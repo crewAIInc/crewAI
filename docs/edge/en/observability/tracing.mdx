@@ -9,7 +9,7 @@ mode: "wide"
 
 CrewAI provides built-in tracing capabilities that allow you to monitor and debug your Crews and Flows in real-time. This guide demonstrates how to enable tracing for both **Crews** and **Flows** using CrewAI's integrated observability platform.
 
-> **What is CrewAI Tracing?** CrewAI's built-in tracing provides comprehensive observability for your AI agents, including agent decisions, task execution timelines, tool usage, and LLM calls - all accessible through the [CrewAI AMP platform](https://app.crewai.com).
+> **What is CrewAI Tracing?** CrewAI's built-in tracing provides comprehensive observability for your AI agents, including agent decisions, task execution timelines, tool usage, and LLM calls - all accessible through the [CrewAI AMP platform](https://app.crewai.com). Tracing is managed independently from [telemetry](/en/telemetry).
 
 ![CrewAI Tracing Interface](/images/crewai-tracing.png)
 
@@ -169,6 +169,18 @@ CREWAI_TRACING_ENABLED=true
 ```
 
 When this environment variable is set, all Crews and Flows will automatically have tracing enabled, even without explicitly setting `tracing=True`.
+
+## Viewing traces after your first run
+
+The first time you run a Crew or Flow, an interactive terminal may ask:
+
+```text
+Would you like to view your execution traces? [y/N]
+```
+
+Choose **yes** to open a view link. You can change this later with
+`crewai traces enable` or `crewai traces disable`, or by setting `tracing`
+on the Crew or Flow.
 
 ## Viewing Your Traces
 

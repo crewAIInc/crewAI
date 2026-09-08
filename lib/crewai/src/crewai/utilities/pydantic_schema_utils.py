@@ -30,6 +30,8 @@ from typing import (
     TypedDict,
     Union,
     cast,
+    get_args,
+    get_origin,
 )
 import uuid
 
@@ -1042,7 +1044,20 @@ def _json_schema_to_pydantic_field(
                 elif len(allowed_schemes) == 1 and allowed_schemes[0] == "file":
                     pydantic_type = FileUrl
 
-        type_ = pydantic_type
+        # `type_` can be a Union built from a list-form `type` (or anyOf/oneOf)
+        # rather than a plain `str`, e.g. `{"type": ["string", "null"],
+        # "format": "date-time"}`. Replacing the whole thing with
+        # `pydantic_type` would silently drop the other members (null,
+        # non-string alternatives) instead of just narrowing the string one.
+        if type_ is str:
+            type_ = pydantic_type
+        elif get_origin(type_) is Union:
+            type_ = Union[  # noqa: UP007
+                tuple(
+                    pydantic_type if member is str else member
+                    for member in get_args(type_)
+                )
+            ]
 
     if isinstance(type_, type) and issubclass(type_, str):
         if "minLength" in json_schema:
@@ -1214,6 +1229,28 @@ def _json_schema_to_pydantic_type(
         )
 
     type_ = json_schema.get("type")
+
+    if isinstance(type_, list):
+        # JSON Schema also allows "type" to be an array, e.g.
+        # {"type": ["string", "null"]} -- the .NET/System.Text.Json-style
+        # way of expressing a nullable field. Pydantic's own schema
+        # generation instead uses anyOf/oneOf for this (handled above), so
+        # external tool schemas (e.g. from a non-Python MCP server) are the
+        # main source of this form. Treat each entry the same way anyOf's
+        # members are handled just above: build a Union of the
+        # corresponding Python types. A single-element list collapses to
+        # that one type, matching typing.Union's own behavior.
+        member_types = [
+            _json_schema_to_pydantic_type(
+                {**json_schema, "type": member},
+                root_schema,
+                name_=f"{name_ or 'Union'}Option{i}",
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+            )
+            for i, member in enumerate(type_)
+        ]
+        return Union[tuple(member_types)]  # noqa: UP007
 
     if type_ == "string":
         return str
