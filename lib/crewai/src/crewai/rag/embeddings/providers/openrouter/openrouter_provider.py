@@ -28,7 +28,6 @@ class OpenRouterProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     api_key: str = Field(
         description="OpenRouter API key",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_OPENROUTER_API_KEY",
             "OPENROUTER_API_KEY",
         ),
     )
@@ -36,7 +35,6 @@ class OpenRouterProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         default="openai/text-embedding-3-small",
         description="Model name to use for embeddings",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_OPENROUTER_MODEL_NAME",
             "model_name",
         ),
     )
@@ -44,7 +42,6 @@ class OpenRouterProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         default="https://openrouter.ai/api/v1",
         description="Base URL for OpenRouter API requests",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_OPENROUTER_API_BASE",
             "OPENROUTER_API_BASE",
             "api_base",
         ),
@@ -56,17 +53,7 @@ class OpenRouterProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         default=None,
         description="Embedding dimensions",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_OPENROUTER_DIMENSIONS",
             "OPENROUTER_DIMENSIONS",
             "dimensions",
-        ),
-    )
-    organization_id: str | None = Field(
-        default=None,
-        description="OpenRouter organization ID",
-        validation_alias=AliasChoices(
-            "EMBEDDINGS_OPENROUTER_ORGANIZATION_ID",
-            "OPENROUTER_ORGANIZATION_ID",
-            "organization_id",
         ),
     )

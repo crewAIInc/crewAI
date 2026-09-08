@@ -14,7 +14,6 @@ class OpenRouterProviderConfig(TypedDict, total=False):
     api_base: str
     default_headers: dict[str, Any] | None
     dimensions: int | None
-    organization_id: str | None
 
 
 class OpenRouterProviderSpec(TypedDict, total=False):

@@ -107,7 +107,6 @@ class TestOpenRouterProviderDirect:
         assert provider.model_name == "openai/text-embedding-3-small"
         assert provider.api_base == "https://openrouter.ai/api/v1"
         assert provider.dimensions is None
-        assert provider.organization_id is None
         assert provider.default_headers is None
 
     def test_custom_values(self):
@@ -117,7 +116,6 @@ class TestOpenRouterProviderDirect:
             model="openai/text-embedding-3-large",
             api_base="https://custom.openrouter.ai/api/v1",
             dimensions=3072,
-            organization_id="org-123",
             default_headers={"HTTP-Referer": "https://crewai.com"},
         )
 
@@ -125,13 +123,11 @@ class TestOpenRouterProviderDirect:
         assert provider.model_name == "openai/text-embedding-3-large"
         assert provider.api_base == "https://custom.openrouter.ai/api/v1"
         assert provider.dimensions == 3072
-        assert provider.organization_id == "org-123"
         assert provider.default_headers == {"HTTP-Referer": "https://crewai.com"}
 
     def test_missing_api_key_raises_validation_error(self, monkeypatch):
         """Test that missing API key raises ValidationError when no env vars set."""
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-        monkeypatch.delenv("EMBEDDINGS_OPENROUTER_API_KEY", raising=False)
 
         with pytest.raises(ValidationError):
             OpenRouterProvider()
@@ -139,18 +135,9 @@ class TestOpenRouterProviderDirect:
     def test_env_var_openrouter_api_key(self, monkeypatch):
         """Test resolving API key from OPENROUTER_API_KEY env var."""
         monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-env-key")
-        monkeypatch.delenv("EMBEDDINGS_OPENROUTER_API_KEY", raising=False)
 
         provider = OpenRouterProvider()
         assert provider.api_key == "sk-or-env-key"
-
-    def test_env_var_embeddings_openrouter_api_key(self, monkeypatch):
-        """Test resolving API key from EMBEDDINGS_OPENROUTER_API_KEY env var."""
-        monkeypatch.setenv("EMBEDDINGS_OPENROUTER_API_KEY", "sk-or-embed-key")
-        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-
-        provider = OpenRouterProvider()
-        assert provider.api_key == "sk-or-embed-key"
 
     def test_model_alias_normalization(self):
         """Test 'model' parameter maps to 'model_name'."""
