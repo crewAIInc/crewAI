@@ -849,6 +849,33 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     assert formatted == original_messages
 
 
+@pytest.fixture
+def gemini_litellm_llm():
+    return LLM(model="gemini/gemini-flash-latest", is_litellm=True)
+
+
+def test_gemini_litellm_appends_user_message_when_last_is_assistant(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Hi there"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert len(formatted) == len(original_messages) + 1
+    assert formatted[-1] == {"role": "user", "content": "Please continue."}
+
+
+def test_gemini_litellm_does_not_modify_when_last_is_user(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Tell me a joke."},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert formatted == original_messages
+
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
