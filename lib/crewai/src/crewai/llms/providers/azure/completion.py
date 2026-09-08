@@ -1328,7 +1328,6 @@ class AzureCompletion(BaseLLM):
             "o1-mini": 128000,
             "o1-pro": 200000,
             "o3-mini": 200000,
-            "o4-mini": 200000,
             "gpt-4": 8192,
             "o1": 200000,
             "o3": 200000,
