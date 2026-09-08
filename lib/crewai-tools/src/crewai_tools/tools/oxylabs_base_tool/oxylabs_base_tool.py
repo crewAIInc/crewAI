@@ -1,11 +1,13 @@
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from importlib.metadata import PackageNotFoundError, version
 import json
 import logging
 import os
 from platform import architecture, python_version
 import re
+import threading
 from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool, EnvVar
@@ -21,6 +23,30 @@ _HTTP_ERROR_PATTERN = re.compile(
 )
 
 
+_active_capture: ContextVar[list[str] | None] = ContextVar(
+    "oxylabs_active_capture", default=None
+)
+_capture_handler_lock = threading.Lock()
+
+
+class _CaptureHandler(logging.Handler):
+    """Routes each SDK error to the capture belonging to the call that caused it.
+
+    A single handler serves every concurrent scrape, and the context variable
+    keeps one thread's or task's records out of the others' hands. Sharing a
+    collector instead would let two simultaneous scrapes each see both errors,
+    and a timeout could be reported as the other request's non-retryable 400.
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        messages = _active_capture.get()
+        if messages is not None:
+            messages.append(record.getMessage())
+
+
+_CAPTURE_HANDLER = _CaptureHandler(level=logging.ERROR)
+
+
 @contextmanager
 def _captured_sdk_errors() -> Iterator[list[str]]:
     """Collect the error messages the oxylabs SDK only writes to its logger.
@@ -28,22 +54,24 @@ def _captured_sdk_errors() -> Iterator[list[str]]:
     The SDK catches transport and HTTP errors, logs them and hands back an
     empty response, so the cause is absent from the object we get back.
     Listening on its logger is the only way to tell the agent what actually
-    went wrong. Nothing about the caller's logging setup is modified, so an
-    application that has silenced the SDK still gets the generic failure.
+    went wrong.
+
+    The handler stays attached once installed: it is inert outside a capture,
+    and detaching it would race with scrapes running concurrently. No level,
+    filter or other handler is touched, so an application that has silenced the
+    SDK simply falls back to the generic failure.
     """
-    messages: list[str] = []
-
-    class _Collector(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            messages.append(record.getMessage())
-
     sdk_logger = logging.getLogger("oxylabs")
-    handler = _Collector(level=logging.ERROR)
-    sdk_logger.addHandler(handler)
+    with _capture_handler_lock:
+        if _CAPTURE_HANDLER not in sdk_logger.handlers:
+            sdk_logger.addHandler(_CAPTURE_HANDLER)
+
+    messages: list[str] = []
+    token = _active_capture.set(messages)
     try:
         yield messages
     finally:
-        sdk_logger.removeHandler(handler)
+        _active_capture.reset(token)
 
 
 def _api_detail(messages: list[str]) -> str | None:

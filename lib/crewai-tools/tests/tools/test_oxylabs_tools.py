@@ -1,6 +1,8 @@
+from collections.abc import Callable
 import json
 import logging
 import os
+import threading
 from unittest.mock import MagicMock
 
 from crewai.tools.base_tool import BaseTool
@@ -176,6 +178,7 @@ def build_tool(
     tool_class: type[BaseTool],
     raw_response: dict,
     sdk_logs: list[str] | None = None,
+    config: BaseModel | None = None,
 ) -> BaseTool:
     """Build a tool whose every scrape entrypoint answers with ``raw_response``.
 
@@ -195,7 +198,7 @@ def build_tool(
     api.amazon.scrape_product.side_effect = scrape
     api.google.scrape_search.side_effect = scrape
 
-    tool = tool_class(username="username", password="password")
+    tool = tool_class(username="username", password="password", config=config)
     # setting via __dict__ to bypass pydantic validation
     tool.__dict__["oxylabs_api"] = api
     return tool
@@ -349,8 +352,8 @@ def test_google_config_forwards_locale():
     tool = build_tool(
         OxylabsGoogleSearchScraperTool,
         {"results": [{"content": {"ok": True}, "status_code": 200}]},
+        config=OxylabsGoogleSearchScraperConfig(locale="de", limit=2),
     )
-    tool.__dict__["config"] = OxylabsGoogleSearchScraperConfig(locale="de", limit=2)
 
     tool.run("iPhone 16")
 
@@ -367,3 +370,66 @@ def test_result_without_content_is_reported():
 
     assert isinstance(result, ToolFailure)
     assert result.code == "empty_content"
+
+
+def test_concurrent_scrapes_do_not_share_diagnoses():
+    """Two scrapes in flight at once must each be diagnosed from their own error.
+
+    A shared collector would hand both calls both errors, and the timeout below
+    would be reported as the other request's non-retryable 400 -- telling the
+    agent not to retry something it should.
+    """
+    both_started = threading.Barrier(2)
+    timeout_logged = threading.Event()
+    bad_request_logged = threading.Event()
+    outcomes: dict[str, ToolFailure] = {}
+
+    def tool_logging(emit: Callable[[], None]) -> BaseTool:
+        api = MagicMock()
+
+        def scrape(*_args: object, **_kwargs: object) -> OxylabsResponse:
+            both_started.wait(timeout=5)
+            emit()
+            return OxylabsResponse({})
+
+        api.universal.scrape_url.side_effect = scrape
+        tool = OxylabsUniversalScraperTool(username="username", password="password")
+        tool.__dict__["oxylabs_api"] = api
+        return tool
+
+    sdk_logger = logging.getLogger("oxylabs.internal.api")
+
+    def emit_timeout() -> None:
+        sdk_logger.error(
+            "Timeout error. The request to https://realtime.oxylabs.io/v1/queries "
+            "with method POST has timed out."
+        )
+        timeout_logged.set()
+        # Hold this capture open while the other call logs, which is the window
+        # in which the two could bleed into each other.
+        bad_request_logged.wait(timeout=5)
+
+    def emit_bad_request() -> None:
+        timeout_logged.wait(timeout=5)
+        sdk_logger.error(
+            "HTTP error occurred: 400 Client Error: Bad Request for url: "
+            "https://realtime.oxylabs.io/v1/queries"
+        )
+        bad_request_logged.set()
+
+    def run(key: str, emit: Callable[[], None]) -> None:
+        outcomes[key] = tool_logging(emit).run("https://example.com")
+
+    threads = [
+        threading.Thread(target=run, args=("timeout", emit_timeout)),
+        threading.Thread(target=run, args=("bad_request", emit_bad_request)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=15)
+
+    assert outcomes["timeout"].code == "timeout"
+    assert outcomes["timeout"].retryable is True
+    assert outcomes["bad_request"].code == "400"
+    assert outcomes["bad_request"].retryable is False
