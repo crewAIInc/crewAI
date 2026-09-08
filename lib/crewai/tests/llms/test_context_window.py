@@ -53,8 +53,8 @@ def test_resolve_context_window_size_gpt5_regression():
     assert result == int(1047576 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
-def test_native_vs_litellm_parity():
-    """Test that the centralized resolver correctly matches expected context window sizes for key models."""
+def test_registry_expected_model_sizes():
+    """Test that the centralized resolver correctly matches expected context window sizes in the registry for key models."""
     from crewai.llms.context_window import LLM_CONTEXT_WINDOW_SIZES
     
     # Native explicit overrides or matching values
