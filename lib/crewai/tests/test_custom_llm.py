@@ -75,8 +75,29 @@ class CustomLLM(BaseLLM):
         """
         return 4096
 
-    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+    async def acall(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ):
+        """Raise because async calls are not implemented for this test LLM."""
         raise NotImplementedError
+
+
+def test_base_llm_repr_masks_api_key():
+    """Test that BaseLLM repr does not expose the API key."""
+    llm = CustomLLM()
+    llm.api_key = "sk-secret"
+
+    representation = repr(llm)
+
+    assert "sk-secret" not in representation
+    assert "'api_key': '***'" in representation
 
 
 @pytest.mark.vcr()
