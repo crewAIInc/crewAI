@@ -479,6 +479,12 @@ class FileResolver:
 
         output: dict[str, ResolvedFile] = {}
         for item in gather_results:
+            # A lookup failure (unknown provider, unconfigured Bedrock, or a
+            # missing provider SDK) applies to every file in the batch, since
+            # they share one provider. Surface it instead of silently dropping
+            # files, matching the sync resolve_files path.
+            if isinstance(item, (ValueError, ImportError)):
+                raise item
             if isinstance(item, BaseException):
                 logger.error(f"Resolution failed: {item}")
                 continue
