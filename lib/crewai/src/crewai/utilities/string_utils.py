@@ -127,12 +127,20 @@ def interpolate_only(
         return ""
     if "{" not in input_string and "}" not in input_string:
         return input_string
+
+    variables = _VARIABLE_PATTERN.findall(input_string)
+
+    # Braces can appear without any actual {template} variables (e.g. a JSON
+    # payload). There is nothing to interpolate in that case, so return the
+    # string untouched instead of requiring a non-empty inputs dictionary.
+    if not variables:
+        return input_string
+
     if not inputs:
         raise ValueError(
             "Inputs dictionary cannot be empty when interpolating variables"
         )
 
-    variables = _VARIABLE_PATTERN.findall(input_string)
     result = input_string
 
     missing_vars = [var for var in variables if var not in inputs]

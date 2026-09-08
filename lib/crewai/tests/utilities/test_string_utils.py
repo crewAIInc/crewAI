@@ -184,3 +184,14 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+    def test_braces_without_variables_and_empty_inputs(self):
+        """A string with braces but no {template} variables (e.g. JSON) should be
+        returned untouched even when inputs is empty, rather than raising."""
+        json_string = '{"name": "John", "nested": {"v": 1}}'
+        assert interpolate_only(json_string, {}) == json_string
+        # Non-matching brace patterns are not variables either.
+        assert (
+            interpolate_only("This {123} and {!bad} stay", {})
+            == "This {123} and {!bad} stay"
+        )
