@@ -385,3 +385,20 @@ class TestProviderConfigurations:
             call_args = mock_build_embedder.call_args[0][0]
             assert call_args["provider"] == "openrouter"
             assert call_args["config"]["api_key"] == "test-openrouter-key"
+
+    @patch("crewai.rag.embeddings.factory.build_embedder")
+    def test_openrouter_default_model_without_model_arg(self, mock_build_embedder):
+        """Test constructing EmbeddingService(provider='openrouter') without a model uses namespaced default."""
+        mock_build_embedder.return_value = Mock()
+
+        service = EmbeddingService(
+            provider="openrouter",
+            api_key="test-key",
+        )
+
+        assert service.config.provider == "openrouter"
+        assert service.config.model == "openai/text-embedding-3-small"
+        mock_build_embedder.assert_called_once()
+        call_args = mock_build_embedder.call_args[0][0]
+        assert call_args["provider"] == "openrouter"
+        assert call_args["config"]["model_name"] == "openai/text-embedding-3-small"

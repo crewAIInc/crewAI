@@ -62,7 +62,7 @@ class EmbeddingService:
     def __init__(
         self,
         provider: str = "openai",
-        model: str = "text-embedding-3-small",
+        model: str | None = None,
         api_key: str | None = None,
         **kwargs: Any,
     ):
@@ -71,10 +71,16 @@ class EmbeddingService:
 
         Args:
             provider: The embedding provider to use
-            model: The model name
+            model: The model name (if not provided, uses provider default)
             api_key: API key (if not provided, will look for environment variables)
             **kwargs: Additional configuration options
         """
+        if model is None:
+            if provider == "openrouter":
+                model = "openai/text-embedding-3-small"
+            else:
+                model = "text-embedding-3-small"
+
         self.config = EmbeddingConfig(
             provider=provider,
             model=model,
