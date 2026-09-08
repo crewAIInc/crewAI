@@ -484,10 +484,10 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.experimental.agent_executor.aget_llm_response_with_fallback",
             return_value="Thought: done\nFinal Answer: complete",
         ) as get_llm_response_mock:
-            result = executor.call_llm_and_parse()
+            result = asyncio.run(executor.call_llm_and_parse())
 
         assert result == "parsed"
         assert get_llm_response_mock.call_args.kwargs["response_model"] is None
@@ -506,10 +506,10 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.experimental.agent_executor.aget_llm_response_with_fallback",
             return_value="complete",
         ) as get_llm_response_mock:
-            result = executor.call_llm_native_tools()
+            result = asyncio.run(executor.call_llm_native_tools())
 
         assert result == "native_finished"
         assert get_llm_response_mock.call_args.kwargs["response_model"] is None
@@ -532,13 +532,13 @@ class TestAgentExecutor:
         executor.tools_description = "lookup: search for information"
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.experimental.agent_executor.aget_llm_response_with_fallback",
             side_effect=RuntimeError(
                 "Error code: 400 - registry.ollama.ai/library/mariner:latest "
                 "does not support tools"
             ),
         ):
-            result = executor.call_llm_native_tools()
+            result = asyncio.run(executor.call_llm_native_tools())
 
         assert result == "continue_reasoning"
         assert executor.state.use_native_tools is False
@@ -1108,7 +1108,7 @@ class TestFlowErrorHandling:
             "tools_handler": Mock(),
         }
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
+    @patch("crewai.experimental.agent_executor.aget_llm_response_with_fallback")
     @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
     def test_call_llm_parser_error(
         self, mock_enforce_rpm, mock_get_llm, mock_dependencies
@@ -1120,12 +1120,12 @@ class TestFlowErrorHandling:
         mock_get_llm.side_effect = OutputParserError("parse failed")
 
         executor = _build_executor(**mock_dependencies)
-        result = executor.call_llm_and_parse()
+        result = asyncio.run(executor.call_llm_and_parse())
 
         assert result == "parser_error"
         assert executor._last_parser_error is not None
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
+    @patch("crewai.experimental.agent_executor.aget_llm_response_with_fallback")
     @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
     @patch("crewai.experimental.agent_executor.is_context_length_exceeded")
     def test_call_llm_context_error(
@@ -1141,7 +1141,7 @@ class TestFlowErrorHandling:
         mock_is_context_exceeded.return_value = True
 
         executor = _build_executor(**mock_dependencies)
-        result = executor.call_llm_and_parse()
+        result = asyncio.run(executor.call_llm_and_parse())
 
         assert result == "context_error"
         assert executor._last_context_error is not None
