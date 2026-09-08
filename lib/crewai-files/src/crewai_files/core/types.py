@@ -163,7 +163,7 @@ class BaseFile(ABC, BaseModel):
     - File source management
     - Content reading
     - Dict unpacking support (`**` syntax)
-    - Per-file mode mode
+    - Per-file mode
 
     Can be unpacked with ** syntax: `{**ImageFile(source="./chart.png")}`
     which unpacks to: `{"chart": <ImageFile instance>}` using filename stem as key.

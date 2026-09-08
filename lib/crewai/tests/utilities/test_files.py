@@ -494,13 +494,13 @@ class TestGenericFile:
         assert f.mode == "auto"
 
     def test_file_custom_mode(self) -> None:
-        """Test File with custom mode mode."""
+        """Test File with custom mode."""
         f = File(source=b"content", mode="strict")
 
         assert f.mode == "strict"
 
     def test_file_chunk_mode(self) -> None:
-        """Test File with chunk mode mode."""
+        """Test File with chunk mode."""
         f = File(source=b"content", mode="chunk")
 
         assert f.mode == "chunk"
