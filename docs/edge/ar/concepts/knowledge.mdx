@@ -638,6 +638,7 @@ agent = Agent(
 )
 
 # Option 4: Use OpenRouter embeddings (supports models across providers)
+# Set OPENROUTER_API_KEY environment variable if api_key is omitted in config
 crew = Crew(
     agents=[agent],
     tasks=[...],
@@ -645,8 +646,8 @@ crew = Crew(
     embedder={
         "provider": "openrouter",
         "config": {
-            "api_key": "your-openrouter-api-key",
-            "model": "openai/text-embedding-3-small"
+            "model_name": "openai/text-embedding-3-small",
+            "api_key": "your-openrouter-api-key"  # Optional if OPENROUTER_API_KEY is set
         }
     }
 )
