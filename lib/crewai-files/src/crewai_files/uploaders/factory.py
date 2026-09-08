@@ -113,20 +113,20 @@ def get_uploader(
 def get_uploader(
     provider: BedrockProviderType,
     **kwargs: Unpack[BedrockOpts],
-) -> BedrockFileUploader | None:
+) -> BedrockFileUploader:
     """Get Bedrock file uploader."""
 
 
 @overload
 def get_uploader(
     provider: ProviderType, **kwargs: Unpack[AllOptions]
-) -> FileUploaderType | None:
+) -> FileUploaderType:
     """Get any file uploader."""
 
 
 def get_uploader(
     provider: ProviderType, **kwargs: Unpack[AllOptions]
-) -> FileUploaderType | None:
+) -> FileUploaderType:
     """Get a file uploader for a specific provider.
 
     Args:
@@ -134,7 +134,12 @@ def get_uploader(
         **kwargs: Additional arguments passed to the uploader constructor.
 
     Returns:
-        FileUploader instance for the provider, or None if not supported.
+        FileUploader instance for the provider.
+
+    Raises:
+        ValueError: If the provider is unknown, or Bedrock is selected without a
+            configured S3 bucket (CREWAI_BEDROCK_S3_BUCKET or bucket_name).
+        ImportError: If the selected provider's SDK is not installed.
     """
     provider_lower = provider.lower()
 
@@ -191,11 +196,10 @@ def get_uploader(
         if not os.environ.get("CREWAI_BEDROCK_S3_BUCKET") and not kwargs.get(
             "bucket_name"
         ):
-            logger.debug(
-                "Bedrock S3 uploader not configured. "
-                "Set CREWAI_BEDROCK_S3_BUCKET environment variable to enable."
+            raise ValueError(
+                "Bedrock file uploads are not configured. Set the "
+                "CREWAI_BEDROCK_S3_BUCKET environment variable or pass bucket_name."
             )
-            return None
         try:
             from crewai_files.uploaders.bedrock import BedrockFileUploader
 
@@ -211,5 +215,4 @@ def get_uploader(
             logger.warning("boto3 not installed. Install with: pip install boto3")
             raise
 
-    logger.debug(f"No file uploader available for provider: {provider}")
-    return None
+    raise ValueError(f"No file uploader available for provider: {provider!r}")
