@@ -133,3 +133,43 @@ finally:
 
 플레이스홀더 경로 및 명령어를 실제 Stdio 서버 정보로 교체해야 합니다. `StdioServerParameters`의 `env` 파라미터는 
 서버 프로세스용 환경 변수를 설정할 때 사용할 수 있습니다. 이는 서버의 동작을 구성하거나 필요한 경로(예: `PYTHONPATH`)를 제공하는 데 유용할 수 있습니다.
+
+### 예시: Entroly
+
+Entroly는 stdio MCP를 통해 로컬 컨텍스트 선택 및 복구 도구를 제공합니다.
+[`uv`](https://docs.astral.sh/uv/getting-started/installation/)를 설치한 다음,
+영구 전역 설치 없이 검증된 Entroly 버전을 실행하도록 어댑터를 구성합니다.
+
+```python
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters
+import os
+
+# Run this example from the repository Entroly should index, or replace this
+# value with that repository's absolute path.
+project_root = os.getcwd()
+
+server_params = StdioServerParameters(
+    command="uvx",
+    args=["--from", "entroly==1.0.77", "entroly", "serve"],
+    env={
+        **os.environ,
+        "ENTROLY_NO_DOCKER": "1",
+        "ENTROLY_SOURCE": project_root,
+    },
+)
+
+with MCPServerAdapter(server_params) as tools:
+    # Pass the discovered MCP tools to an Agent through its `tools` argument.
+    print([tool.name for tool in tools])
+```
+
+워크플로에서 사용하기 전에 API 키 없이 설치된 패키지와 로컬 복구 경로를
+검증합니다.
+
+```bash
+uvx --from 'entroly==1.0.77' entroly verify-claims --max-files 30
+```
+
+컨텍스트 감소율과 후속 작업 품질은 워크로드와 선택한 예산에 따라 달라집니다.
+프로덕션 요청을 라우팅하기 전에 대표 작업을 측정하세요.
