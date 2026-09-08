@@ -203,7 +203,7 @@ def test_bedrock_anthropic_claude_sonnet_4_6_is_1m_not_200k():
     assert llm.get_context_window_size() == int(1000000 * RATIO)
 
 def test_azure_gpt_35_turbo_litellm_is_16385():
-    llm = LLM(model="gpt-35-turbo")
+    llm = LLM(model="azure/gpt-35-turbo", is_litellm=True)
     assert llm.get_context_window_size() == int(16385 * RATIO)
 
 # issue #7303: o1/o1-pro/o3 must resolve to the official 200k window.
