@@ -60,6 +60,6 @@ Results include `exit_code`, UTF-8 `stdout` and `stderr` (invalid bytes are repl
 ## Safety and limits
 
 - Commands have shell access and can modify or delete data and access the Sprite's network and credentials. Use a dedicated Sprite with only the data and permissions the agent needs. Binding a Sprite name is not a server-side authorization boundary.
-- `timeout` limits how long the client waits; it does **not** guarantee remote process termination. Async cancellation also does not guarantee termination. After a timeout or connection failure, inspect the Sprite before retrying a command with side effects.
-- Output is truncated **after** the SDK captures it. This bounds agent context, not memory consumption. Redirect verbose output to files in the Sprite.
+- `timeout` limits how long the client waits; it does **not** guarantee remote process termination. Async cancellation closes the local connection without leaving an executor worker running, but also does not guarantee remote termination. After cancellation, a timeout, or a connection failure, inspect the Sprite before retrying a command with side effects.
+- Output collection retains at most `max_output_chars` characters per stream, decoding UTF-8 incrementally. Excess output is discarded before SDK accumulation while the connection is drained until command exit or timeout. This bounds retained output, not network traffic or per-frame transport overhead. Redirect verbose output to files in the Sprite.
 - No host environment variables are forwarded automatically. Files remain until you manage or remove them yourself.

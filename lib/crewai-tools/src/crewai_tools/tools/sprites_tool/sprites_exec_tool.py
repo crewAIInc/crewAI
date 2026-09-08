@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool, EnvVar
 from crewai.types.callback import SerializableCallable
 from pydantic import BaseModel, Field, SecretStr, field_validator
+
+
+if TYPE_CHECKING:
+    from crewai.tools.structured_tool import CrewStructuredTool
 
 
 def _no_cache(_args: Any = None, _result: Any = None) -> bool:
@@ -15,6 +19,8 @@ def _no_cache(_args: Any = None, _result: Any = None) -> bool:
 
 
 class SpritesExecToolSchema(BaseModel):
+    """Agent-supplied command and optional remote working directory."""
+
     command: str = Field(
         ...,
         min_length=1,
@@ -27,6 +33,7 @@ class SpritesExecToolSchema(BaseModel):
     @field_validator("command", "cwd")
     @classmethod
     def validate_command_argument(cls, value: str | None) -> str | None:
+        """Reject blank arguments and NUL bytes before opening a connection."""
         if value is not None and (not value.strip() or "\x00" in value):
             raise ValueError(
                 "Command and working directory must be nonblank and contain no NUL bytes."
@@ -81,6 +88,7 @@ class SpritesExecTool(BaseTool):
     @field_validator("sprite_name")
     @classmethod
     def validate_sprite_name(cls, value: str) -> str:
+        """Require a single Sprite name rather than a URL or path."""
         # The SDK interpolates this value into API paths. Require a single name.
         if value in {".", ".."} or any(
             char.isspace() or char in "/\\?#%" or ord(char) < 32 or ord(char) == 127
@@ -90,12 +98,33 @@ class SpritesExecTool(BaseTool):
         return value
 
     def _run(self, command: str, cwd: str | None = None) -> dict[str, str | int | bool]:
+        """Run the async transport on the SDK's dedicated loop for sync callers."""
+        try:
+            from sprites.loop import run_sync
+        except ImportError:
+            raise ImportError(
+                'Install Fly.io Sprites support with: uv add "crewai-tools[sprites]"'
+            ) from None
+        return run_sync(self._arun(command, cwd))
+
+    def to_structured_tool(self) -> CrewStructuredTool:
+        """Preserve native async dispatch when CrewAI adapts this tool."""
+        structured_tool = super().to_structured_tool()
+        structured_tool.func = self._arun
+        return structured_tool
+
+    async def _arun(
+        self, command: str, cwd: str | None = None
+    ) -> dict[str, str | int | bool]:
+        """Await bounded SDK I/O directly so cancellation leaves no worker behind."""
         inputs = SpritesExecToolSchema(command=command, cwd=cwd)
         if self.api_key is None or not self.api_key.get_secret_value().strip():
             raise ValueError("Set SPRITE_TOKEN or pass api_key to SpritesExecTool.")
         try:
             from sprites import SpritesClient
             from sprites.exceptions import TimeoutError as SpritesTimeoutError
+
+            from crewai_tools.tools.sprites_tool._execution import BoundedWSCommand
         except ImportError:
             raise ImportError(
                 'Install Fly.io Sprites support with: uv add "crewai-tools[sprites]"'
@@ -103,14 +132,16 @@ class SpritesExecTool(BaseTool):
 
         try:
             with SpritesClient(token=self.api_key.get_secret_value()) as client:
-                result = client.sprite(self.sprite_name).run(
+                cmd = client.sprite(self.sprite_name).command(
                     "bash",
                     "-lc",
                     inputs.command,
                     cwd=inputs.cwd,
-                    capture_output=True,
                     timeout=self.timeout,
-                    check=False,
+                )
+                execution = BoundedWSCommand(cmd, self.max_output_chars)
+                exit_code = await asyncio.wait_for(
+                    execution.execute(), timeout=self.timeout
                 )
         except (TimeoutError, SpritesTimeoutError):
             raise TimeoutError(
@@ -126,18 +157,12 @@ class SpritesExecTool(BaseTool):
                 "inspect the Sprite before retrying commands with side effects."
             ) from None
 
-        stdout = (result.stdout or b"").decode("utf-8", errors="replace")
-        stderr = (result.stderr or b"").decode("utf-8", errors="replace")
+        stdout = execution.stdout.text()
+        stderr = execution.stderr.text()
         return {
-            "exit_code": result.returncode,
-            "stdout": stdout[: self.max_output_chars],
-            "stderr": stderr[: self.max_output_chars],
-            "stdout_truncated": len(stdout) > self.max_output_chars,
-            "stderr_truncated": len(stderr) > self.max_output_chars,
+            "exit_code": exit_code,
+            "stdout": stdout,
+            "stderr": stderr,
+            "stdout_truncated": execution.stdout.truncated,
+            "stderr_truncated": execution.stderr.truncated,
         }
-
-    async def _arun(
-        self, command: str, cwd: str | None = None
-    ) -> dict[str, str | int | bool]:
-        """Keep blocking SDK execution off the crew's event loop."""
-        return await asyncio.to_thread(self._run, command, cwd)

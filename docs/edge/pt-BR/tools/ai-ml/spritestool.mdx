@@ -60,6 +60,6 @@ Os resultados incluem `exit_code`, `stdout` e `stderr` em UTF-8 (bytes inválido
 ## Segurança e limites
 
 - Os comandos têm acesso ao shell e podem modificar ou excluir dados e acessar a rede e as credenciais do Sprite. Use um Sprite dedicado com apenas os dados e permissões necessários ao agente. Fixar um nome de Sprite não é um limite de autorização no servidor.
-- `timeout` limita o tempo de espera do cliente; **não** garante o encerramento do processo remoto. O cancelamento assíncrono também não garante o encerramento. Após um timeout ou falha de conexão, inspecione o Sprite antes de repetir um comando com efeitos colaterais.
-- A saída é truncada **depois** de ser capturada pelo SDK. Isso limita o contexto do agente, não o consumo de memória. Redirecione saídas extensas para arquivos no Sprite.
+- `timeout` limita o tempo de espera do cliente; **não** garante o encerramento do processo remoto. O cancelamento assíncrono fecha a conexão local sem deixar uma thread do executor em execução, mas também não garante o encerramento remoto. Após um cancelamento, timeout ou falha de conexão, inspecione o Sprite antes de repetir um comando com efeitos colaterais.
+- A coleta de saída retém no máximo `max_output_chars` caracteres por fluxo, decodificando UTF-8 incrementalmente. A saída excedente é descartada antes de se acumular no SDK, enquanto a conexão continua sendo lida até o comando terminar ou ocorrer um timeout. Isso limita a saída retida, não o tráfego de rede nem a sobrecarga de transporte por frame. Redirecione saídas extensas para arquivos no Sprite.
 - Nenhuma variável de ambiente do host é encaminhada automaticamente. Os arquivos permanecem até que você os gerencie ou remova.
