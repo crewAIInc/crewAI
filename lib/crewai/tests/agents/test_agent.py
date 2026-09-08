@@ -701,6 +701,7 @@ def test_agent_step_callback():
 
 
 def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
+    """Use a native tool result as the Crew's final answer without another LLM call."""
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -708,6 +709,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
         description: str = "Get a random greeting back"
 
         def _run(self) -> str:
+            """Return a deterministic greeting for the integration test."""
             return "Howdy!"
 
     llm = LLM(model="gpt-4o-mini")
