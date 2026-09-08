@@ -1,3 +1,4 @@
+import gc
 from typing import Any, ClassVar, cast
 from unittest.mock import Mock, create_autospec, patch
 
@@ -16,6 +17,7 @@ from crewai.project import (
     llm,
     task,
 )
+from crewai.project import utils as project_utils
 from crewai.task import Task
 from crewai.tools import tool
 
@@ -135,6 +137,30 @@ def test_crew_memoization():
     assert first_call_result is second_call_result, (
         "Crew references should point to the same object"
     )
+
+
+def test_instance_memoization_cache_does_not_retain_discarded_crews():
+    """Memoized CrewBase results should be released with their owner instance."""
+    project_utils._instance_caches.clear()
+
+    class CrewFactory:
+        @agent
+        def simple_agent(self):
+            return Agent(
+                role="Simple Agent", goal="Simple Goal", backstory="Simple Backstory"
+            )
+
+    factories = [CrewFactory() for _ in range(10)]
+    results = [factory.simple_agent() for factory in factories]
+
+    assert len(project_utils._instance_caches) == len(factories)
+    assert len({id(result) for result in results}) == len(factories)
+
+    del results
+    del factories
+    gc.collect()
+
+    assert len(project_utils._instance_caches) == 0
 
 
 def test_task_name():

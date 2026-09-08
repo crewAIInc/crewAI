@@ -3,7 +3,9 @@
 from collections.abc import Callable, Coroutine
 from functools import wraps
 import inspect
+import threading
 from typing import Any, ParamSpec, TypeVar, cast
+from weakref import WeakKeyDictionary
 
 from pydantic import BaseModel
 
@@ -13,6 +15,30 @@ from crewai.agents.cache.cache_handler import CacheHandler
 P = ParamSpec("P")
 R = TypeVar("R")
 cache = CacheHandler()
+_instance_caches: WeakKeyDictionary[Any, CacheHandler] = WeakKeyDictionary()
+_instance_caches_lock = threading.Lock()
+
+
+def _get_cache(args: tuple[Any, ...]) -> CacheHandler:
+    """Return an instance-scoped cache when memoizing a bound method.
+
+    Instance caches are held by weak keys so cached Agent/Task/Crew results do
+    not keep discarded CrewBase instances alive. Functions without an instance
+    argument continue using the process-wide cache.
+    """
+    if not args:
+        return cache
+
+    instance = args[0]
+    if not hasattr(instance, "__dict__"):
+        return cache
+
+    try:
+        with _instance_caches_lock:
+            return _instance_caches.setdefault(instance, CacheHandler())
+    except TypeError:
+        # Some callable objects are unhashable or cannot be weakly referenced.
+        return cache
 
 
 def _make_hashable(arg: Any) -> Any:
@@ -63,12 +89,15 @@ def _memoize_sync(meth: Callable[P, R]) -> Callable[P, R]:
         )
         cache_key = str((hashable_args, hashable_kwargs))
 
-        cached_result: R | None = cache.read(tool=meth.__name__, input=cache_key)
+        instance_cache = _get_cache(tuple(args))
+        cached_result: R | None = instance_cache.read(
+            tool=meth.__name__, input=cache_key
+        )
         if cached_result is not None:
             return cached_result
 
         result = meth(*args, **kwargs)
-        cache.add(tool=meth.__name__, input=cache_key, output=result)
+        instance_cache.add(tool=meth.__name__, input=cache_key, output=result)
         return result
 
     return cast(Callable[P, R], wrapper)
@@ -87,12 +116,15 @@ def _memoize_async(
         )
         cache_key = str((hashable_args, hashable_kwargs))
 
-        cached_result: R | None = cache.read(tool=meth.__name__, input=cache_key)
+        instance_cache = _get_cache(tuple(args))
+        cached_result: R | None = instance_cache.read(
+            tool=meth.__name__, input=cache_key
+        )
         if cached_result is not None:
             return cached_result
 
         result = await meth(*args, **kwargs)
-        cache.add(tool=meth.__name__, input=cache_key, output=result)
+        instance_cache.add(tool=meth.__name__, input=cache_key, output=result)
         return result
 
     return wrapper
