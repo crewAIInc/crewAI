@@ -23,11 +23,16 @@ def _duplicate_separator_pattern(separator: str) -> re.Pattern[str]:
     return re.compile(f"(?:{re.escape(separator)}){{2,}}")
 
 
+@functools.lru_cache(maxsize=1024)
 def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> str:
     """Sanitize tool name for LLM provider compatibility.
 
     Normalizes Unicode, splits camelCase, lowercases, replaces invalid characters
     with underscores, and truncates to max_length. Conforms to OpenAI/Bedrock requirements.
+
+    Pure function of its arguments, so results are memoized: it is called many
+    times per agent iteration over the same small, stable set of tool names
+    (each call does an NFKD normalize, ascii round-trip and several regex subs).
 
     Args:
         name: Original tool name.
