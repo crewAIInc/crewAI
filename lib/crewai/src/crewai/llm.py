@@ -573,7 +573,8 @@ class LLM(BaseLLM):
             return True
 
         if provider == "dashscope":
-            return model_lower.startswith("qwen")
+            # DashScope's OpenAI-compatible endpoint serves Qwen plus DeepSeek/Kimi/GLM/etc.
+            return True
 
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything
