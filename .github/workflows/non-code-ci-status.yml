@@ -1,0 +1,86 @@
+# Reports required branch-protection check names when the Python CI workflows
+# are skipped via paths-ignore (docs / markdown / Actions-only PRs).
+#
+# Creates check runs via the Checks API (instead of same-named jobs) so code
+# PRs do not get conflicting skipped `tests` / `lint` checks alongside the
+# real workflows.
+#
+# Required contexts (ruleset "main"): lint, type-checker, tests,
+# tests (3.10)–tests (3.13).
+name: Non-code CI status
+
+on:
+  pull_request:
+    # Only start when a non-code path changed. Mixed PRs (docs + code) still
+    # enter here, but `report` no-ops when dorny detects code changes so we
+    # do not create duplicate check runs alongside Run Tests / Lint / etc.
+    paths:
+      - 'docs/**'
+      - '**/*.md'
+      - '**/*.mdx'
+      - '.github/**'
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
+        id: filter
+        with:
+          # Exclusion-only patterns match every non-excluded file under the
+          # default "some" quantifier. Require all patterns (including "**")
+          # so docs/markdown/Actions-only PRs correctly set code=false.
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!docs/**'
+              - '!**/*.md'
+              - '!**/*.mdx'
+              - '!.github/**'
+
+  report:
+    name: Report required checks
+    needs: changes
+    if: needs.changes.outputs.code != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create successful check runs for required contexts
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const headSha = context.payload.pull_request.head.sha;
+            const names = [
+              'lint',
+              'type-checker',
+              'tests',
+              'tests (3.10)',
+              'tests (3.11)',
+              'tests (3.12)',
+              'tests (3.13)',
+            ];
+            const summary =
+              'Non-code change (docs / markdown / Actions-only). ' +
+              'Python CI workflows were skipped via paths-ignore.';
+            for (const name of names) {
+              await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name,
+                head_sha: headSha,
+                status: 'completed',
+                conclusion: 'success',
+                output: {
+                  title: 'Skipped (non-code change)',
+                  summary,
+                },
+              });
+            }
