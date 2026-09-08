@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+from importlib import import_module
 from unittest.mock import patch, MagicMock
 import pytest
 
@@ -139,7 +140,11 @@ def test_bedrock_completion_module_is_imported(monkeypatch):
     Test that the completion module is properly imported when using Bedrock provider
     """
     module_name = "crewai.llms.providers.bedrock.completion"
+    completion_module = import_module(module_name)
+    provider_module = import_module("crewai.llms.providers.bedrock")
 
+    # Keep the package attribute in sync when monkeypatch restores sys.modules.
+    monkeypatch.setattr(provider_module, "completion", completion_module)
     monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
