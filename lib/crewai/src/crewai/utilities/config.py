@@ -1,7 +1,6 @@
 from typing import Any
-
 from pydantic import BaseModel
-
+import copy
 
 def process_config(
     values: dict[str, Any], model_class: type[BaseModel]
@@ -20,16 +19,23 @@ def process_config(
         return values
 
     for key, value in config.items():
-        if key not in model_class.model_fields or values.get(key) is not None:
+        if key not in model_class.model_fields:
             continue
-
-        if isinstance(value, dict):
-            if isinstance(values.get(key), dict):
-                values[key].update(value)
-            else:
-                values[key] = value
+        if (override_value := values.get(key)) is not None:
+            if isinstance(override_value, dict) and isinstance(value, dict):
+                config_value = copy.deepcopy(value)
+                _dict_deep_update(config_value, override_value)
+                values[key] = config_value
         else:
-            values[key] = value
+            values[key] = copy.deepcopy(value) if isinstance(value, (dict, list)) else value
 
     values.pop("config", None)
     return values
+
+def _dict_deep_update(to_dict: dict[str, Any], from_dict: dict[str, Any]) -> None:
+    """Internal helper to recursively update to_dict with from_dict values in-place."""
+    for key, value in from_dict.items():
+        if key in to_dict and isinstance(to_dict[key], dict) and isinstance(value, dict):
+            _dict_deep_update(to_dict[key], value)
+        else:
+            to_dict[key] = value
