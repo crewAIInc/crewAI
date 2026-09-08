@@ -104,7 +104,7 @@ chore(deps): bump pydantic to 2.11
 - PRs over 500 lines are labeled `size/XL` automatically
 - Title must follow the same conventional commit format
 - Link related issues where applicable (`#123`, `Fixes #123`, or the issue URL)
-- First-time contributors must open or pick an existing **open** issue first, then mention it in the PR title or body (for example `#123`). PRs without a linked open issue are closed automatically.
+- First-time contributors must open or pick an existing **open** issue first, then mention it in the PR title or body (for example `#123`). PRs without a linked open issue are closed automatically and labeled `needs-issue`.
 
 ## Testing
 
