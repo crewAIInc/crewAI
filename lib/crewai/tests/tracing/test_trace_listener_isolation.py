@@ -9,9 +9,18 @@ the failure lands in whichever unrelated test happens to run later — the sympt
 names neither the leak nor the test that caused it.
 
 The autouse `reset_trace_listener_singleton` fixture in the root `conftest.py`
-clears the cached instance after every test. These are canaries for that: run on
-their own they pass trivially, but under the full suite in random order they fail
-if the fixture stops working.
+clears the cached instance after every test. This is a canary for that: run on
+its own it passes trivially, but under the full suite in random order it fails if
+the fixture stops working.
+
+There is deliberately no canary for `_listeners_setup`, because one cannot be
+written. `BaseEventListener.__init__` calls `setup_listeners`
+(`base_event_listener.py:16`), which sets the flag on the instance
+(`trace_listener.py:229`), so reading it back through `TraceCollectionListener()`
+is always `True` — construction is what sets it. Reading it off the class is
+always `False`, because nothing assigns it there. Neither observes a leak. The
+flag lives on the instance the fixture deletes, so it cannot outlive a test; that
+is guaranteed by construction, not by assertion.
 """
 
 from __future__ import annotations
@@ -34,13 +43,3 @@ def test_batch_manager_starts_clean() -> None:
     assert manager.batch_owner_id is None
     assert manager.event_buffer == []
     assert manager.defer_session_finalization is False
-
-
-def test_listener_setup_flag_starts_clean() -> None:
-    """`_listeners_setup` must not survive a test.
-
-    `cleanup_event_handlers` empties the event bus between tests. If the flag
-    stayed set, the next listener would consider itself registered and collect
-    nothing at all — a silent hole rather than a visible failure.
-    """
-    assert TraceCollectionListener._listeners_setup is False
