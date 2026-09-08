@@ -307,10 +307,6 @@ class FileResolver:
                 )
 
         uploader = self._get_uploader(provider)
-        if uploader is None:
-            logger.debug(f"No uploader available for {provider}")
-            return None
-
         result = self._upload_with_retry(uploader, file, provider, context.size)
         if result is None:
             return None
@@ -524,10 +520,6 @@ class FileResolver:
                 )
 
         uploader = self._get_uploader(provider)
-        if uploader is None:
-            logger.debug(f"No uploader available for {provider}")
-            return None
-
         result = await self._aupload_with_retry(uploader, file, provider, context.size)
         if result is None:
             return None
@@ -612,23 +604,23 @@ class FileResolver:
         )
         return None
 
-    def _get_uploader(self, provider: ProviderType) -> FileUploader | None:
+    def _get_uploader(self, provider: ProviderType) -> FileUploader:
         """Get or create an uploader for a provider.
 
         Args:
             provider: Provider name.
 
         Returns:
-            FileUploader instance or None if not available.
+            FileUploader instance for the provider.
+
+        Raises:
+            ValueError: If the provider is unknown or not configured.
+            ImportError: If the provider's SDK is not installed.
         """
         if provider not in self._uploaders:
-            uploader = get_uploader(provider)
-            if uploader is not None:
-                self._uploaders[provider] = uploader
-            else:
-                return None
+            self._uploaders[provider] = get_uploader(provider)
 
-        return self._uploaders.get(provider)
+        return self._uploaders[provider]
 
     def get_cached_uploads(self, provider: ProviderType) -> list[CachedUpload]:
         """Get all cached uploads for a provider.

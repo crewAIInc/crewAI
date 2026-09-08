@@ -1,7 +1,15 @@
 """Tests for get_uploader."""
 
 from crewai_files.uploaders import get_uploader
+from crewai_files.uploaders.openai import OpenAIFileUploader
 import pytest
+
+
+def test_get_uploader_returns_uploader_for_configured_provider():
+    # Happy path: a configured provider returns its uploader instance rather
+    # than raising or returning None
+    uploader = get_uploader("openai", api_key="test-key")
+    assert isinstance(uploader, OpenAIFileUploader)
 
 
 def test_get_uploader_raises_for_unknown_provider():

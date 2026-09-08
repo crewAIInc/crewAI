@@ -215,4 +215,7 @@ def get_uploader(
             logger.warning("boto3 not installed. Install with: pip install boto3")
             raise
 
-    raise ValueError(f"No file uploader available for provider: {provider!r}")
+    raise ValueError(
+        f"No file uploader available for provider: {provider!r}. Supported "
+        "providers: gemini/google, anthropic/claude, openai/gpt/azure, bedrock/aws."
+    )
