@@ -17466,6 +17466,19 @@
                 "description": "Number of results to retrieve in each page.",
                 "title": "Limit"
               },
+              "locale": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "`Accept-Language` header value which changes your Google search page web interface language.",
+                "title": "Locale"
+              },
               "pages": {
                 "anyOf": [
                   {
