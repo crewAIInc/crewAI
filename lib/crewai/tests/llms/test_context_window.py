@@ -45,3 +45,10 @@ def test_resolve_context_window_size_bounds():
     
     result_big = resolve_context_window_size("too-big", sizes)
     assert result_big == int(MAX_CONTEXT * CONTEXT_WINDOW_USAGE_RATIO)
+
+def test_resolve_context_window_size_gpt5_regression():
+    """Ensure bare gpt-5 resolves to its intended context window size."""
+    from crewai.llms.context_window import OPENAI_CONTEXT_WINDOWS
+    result = resolve_context_window_size("gpt-5", OPENAI_CONTEXT_WINDOWS)
+    assert result == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+

@@ -1307,6 +1307,7 @@ class AzureCompletion(BaseLLM):
         return resolve_context_window_size(
             model=self.model,
             sizes={**OPENAI_CONTEXT_WINDOWS, **AZURE_CONTEXT_WINDOWS},
+            default=8192,
         )
 
     def _effective_max_tokens(self) -> int | float | None:

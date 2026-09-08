@@ -2129,6 +2129,7 @@ class BedrockCompletion(BaseLLM):
         return resolve_context_window_size(
             model=self.model,
             sizes=BEDROCK_CONTEXT_WINDOWS,
+            default=8192,
         )
 
     def supports_multimodal(self) -> bool:

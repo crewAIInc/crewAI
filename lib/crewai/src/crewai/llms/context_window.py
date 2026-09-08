@@ -10,6 +10,7 @@ OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
     "gpt-4o-mini": 128000,
+    "gpt-5": 128000,
     "gpt-5.4-mini": 200000,
     "gpt-5.6": 1050000,
     "gpt-4-turbo": 128000,
