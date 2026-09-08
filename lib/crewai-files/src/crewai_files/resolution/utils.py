@@ -65,8 +65,6 @@ def normalize_input_files(
     for i, item in enumerate(input_files):
         if isinstance(item, BaseFile):
             name = item.filename or f"file_{i}"
-            if "." in name:
-                name = name.rsplit(".", 1)[0]
             result[name] = item
             continue
 
