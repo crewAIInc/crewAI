@@ -25,7 +25,8 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -903,3 +904,26 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_original_tool_calling_raises_tool_usage_error_for_non_dict_arguments():
+    """Regression test for #6430: non-dict arguments must raise ToolUsageError,
+    not a bare `raise` (which would raise RuntimeError: No active exception)."""
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[RandomNumberTool()],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=example_agent,
+        action=MagicMock(tool="Random Number Generator", tool_input="[]"),
+    )
+
+    with patch.object(tool_usage, "_validate_tool_input", return_value=["not", "a", "dict"]):
+        with pytest.raises(ToolUsageError) as e_info:
+            tool_usage._original_tool_calling("irrelevant", raise_error=True)
+
+        assert str(e_info.value) == I18N_DEFAULT.errors("tool_arguments_error")
+
+        result = tool_usage._original_tool_calling("irrelevant", raise_error=False)
+        assert isinstance(result, ToolUsageError)
+        assert str(result) == I18N_DEFAULT.errors("tool_arguments_error")
