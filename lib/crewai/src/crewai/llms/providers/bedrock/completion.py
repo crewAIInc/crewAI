@@ -2124,7 +2124,10 @@ class BedrockCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llms.context_window import BEDROCK_CONTEXT_WINDOWS, resolve_context_window_size
+        from crewai.llms.context_window import (
+            BEDROCK_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
         return resolve_context_window_size(
             model=self.model,

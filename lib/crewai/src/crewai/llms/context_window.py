@@ -1,4 +1,8 @@
-from typing import Final, Mapping, Sequence
+"""Context window size resolution for LLM providers."""
+
+from collections.abc import Mapping, Sequence
+from typing import Final
+
 
 MIN_CONTEXT: Final[int] = 1024
 MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
@@ -10,7 +14,7 @@ OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
     "gpt-4o-mini": 128000,
-    "gpt-5": 128000,
+    "gpt-5": 1047576,
     "gpt-5.4-mini": 200000,
     "gpt-5.6": 1050000,
     "gpt-4-turbo": 128000,
@@ -173,21 +177,21 @@ def resolve_context_window_size(
         extra_names: Additional model names to check (e.g., bare names without provider prefix).
     """
     candidates = [model] + list(extra_names)
-    
+
     # Find all matches across all candidates
     matches = []
     for candidate in candidates:
         for prefix, size in sizes.items():
             if candidate.startswith(prefix):
                 matches.append((len(prefix), size))
-                
+
     if not matches:
         return int(default * CONTEXT_WINDOW_USAGE_RATIO)
-        
+
     # Longest prefix wins
     matches.sort(key=lambda x: x[0], reverse=True)
     best_size = matches[0][1]
-    
+
     # Bound the size
     bounded_size = min(MAX_CONTEXT, max(MIN_CONTEXT, best_size))
     return int(bounded_size * CONTEXT_WINDOW_USAGE_RATIO)

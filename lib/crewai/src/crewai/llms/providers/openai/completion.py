@@ -1,3 +1,4 @@
+"""OpenAI provider implementation for crewAI."""
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -2664,7 +2665,10 @@ class OpenAICompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llms.context_window import OPENAI_CONTEXT_WINDOWS, resolve_context_window_size
+        from crewai.llms.context_window import (
+            OPENAI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
         return resolve_context_window_size(
             model=self.model,

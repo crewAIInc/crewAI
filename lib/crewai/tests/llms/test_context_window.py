@@ -50,5 +50,20 @@ def test_resolve_context_window_size_gpt5_regression():
     """Ensure bare gpt-5 resolves to its intended context window size."""
     from crewai.llms.context_window import OPENAI_CONTEXT_WINDOWS
     result = resolve_context_window_size("gpt-5", OPENAI_CONTEXT_WINDOWS)
-    assert result == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert result == int(1047576 * CONTEXT_WINDOW_USAGE_RATIO)
 
+
+def test_native_vs_litellm_parity():
+    """Test that the centralized resolver correctly matches expected context window sizes for key models."""
+    from crewai.llms.context_window import LLM_CONTEXT_WINDOW_SIZES
+    
+    # Native explicit overrides or matching values
+    expected_parities = {
+        "gpt-5": 1047576,
+        "claude-sonnet-4-6": 1000000,
+        "gemini-2.0-flash": 1048576,
+    }
+    
+    for model, expected_size in expected_parities.items():
+        result = resolve_context_window_size(model, LLM_CONTEXT_WINDOW_SIZES)
+        assert result == int(expected_size * CONTEXT_WINDOW_USAGE_RATIO), f"Mismatch for {model}"

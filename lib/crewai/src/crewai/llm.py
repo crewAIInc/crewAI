@@ -165,12 +165,9 @@ def _ensure_litellm() -> bool:
 
 from crewai.llms.context_window import (
     LLM_CONTEXT_WINDOW_SIZES,
-    DEFAULT_CONTEXT_WINDOW_SIZE,
-    CONTEXT_WINDOW_USAGE_RATIO,
-    MAX_CONTEXT,
-    MIN_CONTEXT,
     resolve_context_window_size,
 )
+
 
 ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [

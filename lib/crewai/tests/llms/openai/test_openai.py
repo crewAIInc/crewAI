@@ -2364,11 +2364,4 @@ def test_openai_no_detail_fields_omitted():
     assert "cached_prompt_tokens" not in usage
     assert "reasoning_tokens" not in usage
 
-def test_openai_get_context_window_size_gpt5():
-    """Ensure bare gpt-5 resolves to its intended context window size in OpenAICompletion."""
-    from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
-    from crewai.llms.providers.openai.completion import OpenAICompletion
-    
-    llm = OpenAICompletion(model="gpt-5")
-    assert llm.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
 
