@@ -762,7 +762,7 @@ memory = Memory(
 ## Storage Backend
 
 - **Default**: LanceDB, stored under `./.crewai/memory` (or `$CREWAI_STORAGE_DIR/memory` if the env var is set, or the path you pass as `storage="path/to/dir"`).
-- **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
+- **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`. For production deployments, you can use the MongoDB StorageBackend implementation for CrewAI Memory. See the [MongoDB implementation tutorial](https://www.mongodb.com/docs/atlas/ai-integrations/crewai/agent-memory/) for setup details.
 
 
 ## Discovery
