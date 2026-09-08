@@ -298,6 +298,20 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
 
+    def test_llm_creates_openai_compatible_for_dashscope_non_qwen(self):
+        """Non-Qwen DashScope models must still use the native OpenAI-compatible path."""
+        with patch.dict(
+            os.environ,
+            {
+                "DASHSCOPE_API_KEY": "test-key",
+                "DASHSCOPE_BASE_URL": "https://my-dashscope.example.com/v1",
+            },
+        ):
+            llm = LLM(model="dashscope/deepseek-v3")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "dashscope"
+            assert llm.base_url == "https://my-dashscope.example.com/v1"
+
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
         with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
