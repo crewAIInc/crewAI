@@ -3,7 +3,7 @@
 Unified Parallel web search tool using the Parallel Search API (v1beta). Returns ranked results with compressed excerpts optimized for LLMs.
 
 - **Quickstart**: see the official docs: [Search API Quickstart](https://docs.parallel.ai/search-api/search-quickstart)
-- **Processors**: guidance on `base` vs `pro`: [Processors](https://docs.parallel.ai/search-api/processors)
+- **Processors**: guidance on `base` vs `pro`: [Processors](https://docs.parallel.ai/getting-started/overview)
 
 ## Why this tool
 
