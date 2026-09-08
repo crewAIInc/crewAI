@@ -170,7 +170,7 @@ ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "cla
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
-    "gpt-4o-mini": 200000,
+    "gpt-4o-mini": 128000,
     "gpt-5.4-mini": 200000,
     "gpt-5.6": 1050000,  # sol, terra, luna, and the gpt-5.6 alias
     "gpt-4-turbo": 128000,
