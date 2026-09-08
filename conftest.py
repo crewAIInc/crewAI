@@ -203,6 +203,29 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
 
 
 @pytest.fixture(autouse=True, scope="function")
+def reset_trace_listener_singleton() -> Generator[None, Any, None]:
+    """Drop the `TraceCollectionListener` singleton after each test.
+
+    The listener caches a `TraceBatchManager` on the class and `_initialized`
+    short-circuits `__init__`, so a test that leaves `trace_batch_id` set changes
+    the URL every later test in the same worker posts to. That surfaces far away
+    as an unrelated cassette miss, which is near-impossible to attribute.
+
+    Clearing the class attributes is complete by construction; enumerating the
+    manager's fields would rot as fields are added. `_listeners_setup` has to go
+    too, because `cleanup_event_handlers` empties the bus — without it the next
+    listener believes it is already registered and silently collects nothing.
+    """
+    yield
+
+    from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+
+    TraceCollectionListener._instance = None
+    TraceCollectionListener._initialized = False
+    TraceCollectionListener._listeners_setup = False
+
+
+@pytest.fixture(autouse=True, scope="function")
 def reset_event_state() -> None:
     """Reset event system state before each test for isolation."""
     from crewai.events.base_events import reset_emission_counter
