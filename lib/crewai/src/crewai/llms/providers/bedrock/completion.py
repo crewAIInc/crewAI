@@ -2124,33 +2124,14 @@ class BedrockCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+        from crewai.llms.context_window import (
+            BEDROCK_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        context_windows = {
-            "anthropic.claude-sonnet-4": 200000,
-            "anthropic.claude-opus-4": 200000,
-            "anthropic.claude-haiku-4": 200000,
-            "anthropic.claude-3-5-sonnet": 200000,
-            "anthropic.claude-3-5-haiku": 200000,
-            "anthropic.claude-3-opus": 200000,
-            "anthropic.claude-3-sonnet": 200000,
-            "anthropic.claude-3-haiku": 200000,
-            "anthropic.claude-3-7-sonnet": 200000,
-            "anthropic.claude-v2": 100000,
-            "amazon.titan-text-express": 8000,
-            "ai21.j2-ultra": 8192,
-            "cohere.command-text": 4096,
-            "meta.llama2-13b-chat": 4096,
-            "meta.llama2-70b-chat": 4096,
-            "meta.llama3-70b-instruct": 128000,
-            "deepseek.r1": 32768,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model, BEDROCK_CONTEXT_WINDOWS, default=8192
+        )
 
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
