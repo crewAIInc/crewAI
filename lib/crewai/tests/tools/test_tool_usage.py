@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -903,3 +903,31 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_original_tool_calling_raises_tool_usage_error_not_runtime_error():
+    """A non-dict tool input with ``raise_error=True`` must surface a
+    ``ToolUsageError``, not a ``RuntimeError`` from a bare ``raise`` outside an
+    except block.
+
+    See issue #6430: ``_original_tool_calling`` raised
+    ``RuntimeError("No active exception to re-raise")`` instead of the intended
+    tool-arguments error.
+    """
+    tool = RandomNumberTool()
+    action = MagicMock()
+    action.tool = "random_number_generator"
+    # A JSON array validates to a list, not a dict.
+    action.tool_input = "[1, 2, 3]"
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[tool],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=action,
+    )
+
+    with pytest.raises(ToolUsageError):
+        tool_usage._original_tool_calling("Action: random_number_generator", raise_error=True)
