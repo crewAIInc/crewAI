@@ -129,3 +129,37 @@ def test_initialization_with_driver(_mocked_chrome_driver):
     mock_driver = MagicMock()
     tool = initialize_tool_with(mock_driver)
     assert tool.driver == mock_driver
+
+
+@patch("selenium.webdriver.Chrome")
+def test_rejects_loopback_ssrf_targets(_mocked_chrome_driver):
+    mock_driver = mock_driver_with_html("<html><body>nope</body></html>")
+    tool = initialize_tool_with(mock_driver)
+
+    result = tool._run(website_url="http://127.0.0.1/admin")
+
+    assert "private/reserved" in result.lower() or "Error scraping website" in result
+    mock_driver.get.assert_not_called()
+
+
+@patch("selenium.webdriver.Chrome")
+def test_rejects_cloud_metadata_ssrf_targets(_mocked_chrome_driver):
+    mock_driver = mock_driver_with_html("<html><body>nope</body></html>")
+    tool = initialize_tool_with(mock_driver)
+
+    result = tool._run(website_url="http://169.254.169.254/latest/meta-data/")
+
+    assert "private/reserved" in result.lower() or "Error scraping website" in result
+    mock_driver.get.assert_not_called()
+
+
+@patch("selenium.webdriver.Chrome")
+def test_fixed_url_constructor_rejects_private_targets(mocked_chrome):
+    mocked_chrome.return_value = MagicMock()
+    try:
+        SeleniumScrapingTool(website_url="http://localhost/internal")
+        raised = False
+    except ValueError as exc:
+        raised = True
+        assert "private/reserved" in str(exc).lower() or "localhost" in str(exc).lower()
+    assert raised
