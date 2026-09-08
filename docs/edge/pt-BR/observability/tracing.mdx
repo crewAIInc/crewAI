@@ -9,7 +9,7 @@ mode: "wide"
 
 O CrewAI fornece recursos de rastreamento integrados que permitem monitorar e depurar seus Crews e Flows em tempo real. Este guia demonstra como habilitar o rastreamento para **Crews** e **Flows** usando a plataforma de observabilidade integrada do CrewAI.
 
-> **O que é o CrewAI Tracing?** O rastreamento integrado do CrewAI fornece observabilidade abrangente para seus agentes de IA, incluindo decisões de agentes, cronogramas de execução de tarefas, uso de ferramentas e chamadas de LLM - tudo acessível através da [plataforma CrewAI AMP](https://app.crewai.com).
+> **O que é o CrewAI Tracing?** O rastreamento integrado do CrewAI fornece observabilidade abrangente para seus agentes de IA, incluindo decisões de agentes, cronogramas de execução de tarefas, uso de ferramentas e chamadas de LLM - tudo acessível através da [plataforma CrewAI AMP](https://app.crewai.com). O rastreamento é gerenciado de forma independente da [telemetria](/pt-BR/telemetry).
 
 ![CrewAI Tracing Interface](/images/crewai-tracing.png)
 
@@ -169,6 +169,18 @@ CREWAI_TRACING_ENABLED=true
 ```
 
 Quando esta variável de ambiente estiver definida, todos os Crews e Flows terão automaticamente o rastreamento habilitado, mesmo sem definir explicitamente `tracing=True`.
+
+## Visualizando rastreamentos após a primeira execução
+
+Na primeira vez que você executa um Crew ou Flow, um terminal interativo pode perguntar:
+
+```text
+Would you like to view your execution traces? [y/N]
+```
+
+Escolha **yes** para abrir um link de visualização. Você pode alterar isso depois com
+`crewai traces enable` ou `crewai traces disable`, ou definindo `tracing`
+no Crew ou Flow.
 
 ## Visualizando seus Rastreamentos
 
