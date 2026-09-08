@@ -202,13 +202,17 @@ crewai skill publish
 
 ### 설치
 
-게시된 스킬을 `@org/name` 참조로 설치합니다:
+게시된 스킬을 `@org-uuid/name` 참조로 설치합니다:
 
 ```shell Terminal
-crewai skill install @acme/code-review
+crewai skill install @your-org-uuid/code-review
 ```
 
-크루 프로젝트 내부에서는 스킬이 `./skills/{name}/`에 설치되고, 프로젝트 외부에서는 공유 캐시인 `~/.crewai/skills/{org}/{name}/`에 저장됩니다.
+<Note>
+  조직 이름이 아니라 조직 **UUID**를 사용하세요 — 조직 이름은 고유하지 않아서 잘못된 조직으로 해석될 수 있고, 그러면 설치가 "찾을 수 없음" 오류로 실패합니다. `crewai org list`를 실행하면 소속된 각 조직의 UUID(`ID` 열)를 확인할 수 있습니다.
+</Note>
+
+크루 프로젝트 내부에서는 스킬이 `./skills/{name}/`에 설치되고, 프로젝트 외부에서는 공유 캐시인 `~/.crewai/skills/{org-uuid}/{name}/`에 저장됩니다.
 
 에이전트는 레지스트리 스킬을 직접 참조할 수도 있습니다 — 런타임에 로컬 캐시(또는 프로젝트 `skills/` 디렉터리)에서 해석됩니다:
 
@@ -217,7 +221,7 @@ agent = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["@acme/code-review"],  # registry ref, resolved locally
+    skills=["@your-org-uuid/code-review"],  # registry ref, resolved locally
 )
 ```
 
