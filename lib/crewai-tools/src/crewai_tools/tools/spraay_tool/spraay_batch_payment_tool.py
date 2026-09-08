@@ -1,0 +1,258 @@
+"""Spraay Batch Payment Tool for CrewAI.
+
+Enables AI agents to validate, estimate, and execute batch cryptocurrency
+payments on nine EVM chains (Base, Ethereum, BNB Chain, Unichain, Polygon,
+Plasma, Arbitrum, Avalanche, BOB) via the Spraay x402 payment gateway.
+"""
+
+import json
+from typing import Any, ClassVar
+
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field, ValidationError
+import requests
+
+from crewai_tools.tools.spraay_tool.spraay_payload import (
+    chain_slug,
+    to_base_units,
+    token_decimals,
+)
+from crewai_tools.tools.spraay_tool.spraay_x402 import post_with_x402
+
+
+class SpraayRecipient(BaseModel):
+    """A single recipient in a batch payment."""
+
+    address: str = Field(..., description="Recipient wallet address.")
+    amount: str = Field(
+        ...,
+        description="Token amount to send, as a string (e.g. '10.0').",
+    )
+
+
+class SpraayBatchPaymentInput(BaseModel):
+    """Input schema for the SpraayBatchPaymentTool."""
+
+    action: str = Field(
+        ...,
+        description=(
+            "The batch payment action to perform. "
+            "Options: 'validate' (check recipient list), "
+            "'estimate' (get gas and fee estimates), "
+            "'execute' (send the batch payment)."
+        ),
+    )
+    token_address: str = Field(
+        ...,
+        description=(
+            "The ERC-20 token contract address to send, "
+            "or '0x0000000000000000000000000000000000000000' for native ETH."
+        ),
+    )
+    recipients: list[SpraayRecipient] = Field(
+        ...,
+        description=(
+            "List of payment recipients. Each entry must have "
+            "'address' (wallet address) and 'amount' (token amount as string). "
+            "Example: [{'address': '0xAbc...', 'amount': '10.0'}]"
+        ),
+    )
+    chain_id: int = Field(
+        default=8453,
+        description="Chain ID for the payment. Default: 8453 (Base).",
+    )
+    sender_address: str | None = Field(
+        default=None,
+        description=(
+            "Sender wallet address. Required for 'estimate' and 'execute' actions."
+        ),
+    )
+
+
+class SpraayBatchPaymentTool(BaseTool):
+    """Tool for batch cryptocurrency payments via the Spraay x402 gateway.
+
+    Send payments to up to 200 recipients in a single transaction with
+    ~80% gas savings compared to individual transfers. Supports ERC-20
+    tokens and native coins on nine EVM chains: Base, Ethereum, BNB Chain,
+    Unichain, Polygon, Plasma, Arbitrum, Avalanche, and BOB.
+
+    Use cases include payroll, grant distributions, DAO disbursements,
+    airdrops, and bounty payouts.
+
+    The gateway uses the x402 payment protocol. Validation and estimation
+    are free. Execution is paid per request via x402 micropayment — no API
+    key or signup required, but a funded wallet private key must be set in
+    the SPRAAY_WALLET_PRIVATE_KEY environment variable. Without it, the
+    'execute' action returns the gateway's payment requirements instead of
+    executing.
+
+    Attributes:
+        gateway_url: Base URL of the Spraay gateway.
+    """
+
+    name: str = "Spraay Batch Payment"
+    description: str = (
+        "Validate, estimate gas costs for, and execute batch cryptocurrency "
+        "payments to multiple recipients in a single transaction. Supports "
+        "ERC-20 tokens and native coins on nine EVM chains (Base, Ethereum, "
+        "BNB Chain, Unichain, Polygon, Plasma, Arbitrum, Avalanche, BOB). "
+        "Use 'validate' to check a recipient list, 'estimate' to preview fees, "
+        "and 'execute' to send the payment. No API key required — the gateway "
+        "uses the x402 payment protocol."
+    )
+    args_schema: type[BaseModel] = SpraayBatchPaymentInput
+
+    gateway_url: str = "https://gateway.spraay.app"
+    _supported_actions: ClassVar[set[str]] = {"validate", "estimate", "execute"}
+
+    def _run(self, **kwargs: Any) -> str:
+        action = kwargs.get("action", "").lower()
+        if action not in self._supported_actions:
+            return (
+                f"Error: Invalid action '{action}'. "
+                f"Must be one of: {', '.join(sorted(self._supported_actions))}"
+            )
+
+        token_address = kwargs.get("token_address", "")
+        chain_id = kwargs.get("chain_id", 8453)
+        sender_address = kwargs.get("sender_address")
+
+        try:
+            recipients = [
+                r
+                if isinstance(r, SpraayRecipient)
+                else SpraayRecipient.model_validate(r)
+                for r in kwargs.get("recipients", [])
+            ]
+        except ValidationError as e:
+            return f"Error: Invalid recipient entry: {e}"
+
+        if not recipients:
+            return "Error: 'recipients' list is required and cannot be empty."
+
+        if action in ("estimate", "execute") and not sender_address:
+            return f"Error: 'sender_address' is required for '{action}' action."
+
+        try:
+            chain = chain_slug(chain_id)
+            decimals = token_decimals(token_address, chain_id)
+            base_amounts = [to_base_units(r.amount, decimals) for r in recipients]
+        except ValueError as e:
+            return f"Error: {e}"
+
+        if action == "validate":
+            return self._validate_batch(chain, token_address, recipients, base_amounts)
+        if action == "estimate":
+            return self._estimate_batch(chain, len(recipients))
+        return self._execute_batch(
+            chain, token_address, recipients, base_amounts, sender_address, decimals
+        )
+
+    def _validate_batch(
+        self,
+        chain: str,
+        token: str,
+        recipients: list[SpraayRecipient],
+        base_amounts: list[str],
+    ) -> str:
+        """Validate a batch payment recipient list (free endpoint).
+
+        The gateway expects {chain, token, recipients: [{to, amount}]} with
+        amounts in base units (verified against /free/validate-batch).
+        """
+        body = {
+            "chain": chain,
+            "token": token,
+            "recipients": [
+                {"to": r.address, "amount": amount}
+                for r, amount in zip(recipients, base_amounts, strict=True)
+            ],
+        }
+        try:
+            response = requests.post(
+                f"{self.gateway_url}/free/validate-batch",
+                json=body,
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return json.dumps(
+                {
+                    "status": "valid" if data.get("valid") else "invalid",
+                    "recipientCount": len(recipients),
+                    "details": data,
+                },
+                indent=2,
+            )
+        except requests.RequestException as e:
+            return f"Error validating batch: {e}"
+
+    def _estimate_batch(self, chain: str, recipient_count: int) -> str:
+        """Estimate gas and fees for a batch payment (free endpoint).
+
+        The gateway expects ?recipients=<count>&chain=<slug> query params.
+        """
+        try:
+            response = requests.get(
+                f"{self.gateway_url}/free/estimate-batch",
+                params={"recipients": recipient_count, "chain": chain},
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return json.dumps(
+                {
+                    "status": "estimated",
+                    "recipientCount": recipient_count,
+                    "estimate": data,
+                },
+                indent=2,
+            )
+        except requests.RequestException as e:
+            return f"Error estimating batch: {e}"
+
+    def _execute_batch(
+        self,
+        chain: str,
+        token: str,
+        recipients: list[SpraayRecipient],
+        base_amounts: list[str],
+        sender: str,
+        decimals: int,
+    ) -> str:
+        """Execute a batch payment (x402 paid endpoint).
+
+        The gateway expects {token, recipients, amounts, sender} — token as
+        contract address or native symbol, recipients as a flat address
+        array, amounts as a parallel base-unit array (per the gateway
+        OpenAPI spec and BPA 1.0 §12). The chain slug is included for
+        non-Base batches; the gateway tolerates extra fields.
+        """
+        body = {
+            "token": token,
+            "recipients": [r.address for r in recipients],
+            "amounts": base_amounts,
+            "sender": sender,
+            "chain": chain,
+        }
+        try:
+            paid, data = post_with_x402(
+                f"{self.gateway_url}/api/v1/batch/execute",
+                body,
+                timeout=60,
+            )
+            if not paid:
+                return json.dumps(data, indent=2)
+            return json.dumps(
+                {
+                    "status": "executed",
+                    "recipientCount": len(recipients),
+                    "chain": chain,
+                    "tokenDecimals": decimals,
+                    "result": data,
+                },
+                indent=2,
+            )
+        except requests.RequestException as e:
+            return f"Error executing batch payment: {e}"
