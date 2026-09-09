@@ -203,25 +203,37 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
 
 
 @pytest.fixture(autouse=True, scope="function")
-def reset_trace_listener_singleton() -> Generator[None, Any, None]:
-    """Drop the `TraceCollectionListener` singleton after each test.
+def reset_trace_batch_state() -> Generator[None, Any, None]:
+    """Clear trace batch state after each test.
 
-    The listener caches a `TraceBatchManager` on the class and `_initialized`
-    short-circuits `__init__`, so a test that leaves `trace_batch_id` set changes
-    the URL every later test in the same worker posts to. That surfaces far away
-    as an unrelated cassette miss, which is near-impossible to attribute.
+    `TraceCollectionListener` is a singleton, so its `TraceBatchManager` outlives
+    every test in the worker. A leaked `trace_batch_id` moves later trace POSTs
+    from `/tracing/ephemeral/batches` to `/tracing/batches/<id>/events`, the
+    recorded cassette stops matching, and the failure lands in some unrelated
+    test hundreds of tests later — naming neither the leak nor its source.
 
-    Dropping the cached instance is enough, and is complete by construction:
-    `_initialized` and `_listeners_setup` are only ever assigned on the instance
-    (`trace_listener.py:178` and `:229`), so they go with it and the next lookup
-    falls back to the `False` class defaults. Enumerating the manager's fields
-    instead would rot as fields are added.
+    Reset the state in place rather than dropping the singleton: a fresh listener
+    re-runs `setup_listeners`, which re-registers ~50 handlers on a bus other
+    tests assert over (`test_task_failure_instrumentation` requires exactly one
+    handler per event), and `first_time_handler` holds a reference to this exact
+    manager object. The fields below mirror the manual reset in
+    `test_flow_conversation.py`; extend them if the manager gains batch state.
     """
     yield
 
     from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 
-    TraceCollectionListener._instance = None
+    listener = TraceCollectionListener._instance
+    if listener is None:
+        return
+
+    manager = listener.batch_manager
+    manager.trace_batch_id = None
+    manager.current_batch = None
+    manager.batch_owner_type = None
+    manager.batch_owner_id = None
+    manager.defer_session_finalization = False
+    manager.event_buffer.clear()
 
 
 @pytest.fixture(autouse=True, scope="function")

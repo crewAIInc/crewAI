@@ -8,22 +8,17 @@ POSTs move from `/tracing/ephemeral/batches` to
 the failure lands in whichever unrelated test happens to run later — the symptom
 names neither the leak nor the test that caused it.
 
-The autouse `reset_trace_listener_singleton` fixture in the root `conftest.py`
-clears the cached instance after every test. This is a canary for that: run on
-its own it passes trivially, but under the full suite in random order it fails if
-the fixture stops working.
+The autouse `reset_trace_batch_state` fixture in the root `conftest.py` clears
+that state after every test. This is a canary for it: run on its own it passes
+trivially, but under the full suite in random order it fails if the fixture stops
+working.
 
-There is deliberately no canary for `_listeners_setup`, because one cannot be
-written. Read off the class it is always `False`, since nothing ever assigns it
-there. Read through `TraceCollectionListener()` it only reports whether handler
-registration happened to run: `BaseEventListener.__init__` calls
-`setup_listeners` (`base_event_listener.py:16`), but that returns early when
-tracing is off and no override applies (`trace_listener.py:213-220`) and assigns
-the flag at `:229` only when it does register. The instance value therefore
-tracks ambient tracing state, not isolation, so neither read observes a leak.
-
-The flag lives on the instance the fixture deletes, so it cannot outlive a test;
-that is guaranteed by construction, not by assertion.
+The fixture clears the manager in place rather than dropping the singleton. A
+fresh listener re-runs `setup_listeners` and re-registers its handlers, which
+breaks `test_task_failure_instrumentation` — that test requires exactly one
+handler per event, and the re-registered `on_task_failed` makes two. Handler
+cleanup is already `cleanup_event_handlers`' job; this fixture owns batch state
+only.
 """
 
 from __future__ import annotations
