@@ -73,3 +73,68 @@ def test_default_uses_medium_complexity_model(mock_llm_cls):
     tool._run(image_path_url=IMAGE_URL)
 
     mock_llm_cls.assert_called_once_with(model=DEFAULT_MODEL, stop=["STOP", "END"])
+
+
+@patch("crewai_tools.tools.vision_tool.vision_tool.LLM")
+def test_reading_llm_property_does_not_override_complexity_level(mock_llm_cls):
+    """A cached ``self._llm`` (side effect of reading ``llm``) must not win.
+
+    Regression for the bug where any populated ``self._llm`` was treated as an
+    explicitly supplied LLM, causing every subsequent call to reuse the cached
+    model regardless of ``complexity_level``.
+    """
+    mock_llm_cls.return_value = _llm_mock()
+
+    tool = VisionTool()
+    _ = tool.llm  # caches the medium-tier model as a side effect
+    mock_llm_cls.assert_called_once_with(model=DEFAULT_MODEL, stop=["STOP", "END"])
+
+    mock_llm_cls.reset_mock()
+    tool._run(image_path_url=IMAGE_URL, complexity_level="hard")
+
+    mock_llm_cls.assert_called_once_with(
+        model=COMPLEXITY_MODEL_MAP["hard"], stop=["STOP", "END"]
+    )
+
+
+@patch("crewai_tools.tools.vision_tool.vision_tool.LLM")
+def test_same_instance_resolves_model_per_call(mock_llm_cls):
+    """One instance across two calls resolves each call's model independently."""
+    mock_llm_cls.side_effect = lambda **kwargs: _llm_mock()
+
+    tool = VisionTool()
+    tool._run(image_path_url=IMAGE_URL, complexity_level="easy")
+    tool._run(image_path_url=IMAGE_URL, complexity_level="hard")
+
+    used_models = [call.kwargs["model"] for call in mock_llm_cls.call_args_list]
+    assert used_models == [
+        COMPLEXITY_MODEL_MAP["easy"],
+        COMPLEXITY_MODEL_MAP["hard"],
+    ]
+
+
+@patch("crewai_tools.tools.vision_tool.vision_tool.LLM")
+def test_complexity_llm_is_cached_per_level(mock_llm_cls):
+    """Repeated calls with the same complexity level reuse a single LLM."""
+    mock_llm_cls.return_value = _llm_mock()
+
+    tool = VisionTool()
+    tool._run(image_path_url=IMAGE_URL, complexity_level="hard")
+    tool._run(image_path_url=IMAGE_URL, complexity_level="hard")
+
+    mock_llm_cls.assert_called_once_with(
+        model=COMPLEXITY_MODEL_MAP["hard"], stop=["STOP", "END"]
+    )
+
+
+def test_invalid_complexity_level_returns_error_string():
+    """An unexpected complexity level fails validation and is reported as an error.
+
+    ``ImagePromptSchema``'s ``Literal`` validation raises, which ``_run`` catches
+    and surfaces as a generic error string rather than propagating.
+    """
+    tool = VisionTool()
+
+    result = tool._run(image_path_url=IMAGE_URL, complexity_level="very hard")
+
+    assert result.startswith("An error occurred")

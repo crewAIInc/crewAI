@@ -84,6 +84,8 @@ class VisionTool(BaseTool):
     _model: str = PrivateAttr(default=DEFAULT_MODEL)
     _model_explicitly_set: bool = PrivateAttr(default=False)
     _llm: LLM | None = PrivateAttr(default=None)
+    _llm_explicitly_set: bool = PrivateAttr(default=False)
+    _complexity_llms: dict[ComplexityLevel, LLM] = PrivateAttr(default_factory=dict)
 
     def __init__(
         self, llm: LLM | None = None, model: str | None = None, **kwargs: Any
@@ -91,7 +93,8 @@ class VisionTool(BaseTool):
         """Initialize the vision tool.
 
         Args:
-            llm: Optional LLM instance to use
+            llm: Optional LLM instance to use. When set, it always takes
+                precedence over ``model`` and the complexity-based selection.
             model: Model identifier to use if no LLM is provided. When set, it
                 takes precedence over the complexity-based model selection.
             **kwargs: Additional arguments for the base tool
@@ -100,6 +103,7 @@ class VisionTool(BaseTool):
         self._model = model if model is not None else DEFAULT_MODEL
         self._model_explicitly_set = model is not None
         self._llm = llm
+        self._llm_explicitly_set = llm is not None
 
     @property
     def model(self) -> str:
@@ -124,18 +128,33 @@ class VisionTool(BaseTool):
     def _llm_for_complexity(self, complexity_level: ComplexityLevel) -> LLM:
         """Return the LLM to use for the given complexity level.
 
-        An explicitly provided LLM takes precedence, followed by an explicitly
-        provided model; otherwise the complexity level is mapped to a specific
-        OpenAI model.
+        Precedence:
+
+        1. An LLM explicitly supplied to ``__init__`` always wins, regardless of
+           ``complexity_level``.
+        2. An explicitly provided ``model`` (constructor argument or ``model``
+           setter) wins over the complexity-based selection.
+        3. Otherwise the ``complexity_level`` is mapped to a specific model. The
+           resolved LLM is cached per level so each level is only instantiated
+           once, without leaking across levels.
+
+        Note: ``self._llm`` being populated is *not* treated as an explicit LLM,
+        since it can be set as a side effect of reading the :attr:`llm` property
+        or of the :attr:`model` setter. Only ``_llm_explicitly_set`` reflects an
+        LLM the caller passed in.
         """
-        if self._llm is not None:
+        if self._llm_explicitly_set and self._llm is not None:
             return self._llm
 
         if self._model_explicitly_set:
             return self.llm
 
-        model = COMPLEXITY_MODEL_MAP[complexity_level]
-        return LLM(model=model, stop=["STOP", "END"])
+        if complexity_level not in self._complexity_llms:
+            model = COMPLEXITY_MODEL_MAP[complexity_level]
+            self._complexity_llms[complexity_level] = LLM(
+                model=model, stop=["STOP", "END"]
+            )
+        return self._complexity_llms[complexity_level]
 
     def _run(self, **kwargs: Any) -> str:
         try:
