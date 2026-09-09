@@ -1,7 +1,6 @@
 import os
 import sys
 import types
-from importlib import import_module
 from typing import Any
 from unittest.mock import patch, MagicMock
 import openai
@@ -212,11 +211,7 @@ def test_openai_completion_module_is_imported(monkeypatch):
     Test that the completion module is properly imported when using OpenAI provider
     """
     module_name = "crewai.llms.providers.openai.completion"
-    completion_module = import_module(module_name)
-    provider_module = import_module("crewai.llms.providers.openai")
 
-    # Keep the package attribute in sync when monkeypatch restores sys.modules.
-    monkeypatch.setattr(provider_module, "completion", completion_module)
     monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="gpt-4o")
