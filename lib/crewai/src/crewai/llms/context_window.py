@@ -11,30 +11,11 @@ MIN_CONTEXT_WINDOW_SIZE: Final[int] = 1024
 MAX_CONTEXT_WINDOW_SIZE: Final[int] = 2097152
 
 LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "gemini-2.0-flash-thinking-exp-01-21": 32768,
-    "gemini-2.0-flash-lite-001": 1048576,
-    "gemini-2.0-flash-001": 1048576,
-    "gemini-2.5-flash-preview-04-17": 1048576,
-    "gemini-2.5-pro-exp-03-25": 1048576,
     "gemini/gemma-3-1b-it": 32000,
     "gemini/gemma-3-4b-it": 128000,
     "gemini/gemma-3-12b-it": 128000,
     "gemini/gemma-3-27b-it": 128000,
     "deepseek-chat": 128000,
-    "gemma2-9b-it": 8192,
-    "gemma-7b-it": 8192,
-    "llama3-groq-70b-8192-tool-use-preview": 8192,
-    "llama3-groq-8b-8192-tool-use-preview": 8192,
-    "llama-3.1-70b-versatile": 131072,
-    "llama-3.1-8b-instant": 131072,
-    "llama-3.2-1b-preview": 8192,
-    "llama-3.2-3b-preview": 8192,
-    "llama-3.2-11b-text-preview": 8192,
-    "llama-3.2-90b-text-preview": 8192,
-    "llama3-70b-8192": 8192,
-    "llama3-8b-8192": 8192,
-    "mixtral-8x7b-32768": 32768,
-    "llama-3.3-70b-versatile": 128000,
     "llama-3.3-70b-instruct": 128000,
     "Meta-Llama-3.3-70B-Instruct": 131072,
     "QwQ-32B-Preview": 8192,
@@ -57,8 +38,6 @@ LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "mistral/mistral-small-latest": 32768,
     "mistral/mistral-medium-latest": 32768,
     "mistral/mistral-large-latest": 32768,
-    "mistral/mistral-large-2407": 32768,
-    "mistral/mistral-large-2402": 32768,
 }
 
 # GPT / o-series (OpenAI + Azure)
@@ -70,12 +49,10 @@ OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-4o-mini": 128000,
     "gpt-5-mini": 1047576,
     "gpt-5-nano": 1047576,
-    "o1-preview": 128000,
     "gpt-5.6": 1050000,
     "o1": 200000,
     "o1-pro": 200000,
     "o3": 200000,
-    "o1-mini": 128000,
     "o3-mini": 200000,
     "o4-mini": 200000,
     "gpt-4.1": 1047576,
@@ -110,16 +87,9 @@ ANTHROPIC_CONTEXT_WINDOWS = {
 }
 
 GEMINI_CONTEXT_WINDOWS = {
-    "gemini-3-pro-preview": 1048576,  # 1M tokens
-    "gemini-2.0-flash": 1048576,  # 1M tokens
     "gemini-2.0-flash-thinking": 32768,
-    "gemini-2.0-flash-lite": 1048576,
     "gemini-2.5-flash": 1048576,
     "gemini-2.5-pro": 1048576,
-    "gemini-1.5-pro": 2097152,  # 2M tokens
-    "gemini-1.5-flash": 1048576,
-    "gemini-1.5-flash-8b": 1048576,
-    "gemini-1.0-pro": 32768,
     "gemma-3-1b": 32000,
     "gemma-3-4b": 128000,
     "gemma-3-12b": 128000,
@@ -144,20 +114,19 @@ BEDROCK_ANTHROPIC_CONTEXT_WINDOWS = {
 BEDROCK_CONTEXT_WINDOWS = {
     **BEDROCK_ANTHROPIC_CONTEXT_WINDOWS,
     "anthropic.claude-sonnet-4": 200000,
-    "anthropic.claude-opus-4": 200000,
-    "anthropic.claude-haiku-4": 200000,
-    "anthropic.claude-3-5-sonnet": 200000,
-    "anthropic.claude-3-5-haiku": 200000,
-    "anthropic.claude-3-opus": 200000,
-    "anthropic.claude-3-sonnet": 200000,
+    "anthropic.claude-opus-4": 200000,  # TODO(verify)
+    "anthropic.claude-haiku-4": 200000,  # TODO(verify)
+    "anthropic.claude-3-5-sonnet": 200000,  # TODO(verify)
+    "anthropic.claude-3-opus": 200000,  # TODO(verify)
+    "anthropic.claude-3-sonnet": 200000,  # TODO(verify)
     "anthropic.claude-3-haiku": 200000,
-    "anthropic.claude-3-7-sonnet": 200000,
-    "anthropic.claude-v2": 100000,
+    "anthropic.claude-3-7-sonnet": 200000,  # TODO(verify)
+    "anthropic.claude-v2": 100000,  # TODO(verify)
     "amazon.titan-text-express": 8000,
     "ai21.j2-ultra": 8192,
     "cohere.command-text": 4096,
-    "meta.llama2-13b-chat": 4096,
-    "meta.llama2-70b-chat": 4096,
+    "meta.llama2-13b-chat": 4096,  # TODO(verify)
+    "meta.llama2-70b-chat": 4096,  # TODO(verify)
     "meta.llama3-70b-instruct": 128000,
     "deepseek.r1": 32768,
     "us.amazon.nova-pro-v1:0": 300000,
@@ -170,26 +139,19 @@ BEDROCK_CONTEXT_WINDOWS = {
     "us.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
     "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
     "us.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "us.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "us.anthropic.claude-opus-4-20250514-v1:0": 200000,  # TODO(verify)
     "us.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
-    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
-    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,
-    "us.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "us.meta.llama3-2-11b-instruct-v1:0": 128000,
-    "us.meta.llama3-2-3b-instruct-v1:0": 131000,
-    "us.meta.llama3-2-90b-instruct-v1:0": 128000,
-    "us.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,  # TODO(verify)
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,  # TODO(verify)
+    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,  # TODO(verify)
+    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,  # TODO(verify)
+    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,  # TODO(verify)
+    "us.meta.llama3-2-1b-instruct-v1:0": 131000,  # TODO(verify)
     "us.meta.llama3-1-8b-instruct-v1:0": 128000,
     "us.meta.llama3-1-70b-instruct-v1:0": 128000,
     "us.meta.llama3-3-70b-instruct-v1:0": 128000,
-    "us.meta.llama3-1-405b-instruct-v1:0": 128000,
-    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,  # TODO(verify)
+    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,  # TODO(verify)
     "eu.anthropic.claude-opus-4-7": 1000000,
     "eu.anthropic.claude-sonnet-4-6": 1000000,
     "eu.anthropic.claude-opus-4-6-v1": 1000000,
@@ -197,14 +159,12 @@ BEDROCK_CONTEXT_WINDOWS = {
     "eu.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
     "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
     "eu.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "eu.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "eu.anthropic.claude-opus-4-20250514-v1:0": 200000,  # TODO(verify)
     "eu.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
-    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
-    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,  # TODO(verify)
+    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,  # TODO(verify)
+    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,  # TODO(verify)
+    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,  # TODO(verify)
     "apac.anthropic.claude-opus-4-7": 1000000,
     "apac.anthropic.claude-sonnet-4-6": 1000000,
     "apac.anthropic.claude-opus-4-6-v1": 1000000,
@@ -212,8 +172,8 @@ BEDROCK_CONTEXT_WINDOWS = {
     "apac.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
     "apac.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
     "apac.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "apac.anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "apac.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
+    "apac.anthropic.claude-opus-4-20250514-v1:0": 200000,  # TODO(verify)
+    "apac.anthropic.claude-sonnet-4-20250514-v1:0": 200000,  # TODO(verify)
     "amazon.nova-pro-v1:0": 300000,
     "amazon.nova-micro-v1:0": 128000,
     "amazon.nova-lite-v1:0": 300000,
@@ -224,28 +184,25 @@ BEDROCK_CONTEXT_WINDOWS = {
     "anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
     "anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
     "anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
-    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
-    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "anthropic.claude-3-opus-20240229-v1:0": 200000,
-    "anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "anthropic.claude-v2:1": 200000,
-    "anthropic.claude-instant-v1": 100000,
-    "meta.llama3-1-405b-instruct-v1:0": 128000,
+    "anthropic.claude-opus-4-20250514-v1:0": 200000,  # TODO(verify)
+    "anthropic.claude-sonnet-4-20250514-v1:0": 200000,  # TODO(verify)
+    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,  # TODO(verify)
+    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,  # TODO(verify)
+    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,  # TODO(verify)
+    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,  # TODO(verify)
+    "anthropic.claude-3-opus-20240229-v1:0": 200000,  # TODO(verify)
+    "anthropic.claude-v2:1": 200000,  # TODO(verify)
+    "anthropic.claude-instant-v1": 100000,  # TODO(verify)
     "meta.llama3-1-70b-instruct-v1:0": 128000,
     "meta.llama3-1-8b-instruct-v1:0": 128000,
     "meta.llama3-70b-instruct-v1:0": 8000,
     "meta.llama3-8b-instruct-v1:0": 8000,
-    "amazon.titan-text-lite-v1": 4000,
-    "amazon.titan-text-express-v1": 8000,
-    "cohere.command-text-v14": 4000,
-    "ai21.j2-mid-v1": 8191,
-    "ai21.j2-ultra-v1": 8191,
-    "ai21.jamba-instruct-v1:0": 256000,
+    "amazon.titan-text-lite-v1": 4000,  # TODO(verify)
+    "amazon.titan-text-express-v1": 8000,  # TODO(verify)
+    "cohere.command-text-v14": 4000,  # TODO(verify)
+    "ai21.j2-mid-v1": 8191,  # TODO(verify)
+    "ai21.j2-ultra-v1": 8191,  # TODO(verify)
+    "ai21.jamba-instruct-v1:0": 256000,  # TODO(verify)
     "mistral.mistral-7b-instruct-v0:2": 32000,
     "mistral.mixtral-8x7b-instruct-v0:1": 32000,
 }
