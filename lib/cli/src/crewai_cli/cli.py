@@ -1349,6 +1349,7 @@ def checkpoint_prune(
 ) -> None:
     """Remove old checkpoints."""
     from crewai_cli.checkpoint_cli import prune_checkpoints
+
     prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
 
 
