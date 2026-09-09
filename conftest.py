@@ -203,37 +203,35 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
 
 
 @pytest.fixture(autouse=True, scope="function")
-def reset_trace_batch_state() -> Generator[None, Any, None]:
-    """Clear trace batch state after each test.
+def reset_tracing_state() -> Generator[None, Any, None]:
+    """Drop the tracing singleton and its context after each test.
 
-    `TraceCollectionListener` is a singleton, so its `TraceBatchManager` outlives
-    every test in the worker. A leaked `trace_batch_id` moves later trace POSTs
-    from `/tracing/ephemeral/batches` to `/tracing/batches/<id>/events`, the
-    recorded cassette stops matching, and the failure lands in some unrelated
-    test hundreds of tests later — naming neither the leak nor its source.
+    `TraceCollectionListener` is a singleton, so without this three things leak
+    for the rest of the xdist worker:
 
-    Reset the state in place rather than dropping the singleton: a fresh listener
-    re-runs `setup_listeners`, which re-registers ~50 handlers on a bus other
-    tests assert over (`test_task_failure_instrumentation` requires exactly one
-    handler per event), and `first_time_handler` holds a reference to this exact
-    manager object. The fields below mirror the manual reset in
-    `test_flow_conversation.py`; extend them if the manager gains batch state.
+    - `TraceBatchManager.trace_batch_id`, which moves later trace POSTs from
+      `/tracing/ephemeral/batches` to `/tracing/batches/<id>/events` until some
+      unrelated cassette stops matching, naming neither the leak nor its source.
+    - `_listeners_setup`, which makes `setup_listeners` return early
+      (`trace_listener.py:208`) after `cleanup_event_handlers` has wiped the bus,
+      so tracing silently registers nothing and collects no events.
+    - the `_tracing_enabled` context var, which leaves tracing on for later tests
+      and re-registers `on_task_failed` alongside telemetry's — breaking
+      `test_task_failure_instrumentation`, which requires one handler per event.
+
+    All three go together: clearing the context vars is what makes dropping the
+    singleton safe, because the replacement listener then sees tracing disabled
+    and registers nothing. Dropping the singleton alone re-registers handlers and
+    breaks the telemetry test.
     """
     yield
 
+    from crewai.events.listeners.tracing import utils as tracing_utils
     from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 
-    listener = TraceCollectionListener._instance
-    if listener is None:
-        return
-
-    manager = listener.batch_manager
-    manager.trace_batch_id = None
-    manager.current_batch = None
-    manager.batch_owner_type = None
-    manager.batch_owner_id = None
-    manager.defer_session_finalization = False
-    manager.event_buffer.clear()
+    tracing_utils._tracing_enabled.set(None)
+    tracing_utils._tui_mode.set(False)
+    TraceCollectionListener._instance = None
 
 
 @pytest.fixture(autouse=True, scope="function")
