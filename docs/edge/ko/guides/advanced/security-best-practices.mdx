@@ -1,0 +1,181 @@
+---
+title: CrewAI Agent 보안 모범 사례
+description: 프로덕션에서 CrewAI Agent와 Crew를 안전하게 구성하기 위한 실용 가이드.
+icon: shield
+---
+
+## 개요
+
+이 가이드는 프로덕션 시스템에서 보안 위험을 줄이기 위해 사용할 수 있는 **CrewAI 기본 제어**에 초점을 맞춥니다.
+
+목표는 간단합니다. Agent 동작을 제한하고, 최소 권한을 적용하며, 검토 가능하게 유지하는 것입니다.
+
+## 1) 실행 범위를 제한해 폭주 동작 방지
+
+Agent와 Crew에 실행 제한을 설정하면 실패가 확산되기보다 예측 가능하게 처리됩니다.
+
+### 권장 제어
+
+- `max_rpm`: 프로바이더 요청 속도 상한
+- `max_iter`: 반복 추론/도구 호출 사이클 상한
+- `max_execution_time`: 장시간 작업에 대한 하드 타임아웃
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Security Analyst",
+    goal="Investigate and summarize incidents",
+    backstory="Careful and methodical",
+    max_rpm=30,
+    max_iter=12,
+    max_execution_time=180,
+)
+```
+
+## 2) 도구에 최소 권한 적용
+
+모든 Agent에게 모든 도구를 주지 마세요. 각 Agent에는 해당 Task에 필요한 도구만 제공하세요.
+
+### 중요한 이유
+
+- 프롬프트 인젝션이나 로직 오류의 영향 범위 축소
+- 관련 없는 시스템에 대한 우발적 접근 방지
+- 누가 무엇을 할 수 있는지 추적성 향상
+
+```python
+from crewai import Agent
+from crewai.tools import FileReadTool, SerperDevTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Collect external facts",
+    backstory="Finds reliable sources",
+    tools=[SerperDevTool()],
+)
+
+auditor = Agent(
+    role="Document Auditor",
+    goal="Review internal policy documents",
+    backstory="Checks compliance language",
+    tools=[FileReadTool()],
+)
+```
+
+## 3) 위임을 신뢰 경계로 취급
+
+`allow_delegation=True`이면 Agent가 다른 Agent에게 작업을 라우팅할 수 있습니다. 유용할 수 있지만 보안 경계이기도 합니다.
+
+### 안전한 위임 패턴
+
+- 기본값으로 위임 비활성화
+- 실제로 오케스트레이션이 필요한 역할에만 활성화
+- 명확한 Task 제약과 제한된 실행과 함께 사용
+
+```python
+from crewai import Agent
+
+coordinator = Agent(
+    role="Coordinator",
+    goal="Route specialized tasks",
+    backstory="Delegates carefully",
+    allow_delegation=True,
+    max_iter=8,
+)
+```
+
+## 4) 스키마와 기대 출력으로 출력 제한
+
+가능한 한 구조화된 출력을 사용해 모호하거나 위험한 자유 형식 응답을 줄이세요.
+
+### 권장 제어
+
+- `output_pydantic`: 스키마로 검증되는 Task 출력
+- `expected_output`: 엄격한 수용 기준 설명
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class RiskSummary(BaseModel):
+    severity: str
+    findings: list[str]
+    recommendation: str
+
+security_task = Task(
+    description="Review tool configuration for least privilege",
+    expected_output="A structured risk summary with severity, findings, and recommendation.",
+    output_pydantic=RiskSummary,
+)
+```
+
+## 5) 고위험 작업에 대한 인간 감독 추가
+
+민감한 작업(예: 금융 작업, 프로덕션 변경, 고객 영향 변경)에는 실행 경로의 올바른 지점에서 인간 검토를 추가하세요.
+
+### `human_input=True`가 하는 일
+
+Task의 `human_input=True`는 Agent가 도구를 실행하고 결과를 생성한 **후**에 일시 중지합니다. 최종 답변에 대한 인간 피드백을 요청하여 **해당 출력이 수락·확정되기 전**에 검토할 수 있게 합니다. 도구 실행을 차단하지 **않습니다** — `human_input=True`인 Task의 Agent도 사람이 실행을 보기 전에 파괴적이거나 부수 효과가 있는 도구를 호출할 수 있습니다.
+
+공식 결과가 되기 전에 Task 출력을 검토·수정·승인하려는 경우(예: 트레이닝 워크플로, 품질 검토)에 `human_input=True`를 사용하세요.
+
+```python
+from crewai import Task
+
+review_task = Task(
+    description="Draft the incident summary from collected logs",
+    expected_output="A concise incident summary",
+    human_input=True,
+)
+```
+
+### 도구 실행 전 승인이 필요한 경우
+
+다음과 같은 체크포인트에는 사전 실행 게이트를 사용하세요.
+
+- 되돌릴 수 없는 도구 실행 전
+- 외부 부수 효과(이메일, 티켓, 쓰기) 전
+- 정책/보안 예외 전
+
+사전 실행 게이트 예:
+
+- **`@on(InterceptionPoint.PRE_TOOL_CALL)`** 및 `request_human_input()`이 있는 **[Tool hooks](/ko/learn/tool-hooks)** — 승인 전까지 도구 호출 차단
+- Crew 및 Flow 실행의 **[Execution hooks](/ko/learn/execution-hooks)**
+- 워크플로 수준 승인을 위한 Flow 단계의 **[@human_feedback](/ko/learn/human-feedback-in-flows)**
+
+```python
+from crewai.hooks import HookAborted, InterceptionPoint, on
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "delete_file"])
+def require_approval(ctx):
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name}?",
+        default_message=f"Args: {ctx.tool_input}\nType 'yes' to approve:",
+    )
+    if response.strip().lower() != "yes":
+        raise HookAborted(reason="denied by operator", source="approval-gate")
+```
+
+사후 검토를 위해 민감한 Flow에 관여하는 Agent에 `verbose=True`를 설정하면 디버깅 및 사후 분석 시 실행 세부 정보를 더 쉽게 확인할 수 있습니다.
+
+## 운영 체크리스트
+
+프로덕션 배포 전 빠른 체크리스트:
+
+- [ ] 모든 Agent에 실행 제한(`max_rpm`, `max_iter`, `max_execution_time`) 적용
+- [ ] 역할별로 도구 접근 범위 제한(광범위한 공유 도구 목록 없음)
+- [ ] 명시적으로 필요한 경우가 아니면 위임 비활성화
+- [ ] 고영향 Task에 `output_pydantic`과 정확한 `expected_output` 사용
+- [ ] 되돌릴 수 없거나 부수 효과가 있는 도구에 사전 실행 승인 게이트 존재(tool hooks, Flow hooks, `@human_feedback`)
+- [ ] `human_input=True`는 실행 후 출력 검토로 충분한 경우에만 사용
+- [ ] Agent 실행이 사후 검토를 위해 로깅 또는 추적됨
+
+## 관련 리소스
+
+- [Agents](/ko/concepts/agents)
+- [Tasks](/ko/concepts/tasks)
+- [Flows](/ko/concepts/flows)
+- [Human input on execution](/ko/learn/human-input-on-execution)
+- [Human-in-the-loop](/ko/learn/human-in-the-loop)
+- [Tool Hooks](/ko/learn/tool-hooks)
+- [Tracing and observability](/ko/observability/overview)

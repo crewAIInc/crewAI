@@ -1,0 +1,181 @@
+---
+title: أفضل ممارسات الأمان لـ Agents في CrewAI
+description: إرشادات عملية لتكوين Agents وCrews في CrewAI بأمان في بيئات الإنتاج.
+icon: shield
+---
+
+## نظرة عامة
+
+يركز هذا الدليل على **ضوابط CrewAI الأصلية** التي يمكنك استخدامها لتقليل مخاطر الأمان في أنظمة الإنتاج.
+
+الهدف بسيط: إبقاء سلوك الـ Agent محدودًا، بأقل امتياز، وقابلًا للمراجعة.
+
+## 1) تحديد التنفيذ لمنع السلوك الجامح
+
+استخدم حدود التنفيذ على Agents وCrews حتى تتدهور الأعطال بشكل متوقع بدلًا من التصاعد.
+
+### الضوابط الموصى بها
+
+- `max_rpm`: تحديد معدل الطلبات إلى المزودين
+- `max_iter`: تحديد دورات التفكير/الأدوات التكرارية
+- `max_execution_time`: مهلة صارمة للعمل الطويل
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Security Analyst",
+    goal="Investigate and summarize incidents",
+    backstory="Careful and methodical",
+    max_rpm=30,
+    max_iter=12,
+    max_execution_time=180,
+)
+```
+
+## 2) تطبيق أقل امتياز على الأدوات
+
+تجنب منح كل أداة لكل Agent. امنح كل Agent فقط الأدوات المطلوبة لمهمته.
+
+### لماذا يهم ذلك
+
+- يقلل نطاق تأثير prompt injection أو أخطاء المنطق
+- يمنع الوصول العرضي إلى أنظمة غير ذات صلة
+- يحسّن إمكانية تتبع من يمكنه فعل ماذا
+
+```python
+from crewai import Agent
+from crewai.tools import FileReadTool, SerperDevTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Collect external facts",
+    backstory="Finds reliable sources",
+    tools=[SerperDevTool()],
+)
+
+auditor = Agent(
+    role="Document Auditor",
+    goal="Review internal policy documents",
+    backstory="Checks compliance language",
+    tools=[FileReadTool()],
+)
+```
+
+## 3) التعامل مع التفويض كحدود ثقة
+
+عندما يكون `allow_delegation=True`، يمكن للـ Agent توجيه العمل إلى Agents أخرى. قد يكون ذلك مفيدًا، لكنه أيضًا حد أمني.
+
+### أنماط تفويض آمنة
+
+- اجعل التفويض معطّلًا افتراضيًا
+- فعّله فقط للأدوار التي تحتاج فعلًا إلى orchestration
+- ادمجه مع قيود Task واضحة وتنفيذ محدود
+
+```python
+from crewai import Agent
+
+coordinator = Agent(
+    role="Coordinator",
+    goal="Route specialized tasks",
+    backstory="Delegates carefully",
+    allow_delegation=True,
+    max_iter=8,
+)
+```
+
+## 4) تقييد المخرجات بالمخططات والتوقعات
+
+استخدم مخرجات منظمة whenever possible لتقليل الاستجابات الغامضة أو غير الآمنة.
+
+### الضوابط الموصى بها
+
+- `output_pydantic` لمخرجات Task validated بالمخطط
+- `expected_output` لوصف معايير قبول صارمة
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class RiskSummary(BaseModel):
+    severity: str
+    findings: list[str]
+    recommendation: str
+
+security_task = Task(
+    description="Review tool configuration for least privilege",
+    expected_output="A structured risk summary with severity, findings, and recommendation.",
+    output_pydantic=RiskSummary,
+)
+```
+
+## 5) إضافة إشراف بشري للإجراءات عالية المخاطر
+
+للعمليات الحساسة (مثل الإجراءات المالية، تغييرات الإنتاج، أو التغييرات المؤثرة على العملاء)، أضف مراجعة بشرية في النقطة الصحيحة من مسار التنفيذ.
+
+### ماذا يفعل `human_input=True`
+
+`human_input=True` على Task يوقف التنفيذ **بعد** أن يشغّل الـ Agent أدواته وينتج نتيجة. يطلب ملاحظات بشرية على الإجابة النهائية **قبل قبول هذه المخرجات واعتمادها**. **لا** يمنع تنفيذ الأدوات — يمكن للـ Agent في Task مع `human_input=True` أن يستدعي أدوات مدمرة أو ذات آثار جانبية قبل أن يرى أي إنسان التشغيل.
+
+استخدم `human_input=True` عندما تريد أن يراجع إنسان مخرجات Task أو يعدّلها أو يوافق عليها قبل أن تصبح النتيجة الرسمية (مثل سير عمل التدريب أو مراجعة الجودة).
+
+```python
+from crewai import Task
+
+review_task = Task(
+    description="Draft the incident summary from collected logs",
+    expected_output="A concise incident summary",
+    human_input=True,
+)
+```
+
+### عندما تحتاج موافقة قبل تشغيل الأدوات
+
+لنقاط مثل:
+
+- قبل تشغيل أدوات لا رجعة فيها
+- قبل الآثار الجانبية الخارجية (بريد، تذاكر، كتابة)
+- قبل استثناءات السياسة/الأمان
+
+استخدم بوابات ما قبل التنفيذ:
+
+- **[Tool hooks](/ar/learn/tool-hooks)** مع `@on(InterceptionPoint.PRE_TOOL_CALL)` و`request_human_input()` — يمنع استدعاء الأداة حتى الموافقة
+- **[Execution hooks](/ar/learn/execution-hooks)** في تشغيل Crew وFlow
+- **[@human_feedback](/ar/learn/human-feedback-in-flows)** على خطوات Flow للموافقة على مستوى سير العمل
+
+```python
+from crewai.hooks import HookAborted, InterceptionPoint, on
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "delete_file"])
+def require_approval(ctx):
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name}?",
+        default_message=f"Args: {ctx.tool_input}\nType 'yes' to approve:",
+    )
+    if response.strip().lower() != "yes":
+        raise HookAborted(reason="denied by operator", source="approval-gate")
+```
+
+للمراجعة لاحقًا، فكّر في تفعيل `verbose=True` على Agents في تدفقات حساسة لتسهيل الفحص أثناء التصحيح ومراجعة الحوادث.
+
+## قائمة تحقق تشغيلية
+
+استخدم هذه القائمة السريعة قبل النشر في الإنتاج:
+
+- [ ] كل Agent له تنفيذ محدود (`max_rpm`، `max_iter`، `max_execution_time`)
+- [ ] الوصول إلى الأدوات محدود حسب الدور (بدون قائمة أدوات مشتركة واسعة)
+- [ ] التفويض معطّل ما لم يكن مطلوبًا صراحة
+- [ ] Tasks عالية التأثير تستخدم `output_pydantic` و`expected_output` دقيق
+- [ ] بوابات موافقة ما قبل التنفيذ موجودة للأدوات غير القابلة للتراجع أو ذات الآثار الجانبية (tool hooks أو Flow hooks أو `@human_feedback`)
+- [ ] `human_input=True` يُستخدم فقط حيث تكفي مراجعة المخرجات بعد التشغيل
+- [ ] تشغيلات Agent مسجّلة أو متتبعة للمراجعة بعد الحادث
+
+## موارد ذات صلة
+
+- [Agents](/ar/concepts/agents)
+- [Tasks](/ar/concepts/tasks)
+- [Flows](/ar/concepts/flows)
+- [Human input on execution](/ar/learn/human-input-on-execution)
+- [Human-in-the-loop](/ar/learn/human-in-the-loop)
+- [Tool Hooks](/ar/learn/tool-hooks)
+- [Tracing and observability](/ar/observability/overview)
