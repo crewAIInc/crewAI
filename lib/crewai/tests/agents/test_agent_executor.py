@@ -2421,7 +2421,7 @@ class TestNativeToolCallMaxUsage:
 
 
 class TestNativeToolCallEvents:
-    def test_native_tool_usage_events_include_call_id(self):
+    def test_native_tool_usage_events_include_call_id(self) -> None:
         """Propagate a provider-supplied ID through experimental tool events."""
         class EchoTool(BaseTool):
             name: str = "echo"
@@ -2464,7 +2464,7 @@ class TestNativeToolCallEvents:
             "call_experimental",
         ]
 
-    def test_native_tool_usage_events_omit_missing_provider_call_id(self):
+    def test_native_tool_usage_events_omit_missing_provider_call_id(self) -> None:
         """Leave event IDs unset when the provider did not supply one."""
         class EchoTool(BaseTool):
             name: str = "echo"

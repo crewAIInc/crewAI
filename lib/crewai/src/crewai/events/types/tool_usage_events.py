@@ -16,6 +16,7 @@ class ToolUsageEvent(BaseEvent):
     agent_id: str | None = None
     tool_name: str
     call_id: str | None = None
+    """Provider-supplied tool-call ID, or ``None`` when unavailable."""
     tool_args: dict[str, Any] | str
     tool_class: str | None = None
     run_attempts: int = 0
