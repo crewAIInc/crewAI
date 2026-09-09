@@ -17,6 +17,7 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.tools.base_tool import BaseTool
+from crewai.llms.base_llm import BaseLLM
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
@@ -36,6 +37,7 @@ from crewai.utilities.agent_utils import (
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
+    aget_llm_response_with_fallback,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 
@@ -1652,3 +1654,77 @@ class TestResolvePlusResponse:
                 resolve_plus_response(future)
 
         asyncio.run(main())
+
+
+class TestAgetLlmResponseWithFallback:
+    class _AsyncLLM(BaseLLM):
+          calls: list[str] = Field(default_factory=list)
+
+          def call(self, messages, **kw):
+              self.calls.append("call")
+              return "Final Answer: ok"
+
+          async def acall(self, messages, **kw):
+              self.calls.append("acall")
+              return "Final Answer: ok"
+
+    class _SyncOnlyLLM(BaseLLM):
+        calls: list[str] = Field(default_factory=list)
+
+        def call(self, messages, **kw):
+            self.calls.append("call")
+            return "Final Answer: ok"
+
+        # no acall override -> inherits BaseLLM.acall, which raises NotImplementedError
+
+    class _BrokenAsyncLLM(_SyncOnlyLLM):
+        async def acall(self, messages, **kw):
+            raise NotImplementedError("no aiobotocore")
+
+    class _RaisingAsyncLLM(_SyncOnlyLLM):
+        async def acall(self, messages, **kw):
+            raise RuntimeError("boom")
+
+    @pytest.mark.asyncio
+    async def test_awaits_acall_when_available(self):
+        llm = self._AsyncLLM(model="x/y")
+
+        out = await aget_llm_response_with_fallback(
+            llm, [{"role": "user", "content": "hi"}], [], MagicMock()
+        )
+
+        assert llm.calls == ["acall"]
+        assert out == "Final Answer: ok"
+
+    @pytest.mark.asyncio
+    async def test_falls_back_when_acall_not_implemented(self):
+        llm = self._SyncOnlyLLM(model="x/y")
+
+        out = await aget_llm_response_with_fallback(
+            llm, [{"role": "user", "content": "hi"}], [], MagicMock()
+        )
+
+        assert llm.calls == ["call"]
+        assert out == "Final Answer: ok"
+
+    @pytest.mark.asyncio
+    async def test_falls_back_when_acall_raises_not_implemented(self):
+        llm = self._BrokenAsyncLLM(model="x/y")
+
+        out = await aget_llm_response_with_fallback(
+            llm, [{"role": "user", "content": "hi"}], [], MagicMock()
+        )
+
+        assert llm.calls == ["call"]
+        assert out == "Final Answer: ok"
+
+    @pytest.mark.asyncio
+    async def test_propagates_non_not_implemented_errors(self):
+        llm = self._RaisingAsyncLLM(model="x/y")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            await aget_llm_response_with_fallback(
+                llm, [{"role": "user", "content": "hi"}], [], MagicMock()
+            )
+
+        assert llm.calls == []
