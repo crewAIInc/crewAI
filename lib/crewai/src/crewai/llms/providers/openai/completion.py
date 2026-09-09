@@ -35,6 +35,7 @@ from openai.types.responses import (
 )
 from pydantic import BaseModel, PrivateAttr, model_validator
 
+from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
@@ -222,7 +223,7 @@ class OpenAICompletion(BaseLLM):
         "computer_use": "computer_use_preview",
     }
 
-    model: str = "gpt-4o"
+    model: str = DEFAULT_LLM_MODEL
     organization: str | None = None
     project: str | None = None
     timeout: float | None = None
@@ -285,7 +286,7 @@ class OpenAICompletion(BaseLLM):
         data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
         if "api_base" not in data:
             data["api_base"] = None
-        model = data.get("model", "gpt-4o")
+        model = data.setdefault("model", DEFAULT_LLM_MODEL)
         data["is_o1_model"] = "o1" in model.lower()
         data["is_gpt4_model"] = "gpt-4" in model.lower()
         return data

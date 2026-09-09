@@ -43,7 +43,7 @@ The Visual Agent Builder enables:
 | **Role**                                | `role`                   | `str`                                 | Defines the agent's function and expertise within the crew.                                              |
 | **Goal**                                | `goal`                   | `str`                                 | The individual objective that guides the agent's decision-making.                                        |
 | **Backstory**                           | `backstory`              | `str`                                 | Provides context and personality to the agent, enriching interactions.                                   |
-| **LLM** _(optional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Language model that powers the agent. Defaults to the model specified in `OPENAI_MODEL_NAME` or "gpt-4". |
+| **LLM** _(optional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Language model that powers the agent. Uses the first non-empty environment variable: `MODEL`, `MODEL_NAME`, then `OPENAI_MODEL_NAME`; otherwise defaults to `gpt-5.6-luna`. |
 | **Tools** _(optional)_                  | `tools`                  | `List[BaseTool]`                      | Capabilities or functions available to the agent. Defaults to an empty list.                             |
 | **Function Calling LLM** _(optional)_   | `function_calling_llm`   | `Optional[Any]`                       | Language model for tool calling, overrides crew's LLM if specified.                                      |
 | **Max Iterations** _(optional)_         | `max_iter`               | `int`                                 | Maximum iterations before the agent must provide its best answer. Default is 20.                         |
@@ -144,7 +144,7 @@ agent = Agent(
     goal="Analyze and interpret complex datasets to provide actionable insights",
     backstory="With over 10 years of experience in data science and machine learning, "
               "you excel at finding patterns in complex datasets.",
-    llm="gpt-4",  # Default: OPENAI_MODEL_NAME or "gpt-4"
+    llm="gpt-5.6-luna",
     function_calling_llm=None,  # Optional: Separate LLM for tool calling
     verbose=False,  # Default: False
     allow_delegation=False,  # Default: False
@@ -275,7 +275,7 @@ multimodal_agent = Agent(
 #### Critical Parameters
 
 - `role`, `goal`, and `backstory` are required and shape the agent's behavior
-- `llm` determines the language model used (default: OpenAI's GPT-4)
+- `llm`: Language model that powers the agent. Uses the first non-empty environment variable: `MODEL`, `MODEL_NAME`, then `OPENAI_MODEL_NAME`; otherwise defaults to `gpt-5.6-luna`.
 
 #### Memory and Context
 

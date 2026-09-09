@@ -38,7 +38,7 @@ CrewAI AOP에는 코드를 작성하지 않고도 에이전트 생성 및 구성
 | **역할**                                | `role`                   | `str`                         | 에이전트의 기능과 전문 분야를 정의합니다.                                                                              |
 | **목표**                                | `goal`                   | `str`                         | 에이전트의 의사결정을 이끄는 개별 목표입니다.                                                                          |
 | **배경 이야기**                         | `backstory`              | `str`                         | 에이전트에게 맥락과 개성을 부여하여 상호작용을 풍부하게 합니다.                                                        |
-| **LLM** _(옵션)_                        | `llm`                    | `Union[str, LLM, Any]`        | 에이전트를 구동하는 언어 모델입니다. `OPENAI_MODEL_NAME`에 지정된 모델 또는 "gpt-4"가 기본값입니다.                    |
+| **LLM** _(옵션)_                        | `llm`                    | `Union[str, LLM, Any]`        | 에이전트를 구동하는 언어 모델입니다. `MODEL`, `MODEL_NAME`, `OPENAI_MODEL_NAME` 순서로 비어 있지 않은 첫 환경 변수를 사용하며, 없으면 `gpt-5.6-luna`를 사용합니다. |
 | **도구** _(옵션)_                       | `tools`                  | `List[BaseTool]`              | 에이전트가 사용할 수 있는 기능 혹은 역량입니다. 기본값은 빈 리스트입니다.                                               |
 | **Function Calling LLM** _(옵션)_       | `function_calling_llm`   | `Optional[Any]`               | 도구 호출을 위한 언어 모델로, 지정 시 crew의 LLM을 재정의합니다.                                                       |
 | **최대 반복 횟수** _(옵션)_             | `max_iter`               | `int`                         | 에이전트가 최선의 답변을 제공하기 전 최대 반복 수입니다. 기본값은 20입니다.                                             |
@@ -180,7 +180,7 @@ agent = Agent(
     goal="Analyze and interpret complex datasets to provide actionable insights",
     backstory="With over 10 years of experience in data science and machine learning, "
               "you excel at finding patterns in complex datasets.",
-    llm="gpt-4",  # 기본값: OPENAI_MODEL_NAME 또는 "gpt-4"
+    llm="gpt-5.6-luna",
     function_calling_llm=None,  # 옵션: 도구 호출을 위한 별도의 LLM
     verbose=False,  # 기본값: False
     allow_delegation=False,  # 기본값: False
@@ -303,7 +303,7 @@ multimodal_agent = Agent(
 
 #### 중요 파라미터
 - `role`, `goal`, 그리고 `backstory`는 필수이며 에이전트의 행동을 결정합니다
-- `llm`은 사용되는 언어 모델을 결정합니다 (기본값: OpenAI의 GPT-4)
+- `llm`: 에이전트를 구동하는 언어 모델입니다. `MODEL`, `MODEL_NAME`, `OPENAI_MODEL_NAME` 순서로 비어 있지 않은 첫 환경 변수를 사용하며, 없으면 `gpt-5.6-luna`를 사용합니다.
 
 #### 메모리 및 컨텍스트
 - `memory`: 대화 이력을 유지하도록 활성화합니다

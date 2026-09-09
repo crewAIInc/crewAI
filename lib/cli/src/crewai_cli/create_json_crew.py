@@ -13,7 +13,7 @@ from crewai_core.telemetry import Telemetry
 from rich.console import Console
 from rich.text import Text
 
-from crewai_cli.constants import ENV_VARS
+from crewai_cli.constants import DEFAULT_LLM_MODEL, ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
 from crewai_cli.tui_picker import pick_many, pick_one
@@ -57,7 +57,6 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("gpt-5.5-pro", "GPT-5.5 Pro"),
         ("gpt-5.6-sol", "GPT-5.6 Sol"),
         ("gpt-5.6-terra", "GPT-5.6 Terra"),
-        ("gpt-5.6-luna", "GPT-5.6 Luna"),
         ("gpt-5.6", "GPT-5.6"),
         ("gpt-5.4", "GPT-5.4"),
         ("gpt-5.4-mini", "GPT-5.4 Mini"),
@@ -620,7 +619,7 @@ def _default_agents_and_tasks(
     default_llm: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Return deterministic scaffold data for non-interactive project creation."""
-    llm = default_llm or "openai/gpt-4o"
+    llm = default_llm or f"openai/{DEFAULT_LLM_MODEL}"
     agents = [
         {
             "name": "researcher",

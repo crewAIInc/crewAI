@@ -22,6 +22,7 @@ from crewai.agents.agent_adapters.langgraph.structured_output_converter import (
     LangGraphConverterAdapter,
 )
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
@@ -57,7 +58,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     )
     step_callback: SerializableCallable | None = Field(default=None)
 
-    model: str = Field(default="gpt-4o")
+    model: str = Field(default=DEFAULT_LLM_MODEL)
     verbose: bool = Field(default=False)
 
     def __init__(
@@ -78,7 +79,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             goal: The primary goal the agent should achieve.
             backstory: Background information about the agent.
             tools: Optional list of tools available to the agent.
-            llm: Language model to use, defaults to gpt-4o.
+            llm: Language model to use, defaults to DEFAULT_LLM_MODEL.
             max_iterations: Maximum number of iterations for task execution.
             agent_config: Additional configuration for the LangGraph agent.
             **kwargs: Additional arguments passed to the base adapter.

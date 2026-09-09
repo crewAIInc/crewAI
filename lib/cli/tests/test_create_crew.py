@@ -905,7 +905,16 @@ def test_json_wizard_task_reprompts_on_cancelled_agent_pick(monkeypatch):
     assert task["agent"] == "second_agent"
 
 
-def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    ("provider", "expected_model"),
+    [
+        (None, "openai/gpt-5.6-luna"),
+        ("anthropic/claude-custom", "anthropic/claude-custom"),
+    ],
+)
+def test_json_create_dmn_mode_uses_non_interactive_defaults(
+    tmp_path, monkeypatch, provider, expected_model
+):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CREWAI_DMN", "True")
     monkeypatch.setattr(
@@ -919,7 +928,7 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
         lambda *_args, **_kwargs: pytest.fail("DMN mode must not prompt for env vars"),
     )
 
-    json_crew.create_json_crew("DMN Crew", provider="anthropic", skip_provider=False)
+    json_crew.create_json_crew("DMN Crew", provider=provider, skip_provider=False)
 
     project_root = tmp_path / "dmn_crew"
     assert (project_root / "crew.jsonc").exists()
@@ -933,4 +942,4 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert '"description": "Research current AI trends and write a concise summary."' in (
         crew_template
     )
-    assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+    assert f'"llm": "{expected_model}"' in agent_template

@@ -43,7 +43,7 @@ O Construtor Visual de Agentes permite:
 | **Role (Função)**                       | `role`                   | `str`                                 | Define a função e a área de especialização do agente dentro da equipe.                                    |
 | **Goal (Objetivo)**                     | `goal`                   | `str`                                 | O objetivo individual que guia a tomada de decisão do agente.                                             |
 | **Backstory (História de fundo)**       | `backstory`              | `str`                                 | Fornece contexto e personalidade ao agente, enriquecendo as interações.                                   |
-| **LLM** _(opcional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Modelo de linguagem que alimenta o agente. Padrão: modelo especificado em `OPENAI_MODEL_NAME` ou "gpt-4". |
+| **LLM** _(opcional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Modelo de linguagem que alimenta o agente. Usa a primeira variável de ambiente não vazia: `MODEL`, `MODEL_NAME` e `OPENAI_MODEL_NAME`; caso contrário, usa `gpt-5.6-luna`. |
 | **Tools (Ferramentas)** _(opcional)_    | `tools`                  | `List[BaseTool]`                      | Capacidades ou funções disponíveis para o agente. Padrão: lista vazia.                                    |
 | **Function Calling LLM** _(opcional)_   | `function_calling_llm`   | `Optional[Any]`                       | Modelo de linguagem usado para chamada de ferramentas, sobrescreve LLM principal se especificado.         |
 | **Max Iterations** _(opcional)_         | `max_iter`               | `int`                                 | Número máximo de iterações antes do agente fornecer sua melhor resposta. Padrão: 20.                      |
@@ -185,7 +185,7 @@ agent = Agent(
     role="Cientista de Dados Sênior",
     goal="Analisar e interpretar conjuntos de dados complexos para fornecer insights acionáveis",
     backstory="Com mais de 10 anos de experiência em ciência de dados e aprendizado de máquina, você é especialista em encontrar padrões em grandes volumes de dados.",
-    llm="gpt-4",  # Padrão: OPENAI_MODEL_NAME ou "gpt-4"
+    llm="gpt-5.6-luna",
     function_calling_llm=None,  # Opcional: LLM separado para chamadas de ferramentas
     verbose=False,  # Padrão: False
     allow_delegation=False,  # Padrão: False
@@ -313,7 +313,7 @@ multimodal_agent = Agent(
 #### Parâmetros Críticos
 
 - `role`, `goal` e `backstory` são obrigatórios e definem o comportamento do agente
-- `llm` determina o modelo de linguagem utilizado (padrão: GPT-4 da OpenAI)
+- `llm`: Modelo de linguagem que alimenta o agente. Usa a primeira variável de ambiente não vazia: `MODEL`, `MODEL_NAME` e `OPENAI_MODEL_NAME`; caso contrário, usa `gpt-5.6-luna`.
 
 #### Memória e Contexto
 

@@ -15,3 +15,14 @@ def test_luna_default_models_use_native_openai_without_litellm(model, monkeypatc
     assert llm.is_litellm is False
     assert llm.provider == "openai"
     assert llm.model == "gpt-5.6-luna"
+
+
+@pytest.mark.parametrize("model", [None, "gpt-4o"])
+def test_openai_completion_default_preserves_explicit_model(model, monkeypatch):
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    llm = OpenAICompletion(**({"model": model} if model else {}))
+
+    assert llm.model == (model or "gpt-5.6-luna")
+    assert llm.is_gpt4_model is (model == "gpt-4o")

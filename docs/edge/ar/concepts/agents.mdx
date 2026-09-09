@@ -42,7 +42,7 @@ mode: "wide"
 | **الدور**                                | `role`                   | `str`                                 | يحدد وظيفة الوكيل وخبرته ضمن الطاقم.                                              |
 | **الهدف**                                | `goal`                   | `str`                                 | الهدف الفردي الذي يوجه عملية اتخاذ القرار لدى الوكيل.                                        |
 | **الخلفية**                           | `backstory`              | `str`                                 | يوفر سياقًا وشخصية للوكيل، مما يثري التفاعلات.                                   |
-| **LLM** _(اختياري)_                    | `llm`                    | `Union[str, LLM, Any]`                | نموذج اللغة الذي يشغّل الوكيل. افتراضيًا النموذج المحدد في `OPENAI_MODEL_NAME` أو "gpt-4". |
+| **LLM** _(اختياري)_                    | `llm`                    | `Union[str, LLM, Any]`                | نموذج اللغة الذي يشغّل الوكيل. يستخدم أول متغير بيئة غير فارغ: `MODEL`، ثم `MODEL_NAME`، ثم `OPENAI_MODEL_NAME`؛ وإلا يستخدم `gpt-5.6-luna` افتراضيًا. |
 | **الأدوات** _(اختياري)_                  | `tools`                  | `List[BaseTool]`                      | القدرات أو الوظائف المتاحة للوكيل. افتراضيًا قائمة فارغة.                             |
 | **LLM استدعاء الدوال** _(اختياري)_   | `function_calling_llm`   | `Optional[Any]`                       | نموذج لغة لاستدعاء الأدوات، يتجاوز LLM الطاقم إذا حُدد.                                      |
 | **الحد الأقصى للتكرارات** _(اختياري)_         | `max_iter`               | `int`                                 | الحد الأقصى للتكرارات قبل أن يقدم الوكيل أفضل إجابته. الافتراضي 20.                         |
@@ -185,7 +185,7 @@ agent = Agent(
     goal="Analyze and interpret complex datasets to provide actionable insights",
     backstory="With over 10 years of experience in data science and machine learning, "
               "you excel at finding patterns in complex datasets.",
-    llm="gpt-4",
+    llm="gpt-5.6-luna",
     function_calling_llm=None,
     verbose=False,
     allow_delegation=False,
@@ -259,7 +259,7 @@ analysis_agent = Agent(
 #### المعاملات الحرجة
 
 - `role` و `goal` و `backstory` مطلوبة وتشكّل سلوك الوكيل
-- `llm` يحدد نموذج اللغة المستخدم (افتراضي: GPT-4 من OpenAI)
+- `llm`: نموذج اللغة الذي يشغّل الوكيل. يستخدم أول متغير بيئة غير فارغ: `MODEL`، ثم `MODEL_NAME`، ثم `OPENAI_MODEL_NAME`؛ وإلا يستخدم `gpt-5.6-luna` افتراضيًا.
 
 #### الذاكرة والسياق
 
