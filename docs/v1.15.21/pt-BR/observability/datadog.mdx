@@ -1,0 +1,108 @@
+---
+title: Integração Datadog
+description: Saiba como integrar o Datadog com o CrewAI para enviar os rastros de observabilidade do LLM para o Datadog.
+icon: dog
+mode: "wide"
+---
+
+# Integrar o Datadog com a CrewAI
+
+Este guia demonstrará como integrar o **Datadog** com o **CrewAI** usando a instrumentação automática do Datadog. Ao final deste guia, você poderá enviar rastreamentos do LLM Observability para o Datadog e visualizar as execuções do agente CrewAI no Agentic Execution View do Datadog LLM Observability.
+
+## O que é o Datadog LLM Observability?
+
+O [Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/) ajuda os engenheiros de IA, cientistas de dados e desenvolvedores de aplicativos a desenvolver, avaliar e monitorar rapidamente os aplicativos LLM. Melhore com confiança a qualidade dos resultados, o desempenho, os custos e o risco geral com experimentos estruturados, rastreamento de ponta a ponta em agentes de IA e avaliações.
+
+## Primeiros passos
+
+### Instalar dependências
+
+```shell
+pip install ddtrace crewai crewai-tools
+```
+
+### Definir variáveis de ambiente
+
+Se você não tiver uma chave de API da Datadog, poderá [criar uma conta](https://www.datadoghq.com/) e [obter sua chave de API](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
+
+Você também precisará especificar um nome de aplicativo de ML nas seguintes variáveis de ambiente. Um aplicativo de ML é um agrupamento de rastros de observabilidade do LLM associados a um aplicativo específico baseado em LLM. Consulte [ML Application Naming Guidelines](https://docs.datadoghq.com/llm_observability/instrumentation/sdk?tab=python#application-naming-guidelines) para obter mais informações sobre as limitações dos nomes de aplicativos do ML.
+
+```shell
+export DD_API_KEY=<SUA_API_KEY>
+export DD_SITE=<Seu_DD_SITE>
+export DD_LLMOBS_ENABLED=true
+export DD_LLMOBS_ML_APP=<YOUR_ML_APP_NAME>
+export DD_LLMOBS_AGENTLESS_ENABLED=true
+export DD_APM_TRACING_ENABLED=false
+```
+
+Além disso, configure todas as chaves de API do provedor LLM
+
+```shell
+export OPENAI_API_KEY=<SUA_OPENAI_API_KEY>
+export ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY>
+export GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
+...
+```
+
+### Criar um aplicativo agente CrewAI
+
+```python
+# crewai_agent.py
+from crewai import Agent, Task, Crew
+
+from crewai_tools import (
+    WebsiteSearchTool
+)
+
+web_rag_tool = WebsiteSearchTool()
+
+writer = Agent(
+    role="Writer",
+    goal="Você torna a matemática envolvente e compreensível para crianças pequenas por meio da poesia",
+    backstory="Você é um especialista em escrever haikus, mas não sabe nada de matemática",
+    tools=[web_rag_tool],
+)
+
+task = Task(
+    description=("O que é {multiplicação}?"),
+    expected_output=("Componha um haicai que inclua a resposta."),
+    agent=writer
+)
+
+crew = Crew(
+    agents=[writer],
+    tasks=[task],
+    share_crew=False
+)
+
+output = crew.kickoff(dict(multiplicação="2 * 2"))
+```
+
+### Executar o aplicativo com a instrumentação automática do Datadog
+
+Com as [variáveis de ambiente](#definir-variáveis-de-ambiente) definidas, agora você pode executar o aplicativo com a instrumentação automática do Datadog.
+
+```shell
+ddtrace-run python crewai_agent.py
+```
+
+### Visualizar os rastros no Datadog
+
+Depois de executar o aplicativo, você pode visualizar os traços na [Datadog LLM Observability's Traces View](https://app.datadoghq.com/llm/traces), selecionando o nome do aplicativo de ML que você escolheu no menu suspenso superior esquerdo.
+
+Ao clicar em um rastreamento, você verá os detalhes do rastreamento, incluindo o total de tokens usados, o número de chamadas LLM, os modelos usados e o custo estimado. Clicar em um intervalo específico reduzirá esses detalhes e mostrará a entrada, a saída e os metadados relacionados.
+
+<Frame>
+<img src="/images/datadog-llm-observability-1.png" alt="Visualização do rastreamento de observabilidade do Datadog LLM" />
+</Frame>    
+Além disso, você pode visualizar a visualização do gráfico de execução do rastreamento, que mostra o controle e o fluxo de dados do rastreamento, que será dimensionado com agentes maiores para mostrar transferências e relacionamentos entre chamadas LLM, chamadas de ferramentas e interações de agentes.
+
+<Frame>
+<img src="/images/datadog-llm-observability-2.png" alt="Visualização do fluxo de execução do agente de observabilidade do Datadog LLM" />
+</Frame>
+
+## Referências
+
+- [Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/)
+- [Datadog LLM Observability CrewAI Auto-Instrumentation](https://docs.datadoghq.com/llm_observability/instrumentation/auto_instrumentation?tab=python#crew-ai)
