@@ -9,7 +9,7 @@ mode: "wide"
 
 CrewAI는 Crews와 Flows를 실시간으로 모니터링하고 디버깅할 수 있는 내장 추적 기능을 제공합니다. 이 가이드는 CrewAI의 통합 관측 가능성 플랫폼을 사용하여 **Crews**와 **Flows** 모두에 대한 추적을 활성화하는 방법을 보여줍니다.
 
-> **CrewAI Tracing이란?** CrewAI의 내장 추적은 agent 결정, 작업 실행 타임라인, 도구 사용, LLM 호출을 포함한 AI agent에 대한 포괄적인 관측 가능성을 제공하며, 모두 [CrewAI AMP 플랫폼](https://app.crewai.com)을 통해 액세스할 수 있습니다.
+> **CrewAI Tracing이란?** CrewAI의 내장 추적은 agent 결정, 작업 실행 타임라인, 도구 사용, LLM 호출을 포함한 AI agent에 대한 포괄적인 관측 가능성을 제공하며, 모두 [CrewAI AMP 플랫폼](https://app.crewai.com)을 통해 액세스할 수 있습니다. 추적은 [텔레메트리](/ko/telemetry)와 별도로 관리됩니다.
 
 ![CrewAI Tracing Interface](/images/crewai-tracing.png)
 
@@ -169,6 +169,17 @@ CREWAI_TRACING_ENABLED=true
 ```
 
 이 환경 변수가 설정되면 `tracing=True`를 명시적으로 설정하지 않아도 모든 Crews와 Flows에 자동으로 추적이 활성화됩니다.
+
+## 첫 실행 후 추적 보기
+
+Crew 또는 Flow를 처음 실행하면 대화형 터미널에서 다음을 물을 수 있습니다:
+
+```text
+Would you like to view your execution traces? [y/N]
+```
+
+보기 링크를 열려면 **yes**를 선택하세요. 나중에 `crewai traces enable` 또는
+`crewai traces disable`로 바꾸거나, Crew 또는 Flow에서 `tracing`을 설정할 수 있습니다.
 
 ## 추적 보기
 
