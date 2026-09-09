@@ -1268,7 +1268,7 @@ def traces_status() -> None:
 @click.pass_context
 def checkpoint(ctx: click.Context, location: str) -> None:
     """Browse and inspect checkpoints. Launches a TUI when called without a subcommand."""
-    from crewai_cli.checkpoint_cli import _detect_location
+    from crewai_cli.checkpoint_cli import _detect_location, _record_checkpoint_usage
 
     location = _detect_location(location)
     ctx.ensure_object(dict)
@@ -1276,6 +1276,7 @@ def checkpoint(ctx: click.Context, location: str) -> None:
     if ctx.invoked_subcommand is None:
         from crewai_cli.checkpoint_tui import run_checkpoint_tui
 
+        _record_checkpoint_usage("tui")
         run_checkpoint_tui(location)
 
 
@@ -1283,8 +1284,13 @@ def checkpoint(ctx: click.Context, location: str) -> None:
 @click.argument("location", default="./.checkpoints")
 def checkpoint_list(location: str) -> None:
     """List checkpoints in a directory."""
-    from crewai_cli.checkpoint_cli import _detect_location, list_checkpoints
+    from crewai_cli.checkpoint_cli import (
+        _detect_location,
+        _record_checkpoint_usage,
+        list_checkpoints,
+    )
 
+    _record_checkpoint_usage("list")
     list_checkpoints(_detect_location(location))
 
 
@@ -1292,8 +1298,13 @@ def checkpoint_list(location: str) -> None:
 @click.argument("path", default="./.checkpoints")
 def checkpoint_info(path: str) -> None:
     """Show details of a checkpoint. Pass a file or directory for latest."""
-    from crewai_cli.checkpoint_cli import _detect_location, info_checkpoint
+    from crewai_cli.checkpoint_cli import (
+        _detect_location,
+        _record_checkpoint_usage,
+        info_checkpoint,
+    )
 
+    _record_checkpoint_usage("info")
     info_checkpoint(_detect_location(path))
 
 
@@ -1302,8 +1313,9 @@ def checkpoint_info(path: str) -> None:
 @click.pass_context
 def checkpoint_resume(ctx: click.Context, checkpoint_id: str | None) -> None:
     """Resume from a checkpoint. Defaults to the most recent."""
-    from crewai_cli.checkpoint_cli import resume_checkpoint
+    from crewai_cli.checkpoint_cli import _record_checkpoint_usage, resume_checkpoint
 
+    _record_checkpoint_usage("resume")
     resume_checkpoint(ctx.obj["location"], checkpoint_id)
 
 
@@ -1313,8 +1325,9 @@ def checkpoint_resume(ctx: click.Context, checkpoint_id: str | None) -> None:
 @click.pass_context
 def checkpoint_diff(ctx: click.Context, id1: str, id2: str) -> None:
     """Compare two checkpoints side-by-side."""
-    from crewai_cli.checkpoint_cli import diff_checkpoints
+    from crewai_cli.checkpoint_cli import _record_checkpoint_usage, diff_checkpoints
 
+    _record_checkpoint_usage("diff")
     diff_checkpoints(ctx.obj["location"], id1, id2)
 
 
@@ -1335,8 +1348,9 @@ def checkpoint_prune(
     ctx: click.Context, keep: int | None, older_than: str | None, dry_run: bool
 ) -> None:
     """Remove old checkpoints."""
-    from crewai_cli.checkpoint_cli import prune_checkpoints
+    from crewai_cli.checkpoint_cli import _record_checkpoint_usage, prune_checkpoints
 
+    _record_checkpoint_usage("prune")
     prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
 
 
