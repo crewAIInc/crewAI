@@ -1348,9 +1348,7 @@ def checkpoint_prune(
     ctx: click.Context, keep: int | None, older_than: str | None, dry_run: bool
 ) -> None:
     """Remove old checkpoints."""
-    from crewai_cli.checkpoint_cli import _record_checkpoint_usage, prune_checkpoints
-
-    _record_checkpoint_usage("prune")
+    from crewai_cli.checkpoint_cli import prune_checkpoints
     prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
 
 

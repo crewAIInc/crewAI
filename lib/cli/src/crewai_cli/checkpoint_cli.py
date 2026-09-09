@@ -712,6 +712,7 @@ def prune_checkpoints(
         return
 
     duration: timedelta | None = _parse_duration(older_than) if older_than else None
+    _record_checkpoint_usage("prune")
 
     deleted: int
     if _is_sqlite(location):

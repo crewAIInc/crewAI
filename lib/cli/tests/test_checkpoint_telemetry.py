@@ -27,11 +27,6 @@ from crewai_core.telemetry import Telemetry
             "checkpoint_cli.diff_checkpoints",
             "diff",
         ),
-        (
-            ["prune", "--keep", "2", "--dry-run"],
-            "checkpoint_cli.prune_checkpoints",
-            "prune",
-        ),
     ],
 )
 def test_checkpoint_command_usage(args, target, action):
@@ -115,3 +110,33 @@ async def test_tui_counts_only_actions_with_a_selected_checkpoint(action, select
     else:
         telemetry.assert_not_called()
         exit_app.assert_not_called()
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+@pytest.mark.parametrize("retention", [[], ["--older-than", "invalid"]])
+def test_invalid_prune_is_not_counted(tmp_path, dry_run, retention):
+    args = ["checkpoint", "--location", str(tmp_path), "prune", *retention]
+    if dry_run:
+        args.append("--dry-run")
+    with patch("crewai_core.telemetry.Telemetry") as telemetry:
+        result = CliRunner().invoke(crewai, args)
+    if retention:
+        assert result.exit_code == 2
+        assert "Invalid duration" in result.output
+    else:
+        assert "Specify --keep N and/or --older-than" in result.output
+    telemetry.assert_not_called()
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+@pytest.mark.parametrize("retention", [["--keep", "2"], ["--older-than", "7d"]])
+def test_valid_prune_is_counted_once(tmp_path, dry_run, retention):
+    args = ["checkpoint", "--location", str(tmp_path), "prune", *retention]
+    if dry_run:
+        args.append("--dry-run")
+    with patch("crewai_core.telemetry.Telemetry") as telemetry:
+        result = CliRunner().invoke(crewai, args)
+    assert result.exit_code == 0, result.output
+    telemetry.return_value.feature_usage_span.assert_called_once_with(
+        "cli_usage:checkpoint_prune"
+    )
