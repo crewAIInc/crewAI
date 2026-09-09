@@ -23,6 +23,8 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from crewai.state.runtime import RuntimeState
 
+from opentelemetry import context as otel_context
+
 from crewai.events.base_events import BaseEvent, get_next_emission_sequence
 from crewai.events.depends import Depends
 from crewai.events.event_context import (
@@ -57,7 +59,6 @@ from crewai.events.utils.handlers import (
     is_call_handler_safe,
 )
 from crewai.utilities.rw_lock import RWLock
-from opentelemetry import context as otel_context
 
 
 logger = logging.getLogger(__name__)
@@ -584,6 +585,12 @@ class CrewAIEventsBus:
 
         publish_stream_event(source, event)
         self._record_event(event)
+
+        # Enrich on the execution thread before operation() ends its span.
+        from crewai.telemetry.tracing.context import get_trace_session
+
+        if session := get_trace_session():
+            session.record_event(source, event)
 
     def emit(self, source: Any, event: BaseEvent) -> Future[None] | None:
         """Emit an event to all registered handlers.

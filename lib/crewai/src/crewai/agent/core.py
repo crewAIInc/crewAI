@@ -73,6 +73,7 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
 )
 from crewai.events.types.skill_events import SkillUsedEvent
+from crewai.execution import begin_execution, end_execution
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
@@ -1071,9 +1072,7 @@ class Agent(BaseAgent):
                 raise e
             except Exception as e:
                 # The retry runs a whole aexecute_task of its own, result already finalized.
-                return await self._handle_execution_error_async(
-                    e, task, context, tools
-                )
+                return await self._handle_execution_error_async(e, task, context, tools)
 
             return self._finalize_task_execution(task, result)
 
@@ -1744,9 +1743,11 @@ class Agent(BaseAgent):
             messages, response_format, input_files
         )
 
+        execution_token = None
         try:
+            execution_token = begin_execution()
             with operation(
-                "execute agent",
+                "execute lite agent",
                 {
                     "crewai.agent.role": self.role or "",
                     "crewai.agent.id": str(self.id),
@@ -1779,7 +1780,13 @@ class Agent(BaseAgent):
                 )
 
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     def _finalize_kickoff(
         self,
@@ -2125,9 +2132,11 @@ class Agent(BaseAgent):
             messages, response_format, input_files
         )
 
+        execution_token = None
         try:
+            execution_token = begin_execution()
             with operation(
-                "execute agent",
+                "execute lite agent",
                 {
                     "crewai.agent.role": self.role or "",
                     "crewai.agent.id": str(self.id),
@@ -2160,7 +2169,13 @@ class Agent(BaseAgent):
                 )
 
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     async def akickoff(
         self,

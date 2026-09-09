@@ -16,23 +16,28 @@ from opentelemetry.trace import (
     Link,
     Span,
     SpanContext,
+    SpanKind,
     Status,
     StatusCode,
     TraceFlags,
 )
 
+from crewai.events.event_context import get_current_parent_id
 from crewai.execution import get_execution_uuid
+from crewai.telemetry.tracing.context import get_trace_session
 
 
 _TRACER_NAME = "crewai"
 
 
 def _tracer() -> trace.Tracer:
-    """Resolve the crewAI tracer from the current global provider.
+    """Prefer the execution's tracer; otherwise preserve application OTel wiring.
 
     Always re-resolves so user code that installs a TracerProvider after
     crewAI is imported still gets recording spans.
     """
+    if session := get_trace_session():
+        return session.get_tracer(_TRACER_NAME)
     return trace.get_tracer(_TRACER_NAME)
 
 
@@ -43,6 +48,7 @@ def operation(
     *,
     links: list[Link] | None = None,
     expected_exceptions: tuple[type[BaseException], ...] = (),
+    enabled: bool = True,
 ) -> Iterator[Span]:
     """Open a span around an operation.
 
@@ -72,18 +78,60 @@ def operation(
         The active :class:`Span`.  Callers may attach additional
         attributes or events to it as the operation progresses.
     """
+    if not enabled:
+        yield trace.get_current_span()
+        return
     attrs: dict[str, Any] = dict(attributes or {})
     execution_uuid = get_execution_uuid()
     if execution_uuid and "crewai.execution_uuid" not in attrs:
         attrs["crewai.execution_uuid"] = execution_uuid
 
-    with _tracer().start_as_current_span(
-        name,
-        attributes=attrs,
-        links=links or [],
+    session = get_trace_session()
+    if session:
+        name = {
+            "execute flow method": "call method",
+            "resume flow": "execute flow",
+            "remember memory": "save memory",
+            "recall memory": "query memory",
+            "agent reason": "agent reasoning",
+            "guard llm": "evaluate guardrail",
+        }.get(name, name)
+    span = None
+    if session:
+        # Some lifecycle events precede the operation wrapper. Adopt their
+        # span rather than creating a second row for the same operation.
+        candidate = session.context.active_spans.get(get_current_parent_id() or "")
+        if (
+            candidate is not None
+            and getattr(candidate, "name", None) == name
+            and candidate.is_recording()
+            and candidate.get_span_context().span_id
+            not in session.context.operation_spans
+        ):
+            span = candidate
+            span.set_attributes(attrs)
+            for link in links or []:
+                span.add_link(link.context, link.attributes)
+    if span is None:
+        kind = (
+            SpanKind.CLIENT
+            if session and name in {"call llm", "execute lite agent"}
+            else SpanKind.INTERNAL
+        )
+        span = _tracer().start_span(
+            name, attributes=attrs, links=links or [], kind=kind
+        )
+    if session:
+        session.context.operation_spans.add(span.get_span_context().span_id)
+        if session.context.root_span is None:
+            session.context.root_span = span
+
+    with trace.use_span(
+        span,
+        end_on_exit=session is None,
         record_exception=False,
         set_status_on_exception=False,
-    ) as span:
+    ):
         try:
             yield span
         except expected_exceptions:
@@ -93,7 +141,21 @@ def operation(
             span.set_status(Status(StatusCode.ERROR, f"{type(exc).__name__}: {exc}"))
             raise
         else:
-            span.set_status(Status(StatusCode.OK))
+            if getattr(
+                getattr(span, "status", None), "status_code", None
+            ) != StatusCode.ERROR and (
+                session is None or span not in session.context._span_refs.values()
+            ):
+                span.set_status(Status(StatusCode.OK))
+        finally:
+            if session:
+                span_id = span.get_span_context().span_id
+                session.context.operation_spans.discard(span_id)
+                end_time = session.context.completed_operations.pop(span_id, None)
+                if end_time is not None:
+                    span.end(end_time=end_time)
+                elif span not in session.context._span_refs.values():
+                    span.end()
 
 
 def follows_from(
