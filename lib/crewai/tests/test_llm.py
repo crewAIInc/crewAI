@@ -386,6 +386,26 @@ def test_unrecognized_provider_prefix_is_not_stripped() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "model,expected_size",
+    [
+        ("o1", 200_000),
+        ("o1-2024-12-17", 200_000),
+        ("o1-pro", 200_000),
+        ("o3", 200_000),
+        ("o3-mini", 200_000),
+        ("o1-preview", 128_000),
+        ("o1-mini", 128_000),
+    ],
+)
+def test_o_series_reasoning_models_context_window(
+    model: str, expected_size: int
+) -> None:
+    """Reasoning models o1, o1-pro, and o3 use official 200k context window."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(expected_size * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 @pytest.fixture
 def get_weather_tool_schema():
     return {

@@ -1865,6 +1865,25 @@ def test_openai_gpt5_and_gpt54_mini_keep_their_windows() -> None:
     assert gpt54_mini.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+@pytest.mark.parametrize(
+    "model,expected_size",
+    [
+        ("o1", 200_000),
+        ("o1-2024-12-17", 200_000),
+        ("o1-pro", 200_000),
+        ("o3", 200_000),
+        ("o3-mini", 200_000),
+        ("o1-preview", 128_000),
+        ("o1-mini", 128_000),
+    ],
+)
+def test_openai_o_series_reasoning_models_context_window(
+    model: str, expected_size: int
+) -> None:
+    llm = OpenAICompletion(model=model)
+    assert llm.get_context_window_size() == int(expected_size * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_openai_stop_words_still_applied_to_regular_responses():
     """
     Test that stop words ARE still applied for regular (non-structured) responses.

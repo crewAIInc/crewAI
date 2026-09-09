@@ -177,8 +177,11 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4.1": 1047576,  # Based on official docs
     "gpt-4.1-mini-2025-04-14": 1047576,
     "gpt-4.1-nano-2025-04-14": 1047576,
+    "o1": 200000,
     "o1-preview": 128000,
     "o1-mini": 128000,
+    "o1-pro": 200000,
+    "o3": 200000,
     "o3-mini": 200000,
     "o4-mini": 200000,
     "gemini-3-pro-preview": 1048576,
