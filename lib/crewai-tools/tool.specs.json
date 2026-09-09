@@ -17466,6 +17466,19 @@
                 "description": "Number of results to retrieve in each page.",
                 "title": "Limit"
               },
+              "locale": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "`Accept-Language` header value which changes your Google search page web interface language.",
+                "title": "Locale"
+              },
               "pages": {
                 "anyOf": [
                   {
@@ -27097,9 +27110,26 @@
       "run_params_schema": {
         "description": "Input for Vision Tool.",
         "properties": {
+          "complexity_level": {
+            "default": "medium",
+            "description": "The complexity of the request, which selects the model: 'easy', 'medium', 'hard'.",
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ],
+            "title": "Complexity Level",
+            "type": "string"
+          },
           "image_path_url": {
             "default": "The image path or URL.",
             "title": "Image Path Url",
+            "type": "string"
+          },
+          "query": {
+            "default": "What's in this image?",
+            "description": "The question or instruction to ask the model about the image.",
+            "title": "Query",
             "type": "string"
           }
         },
