@@ -122,6 +122,67 @@ def test_gemini_completion_initialization_parameters():
     assert llm.top_k == 40
 
 
+def test_gemini_user_agent_header_default():
+    """Test that default Gemini client initialization sets the user-agent header."""
+    from crewai import __version__
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini-3.7-flash", api_key="test-key")
+    client = llm._get_sync_client()
+    assert client._api_client._http_options is not None
+    assert client._api_client._http_options.headers is not None
+    assert f"crewai/{__version__}" in client._api_client._http_options.headers["user-agent"]
+
+
+def test_gemini_http_options_dict_conversion():
+    """Test that dictionary http_options in client_params are converted to types.HttpOptions."""
+    from crewai import __version__
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(
+        model="gemini-3.7-flash",
+        api_key="test-key",
+        client_params={"http_options": {"timeout": 45}},
+    )
+    client = llm._get_sync_client()
+    assert client._api_client._http_options is not None
+    assert client._api_client._http_options.timeout == 45
+    assert f"crewai/{__version__}" in client._api_client._http_options.headers["user-agent"]
+
+
+def test_gemini_http_options_custom_headers_preserved():
+    """Test that custom headers in types.HttpOptions are preserved alongside user-agent."""
+    from google.genai import types
+    from crewai import __version__
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(
+        model="gemini-3.7-flash",
+        api_key="test-key",
+        client_params={"http_options": types.HttpOptions(headers={"X-Custom-Header": "my-value"})},
+    )
+    client = llm._get_sync_client()
+    assert client._api_client._http_options is not None
+    assert client._api_client._http_options.headers.get("X-Custom-Header") == "my-value"
+    assert f"crewai/{__version__}" in client._api_client._http_options.headers["user-agent"]
+
+
+def test_gemini_vertex_express_mode_preserves_user_agent():
+    """Test that Vertex AI Express mode sets api_version='v1' and preserves user-agent."""
+    from crewai import __version__
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(
+        model="gemini-3.7-flash",
+        api_key="test-key",
+        use_vertexai=True,
+    )
+    client = llm._get_sync_client()
+    assert client._api_client._http_options is not None
+    assert client._api_client._http_options.api_version == "v1"
+    assert f"crewai/{__version__}" in client._api_client._http_options.headers["user-agent"]
+
+
 def test_gemini_started_event_surfaces_max_output_tokens():
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallStartedEvent
