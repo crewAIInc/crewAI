@@ -1,6 +1,7 @@
 import gc
 from typing import Any, ClassVar, cast
 from unittest.mock import Mock, create_autospec, patch
+from weakref import ref
 
 import pytest
 from crewai.agent import Agent
@@ -13,6 +14,7 @@ from crewai.project import (
     after_kickoff,
     agent,
     before_kickoff,
+    callback,
     crew,
     llm,
     task,
@@ -144,14 +146,23 @@ def test_instance_memoization_cache_does_not_retain_discarded_crews():
     project_utils._instance_caches.clear()
 
     class CrewFactory:
+        @callback
+        def step_callback(self, _):
+            return None
+
         @agent
         def simple_agent(self):
             return Agent(
-                role="Simple Agent", goal="Simple Goal", backstory="Simple Backstory"
+                role="Simple Agent",
+                goal="Simple Goal",
+                backstory="Simple Backstory",
+                step_callback=self.step_callback,
             )
 
     factories = [CrewFactory() for _ in range(10)]
     results = [factory.simple_agent() for factory in factories]
+    factory_refs = [ref(factory) for factory in factories]
+    result_refs = [ref(result) for result in results]
 
     assert len(project_utils._instance_caches) == len(factories)
     assert len({id(result) for result in results}) == len(factories)
@@ -160,6 +171,8 @@ def test_instance_memoization_cache_does_not_retain_discarded_crews():
     del factories
     gc.collect()
 
+    assert all(factory_ref() is None for factory_ref in factory_refs)
+    assert all(result_ref() is None for result_ref in result_refs)
     assert len(project_utils._instance_caches) == 0
 
 

@@ -15,16 +15,18 @@ from crewai.agents.cache.cache_handler import CacheHandler
 P = ParamSpec("P")
 R = TypeVar("R")
 cache = CacheHandler()
-_instance_caches: WeakKeyDictionary[Any, CacheHandler] = WeakKeyDictionary()
+_INSTANCE_CACHE_ATTR = "__crewai_memoization_cache__"
+_instance_caches: WeakKeyDictionary[Any, None] = WeakKeyDictionary()
 _instance_caches_lock = threading.Lock()
 
 
 def _get_cache(args: tuple[Any, ...]) -> CacheHandler:
     """Return an instance-scoped cache when memoizing a bound method.
 
-    Instance caches are held by weak keys so cached Agent/Task/Crew results do
-    not keep discarded CrewBase instances alive. Functions without an instance
-    argument continue using the process-wide cache.
+    Instance caches live on their owner so cached Agent/Task/Crew results can
+    form a collectable cycle with the owner without being rooted by a global
+    registry. Functions without an instance argument continue using the
+    process-wide cache.
     """
     if not args:
         return cache
@@ -35,9 +37,14 @@ def _get_cache(args: tuple[Any, ...]) -> CacheHandler:
 
     try:
         with _instance_caches_lock:
-            return _instance_caches.setdefault(instance, CacheHandler())
-    except TypeError:
-        # Some callable objects are unhashable or cannot be weakly referenced.
+            instance_cache = instance.__dict__.get(_INSTANCE_CACHE_ATTR)
+            if instance_cache is None:
+                instance_cache = CacheHandler()
+                instance.__dict__[_INSTANCE_CACHE_ATTR] = instance_cache
+            _instance_caches[instance] = None
+            return instance_cache
+    except (AttributeError, TypeError):
+        # Some callable objects cannot expose a mutable dict or weak reference.
         return cache
 
 
