@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 import json
 import logging
 import os
+import ssl
+import threading
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
@@ -12,6 +15,8 @@ from openai import (
     APIConnectionError,
     AsyncOpenAI,
     BadRequestError,
+    DefaultAsyncHttpxClient,
+    DefaultHttpxClient,
     NotFoundError,
     OpenAI,
     Stream,
@@ -69,6 +74,135 @@ if TYPE_CHECKING:
 # `_remember_responses_only_model` so the wasted round trip is paid once per model
 # per process rather than on every call.
 _LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+
+
+_SHARED_SSL_CONTEXT: ssl.SSLContext | None = None
+_SHARED_SSL_CONTEXT_LOCK = threading.Lock()
+_PENDING_ASYNC_CLOSE_TASKS: set[asyncio.Task[None]] = set()
+
+
+class _ClientLock:
+    """A lock that gives deep-copied providers independent synchronization."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+
+    def __enter__(self) -> _ClientLock:
+        self._lock.acquire()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self._lock.release()
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> _ClientLock:
+        copied = type(self)()
+        memo[id(self)] = copied
+        return copied
+
+    def __reduce__(self) -> tuple[type[_ClientLock], tuple[()]]:
+        """Recreate an unlocked lock instead of serializing thread state."""
+        return type(self), ()
+
+
+def _consume_async_close_task(task: asyncio.Task[None]) -> None:
+    """Retain finalizer tasks until completion and consume cleanup errors."""
+    _PENDING_ASYNC_CLOSE_TASKS.discard(task)
+    if task.cancelled():
+        return
+    try:
+        task.exception()
+    except Exception:
+        return
+
+
+def _schedule_async_client_close(client: httpx.AsyncClient) -> bool:
+    """Schedule async cleanup only when called from a live event loop."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    if loop.is_closed():
+        return False
+    task = loop.create_task(client.aclose())
+    _PENDING_ASYNC_CLOSE_TASKS.add(task)
+    task.add_done_callback(_consume_async_close_task)
+    return True
+
+
+def _close_failed_async_client(client: httpx.AsyncClient) -> None:
+    """Close a newly created async client after API-client initialization fails."""
+    if _schedule_async_client_close(client):
+        return
+    try:
+        # No loop is running in this thread, and the client has not performed
+        # any I/O yet, so it is not bound to a different event loop.
+        asyncio.run(client.aclose())
+    except Exception:
+        logging.debug(
+            "Failed to close an async OpenAI HTTP client after initialization",
+            exc_info=True,
+        )
+
+
+def _shared_ssl_context() -> ssl.SSLContext:
+    """Return one process-wide TLS context for OpenAI clients.
+
+    ``httpx`` builds a fresh context per client, and each one loads the system
+    CA bundle from disk. Every completion builds two clients, so agent creation
+    paid that load twice. An ``ssl.SSLContext`` is safe to share across clients.
+    """
+    global _SHARED_SSL_CONTEXT
+    if _SHARED_SSL_CONTEXT is None:
+        with _SHARED_SSL_CONTEXT_LOCK:
+            if _SHARED_SSL_CONTEXT is None:
+                _SHARED_SSL_CONTEXT = httpx.create_ssl_context()
+    return _SHARED_SSL_CONTEXT
+
+
+class _SharedSSLHttpxClient(DefaultHttpxClient):
+    """OpenAI defaults with the shared context and SDK-equivalent finalization."""
+
+    def __del__(self) -> None:
+        try:
+            if not self.is_closed:
+                self.close()
+        except Exception:
+            return
+
+
+class _SharedSSLAsyncHttpxClient(DefaultAsyncHttpxClient):
+    """Async OpenAI defaults with safe best-effort loop finalization."""
+
+    def __del__(self) -> None:
+        try:
+            if not self.is_closed:
+                _schedule_async_client_close(self)
+        except Exception:
+            # Match the OpenAI SDK wrapper: async cleanup can only be scheduled
+            # while its owning event loop is still running.
+            return
+
+
+class _InterceptorHttpxClient(httpx.Client):
+    """Provider-owned interceptor client with synchronous finalization."""
+
+    def __del__(self) -> None:
+        try:
+            if not self.is_closed:
+                self.close()
+        except Exception:
+            return
+
+
+class _InterceptorAsyncHttpxClient(httpx.AsyncClient):
+    """Provider-owned async interceptor client with loop finalization."""
+
+    def __del__(self) -> None:
+        try:
+            if not self.is_closed:
+                _schedule_async_client_close(self)
+        except Exception:
+            return
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -258,6 +392,11 @@ class OpenAICompletion(BaseLLM):
 
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)
+    _owns_sync_http_client: bool = PrivateAttr(default=False)
+    _owns_async_http_client: bool = PrivateAttr(default=False)
+    _sync_client_lock: _ClientLock = PrivateAttr(default_factory=_ClientLock)
+    _async_client_lock: _ClientLock = PrivateAttr(default_factory=_ClientLock)
+    _async_client_closing: bool = PrivateAttr(default=False)
     _last_response_id: str | None = PrivateAttr(default=None)
     _last_reasoning_items: list[Any] | None = PrivateAttr(default=None)
 
@@ -290,42 +429,161 @@ class OpenAICompletion(BaseLLM):
         data["is_gpt4_model"] = "gpt-4" in model.lower()
         return data
 
-    @model_validator(mode="after")
-    def _init_clients(self) -> OpenAICompletion:
-        """Eagerly build clients when the API key is available, otherwise
-        defer so ``LLM(model="openai/...")`` can be constructed at module
-        import time even before deployment env vars are set.
-        """
-        try:
-            self._client = self._build_sync_client()
-            self._async_client = self._build_async_client()
-        except ValueError:
-            pass
-        return self
-
     def _build_sync_client(self) -> Any:
         client_config = self._get_client_params()
+        http_client: httpx.Client | None = None
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
-            client_config["http_client"] = httpx.Client(transport=transport)
-        return OpenAI(**client_config)
+            http_client = _InterceptorHttpxClient(transport=transport)
+            client_config["http_client"] = http_client
+            self._owns_sync_http_client = True
+        elif "http_client" not in client_config:
+            http_client = _SharedSSLHttpxClient(verify=_shared_ssl_context())
+            client_config["http_client"] = http_client
+            self._owns_sync_http_client = True
+        else:
+            self._owns_sync_http_client = False
+        try:
+            return OpenAI(**client_config)
+        except Exception:
+            if http_client is not None:
+                try:
+                    http_client.close()
+                except Exception:
+                    logging.debug(
+                        "Failed to close an OpenAI HTTP client after initialization",
+                        exc_info=True,
+                    )
+                self._owns_sync_http_client = False
+            raise
 
     def _build_async_client(self) -> Any:
         client_config = self._get_client_params()
+        http_client: httpx.AsyncClient | None = None
         if self.interceptor:
             transport = AsyncHTTPTransport(interceptor=self.interceptor)
-            client_config["http_client"] = httpx.AsyncClient(transport=transport)
-        return AsyncOpenAI(**client_config)
+            http_client = _InterceptorAsyncHttpxClient(transport=transport)
+            client_config["http_client"] = http_client
+            self._owns_async_http_client = True
+        elif "http_client" not in client_config:
+            http_client = _SharedSSLAsyncHttpxClient(verify=_shared_ssl_context())
+            client_config["http_client"] = http_client
+            self._owns_async_http_client = True
+        else:
+            self._owns_async_http_client = False
+        try:
+            return AsyncOpenAI(**client_config)
+        except Exception:
+            if http_client is not None:
+                _close_failed_async_client(http_client)
+                self._owns_async_http_client = False
+            raise
 
     def _get_sync_client(self) -> Any:
-        if self._client is None:
-            self._client = self._build_sync_client()
-        return self._client
+        client = self._client
+        if client is not None:
+            return client
+        with self._sync_client_lock:
+            client = self._client
+            if client is None:
+                client = self._build_sync_client()
+                self._client = client
+            return client
 
     def _get_async_client(self) -> Any:
-        if self._async_client is None:
-            self._async_client = self._build_async_client()
-        return self._async_client
+        client = self._async_client
+        if client is not None and not self._async_client_closing:
+            return client
+        with self._async_client_lock:
+            if self._async_client_closing:
+                raise RuntimeError("OpenAI async client is being closed")
+            client = self._async_client
+            if client is None:
+                client = self._build_async_client()
+                self._async_client = client
+            return client
+
+    def __copy__(self) -> OpenAICompletion:
+        """Copy configuration without sharing provider-owned client state."""
+        with self._sync_client_lock, self._async_client_lock:
+            copied = super().__copy__()
+            copied._sync_client_lock = _ClientLock()
+            copied._async_client_lock = _ClientLock()
+            copied._async_client_closing = False
+            if self._owns_sync_http_client:
+                copied._client = None
+                copied._owns_sync_http_client = False
+            if self._owns_async_http_client:
+                copied._async_client = None
+                copied._owns_async_http_client = False
+            return copied
+
+    def __getstate__(self) -> dict[Any, Any]:
+        """Serialize configuration without live provider-owned resources."""
+        with self._sync_client_lock, self._async_client_lock:
+            state = super().__getstate__()
+            private = state.get("__pydantic_private__")
+            if private is None:
+                return state
+            if self._owns_sync_http_client:
+                private["_client"] = None
+                private["_owns_sync_http_client"] = False
+            if self._owns_async_http_client:
+                private["_async_client"] = None
+                private["_owns_async_http_client"] = False
+            private["_async_client_closing"] = False
+            return state
+
+    def __enter__(self) -> OpenAICompletion:
+        """Return this provider for synchronous managed use."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Close a provider-owned synchronous client."""
+        self.close()
+
+    async def __aenter__(self) -> OpenAICompletion:
+        """Return this provider for asynchronous managed use."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Close all provider-owned clients."""
+        await self.aclose()
+
+    def close(self) -> None:
+        """Close the provider-owned synchronous HTTP client."""
+        with self._sync_client_lock:
+            if self._client is not None and self._owns_sync_http_client:
+                self._client.close()
+                self._client = None
+                self._owns_sync_http_client = False
+
+    async def aclose(self) -> None:
+        """Close all provider-owned HTTP clients."""
+        try:
+            self.close()
+        finally:
+            while True:
+                client = None
+                with self._async_client_lock:
+                    if not self._async_client_closing:
+                        if self._owns_async_http_client:
+                            client = self._async_client
+                        if client is not None:
+                            self._async_client_closing = True
+                        break
+                await asyncio.sleep(0)
+            if client is not None:
+                closed = False
+                try:
+                    await client.close()
+                    closed = True
+                finally:
+                    with self._async_client_lock:
+                        if closed:
+                            self._async_client = None
+                            self._owns_async_http_client = False
+                        self._async_client_closing = False
 
     @property
     def last_response_id(self) -> str | None:
