@@ -81,11 +81,9 @@ class VisionTool(BaseTool):
         ]
     )
 
-    _model: str = PrivateAttr(default=DEFAULT_MODEL)
-    _model_explicitly_set: bool = PrivateAttr(default=False)
-    _llm: LLM | None = PrivateAttr(default=None)
-    _llm_explicitly_set: bool = PrivateAttr(default=False)
-    _complexity_llms: dict[ComplexityLevel, LLM] = PrivateAttr(default_factory=dict)
+    _explicit_llm: LLM | None = PrivateAttr(default=None)
+    _explicit_model: str | None = PrivateAttr(default=None)
+    _llms_by_model: dict[str, LLM] = PrivateAttr(default_factory=dict)
 
     def __init__(
         self, llm: LLM | None = None, model: str | None = None, **kwargs: Any
@@ -100,61 +98,43 @@ class VisionTool(BaseTool):
             **kwargs: Additional arguments for the base tool
         """
         super().__init__(**kwargs)
-        self._model = model if model is not None else DEFAULT_MODEL
-        self._model_explicitly_set = model is not None
-        self._llm = llm
-        self._llm_explicitly_set = llm is not None
+        self._explicit_llm = llm
+        self._explicit_model = model
 
     @property
     def model(self) -> str:
-        """Get the current model identifier."""
-        return self._model
+        """Get the configured model identifier, or the default model."""
+        return (
+            self._explicit_model if self._explicit_model is not None else DEFAULT_MODEL
+        )
 
     @model.setter
     def model(self, value: str) -> None:
-        """Set the model identifier and reset LLM if it was auto-created."""
-        self._model = value
-        self._model_explicitly_set = True
-        if self._llm is not None and getattr(self._llm, "model", None) != value:
-            self._llm = None
+        """Set the model override; an explicitly supplied LLM still takes precedence."""
+        self._explicit_model = value
 
     @property
     def llm(self) -> LLM:
-        """Get the LLM instance, creating one if needed."""
-        if self._llm is None:
-            self._llm = LLM(model=self._model, stop=["STOP", "END"])
-        return self._llm
+        """Get the LLM for the default complexity, honoring explicit overrides."""
+        return self._llm_for_complexity("medium")
+
+    def _get_or_create_llm(self, model: str) -> LLM:
+        """Reuse one LLM instance per model."""
+        if model not in self._llms_by_model:
+            self._llms_by_model[model] = LLM(model=model, stop=["STOP", "END"])
+        return self._llms_by_model[model]
 
     def _llm_for_complexity(self, complexity_level: ComplexityLevel) -> LLM:
-        """Return the LLM to use for the given complexity level.
+        """Select an explicit LLM, explicit model, or complexity model, in that order."""
+        if self._explicit_llm is not None:
+            return self._explicit_llm
 
-        Precedence:
-
-        1. An LLM explicitly supplied to ``__init__`` always wins, regardless of
-           ``complexity_level``.
-        2. An explicitly provided ``model`` (constructor argument or ``model``
-           setter) wins over the complexity-based selection.
-        3. Otherwise the ``complexity_level`` is mapped to a specific model. The
-           resolved LLM is cached per level so each level is only instantiated
-           once, without leaking across levels.
-
-        Note: ``self._llm`` being populated is *not* treated as an explicit LLM,
-        since it can be set as a side effect of reading the :attr:`llm` property
-        or of the :attr:`model` setter. Only ``_llm_explicitly_set`` reflects an
-        LLM the caller passed in.
-        """
-        if self._llm_explicitly_set and self._llm is not None:
-            return self._llm
-
-        if self._model_explicitly_set:
-            return self.llm
-
-        if complexity_level not in self._complexity_llms:
-            model = COMPLEXITY_MODEL_MAP[complexity_level]
-            self._complexity_llms[complexity_level] = LLM(
-                model=model, stop=["STOP", "END"]
-            )
-        return self._complexity_llms[complexity_level]
+        model = (
+            self._explicit_model
+            if self._explicit_model is not None
+            else COMPLEXITY_MODEL_MAP[complexity_level]
+        )
+        return self._get_or_create_llm(model)
 
     def _run(self, **kwargs: Any) -> str:
         try:
@@ -162,14 +142,8 @@ class VisionTool(BaseTool):
             if not image_path_url:
                 return "Image Path or URL is required."
 
-            query = kwargs.get("query", "What's in this image?")
-            complexity_level: ComplexityLevel = kwargs.get("complexity_level", "medium")
-
-            ImagePromptSchema(
-                image_path_url=image_path_url,
-                query=query,
-                complexity_level=complexity_level,
-            )
+            inputs = ImagePromptSchema(**kwargs)
+            image_path_url = inputs.image_path_url
 
             if image_path_url.startswith("http"):
                 image_data = image_path_url
@@ -184,7 +158,7 @@ class VisionTool(BaseTool):
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": query},
+                        {"type": "text", "text": inputs.query},
                         {
                             "type": "image_url",
                             "image_url": {"url": image_data},
@@ -192,7 +166,9 @@ class VisionTool(BaseTool):
                     ],
                 },
             ]
-            return self._llm_for_complexity(complexity_level).call(messages=messages)
+            return self._llm_for_complexity(inputs.complexity_level).call(
+                messages=messages
+            )
         except Exception as e:
             return f"An error occurred: {e!s}"
 
