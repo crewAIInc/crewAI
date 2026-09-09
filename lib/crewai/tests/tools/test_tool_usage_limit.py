@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from crewai.tools import BaseTool, tool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 
 
@@ -149,3 +150,44 @@ def test_tool_usage_with_toolusage_class():
     
     result3 = tool_usage._check_usage_limit(tool, "Limited Tool")
     assert "has reached its usage limit of 2 times" in result3
+
+
+def test_tool_usage_use_does_not_double_count():
+    """A tool run through ToolUsage.use() must increment its usage count once
+    per call, not twice. Previously invoke() and ToolUsage._use both
+    incremented, halving the effective max_usage_count."""
+    runs = {"n": 0}
+
+    class CountingTool(BaseTool):
+        name: str = "counter"
+        description: str = "counts"
+        max_usage_count: int = 2
+
+        def _run(self, x: int) -> str:
+            runs["n"] += 1
+            return f"got {x}"
+
+    structured = CountingTool().to_structured_tool()
+
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[structured],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=None,
+    )
+
+    tool_usage.use(calling=ToolCalling(tool_name="counter", arguments={"x": 1}), tool_string="")
+    assert structured.current_usage_count == 1
+
+    tool_usage.use(calling=ToolCalling(tool_name="counter", arguments={"x": 2}), tool_string="")
+    assert structured.current_usage_count == 2
+
+    # Both calls actually executed (the limit did not block the second one).
+    assert runs["n"] == 2
+
+    # The third call is over the limit and must not execute the tool.
+    tool_usage.use(calling=ToolCalling(tool_name="counter", arguments={"x": 3}), tool_string="")
+    assert runs["n"] == 2
+    assert structured.current_usage_count == 2
