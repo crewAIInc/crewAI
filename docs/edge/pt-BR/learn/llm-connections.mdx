@@ -10,7 +10,7 @@ mode: "wide"
 O CrewAI conecta-se a LLMs por meio de integrações nativas via SDK para os provedores mais populares (OpenAI, Anthropic, Google Gemini, Azure e AWS Bedrock), e usa o LiteLLM como alternativa flexível para todos os demais provedores.
 
 <Note>
-    Por padrão, o CrewAI usa o modelo `gpt-5.6-luna`. Isso é determinado pela variável de ambiente `OPENAI_MODEL_NAME`, que tem como padrão "gpt-5.6-luna" se não for definida.
+    Quando nenhum modelo é configurado explicitamente, o CrewAI usa a primeira variável de ambiente não vazia nesta ordem: `MODEL`, `MODEL_NAME` e `OPENAI_MODEL_NAME`. Se nenhuma estiver definida, usa o valor de `DEFAULT_LLM_MODEL`, atualmente `gpt-5.6-luna`.
     Você pode facilmente configurar seus agentes para usar um modelo ou provedor diferente, conforme descrito neste guia.
 </Note>
 
