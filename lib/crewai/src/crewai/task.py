@@ -795,6 +795,16 @@ class Task(BaseModel):
                 TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
+        except asyncio.CancelledError as e:
+            # CancelledError inherits from BaseException, not Exception, so it bypasses
+            # the ordinary failure path. Emit a terminal event so EventListener can pop
+            # execution_spans and release the retained task graph, then re-raise.
+            self.end_time = datetime.datetime.now()
+            crewai_event_bus.emit(
+                self,
+                TaskFailedEvent(error=str(e) or "CancelledError", error_type=type(e), task=self),
+            )
+            raise
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(
