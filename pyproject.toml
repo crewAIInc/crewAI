@@ -234,11 +234,12 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # ships. TODO: drop --ignore-vuln GHSA-8mgp-746c-j5xp when bumping nltk
 # past 3.10.3. Transitive via
 # crewai-tools[xml] -> unstructured.
-# accelerate <=1.14.0 has GHSA-4j2p-28q2-5m79 (CVE-2026-69112), a path
-# traversal and denial-of-service issue in sharded-checkpoint weight_map handling.
-# Upstream fixes are merged, but no patched PyPI release is available yet; the
-# dependency is transitive via docling[standard]. TODO: remove the matching
-# pip-audit ignore when accelerate publishes a patched release.
+# accelerate <=1.14.0 has GHSA-4j2p-28q2-5m79 (CVE-2026-69112): path traversal
+# and FIFO DoS via unsanitized sharded-checkpoint weight_map entries. Latest
+# PyPI is still 1.14.0; the fix is huggingface/accelerate#4138 and is not
+# released. Ignored in pip-audit until a patched release ships. TODO: drop
+# --ignore-vuln GHSA-4j2p-28q2-5m79 when bumping accelerate past 1.14.0.
+# Transitive via docling extras (docling-ibm-models / docling-slim[standard]).
 # pydantic-settings <2.14.2 has GHSA-4xgf-cpjx-pc3j.
 # h2 <=4.4.0 has GHSA-6hr6-w5qg-qmwg (CVE-2026-71554): duplicate Host headers
 # can facilitate request smuggling; fixed in 4.4.1. Transitive via

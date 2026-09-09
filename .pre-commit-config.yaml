@@ -30,7 +30,7 @@ repos:
         name: pip-audit
         # Keep this ignore list in sync with .github/workflows/vulnerability-scan.yml.
         # TODO: drop --ignore-vuln GHSA-8mgp-746c-j5xp when bumping nltk past 3.10.3.
-        # TODO: drop --ignore-vuln GHSA-4j2p-28q2-5m79 when accelerate ships a patched release.
+        # TODO: drop --ignore-vuln GHSA-4j2p-28q2-5m79 when bumping accelerate past 1.14.0.
         entry: >-
           bash -c 'case "$OSTYPE" in msys*|cygwin*|win32*) source .venv/Scripts/activate ;; *) source .venv/bin/activate ;; esac && uv run pip-audit --skip-editable
           --ignore-vuln PYSEC-2024-277
