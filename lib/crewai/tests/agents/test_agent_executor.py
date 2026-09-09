@@ -484,7 +484,7 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.aget_llm_response_with_fallback",
+            "crewai.experimental.agent_executor.aget_llm_response",
             return_value="Thought: done\nFinal Answer: complete",
         ) as get_llm_response_mock:
             result = asyncio.run(executor.call_llm_and_parse())
@@ -506,7 +506,7 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.aget_llm_response_with_fallback",
+            "crewai.experimental.agent_executor.aget_llm_response",
             return_value="complete",
         ) as get_llm_response_mock:
             result = asyncio.run(executor.call_llm_native_tools())
@@ -532,7 +532,7 @@ class TestAgentExecutor:
         executor.tools_description = "lookup: search for information"
 
         with patch(
-            "crewai.experimental.agent_executor.aget_llm_response_with_fallback",
+            "crewai.experimental.agent_executor.aget_llm_response",
             side_effect=RuntimeError(
                 "Error code: 400 - registry.ollama.ai/library/mariner:latest "
                 "does not support tools"
@@ -1108,7 +1108,7 @@ class TestFlowErrorHandling:
             "tools_handler": Mock(),
         }
 
-    @patch("crewai.experimental.agent_executor.aget_llm_response_with_fallback")
+    @patch("crewai.experimental.agent_executor.aget_llm_response")
     @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
     def test_call_llm_parser_error(
         self, mock_enforce_rpm, mock_get_llm, mock_dependencies
@@ -1125,7 +1125,7 @@ class TestFlowErrorHandling:
         assert result == "parser_error"
         assert executor._last_parser_error is not None
 
-    @patch("crewai.experimental.agent_executor.aget_llm_response_with_fallback")
+    @patch("crewai.experimental.agent_executor.aget_llm_response")
     @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
     @patch("crewai.experimental.agent_executor.is_context_length_exceeded")
     def test_call_llm_context_error(

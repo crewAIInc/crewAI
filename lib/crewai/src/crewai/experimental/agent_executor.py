@@ -86,7 +86,7 @@ from crewai.tools.tool_failure import (
 )
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
-    aget_llm_response_with_fallback,
+    aget_llm_response,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
     enforce_rpm_limit,
@@ -1470,7 +1470,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 None if self.original_tools else self.response_model
             )
 
-            answer = await aget_llm_response_with_fallback(
+            answer = await aget_llm_response(
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,
@@ -1560,7 +1560,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             enforce_rpm_limit(self.request_within_rpm_limit)
 
             # Call LLM with native tools
-            answer = await aget_llm_response_with_fallback(
+            answer = await aget_llm_response(
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,

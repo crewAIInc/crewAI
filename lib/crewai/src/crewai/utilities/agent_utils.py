@@ -618,7 +618,7 @@ async def aget_llm_response(
     executor_context: CrewAgentExecutor | AgentExecutor | None = None,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
-    """Call the LLM asynchronously and return the response.
+    """Call the LLM asynchronously, fall back to sync-call and return the response.
 
     Args:
         llm: The LLM instance to call.
@@ -644,75 +644,31 @@ async def aget_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        answer = await llm.acall(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            answer = await llm.acall(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+        except NotImplementedError:
+            answer = await asyncio.to_thread(
+                llm.call,
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
     )
-
-
-async def aget_llm_response_with_fallback(
-    llm: LLM | BaseLLM,
-    messages: list[LLMMessage],
-    callbacks: list[TokenCalcHandler],
-    printer: Printer,
-    tools: list[dict[str, Any]] | None = None,
-    available_functions: dict[str, Callable[..., Any]] | None = None,
-    from_task: Task | None = None,
-    from_agent: BaseAgent | None = None,
-    response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | AgentExecutor | None = None,
-    verbose: bool = True,
-) -> str | BaseModel | Any:
-    """Call aget_llm_response, fall back to get_llm_response and return the response.
-
-    Args:
-        llm: The LLM instance to call.
-        messages: The messages to send to the LLM.
-        callbacks: List of callbacks for the LLM call.
-        printer: Printer instance for output.
-        tools: Optional list of tool schemas for native function calling.
-        available_functions: Optional dict mapping function names to callables.
-        from_task: Optional task context for the LLM call.
-        from_agent: Optional agent context for the LLM call.
-        response_model: Optional Pydantic model for structured outputs.
-        executor_context: Optional executor context for hook invocation.
-        verbose: Whether to print output.
-
-    Returns:
-        The response from the LLM as a string, Pydantic model (when response_model is provided),
-        or tool call results if native function calling is used.
-
-    Raises:
-        Exception: If an error occurs.
-        ValueError: If the response is None or empty.
-    """
-    call_kwargs = {
-        "llm": llm,
-        "messages": messages,
-        "callbacks": callbacks,
-        "printer": printer,
-        "tools": tools,
-        "available_functions": available_functions,
-        "from_task": from_task,
-        "from_agent": from_agent,
-        "response_model": response_model,
-        "executor_context": executor_context,
-        "verbose": verbose,
-    }
-
-    try:
-        return await aget_llm_response(**call_kwargs)
-    except NotImplementedError:
-        return await asyncio.to_thread(get_llm_response, **call_kwargs)
 
 
 def process_llm_response(

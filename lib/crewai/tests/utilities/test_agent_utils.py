@@ -37,7 +37,7 @@ from crewai.utilities.agent_utils import (
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
-    aget_llm_response_with_fallback,
+    aget_llm_response,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 
@@ -1658,15 +1658,15 @@ class TestResolvePlusResponse:
 
 class TestAgetLlmResponseWithFallback:
     class _AsyncLLM(BaseLLM):
-          calls: list[str] = Field(default_factory=list)
+        calls: list[str] = Field(default_factory=list)
 
-          def call(self, messages, **kw):
-              self.calls.append("call")
-              return "Final Answer: ok"
+        def call(self, messages, **kw):
+            self.calls.append("call")
+            return "Final Answer: ok"
 
-          async def acall(self, messages, **kw):
-              self.calls.append("acall")
-              return "Final Answer: ok"
+        async def acall(self, messages, **kw):
+            self.calls.append("acall")
+            return "Final Answer: ok"
 
     class _SyncOnlyLLM(BaseLLM):
         calls: list[str] = Field(default_factory=list)
@@ -1689,7 +1689,7 @@ class TestAgetLlmResponseWithFallback:
     async def test_awaits_acall_when_available(self):
         llm = self._AsyncLLM(model="x/y")
 
-        out = await aget_llm_response_with_fallback(
+        out = await aget_llm_response(
             llm, [{"role": "user", "content": "hi"}], [], MagicMock()
         )
 
@@ -1700,7 +1700,7 @@ class TestAgetLlmResponseWithFallback:
     async def test_falls_back_when_acall_not_implemented(self):
         llm = self._SyncOnlyLLM(model="x/y")
 
-        out = await aget_llm_response_with_fallback(
+        out = await aget_llm_response(
             llm, [{"role": "user", "content": "hi"}], [], MagicMock()
         )
 
@@ -1711,7 +1711,7 @@ class TestAgetLlmResponseWithFallback:
     async def test_falls_back_when_acall_raises_not_implemented(self):
         llm = self._BrokenAsyncLLM(model="x/y")
 
-        out = await aget_llm_response_with_fallback(
+        out = await aget_llm_response(
             llm, [{"role": "user", "content": "hi"}], [], MagicMock()
         )
 
@@ -1723,7 +1723,7 @@ class TestAgetLlmResponseWithFallback:
         llm = self._RaisingAsyncLLM(model="x/y")
 
         with pytest.raises(RuntimeError, match="boom"):
-            await aget_llm_response_with_fallback(
+            await aget_llm_response(
                 llm, [{"role": "user", "content": "hi"}], [], MagicMock()
             )
 
