@@ -1295,6 +1295,16 @@ def test_infrastructure_flows_suppress_flow_events_by_default():
         assert flow.suppress_flow_events is True
 
 
+def test_infrastructure_flows_are_marked_internal():
+    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.memory.encoding_flow import EncodingFlow
+    from crewai.memory.recall_flow import RecallFlow
+
+    assert AgentExecutor.is_crewai_internal is True
+    assert EncodingFlow.is_crewai_internal is True
+    assert RecallFlow.is_crewai_internal is True
+
+
 @pytest.mark.vcr()
 def test_llm_emits_call_started_event():
     started_events: list[LLMCallStartedEvent] = []

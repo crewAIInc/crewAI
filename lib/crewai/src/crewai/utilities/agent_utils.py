@@ -24,7 +24,7 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.llms.base_llm import BaseLLM, call_stop_override
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -481,13 +481,17 @@ def enforce_rpm_limit(
         request_within_rpm_limit()
 
 
+@contextlib.contextmanager
 def _prepare_llm_call(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     messages: list[LLMMessage],
     printer: Printer,
     verbose: bool = True,
-) -> list[LLMMessage]:
+) -> Iterator[list[LLMMessage]]:
     """Shared pre-call logic: run before hooks and resolve messages.
+
+    Yields for the duration of the LLM call so the LLM layer knows the hooks
+    already ran with this executor's context and does not dispatch them twice.
 
     Args:
         executor_context: Optional executor context for hook invocation.
@@ -495,17 +499,23 @@ def _prepare_llm_call(
         printer: Printer instance for output.
         verbose: Whether to print output.
 
-    Returns:
+    Yields:
         The resolved messages list (may come from executor_context).
 
     Raises:
         ValueError: If a before hook blocks the call.
     """
-    if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-            raise ValueError("LLM call blocked by before_llm_call hook")
-        messages = executor_context.messages
-    return messages
+    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+    if executor_context is None:
+        yield messages
+        return
+
+    if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
+        raise LLMCallBlockedError("LLM call blocked by before_llm_call hook")
+
+    with model_call_hooks_dispatched():
+        yield executor_context.messages
 
 
 def _validate_and_finalize_llm_response(
@@ -577,17 +587,18 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = llm.call(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = llm.call(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -630,17 +641,18 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = await llm.acall(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = await llm.acall(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -844,11 +856,40 @@ def _estimate_token_count(text: str) -> int:
     return len(text) // 4
 
 
-def _message_content_text(msg: LLMMessage) -> str:
-    """Return the message content as text for token estimation."""
+def _content_parts_text(content: list[dict[str, Any]]) -> str:
+    """Text carried by a multimodal content-part list.
+
+    Non-text blocks (images, audio) have no text to give, so a list with
+    none of them is named rather than rendered -- ``str()`` on the list
+    would put a Python repr in front of the model.
+
+    Blocks are ``dict[str, Any]`` and arrive from a model, so a ``text``
+    key that is not a string is possible; such a block carries no usable
+    text and is skipped rather than joined, which would raise.
+    """
+    text_parts = [
+        block["text"]
+        for block in content
+        if isinstance(block, dict)
+        and block.get("type") == "text"
+        and isinstance(block.get("text"), str)
+    ]
+    return " ".join(text_parts) if text_parts else "[multimodal content]"
+
+
+def message_content_text(msg: LLMMessage) -> str:
+    """Return the message content as text.
+
+    Used wherever a message has to collapse to a string -- token
+    estimation, memory, and the one turn promoted into the executor
+    prompt. Content is ``str | list[dict] | None``, and the list form is
+    the multimodal one.
+    """
     content = msg.get("content")
     if content is None:
         return ""
+    if isinstance(content, list):
+        return _content_parts_text(content)
     return str(content)
 
 
@@ -866,7 +907,7 @@ def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
 
 def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
     """Split a message whose content alone exceeds max_tokens into sub-messages."""
-    msg_text = _message_content_text(msg)
+    msg_text = message_content_text(msg)
     if _estimate_token_count(msg_text) <= max_tokens:
         return [msg]
 
@@ -932,12 +973,7 @@ def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
             else:
                 content = ""
         elif isinstance(content, list):
-            text_parts = [
-                block.get("text", "")
-                for block in content
-                if isinstance(block, dict) and block.get("type") == "text"
-            ]
-            content = " ".join(text_parts) if text_parts else "[multimodal content]"
+            content = _content_parts_text(content)
 
         if role == "assistant":
             label = "[ASSISTANT]:"
@@ -976,7 +1012,7 @@ def _split_messages_into_chunks(
     current_tokens = 0
 
     for msg in normalized:
-        msg_tokens = _estimate_token_count(_message_content_text(msg))
+        msg_tokens = _estimate_token_count(message_content_text(msg))
 
         if current_chunk and (current_tokens + msg_tokens) > max_tokens:
             chunks.append(current_chunk)
@@ -1929,16 +1965,23 @@ def _setup_before_llm_call_hooks(
         verbose: Whether to print output.
 
     Returns:
-        True if LLM execution should proceed, False if blocked by a hook.
+        True if LLM execution should proceed, False if a hook blocked it by
+        returning ``False``.
+
+    Raises:
+        HookAborted: If a hook raised it, so the deny reaches the caller intact.
     """
     if executor_context:
         from crewai.hooks.dispatch import (
-            HookAborted,
             InterceptionPoint,
             get_scoped_hooks,
             run_hooks,
         )
-        from crewai.hooks.llm_hooks import LLMCallHookContext, before_llm_call_reducer
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            LegacyHookBlocked,
+            before_llm_call_reducer,
+        )
 
         # Executor snapshot first, then execution-scoped hooks — the same
         # ordering dispatch() applies to global vs scoped hooks.
@@ -1960,7 +2003,7 @@ def _setup_before_llm_call_hooks(
                 reducer=before_llm_call_reducer,
                 verbose=verbose,
             )
-        except HookAborted:
+        except LegacyHookBlocked:
             if verbose:
                 printer.print(
                     content="LLM call blocked by before_llm_call hook",

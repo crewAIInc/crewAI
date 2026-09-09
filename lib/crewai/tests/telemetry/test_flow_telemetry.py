@@ -17,7 +17,7 @@ import time
 
 import pytest
 
-from crewai.experimental.conversational import ConversationConfig
+from crewai.flow import ConversationConfig
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow import Flow, listen, start
 from crewai.flow.human_feedback import human_feedback

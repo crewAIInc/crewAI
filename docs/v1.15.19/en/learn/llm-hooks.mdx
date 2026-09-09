@@ -1,0 +1,282 @@
+---
+title: LLM Call Hooks
+description: Learn how to use LLM call hooks to intercept, modify, and control language model interactions in CrewAI
+mode: "wide"
+---
+
+LLM Call Hooks provide fine-grained control over language model interactions
+during agent execution. These hooks allow you to intercept LLM calls, modify
+prompts, transform responses, implement approval gates, and add custom logging
+or monitoring.
+
+## Overview
+
+LLM hooks are executed at two interception points:
+
+| Point | When | Hook receives |
+|-------|------|---------------|
+| `PRE_MODEL_CALL` | Before every LLM call | `LLMCallHookContext` |
+| `POST_MODEL_CALL` | After every LLM call | `LLMCallHookContext` (with `response` set) |
+
+Write them with the [`@on` decorator](/edge/en/learn/execution-hooks). The
+[legacy `@before_llm_call` / `@after_llm_call` decorators](#legacy-decorators)
+keep working unchanged — both styles register on the same engine and run in one
+ordered chain.
+
+## Hook Signature
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint, LLMCallHookContext
+
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def before_hook(ctx: LLMCallHookContext) -> None:
+    # Mutate ctx.messages in place, or
+    # raise HookAborted(reason, source) to block the call
+    ...
+
+@on(InterceptionPoint.POST_MODEL_CALL)
+def after_hook(ctx: LLMCallHookContext) -> str | None:
+    # Return a string to replace ctx.response
+    # Return None to keep the original response
+    ...
+```
+
+Unlike the boundary and step points, the model-call points pass the rich
+`LLMCallHookContext` directly as the hook argument (there is no separate
+`ctx.payload`): mutate `ctx.messages` in place before the call, and return a
+string to replace the response after it.
+
+Blocking a call raises `ValueError("LLM call blocked by before_llm_call hook")`
+inside the executor; the `HookAborted` reason and source are recorded in
+[telemetry](/edge/en/learn/execution-hooks#telemetry).
+
+## LLM Hook Context
+
+The `LLMCallHookContext` object provides comprehensive access to execution state:
+
+```python
+class LLMCallHookContext:
+    executor: CrewAgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
+    messages: list               # Mutable message list
+    agent: Agent | None          # Current agent (None for direct LLM calls)
+    task: Task | None            # Current task (None for direct calls or LiteAgent)
+    crew: Crew | None            # Crew instance (None for direct calls or LiteAgent)
+    llm: BaseLLM | None          # LLM instance
+    iterations: int              # Current iteration count (0 for direct calls)
+    response: str | None         # LLM response (POST_MODEL_CALL only)
+```
+
+The context also exposes `request_human_input(prompt, default_message)`, which
+pauses live console updates and collects input from the terminal — useful for
+approval gates.
+
+### Modifying Messages
+
+**Important:** Always modify messages in-place:
+
+```python
+# ✅ Correct - modify in-place
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def add_context(ctx: LLMCallHookContext) -> None:
+    ctx.messages.append({"role": "system", "content": "Be concise"})
+
+# ❌ Wrong - replaces list reference and breaks the executor
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def wrong_approach(ctx: LLMCallHookContext) -> None:
+    ctx.messages = [{"role": "system", "content": "Be concise"}]
+```
+
+## Registration Methods
+
+### 1. Global Hooks
+
+Apply to all LLM calls across all crews. Use the `agents=` filter to scope a
+hook to specific agent roles:
+
+```python
+from crewai.hooks import on, InterceptionPoint
+
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def log_llm_call(ctx):
+    print(f"LLM call by {ctx.agent.role} at iteration {ctx.iterations}")
+
+@on(InterceptionPoint.POST_MODEL_CALL, agents=["Researcher"])
+def log_researcher_responses(ctx):
+    print(f"Response length: {len(ctx.response)}")
+```
+
+### 2. Crew-Scoped Hooks
+
+Apply the same decorator to a method inside a `@CrewBase` class to scope the
+hook to that crew only:
+
+```python
+from crewai.hooks import on, InterceptionPoint
+
+@CrewBase
+class MyProjCrew:
+    @on(InterceptionPoint.PRE_MODEL_CALL)
+    def validate_inputs(self, ctx):
+        # Only applies to this crew
+        if ctx.iterations == 0:
+            print(f"Starting task: {ctx.task.description}")
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)
+```
+
+## Common Use Cases
+
+### 1. Iteration Limiting
+
+```python
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def limit_iterations(ctx: LLMCallHookContext) -> None:
+    if ctx.iterations > 15:
+        raise HookAborted(reason="exceeded 15 iterations", source="loop-guard")
+```
+
+### 2. Human Approval Gate
+
+```python
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def require_approval(ctx: LLMCallHookContext) -> None:
+    if ctx.iterations > 5:
+        response = ctx.request_human_input(
+            prompt=f"Iteration {ctx.iterations}: Approve LLM call?",
+            default_message="Press Enter to approve, or type 'no' to block:",
+        )
+        if response.lower() == "no":
+            raise HookAborted(reason="blocked by user", source="approval-gate")
+```
+
+### 3. Adding System Context
+
+```python
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def add_guardrails(ctx: LLMCallHookContext) -> None:
+    ctx.messages.append({
+        "role": "system",
+        "content": "Ensure responses are factual and cite sources when possible."
+    })
+```
+
+### 4. Response Sanitization
+
+```python
+import re
+
+@on(InterceptionPoint.POST_MODEL_CALL)
+def sanitize_sensitive_data(ctx: LLMCallHookContext) -> str | None:
+    if not ctx.response:
+        return None
+    sanitized = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN-REDACTED]', ctx.response)
+    return re.sub(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b', '[CARD-REDACTED]', sanitized)
+```
+
+### 5. Debug Logging
+
+```python
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def debug_request(ctx: LLMCallHookContext) -> None:
+    print(f"Agent: {ctx.agent.role}, iteration {ctx.iterations}, "
+          f"{len(ctx.messages)} messages")
+
+@on(InterceptionPoint.POST_MODEL_CALL)
+def debug_response(ctx: LLMCallHookContext) -> None:
+    if ctx.response:
+        print(f"Response preview: {ctx.response[:100]}...")
+```
+
+## Hook Management
+
+```python
+from crewai.hooks import (
+    InterceptionPoint,
+    clear_all_hooks,
+    clear_hooks,
+    get_hooks,
+    unregister_hook,
+)
+
+# Unregister a specific hook
+unregister_hook(InterceptionPoint.PRE_MODEL_CALL, my_hook)
+
+# Clear one point, or everything (e.g. between tests)
+clear_hooks(InterceptionPoint.POST_MODEL_CALL)
+clear_all_hooks()
+
+# Inspect what's registered
+print(len(get_hooks(InterceptionPoint.PRE_MODEL_CALL)))
+```
+
+The legacy management API (`register_before_llm_call_hook`,
+`unregister_before_llm_call_hook`, `clear_before_llm_call_hooks`,
+`clear_all_llm_call_hooks`, `get_before_llm_call_hooks`, and their `after_`
+counterparts) operates on the same underlying registries, so either API can
+manage hooks registered by the other.
+
+## Legacy Decorators
+
+The original per-point decorators keep working unchanged and run in the same
+registration-order chain as `@on` hooks:
+
+```python
+from crewai.hooks import before_llm_call, after_llm_call
+
+@before_llm_call
+def validate_iteration_count(context):
+    if context.iterations > 10:
+        return False  # Block execution
+    return None
+
+@after_llm_call(agents=["Researcher"])
+def sanitize_response(context):
+    if context.response and "API_KEY" in context.response:
+        return context.response.replace("API_KEY", "[REDACTED]")
+    return None
+```
+
+Differences from `@on`:
+
+- **Blocking** is `return False` from a before hook — equivalent to raising
+  `HookAborted`, but without a custom reason or source for telemetry.
+- **Signatures** are point-specific: before hooks return `bool | None`, after
+  hooks return `str | None`. The context object is the same
+  `LLMCallHookContext`.
+- **Filters and crew-scoping** work the same way: `@before_llm_call(agents=[...])`,
+  and applying the decorator to a `@CrewBase` method scopes it to that crew.
+
+Prefer `@on` for new code; keep the legacy style where it is already in use —
+there is no behavioral penalty.
+
+## Best Practices
+
+1. **Keep hooks focused and fast** — they run on every LLM call
+2. **Modify in-place** — always mutate `ctx.messages`, never replace the list
+3. **Use type hints** — annotate with `LLMCallHookContext` for IDE support
+4. **Abort loudly** — raise `HookAborted` with a meaningful reason and source;
+   any other exception is swallowed (fail-open)
+5. **Clear hooks in tests** — call `clear_all_hooks()` between test runs
+
+## Troubleshooting
+
+### Hook Not Executing
+- Verify the hook is registered before crew execution
+- Check whether an earlier hook aborted (subsequent hooks don't run)
+
+### Message Modifications Not Persisting
+- Use in-place modifications: `ctx.messages.append(...)`
+- Don't replace the list: `ctx.messages = []`
+
+### Response Modifications Not Working
+- Return the modified string from a `POST_MODEL_CALL` hook
+- Returning `None` keeps the original response
+
+## Related Documentation
+
+- [Execution Hooks Overview →](/edge/en/learn/execution-hooks)
+- [Tool Call Hooks →](/edge/en/learn/tool-hooks)
+- [Execution Boundary Hooks →](/edge/en/learn/execution-boundary-hooks)
+- [Step Hooks →](/edge/en/learn/step-hooks)

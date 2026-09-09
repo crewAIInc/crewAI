@@ -8,6 +8,7 @@ sees a well-shaped payload, an in-place/returned modification is honored, and a
 from __future__ import annotations
 
 import asyncio
+from typing import ClassVar
 from unittest.mock import patch
 
 from crewai.agent import Agent
@@ -20,12 +21,15 @@ from crewai.events.types.flow_events import (
     FlowStartedEvent,
 )
 from crewai.flow.flow import Flow, listen, start
+from crewai.flow.flow_context import current_flow_id
 from crewai.hooks.dispatch import (
     HookAborted,
     InterceptionPoint,
     clear_all,
     on,
 )
+from crewai.llm import LLM
+from crewai.memory.recall_flow import RecallFlow
 from crewai.task import Task
 import pytest
 
@@ -45,6 +49,22 @@ class _SimpleFlow(Flow):
     @listen(begin)
     def finish(self, _):
         return "flow-result"
+
+
+class _InternalFlow(Flow):
+    is_crewai_internal: ClassVar[bool] = True
+
+    @start()
+    def begin(self):
+        return "ok"
+
+
+class _QuietFlow(Flow):
+    suppress_flow_events: bool = True
+
+    @start()
+    def begin(self):
+        return "ok"
 
 
 class _FailingFlow(Flow):
@@ -130,6 +150,52 @@ class TestFlowExecutionBoundaries:
             _SimpleFlow().kickoff()
         assert exc.value.reason == "not allowed"
 
+    def test_internal_flow_does_not_fire_boundary_hooks(self):
+        fired: list[str] = []
+
+        for point in (
+            InterceptionPoint.EXECUTION_START,
+            InterceptionPoint.INPUT,
+            InterceptionPoint.OUTPUT,
+            InterceptionPoint.EXECUTION_END,
+        ):
+
+            @on(point)
+            def _probe(ctx, _point=point):
+                fired.append(_point.value)
+
+        assert _InternalFlow().kickoff(inputs={"query": "x"}) == "ok"
+        assert fired == []
+
+    def test_internal_flow_ignores_input_hook_abort(self):
+        @on(InterceptionPoint.INPUT)
+        def block(ctx):
+            raise HookAborted(reason="blocked", source="policy")
+
+        assert _InternalFlow().kickoff(inputs={"query": "x"}) == "ok"
+
+    def test_quiet_user_flow_still_fires_boundary_hooks(self):
+        fired: list[str] = []
+
+        for point in (
+            InterceptionPoint.EXECUTION_START,
+            InterceptionPoint.INPUT,
+            InterceptionPoint.OUTPUT,
+            InterceptionPoint.EXECUTION_END,
+        ):
+
+            @on(point)
+            def _probe(ctx, _point=point):
+                fired.append(_point.value)
+
+        assert _QuietFlow().kickoff(inputs={"seed": 1}) == "ok"
+        assert fired == [
+            "execution_start",
+            "input",
+            "output",
+            "execution_end",
+        ]
+
 
 class TestFlowStepPoints:
     """pre_step / post_step for flow methods (kind=flow_method)."""
@@ -160,6 +226,182 @@ class TestFlowStepPoints:
             return None
 
         assert _SimpleFlow().kickoff() == "rewritten"
+
+    def test_internal_flow_does_not_fire_step_hooks(self):
+        fired: list[str] = []
+
+        @on(InterceptionPoint.PRE_STEP)
+        def pre(ctx):
+            fired.append(f"pre:{ctx.step_name}")
+
+        @on(InterceptionPoint.POST_STEP)
+        def post(ctx):
+            fired.append(f"post:{ctx.step_name}")
+
+        assert _InternalFlow().kickoff() == "ok"
+        assert fired == []
+
+    def test_internal_flow_ignores_step_hook_abort(self):
+        @on(InterceptionPoint.PRE_STEP)
+        def block(ctx):
+            raise HookAborted(reason="blocked", source="policy")
+
+        assert _InternalFlow().kickoff() == "ok"
+
+    def test_quiet_user_flow_still_fires_step_hooks(self):
+        fired: list[str] = []
+
+        @on(InterceptionPoint.PRE_STEP)
+        def pre(ctx):
+            fired.append(f"pre:{ctx.step_name}")
+
+        @on(InterceptionPoint.POST_STEP)
+        def post(ctx):
+            fired.append(f"post:{ctx.step_name}")
+
+        assert _QuietFlow().kickoff() == "ok"
+        assert fired == ["pre:begin", "post:begin"]
+
+
+class TestCrewaiInternalFlows:
+    """The agent executor runs for real here.
+
+    Patching ``Agent.execute_task`` skips the very flow whose dispatches used
+    to leak into the caller's run, so only a real executor proves the skip.
+    """
+
+    _POINTS = (
+        InterceptionPoint.EXECUTION_START,
+        InterceptionPoint.INPUT,
+        InterceptionPoint.PRE_STEP,
+        InterceptionPoint.POST_STEP,
+        InterceptionPoint.OUTPUT,
+        InterceptionPoint.EXECUTION_END,
+    )
+
+    @staticmethod
+    def _agent() -> Agent:
+        return Agent(
+            role="Writer",
+            goal="Write",
+            backstory="Writes things.",
+            llm=LLM(model="gpt-4o-mini"),
+        )
+
+    @classmethod
+    def _record(cls) -> list[tuple[str, str | None]]:
+        fired: list[tuple[str, str | None]] = []
+        for point in cls._POINTS:
+
+            @on(point)
+            def _probe(ctx, _point=point):
+                fired.append((_point.value, getattr(ctx, "kind", None)))
+
+        return fired
+
+    def test_crew_run_dispatches_only_the_crews_own_points(self):
+        fired = self._record()
+        agent = self._agent()
+        task = Task(
+            description="Write something", expected_output="Some text", agent=agent
+        )
+
+        with patch.object(type(agent.llm), "call", return_value="Final Answer: done"):
+            Crew(agents=[agent], tasks=[task], verbose=False).kickoff()
+
+        assert fired == [
+            ("execution_start", None),
+            ("input", None),
+            ("pre_step", "task"),
+            ("post_step", "task"),
+            ("output", None),
+            ("execution_end", None),
+        ]
+
+    def test_standalone_agent_kickoff_keeps_its_execution_boundary(self):
+        fired = self._record()
+        agent = self._agent()
+
+        with patch.object(type(agent.llm), "call", return_value="Final Answer: done"):
+            agent.kickoff("write something")
+
+        assert fired == [
+            ("execution_start", None),
+            ("input", None),
+            ("output", None),
+            ("execution_end", None),
+        ]
+
+    def test_agent_kickoff_inside_a_flow_leaves_the_boundary_to_the_flow(self):
+        fired = self._record()
+        agent = self._agent()
+
+        class _AgentFlow(Flow):
+            @start()
+            def run_agent(self):
+                agent.kickoff("write something")
+                return "flow-result"
+
+        with patch.object(type(agent.llm), "call", return_value="Final Answer: done"):
+            assert _AgentFlow().kickoff() == "flow-result"
+
+        assert fired == [
+            ("execution_start", None),
+            ("input", None),
+            ("pre_step", "flow_method"),
+            ("post_step", "flow_method"),
+            ("output", None),
+            ("execution_end", None),
+        ]
+
+    def test_the_memory_recall_flow_dispatches_nothing(self):
+        fired = self._record()
+
+        class _Storage:
+            def list_scopes(self, _prefix):
+                return ["/"]
+
+            def search(self, *_args, **_kwargs):
+                return []
+
+        flow = RecallFlow(
+            storage=_Storage(),
+            llm=None,
+            embedder=lambda texts: [[0.1] for _ in texts],
+        )
+
+        assert flow.kickoff(inputs={"query": "anything"}) == []
+        assert fired == []
+
+    def test_a_restored_outer_flow_id_keeps_the_agent_out_of_the_boundary(self):
+        fired = self._record()
+        agent = self._agent()
+
+        token = current_flow_id.set("run-owned-by-another-process")
+        try:
+            with patch.object(
+                type(agent.llm), "call", return_value="Final Answer: done"
+            ):
+                agent.kickoff("write something")
+        finally:
+            current_flow_id.reset(token)
+
+        assert fired == []
+
+    def test_standalone_agent_kickoff_is_blockable(self):
+        @on(InterceptionPoint.EXECUTION_START)
+        def block(ctx):
+            raise HookAborted(reason="not allowed", source="policy")
+
+        agent = self._agent()
+
+        with patch.object(
+            type(agent.llm), "call", return_value="Final Answer: done"
+        ) as call:
+            with pytest.raises(HookAborted):
+                agent.kickoff("write something")
+
+        call.assert_not_called()
 
 
 class TestTaskStepPoints:

@@ -362,6 +362,8 @@ class AgentReasoning:
         """
         self.logger.debug(f"Using function calling for {plan_type} planning")
 
+        from crewai.hooks.dispatch import HookAborted
+
         try:
             system_prompt = self._get_system_prompt()
 
@@ -412,6 +414,8 @@ class AgentReasoning:
                 "READY: I am ready to execute the task." in response_str,
             )
 
+        except HookAborted:
+            raise
         except Exception as e:
             self.logger.warning(
                 f"Error during function calling: {e!s}. Falling back to text parsing."
@@ -435,6 +439,8 @@ class AgentReasoning:
                     [],
                     "READY: I am ready to execute the task." in fallback_str,
                 )
+            except HookAborted:
+                raise
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
                 return (

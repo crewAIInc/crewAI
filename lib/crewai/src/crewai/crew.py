@@ -207,6 +207,9 @@ class Crew(FlowTrackable, BaseModel):
 
     __hash__ = object.__hash__
     _execution_span: Span | None = PrivateAttr()
+    # Monotonic stamp for the ungated "Crew Completed" span. A PrivateAttr
+    # because Crew is a BaseModel, unlike Flow which takes a plain attribute.
+    _telemetry_started_at: float | None = PrivateAttr(default=None)
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()

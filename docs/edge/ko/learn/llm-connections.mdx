@@ -141,7 +141,7 @@ OpenAI 호환 LLM에 연결하려면 환경 변수를 사용하거나 LLM 클래
         # Gemini의 OpenAI 호환 API 예시입니다.
         os.environ["OPENAI_API_KEY"] = "your-gemini-key"  # AIza...로 시작해야 합니다.
         os.environ["OPENAI_API_BASE"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
-        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-2.0-flash"  # Gemini 모델을 여기에 추가하세요. openai/ 하위에 위치.
+        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-3.7-flash"  # Gemini 모델을 여기에 추가하세요. openai/ 하위에 위치.
         ```
         </CodeGroup>
     </Tab>
@@ -159,7 +159,7 @@ OpenAI 호환 LLM에 연결하려면 환경 변수를 사용하거나 LLM 클래
             ```python Google
             # Gemini의 OpenAI 호환 API 예시
             llm = LLM(
-                model="openai/gemini-2.0-flash",
+                model="openai/gemini-3.7-flash",
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
                 api_key="your-gemini-key",  # AIza...로 시작해야 합니다.
             )

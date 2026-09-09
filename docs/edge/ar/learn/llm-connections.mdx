@@ -141,7 +141,7 @@ mode: "wide"
         # Example using Gemini's OpenAI-compatible API.
         os.environ["OPENAI_API_KEY"] = "your-gemini-key"  # Should start with AIza...
         os.environ["OPENAI_API_BASE"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
-        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-2.0-flash"  # Add your Gemini model here, under openai/
+        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-3.7-flash"  # Add your Gemini model here, under openai/
         ```
         </CodeGroup>
     </Tab>
@@ -159,7 +159,7 @@ mode: "wide"
             ```python Google
             # Example using Gemini's OpenAI-compatible API
             llm = LLM(
-                model="openai/gemini-2.0-flash",
+                model="openai/gemini-3.7-flash",
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
                 api_key="your-gemini-key",  # Should start with AIza...
             )

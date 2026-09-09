@@ -1,3 +1,3 @@
 """CrewAI development tools."""
 
-__version__ = "1.15.17"
+__version__ = "1.15.20"
