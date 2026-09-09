@@ -17,6 +17,13 @@ class MissingChromaDBConfig(_MissingProvider):
 
 
 @pyd_dataclass(config=ConfigDict(extra="forbid"))
+class MissingMilvusConfig(_MissingProvider):
+    """Placeholder for missing Milvus configuration."""
+
+    provider: Literal["milvus"] = field(default="milvus")
+
+
+@pyd_dataclass(config=ConfigDict(extra="forbid"))
 class MissingQdrantConfig(_MissingProvider):
     """Placeholder for missing Qdrant configuration."""
 
