@@ -14,13 +14,16 @@ its own it passes trivially, but under the full suite in random order it fails i
 the fixture stops working.
 
 There is deliberately no canary for `_listeners_setup`, because one cannot be
-written. `BaseEventListener.__init__` calls `setup_listeners`
-(`base_event_listener.py:16`), which sets the flag on the instance
-(`trace_listener.py:229`), so reading it back through `TraceCollectionListener()`
-is always `True` — construction is what sets it. Reading it off the class is
-always `False`, because nothing assigns it there. Neither observes a leak. The
-flag lives on the instance the fixture deletes, so it cannot outlive a test; that
-is guaranteed by construction, not by assertion.
+written. Read off the class it is always `False`, since nothing ever assigns it
+there. Read through `TraceCollectionListener()` it only reports whether handler
+registration happened to run: `BaseEventListener.__init__` calls
+`setup_listeners` (`base_event_listener.py:16`), but that returns early when
+tracing is off and no override applies (`trace_listener.py:213-220`) and assigns
+the flag at `:229` only when it does register. The instance value therefore
+tracks ambient tracing state, not isolation, so neither read observes a leak.
+
+The flag lives on the instance the fixture deletes, so it cannot outlive a test;
+that is guaranteed by construction, not by assertion.
 """
 
 from __future__ import annotations
