@@ -1,6 +1,6 @@
 import base64
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from crewai import LLM
 from crewai.tools import BaseTool, EnvVar
@@ -10,10 +10,34 @@ from pydantic import BaseModel, Field, PrivateAttr, field_validator
 from crewai_tools.security.safe_path import validate_file_path
 
 
+ComplexityLevel = Literal["easy", "medium", "hard"]
+
+# Maps a complexity level to the OpenAI model used to answer the request.
+COMPLEXITY_MODEL_MAP: dict[ComplexityLevel, str] = {
+    "easy": "gpt-5.6-luna",
+    "medium": "gpt-5.6-terra",
+    "hard": "gpt-5.6-sol",
+}
+
+# Model used when no complexity level or explicit model/LLM is provided.
+DEFAULT_MODEL: str = COMPLEXITY_MODEL_MAP["medium"]
+
+
 class ImagePromptSchema(BaseModel):
     """Input for Vision Tool."""
 
     image_path_url: str = "The image path or URL."
+    query: str = Field(
+        default="What's in this image?",
+        description="The question or instruction to ask the model about the image.",
+    )
+    complexity_level: ComplexityLevel = Field(
+        default="medium",
+        description=(
+            "The complexity of the request, which selects the model: "
+            "'easy', 'medium', 'hard'."
+        ),
+    )
 
     @field_validator("image_path_url")
     @classmethod
@@ -57,21 +81,24 @@ class VisionTool(BaseTool):
         ]
     )
 
-    _model: str = PrivateAttr(default="gpt-4o-mini")
+    _model: str = PrivateAttr(default=DEFAULT_MODEL)
+    _model_explicitly_set: bool = PrivateAttr(default=False)
     _llm: LLM | None = PrivateAttr(default=None)
 
     def __init__(
-        self, llm: LLM | None = None, model: str = "gpt-4o-mini", **kwargs: Any
+        self, llm: LLM | None = None, model: str | None = None, **kwargs: Any
     ) -> None:
         """Initialize the vision tool.
 
         Args:
             llm: Optional LLM instance to use
-            model: Model identifier to use if no LLM is provided
+            model: Model identifier to use if no LLM is provided. When set, it
+                takes precedence over the complexity-based model selection.
             **kwargs: Additional arguments for the base tool
         """
         super().__init__(**kwargs)
-        self._model = model
+        self._model = model if model is not None else DEFAULT_MODEL
+        self._model_explicitly_set = model is not None
         self._llm = llm
 
     @property
@@ -83,6 +110,7 @@ class VisionTool(BaseTool):
     def model(self, value: str) -> None:
         """Set the model identifier and reset LLM if it was auto-created."""
         self._model = value
+        self._model_explicitly_set = True
         if self._llm is not None and getattr(self._llm, "model", None) != value:
             self._llm = None
 
@@ -93,13 +121,36 @@ class VisionTool(BaseTool):
             self._llm = LLM(model=self._model, stop=["STOP", "END"])
         return self._llm
 
+    def _llm_for_complexity(self, complexity_level: ComplexityLevel) -> LLM:
+        """Return the LLM to use for the given complexity level.
+
+        An explicitly provided LLM takes precedence, followed by an explicitly
+        provided model; otherwise the complexity level is mapped to a specific
+        OpenAI model.
+        """
+        if self._llm is not None:
+            return self._llm
+
+        if self._model_explicitly_set:
+            return self.llm
+
+        model = COMPLEXITY_MODEL_MAP[complexity_level]
+        return LLM(model=model, stop=["STOP", "END"])
+
     def _run(self, **kwargs: Any) -> str:
         try:
             image_path_url = kwargs.get("image_path_url")
             if not image_path_url:
                 return "Image Path or URL is required."
 
-            ImagePromptSchema(image_path_url=image_path_url)
+            query = kwargs.get("query", "What's in this image?")
+            complexity_level: ComplexityLevel = kwargs.get("complexity_level", "medium")
+
+            ImagePromptSchema(
+                image_path_url=image_path_url,
+                query=query,
+                complexity_level=complexity_level,
+            )
 
             if image_path_url.startswith("http"):
                 image_data = image_path_url
@@ -114,7 +165,7 @@ class VisionTool(BaseTool):
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "What's in this image?"},
+                        {"type": "text", "text": query},
                         {
                             "type": "image_url",
                             "image_url": {"url": image_data},
@@ -122,7 +173,7 @@ class VisionTool(BaseTool):
                     ],
                 },
             ]
-            return self.llm.call(messages=messages)
+            return self._llm_for_complexity(complexity_level).call(messages=messages)
         except Exception as e:
             return f"An error occurred: {e!s}"
 
