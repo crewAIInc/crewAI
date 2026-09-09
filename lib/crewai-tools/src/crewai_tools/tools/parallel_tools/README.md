@@ -30,7 +30,7 @@ Optional (for the agent example):
 Notes:
 - API is in beta; default rate limit is 600 RPM. Contact support for production capacity.
 
-## Direct usage (when published)
+## Direct usage
 
 ```python
 from crewai_tools import ParallelSearchTool
@@ -150,4 +150,4 @@ Tips:
 ## References
 
 - Search API Quickstart: https://docs.parallel.ai/search-api/search-quickstart
-- Processors: https://docs.parallel.ai/search-api/processors
+- Search API (v1beta) reference: https://docs.parallel.ai/api-reference/legacy/search-beta/search
