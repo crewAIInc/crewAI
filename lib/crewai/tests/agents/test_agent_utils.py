@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Task
@@ -15,14 +16,18 @@ class _Output(BaseModel):
     note: str | None = Field(default=None)
 
 
-def test_optional_fields_stay_nullable_in_the_prompt_schema() -> None:
+@pytest.mark.parametrize("output_attribute", ["output_pydantic", "output_json"])
+def test_optional_fields_stay_nullable_in_the_prompt_schema(
+    output_attribute: str,
+) -> None:
     """An Optional field must still be expressible as null in the prompt schema.
 
     The provider-side response schema generated from the same model allows null,
     so stripping it here hands the model two contradictory contracts and leaves
-    it no way to say "not applicable".
+    it no way to say "not applicable". Both output attributes embed a schema in
+    the prompt, so both are pinned.
     """
-    task = Task(description="d", expected_output="e", output_pydantic=_Output)
+    task = Task(description="d", expected_output="e", **{output_attribute: _Output})
 
     prompt = build_task_prompt_with_schema(task, "")
 
@@ -30,7 +35,7 @@ def test_optional_fields_stay_nullable_in_the_prompt_schema() -> None:
     end = prompt.rindex("}", start) + 1
     schema = json.loads(prompt[start:end])
 
-    assert schema["properties"]["note"]["anyOf"] == [
-        {"type": "string"},
-        {"type": "null"},
-    ]
+    assert {entry["type"] for entry in schema["properties"]["note"]["anyOf"]} == {
+        "string",
+        "null",
+    }
