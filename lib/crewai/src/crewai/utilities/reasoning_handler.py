@@ -599,7 +599,13 @@ class AgentReasoning:
         Returns:
             True if the agent declared READY, False otherwise.
         """
-        return bool(re.search(r"(?<!\bnot\s)\bready\b", response, re.IGNORECASE))
+        # A fixed-width lookbehind can only exclude a single whitespace character,
+        # so "NOT  READY" would slip through and be reported as ready. Check each
+        # standalone occurrence against an arbitrary run of whitespace instead.
+        return any(
+            not re.search(r"\bnot\s+$", response[: match.start()], re.IGNORECASE)
+            for match in re.finditer(r"\bready\b", response, re.IGNORECASE)
+        )
 
     @staticmethod
     def _parse_planning_response(response: str) -> tuple[str, bool]:
