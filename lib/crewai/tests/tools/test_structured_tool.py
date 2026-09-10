@@ -164,7 +164,7 @@ def test_from_function_returns_raw_result_and_json_agent_text(
     )
 
 
-def test_from_function_does_not_infer_non_pydantic_result_schema():
+def test_from_function_serializes_non_pydantic_mapping_output_as_json():
     tool = CrewStructuredTool.from_function(
         func=_build_plain_structured_value,
         name="build_value",
@@ -173,6 +173,27 @@ def test_from_function_does_not_infer_non_pydantic_result_schema():
     raw_result = tool.invoke({"value": "crew"})
 
     assert raw_result == {"value": "crew", "count": 1}
+    assert json.loads(tool.format_output_for_agent(raw_result)) == {
+        "value": "crew",
+        "count": 1,
+    }
+
+
+def test_from_function_falls_back_for_circular_mapping_output():
+    def build_value(value: str) -> dict[str, object]:
+        """Build a value."""
+        result: dict[str, object] = {"value": value}
+        result["self"] = result
+        return result
+
+    tool = CrewStructuredTool.from_function(
+        func=build_value,
+        name="build_value",
+    )
+
+    raw_result = tool.invoke({"value": "crew"})
+
+    assert raw_result["self"] is raw_result
     assert tool.format_output_for_agent(raw_result) == str(raw_result)
 
 
