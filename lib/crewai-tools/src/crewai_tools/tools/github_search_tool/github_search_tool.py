@@ -21,19 +21,19 @@ class GithubSearchToolSchema(FixedGithubSearchToolSchema):
     github_repo: str = Field(..., description="Mandatory github you want to search")
     content_types: list[str] = Field(
         ...,
-        description="Mandatory content types you want to be included search, options: [code, repo, pr, issue]",
+        description="Mandatory content types you want to be included in search, options: [code, repo, pr, issue]",
     )
 
 
 class GithubSearchTool(RagTool):
     name: str = "Search a github repo's content"
-    description: str = "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
+    description: str = "A tool that can be used to semantically search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
     summarize: bool = False
     gh_token: str
     args_schema: type[BaseModel] = GithubSearchToolSchema
     content_types: list[str] = Field(
         default_factory=lambda: ["code", "repo", "pr", "issue"],
-        description="Content types you want to be included search, options: [code, repo, pr, issue]",
+        description="Content types you want to be included in search, options: [code, repo, pr, issue]",
     )
 
     def __init__(
