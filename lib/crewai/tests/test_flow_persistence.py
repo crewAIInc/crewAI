@@ -481,6 +481,8 @@ def test_persist_complex_types_structured_state(tmp_path):
     from pydantic import Field
 
     class ComplexState(FlowState):
+        """Structured state with non-primitive types for testing."""
+
         created_at: datetime = Field(
             default_factory=lambda: datetime.now(timezone.utc)
         )
@@ -492,11 +494,14 @@ def test_persist_complex_types_structured_state(tmp_path):
     persistence = SQLiteFlowPersistence(db_path)
 
     class ComplexFlow(Flow[ComplexState]):
+        """Flow with structured complex state."""
+
         initial_state = ComplexState
 
         @start()
         @persist(persistence)
         def step(self):
+            """Step that increments counter."""
             self.state.counter += 1
             return "done"
 
@@ -538,11 +543,14 @@ def test_persist_complex_types_dict_state(tmp_path):
     uid = uuid.uuid4()
 
     class DictFlow(Flow[Dict[str, Any]]):
+        """Flow with dictionary state."""
+
         initial_state = dict
 
         @start()
         @persist(persistence)
         def step(self):
+            """Step that populates dictionary state."""
             self.state["id"] = "dict-uuid-1"
             self.state["created_at"] = now
             self.state["user_id"] = uid
