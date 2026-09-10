@@ -63,6 +63,11 @@ from crewai_tools.tools.directory_read_tool.directory_read_tool import (
 from crewai_tools.tools.directory_search_tool.directory_search_tool import (
     DirectorySearchTool,
 )
+from crewai_tools.tools.dns_doctor_tool.dns_doctor_tool import (
+    DnsDoctorDmarcUpgradeTool,
+    DnsDoctorPropagationTool,
+    DnsDoctorScanTool,
+)
 from crewai_tools.tools.docx_search_tool.docx_search_tool import DOCXSearchTool
 from crewai_tools.tools.e2b_sandbox_tool import (
     E2BExecTool,
@@ -246,6 +251,9 @@ __all__ = [
     "DaytonaPythonTool",
     "DirectoryReadTool",
     "DirectorySearchTool",
+    "DnsDoctorDmarcUpgradeTool",
+    "DnsDoctorPropagationTool",
+    "DnsDoctorScanTool",
     "E2BExecTool",
     "E2BFileTool",
     "E2BPythonTool",
