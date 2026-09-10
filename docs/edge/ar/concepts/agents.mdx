@@ -350,6 +350,12 @@ result = researcher.kickoff("What are the latest developments in language models
 print(result.raw)
 ```
 
+<Note>
+  يشغّل `kickoff()` مُنفّذ `AgentExecutor`. ولا ينشئ Task ولا Crew.
+  يحتفظ الـ Agent بدوره وهدفه وخلفيته وأدواته. تُرجع الدالة
+  `LiteAgentOutput`.
+</Note>
+
 ## اعتبارات مهمة وأفضل الممارسات
 
 ### الأمان وتنفيذ الكود
