@@ -47,7 +47,7 @@ def assert_experiment_no_regression(comparison_result: dict[str, list[str]]) -> 
     missing_tests = comparison_result.get("missing_tests", [])
     if missing_tests:
         warnings.warn(
-            f"Warning: {len(missing_tests)} tests from the baseline are missing in the current run: {missing_tests}",
+            f"{len(missing_tests)} tests from the baseline are missing in the current run: {missing_tests}",
             UserWarning,
             stacklevel=2,
         )
