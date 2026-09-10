@@ -3,7 +3,7 @@
 from functools import lru_cache
 import json
 import os
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
@@ -145,3 +145,31 @@ def get_i18n(prompt_file: str | None = None) -> I18N:
 
 
 I18N_DEFAULT: I18N = get_i18n()
+
+
+def resolve_i18n(agent: Any) -> I18N:
+    """Resolve the prompts an agent should be rendered with.
+
+    Precedence is most specific first: a prompt file set directly on the agent,
+    then the one set on its crew, then the built-in prompts. Instances come from
+    the ``get_i18n`` cache, so a custom file is read once per path.
+
+    Args:
+        agent: The agent whose prompts are being built.
+
+    Returns:
+        The I18N instance to render this agent's prompts with.
+    """
+    # Read the deprecated i18n field out of __dict__ rather than through the
+    # attribute, which would emit a DeprecationWarning on every prompt build.
+    agent_i18n = getattr(agent, "__dict__", {}).get("i18n")
+    prompt_file: str | None = getattr(agent_i18n, "prompt_file", None)
+
+    if prompt_file is None:
+        crew = getattr(agent, "crew", None)
+        if crew is not None and not isinstance(crew, str):
+            prompt_file = getattr(crew, "prompt_file", None)
+
+    if prompt_file is None:
+        return I18N_DEFAULT
+    return get_i18n(prompt_file=prompt_file)

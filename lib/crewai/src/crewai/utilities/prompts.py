@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import I18N, get_i18n
 
 
 VALID_DATE_FORMAT_CODES = (
@@ -64,6 +64,11 @@ class Prompts(BaseModel):
         - Need to refactor so that prompt is not tightly coupled to agent.
     """
 
+    i18n: I18N = Field(
+        default_factory=get_i18n,
+        description="Prompts to render this agent with, resolved from the agent's "
+        "or its crew's prompt_file",
+    )
     has_tools: bool = Field(
         default=False, description="Indicates if the agent has access to tools"
     )
@@ -229,12 +234,12 @@ class Prompts(BaseModel):
         prompt: str
         if not system_template or not prompt_template:
             prompt_parts: list[str] = [
-                I18N_DEFAULT.slice(component) for component in components
+                self.i18n.slice(component) for component in components
             ]
             prompt = "".join(prompt_parts)
         else:
             template_parts: list[str] = [
-                I18N_DEFAULT.slice(component)
+                self.i18n.slice(component)
                 for component in components
                 if component != "task"
             ]
@@ -242,7 +247,7 @@ class Prompts(BaseModel):
                 "{{ .System }}", "".join(template_parts)
             )
             prompt = prompt_template.replace(
-                "{{ .Prompt }}", "".join(I18N_DEFAULT.slice("task"))
+                "{{ .Prompt }}", "".join(self.i18n.slice("task"))
             )
             if response_template:
                 response: str = response_template.split("{{ .Response }}")[0]
