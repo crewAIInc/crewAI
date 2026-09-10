@@ -145,7 +145,7 @@ class OpenAIFormatter:
                 type (e.g. PDF) is not supported by the OpenAI Chat Completions
                 API.
         """
-        media_type = _normalize_media_type(content_type)
+        media_type = _normalize_media_type(content_type or resolved.content_type)
         is_pdf = media_type == "application/pdf"
 
         if is_pdf:
