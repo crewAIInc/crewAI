@@ -6,7 +6,7 @@ from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, get_args
 import uuid
 
 from pydantic import (
@@ -199,6 +199,7 @@ PlatformApp = Literal[
     "zendesk",
 ]
 
+PLATFORM_APPS: Final[tuple[str, ...]] = get_args(PlatformApp)
 PlatformAppOrAction = PlatformApp | str
 
 
