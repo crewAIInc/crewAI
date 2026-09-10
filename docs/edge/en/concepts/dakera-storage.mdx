@@ -1,0 +1,260 @@
+---
+title: Dakera Storage
+description: Use Dakera as a self-hosted, persistent vector memory backend for CrewAI — decay-weighted recall that survives process restarts and scales across agents.
+icon: server
+---
+
+## Overview
+
+[Dakera](https://dakera.ai) is a self-hosted memory server that implements CrewAI's `StorageBackend` protocol. It stores embeddings in a persistent vector index with decay-weighted importance scoring — so older, less-accessed memories fade naturally while relevant context stays sharp across agent runs, deployments, and process restarts.
+
+The `crewai-dakera` package (v0.2.0+) provides `DakeraStorage`, a drop-in backend for `Memory(storage=...)`.
+
+**When to choose Dakera over the default LanceDB backend:**
+
+- You need memory to persist across container restarts or deployments
+- Multiple crew instances or agents share the same memory pool
+- You want decay-weighted recall (importance degrades over time without access)
+- You need a REST API to inspect, inject, or delete memories from outside CrewAI
+
+## Installation
+
+```bash
+pip install crewai-dakera
+```
+
+## Start the Dakera Server
+
+```bash
+docker run -d \
+  --name dakera \
+  -p 3300:3300 \
+  -e DAKERA_API_KEY=your_key \
+  -v dakera_data:/data \
+  ghcr.io/dakera-ai/dakera:latest
+```
+
+The server exposes three core endpoints:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/memories` | Store a memory with embedding |
+| `POST` | `/v1/memories/search` | Semantic recall with decay scoring |
+| `DELETE` | `/v1/memories` | Forget memories by filter |
+
+## Basic Usage
+
+### With Crews
+
+```python
+from crewai import Crew, Agent, Task, Process
+from crewai_dakera import DakeraStorage
+
+storage = DakeraStorage(
+    base_url="http://localhost:3300",
+    api_key="your_key",
+)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+    memory=True,
+    storage=storage,
+)
+
+result = crew.kickoff()
+```
+
+All facts extracted from task outputs are stored in Dakera and recalled automatically before each task — persisted across runs.
+
+### With the Memory Class Directly
+
+```python
+from crewai import Memory
+from crewai_dakera import DakeraStorage
+
+memory = Memory(
+    storage=DakeraStorage(
+        base_url="http://localhost:3300",
+        api_key="your_key",
+    )
+)
+
+memory.remember("The client uses PostgreSQL 15 on AWS RDS.")
+memory.remember("Rate limit: 500 requests/minute per tenant.")
+
+matches = memory.recall("What database does the client use?")
+for m in matches:
+    print(f"[{m.score:.2f}] {m.record.content}")
+```
+
+### With Agents (Scoped Memory)
+
+```python
+from crewai import Agent, Memory
+from crewai_dakera import DakeraStorage
+
+storage = DakeraStorage(
+    base_url="http://localhost:3300",
+    api_key="your_key",
+)
+
+memory = Memory(storage=storage)
+
+# Each agent gets a private scope within the shared Dakera backend
+researcher = Agent(
+    role="Researcher",
+    goal="Find and analyze information",
+    backstory="Expert researcher with attention to detail",
+    memory=memory.scope("/agent/researcher"),
+)
+
+writer = Agent(
+    role="Writer",
+    goal="Produce clear, well-structured content",
+    backstory="Experienced technical writer",
+    memory=memory.scope("/agent/writer"),
+)
+```
+
+## Decay-Weighted Recall
+
+Dakera applies an exponential decay to memory importance over time. Memories accessed frequently remain highly ranked; stale memories fade — matching how human memory works.
+
+```python
+storage = DakeraStorage(
+    base_url="http://localhost:3300",
+    api_key="your_key",
+    # Optional: tune decay parameters
+    half_life_days=14,      # Importance halves every 14 days without access
+    access_boost=0.1,       # Importance boost on each recall
+)
+```
+
+This means a memory about last week's API design decision outranks one about a deprecated endpoint from six months ago — without manual cleanup.
+
+## Cross-Session Persistence
+
+Unlike the default LanceDB backend (which stores to the local filesystem), Dakera persists to its own server. Memories survive:
+
+- Python process restarts
+- Container rebuilds
+- Horizontal scaling (multiple crew instances point to the same server)
+
+```python
+# Run 1 — stores context
+crew_run_1 = Crew(
+    agents=[researcher],
+    tasks=[discovery_task],
+    memory=True,
+    storage=DakeraStorage(base_url="http://dakera:3300", api_key="key"),
+)
+crew_run_1.kickoff()
+
+# Run 2 (next day, new process) — recalls from Run 1 automatically
+crew_run_2 = Crew(
+    agents=[researcher],
+    tasks=[followup_task],
+    memory=True,
+    storage=DakeraStorage(base_url="http://dakera:3300", api_key="key"),
+)
+crew_run_2.kickoff()
+# Agent automatically recalls relevant context from Run 1
+```
+
+## Configuration Reference
+
+```python
+DakeraStorage(
+    base_url="http://localhost:3300",  # Dakera server URL (required)
+    api_key="your_key",               # API key (required)
+    namespace="crewai",               # Isolate memories by crew/project (optional)
+    half_life_days=30,                # Decay half-life in days (default: 30)
+    access_boost=0.05,                # Importance boost per recall (default: 0.05)
+    timeout=10.0,                     # HTTP timeout in seconds (default: 10.0)
+)
+```
+
+## Environment Variables
+
+Set credentials via environment variables to avoid hardcoding:
+
+```bash
+export DAKERA_BASE_URL=http://localhost:3300
+export DAKERA_API_KEY=your_key
+```
+
+```python
+import os
+from crewai_dakera import DakeraStorage
+
+storage = DakeraStorage(
+    base_url=os.environ["DAKERA_BASE_URL"],
+    api_key=os.environ["DAKERA_API_KEY"],
+)
+```
+
+## Inspecting Memories via REST
+
+Because Dakera is a REST server, you can inspect, inject, or delete memories from outside CrewAI:
+
+```bash
+# Store a memory manually
+curl -X POST http://localhost:3300/v1/memories \
+  -H "Authorization: Bearer your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "The project deadline is 2026-09-01.", "namespace": "crewai"}'
+
+# Search memories
+curl -X POST http://localhost:3300/v1/memories/search \
+  -H "Authorization: Bearer your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "project deadline", "namespace": "crewai", "limit": 5}'
+
+# Delete memories by filter
+curl -X DELETE http://localhost:3300/v1/memories \
+  -H "Authorization: Bearer your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"namespace": "crewai", "older_than_days": 90}'
+```
+
+## Production Deployment
+
+For production, use Docker Compose with a named volume:
+
+```yaml
+services:
+  dakera:
+    image: ghcr.io/dakera-ai/dakera:latest
+    ports:
+      - "3300:3300"
+    environment:
+      DAKERA_API_KEY: ${DAKERA_API_KEY}
+    volumes:
+      - dakera_data:/data
+    restart: unless-stopped
+
+volumes:
+  dakera_data:
+```
+
+## Troubleshooting
+
+**Connection refused?**
+- Confirm the Dakera server is running: `curl http://localhost:3300/health`
+- Check the `base_url` matches the server address
+
+**Authentication errors?**
+- Verify `DAKERA_API_KEY` matches the value passed to `-e DAKERA_API_KEY=...` in Docker
+
+**Memories not recalled between runs?**
+- Ensure both runs point to the same `base_url` and use the same `namespace`
+- Confirm the Docker volume is mounted (not ephemeral storage)
+
+## Further Resources
+
+- [Dakera documentation](https://dakera.ai/docs)
+- [`crewai-dakera` on PyPI](https://pypi.org/project/crewai-dakera/)
+- [Memory concepts](/concepts/memory)
+- [StorageBackend protocol reference](https://docs.crewai.com/reference/crewai.memory.storage.backend)
