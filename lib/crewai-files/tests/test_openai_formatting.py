@@ -21,6 +21,14 @@ def test_openai_formatter_rejects_pdf_variants(content_type: str) -> None:
         OpenAIFormatter.format_block(resolved, content_type)
 
 
+def test_openai_formatter_uses_resolved_pdf_content_type() -> None:
+    """Use the resolved MIME type when callers omit the optional argument."""
+    resolved = InlineBase64(content_type="application/pdf", data="ZmFrZS1wZGY=")
+
+    with pytest.raises(TypeError, match="does not support PDF attachments"):
+        OpenAIFormatter.format_block(resolved)
+
+
 @pytest.mark.parametrize("content_type", PDF_CONTENT_TYPES)
 def test_openai_responses_formatter_accepts_pdf_variants(content_type: str) -> None:
     """Format PDF media types as Responses API input files."""
