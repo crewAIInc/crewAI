@@ -28450,6 +28450,125 @@
       }
     },
     {
+      "description": "Search global news articles and blog posts with Webz.io. Returns matching articles with title, url, publication date, source, language and text. Supports filtering by language, country, published date, sentiment, site and more; pass only the filters you were asked for.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API token for the Webz.io News API",
+          "name": "WEBZ_API_TOKEN",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Override for the Webz.io News Search MCP endpoint",
+          "name": "WEBZ_MCP_URL",
+          "required": false
+        }
+      ],
+      "humanized_name": "Webzio News Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search global news coverage with Webz.io over its hosted MCP server.\n\nThe argument schema is fetched from the MCP server when the tool is built,\nso filters that Webz.io adds server-side become available to the agent\nwithout a crewai-tools release. Construction does not fail when the server\nis unreachable: the tool keeps :class:`WebzioNewsSearchToolSchema` and\nretries the connection on the first call, which is where a missing token or\nan unreachable server is reported.\n\nThe MCP endpoint must be an absolute ``https://`` URL so the Bearer token\nis not sent in cleartext.\n\nThe MCP session stays open for reuse. Close it with :meth:`stop`, or use the\ntool as a context manager.\n\nAttributes:\n    api_token: The Webz.io API token.\n    mcp_url: The News Search MCP endpoint.\n    connect_timeout: Seconds allowed for the MCP connection.",
+        "properties": {
+          "api_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Webz.io API token. Falls back to the WEBZ_API_TOKEN environment variable when not provided.",
+            "required": false,
+            "title": "Api Token"
+          },
+          "connect_timeout": {
+            "default": 30,
+            "description": "Seconds to wait for the MCP server connection.",
+            "title": "Connect Timeout",
+            "type": "integer"
+          },
+          "mcp_url": {
+            "description": "News Search MCP endpoint. Falls back to the WEBZ_MCP_URL environment variable, then to the hosted endpoint.",
+            "required": false,
+            "title": "Mcp Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "WebzioNewsSearchTool",
+        "type": "object"
+      },
+      "name": "WebzioNewsSearchTool",
+      "package_dependencies": [
+        "mcp",
+        "mcpadapt"
+      ],
+      "run_params_schema": {
+        "additionalProperties": true,
+        "description": "Fallback arguments, used until the live MCP schema has been fetched.\n\nExtra keys are allowed so that server-side filters still reach Webz.io when\nthe tool is running on this fallback; the MCP server validates them.",
+        "properties": {
+          "query": {
+            "description": "The news search query string.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "WebzioNewsSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a XML's content.",
       "env_vars": [],
       "humanized_name": "Search a XML's content",
