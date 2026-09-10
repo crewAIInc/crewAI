@@ -17,7 +17,10 @@ from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
 
-from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+from crewai.agents.constants import (
+    ACTION_INPUT_REGEX,
+    FINAL_ANSWER_ACTION,
+)
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -141,6 +144,9 @@ class SummaryContent(TypedDict):
 console = Console()
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
+_FABRICATED_OBSERVATION_REGEX: Final[re.Pattern[str]] = re.compile(
+    r"^Observation:", re.MULTILINE
+)
 _NATIVE_TOOL_UNSUPPORTED_PATTERNS: Final[tuple[str, ...]] = (
     "does not support tools",
     "doesn't support tools",
@@ -672,13 +678,59 @@ def process_llm_response(
         Either an AgentAction or AgentFinish
     """
     if not use_stop_words:
-        try:
-            format_answer(answer)
-        except OutputParserError as e:
-            if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
-                answer = answer.split("Observation:")[0].strip()
+        answer = _recover_real_tool_call(answer)
 
     return format_answer(answer)
+
+
+def _recover_real_tool_call(answer: str) -> str:
+    """Recover a real tool call from a fabricated observation continuation.
+
+    Models that ignore stop sequences sometimes generate past the real
+    ``Action``/``Action Input`` and fabricate the rest of the ReAct loop in a
+    single completion: a made-up ``Observation:`` followed by a ``Final
+    Answer:``.  When that happens the parser treats the fabricated ``Final
+    Answer`` as the agent's output and the real tool call never executes.
+
+    The action-input capture is unbounded (it runs to the end of the
+    response), so a line-delimited ``Observation:`` inside free-form input
+    text is indistinguishable from a fabricated one.  Recovery therefore
+    fires only when the candidate input before the marker parses as a
+    complete JSON value — proof that the real input ended there — and a
+    ``Final Answer:`` follows the marker.  Free-form input is preserved
+    untouched, and a literal ``Final Answer:`` inside the input never
+    truncates valid arguments.
+
+    Args:
+        answer: The raw LLM response.
+
+    Returns:
+        The response with the fabricated continuation removed when the
+        ``Action -> Observation -> Final Answer`` fabrication shape is
+        detected; otherwise the response unchanged.
+    """
+    action_match = ACTION_INPUT_REGEX.search(answer)
+
+    if action_match is None:
+        return answer
+
+    observation_match = _FABRICATED_OBSERVATION_REGEX.search(
+        answer, action_match.start()
+    )
+    if observation_match is None:
+        return answer
+
+    final_answer_idx = answer.find(FINAL_ANSWER_ACTION, observation_match.start())
+    if final_answer_idx == -1:
+        return answer
+
+    candidate_input = answer[action_match.start(2) : observation_match.start()].strip()
+    try:
+        json.loads(candidate_input)
+    except ValueError:
+        return answer
+
+    return answer[: observation_match.start()].strip()
 
 
 def handle_agent_action_core(
