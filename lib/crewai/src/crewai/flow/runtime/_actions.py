@@ -100,12 +100,40 @@ class ToolAction:
         self.kwargs = definition.with_ or {}
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
-        local_context = _pop_local_context(kwargs)
-        return self.tool.run(
-            **Expression.from_flow(
-                self.kwargs, self.flow, local_context=local_context
-            ).render_template()
+        from crewai.hooks.tool_hooks import (
+            ToolCallHookContext,
+            run_after_tool_call_hooks,
+            run_before_tool_call_hooks,
         )
+        from crewai.utilities.string_utils import sanitize_tool_name
+
+        local_context = _pop_local_context(kwargs)
+        tool_input = Expression.from_flow(
+            self.kwargs, self.flow, local_context=local_context
+        ).render_template()
+        tool_name = sanitize_tool_name(self.tool.name)
+
+        # Same dispatch as the executor tool paths, so a policy registered on
+        # PRE_TOOL_CALL judges a declarative tool action too.
+        before_hook_context = ToolCallHookContext(
+            tool_name=tool_name,
+            tool_input=tool_input,
+            tool=self.tool,
+        )
+        if run_before_tool_call_hooks(before_hook_context):
+            result: Any = f"Tool execution blocked by hook. Tool: {tool_name}"
+        else:
+            result = self.tool.run(**tool_input)
+
+        after_hook_context = ToolCallHookContext(
+            tool_name=tool_name,
+            tool_input=tool_input,
+            tool=self.tool,
+            tool_result=result,
+            raw_tool_result=result,
+        )
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        return modified_result if modified_result is not None else result
 
     def _build_tool(self) -> Any:
         from crewai.tools import BaseTool
