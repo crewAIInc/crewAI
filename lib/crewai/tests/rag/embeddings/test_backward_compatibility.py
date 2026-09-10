@@ -15,6 +15,7 @@ from crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_p
 )
 from crewai.rag.embeddings.providers.instructor.instructor_provider import InstructorProvider
 from crewai.rag.embeddings.providers.openclip.openclip_provider import OpenCLIPProvider
+from crewai.rag.embeddings.providers.openrouter.openrouter_provider import OpenRouterProvider
 
 
 class TestGoogleProviderAlias:
@@ -55,6 +56,25 @@ class TestModelKeyBackwardCompatibility:
         provider = OpenAIProvider(api_key="test-key")
 
         assert provider.model_name == "text-embedding-3-large"
+
+    def test_openrouter_provider_accepts_model_key(self):
+        """Test OpenRouter provider accepts 'model' as alias for 'model_name'."""
+        provider = OpenRouterProvider(
+            api_key="test-key",
+            model="openai/text-embedding-3-large",
+        )
+        assert provider.model_name == "openai/text-embedding-3-large"
+
+    def test_openrouter_provider_ignores_chat_model_env(self, monkeypatch):
+        """Test OpenRouter embeddings don't inherit unrelated chat model env vars."""
+        monkeypatch.setenv("OPENAI_MODEL_NAME", "gpt-5.5")
+        monkeypatch.setenv("MODEL", "gpt-5.5")
+        monkeypatch.delenv("EMBEDDINGS_OPENROUTER_MODEL_NAME", raising=False)
+        monkeypatch.delenv("OPENROUTER_MODEL_NAME", raising=False)
+
+        provider = OpenRouterProvider(api_key="test-key")
+
+        assert provider.model_name == "openai/text-embedding-3-small"
 
     def test_azure_provider_ignores_openai_chat_model_env(self, monkeypatch):
         """Test Azure embeddings don't inherit the OpenAI chat model env var."""
