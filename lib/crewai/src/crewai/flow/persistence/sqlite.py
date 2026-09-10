@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from crewai_core.lock_store import lock as store_lock
 from crewai_core.paths import db_storage_path
@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.utilities.serialization import to_serializable
 
 
 if TYPE_CHECKING:
@@ -139,7 +140,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 flow_uuid,
                 method_name,
                 datetime.now(timezone.utc).isoformat(),
-                json.dumps(state_dict),
+                json.dumps(state_dict, default=str),
             ),
         )
 
@@ -147,9 +148,9 @@ class SQLiteFlowPersistence(FlowPersistence):
     def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to a plain dict."""
         if isinstance(state_data, BaseModel):
-            return state_data.model_dump()
+            return state_data.model_dump(mode="json")
         if isinstance(state_data, dict):
-            return state_data
+            return cast(dict[str, Any], to_serializable(state_data, max_depth=0))
         raise ValueError(
             f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
         )
@@ -237,8 +238,8 @@ class SQLiteFlowPersistence(FlowPersistence):
             """,
                 (
                     flow_uuid,
-                    json.dumps(context.to_dict()),
-                    json.dumps(state_dict),
+                    json.dumps(context.to_dict(), default=str),
+                    json.dumps(state_dict, default=str),
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )

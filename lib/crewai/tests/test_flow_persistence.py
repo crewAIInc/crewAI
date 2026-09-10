@@ -472,3 +472,127 @@ async def test_akickoff_fork_conflict_with_from_checkpoint_raises():
     msg = str(excinfo.value)
     assert "from_checkpoint" in msg
     assert "restore_from_state_id" in msg
+
+
+def test_persist_complex_types_structured_state(tmp_path):
+    """Test persisting state with datetime, UUID, and set fields."""
+    from datetime import datetime, timezone
+    import uuid
+    from pydantic import Field
+
+    class ComplexState(FlowState):
+        created_at: datetime = Field(
+            default_factory=lambda: datetime.now(timezone.utc)
+        )
+        user_id: uuid.UUID = Field(default_factory=uuid.uuid4)
+        tags: set[str] = Field(default_factory=lambda: {"alpha", "beta"})
+        counter: int = 0
+
+    db_path = os.path.join(tmp_path, "test_complex_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class ComplexFlow(Flow[ComplexState]):
+        initial_state = ComplexState
+
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+            return "done"
+
+    flow1 = ComplexFlow(persistence=persistence)
+    flow1.kickoff()
+    flow1_id = flow1.state.id
+    flow1_created_at = flow1.state.created_at
+    flow1_user_id = flow1.state.user_id
+
+    saved = persistence.load_state(flow1_id)
+    assert saved is not None
+    assert saved["counter"] == 1
+    assert isinstance(saved["created_at"], str)
+    assert isinstance(saved["user_id"], str)
+    assert set(saved["tags"]) == {"alpha", "beta"}
+
+    flow2 = ComplexFlow(persistence=persistence)
+    flow2.kickoff(inputs={"id": flow1_id})
+    assert flow2.state.id == flow1_id
+    assert flow2.state.counter == 2
+    assert isinstance(flow2.state.created_at, datetime)
+    assert flow2.state.created_at == flow1_created_at
+    assert isinstance(flow2.state.user_id, uuid.UUID)
+    assert flow2.state.user_id == flow1_user_id
+    assert isinstance(flow2.state.tags, set)
+    assert flow2.state.tags == {"alpha", "beta"}
+
+
+def test_persist_complex_types_dict_state(tmp_path):
+    """Test persisting dictionary state containing datetime and UUID."""
+    from datetime import datetime, timezone
+    import uuid
+    from typing import Any
+
+    db_path = os.path.join(tmp_path, "test_dict_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    now = datetime.now(timezone.utc)
+    uid = uuid.uuid4()
+
+    class DictFlow(Flow[Dict[str, Any]]):
+        initial_state = dict
+
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state["id"] = "dict-uuid-1"
+            self.state["created_at"] = now
+            self.state["user_id"] = uid
+            self.state["tags"] = {"x", "y"}
+            self.state["nested"] = {"l1": {"l2": {"l3": {"l4": {"l5": {"l6": "deep_value"}}}}}}
+            return "done"
+
+    flow = DictFlow(persistence=persistence)
+    flow.kickoff()
+
+    saved = persistence.load_state("dict-uuid-1")
+    assert saved is not None
+    assert saved["created_at"] == now.isoformat()
+    assert saved["user_id"] == str(uid)
+    assert set(saved["tags"]) == {"x", "y"}
+    assert saved["nested"]["l1"]["l2"]["l3"]["l4"]["l5"]["l6"] == "deep_value"
+
+
+def test_save_pending_feedback_complex_types(tmp_path):
+    """Test saving and loading pending feedback with complex types in state."""
+    from datetime import datetime, timezone
+    import uuid
+    from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+    db_path = os.path.join(tmp_path, "test_feedback_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    context = PendingFeedbackContext(
+        flow_id="test-feedback-uuid",
+        flow_class="test.TestFlow",
+        method_name="request_review",
+        method_output="draft output",
+        message="Please review",
+    )
+    now = datetime.now(timezone.utc)
+    uid = uuid.uuid4()
+    state_data = {
+        "id": "test-feedback-uuid",
+        "timestamp": now,
+        "session_id": uid,
+        "categories": {"ai", "agents"},
+    }
+
+    persistence.save_pending_feedback("test-feedback-uuid", context, state_data)
+
+    result = persistence.load_pending_feedback("test-feedback-uuid")
+    assert result is not None
+    loaded_state, loaded_context = result
+    assert loaded_context.method_name == "request_review"
+    assert loaded_state["timestamp"] == now.isoformat()
+    assert loaded_state["session_id"] == str(uid)
+    assert set(loaded_state["categories"]) == {"ai", "agents"}
+
