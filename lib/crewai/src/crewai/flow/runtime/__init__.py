@@ -248,18 +248,6 @@ def _iter_condition_events(condition: FlowDefinitionCondition) -> Iterator[str]:
         yield from _iter_condition_events(branch)
 
 
-def _or_alternative_events(condition: FlowDefinitionCondition) -> Iterator[str]:
-    if isinstance(condition, str):
-        yield condition
-        return
-
-    operator, branches = _condition_branches(condition)
-    if operator != "or":
-        return
-    for branch in branches:
-        yield from _or_alternative_events(branch)
-
-
 def _is_multi_event_or(
     condition: FlowDefinitionCondition,
 ) -> bool:
@@ -748,9 +736,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         default_factory=dict
     )
     _fired_or_listeners: set[FlowMethodName] = PrivateAttr(default_factory=set)
-    _racing_groups_cache: dict[frozenset[FlowMethodName], FlowMethodName] | None = (
-        PrivateAttr(default=None)
-    )
     _method_outputs: list[Any] = PrivateAttr(default_factory=list)
     _definition: FlowDefinition = PrivateAttr()
     _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
@@ -1097,130 +1082,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self._fired_or_listeners.discard(listener_name)
                 if rearmable is not None:
                     rearmable.discard(listener_name)
-
-    def _build_racing_groups(self) -> dict[frozenset[FlowMethodName], FlowMethodName]:
-        # Events of a multi-event or_() listener race: only the first to fire
-        # should trigger it. We map {frozenset(racing events): listener}.
-        # Only events that EXCLUSIVELY feed one OR listener race; an event that
-        # also feeds another listener (e.g. an AND) is left alone when a sibling
-        # wins. e.g. @listen(or_(a, b)) on handler -> {frozenset({a, b}): handler}.
-        # Events nested under an and_() branch (e.g. or_(and_(a, b), c)) are not
-        # alternatives and never race -- cancelling one would make the AND
-        # unsatisfiable.
-        racing_groups: dict[frozenset[FlowMethodName], FlowMethodName] = {}
-        listener_conditions: dict[FlowMethodName, FlowDefinitionCondition] = {
-            listener_name: condition
-            for listener_name, method_definition, condition in self._listener_methods()
-            if not method_definition.router
-        }
-
-        events_by_listener: dict[FlowMethodName, set[str]] = {
-            listener_name: set(_iter_condition_events(condition))
-            for listener_name, condition in listener_conditions.items()
-        }
-
-        listeners_by_event: dict[str, set[FlowMethodName]] = {}
-        for listener_name, events in events_by_listener.items():
-            for event in events:
-                listeners_by_event.setdefault(event, set()).add(listener_name)
-
-        for listener_name, condition in listener_conditions.items():
-            if not isinstance(condition, dict):
-                continue
-            alternatives = set(_or_alternative_events(condition))
-            if len(alternatives) <= 1:
-                continue
-
-            exclusive_events = {
-                event
-                for event in alternatives
-                if listeners_by_event[event] == {listener_name}
-            }
-            if len(exclusive_events) > 1:
-                # Racing only applies to method-completion events: each member is
-                # later executed as a method and intersected with the running
-                # method names, so the leaves re-enter method space here.
-                racing_groups[
-                    frozenset(FlowMethodName(event) for event in exclusive_events)
-                ] = listener_name
-
-        return racing_groups
-
-    def _get_racing_group_for_listeners(
-        self,
-        listener_names: list[FlowMethodName],
-    ) -> tuple[frozenset[FlowMethodName], FlowMethodName] | None:
-        """Check if the given listeners form a racing group.
-
-        Args:
-            listener_names: List of listener method names being executed.
-
-        Returns:
-            Tuple of (racing_members, or_listener_name) if these listeners race,
-            None otherwise.
-        """
-        if self._racing_groups_cache is None:
-            self._racing_groups_cache = self._build_racing_groups()
-
-        listener_set = set(listener_names)
-
-        for racing_members, or_listener in self._racing_groups_cache.items():
-            racing_subset = racing_members & listener_set
-            if len(racing_subset) > 1:
-                return (frozenset(racing_subset), or_listener)
-
-        return None
-
-    async def _execute_racing_listeners(
-        self,
-        racing_listeners: frozenset[FlowMethodName],
-        other_listeners: list[FlowMethodName],
-        result: Any,
-        triggering_event_id: str | None = None,
-    ) -> None:
-        """Execute racing listeners with first-wins semantics.
-
-        Racing listeners are executed in parallel, but once the first one
-        completes, the others are cancelled. Non-racing listeners in the
-        same batch are executed normally in parallel.
-
-        Args:
-            racing_listeners: Set of listener names that race for an OR condition.
-            other_listeners: Other listeners to execute in parallel (not racing).
-            result: The result from the triggering method.
-            triggering_event_id: The event_id of the event that triggered these listeners.
-        """
-        racing_tasks = [
-            asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
-                name=str(name),
-            )
-            for name in racing_listeners
-        ]
-
-        other_tasks = [
-            asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
-                name=str(name),
-            )
-            for name in other_listeners
-        ]
-
-        if racing_tasks:
-            for coro in asyncio.as_completed(racing_tasks):
-                try:
-                    await coro
-                except Exception as e:
-                    logger.debug(f"Racing listener failed: {e}")
-                    continue
-                break
-
-            for task in racing_tasks:
-                if not task.done():
-                    task.cancel()
-
-        if other_tasks:
-            await asyncio.gather(*other_tasks, return_exceptions=True)
 
     @classmethod
     def from_pending(
@@ -3230,32 +3091,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     listener_result = router_result_payloads.get(
                         str(current_trigger), result
                     )
-                    racing_group = self._get_racing_group_for_listeners(
-                        listeners_triggered
-                    )
-                    if racing_group:
-                        racing_members, _ = racing_group
-                        other_listeners = [
-                            name
-                            for name in listeners_triggered
-                            if name not in racing_members
-                        ]
-                        await self._execute_racing_listeners(
-                            racing_members,
-                            other_listeners,
+                    tasks = [
+                        self._execute_single_listener(
+                            listener_name,
                             listener_result,
                             current_triggering_event_id,
                         )
-                    else:
-                        tasks = [
-                            self._execute_single_listener(
-                                listener_name,
-                                listener_result,
-                                current_triggering_event_id,
-                            )
-                            for listener_name in listeners_triggered
-                        ]
-                        await asyncio.gather(*tasks)
+                        for listener_name in listeners_triggered
+                    ]
+                    outcomes = await asyncio.gather(*tasks, return_exceptions=True)
+                    for outcome in outcomes:
+                        if isinstance(outcome, BaseException):
+                            raise outcome
 
                 if current_trigger in router_results:
                     for method_name in self._start_method_names():
