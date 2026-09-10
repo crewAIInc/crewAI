@@ -995,6 +995,38 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
     llm = LLM(model="gpt-4")
     ```
   </Tab>
+  <Tab title="게이트웨이 오류">
+    <Tip>
+      OpenRouter와 같은 게이트웨이는 업스트림 공급자가 요청을 수락하는 즉시 `200 OK`를 반환하므로, 공급자 타임아웃은 상태 코드가 아니라 응답 본문에 담겨 도착합니다.
+    </Tip>
+
+    CrewAI는 해당 업스트림 코드가 실제 HTTP 상태로 왔을 때 발생시킬 예외와 동일한 예외를 발생시키므로, 이미 구성해 둔 재시도 처리로 가려진 실패를 잡을 수 있습니다:
+
+    ```python
+    import openai
+    from pydantic import BaseModel
+
+    from crewai import LLM
+
+
+    class Report(BaseModel):
+        summary: str
+
+
+    llm = LLM(model="openrouter/z-ai/glm-5.3", response_format=Report)
+
+    try:
+        result = llm.call("Summarize the incident", response_model=Report)
+    except openai.InternalServerError as e:
+        # "z-ai/glm-5.3 via openrouter.ai returned HTTP 200 with an upstream error
+        #  and no choices: The operation was aborted (upstream code 504)"
+        print(f"Upstream provider failed, safe to retry: {e}")
+    ```
+
+    <Warning>
+      크거나 깊게 중첩된 `response_model`은 업스트림 타임아웃 가능성을 높입니다. 이를 모델이 잘못된 구조화 출력을 생성한 것으로 보지 말고, 일시적인 공급자 장애로 처리하세요.
+    </Warning>
+  </Tab>
   <Tab title="컨텍스트 길이">
     <Tip>
       대규모 작업에는 더 큰 컨텍스트 모델을 사용하세요.
