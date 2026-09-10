@@ -132,6 +132,10 @@ PROVIDERS: list[str] = [
 
 MODELS: dict[str, list[str]] = {
     "openai": [
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "gpt-5.6",
         "gpt-5.5",
         "gpt-5.5-pro",
         "gpt-5.4",
@@ -161,16 +165,16 @@ MODELS: dict[str, list[str]] = {
         "gpt-4.1-nano-2025-04-14",
     ],
     "anthropic": [
+        "claude-fable-5",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
         "claude-opus-4-6",
         "claude-sonnet-4-6",
+        "claude-opus-4-5",
+        "claude-sonnet-4-5",
         "claude-haiku-4-5-20251001",
-        "claude-3-7-sonnet-20250219",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
-        "claude-3-5-sonnet-20240620",
-        "claude-3-opus-20240229",
-        "claude-3-sonnet-20240229",
-        "claude-3-haiku-20240307",
     ],
     "gemini": [
         "gemini/gemini-3-pro-preview",

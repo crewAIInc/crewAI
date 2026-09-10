@@ -1,0 +1,916 @@
+---
+title: 'LLMs'
+description: 'Um guia abrangente para configurar e usar Modelos de Linguagem de Grande Escala (LLMs) em seus projetos CrewAI'
+icon: 'microchip-ai'
+mode: "wide"
+---
+
+## Visão Geral
+
+O CrewAI integra-se com múltiplos provedores de LLM através do LiteLLM, oferecendo flexibilidade para você escolher o modelo certo para o seu caso de uso específico. Este guia irá ajudá-lo a entender como configurar e usar diferentes provedores de LLM em seus projetos CrewAI.
+
+## O que são LLMs?
+
+Modelos de Linguagem de Grande Escala (LLMs) são a inteligência central por trás dos agentes CrewAI. Eles permitem que os agentes compreendam o contexto, tomem decisões e gerem respostas semelhantes às humanas. Veja o que você precisa saber:
+
+<CardGroup cols={2}>
+  <Card title="Noções Básicas de LLM" icon="brain">
+    Modelos de Linguagem de Grande Escala são sistemas de IA treinados em grandes volumes de dados textuais. Eles potencializam a inteligência dos agentes CrewAI, permitindo compreender e gerar textos de voz humana.
+  </Card>
+  <Card title="Janela de Contexto" icon="window">
+    A janela de contexto determina quanto texto um LLM pode processar de uma só vez. Janelas maiores (por exemplo, 128K tokens) permitem mais contexto, porém podem ser mais caras e lentas.
+  </Card>
+  <Card title="Temperatura" icon="temperature-three-quarters">
+    A temperatura é um controle de amostragem compatível com alguns modelos. Valores mais baixos geralmente tornam a amostragem mais focada, enquanto valores mais altos aumentam a variabilidade. Alguns modelos de raciocínio mais recentes ignoram, desaconselham ou rejeitam esse parâmetro; consulte a documentação do modelo escolhido antes de defini-lo.
+  </Card>
+  <Card title="Seleção de Provedor" icon="server">
+    Cada provedor de LLM (ex.: OpenAI, Anthropic, Google) oferece modelos diferentes, com capacidades, preços e recursos variados. Escolha conforme suas necessidades de precisão, velocidade e custo.
+  </Card>
+</CardGroup>
+
+## Configurando seu LLM
+
+Existem diferentes locais no código do CrewAI onde você pode especificar o modelo a ser utilizado. Após definir o modelo usado, será necessário fornecer a configuração (como uma chave de API) para cada provedor de modelo. Veja a seção de [exemplos de configuração de provedores](#provider-configuration-examples) para seu provedor.
+
+<Tabs>
+  <Tab title="1. Variáveis de Ambiente">
+    A maneira mais simples de começar. Defina o modelo diretamente em seu ambiente, usando um arquivo `.env` ou no código do seu aplicativo. Se você utilizou `crewai create` para iniciar seu projeto, já estará configurado.
+
+    ```bash .env
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
+
+    # Lembre-se de definir suas chaves de API aqui também. Veja a seção
+    # do Provedor abaixo.
+    ```
+
+    <Warning>
+      Nunca envie chaves de API para controle de versão. Use arquivos de ambiente (.env) ou o gerenciamento de segredos do seu sistema.
+    </Warning>
+  </Tab>
+  <Tab title="2. Configuração YAML">
+    Crie um arquivo YAML para definir as configurações dos seus agentes. Este método é ótimo para controle de versão e colaboração em equipe:
+
+    ```yaml agents.yaml {6}
+    researcher:
+        role: Research Specialist
+        goal: Conduct comprehensive research and analysis
+        backstory: A dedicated research professional with years of experience
+        verbose: true
+        llm: provider/model-id  # e.g. anthropic/claude-sonnet-4-6
+        # (veja exemplos de configuração de provedores abaixo para mais)
+    ```
+
+    <Info>
+      A configuração YAML permite:
+      - Controlar versões das configurações dos agentes
+      - Trocar facilmente entre diferentes modelos
+      - Compartilhar configurações entre membros da equipe
+      - Documentar escolhas de modelos e seus propósitos
+    </Info>
+  </Tab>
+  <Tab title="3. Código Direto">
+    Para máxima flexibilidade, configure os LLMs diretamente no seu código Python:
+
+    ```python {4,8}
+    from crewai import LLM
+
+    # Configuração básica
+    llm = LLM(model="provider/model-id")  # e.g. gemini/gemini-3.6-flash
+
+    # Configuração avançada com parâmetros detalhados
+    llm = LLM(
+        model="provider/model-id",
+        timeout=120,
+        max_tokens=4000,
+        response_format={"type": "json"},  # Para saídas estruturadas
+    )
+    ```
+
+    <Info>
+      Explicações dos parâmetros:
+      - `timeout`: Tempo máximo de espera pela resposta
+      - `max_tokens`: Limita o comprimento da resposta
+      - `response_format`: Especifica formato de saída
+
+      Controles de amostragem como `temperature` e `top_p`, parâmetros de penalidade, nomes de limites de tokens e controles de raciocínio são específicos de cada modelo. Adicione-os somente quando o provedor e o modelo escolhidos oferecerem suporte. Consulte os exemplos de provedores abaixo e a documentação do modelo do provedor.
+    </Info>
+  </Tab>
+</Tabs>
+
+<Info>
+  O CrewAI oferece integrações nativas via SDK para OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock e Snowflake Cortex — sem necessidade de instalação extra além dos extras específicos do provedor (ex.: `uv add "crewai[openai]"`).
+
+  Todos os outros provedores são alimentados pelo **LiteLLM**. Se você planeja usar algum deles, adicione-o como dependência ao seu projeto:
+  ```bash
+  uv add 'crewai[litellm]'
+  ```
+</Info>
+
+## Exemplos de Configuração de Provedores
+
+O CrewAI suporta uma grande variedade de provedores de LLM, cada um com recursos, métodos de autenticação e capacidades de modelo únicos.
+Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, configurar e otimizar o LLM que melhor atende às necessidades do seu projeto.
+
+<Warning>
+  A disponibilidade dos modelos muda com frequência e pode variar por conta, região e plataforma de nuvem. Os exemplos abaixo usam modelos atuais no momento da redação, mas não são listas completas de suporte. Antes de implantar, confirme o ID e o estado do ciclo de vida do modelo no catálogo vinculado do provedor.
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    # Obrigatório
+    OPENAI_API_KEY=sk-...
+
+    # Opcional
+    OPENAI_API_BASE=<custom-base-url>
+    OPENAI_ORGANIZATION=<your-org-id>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-5.6-terra",
+        reasoning_effort="medium",
+        max_completion_tokens=4000
+    )
+    ```
+
+    A OpenAI adiciona modelos e desativa snapshots antigos regularmente. Consulte o [catálogo de modelos da OpenAI](https://developers.openai.com/api/docs/models) para obter IDs atuais, janelas de contexto, compatibilidade com endpoints e informações de ciclo de vida.
+
+    **Responses API:**
+
+    A OpenAI oferece duas APIs: Chat Completions (padrão) e a nova Responses API. A Responses API foi projetada desde o início com suporte multimodal nativo—texto, imagens, áudio e chamadas de função são todos cidadãos de primeira classe. Ela oferece melhor performance com modelos de raciocínio e suporta recursos adicionais como auto-encadeamento e ferramentas integradas.
+
+    ```python Code
+    from crewai import LLM
+
+    # Usar Responses API em vez de Chat Completions
+    llm = LLM(
+        model="openai/gpt-4o",
+        api="responses",  # Habilitar Responses API
+        store=True,  # Armazenar respostas para multi-turno (opcional)
+        auto_chain=True,  # Auto-encadeamento para modelos de raciocínio (opcional)
+    )
+    ```
+
+    **Parâmetros da Responses API:**
+    - `api`: Defina como `"responses"` para usar a Responses API (padrão: `"completions"`)
+    - `instructions`: Instruções de nível de sistema (apenas Responses API)
+    - `store`: Se deve armazenar respostas para conversas multi-turno
+    - `previous_response_id`: ID da resposta anterior para multi-turno
+    - `include`: Dados adicionais para incluir na resposta (ex: `["reasoning.encrypted_content"]`)
+    - `builtin_tools`: Lista de ferramentas integradas da OpenAI: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `parse_tool_outputs`: Retornar `ResponsesAPIResult` estruturado com saídas de ferramentas integradas parseadas
+    - `auto_chain`: Rastrear e usar automaticamente IDs de resposta para conversas multi-turno
+    - `auto_chain_reasoning`: Rastrear itens de raciocínio criptografados para conformidade ZDR (Zero Data Retention)
+
+    <Tip>
+      Use a Responses API para novos projetos, especialmente ao trabalhar com modelos de raciocínio (o1, o3, o4) ou quando precisar de suporte multimodal nativo para [arquivos](/pt-BR/concepts/files).
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Meta-Llama">
+    A API Llama da Meta fornece acesso à família de modelos de linguagem de grande escala da Meta.
+    A API está disponível através da [Meta Llama API](https://llama.developer.meta.com?utm_source=partner-crewai&utm_medium=website).
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    # Configuração chave da API Meta Llama
+    LLAMA_API_KEY=LLM|your_api_key_here
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    # Inicializar Meta Llama LLM
+    llm = LLM(
+        model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
+        temperature=0.8,
+        stop=["FIM"],
+        seed=42
+    )
+    ```
+
+    Consulte a [visão geral dos modelos Meta Llama](https://ai.meta.com/llama/get-started/) para conhecer as famílias de modelos, modalidades e orientações de contexto atuais.
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Snowflake Cortex">
+    O CrewAI oferece integração nativa com a API REST do Snowflake Cortex pelo endpoint Chat Completions compatível com OpenAI. Isso evita fallback para LiteLLM em modelos `snowflake/...`. Atualmente, o Snowflake Cortex no CrewAI oferece suporte apenas a Chat Completions, então use o modo `api` padrão e não defina `api="responses"`.
+
+    ```toml Code
+    # Obrigatório
+    SNOWFLAKE_PAT=<your-programmatic-access-token>
+    SNOWFLAKE_ACCOUNT_URL=https://<account-identifier>.snowflakecomputing.com
+
+    # Configuração alternativa da conta
+    SNOWFLAKE_ACCOUNT=<account-identifier>
+    ```
+
+    **Uso básico:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/openai-gpt-4.1",
+        temperature=0.7,
+        max_completion_tokens=1024,
+    )
+    ```
+
+    **Modelos Claude no Cortex:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/claude-sonnet-4-5",
+        max_completion_tokens=1024,
+        stream=True,
+    )
+    ```
+
+    **Variáveis de ambiente suportadas:**
+    - `SNOWFLAKE_PAT`, `SNOWFLAKE_TOKEN` ou `SNOWFLAKE_JWT`: token usado como credencial Bearer
+    - `SNOWFLAKE_ACCOUNT_URL`: URL completa da conta Snowflake
+    - `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_ACCOUNT_ID` ou `SNOWFLAKE_ACCOUNT_IDENTIFIER`: identificador da conta usado para montar a URL
+
+    As requisições REST do Snowflake usam a role padrão do usuário. Garanta que essa role tenha `SNOWFLAKE.CORTEX_USER` ou `SNOWFLAKE.CORTEX_REST_API_USER`. Parâmetros de banco de dados, schema, warehouse e role explícita não são exigidos pelo endpoint Cortex REST Chat Completions.
+
+    **Recursos:**
+    - Seleção nativa com `model="snowflake/<model-name>"`
+    - Chat Completions com e sem streaming apenas; `api="responses"` não é compatível
+    - Rastreamento de uso de tokens
+    - Chamadas de função para modelos OpenAI e Claude hospedados no Snowflake
+    - Remoção automática de prefill final de assistant inválido para modelos Claude no Snowflake
+  </Accordion>
+
+  <Accordion title="Anthropic">
+    ```toml Code
+    # Obrigatório
+    ANTHROPIC_API_KEY=sk-ant-...
+
+    # Opcional
+    ANTHROPIC_API_BASE=<custom-base-url>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-6",
+        max_tokens=4096
+    )
+    ```
+
+    Consulte a [visão geral dos modelos](https://platform.claude.com/docs/en/about-claude/models/overview) da Anthropic para obter IDs e capacidades atuais e revise a [tabela de descontinuação](https://platform.claude.com/docs/en/about-claude/model-deprecations) antes de fixar um modelo em produção.
+  </Accordion>
+
+  <Accordion title="Google (Gemini API)">
+    Defina sua chave de API no seu arquivo `.env`. Se precisar de uma chave, ou encontrar uma existente, verifique o [AI Studio](https://aistudio.google.com/apikey).
+
+    ```toml .env
+    # Para API Gemini (uma das seguintes)
+    GOOGLE_API_KEY=<your-api-key>
+    GEMINI_API_KEY=<your-api-key>
+
+    # Para Vertex AI Express mode (autenticação por chave de API)
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+
+    # Para Vertex AI com conta de serviço
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>  # Padrão: us-central1
+    ```
+
+    **Uso Básico:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-3.6-flash",
+    )
+    ```
+
+    **Vertex AI Express Mode (Autenticação por Chave de API):**
+
+    O Vertex AI Express mode permite usar o Vertex AI com autenticação simples por chave de API, em vez de credenciais de conta de serviço. Esta é a maneira mais rápida de começar com o Vertex AI.
+
+    Para habilitar o Express mode, defina ambas as variáveis de ambiente no seu arquivo `.env`:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+    ```
+
+    Em seguida, use o LLM normalmente:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-3.6-flash"
+    )
+    ```
+
+    <Info>
+      Para obter uma chave de API do Express mode:
+      - Novos usuários do Google Cloud: Obtenha uma [chave de API do Express mode](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)
+      - Usuários existentes do Google Cloud: Obtenha uma [chave de API do Google Cloud vinculada a uma conta de serviço](https://cloud.google.com/docs/authentication/api-keys)
+
+      Para mais detalhes, consulte a [documentação do Vertex AI Express mode](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey).
+    </Info>
+
+    O Google publica IDs atuais, capacidades e estágios do ciclo de vida no [catálogo de modelos Gemini](https://ai.google.dev/gemini-api/docs/models). Consulte o [cronograma de descontinuação](https://ai.google.dev/gemini-api/docs/deprecations) antes de escolher um modelo estável ou preview. A API Gemini também hospeda [modelos Gemma](https://ai.google.dev/gemma/docs).
+
+  </Accordion>
+  <Accordion title="Google (Vertex AI)">
+    Autentique-se com as [Credenciais Padrão do Aplicativo](https://cloud.google.com/docs/authentication/provide-credentials-adc) e configure o provedor Gemini nativo para usar o Vertex AI:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-3.6-flash"
+    )
+    ```
+
+    Consulte as [informações de modelos do Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models) para verificar modelos e regiões disponíveis.
+
+    **Nota:** Esta configuração usa a integração Gemini nativa do CrewAI. Adicione-a como dependência ao seu projeto:
+    ```bash
+    uv add "crewai[google-genai]"
+    ```
+  </Accordion>
+
+  <Accordion title="Azure">
+    ```toml Code
+    # Obrigatório
+    AZURE_API_KEY=<your-api-key>
+    AZURE_API_BASE=<your-resource-url>
+    AZURE_API_VERSION=<api-version>
+
+    # Opcional
+    AZURE_AD_TOKEN=<your-azure-ad-token>
+    AZURE_API_TYPE=<your-azure-api-type>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="azure/gpt-4",
+        api_version="2023-05-15"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="AWS Bedrock">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="bedrock/us.anthropic.claude-sonnet-4-6"
+    )
+    ```
+
+    Antes de usar o Amazon Bedrock, certifique-se de ter o boto3 instalado em seu ambiente
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) é um serviço gerenciado que fornece acesso a múltiplos modelos fundamentais dos principais provedores de IA através de uma API unificada, permitindo o desenvolvimento seguro e responsável de aplicações de IA.
+
+  </Accordion>
+
+  <Accordion title="Amazon SageMaker">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="sagemaker/<my-endpoint>"
+    )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Mistral">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    MISTRAL_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="mistral/mistral-large-latest",
+        temperature=0.7
+    )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Nvidia NIM">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
+        temperature=0.7
+    )
+    ```
+
+    O catálogo hospedado do NVIDIA NIM muda com frequência. Use o [catálogo de modelos NVIDIA NIM](https://build.nvidia.com/models) para escolher um endpoint atual e confirmar o ID, as modalidades e os limites de contexto.
+
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Local NVIDIA NIM Deployed using WSL2">
+
+    O NVIDIA NIM permite rodar LLMs potentes localmente em máquinas Windows usando WSL2 (Windows Subsystem for Linux).
+    Este método aproveita o GPU NVIDIA para inferência privativa, segura e econômica, sem depender de serviços em nuvem.
+    Perfeito para desenvolvimento, testes ou produção onde privacidade ou funcionalidades offline são necessárias.
+
+    Aqui está um guia passo a passo para configurar um modelo local NVIDIA NIM:
+
+    1. Siga as instruções de instalação no [site da NVIDIA](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)
+
+    2. Instale o modelo local. Para Llama 3.1-8b siga as [instruções](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy)
+
+    3. Configure seus modelos locais crewai:
+
+    ```python Code
+    from crewai.llm import LLM
+
+    local_nvidia_nim_llm = LLM(
+        model="openai/meta/llama-3.1-8b-instruct", # é compatível com openai-api
+        base_url="http://localhost:8000/v1",
+        api_key="<your_api_key|any text if you have not configured it>", # api_key obrigatório, pode usar qualquer texto
+    )
+
+    # Então pode usá-lo no seu crew:
+
+    @CrewBase
+    class MyCrew():
+        # ...
+
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'], # type: ignore[index]
+                llm=local_nvidia_nim_llm
+            )
+
+        # ...
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Groq">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    GROQ_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="groq/qwen/qwen3.6-27b",
+        temperature=0.7
+    )
+    ```
+
+    A Groq diferencia modelos production e preview e desativa IDs regularmente. Consulte o [catálogo de modelos da Groq](https://console.groq.com/docs/models) e a [página de descontinuações](https://console.groq.com/docs/deprecations) antes de escolher um modelo para produção.
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="IBM watsonx.ai">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Obrigatório
+    WATSONX_URL=<your-url>
+    WATSONX_APIKEY=<your-apikey>
+    WATSONX_PROJECT_ID=<your-project-id>
+
+    # Opcional
+    WATSONX_TOKEN=<your-token>
+    WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="watsonx/meta-llama/llama-3-1-70b-instruct",
+        base_url="https://api.watsonx.ai/v1"
+    )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Ollama (LLMs Locais)">
+    1. Instale o Ollama: [ollama.ai](https://ollama.ai/)
+    2. Rode um modelo: `ollama run llama3`
+    3. Configure:
+
+    ```python Code
+    llm = LLM(
+        model="ollama/llama3:70b",
+        base_url="http://localhost:11434"
+    )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Fireworks AI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    FIREWORKS_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Perplexity AI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    PERPLEXITY_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="perplexity/sonar-pro"
+    )
+    ```
+
+    Consulte o [catálogo de modelos da Perplexity](https://docs.perplexity.ai/getting-started/models) e o [changelog](https://docs.perplexity.ai/docs/resources/changelog) para obter IDs atuais e avisos de descontinuação.
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Hugging Face">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    HF_TOKEN=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
+    )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="SambaNova">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    SAMBANOVA_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="sambanova/Meta-Llama-3.3-70B-Instruct",
+        temperature=0.7
+    )
+    ```
+
+    Os modelos hospedados no SambaNova Cloud podem mudar independentemente do CrewAI. Consulte o [endpoint de modelos](https://docs.sambanova.ai/docs/api-reference/models/get-environments-available-model-list-metadata) e o [guia de descontinuação](https://docs.sambanova.ai/docs/en/models/deprecations) antes de implantar.
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Cerebras">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Obrigatório
+    CEREBRAS_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="cerebras/gpt-oss-120b",
+        temperature=0.7,
+        max_tokens=8192
+    )
+    ```
+
+    <Info>
+      Recursos do Cerebras:
+      - Altas velocidades de inferência
+      - Preços competitivos
+      - Equilíbrio entre velocidade e qualidade
+      - Suporte a longas janelas de contexto
+    </Info>
+
+    Consulte o [catálogo de modelos Cerebras](https://inference-docs.cerebras.ai/models/overview) e os [avisos de descontinuação](https://inference-docs.cerebras.ai/support/deprecation) para obter os IDs atuais dos endpoints públicos.
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Open Router">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    OPENROUTER_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+    ```
+
+    <Info>
+      Modelos do Open Router:
+      - openrouter/deepseek/deepseek-r1
+      - openrouter/deepseek/deepseek-chat
+    </Info>
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Respostas em streaming
+
+O CrewAI suporta respostas em streaming de LLMs, permitindo que sua aplicação receba e processe saídas em tempo real assim que são geradas.
+
+<Tabs>
+  <Tab title="Configuração Básica">
+    Ative o streaming definindo o parâmetro `stream` como `True` ao inicializar seu LLM:
+
+    ```python
+    from crewai import LLM
+
+    # Crie um LLM com streaming ativado
+    llm = LLM(
+        model="openai/gpt-5.6-terra",
+        stream=True  # Ativar streaming
+    )
+    ```
+
+    Quando o streaming está ativado, as respostas são entregues em partes à medida que vão sendo geradas, criando uma experiência mais responsiva para o usuário.
+  </Tab>
+
+  <Tab title="Manipulação de Eventos">
+    O CrewAI emite eventos para cada chunk recebido durante o streaming:
+
+    ```python
+    from crewai.events import (
+      LLMStreamChunkEvent
+    )
+    from crewai.events import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+              # Clique para cada chunk assim que chegar
+              print(f"Received chunk: {event.chunk}")
+
+    my_listener = MyCustomListener()
+    ```
+
+    <Tip>
+      [Clique aqui](/pt-BR/concepts/event-listener#event-listeners) para mais detalhes
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Chamada Estruturada de LLM
+
+O CrewAI suporta respostas estruturadas de LLMs permitindo que você defina um `response_format` usando um modelo Pydantic. Isso permite que o framework automaticamente faça o parsing e valide a saída, facilitando a integração da resposta em sua aplicação sem pós-processamento manual.
+
+O suporte a saídas estruturadas varia de acordo com o provedor e o modelo. Teste o modelo escolhido antes de depender de respostas estruturadas em produção.
+
+Por exemplo, é possível definir um modelo Pydantic para representar a resposta esperada e passá-lo como `response_format` ao instanciar o LLM. O modelo será utilizado para converter a resposta do LLM em um objeto Python estruturado.
+
+```python Code
+from crewai import LLM
+
+class Dog(BaseModel):
+    name: str
+    age: int
+    breed: str
+
+
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
+
+response = llm.call(
+    "Analyze the following messages and return the name, age, and breed. "
+    "Meet Kona! She is 3 years old and is a black german shepherd."
+)
+print(response)
+
+# Output:
+# Dog(name='Kona', age=3, breed='black german shepherd')
+```
+
+## Recursos Avançados e Otimização
+
+Saiba como obter o máximo da configuração do seu LLM:
+
+<AccordionGroup>
+  <Accordion title="Gestão da Janela de Contexto">
+    O CrewAI inclui recursos inteligentes para gerenciamento de contexto:
+
+    ```python
+    from crewai import LLM
+
+    # O CrewAI automaticamente gerencia:
+    # 1. Contagem e acompanhamento de tokens
+    # 2. Resumo de conteúdo quando necessário
+    # 3. Divisão de tarefas para grandes contextos
+
+    llm = LLM(
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # Limitar tamanho da resposta
+    )
+    ```
+
+    <Info>
+      Boas práticas para o gerenciamento de contexto:
+      1. Prefira modelos com janelas apropriadas
+      2. Pré-processe entradas muito longas
+      3. Utilize divisão para documentos grandes
+      4. Monitore tokens para otimizar custos
+    </Info>
+  </Accordion>
+
+  <Accordion title="Otimização de Performance">
+    <Steps>
+      <Step title="Otimização do Uso de Tokens">
+        Escolha a janela de contexto certa para sua tarefa:
+        - Tarefas pequenas (até 4K tokens): Modelos padrão
+        - Tarefas médias (entre 4K-32K): Modelos aprimorados
+        - Tarefas grandes (acima de 32K): Modelos com contexto expandido
+
+        ```python
+        # Configure o modelo com as opções certas
+        llm = LLM(
+            model="openai/gpt-5.6-terra",
+            reasoning_effort="medium",
+            max_completion_tokens=4096,
+            timeout=300
+        )
+        ```
+        <Tip>
+          Use os controles compatíveis com o modelo escolhido. Dependendo do provedor, isso pode ser `temperature`, um nível de reasoning ou thinking, ou instruções no prompt que definam o estilo e a variabilidade desejados.
+        </Tip>
+      </Step>
+
+      <Step title="Boas Práticas">
+        1. Monitore o uso de tokens
+        2. Implemente limites de taxa (rate limiting)
+        3. Use cache quando possível
+        4. Defina limites apropriados para max_tokens
+      </Step>
+    </Steps>
+
+    <Info>
+      Lembre-se de monitorar regularmente o uso de tokens e ajustar suas configurações para otimizar custos e desempenho.
+    </Info>
+  </Accordion>
+
+  <Accordion title="Descartar Parâmetros Adicionais">
+    O CrewAI usa Litellm internamente para chamadas LLM, permitindo descartar parâmetros adicionais desnecessários para seu caso de uso. Isso pode simplificar seu código e reduzir a complexidade da configuração do LLM.
+    Por exemplo, se não precisar enviar o parâmetro <code>stop</code>, basta omiti-lo na chamada do LLM:
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Problemas Comuns e Soluções
+
+<Tabs>
+  <Tab title="Autenticação">
+    <Warning>
+      A maioria dos problemas de autenticação pode ser resolvida verificando o formato da chave da API e os nomes das variáveis de ambiente.
+    </Warning>
+
+    ```bash
+    # OpenAI
+    OPENAI_API_KEY=sk-...
+
+    # Anthropic
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+  </Tab>
+  <Tab title="Nomes dos Modelos">
+    <Check>
+      Sempre inclua o prefixo do provedor nos nomes dos modelos
+    </Check>
+
+    ```python
+    # Correto
+    llm = LLM(model="openai/gpt-4")
+
+    # Incorreto
+    llm = LLM(model="gpt-4")
+    ```
+  </Tab>
+  <Tab title="Comprimento do Contexto">
+    <Tip>
+      Use modelos de contexto expandido para tarefas extensas
+    </Tip>
+
+    ```python
+    # Modelo com contexto expandido
+    llm = LLM(model="openai/gpt-4o")  # 128K tokens
+    ```
+  </Tab>
+</Tabs>

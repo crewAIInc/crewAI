@@ -29,7 +29,7 @@ uv run pre-commit install
 
 ## Repository Structure
 
-This is a uv workspace with four packages under `lib/`:
+This is a uv workspace with six packages under `lib/`:
 
 | Package | Path | Description |
 |---------|------|-------------|
@@ -37,6 +37,8 @@ This is a uv workspace with four packages under `lib/`:
 | `crewai-tools` | `lib/crewai-tools/` | Tool integrations |
 | `crewai-files` | `lib/crewai-files/` | File handling |
 | `devtools` | `lib/devtools/` | Internal release tooling |
+| `crewai-cli` | `lib/cli/` | Command-line interface |
+| `crewai-core` | `lib/crewai-core/` | Shared core utilities |
 
 Documentation lives in `docs/` with translations under `docs/{en,ar,ko,pt-BR}/`.
 
@@ -103,7 +105,8 @@ chore(deps): bump pydantic to 2.11
 - Keep PRs focused — avoid bundling unrelated changes
 - PRs over 500 lines are labeled `size/XL` automatically
 - Title must follow the same conventional commit format
-- Link related issues where applicable
+- Link related issues where applicable (`#123`, `Fixes #123`, or the issue URL)
+- First-time contributors must open or pick an existing **open** issue first, then mention it in the PR title or body (for example `#123`). PRs without a linked open issue are closed automatically and labeled `needs-issue`.
 
 ## Testing
 

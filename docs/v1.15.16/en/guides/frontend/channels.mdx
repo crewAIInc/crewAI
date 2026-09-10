@@ -1,0 +1,156 @@
+---
+title: Channels
+description: Run the same CrewAI agent as a Slack or Teams bot with the CopilotKit Channels SDK and managed Intelligence platform.
+icon: messages
+mode: "wide"
+---
+
+## Meet your users where they already are
+
+The CrewAI agent you built in the [Overview](/edge/en/guides/frontend/overview) does not have to live behind a web app. The same Crew or Flow can run as a bot inside a messaging platform. No rebuild, no second copy of your agent logic: the agent stays exposed over the [AG-UI protocol](https://docs.ag-ui.com), and a **channel** drives it from Slack or Microsoft Teams.
+
+CopilotKit's [Channels SDK](https://docs.copilotkit.ai/slack) provides that channel. You declare a `createChannel` in a small runtime, point it at your CrewAI agent, and CopilotKit's managed **Intelligence** platform brokers the connection to the messaging provider.
+
+<Note>
+Unlike the rest of this section, Channels is **not self-hosted**. It runs through **CopilotKit Intelligence** — a required surface for Channels, by design (a free tier is available). Intelligence holds the platform connection and credentials, receives each platform event, and delivers the turn to your channel process; your process runs the agent and streams the reply back. You configure Slack once in the Intelligence dashboard, and platform credentials never enter your process. Your agent, tools, and state stay yours.
+</Note>
+
+## How it fits together
+
+Nothing about your CrewAI agent server changes. It keeps serving your Crew or Flow over AG-UI exactly as in the Overview. What you add is a separate long-running Node process built with `@copilotkit/channels`: it registers a channel on the `CopilotRuntime`, connects to Intelligence, and runs your agent whenever a message arrives.
+
+```
+Slack / Teams  ──►  CopilotKit Intelligence  ──►  channel process (Node)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+The channel process holds a persistent connection to the Intelligence gateway, so it needs a long-running host — a serverless request handler cannot own that connection. Your CrewAI server can keep serving the web frontend from the Overview at the same time: the web app and the channel are just two clients of one AG-UI endpoint.
+
+## Integration guide
+
+<Steps>
+
+<Step title="Install the Channels packages">
+
+The Channels SDK is batteries-included — every platform ships in the one package, with no per-platform adapter to install. Add it alongside the runtime that hosts the channel and the CrewAI AG-UI client:
+
+```bash
+npm install @copilotkit/channels @copilotkit/runtime @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="Create a Channel in Intelligence">
+
+In the [CopilotKit dashboard](https://docs.copilotkit.ai/slack), create a Channel and connect Slack — Intelligence walks you through creating the Slack app and holds its credentials. That leaves two environment variables for your process, both from the dashboard:
+
+```bash
+export INTELLIGENCE_API_KEY=...      # authenticates the runtime with Intelligence (free tier available)
+export INTELLIGENCE_CHANNEL_ID=...   # the Channel ID, matched by createChannel({ name })
+```
+
+</Step>
+
+<Step title="Define the channel">
+
+`createChannel` declares the channel and attaches your agent. Build the agent as a per-thread factory so each conversation gets its own session, using the same `CrewAIAgent` the Overview uses in the web runtime, pointed at your AG-UI endpoint. `identifyUser: "platform"` lets Intelligence map each platform user to a stable identity.
+
+```ts
+// channel.ts
+import { createChannel } from "@copilotkit/channels";
+import { CrewAIAgent } from "@ag-ui/crewai";
+
+const channel = createChannel({
+  name: process.env.INTELLIGENCE_CHANNEL_ID!, // must match the Channel ID in Intelligence
+  identifyUser: "platform",
+  // A fresh agent per conversation, pointed at your CrewAI AG-UI endpoint.
+  agent: (threadId) => {
+    const agent = new CrewAIAgent({ url: "http://localhost:8000/recipe" });
+    agent.threadId = threadId;
+    return agent;
+  },
+});
+
+// A mention subscribes the thread and runs the agent; afterwards every message
+// in a subscribed thread runs it without needing another mention.
+channel.onMention(async ({ thread }) => {
+  await thread.subscribe();
+  await thread.runAgent();
+});
+
+channel.onMessage(async ({ thread }) => {
+  if (await thread.isSubscribed()) await thread.runAgent();
+});
+
+export { channel };
+```
+
+</Step>
+
+<Step title="Register the channel on the runtime">
+
+Create a `CopilotRuntime` with the Intelligence gateway and your channel, then serve it with `createCopilotNodeListener`. The `agents` map stays empty — the channel supplies its own agent. Wait for the channel to be ready so a broken config fails startup loudly.
+
+```ts
+// server.ts
+import { createServer } from "node:http";
+import { CopilotRuntime, CopilotKitIntelligence } from "@copilotkit/runtime/v2";
+import { createCopilotNodeListener } from "@copilotkit/runtime/v2/node";
+import { channel } from "./channel";
+
+const runtime = new CopilotRuntime({
+  agents: {}, // the channel supplies its own agent; no web-facing agents needed
+  intelligence: new CopilotKitIntelligence({
+    apiKey: process.env.INTELLIGENCE_API_KEY!, // free tier available
+  }),
+  channels: [channel],
+});
+
+const listener = createCopilotNodeListener({ runtime });
+await listener.channels?.ready({ timeoutMs: 15_000 });
+
+createServer(listener).listen(3123, () => {
+  console.log("Channels runtime listening on port 3123");
+});
+```
+
+</Step>
+
+<Step title="Run the channel runtime">
+
+Start it alongside your CrewAI agent server:
+
+```bash
+uvicorn server:app --port 8000   # terminal 1 — CrewAI agent server
+npx tsx server.ts                 # terminal 2 — Channels runtime
+```
+
+Mention the bot in Slack or Teams and it runs your Crew or Flow, streaming the reply back into the thread. The thread stays subscribed, so follow-up messages run without another mention.
+
+</Step>
+
+</Steps>
+
+## The event model
+
+A channel reacts to platform events with handlers, and each handler receives a `thread` you drive with a few methods:
+
+- **`channel.onMention`** fires when a user @-mentions the bot. Call `thread.subscribe()` to join the thread, then `thread.runAgent()` to run your CrewAI agent on the mention.
+- **`channel.onMessage`** fires on every message in a thread the bot can see. Gate it with `thread.isSubscribed()` so the agent only responds where it has joined, then `thread.runAgent()`.
+- **`thread.runAgent()`** runs the attached CrewAI agent for the current turn and streams its output back into the channel. Pass `{ prompt }` to override the text the agent runs on.
+
+Your agent receives an ordinary AG-UI `RunAgentInput` and emits ordinary AG-UI events; the platform mechanics stay behind the channel, so the same Crew or Flow runs unchanged across every platform. The channel also exposes handlers for welcomes, interrupts, commands, reactions, and modals — see the [`Channel` reference](https://docs.copilotkit.ai/reference/channels/classes/Channel) for the full surface.
+
+## Platform support
+
+The managed Intelligence path covers **Slack** and **Microsoft Teams** today — the same channel code runs on either, and `message.platform` / `thread.platform` report the native origin. Other messaging platforms connect the same managed way, with your channel code unchanged. Check the [CopilotKit Channels documentation](https://docs.copilotkit.ai/slack) for the current platform list and per-platform setup.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Frontend Overview" icon="browser" href="/edge/en/guides/frontend/overview">
+    Serve your Crew or Flow over AG-UI — the foundation every channel builds on.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    Pause the agent to collect user approval or input mid-run.
+  </Card>
+</CardGroup>

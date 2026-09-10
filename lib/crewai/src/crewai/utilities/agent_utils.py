@@ -24,12 +24,20 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.llms.base_llm import BaseLLM, call_stop_override
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
     strip_composite_description_prefix,
+)
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+    reportable_failure,
 )
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
@@ -473,13 +481,17 @@ def enforce_rpm_limit(
         request_within_rpm_limit()
 
 
+@contextlib.contextmanager
 def _prepare_llm_call(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     messages: list[LLMMessage],
     printer: Printer,
     verbose: bool = True,
-) -> list[LLMMessage]:
+) -> Iterator[list[LLMMessage]]:
     """Shared pre-call logic: run before hooks and resolve messages.
+
+    Yields for the duration of the LLM call so the LLM layer knows the hooks
+    already ran with this executor's context and does not dispatch them twice.
 
     Args:
         executor_context: Optional executor context for hook invocation.
@@ -487,17 +499,23 @@ def _prepare_llm_call(
         printer: Printer instance for output.
         verbose: Whether to print output.
 
-    Returns:
+    Yields:
         The resolved messages list (may come from executor_context).
 
     Raises:
         ValueError: If a before hook blocks the call.
     """
-    if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-            raise ValueError("LLM call blocked by before_llm_call hook")
-        messages = executor_context.messages
-    return messages
+    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+    if executor_context is None:
+        yield messages
+        return
+
+    if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
+        raise LLMCallBlockedError("LLM call blocked by before_llm_call hook")
+
+    with model_call_hooks_dispatched():
+        yield executor_context.messages
 
 
 def _validate_and_finalize_llm_response(
@@ -569,17 +587,18 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = llm.call(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = llm.call(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -622,17 +641,18 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = await llm.acall(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = await llm.acall(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -836,6 +856,88 @@ def _estimate_token_count(text: str) -> int:
     return len(text) // 4
 
 
+def _content_parts_text(content: list[dict[str, Any]]) -> str:
+    """Text carried by a multimodal content-part list.
+
+    Non-text blocks (images, audio) have no text to give, so a list with
+    none of them is named rather than rendered -- ``str()`` on the list
+    would put a Python repr in front of the model.
+
+    Blocks are ``dict[str, Any]`` and arrive from a model, so a ``text``
+    key that is not a string is possible; such a block carries no usable
+    text and is skipped rather than joined, which would raise.
+    """
+    text_parts = [
+        block["text"]
+        for block in content
+        if isinstance(block, dict)
+        and block.get("type") == "text"
+        and isinstance(block.get("text"), str)
+    ]
+    return " ".join(text_parts) if text_parts else "[multimodal content]"
+
+
+def message_content_text(msg: LLMMessage) -> str:
+    """Return the message content as text.
+
+    Used wherever a message has to collapse to a string -- token
+    estimation, memory, and the one turn promoted into the executor
+    prompt. Content is ``str | list[dict] | None``, and the list form is
+    the multimodal one.
+    """
+    content = msg.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        return _content_parts_text(content)
+    return str(content)
+
+
+def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
+    """Split text into parts each estimated to fit within max_tokens."""
+    if not text:
+        return []
+    if _estimate_token_count(text) <= max_tokens:
+        return [text]
+
+    # Inverse of _estimate_token_count (len // 4): each slice is at most max_tokens.
+    max_chars = max(1, max_tokens * 4)
+    return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+
+
+def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
+    """Split a message whose content alone exceeds max_tokens into sub-messages."""
+    msg_text = message_content_text(msg)
+    if _estimate_token_count(msg_text) <= max_tokens:
+        return [msg]
+
+    # Reserve budget for the [Part i/n] prefix added to each sub-message.
+    body_max_tokens = max(1, max_tokens - 5)
+    parts = _split_text_by_token_limit(msg_text, body_max_tokens)
+    total_parts = len(parts)
+    expanded: list[LLMMessage] = []
+
+    for index, part in enumerate(parts, start=1):
+        part_content = (
+            f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
+        )
+        expanded.append({**msg, "content": part_content})
+
+    return expanded
+
+
+def _normalize_messages_for_chunking(
+    messages: list[LLMMessage], max_tokens: int
+) -> list[LLMMessage]:
+    """Return non-system messages with oversized entries split to fit max_tokens."""
+    normalized: list[LLMMessage] = []
+    for msg in messages:
+        if msg.get("role") == "system":
+            continue
+        normalized.extend(_expand_oversized_message(msg, max_tokens))
+    return normalized
+
+
 def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
     """Format messages with role labels for summarization.
 
@@ -871,12 +973,7 @@ def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
             else:
                 content = ""
         elif isinstance(content, list):
-            text_parts = [
-                block.get("text", "")
-                for block in content
-                if isinstance(block, dict) and block.get("type") == "text"
-            ]
-            content = " ".join(text_parts) if text_parts else "[multimodal content]"
+            content = _content_parts_text(content)
 
         if role == "assistant":
             label = "[ASSISTANT]:"
@@ -896,8 +993,8 @@ def _split_messages_into_chunks(
 ) -> list[list[LLMMessage]]:
     """Split messages into chunks at message boundaries.
 
-    Excludes system messages from chunks. Each chunk stays under
-    max_tokens based on estimated token count.
+    Excludes system messages and expands oversized single messages before
+    chunking. Each chunk stays under max_tokens based on estimated token count.
 
     Args:
         messages: List of messages to split.
@@ -906,24 +1003,16 @@ def _split_messages_into_chunks(
     Returns:
         List of message chunks.
     """
-    non_system = [m for m in messages if m.get("role") != "system"]
-    if not non_system:
+    normalized = _normalize_messages_for_chunking(messages, max_tokens)
+    if not normalized:
         return []
 
     chunks: list[list[LLMMessage]] = []
     current_chunk: list[LLMMessage] = []
     current_tokens = 0
 
-    for msg in non_system:
-        content = msg.get("content")
-        if content is None:
-            msg_text = ""
-        elif isinstance(content, list):
-            msg_text = str(content)
-        else:
-            msg_text = str(content)
-
-        msg_tokens = _estimate_token_count(msg_text)
+    for msg in normalized:
+        msg_tokens = _estimate_token_count(message_content_text(msg))
 
         if current_chunk and (current_tokens + msg_tokens) > max_tokens:
             chunks.append(current_chunk)
@@ -1396,9 +1485,9 @@ def is_tool_call_list(response: list[Any]) -> bool:
     if isinstance(first_item, dict) and "name" in first_item and "input" in first_item:
         return True
     # OpenAI Responses API style: {"id", "name", "arguments"}, with no nested
-    # "function" object and no "input". Without this the list isn't recognized as
-    # tool calls, so the executor hands it back verbatim and the agent returns raw
-    # tool-call JSON instead of running the tool and producing a final answer.
+    # "function" object and no "input". This intentionally accepts the same broad
+    # shape as the Bedrock check above; only provider paths that return lists reach
+    # this classifier.
     if (
         isinstance(first_item, dict)
         and "name" in first_item
@@ -1532,6 +1621,9 @@ class NativeToolCallResult:
 
 def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     """Format native tool output when a tool explicitly defines a formatter."""
+    if isinstance(raw_result, ToolFailure):
+        return raw_result.as_agent_message()
+
     formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
     if formatter is None:
         return str(raw_result)
@@ -1600,13 +1692,30 @@ def execute_single_native_tool_call(
 
     call_id, func_name, func_args = info
 
-    if isinstance(func_args, str):
-        try:
-            args_dict = json.loads(func_args)
-        except json.JSONDecodeError:
-            args_dict = {}
-    else:
-        args_dict = func_args
+    parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+    if parse_error is not None:
+        # Previously the decode error was swallowed into empty args and the tool
+        # ran with no input at all.
+        handle_tool_failure(
+            parse_error["tool_failure"],
+            tool_name=func_name,
+            tool_args=func_args,
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
+        return NativeToolCallResult(
+            call_id=call_id,
+            func_name=func_name,
+            result=parse_error["result"],
+            tool_message={
+                "role": "tool",
+                "tool_call_id": call_id,
+                "name": func_name,
+                "content": parse_error["result"],
+            },
+        )
+    args_dict = parsed_args if parsed_args is not None else {}
 
     agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
 
@@ -1628,12 +1737,14 @@ def execute_single_native_tool_call(
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
     raw_tool_result: Any = result
+    tool_failure: ToolFailure | None = None
 
     if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
             raw_tool_result = cached_result
             result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1666,6 +1777,9 @@ def execute_single_native_tool_call(
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
         raw_tool_result = result
+        # The blocked message replaces any cached result, so a cached failure
+        # must not be attributed to this call.
+        tool_failure = None
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
@@ -1685,9 +1799,11 @@ def execute_single_native_tool_call(
                         )
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
+                tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 raw_tool_result = result
+                tool_failure = failure_from_exception(e)
                 if task:
                     task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1704,6 +1820,14 @@ def execute_single_native_tool_call(
                     ),
                 )
                 error_event_emitted = True
+        else:
+            # Not cached and not executable: the model asked for a tool we do
+            # not have. The ReAct path reports this, so this one must too.
+            tool_failure = ToolFailure(
+                message=result,
+                reason=ToolFailureReason.UNKNOWN_TOOL,
+                code=func_name,
+            )
 
     after_hook_context = ToolCallHookContext(
         tool_name=func_name,
@@ -1733,7 +1857,27 @@ def execute_single_native_tool_call(
                 plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
+                failure=reportable_failure(
+                    tool_failure,
+                    tool=structured_tool,
+                    agent=agent,
+                    task=task,
+                    crew=crew,
+                ),
             ),
+        )
+
+    # After the finished event, so subscribers see the full lifecycle even
+    # when the policy aborts.
+    if tool_failure is not None:
+        handle_tool_failure(
+            tool_failure,
+            tool_name=func_name,
+            tool_args=args_dict,
+            tool=structured_tool,
+            agent=agent,
+            task=task,
+            crew=crew,
         )
 
     tool_message: LLMMessage = {
@@ -1756,6 +1900,9 @@ def execute_single_native_tool_call(
         and original_tool.result_as_answer
         and not error_event_emitted
         and not hook_blocked
+        # A declared failure is excluded for the same reason a raised one is:
+        # an error must not silently become the task's answer.
+        and tool_failure is None
     )
 
     return NativeToolCallResult(
@@ -1779,21 +1926,28 @@ def parse_tool_call_args(
     Returns:
         ``(args_dict, None)`` on success, or ``(None, error_result)`` on
         JSON parse failure where ``error_result`` is a ready-to-return dict
-        with the same shape as ``_execute_single_native_tool_call`` return values.
+        with the same shape as ``_execute_single_native_tool_call`` return
+        values, carrying an ``INVALID_INPUT`` failure for the caller to report.
     """
     if isinstance(func_args, str):
         try:
             return json.loads(func_args), None
         except json.JSONDecodeError as e:
+            message = (
+                f"Error: Failed to parse tool arguments as JSON: {e}. "
+                f"Please provide valid JSON arguments for the '{func_name}' tool."
+            )
             return None, {
                 "call_id": call_id,
                 "func_name": func_name,
-                "result": (
-                    f"Error: Failed to parse tool arguments as JSON: {e}. "
-                    f"Please provide valid JSON arguments for the '{func_name}' tool."
-                ),
+                "result": message,
                 "from_cache": False,
                 "original_tool": original_tool,
+                "tool_failure": ToolFailure(
+                    message=message,
+                    reason=ToolFailureReason.INVALID_INPUT,
+                    code="json_decode_error",
+                ),
             }
     return func_args, None
 
@@ -1811,16 +1965,23 @@ def _setup_before_llm_call_hooks(
         verbose: Whether to print output.
 
     Returns:
-        True if LLM execution should proceed, False if blocked by a hook.
+        True if LLM execution should proceed, False if a hook blocked it by
+        returning ``False``.
+
+    Raises:
+        HookAborted: If a hook raised it, so the deny reaches the caller intact.
     """
     if executor_context:
         from crewai.hooks.dispatch import (
-            HookAborted,
             InterceptionPoint,
             get_scoped_hooks,
             run_hooks,
         )
-        from crewai.hooks.llm_hooks import LLMCallHookContext, before_llm_call_reducer
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            LegacyHookBlocked,
+            before_llm_call_reducer,
+        )
 
         # Executor snapshot first, then execution-scoped hooks — the same
         # ordering dispatch() applies to global vs scoped hooks.
@@ -1842,7 +2003,7 @@ def _setup_before_llm_call_hooks(
                 reducer=before_llm_call_reducer,
                 verbose=verbose,
             )
-        except HookAborted:
+        except LegacyHookBlocked:
             if verbose:
                 printer.print(
                     content="LLM call blocked by before_llm_call hook",

@@ -1004,3 +1004,21 @@ def test_internal_instructor_omits_unset_base_url_and_api_key() -> None:
         InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
 
         mock_from_provider.assert_called_once_with("openai/gpt-4o")
+
+
+def test_internal_instructor_does_not_double_prefix_qualified_models() -> None:
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "groq/llama-3.3-70b"
+    mock_llm.provider = "groq"
+    mock_llm.base_url = None
+    mock_llm.api_key = None
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_from_provider.return_value = Mock()
+
+        InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
+
+        mock_from_provider.assert_called_once_with("groq/llama-3.3-70b")

@@ -1,20 +1,28 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass, field
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, TypedDict
 
 import httpx
 from openai import (
     APIConnectionError,
+    APIResponseValidationError,
+    APIStatusError,
     AsyncOpenAI,
+    AuthenticationError,
     BadRequestError,
+    ConflictError,
+    InternalServerError,
     NotFoundError,
     OpenAI,
+    PermissionDeniedError,
+    RateLimitError,
     Stream,
+    UnprocessableEntityError,
 )
 from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import (
@@ -36,8 +44,14 @@ from openai.types.responses import (
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
-from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    LLMCallBlockedError,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
@@ -63,6 +77,95 @@ if TYPE_CHECKING:
 # `_remember_responses_only_model` so the wasted round trip is paid once per model
 # per process rather than on every call.
 _LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+
+# Upstream status codes carried inside a 200 body, mapped to the exception the SDK
+# raises when the same code arrives as a real HTTP status. Keeping the classes
+# identical means a gateway-masked failure is catchable by whatever already handles
+# the honest one. Codes outside this table fall back to `InternalServerError` for
+# 5xx, otherwise `APIStatusError`.
+_UPSTREAM_STATUS_ERRORS: Final[dict[int, type[APIStatusError]]] = {
+    400: BadRequestError,
+    401: AuthenticationError,
+    403: PermissionDeniedError,
+    404: NotFoundError,
+    409: ConflictError,
+    422: UnprocessableEntityError,
+    429: RateLimitError,
+}
+
+
+def _upstream_status_code(error: Mapping[str, Any]) -> int | None:
+    """Read an HTTP-like status code out of a gateway error object.
+
+    OpenAI-style bodies put a slug in `code` ("model_not_found"), gateways put the
+    upstream status there instead; only the latter is a status code.
+    """
+    code = error.get("code")
+    if isinstance(code, bool):
+        return None
+    if isinstance(code, int):
+        return code if 400 <= code <= 599 else None
+    if isinstance(code, str) and code.isdigit():
+        parsed = int(code)
+        return parsed if 400 <= parsed <= 599 else None
+    return None
+
+
+def _raise_for_upstream_error(
+    body: str,
+    *,
+    model: str,
+    http_response: httpx.Response,
+) -> None:
+    """Raise when a 200 response carries an upstream error instead of choices.
+
+    Gateways commit `200 OK` as soon as a provider accepts the request, so a later
+    provider failure is reported in the body -- an `error` object and no `choices`.
+    The OpenAI SDK guards this for streams (`openai/_streaming.py`) but not for
+    non-streaming responses, where the absent `choices` surfaces from inside the
+    parse helper as `TypeError: 'NoneType' object is not iterable`, naming neither
+    the provider nor the status.
+    """
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        # Not JSON, so not an error envelope. A non-JSON 200 already has its own
+        # (pre-existing) handling in the SDK, which returns the body as `str`.
+        return
+
+    if not isinstance(payload, Mapping) or payload.get("choices"):
+        return
+
+    host = http_response.request.url.host
+    error = payload.get("error")
+
+    if not isinstance(error, Mapping):
+        raise APIResponseValidationError(
+            response=http_response,
+            body=payload,
+            message=(
+                f"{model} via {host} returned HTTP 200 with no choices and no error "
+                f"object; the response does not describe a completion"
+            ),
+        )
+
+    detail = error.get("message") or "no message given"
+    code = _upstream_status_code(error)
+    suffix = f" (upstream code {code})" if code is not None else ""
+    message = (
+        f"{model} via {host} returned HTTP 200 with an upstream error and no "
+        f"choices: {detail}{suffix}"
+    )
+
+    if code is None:
+        raise APIResponseValidationError(
+            response=http_response, body=error, message=message
+        )
+
+    error_cls = _UPSTREAM_STATUS_ERRORS.get(code) or (
+        InternalServerError if code >= 500 else APIStatusError
+    )
+    raise error_cls(message, response=http_response, body=error)
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -462,10 +565,7 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 if self._effective_api() == "responses":
                     return self._call_responses(
@@ -486,6 +586,9 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
@@ -600,6 +703,8 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 if self._effective_api() == "responses":
                     return await self._acall_responses(
                         messages=formatted_messages,
@@ -619,6 +724,9 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
@@ -747,7 +855,7 @@ class OpenAICompletion(BaseLLM):
         )
 
     @staticmethod
-    def _to_responses_input(message: LLMMessage) -> list[Any]:
+    def _to_responses_input(message: LLMMessage) -> list[dict[str, Any] | LLMMessage]:
         """Translate a chat-format message into Responses ``input`` items.
 
         Tool calling is expressed differently by the two APIs. Chat Completions
@@ -765,18 +873,23 @@ class OpenAICompletion(BaseLLM):
         role = message.get("role")
 
         if role == "assistant" and message.get("tool_calls"):
-            items: list[Any] = []
+            items: list[dict[str, Any] | LLMMessage] = []
             content = message.get("content")
             if content:
                 items.append({"role": "assistant", "content": content})
             for call in message["tool_calls"]:
                 function = call.get("function", {})
+                args = function.get("arguments")
+                if args is None or args == "":
+                    args = "{}"
+                elif not isinstance(args, str):
+                    args = json.dumps(args)
                 items.append(
                     {
                         "type": "function_call",
                         "call_id": call.get("id", ""),
                         "name": function.get("name", ""),
-                        "arguments": function.get("arguments", "{}"),
+                        "arguments": args,
                     }
                 )
             return items
@@ -807,7 +920,7 @@ class OpenAICompletion(BaseLLM):
         - Internally-tagged tool format (flat structure)
         """
         instructions: str | None = self.instructions
-        input_messages: list[LLMMessage] = []
+        input_messages: list[dict[str, Any] | LLMMessage] = []
 
         for message in messages:
             if message.get("role") == "system":
@@ -821,7 +934,7 @@ class OpenAICompletion(BaseLLM):
                 input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
-        final_input: list[Any] = []
+        final_input: list[dict[str, Any] | LLMMessage] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
         final_input.extend(input_messages if input_messages else messages)
@@ -1888,10 +2001,16 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = self._get_sync_client().beta.chat.completions.parse(
+                raw_parsed = self._get_sync_client().beta.chat.completions.with_raw_response.parse(
                     **parse_params,
                     response_format=response_model,
                 )
+                _raise_for_upstream_error(
+                    raw_parsed.text,
+                    model=self.model,
+                    http_response=raw_parsed.http_response,
+                )
+                parsed_response = raw_parsed.parse()
                 math_reasoning = parsed_response.choices[0].message
 
                 if math_reasoning.refusal:
@@ -1917,9 +2036,17 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            response: ChatCompletion = self._get_sync_client().chat.completions.create(
-                **params
+            raw_response = (
+                self._get_sync_client().chat.completions.with_raw_response.create(
+                    **params
+                )
             )
+            _raise_for_upstream_error(
+                raw_response.text,
+                model=self.model,
+                http_response=raw_response.http_response,
+            )
+            response: ChatCompletion = raw_response.parse()
 
             usage = self._extract_openai_token_usage(response)
 
@@ -2314,12 +2441,16 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = (
-                    await self._get_async_client().beta.chat.completions.parse(
-                        **parse_params,
-                        response_format=response_model,
-                    )
+                raw_parsed = await self._get_async_client().beta.chat.completions.with_raw_response.parse(
+                    **parse_params,
+                    response_format=response_model,
                 )
+                _raise_for_upstream_error(
+                    raw_parsed.text,
+                    model=self.model,
+                    http_response=raw_parsed.http_response,
+                )
+                parsed_response = raw_parsed.parse()
                 math_reasoning = parsed_response.choices[0].message
 
                 if math_reasoning.refusal:
@@ -2345,9 +2476,15 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            response: ChatCompletion = (
-                await self._get_async_client().chat.completions.create(**params)
+            raw_response = await self._get_async_client().chat.completions.with_raw_response.create(
+                **params
             )
+            _raise_for_upstream_error(
+                raw_response.text,
+                model=self.model,
+                http_response=raw_response.http_response,
+            )
+            response: ChatCompletion = raw_response.parse()
 
             usage = self._extract_openai_token_usage(response)
 
@@ -2659,23 +2796,25 @@ class OpenAICompletion(BaseLLM):
                     f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
-        # Context window sizes for OpenAI models
+        # Longest prefix first. Always insert new keys in that order so
+        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
         context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-4.1": 1047576,
             "gpt-4.1-mini-2025-04-14": 1047576,
             "gpt-4.1-nano-2025-04-14": 1047576,
-            "gpt-5": 1047576,
+            "gpt-5.4-mini": 200000,
+            "gpt-4-turbo": 128000,
+            "gpt-4o-mini": 128000,
             "gpt-5-mini": 1047576,
             "gpt-5-nano": 1047576,
             "o1-preview": 128000,
+            "gpt-5.6": 1050000,
             "o1-mini": 128000,
             "o3-mini": 200000,
             "o4-mini": 200000,
+            "gpt-4.1": 1047576,
+            "gpt-4o": 128000,
+            "gpt-5": 1047576,
+            "gpt-4": 8192,
         }
 
         for model_prefix, size in context_windows.items():

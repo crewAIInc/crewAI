@@ -77,8 +77,8 @@ startxref
 
 def _build_multimodal_message(llm: LLM, prompt: str, files: dict) -> list[dict]:
     """Build a multimodal message with text and file content."""
-    provider = getattr(llm, "provider", None) or llm.model
-    content_blocks = format_multimodal_content(files, provider)
+    formatter = llm._multimodal_formatter_name()
+    content_blocks = format_multimodal_content(files, formatter)
     return [
         {
             "role": "user",

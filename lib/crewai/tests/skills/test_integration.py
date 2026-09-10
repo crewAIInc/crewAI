@@ -144,7 +144,8 @@ class TestSkillDiscoveryAndActivation:
 
         assert agent.skills is not None
         assert [skill.name for skill in agent.skills] == ["path-skill"]
-        assert [skill.instructions for skill in agent.skills] == ["Use the path skill."]
+        assert [skill.disclosure_level for skill in agent.skills] == [METADATA]
+        assert [skill.instructions for skill in agent.skills] == [None]
 
     def test_crew_resolves_inline_skill_string(self) -> None:
         agent = Agent(
@@ -175,7 +176,7 @@ class TestSkillDiscoveryAndActivation:
         assert [skill.name for skill in skills] == ["crew-inline-review"]
         assert [skill.instructions for skill in skills] == ["Apply this to every agent."]
 
-    def test_crew_activates_preloaded_metadata_skill(self, tmp_path: Path) -> None:
+    def test_crew_preserves_preloaded_metadata_skill(self, tmp_path: Path) -> None:
         _create_skill_dir(
             tmp_path,
             "crew-preloaded",
@@ -202,7 +203,5 @@ class TestSkillDiscoveryAndActivation:
 
         assert skills is not None
         assert [skill.name for skill in skills] == ["crew-preloaded"]
-        assert [skill.disclosure_level for skill in skills] == [INSTRUCTIONS]
-        assert [skill.instructions for skill in skills] == [
-            "Apply this crew-level guidance to every agent."
-        ]
+        assert [skill.disclosure_level for skill in skills] == [METADATA]
+        assert [skill.instructions for skill in skills] == [None]
