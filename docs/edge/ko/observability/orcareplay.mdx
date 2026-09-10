@@ -1,0 +1,149 @@
+---
+title: OrcaReplay 통합
+description: CrewAI 실행을 기록하고, 모델 호출 없이 바이트 단위로 동일하게 오프라인에서 재생하세요
+icon: rotate-left
+mode: "wide"
+---
+
+# Crew를 기록하고 재생하기
+
+[OrcaReplay](https://github.com/Continuum-AI-Corp/OrcaReplay)는 에이전트를 위한 오픈 소스
+기록/재생 디버거입니다. 실행을 디스크의 파일로 기록한 다음, 그 파일에 담긴 응답을 모델 대신
+사용해 재생합니다. 따라서 같은 실행을 토큰 소모 없이, 오프라인에서, 원하는 만큼 정확히 재현할
+수 있습니다.
+
+이 섹션의 다른 도구들과 한 가지 다른 점을 먼저 알아두면 좋습니다. **코드에 추가할 것이
+없습니다.** SDK도, 콜백도, 데코레이터도, `import`도 필요 없습니다. OrcaReplay는 스크립트를
+실행하고 그 아래를 지나가는 트래픽을 포착합니다.
+
+## 시작하기
+
+```bash
+pip install crewai
+npm install -g orcareplay
+```
+
+평소처럼 crew를 실행하되, 앞에 `orca record`를 붙입니다:
+
+```bash
+orca record generic-openai -- python your_crew.py
+```
+
+통합은 이것이 전부입니다. 실행이 끝나면:
+
+```bash
+orca show last        # 타임라인: 모든 요청, 응답, 도구 호출과 결과
+orca replay last      # 같은 실행을 다시 — 기록에서, 모델 호출 없이
+```
+
+## 무엇이 기록되나요
+
+모델 API는 상태를 저장하지 않기 때문에, crew는 매 턴마다 이전 턴의 도구 결과를 포함한 전체
+대화를 다시 보냅니다. 그래서 모델 앞에 놓인 프록시는 LLM 호출만이 아니라 루프 전체를 보게
+됩니다. 각 요청, 스트리밍된 각 응답, 모델이 발생시킨 모든 도구 호출, 그리고 crew가 만들어낸
+모든 도구 결과입니다.
+
+```console
+$ orca show last
+run_0ec7e5de1f25  generic-openai@0.2.3  6 events  exit 0
+
+SEQ  KIND   WHAT                                           DETAIL
+0    RUN    run started                                    generic-openai
+1    SNAP   tree ee2d5836718ef5ac09bfc73e3b3d4c7e6f27cf93   0 changed
+2    MODEL  gpt-4o-mini                                    1 messages
+3    MODEL  gpt-4o-mini                                    stop: end_turn · 9 in · 4 out
+4    SNAP   tree ee2d5836718ef5ac09bfc73e3b3d4c7e6f27cf93   0 changed
+5    RUN    run ended                                      exit 0
+```
+
+위는 에이전트 하나, 태스크 하나짜리 crew입니다. 도구를 사용하는 crew라면 모델 행 사이에
+`tool.call`과 `tool.result` 행이 나타납니다. 하니스가 다시 보낸 대화로부터 재구성한 것으로,
+HTTP만 본 도구가 루프 전체를 볼 수 있는 이유가 바로 이것입니다.
+
+모델 트래픽과 함께 턴별 파일 변경, 그리고 실제 종료 코드와 소요 시간이 담긴 셸 명령도
+기록됩니다.
+
+## 재생, 그리고 특정 단계에서의 분기
+
+재생은 관측(observability)이 아닌 부분입니다. 기록은 파일이므로, 지난주에 포착한 실행을 오늘
+네트워크 없이 재현할 수 있습니다:
+
+```console
+$ orca replay last
+info replaying run=run_0ec7e5de1f25 exchanges=1 egress=blocked
+info replay.done reused=1/1 exact=1 divergences=0 unmatched=0 exit=0
+```
+
+`egress=blocked`는 모델 트래픽에 적용됩니다. 프록시는 기록에서 응답할 수 없는 요청을 전달하지
+않으므로 아무것도 호출되지 않고 아무 비용도 발생하지 않습니다. 다만 재생은 기록된 도구 호출을
+*실제로 실행*합니다. 자체 소켓을 여는 도구는 여전히 네트워크에 접근하므로, 재생은 샌드박스가
+아닙니다.
+
+분기는 나머지 절반입니다. 특정 체크포인트까지는 기록을 사용하고, 그 이후를 다른 모델로 실제
+실행합니다:
+
+```bash
+orca replay last --from 4 --model gpt-5.2
+```
+
+같은 작업, 같은 대화 접두부, 같은 파일에 4단계부터 모델만 다릅니다. 두 모델을 비교하는 일이
+의미를 갖는 이유가 여기에 있습니다. 이 부분은 실제로 모델을 호출하며 토큰을 사용합니다.
+
+## Crew를 기록기 또는 게이트웨이로 향하게 하기
+
+`orca record generic-openai`는 `OPENAI_API_BASE`와 `OPENAI_BASE_URL`을 설정하고, CrewAI 1.x의
+네이티브 프로바이더는 두 변수를 모두 읽습니다. 위 명령에 인자도, crew 수정도 필요 없는 이유가
+이것입니다. 코드에서 `LLM(base_url=…)`으로 전달해도 동작하지만, 환경 변수는 `orca record`가
+이미 설정해 두는 경로입니다.
+
+프로바이더가 발행한 적 없는 모델 이름을 사용할 때 — 게이트웨이를 가리킬 때 보통 그렇습니다 —
+알아둘 점이 하나 있습니다. **crewai 1.15.20** 기준으로 측정한 결과입니다:
+
+| `LLM(model=…)` | 해석 여부 |
+|---|---|
+| `gpt-4o-mini`, `my-gateway-model` | 항상 — 접두사 없는 이름은 이름과 무관하게 네이티브 프로바이더에 도달합니다 |
+| `openai/gpt-4o-mini`, `openai/o3-mini` | 항상 — 네이티브 프로바이더가 처리합니다 |
+| `openai/my-gateway-model` | **LiteLLM이 설치된 경우에만** |
+
+어떤 네이티브 프로바이더도 처리하지 않는 접두사 붙은 이름은 LiteLLM으로 넘어가는데, 1.x는
+기본적으로 LiteLLM을 설치하지 않습니다(`crewai[litellm]`으로 추가). 그래서 같은 코드가 어떤
+머신에서는 동작하고 다른 머신에서는 `ImportError: … and the LiteLLM fallback package is not
+installed`를 냅니다. 게이트웨이의 모델 이름에는 접두사 없는 형태를 쓰면 이 문제 자체가
+발생하지 않습니다.
+
+이 오류는 `LLM` 객체를 만드는 도중, 어떤 요청도 보내기 전에 발생합니다. 그래서 그 실행의
+기록에는 이벤트가 3개뿐이고 OrcaReplay는 `capture.empty`를 보고합니다. 정확한 보고이지만,
+모델 이름 문제인데 포착 문제로 오해하기 쉽습니다.
+
+## 텔레메트리는 별개의 연결입니다
+
+CrewAI는 자체 텔레메트리를 전송하며, 이는 모델 트래픽이 아니므로 여기서 기록되지 않습니다.
+실행이 기록기하고만 통신하기를 원한다면:
+
+```python
+import os
+
+os.environ["CREWAI_DISABLE_TELEMETRY"] = "true"
+os.environ["OTEL_SDK_DISABLED"] = "true"
+```
+
+`crewai`를 import 하기 전에 설정하세요. 텔레메트리 클라이언트는 import 시점에 구성됩니다.
+
+## CI에서 검증됨
+
+CrewAI는 OrcaReplay의 통합 매트릭스에 자체 검사를 가지고 있습니다. 실제 `Agent`, `Task`,
+`Crew`를 스텁 오리진에 대해 기록하고, 오리진을 중단한 뒤, 그 기록을 오프라인에서 재생합니다.
+
+```
+── crewai            1 exchanges, replayed exact with the origin down
+```
+
+모든 커밋에서 실행되므로 "CrewAI는 OrcaReplay와 함께 동작한다"는 주장은 조용히 낡아가는 대신
+빌드를 실패시킵니다. 해당 검사는
+[`test/integrations/agents/crewai_agent.py`](https://github.com/Continuum-AI-Corp/OrcaReplay/blob/main/test/integrations/agents/crewai_agent.py)입니다.
+
+## 더 알아보기
+
+- [GitHub의 OrcaReplay](https://github.com/Continuum-AI-Corp/OrcaReplay) — Apache-2.0
+- [프레임워크 기록하기](https://github.com/Continuum-AI-Corp/OrcaReplay/blob/main/docs/integrations.md) —
+  CrewAI와 다른 프레임워크들에 대한 측정 기록
