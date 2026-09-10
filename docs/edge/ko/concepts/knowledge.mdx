@@ -603,6 +603,21 @@ agent = Agent(
         }
     }
 )
+
+# Option 4: Use OpenRouter embeddings (supports models across providers)
+# Set OPENROUTER_API_KEY environment variable if api_key is omitted in config
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "openrouter",
+        "config": {
+            "model_name": "openai/text-embedding-3-small",
+            "api_key": "your-openrouter-api-key"  # Optional if OPENROUTER_API_KEY is set
+        }
+    }
+)
 ```
 
 #### Azure OpenAI 임베딩 구성
