@@ -83,7 +83,6 @@ def test_test_crew_called_process_error(mock_subprocess_run, click):
 @mock.patch("crewai_cli.evaluate_crew.click")
 @mock.patch("crewai_cli.evaluate_crew.subprocess.run")
 def test_test_crew_unexpected_exception(mock_subprocess_run, click):
-    # Arrange
     n_iterations = 5
     mock_subprocess_run.side_effect = Exception("Unexpected error")
     evaluate_crew.evaluate_crew(n_iterations, "gpt-4o")

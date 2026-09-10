@@ -114,7 +114,34 @@ class TestNormalizeOllamaBaseUrl:
     def test_handles_v1_with_trailing_slash(self):
         """Test /v1/ is normalized."""
         assert _normalize_ollama_base_url("http://localhost:11434/v1/") == "http://localhost:11434/v1"
+        
+    def test_bare_host_gets_scheme_and_port(self):
+        """Bare host from OLLAMA_HOST gets http:// and the default port."""
+        assert _normalize_ollama_base_url("0.0.0.0") == "http://0.0.0.0:11434/v1"
 
+    def test_bare_localhost_gets_scheme_and_port(self):
+        """Bare localhost gets http:// and the default port."""
+        assert _normalize_ollama_base_url("localhost") == "http://localhost:11434/v1"
+
+    def test_host_port_without_scheme_gets_scheme(self):
+        """host:port without a scheme gets http:// prepended."""
+        assert _normalize_ollama_base_url("127.0.0.1:11434") == "http://127.0.0.1:11434/v1"
+
+    def test_lan_host_port_without_scheme(self):
+        """A LAN host:port without a scheme gets http:// prepended."""
+        assert _normalize_ollama_base_url("192.168.1.5:11434") == "http://192.168.1.5:11434/v1"
+
+    def test_https_url_keeps_scheme_and_gets_no_default_port(self):
+        """An explicit https:// URL keeps its scheme and gets no default port."""
+        assert _normalize_ollama_base_url("https://ollama.example.com") == "https://ollama.example.com/v1"
+
+    def test_root_path_with_query_does_not_double_slash(self):
+        """A root path alongside a query yields /v1, not //v1."""
+        assert _normalize_ollama_base_url("http://ollama/?tenant=acme") == "http://ollama:11434/v1?tenant=acme"
+
+    def test_trailing_slash_in_query_is_preserved(self):
+        """Only the path is stripped, so a query ending in / keeps that character."""
+        assert _normalize_ollama_base_url("http://ollama:11434/?x=a/") == "http://ollama:11434/v1?x=a/"
 
 class TestOpenAICompatibleCompletion:
     """Tests for OpenAICompatibleCompletion class."""
@@ -126,7 +153,6 @@ class TestOpenAICompatibleCompletion:
 
     def test_missing_required_api_key_raises_error(self):
         """Test that missing required API key raises ValueError."""
-        # Clear any existing env var
         env_key = "DEEPSEEK_API_KEY"
         original = os.environ.pop(env_key, None)
         try:
@@ -271,6 +297,20 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_dashscope_non_qwen(self):
+        """Non-Qwen DashScope models must still use the native OpenAI-compatible path."""
+        with patch.dict(
+            os.environ,
+            {
+                "DASHSCOPE_API_KEY": "test-key",
+                "DASHSCOPE_BASE_URL": "https://my-dashscope.example.com/v1",
+            },
+        ):
+            llm = LLM(model="dashscope/deepseek-v3")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "dashscope"
+            assert llm.base_url == "https://my-dashscope.example.com/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""

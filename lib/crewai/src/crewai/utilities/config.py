@@ -19,8 +19,6 @@ def process_config(
     if not config:
         return values
 
-    # Copy values from config (originally from YAML) to the model's attributes.
-    # Only copy if the attribute isn't already set, preserving any explicitly defined values.
     for key, value in config.items():
         if key not in model_class.model_fields or values.get(key) is not None:
             continue
@@ -33,6 +31,5 @@ def process_config(
         else:
             values[key] = value
 
-    # Remove the config from values to avoid duplicate processing
     values.pop("config", None)
     return values

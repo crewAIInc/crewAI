@@ -235,19 +235,15 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             if isinstance(content, str):
                 messages.append(content)
             elif isinstance(content, list) and len(content) > 0:
-                # Handle message list format
                 messages.extend(
                     msg["content"]
                     for msg in content
                     if isinstance(msg, dict) and "content" in msg
                 )
 
-        # Simple n-gram based similarity detection
-        # For a more robust implementation, consider using embedding-based similarity
+        # NOTE: Uses simple n-gram similarity; embedding-based would be more robust
         for i in range(len(messages) - 2):
             for j in range(i + 1, len(messages) - 1):
-                # Check for repeated patterns (simplistic approach)
-                # A more sophisticated approach would use semantic similarity
                 similarity = self._calculate_text_similarity(messages[i], messages[j])
                 if similarity > 0.7:  # Arbitrary threshold
                     loop_details.append(
@@ -285,7 +281,6 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             if isinstance(content, str):
                 call_lengths.append(len(content))
             elif isinstance(content, list) and len(content) > 0:
-                # Handle message list format
                 total_length = 0
                 for msg in content:
                     if isinstance(msg, dict) and "content" in msg:
@@ -342,10 +337,9 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             x = np.arange(len(values))
             y = np.array(values)
 
-            # Simple linear regression
             slope = np.polyfit(x, y, 1)[0]
 
-            # Normalize slope to -1 to 1 range
+            # Normalize slope to [-1, 1] using full data range as denominator
             max_possible_slope = max(values) - min(values)
             if max_possible_slope > 0:
                 normalized_slope = slope / max_possible_slope

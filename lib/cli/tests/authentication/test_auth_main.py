@@ -333,7 +333,6 @@ class TestAuthenticationCommand:
     @patch("crewai_core.auth.oauth2.httpx.post")
     def test_poll_for_token_error(self, mock_post):
         """Test the method to poll for token (error path)."""
-        # Setup mock to return error
         mock_response_error = MagicMock()
         mock_response_error.status_code = 400
         mock_response_error.json.return_value = {

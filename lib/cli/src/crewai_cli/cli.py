@@ -3,45 +3,93 @@ from __future__ import annotations
 from importlib.metadata import version as get_version
 import os
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from crewai_core.token_manager import TokenManager
 
-from crewai_cli.add_crew_to_flow import add_crew_to_flow
-from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.config import Settings
-from crewai_cli.create_crew import create_crew
-from crewai_cli.create_flow import create_flow
-from crewai_cli.crew_chat import run_chat
-from crewai_cli.deploy.main import DeployCommand
-from crewai_cli.enterprise.main import EnterpriseConfigureCommand
-from crewai_cli.evaluate_crew import evaluate_crew
-from crewai_cli.install_crew import install_crew
-from crewai_cli.kickoff_flow import kickoff_flow
-from crewai_cli.organization.main import OrganizationCommand
-from crewai_cli.plot_flow import plot_flow
-from crewai_cli.remote_template.main import TemplateCommand
-from crewai_cli.replay_from_task import replay_task_command
-from crewai_cli.reset_memories_command import reset_memories_command
-from crewai_cli.run_crew import run_crew
-from crewai_cli.settings.main import SettingsCommand
-from crewai_cli.task_outputs import load_task_outputs
-from crewai_cli.tools.main import ToolCommand
-from crewai_cli.train_crew import train_crew
-from crewai_cli.triggers.main import TriggersCommand
-from crewai_cli.update_crew import update_crew
 from crewai_cli.user_data import (
     _load_user_data,
     is_tracing_enabled,
     update_user_data,
 )
-from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
+from crewai_cli.utils import (
+    build_env_with_all_tool_credentials,
+    enable_prompt_line_editing,
+    get_or_create_project_id,
+    is_dmn_mode_enabled,
+    read_toml,
+    warn_deprecated,
+)
+
+
+def train_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.train_crew import train_crew as _train_crew
+
+    return _train_crew(*args, **kwargs)
+
+
+def evaluate_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.evaluate_crew import evaluate_crew as _evaluate_crew
+
+    return _evaluate_crew(*args, **kwargs)
+
+
+def replay_task_command(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.replay_from_task import replay_task_command as _replay_task_command
+
+    return _replay_task_command(*args, **kwargs)
+
+
+def run_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.run_crew import run_crew as _run_crew
+
+    return _run_crew(*args, **kwargs)
+
+
+if TYPE_CHECKING:
+    # mypy sees the real classes; at runtime the shims below defer the
+    # heavy imports until a command actually instantiates them.
+    from crewai_cli.authentication.main import AuthenticationCommand
+    from crewai_cli.deploy.main import DeployCommand
+    from crewai_cli.organization.main import OrganizationCommand
+    from crewai_cli.remote_template.main import TemplateCommand
+else:
+
+    class AuthenticationCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.authentication.main import (
+                AuthenticationCommand as _AuthenticationCommand,
+            )
+
+            return _AuthenticationCommand(*args, **kwargs)
+
+    class DeployCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.deploy.main import DeployCommand as _DeployCommand
+
+            return _DeployCommand(*args, **kwargs)
+
+    class TemplateCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.remote_template.main import (
+                TemplateCommand as _TemplateCommand,
+            )
+
+            return _TemplateCommand(*args, **kwargs)
+
+    class OrganizationCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.organization.main import (
+                OrganizationCommand as _OrganizationCommand,
+            )
+
+            return _OrganizationCommand(*args, **kwargs)
 
 
 def _get_cli_version() -> str:
     """Return the best available version string for the CLI."""
-    # Prefer crewai version if installed (keeps existing UX)
     try:
         return get_version("crewai")
     except Exception:  # noqa: S110
@@ -66,7 +114,6 @@ def crewai() -> None:
 def uv(uv_args: tuple[str, ...]) -> None:
     """A wrapper around uv commands that adds custom tool authentication through env vars."""
     try:
-        # Verify pyproject.toml exists first
         read_toml()
     except FileNotFoundError as e:
         raise SystemExit(
@@ -91,20 +138,148 @@ def uv(uv_args: tuple[str, ...]) -> None:
 
 
 @crewai.command()
-@click.argument("type", type=click.Choice(["crew", "flow"]))
-@click.argument("name")
+@click.argument(
+    "type",
+    required=False,
+    default=None,
+    type=click.Choice(["crew", "flow", "tool", "skill", "template"]),
+)
+@click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
-@click.option("--skip_provider", is_flag=True, help="Skip provider validation")
+@click.option(
+    "--skip-provider",
+    "skip_provider",
+    is_flag=True,
+    help="Skip provider validation",
+)
+@click.option(
+    "--skip_provider",
+    "deprecated_skip_provider",
+    is_flag=True,
+    hidden=True,
+    help="[Deprecated: use --skip-provider] Skip provider validation",
+)
+@click.option(
+    "--classic",
+    is_flag=True,
+    help="Use classic Python/YAML project structure instead of JSON",
+)
+@click.option(
+    "--declarative",
+    is_flag=True,
+    help="Create a declarative Flow project instead of a Python Flow project",
+)
+@click.option(
+    "--no-project",
+    "in_project",
+    is_flag=True,
+    default=True,
+    flag_value=False,
+    help="Skill only: create in current dir instead of ./skills/",
+)
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Template only: directory name for the template (defaults to template name)",
+)
 def create(
-    type: str, name: str, provider: str | None, skip_provider: bool = False
+    type: str | None,
+    name: str | None,
+    provider: str | None,
+    skip_provider: bool = False,
+    deprecated_skip_provider: bool = False,
+    classic: bool = False,
+    declarative: bool = False,
+    in_project: bool = True,
+    output_dir: str | None = None,
 ) -> None:
-    """Create a new crew, or flow."""
-    if type == "crew":
-        create_crew(name, provider, skip_provider)
+    """Create a new crew, flow, tool, skill, or template."""
+    if deprecated_skip_provider:
+        warn_deprecated(kind="flag", old="--skip_provider", new="--skip-provider")
+        skip_provider = True
+    dmn_mode = is_dmn_mode_enabled()
+    if not type:
+        if dmn_mode:
+            raise click.UsageError(
+                "TYPE is required when CREWAI_DMN is set. "
+                "Use `crewai create <type> <name>` where type is one of: "
+                "crew, flow, tool, skill, template."
+            )
+        from crewai_cli.tui_picker import pick
+
+        options = [
+            ("crew", "A team of AI agents working together"),
+            (
+                "flow",
+                "A deterministic workflow with full control over agents and crews",
+            ),
+            ("tool", "A custom tool for the CrewAI Tool Repository"),
+            ("skill", "An agent skill with instructions and optional assets"),
+            ("template", "A remote project template from the CrewAI gallery"),
+        ]
+        type = pick("What would you like to create?", options)
+        if type is None:
+            raise SystemExit(0)
+        click.echo()
+    if not name:
+        if dmn_mode:
+            raise click.UsageError("NAME is required when CREWAI_DMN is set.")
+        enable_prompt_line_editing()
+        name = click.prompt(
+            click.style(f"  Name of your {type}", fg="cyan", bold=True),
+            prompt_suffix=click.style(" › ", fg="bright_white"),  # noqa: RUF001
+        )
+    if dmn_mode and type == "crew":
+        skip_provider = True
+    if not in_project and type != "skill":
+        raise click.UsageError("--no-project can only be used with skill projects.")
+    if output_dir is not None and type != "template":
+        raise click.UsageError("--output-dir can only be used with template projects.")
+    if type == "tool":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with tool projects."
+            )
+        from crewai_cli.tools.main import ToolCommand
+
+        ToolCommand().create(name)
+    elif type == "skill":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with skill projects."
+            )
+        from crewai_cli.skills.main import SkillCommand
+
+        SkillCommand().create(name, in_project=in_project)
+    elif type == "template":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with template projects."
+            )
+        template_cmd = TemplateCommand()
+        template_cmd.add_template(name, output_dir)
+    elif type == "crew":
+        if declarative:
+            raise click.UsageError("--declarative can only be used with flow projects")
+        if classic:
+            from crewai_cli.create_crew import create_crew
+
+            create_crew(name, provider, skip_provider)
+        else:
+            from crewai_cli.create_json_crew import create_json_crew
+
+            create_json_crew(name, provider, skip_provider)
     elif type == "flow":
-        create_flow(name)
+        from crewai_cli.create_flow import create_flow
+
+        create_flow(name, declarative=declarative)
     else:
-        click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
+        click.secho(
+            "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",
+            fg="red",
+        )
 
 
 @crewai.command()
@@ -130,10 +305,19 @@ def version(tools: bool) -> None:
 @crewai.command()
 @click.option(
     "-n",
-    "--n_iterations",
+    "--n-iterations",
+    "n_iterations",
     type=int,
     default=5,
     help="Number of iterations to train the crew",
+)
+@click.option(
+    "--n_iterations",
+    "deprecated_n_iterations",
+    type=int,
+    default=None,
+    hidden=True,
+    help="[Deprecated: use --n-iterations]",
 )
 @click.option(
     "-f",
@@ -142,8 +326,20 @@ def version(tools: bool) -> None:
     default="trained_agents_data.pkl",
     help="Path to a custom file for training",
 )
-def train(n_iterations: int, filename: str) -> None:
+def train(
+    n_iterations: int,
+    deprecated_n_iterations: int | None,
+    filename: str,
+) -> None:
     """Train the crew."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
+    if deprecated_n_iterations is not None:
+        warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
+        n_iterations = deprecated_n_iterations
     click.echo(f"Training the Crew for {n_iterations} iterations")
     train_crew(n_iterations, filename)
 
@@ -151,9 +347,18 @@ def train(n_iterations: int, filename: str) -> None:
 @crewai.command()
 @click.option(
     "-t",
-    "--task_id",
+    "--task-id",
+    "task_id",
     type=str,
     help="Replay the crew from this task ID, including all subsequent tasks.",
+)
+@click.option(
+    "--task_id",
+    "deprecated_task_id",
+    type=str,
+    default=None,
+    hidden=True,
+    help="[Deprecated: use --task-id]",
 )
 @click.option(
     "-f",
@@ -168,13 +373,25 @@ def train(n_iterations: int, filename: str) -> None:
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
-def replay(task_id: str, trained_agents_file: str | None) -> None:
+def replay(
+    task_id: str | None,
+    deprecated_task_id: str | None,
+    trained_agents_file: str | None,
+) -> None:
     """Replay the crew execution from a specific task.
 
     Args:
         task_id: The ID of the task to replay from.
         trained_agents_file: Optional trained-agents pickle path.
     """
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
+    if deprecated_task_id is not None:
+        warn_deprecated(kind="flag", old="--task_id", new="--task-id")
+        task_id = deprecated_task_id
     try:
         click.echo(f"Replaying the crew from task {task_id}")
         replay_task_command(task_id, trained_agents_file=trained_agents_file)
@@ -186,6 +403,8 @@ def replay(task_id: str, trained_agents_file: str | None) -> None:
 def log_tasks_outputs() -> None:
     """Retrieve your latest crew.kickoff() task outputs."""
     try:
+        from crewai_cli.task_outputs import load_task_outputs
+
         tasks = load_task_outputs()
 
         if not tasks:
@@ -274,6 +493,8 @@ def reset_memories(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
             return
+        from crewai_cli.reset_memories_command import reset_memories_command
+
         reset_memories_command(memory, knowledge, agent_knowledge, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
@@ -296,7 +517,7 @@ def reset_memories(
     "--embedder-model",
     type=str,
     default=None,
-    help="Embedder model name (e.g. text-embedding-3-small, gemini-embedding-001).",
+    help="Embedder model name (e.g. text-embedding-3-large, gemini-embedding-001).",
 )
 @click.option(
     "--embedder-config",
@@ -320,7 +541,6 @@ def memory(
         )
         raise SystemExit(1) from exc
 
-    # Build embedder spec from CLI flags.
     embedder_spec: dict[str, Any] | None = None
     if embedder_config:
         import json as _json
@@ -343,16 +563,25 @@ def memory(
 @crewai.command()
 @click.option(
     "-n",
-    "--n_iterations",
+    "--n-iterations",
+    "n_iterations",
     type=int,
     default=3,
     help="Number of iterations to Test the crew",
 )
 @click.option(
+    "--n_iterations",
+    "deprecated_n_iterations",
+    type=int,
+    default=None,
+    hidden=True,
+    help="[Deprecated: use --n-iterations]",
+)
+@click.option(
     "-m",
     "--model",
     type=str,
-    default="gpt-4o-mini",
+    default="gpt-5.4-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
 @click.option(
@@ -362,14 +591,27 @@ def memory(
     type=str,
     default=None,
     help=(
-        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "Crew-only: path to a trained-agents pickle (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
         "default trained_agents_data.pkl. Equivalent to setting "
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
-def test(n_iterations: int, model: str, trained_agents_file: str | None) -> None:
+def test(
+    n_iterations: int,
+    deprecated_n_iterations: int | None,
+    model: str,
+    trained_agents_file: str | None,
+) -> None:
     """Test the crew and evaluate the results."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
+    if deprecated_n_iterations is not None:
+        warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
+        n_iterations = deprecated_n_iterations
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     evaluate_crew(n_iterations, model, trained_agents_file=trained_agents_file)
 
@@ -383,6 +625,8 @@ def test(n_iterations: int, model: str, trained_agents_file: str | None) -> None
 @click.pass_context
 def install(context: click.Context) -> None:
     """Install the Crew."""
+    from crewai_cli.install_crew import install_crew
+
     install_crew(context.args)
 
 
@@ -400,20 +644,52 @@ def install(context: click.Context) -> None:
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
-def run(trained_agents_file: str | None) -> None:
-    """Run the Crew."""
-    run_crew(trained_agents_file=trained_agents_file)
+@click.option(
+    "--definition",
+    type=str,
+    default=None,
+    help="Flow-only: path to a declarative flow definition.",
+)
+@click.option(
+    "--inputs",
+    type=str,
+    default=None,
+    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
+)
+def run(
+    trained_agents_file: str | None,
+    definition: str | None,
+    inputs: str | None,
+) -> None:
+    """Run the Crew or Flow."""
+    # --inputs no longer requires --definition: with no override it resolves the
+    # configured [tool.crewai] flow, same as a bare `crewai run`.
+    if trained_agents_file is not None and definition is not None:
+        raise click.UsageError("--filename can only be used when running crews")
+
+    run_crew(
+        trained_agents_file=trained_agents_file,
+        definition=definition,
+        inputs=inputs,
+    )
 
 
 @crewai.command()
 def update() -> None:
     """Update the pyproject.toml of the Crew project to use uv."""
+    from crewai_cli.update_crew import update_crew
+
     update_crew()
 
 
 @crewai.command()
 def login() -> None:
     """Sign Up/Login to CrewAI AMP."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     Settings().clear_user_settings()
     AuthenticationCommand().login()
 
@@ -434,7 +710,6 @@ def logout(reset: bool) -> None:
         click.echo("Successfully logged out from CrewAI AMP.")
 
 
-# DEPLOY CREWAI+ COMMANDS
 @crewai.group()
 def deploy() -> None:
     """Deploy the Crew CLI group."""
@@ -449,6 +724,11 @@ def deploy() -> None:
 )
 def deploy_create(yes: bool, skip_validate: bool) -> None:
     """Create a Crew deployment."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     deploy_cmd = DeployCommand()
     deploy_cmd.create_crew(yes, skip_validate=skip_validate)
 
@@ -469,6 +749,11 @@ def deploy_list() -> None:
 )
 def deploy_push(uuid: str | None, skip_validate: bool) -> None:
     """Deploy the Crew."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     deploy_cmd = DeployCommand()
     deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate)
 
@@ -518,6 +803,10 @@ def tool() -> None:
 @tool.command(name="create")
 @click.argument("handle")
 def tool_create(handle: str) -> None:
+    """[Deprecated: use `crewai create tool`] Create a custom tool project."""
+    warn_deprecated(kind="command", old="crewai tool create", new="crewai create tool")
+    from crewai_cli.tools.main import ToolCommand
+
     tool_cmd = ToolCommand()
     tool_cmd.create(handle)
 
@@ -525,6 +814,8 @@ def tool_create(handle: str) -> None:
 @tool.command(name="install")
 @click.argument("handle")
 def tool_install(handle: str) -> None:
+    from crewai_cli.tools.main import ToolCommand
+
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.install(handle)
@@ -541,9 +832,72 @@ def tool_install(handle: str) -> None:
 @click.option("--public", "is_public", flag_value=True, default=False)
 @click.option("--private", "is_public", flag_value=False)
 def tool_publish(is_public: bool, force: bool) -> None:
+    from crewai_cli.tools.main import ToolCommand
+
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
+
+
+@crewai.group(name="skill")
+def skill() -> None:
+    """Create, publish, and install agent skills."""
+
+
+@skill.command(name="create")
+@click.argument("name")
+@click.option(
+    "--no-project",
+    "in_project",
+    is_flag=True,
+    default=True,
+    flag_value=False,
+    help="Create skill in current dir instead of ./skills/",
+)
+def skill_create(name: str, in_project: bool) -> None:
+    """[Deprecated: use `crewai create skill`] Create a new agent skill."""
+    warn_deprecated(
+        kind="command", old="crewai skill create", new="crewai create skill"
+    )
+    from crewai_cli.skills.main import SkillCommand
+
+    skill_cmd = SkillCommand()
+    skill_cmd.create(name, in_project=in_project)
+
+
+@skill.command(name="install")
+@click.argument("ref")
+def skill_install(ref: str) -> None:
+    from crewai_cli.skills.main import SkillCommand
+
+    skill_cmd = SkillCommand()
+    skill_cmd.install(ref)
+
+
+@skill.command(name="publish")
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Skip git-state validation.",
+)
+@click.option("--org", default=None, help="Organisation slug (overrides settings).")
+def skill_publish(org: str | None, force: bool) -> None:
+    """Publish the skill in the current directory, scoped to your organization."""
+    from crewai_cli.skills.main import SkillCommand
+
+    skill_cmd = SkillCommand()
+    skill_cmd.publish(org=org, force=force)
+
+
+@skill.command(name="list")
+def skill_list() -> None:
+    """List locally installed skills."""
+    from crewai_cli.skills.main import SkillCommand
+
+    skill_cmd = SkillCommand()
+    skill_cmd.list_cached()
 
 
 @crewai.group()
@@ -568,7 +922,10 @@ def template_list() -> None:
     help="Directory name for the template (defaults to template name)",
 )
 def template_add(name: str, output_dir: str | None) -> None:
-    """Add a template to the current directory."""
+    """[Deprecated: use `crewai create template`] Add a template to the current directory."""
+    warn_deprecated(
+        kind="command", old="crewai template add", new="crewai create template"
+    )
     template_cmd = TemplateCommand()
     template_cmd.add_template(name, output_dir)
 
@@ -581,13 +938,18 @@ def flow() -> None:
 @flow.command(name="kickoff")
 def flow_run() -> None:
     """Kickoff the Flow."""
-    click.echo("Running the Flow")
-    kickoff_flow()
+    click.secho(
+        "The command 'crewai flow kickoff' is deprecated. Use 'crewai run' instead.",
+        fg="yellow",
+    )
+    run_crew(trained_agents_file=None, definition=None, inputs=None)
 
 
 @flow.command(name="plot")
 def flow_plot() -> None:
     """Plot the Flow."""
+    from crewai_cli.plot_flow import plot_flow
+
     click.echo("Plotting the Flow")
     plot_flow()
 
@@ -596,6 +958,13 @@ def flow_plot() -> None:
 @click.argument("crew_name")
 def flow_add_crew(crew_name: str) -> None:
     """Add a crew to an existing flow."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
+    from crewai_cli.add_crew_to_flow import add_crew_to_flow
+
     click.echo(f"Adding crew {crew_name} to the flow")
     add_crew_to_flow(crew_name)
 
@@ -608,6 +977,8 @@ def triggers() -> None:
 @triggers.command(name="list")
 def triggers_list() -> None:
     """List all available triggers from integrations."""
+    from crewai_cli.triggers.main import TriggersCommand
+
     triggers_cmd = TriggersCommand()
     triggers_cmd.list_triggers()
 
@@ -616,6 +987,8 @@ def triggers_list() -> None:
 @click.argument("trigger_path")
 def triggers_run(trigger_path: str) -> None:
     """Execute crew with trigger payload. Format: app_slug/trigger_slug"""
+    from crewai_cli.triggers.main import TriggersCommand
+
     triggers_cmd = TriggersCommand()
     triggers_cmd.execute_with_trigger(trigger_path)
 
@@ -628,6 +1001,8 @@ def chat() -> None:
     click.secho(
         "\nStarting a conversation with the Crew\nType 'exit' or Ctrl+C to quit.\n",
     )
+    from crewai_cli.crew_chat import run_chat
+
     run_chat()
 
 
@@ -667,6 +1042,13 @@ def enterprise() -> None:
 @click.argument("enterprise_url")
 def enterprise_configure(enterprise_url: str) -> None:
     """Configure CrewAI AMP OAuth2 settings from the provided Enterprise URL."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
+    from crewai_cli.enterprise.main import EnterpriseConfigureCommand
+
     enterprise_command = EnterpriseConfigureCommand()
     enterprise_command.configure(enterprise_url)
 
@@ -679,6 +1061,8 @@ def config() -> None:
 @config.command("list")
 def config_list() -> None:
     """List all CLI configuration parameters."""
+    from crewai_cli.settings.main import SettingsCommand
+
     config_command = SettingsCommand()
     config_command.list()
 
@@ -688,6 +1072,8 @@ def config_list() -> None:
 @click.argument("value")
 def config_set(key: str, value: str) -> None:
     """Set a CLI configuration parameter."""
+    from crewai_cli.settings.main import SettingsCommand
+
     config_command = SettingsCommand()
     config_command.set(key, value)
 
@@ -695,6 +1081,8 @@ def config_set(key: str, value: str) -> None:
 @config.command("reset")
 def config_reset() -> None:
     """Reset all CLI configuration parameters to default values."""
+    from crewai_cli.settings.main import SettingsCommand
+
     config_command = SettingsCommand()
     config_command.reset_all_settings()
 
@@ -715,17 +1103,14 @@ def env_view() -> None:
 
     console = Console()
 
-    # Check for .env file
     env_file = Path(".env")
     env_file_exists = env_file.exists()
 
-    # Create table for environment variables
     table = Table(show_header=True, header_style="bold cyan", expand=True)
     table.add_column("Environment Variable", style="cyan", width=30)
     table.add_column("Value", style="white", width=20)
     table.add_column("Source", style="yellow", width=20)
 
-    # Check CREWAI_TRACING_ENABLED
     crewai_tracing = os.getenv("CREWAI_TRACING_ENABLED", "")
     if crewai_tracing:
         table.add_row(
@@ -740,7 +1125,6 @@ def env_view() -> None:
             "[dim]—[/dim]",
         )
 
-    # Check other related env vars
     crewai_testing = os.getenv("CREWAI_TESTING", "")
     if crewai_testing:
         table.add_row("CREWAI_TESTING", crewai_testing, "Environment/Shell")
@@ -753,7 +1137,6 @@ def env_view() -> None:
     if crewai_org_id:
         table.add_row("CREWAI_ORG_ID", crewai_org_id, "Environment/Shell")
 
-    # Check if .env file exists
     table.add_row(
         ".env file",
         "✅ Found" if env_file_exists else "❌ Not found",
@@ -769,7 +1152,6 @@ def env_view() -> None:
     console.print("\n")
     console.print(panel)
 
-    # Show helpful message
     if env_file_exists:
         console.print(
             "\n[dim]💡 Tip: To enable tracing via .env, add: CREWAI_TRACING_ENABLED=true[/dim]"
@@ -789,6 +1171,11 @@ def traces() -> None:
 @traces.command("enable")
 def traces_enable() -> None:
     """Enable trace collection for crew/flow executions."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     from rich.console import Console
     from rich.panel import Panel
 
@@ -845,11 +1232,9 @@ def traces_status() -> None:
     table.add_column("Setting", style="cyan")
     table.add_column("Value", style="white")
 
-    # Check environment variable
     env_enabled = os.getenv("CREWAI_TRACING_ENABLED", "false")
     table.add_row("CREWAI_TRACING_ENABLED", env_enabled)
 
-    # Check user consent
     trace_consent = user_data.get("trace_consent")
     if trace_consent is True:
         consent_status = "✅ Enabled (user consented)"
@@ -859,7 +1244,6 @@ def traces_status() -> None:
         consent_status = "⚪ Not set (first-time user)"
     table.add_row("User Consent", consent_status)
 
-    # Check overall status
     if is_tracing_enabled():
         overall_status = "✅ ENABLED"
         border_style = "green"
@@ -884,7 +1268,7 @@ def traces_status() -> None:
 @click.pass_context
 def checkpoint(ctx: click.Context, location: str) -> None:
     """Browse and inspect checkpoints. Launches a TUI when called without a subcommand."""
-    from crewai_cli.checkpoint_cli import _detect_location
+    from crewai_cli.checkpoint_cli import _detect_location, _record_checkpoint_usage
 
     location = _detect_location(location)
     ctx.ensure_object(dict)
@@ -892,6 +1276,7 @@ def checkpoint(ctx: click.Context, location: str) -> None:
     if ctx.invoked_subcommand is None:
         from crewai_cli.checkpoint_tui import run_checkpoint_tui
 
+        _record_checkpoint_usage("tui")
         run_checkpoint_tui(location)
 
 
@@ -899,8 +1284,13 @@ def checkpoint(ctx: click.Context, location: str) -> None:
 @click.argument("location", default="./.checkpoints")
 def checkpoint_list(location: str) -> None:
     """List checkpoints in a directory."""
-    from crewai_cli.checkpoint_cli import _detect_location, list_checkpoints
+    from crewai_cli.checkpoint_cli import (
+        _detect_location,
+        _record_checkpoint_usage,
+        list_checkpoints,
+    )
 
+    _record_checkpoint_usage("list")
     list_checkpoints(_detect_location(location))
 
 
@@ -908,8 +1298,13 @@ def checkpoint_list(location: str) -> None:
 @click.argument("path", default="./.checkpoints")
 def checkpoint_info(path: str) -> None:
     """Show details of a checkpoint. Pass a file or directory for latest."""
-    from crewai_cli.checkpoint_cli import _detect_location, info_checkpoint
+    from crewai_cli.checkpoint_cli import (
+        _detect_location,
+        _record_checkpoint_usage,
+        info_checkpoint,
+    )
 
+    _record_checkpoint_usage("info")
     info_checkpoint(_detect_location(path))
 
 
@@ -918,8 +1313,9 @@ def checkpoint_info(path: str) -> None:
 @click.pass_context
 def checkpoint_resume(ctx: click.Context, checkpoint_id: str | None) -> None:
     """Resume from a checkpoint. Defaults to the most recent."""
-    from crewai_cli.checkpoint_cli import resume_checkpoint
+    from crewai_cli.checkpoint_cli import _record_checkpoint_usage, resume_checkpoint
 
+    _record_checkpoint_usage("resume")
     resume_checkpoint(ctx.obj["location"], checkpoint_id)
 
 
@@ -929,8 +1325,9 @@ def checkpoint_resume(ctx: click.Context, checkpoint_id: str | None) -> None:
 @click.pass_context
 def checkpoint_diff(ctx: click.Context, id1: str, id2: str) -> None:
     """Compare two checkpoints side-by-side."""
-    from crewai_cli.checkpoint_cli import diff_checkpoints
+    from crewai_cli.checkpoint_cli import _record_checkpoint_usage, diff_checkpoints
 
+    _record_checkpoint_usage("diff")
     diff_checkpoints(ctx.obj["location"], id1, id2)
 
 

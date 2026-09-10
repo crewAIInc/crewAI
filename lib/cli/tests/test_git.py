@@ -31,6 +31,18 @@ def test_is_git_not_installed(fp):
         Repository(path=".")
 
 
+def test_fetch_failure_raises_value_error(fp):
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], returncode=128, stderr="remote unavailable\n")
+
+    with pytest.raises(
+        ValueError,
+        match=r"Git fetch failed with exit code 128 for command \['git', 'fetch'\]: remote unavailable",
+    ):
+        Repository(path=".")
+
+
 def test_status(fp, repository):
     fp.register(
         ["git", "status", "--branch", "--porcelain"],
@@ -99,3 +111,45 @@ def test_origin_url(fp, repository):
         stdout="https://github.com/user/repo.git\n",
     )
     assert repository.origin_url() == "https://github.com/user/repo.git"
+
+
+def test_initialize_creates_initial_commit(fp, tmp_path):
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "init"], stdout="")
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "rev-parse", "--verify", "HEAD"], returncode=1)
+    fp.register(["git", "add", "."], stdout="")
+    fp.register(
+        [
+            "git",
+            "-c",
+            "user.name=CrewAI",
+            "-c",
+            "user.email=deploy@crewai.com",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "Initial crew",
+        ],
+        stdout="",
+    )
+
+    repo = Repository.initialize(path=str(tmp_path))
+
+    assert repo.path == str(tmp_path)
+    exclude_file = tmp_path / ".git" / "info" / "exclude"
+    exclude_text = exclude_file.read_text()
+    assert ".env" in exclude_text
+    assert "!.env.example" in exclude_text
+    assert "!.env.sample" in exclude_text
+    assert "__pycache__/" in exclude_text
+
+
+def test_deployable_files_uses_git_excludes(fp, repository):
+    fp.register(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        stdout="pyproject.toml\nsrc/main.py\n",
+    )
+
+    assert repository.deployable_files() == ["pyproject.toml", "src/main.py"]

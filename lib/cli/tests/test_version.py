@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 
 from crewai_cli.version import get_crewai_version as _get_ver
 from crewai_cli.version import (
+    get_crewai_dependency_range,
+    get_crewai_tools_dependency,
     get_crewai_version,
     get_latest_version_from_pypi,
     is_current_version_yanked,
@@ -29,6 +31,11 @@ def test_dynamic_versioning_consistency() -> None:
 
     assert package_version is not None
     assert len(package_version.strip()) > 0
+
+
+def test_generated_project_dependency_uses_next_major_upper_bound() -> None:
+    assert get_crewai_dependency_range("1.15.0") == ">=1.15.0,<2.0.0"
+    assert get_crewai_tools_dependency("1.15.0") == "crewai[tools]>=1.15.0,<2.0.0"
 
 
 class TestVersionChecking:

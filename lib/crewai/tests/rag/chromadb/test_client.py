@@ -2,9 +2,9 @@
 
 from unittest.mock import AsyncMock, Mock
 
-import pytest
 from crewai.rag.chromadb.client import ChromaDBClient
 from crewai.rag.types import BaseRecord
+import pytest
 
 
 @pytest.fixture
@@ -113,7 +113,6 @@ class TestChromaDBClient:
         self, async_client, mock_async_chromadb_client
     ) -> None:
         """Test that acreate_collection calls the underlying client correctly."""
-        # Make the mock's create_collection an AsyncMock
         mock_async_chromadb_client.create_collection = AsyncMock(return_value=None)
 
         await async_client.acreate_collection(collection_name="test_collection")
@@ -132,7 +131,6 @@ class TestChromaDBClient:
         self, async_client, mock_async_chromadb_client
     ) -> None:
         """Test acreate_collection with all optional parameters."""
-        # Make the mock's create_collection an AsyncMock
         mock_async_chromadb_client.create_collection = AsyncMock(return_value=None)
 
         mock_config = Mock()
@@ -275,7 +273,6 @@ class TestChromaDBClient:
             embedding_function=client.embedding_function,
         )
 
-        # Verify documents were added to collection
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
         assert len(call_args.kwargs["ids"]) == 1
@@ -321,7 +318,6 @@ class TestChromaDBClient:
 
         client.add_documents(collection_name="test_collection", documents=documents)
 
-        # Verify upsert was called with empty dicts for missing metadata
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
         assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
@@ -378,7 +374,6 @@ class TestChromaDBClient:
             embedding_function=async_client.embedding_function,
         )
 
-        # Verify documents were added to collection
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
         assert len(call_args.kwargs["ids"]) == 1
@@ -438,7 +433,6 @@ class TestChromaDBClient:
             collection_name="test_collection", documents=documents
         )
 
-        # Verify upsert was called with empty dicts for missing metadata
         mock_collection.upsert.assert_called_once()
         call_args = mock_collection.upsert.call_args
         assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
@@ -595,7 +589,6 @@ class TestChromaDBClient:
             include=["metadatas", "documents", "distances"],
         )
 
-        # Only 2 results should pass the score threshold
         assert len(results) == 2
 
     def test_delete_collection(self, client, mock_chromadb_client):

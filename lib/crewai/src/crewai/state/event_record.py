@@ -67,7 +67,11 @@ class EventNode(BaseModel):
     event: Annotated[
         BaseEvent,
         BeforeValidator(_resolve_event),
-        PlainSerializer(lambda v: v.model_dump()),
+        PlainSerializer(
+            lambda v, info: (
+                v.model_dump(mode="json") if info.mode == "json" else v.model_dump()
+            ),
+        ),
     ]
     edges: dict[EdgeType, list[str]] = Field(default_factory=dict)
 

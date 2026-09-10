@@ -46,6 +46,30 @@ class TestModelKeyBackwardCompatibility:
         )
         assert provider.model_name == "text-embedding-3-large"
 
+    def test_openai_provider_ignores_chat_model_env(self, monkeypatch):
+        """Test OpenAI embeddings don't inherit the chat model env var."""
+        monkeypatch.setenv("OPENAI_MODEL_NAME", "gpt-5.5")
+        monkeypatch.setenv("MODEL", "gpt-5.5")
+        monkeypatch.delenv("EMBEDDINGS_OPENAI_MODEL_NAME", raising=False)
+
+        provider = OpenAIProvider(api_key="test-key")
+
+        assert provider.model_name == "text-embedding-3-large"
+
+    def test_azure_provider_ignores_openai_chat_model_env(self, monkeypatch):
+        """Test Azure embeddings don't inherit the OpenAI chat model env var."""
+        monkeypatch.setenv("OPENAI_MODEL_NAME", "gpt-5.5")
+        monkeypatch.setenv("MODEL", "gpt-5.5")
+        monkeypatch.delenv("EMBEDDINGS_OPENAI_MODEL_NAME", raising=False)
+        monkeypatch.delenv("AZURE_OPENAI_MODEL_NAME", raising=False)
+
+        provider = AzureProvider(
+            api_key="test-key",
+            deployment_id="test-deployment",
+        )
+
+        assert provider.model_name == "text-embedding-3-large"
+
     def test_cohere_provider_accepts_model_key(self):
         """Test Cohere provider accepts 'model' as alias for 'model_name'."""
         provider = CohereProvider(

@@ -186,7 +186,6 @@ class BraveSearchToolBase(BaseTool, ABC):
         for attempt in range(_max_retries):
             self._rate_limit()
 
-            # Make the request
             try:
                 resp = requests.get(
                     self.search_url,
@@ -203,7 +202,6 @@ class BraveSearchToolBase(BaseTool, ABC):
                     f"Brave Search API request timed out after {self._timeout}s: {exc}"
                 ) from exc
 
-            # Log the rate limit headers and request details
             logger.debug(
                 "Brave Search API request: %s %s -> %d",
                 "GET",
@@ -251,7 +249,6 @@ class BraveSearchToolBase(BaseTool, ABC):
 
         params = self._common_payload_refinement(params)
 
-        # Validate only schema fields
         schema_keys = self.args_schema.model_fields
         payload_in = {k: v for k, v in params.items() if k in schema_keys}
 
@@ -301,7 +298,6 @@ class BraveSearchToolBase(BaseTool, ABC):
             if k not in fields or fields[k].is_required() or v not in self._EMPTY_VALUES
         }
 
-        # Make sure params has "q" for query instead of "query" or "search_query"
         query = params.get("query") or params.get("search_query")
         if query is not None and "q" not in params:
             params["q"] = query

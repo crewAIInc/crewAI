@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import os
+from collections.abc import Callable
 from typing import Any
 import pytest
 from pydantic import BaseModel, ValidationError
@@ -17,7 +18,6 @@ from crewai.types.callback import (
 )
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
 
 
 def module_level_function() -> str:
@@ -41,7 +41,6 @@ class _Model(BaseModel):
     cb: SerializableCallable | None = None
 
 
-# ── _is_non_roundtrippable ───────────────────────────────────────────
 
 
 class TestIsNonRoundtrippable:
@@ -77,7 +76,6 @@ class TestIsNonRoundtrippable:
         assert _is_non_roundtrippable(_CallableInstance()) is True
 
 
-# ── callable_to_string ───────────────────────────────────────────────
 
 
 class TestCallableToString:
@@ -93,10 +91,18 @@ class TestCallableToString:
         result = callable_to_string(print)
         assert result == "builtins.print"
 
-    def test_lambda_produces_locals_path(self) -> None:
+    def test_lambda_returns_none(self) -> None:
         fn = lambda: None  # noqa: E731
-        result = callable_to_string(fn)
-        assert "<lambda>" in result
+        assert callable_to_string(fn) is None
+
+    def test_closure_returns_none(self) -> None:
+        def outer() -> Callable[[], None]:
+            def inner() -> None:
+                return None
+
+            return inner
+
+        assert callable_to_string(outer()) is None
 
     def test_missing_qualname_raises(self) -> None:
         obj = type("NoQual", (), {"__module__": "test"})()
@@ -105,14 +111,12 @@ class TestCallableToString:
             callable_to_string(obj)
 
     def test_missing_module_raises(self) -> None:
-        # Create an object where getattr(obj, "__module__", None) returns None
         ns: dict[str, Any] = {"__qualname__": "x", "__module__": None}
         obj = type("NoMod", (), ns)()
         with pytest.raises(ValueError, match="missing __module__"):
             callable_to_string(obj)
 
 
-# ── string_to_callable ───────────────────────────────────────────────
 
 
 class TestStringToCallable:
@@ -159,7 +163,6 @@ class TestStringToCallable:
             string_to_callable("nonexistent.module.func")
 
 
-# ── _resolve_dotted_path ─────────────────────────────────────────────
 
 
 class TestResolveDottedPath:

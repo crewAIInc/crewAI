@@ -1,0 +1,237 @@
+---
+title: Braintrust
+description: Integração do Braintrust para CrewAI com rastreamento OpenTelemetry e avaliação
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# Integração Braintrust
+
+Este guia demonstra como integrar o **Braintrust** com **CrewAI** usando OpenTelemetry para rastreamento e avaliação abrangentes. Ao final deste guia, você poderá rastrear seus agentes CrewAI, monitorar seu desempenho e avaliar suas saídas usando a poderosa plataforma de observabilidade do Braintrust.
+
+> **O que é Braintrust?** [Braintrust](https://www.braintrust.dev) é uma plataforma de avaliação e observabilidade de IA que fornece rastreamento, avaliação e monitoramento abrangentes para aplicações de IA com rastreamento de experimentos e análises de desempenho integrados.
+
+## Começar
+
+Vamos percorrer um exemplo simples de uso do CrewAI e integração com Braintrust via OpenTelemetry para observabilidade e avaliação abrangentes.
+
+### Passo 1: Instalar Dependências
+
+```bash
+uv add braintrust[otel] crewai crewai-tools opentelemetry-instrumentation-openai opentelemetry-instrumentation-crewai python-dotenv
+```
+
+### Passo 2: Configurar Variáveis de Ambiente
+
+Configure as chaves de API do Braintrust e configure o OpenTelemetry para enviar rastreamentos para o Braintrust. Você precisará de uma chave de API do Braintrust e sua chave de API do OpenAI.
+
+```python
+import os
+from getpass import getpass
+
+# Obter suas credenciais do Braintrust
+BRAINTRUST_API_KEY = getpass("🔑 Digite sua Chave de API do Braintrust: ")
+
+# Obter chaves de API para serviços
+OPENAI_API_KEY = getpass("🔑 Digite sua chave de API do OpenAI: ")
+
+# Configurar variáveis de ambiente
+os.environ["BRAINTRUST_API_KEY"] = BRAINTRUST_API_KEY
+os.environ["BRAINTRUST_PARENT"] = "project_name:crewai-demo"
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+```
+
+### Passo 3: Inicializar OpenTelemetry com Braintrust
+
+Inicialize a instrumentação OpenTelemetry do Braintrust para começar a capturar rastreamentos e enviá-los para o Braintrust.
+
+```python
+import os
+from typing import Any, Dict
+
+from braintrust.otel import BraintrustSpanProcessor
+from crewai import Agent, Crew, Task
+from crewai.llm import LLM
+from opentelemetry import trace
+from opentelemetry.instrumentation.crewai import CrewAIInstrumentor
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+
+def setup_tracing() -> None:
+    """Configurar rastreamento OpenTelemetry com Braintrust."""
+    current_provider = trace.get_tracer_provider()
+    if isinstance(current_provider, TracerProvider):
+        provider = current_provider
+    else:
+        provider = TracerProvider()
+        trace.set_tracer_provider(provider)
+
+    provider.add_span_processor(BraintrustSpanProcessor())
+    CrewAIInstrumentor().instrument(tracer_provider=provider)
+    OpenAIInstrumentor().instrument(tracer_provider=provider)
+
+
+setup_tracing()
+```
+
+### Passo 4: Criar uma Aplicação CrewAI
+
+Vamos criar uma aplicação CrewAI onde dois agentes colaboram para pesquisar e escrever um post de blog sobre avanços em IA, com rastreamento abrangente habilitado.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+
+def create_crew() -> Crew:
+    """Criar uma crew com múltiplos agentes para rastreamento abrangente."""
+    llm = LLM(model="gpt-4o-mini")
+    search_tool = SerperDevTool()
+
+    # Definir agentes com papéis específicos
+    researcher = Agent(
+        role="Analista de Pesquisa Sênior",
+        goal="Descobrir desenvolvimentos de ponta em IA e ciência de dados",
+        backstory="""Você trabalha em um think tank de tecnologia líder.
+        Sua especialidade está em identificar tendências emergentes.
+        Você tem talento para dissecar dados complexos e apresentar insights acionáveis.""",
+        verbose=True,
+        allow_delegation=False,
+        llm=llm,
+        tools=[search_tool],
+    )
+
+    writer = Agent(
+        role="Estrategista de Conteúdo Tecnológico",
+        goal="Criar conteúdo envolvente sobre avanços tecnológicos",
+        backstory="""Você é um Estrategista de Conteúdo renomado, conhecido por seus artigos perspicazes e envolventes.
+        Você transforma conceitos complexos em narrativas convincentes.""",
+        verbose=True,
+        allow_delegation=True,
+        llm=llm,
+    )
+
+    # Criar tarefas para seus agentes
+    research_task = Task(
+        description="""Realize uma análise abrangente dos últimos avanços em {topic}.
+        Identifique tendências principais, tecnologias revolucionárias e impactos potenciais na indústria.""",
+        expected_output="Relatório de análise completo em pontos de bala",
+        agent=researcher,
+    )
+
+    writing_task = Task(
+        description="""Usando os insights fornecidos, desenvolva um post de blog envolvente
+        que destaque os avanços mais significativos em {topic}.
+        Seu post deve ser informativo, mas acessível, atendendo a um público conhecedor de tecnologia.
+        Faça soar legal, evite palavras complexas para não soar como IA.""",
+        expected_output="Post de blog completo de pelo menos 4 parágrafos",
+        agent=writer,
+        context=[research_task],
+    )
+
+    # Instanciar sua crew com um processo sequencial
+    crew = Crew(
+        agents=[researcher, writer], 
+        tasks=[research_task, writing_task], 
+        verbose=True, 
+        process=Process.sequential
+    )
+
+    return crew
+
+def run_crew():
+    """Executar a crew e retornar resultados."""
+    crew = create_crew()
+    result = crew.kickoff(inputs={"topic": "desenvolvimentos em IA"})
+    return result
+
+# Executar sua crew
+if __name__ == "__main__":
+    # A instrumentação já foi inicializada acima neste módulo
+    result = run_crew()
+    print(result)
+```
+
+### Passo 5: Visualizar Rastreamentos no Braintrust
+
+Após executar sua crew, você pode visualizar rastreamentos abrangentes no Braintrust através de diferentes perspectivas:
+
+<Tabs>
+  <Tab title="Rastreamento(Trace)">
+    <Frame>
+      <img src="/images/braintrust-trace-view.png" alt="Visualização de Rastreamento Braintrust"/>
+    </Frame>
+  </Tab>
+  
+  <Tab title="Linha do Tempo(Timeline)">
+    <Frame>
+      <img src="/images/braintrust-timeline-view.png" alt="Visualização de Linha do Tempo Braintrust"/>
+    </Frame>
+  </Tab>
+  
+  <Tab title="Thread">
+    <Frame>
+      <img src="/images/braintrust-thread-view.png" alt="Visualização de Thread Braintrust"/>
+    </Frame>
+  </Tab>
+</Tabs>
+
+### Passo 6: Avaliar via SDK (Experimentos)
+
+Você também pode executar avaliações usando o Eval SDK do Braintrust. Isso é útil para comparar versões ou pontuar saídas offline. Abaixo está um exemplo em Python usando a classe `Eval` com a crew que criamos acima:
+
+```python
+# eval_crew.py
+from braintrust import Eval
+from autoevals import Levenshtein
+
+def evaluate_crew_task(input_data):
+    """Função de tarefa que envolve nossa crew para avaliação."""
+    crew = create_crew()
+    result = crew.kickoff(inputs={"topic": input_data["topic"]})
+    return str(result)
+
+Eval(
+    "Crew de Pesquisa em IA",  # Nome do projeto
+    {
+        "data": lambda: [
+            {"topic": "tendências de inteligência artificial 2024"},
+            {"topic": "avanços em aprendizado de máquina"},
+            {"topic": "ética e governança de IA"},
+        ],
+        "task": evaluate_crew_task,
+        "scores": [Levenshtein],
+    },
+)
+```
+
+Configure sua chave de API e execute:
+
+```bash
+export BRAINTRUST_API_KEY="YOUR_API_KEY"
+braintrust eval eval_crew.py
+```
+
+Veja o [guia do Eval SDK do Braintrust](https://www.braintrust.dev/docs/start/eval-sdk) para mais detalhes.
+
+### Principais Recursos da Integração Braintrust
+
+- **Rastreamento Abrangente**: Rastreie todas as interações de agentes, uso de ferramentas e chamadas LLM
+- **Monitoramento de Desempenho**: Monitore tempos de execução, uso de tokens e taxas de sucesso
+- **Rastreamento de Experimentos**: Compare diferentes configurações de crew e modelos
+- **Avaliação Automatizada**: Configure métricas de avaliação personalizadas para saídas de crew
+- **Rastreamento de Erros**: Monitore e depure falhas em suas execuções de crew
+- **Análise de Custos**: Rastreie uso de tokens e custos associados
+
+### Informações de Compatibilidade de Versão
+- Python 3.8+
+- CrewAI >= 0.86.0
+- Braintrust >= 0.1.0
+- OpenTelemetry SDK >= 1.31.0
+
+### Referências
+- [Documentação Braintrust](https://www.braintrust.dev/docs) - Visão geral da plataforma Braintrust
+- [Integração CrewAI Braintrust](https://www.braintrust.dev/docs/integrations/crew-ai) - Guia oficial de integração CrewAI
+- [Eval SDK Braintrust](https://www.braintrust.dev/docs/start/eval-sdk) - Execute experimentos via SDK
+- [Documentação CrewAI](https://docs.crewai.com/) - Visão geral do framework CrewAI
+- [Documentação OpenTelemetry](https://opentelemetry.io/docs/) - Guia OpenTelemetry
+- [GitHub Braintrust](https://github.com/braintrustdata/braintrust) - Código fonte do SDK Braintrust

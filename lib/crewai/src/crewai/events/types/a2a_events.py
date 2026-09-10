@@ -726,11 +726,6 @@ class A2AContentTypeNegotiatedEvent(A2AEventBase):
     metadata: dict[str, Any] | None = None
 
 
-# -----------------------------------------------------------------------------
-# Context Lifecycle Events
-# -----------------------------------------------------------------------------
-
-
 class A2AContextCreatedEvent(A2AEventBase):
     """Event emitted when an A2A context is created.
 

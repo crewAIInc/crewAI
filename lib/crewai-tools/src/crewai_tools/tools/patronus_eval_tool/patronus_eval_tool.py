@@ -119,7 +119,6 @@ class PatronusEvalTool(BaseTool):
         evaluated_model_retrieved_context: str | None,
         evaluators: list[dict[str, str]],
     ) -> Any:
-        # Assert correct format of evaluators
         evals = []
         for ev in evaluators:
             evals.append(  # noqa: PERF401

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-import pytest
-
 from crewai.hooks import (
     after_llm_call,
     after_tool_call,
@@ -18,6 +16,7 @@ from crewai.hooks import (
 )
 from crewai.hooks.llm_hooks import LLMCallHookContext
 from crewai.hooks.tool_hooks import ToolCallHookContext
+import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -25,13 +24,11 @@ def clear_hooks():
     """Clear global hooks before and after each test."""
     from crewai.hooks import llm_hooks, tool_hooks
 
-    # Store original hooks
     original_before_llm = llm_hooks._before_llm_call_hooks.copy()
     original_after_llm = llm_hooks._after_llm_call_hooks.copy()
     original_before_tool = tool_hooks._before_tool_call_hooks.copy()
     original_after_tool = tool_hooks._after_tool_call_hooks.copy()
 
-    # Clear hooks
     llm_hooks._before_llm_call_hooks.clear()
     llm_hooks._after_llm_call_hooks.clear()
     tool_hooks._before_tool_call_hooks.clear()
@@ -39,7 +36,6 @@ def clear_hooks():
 
     yield
 
-    # Restore original hooks
     llm_hooks._before_llm_call_hooks.clear()
     llm_hooks._after_llm_call_hooks.clear()
     tool_hooks._before_tool_call_hooks.clear()
@@ -81,7 +77,6 @@ class TestLLMHookDecorators:
         def test_hook(context):
             execution_log.append("executed")
 
-        # Create mock context
         mock_executor = Mock()
         mock_executor.messages = []
         mock_executor.agent = Mock(role="Test")
@@ -92,7 +87,6 @@ class TestLLMHookDecorators:
 
         context = LLMCallHookContext(executor=mock_executor)
 
-        # Execute the hook
         hooks = get_before_llm_call_hooks()
         hooks[0](context)
 
@@ -110,7 +104,6 @@ class TestLLMHookDecorators:
         hooks = get_before_llm_call_hooks()
         assert len(hooks) == 1
 
-        # Test with matching agent
         mock_executor = Mock()
         mock_executor.messages = []
         mock_executor.agent = Mock(role="Researcher")
@@ -125,12 +118,10 @@ class TestLLMHookDecorators:
         assert len(execution_log) == 1
         assert execution_log[0] == "Researcher"
 
-        # Test with non-matching agent
         mock_executor.agent.role = "Analyst"
         context2 = LLMCallHookContext(executor=mock_executor)
         hooks[0](context2)
 
-        # Should still be 1 (hook didn't execute)
         assert len(execution_log) == 1
 
 
@@ -164,12 +155,11 @@ class TestToolHookDecorators:
         @before_tool_call(tools=["delete_file", "execute_code"])
         def filtered_hook(context):
             execution_log.append(context.tool_name)
-            return None
+            return
 
         hooks = get_before_tool_call_hooks()
         assert len(hooks) == 1
 
-        # Test with matching tool
         mock_tool = Mock()
         context = ToolCallHookContext(
             tool_name="delete_file",
@@ -181,7 +171,6 @@ class TestToolHookDecorators:
         assert len(execution_log) == 1
         assert execution_log[0] == "delete_file"
 
-        # Test with non-matching tool
         context2 = ToolCallHookContext(
             tool_name="read_file",
             tool_input={},
@@ -189,7 +178,6 @@ class TestToolHookDecorators:
         )
         hooks[0](context2)
 
-        # Should still be 1 (hook didn't execute for read_file)
         assert len(execution_log) == 1
 
     def test_before_tool_call_tool_filter_sanitizes_names(self):
@@ -200,7 +188,7 @@ class TestToolHookDecorators:
         @before_tool_call(tools=["Delete File", "Execute Code"])
         def filtered_hook(context):
             execution_log.append(context.tool_name)
-            return None
+            return
 
         hooks = get_before_tool_call_hooks()
         assert len(hooks) == 1
@@ -231,13 +219,12 @@ class TestToolHookDecorators:
         @before_tool_call(tools=["write_file"], agents=["Developer"])
         def filtered_hook(context):
             execution_log.append(f"{context.tool_name}-{context.agent.role}")
-            return None
+            return
 
         hooks = get_before_tool_call_hooks()
         mock_tool = Mock()
         mock_agent = Mock(role="Developer")
 
-        # Test with both matching
         context = ToolCallHookContext(
             tool_name="write_file",
             tool_input={},
@@ -249,7 +236,6 @@ class TestToolHookDecorators:
         assert len(execution_log) == 1
         assert execution_log[0] == "write_file-Developer"
 
-        # Test with tool matching but agent not
         mock_agent.role = "Researcher"
         context2 = ToolCallHookContext(
             tool_name="write_file",
@@ -259,7 +245,6 @@ class TestToolHookDecorators:
         )
         hooks[0](context2)
 
-        # Should still be 1 (hook didn't execute)
         assert len(execution_log) == 1
 
     def test_after_tool_call_with_filter(self):
@@ -274,7 +259,6 @@ class TestToolHookDecorators:
         hooks = get_after_tool_call_hooks()
         mock_tool = Mock()
 
-        # Test with matching tool
         context = ToolCallHookContext(
             tool_name="web_search",
             tool_input={},
@@ -285,7 +269,6 @@ class TestToolHookDecorators:
 
         assert result == "RESULT"
 
-        # Test with non-matching tool
         context2 = ToolCallHookContext(
             tool_name="other_tool",
             tool_input={},

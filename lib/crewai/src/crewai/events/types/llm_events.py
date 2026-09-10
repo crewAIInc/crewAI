@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from crewai.events.base_events import BaseEvent
 
@@ -48,6 +48,43 @@ class LLMCallStartedEvent(LLMEventBase):
     tools: list[dict[str, Any]] | None = None
     callbacks: list[Any] | None = None
     available_functions: dict[str, Any] | None = None
+    # Sampling/request parameters forwarded for OTel GenAI compliance.
+    # All optional so legacy emitters keep working unchanged.
+    temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int | float | None = None
+    stream: bool | None = None
+    seed: int | None = None
+    stop_sequences: list[str] | None = None
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    n: int | None = None
+
+    @field_validator("stop_sequences", mode="before")
+    @classmethod
+    def _coerce_stop_sequences_to_str_list(cls, value: Any) -> list[str] | None:
+        """Normalize stop_sequences to ``list[str] | None``.
+
+        Some providers store stop sequences in non-Python-list containers —
+        e.g. a Vertex AI / Gemini code path can hand back a
+        ``google.protobuf.struct_pb2.ListValue`` or a ``RepeatedScalarContainer``.
+        Without coercion the OTel SDK falls back to ``str(value)`` when
+        ``gen_ai.request.stop_sequences`` is set, producing the protobuf
+        textproto repr (``values { string_value: \"...\" }``) instead of a
+        proper ``Sequence[str]``.
+
+        A bare string is treated as a single stop sequence. Anything that
+        can't be iterated cleanly falls back to ``None`` rather than crashing
+        event construction.
+        """
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return [value]
+        try:
+            return [item if isinstance(item, str) else str(item) for item in value]
+        except TypeError:
+            return None
 
 
 class LLMCallCompletedEvent(LLMEventBase):
@@ -58,6 +95,23 @@ class LLMCallCompletedEvent(LLMEventBase):
     response: Any
     call_type: LLMCallType
     usage: dict[str, Any] | None = None
+    finish_reason: str | None = None
+    response_id: str | None = None
+
+    @field_validator("finish_reason", "response_id", mode="before")
+    @classmethod
+    def _coerce_non_string_to_none(cls, value: Any) -> str | None:
+        """Drop non-string values so test mocks and exotic provider types
+        (MagicMock, protobuf enums, etc.) never crash event construction.
+
+        Provider helpers are best-effort: when extraction returns something
+        non-string (e.g. a ``MagicMock`` in unit tests), we treat it as
+        "no value" rather than raising. Downstream telemetry already
+        handles the missing-attribute case.
+        """
+        if value is None or isinstance(value, str):
+            return value
+        return None
 
 
 class LLMCallFailedEvent(LLMEventBase):

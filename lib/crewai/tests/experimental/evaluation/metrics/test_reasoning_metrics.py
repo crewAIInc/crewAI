@@ -77,10 +77,8 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         """
         mock_create_llm.return_value = mock_llm
 
-        # Setup execution trace with sufficient LLM calls
         execution_trace = {"llm_calls": llm_calls}
 
-        # Mock the _detect_loops method to return a simple result
         evaluator = ReasoningEfficiencyEvaluator(llm=mock_llm)
         evaluator._detect_loops = MagicMock(return_value=(False, []))
 
@@ -99,7 +97,6 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         assert "Reasoning Efficiency Evaluation:" in result.feedback
         assert "• Focus: 8.0/10" in result.feedback
 
-        # Verify LLM was called
         mock_llm.call.assert_called_once()
 
     @patch("crewai.utilities.llm_utils.create_llm")
@@ -110,10 +107,8 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         mock_llm.call.return_value = "Invalid JSON response"
         mock_create_llm.return_value = mock_llm
 
-        # Setup execution trace
         execution_trace = {"llm_calls": llm_calls}
 
-        # Mock the _detect_loops method
         evaluator = ReasoningEfficiencyEvaluator(llm=mock_llm)
         evaluator._detect_loops = MagicMock(return_value=(False, []))
 
@@ -132,7 +127,6 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
 
     @patch("crewai.utilities.llm_utils.create_llm")
     def test_loop_detection(self, mock_create_llm, mock_agent, mock_task, mock_output):
-        # Setup LLM calls with a repeating pattern
         repetitive_llm_calls = [
             {
                 "prompt": "How to solve?",

@@ -5,7 +5,6 @@ from crewai_tools import MongoDBVectorSearchConfig, MongoDBVectorSearchTool
 import pytest
 
 
-# Unit Test Fixtures
 @pytest.fixture
 def mongodb_vector_search_tool():
     tool = MongoDBVectorSearchTool(
@@ -15,9 +14,7 @@ def mongodb_vector_search_tool():
     yield tool
 
 
-# Unit Tests
 def test_successful_query_execution(mongodb_vector_search_tool):
-    # Enable embedding
     with patch.object(mongodb_vector_search_tool._coll, "aggregate") as mock_aggregate:
         mock_aggregate.return_value = [dict(text="foo", score=0.1, _id=1)]
 
@@ -50,7 +47,6 @@ def test_provide_config():
 
 def test_cleanup_on_deletion(mongodb_vector_search_tool):
     with patch.object(mongodb_vector_search_tool, "_client") as mock_client:
-        # Trigger cleanup
         mongodb_vector_search_tool.__del__()
 
         mock_client.close.assert_called_once()

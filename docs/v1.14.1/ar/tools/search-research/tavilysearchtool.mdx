@@ -1,0 +1,125 @@
+---
+title: "أداة بحث Tavily"
+description: "إجراء عمليات بحث شاملة على الويب باستخدام Tavily Search API"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+توفر أداة `TavilySearchTool` واجهة لـ Tavily Search API، مما يتيح لوكلاء CrewAI إجراء عمليات بحث شاملة على الويب. تسمح بتحديد عمق البحث والمواضيع والنطاقات الزمنية والنطاقات المضمنة/المستبعدة، وما إذا كان يجب تضمين إجابات مباشرة أو محتوى خام أو صور في النتائج.
+
+## التثبيت
+
+لاستخدام `TavilySearchTool`، تحتاج إلى تثبيت مكتبة `tavily-python`:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+## متغيرات البيئة
+
+تأكد من تعيين مفتاح Tavily API كمتغير بيئة:
+
+```bash
+export TAVILY_API_KEY='your_tavily_api_key'
+```
+
+احصل على مفتاح API على https://app.tavily.com/ (سجّل، ثم أنشئ مفتاحاً).
+
+## مثال على الاستخدام
+
+إليك كيفية تهيئة واستخدام `TavilySearchTool` مع وكيل CrewAI:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilySearchTool
+
+# Ensure the TAVILY_API_KEY environment variable is set
+# os.environ["TAVILY_API_KEY"] = "YOUR_TAVILY_API_KEY"
+
+# Initialize the tool
+tavily_tool = TavilySearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Market Researcher',
+    goal='Find information about the latest AI trends',
+    backstory='An expert market researcher specializing in technology.',
+    tools=[tavily_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Search for the top 3 AI trends in 2024.',
+    expected_output='A JSON report summarizing the top 3 AI trends found.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## خيارات التكوين
+
+تقبل أداة `TavilySearchTool` المعاملات التالية أثناء التهيئة أو عند استدعاء طريقة `run`:
+
+- `query` (str): **مطلوب**. سلسلة استعلام البحث.
+- `search_depth` (Literal["basic", "advanced"]، اختياري): عمق البحث. الافتراضي هو `"basic"`.
+- `topic` (Literal["general", "news", "finance"]، اختياري): الموضوع لتركيز البحث عليه. الافتراضي هو `"general"`.
+- `time_range` (Literal["day", "week", "month", "year"]، اختياري): النطاق الزمني للبحث. الافتراضي هو `None`.
+- `days` (int، اختياري): عدد الأيام للبحث للخلف. ذو صلة إذا لم يتم تعيين `time_range`. الافتراضي هو `7`.
+- `max_results` (int، اختياري): الحد الأقصى لعدد نتائج البحث المُرجعة. الافتراضي هو `5`.
+- `include_domains` (Sequence[str]، اختياري): قائمة بالنطاقات لإعطائها الأولوية في البحث. الافتراضي هو `None`.
+- `exclude_domains` (Sequence[str]، اختياري): قائمة بالنطاقات لاستبعادها من البحث. الافتراضي هو `None`.
+- `include_answer` (Union[bool, Literal["basic", "advanced"]]، اختياري): ما إذا كان يجب تضمين إجابة مباشرة مُركّبة من نتائج البحث. الافتراضي هو `False`.
+- `include_raw_content` (bool، اختياري): ما إذا كان يجب تضمين محتوى HTML الخام للصفحات المبحوث عنها. الافتراضي هو `False`.
+- `include_images` (bool، اختياري): ما إذا كان يجب تضمين نتائج الصور. الافتراضي هو `False`.
+- `timeout` (int، اختياري): مهلة الطلب بالثواني. الافتراضي هو `60`.
+
+## الاستخدام المتقدم
+
+يمكنك تكوين الأداة بمعاملات مخصصة:
+
+```python
+# Example: Initialize with specific parameters
+custom_tavily_tool = TavilySearchTool(
+    search_depth='advanced',
+    max_results=10,
+    include_answer=True
+)
+
+# The agent will use these defaults
+agent_with_custom_tool = Agent(
+    role="Advanced Researcher",
+    goal="Conduct detailed research with comprehensive results",
+    tools=[custom_tavily_tool]
+)
+```
+
+## الميزات
+
+- **بحث شامل**: الوصول إلى فهرس بحث Tavily القوي
+- **عمق قابل للتكوين**: الاختيار بين أوضاع البحث الأساسي والمتقدم
+- **تصفية المواضيع**: تركيز عمليات البحث على المواضيع العامة أو الأخبار أو المالية
+- **التحكم في النطاق الزمني**: تقييد النتائج لفترات زمنية محددة
+- **التحكم في النطاقات**: تضمين أو استبعاد نطاقات محددة
+- **إجابات مباشرة**: الحصول على إجابات مُركّبة من نتائج البحث
+- **تصفية المحتوى**: منع مشاكل نافذة السياق مع اقتطاع المحتوى التلقائي
+
+## تنسيق الاستجابة
+
+تُرجع الأداة نتائج البحث كسلسلة JSON تحتوي على:
+- نتائج بحث مع عناوين وعناوين URL ومقتطفات محتوى
+- إجابات مباشرة اختيارية للاستعلامات
+- نتائج صور اختيارية
+- محتوى HTML خام اختياري (عند التفعيل)
+
+يتم اقتطاع المحتوى لكل نتيجة تلقائياً لمنع مشاكل نافذة السياق مع الحفاظ على المعلومات الأكثر صلة.

@@ -496,7 +496,6 @@ class BrightDataDatasetTool(BaseTool):
             )
 
         async with aiohttp.ClientSession() as session:
-            # Step 1: Trigger job
             async with session.post(
                 f"{BRIGHTDATA_API_URL}/datasets/v3/trigger",
                 params={"dataset_id": dataset_id, "include_errors": "true"},
@@ -511,7 +510,6 @@ class BrightDataDatasetTool(BaseTool):
                 trigger_data = await trigger_response.json()
                 snapshot_id = trigger_data.get("snapshot_id")
 
-            # Step 2: Poll for completion
             elapsed = 0
             while elapsed < timeout:
                 await asyncio.sleep(polling_interval)
@@ -536,7 +534,6 @@ class BrightDataDatasetTool(BaseTool):
             else:
                 raise TimeoutError("Polling timed out before job completed.")
 
-            # Step 3: Retrieve result
             async with session.get(
                 f"{BRIGHTDATA_API_URL}/datasets/v3/snapshot/{snapshot_id}",
                 params={"format": output_format},

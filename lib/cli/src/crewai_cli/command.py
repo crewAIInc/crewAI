@@ -13,6 +13,10 @@ from crewai_cli.plus_api import PlusAPI
 console = Console()
 
 
+class AuthenticationRequiredError(SystemExit):
+    """Raised when a Plus API command needs the user to log in first."""
+
+
 class BaseCommand:
     def __init__(self) -> None:
         self._telemetry = Telemetry()
@@ -31,7 +35,7 @@ class PlusAPIMixin:
                 style="bold red",
             )
             console.print("Run 'crewai login' to sign up/login.", style="bold green")
-            raise SystemExit from None
+            raise AuthenticationRequiredError from None
 
     def _validate_response(self, response: httpx.Response) -> None:
         """Handle and display error messages from API responses.

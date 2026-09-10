@@ -12,7 +12,6 @@ class TestUtils(unittest.TestCase):
     def test_validate_jwt_token(self, mock_jwt, mock_pyjwkclient):
         mock_jwt.decode.return_value = {"exp": 1719859200}
 
-        # Create signing key object mock with a .key attribute
         mock_pyjwkclient.return_value.get_signing_key_from_jwt.return_value = MagicMock(
             key="mock_signing_key"
         )

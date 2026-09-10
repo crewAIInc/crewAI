@@ -53,7 +53,6 @@ class SerplyNewsSearchTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
-        # build query parameters
         query_payload = {}
 
         if "query" in kwargs:
@@ -61,7 +60,6 @@ class SerplyNewsSearchTool(BaseTool):
         elif "search_query" in kwargs:
             query_payload["q"] = kwargs["search_query"]
 
-        # build the url
         url = f"{self.search_url}{urlencode(query_payload)}"
 
         response = requests.request(

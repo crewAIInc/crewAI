@@ -120,5 +120,4 @@ class MCPServerSSE(BaseModel):
     )
 
 
-# Type alias for all MCP server configurations
 MCPServerConfig = MCPServerStdio | MCPServerHTTP | MCPServerSSE

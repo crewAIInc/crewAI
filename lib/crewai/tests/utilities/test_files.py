@@ -40,14 +40,14 @@ class TestDetectContentType:
         """Test detection of PNG content."""
         # Minimal valid PNG: header + IHDR chunk + IEND chunk
         png_data = (
-            b"\x89PNG\r\n\x1a\n"  # PNG signature
+            b"\x89PNG\r\n\x1a\n"
             b"\x00\x00\x00\rIHDR"  # IHDR chunk length and type
-            b"\x00\x00\x00\x01"  # width: 1
-            b"\x00\x00\x00\x01"  # height: 1
+            b"\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01"
             b"\x08\x02"  # bit depth: 8, color type: 2 (RGB)
-            b"\x00\x00\x00"  # compression, filter, interlace
-            b"\x90wS\xde"  # CRC
-            b"\x00\x00\x00\x00IEND\xaeB`\x82"  # IEND chunk
+            b"\x00\x00\x00"
+            b"\x90wS\xde"
+            b"\x00\x00\x00\x00IEND\xaeB`\x82"
         )
         result = detect_content_type(png_data)
         assert result == "image/png"

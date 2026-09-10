@@ -13,7 +13,6 @@ class ConcreteAgentAdapter(BaseAgentAdapter):
     def configure_tools(
         self, tools: list[BaseTool] | None = None, **kwargs: Any
     ) -> None:
-        # Simple implementation for testing
         self.tools = tools or []
 
     def execute_task(
@@ -94,7 +93,6 @@ def test_configure_tools_method_exists():
     adapter = ConcreteAgentAdapter(
         role="test role", goal="test goal", backstory="test backstory"
     )
-    # Create dummy tools if needed, or pass None
     tools = []
     adapter.configure_tools(tools)
     assert hasattr(adapter, "tools")
@@ -107,13 +105,11 @@ def test_configure_structured_output_method_exists():
         role="test role", goal="test goal", backstory="test backstory"
     )
 
-    # Define a dummy structure or pass None/Any
     class DummyOutput(BaseModel):
         data: str
 
     structured_output = DummyOutput
     adapter.configure_structured_output(structured_output)
-    # Add assertions here if configure_structured_output modifies state
     # For now, just ensuring it runs without error is sufficient
 
 

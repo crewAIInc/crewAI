@@ -1,9 +1,9 @@
 import os
-import tempfile
 from pathlib import Path
+import tempfile
 
-import pytest
 from crewai.utilities import project_utils as utils
+import pytest
 
 
 def create_file(path, content):
@@ -207,7 +207,6 @@ def temp_crew_project():
         with open(os.path.join("src", "crew.py"), "w") as f:
             f.write(crew_content)
 
-        # Create a src/templates directory that should be ignored
         os.makedirs(os.path.join("src", "templates"), exist_ok=True)
         with open(os.path.join("src", "templates", "crew.py"), "w") as f:
             f.write("# This should be ignored")
@@ -274,7 +273,6 @@ def test_get_crews_ignores_template_directories(
     assert not template_crew_detected
 
 
-# Tests for extract_tools_metadata
 
 
 def test_extract_tools_metadata_empty_project(temp_project_dir):
@@ -433,10 +431,8 @@ __all__ = ['MyTool']
     assert len(metadata) == 1
     init_params = metadata[0]["init_params_schema"]
     assert "properties" in init_params
-    # Custom params should be included
     assert "api_endpoint" in init_params["properties"]
     assert "timeout" in init_params["properties"]
-    # Base params should be filtered out
     assert "name" not in init_params["properties"]
     assert "description" not in init_params["properties"]
 
@@ -467,7 +463,6 @@ __all__ = ['FirstTool', 'SecondTool']
 
 def test_extract_tools_metadata_multiple_init_files(temp_project_dir):
     """Test that extract_tools_metadata extracts metadata from multiple __init__.py files."""
-    # Create tool in root __init__.py
     create_init_file(
         temp_project_dir,
         """from crewai.tools import BaseTool
@@ -480,7 +475,6 @@ __all__ = ['RootTool']
 """,
     )
 
-    # Create nested package with another tool
     nested_dir = temp_project_dir / "nested"
     nested_dir.mkdir()
     create_init_file(
@@ -537,7 +531,6 @@ class MyTool(BaseTool):
 __all__ = ['MyTool']
 """,
     )
-    # Should not raise, just return empty list
     metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
     assert metadata == []
 
@@ -556,6 +549,5 @@ class MyTool(BaseTool):
 __all__ = ['MyTool']
 """,
     )
-    # Should not raise, just return empty list
     metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
     assert metadata == []

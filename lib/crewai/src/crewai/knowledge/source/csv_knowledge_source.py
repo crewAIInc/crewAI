@@ -1,11 +1,14 @@
 import csv
 from pathlib import Path
+from typing import Literal
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
 class CSVKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries CSV file content using embeddings."""
+
+    source_type: Literal["csv"] = "csv"
 
     def load_content(self) -> dict[Path, str]:
         """Load and preprocess CSV file content."""

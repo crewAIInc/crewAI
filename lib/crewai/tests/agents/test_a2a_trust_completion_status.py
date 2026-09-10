@@ -64,7 +64,6 @@ def test_trust_remote_completion_status_true_returns_directly():
             "history": [],
         }
 
-        # This should return directly without checking LLM response
         result = _delegate_to_a2a(
             self=agent,
             agent_response=MockResponse(),
@@ -140,7 +139,6 @@ def test_trust_remote_completion_status_false_continues_conversation():
             original_task_description="test",
         )
 
-        # Should call original_fn to get server response
         assert call_count >= 1
         assert result == "Server final answer"
 

@@ -14,7 +14,6 @@ from tests.experimental.evaluation.metrics.test_base_evaluation_metrics import (
 
 class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
     def test_no_tools_available(self, mock_task, mock_agent):
-        # Create agent with no tools
         mock_agent.tools = []
 
         execution_trace = {"tool_uses": []}
@@ -47,7 +46,6 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
 
     @patch("crewai.utilities.llm_utils.create_llm")
     def test_successful_evaluation(self, mock_create_llm, mock_agent, mock_task):
-        # Setup mock LLM response
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = """
         {
@@ -57,7 +55,6 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
         """
         mock_create_llm.return_value = mock_llm
 
-        # Setup execution trace with tool uses
         execution_trace = {
             "tool_uses": [
                 {
@@ -80,7 +77,6 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
         assert result.score == 8.5
         assert "The agent made good tool selections" in result.feedback
 
-        # Verify LLM was called with correct prompt
         mock_llm.call.assert_called_once()
         prompt = mock_llm.call.call_args[0][0]
         assert isinstance(prompt, list)
@@ -108,7 +104,6 @@ class TestParameterExtractionEvaluator(BaseEvaluationMetricsTest):
     def test_successful_evaluation(self, mock_create_llm, mock_agent, mock_task):
         mock_agent.tools = ["tool1", "tool2"]
 
-        # Setup mock LLM response
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = """
         {
@@ -118,7 +113,6 @@ class TestParameterExtractionEvaluator(BaseEvaluationMetricsTest):
         """
         mock_create_llm.return_value = mock_llm
 
-        # Setup execution trace with tool uses
         execution_trace = {
             "tool_uses": [
                 {
@@ -166,7 +160,6 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
     @patch("crewai.utilities.llm_utils.create_llm")
     def test_successful_evaluation(self, mock_create_llm, mock_agent, mock_task):
         mock_agent.tools = ["tool1", "tool2"]
-        # Setup mock LLM response
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = """
         {
@@ -176,7 +169,6 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
         """
         mock_create_llm.return_value = mock_llm
 
-        # Setup execution trace with tool uses
         execution_trace = {
             "tool_uses": [
                 {
@@ -202,7 +194,6 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
     @patch("crewai.utilities.llm_utils.create_llm")
     def test_evaluation_with_errors(self, mock_create_llm, mock_agent, mock_task):
         mock_agent.tools = ["tool1", "tool2"]
-        # Setup mock LLM response
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = """
         {
@@ -212,7 +203,6 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
         """
         mock_create_llm.return_value = mock_llm
 
-        # Setup execution trace with tool uses including errors
         execution_trace = {
             "tool_uses": [
                 {

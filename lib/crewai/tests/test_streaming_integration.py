@@ -3,8 +3,10 @@
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.flow.flow import Flow, start
-from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.types.streaming import AsyncStreamSession, CrewStreamingOutput, StreamSession
 
 
 @pytest.fixture
@@ -212,7 +214,7 @@ class TestStreamingFlowIntegration:
 
         streaming = flow.kickoff()
 
-        assert isinstance(streaming, FlowStreamingOutput)
+        assert isinstance(streaming, StreamSession)
 
         chunks = []
         for chunk in streaming:
@@ -232,6 +234,14 @@ class TestStreamingFlowIntegration:
 
             @start()
             def execute(self) -> str:
+                crewai_event_bus.emit(
+                    self,
+                    LLMStreamChunkEvent(
+                        type="llm_stream_chunk",
+                        chunk="Flow result",
+                        call_id="call-1",
+                    ),
+                )
                 return "Flow result"
 
         flow = SimpleFlow()
@@ -241,14 +251,18 @@ class TestStreamingFlowIntegration:
             pass
 
         assert streaming.is_completed is True
-        streaming.get_full_text()
-        assert len(streaming.chunks) >= 0
+        content_frames = [frame for frame in streaming.frames if frame.content]
+        full_text = "".join(frame.content for frame in content_frames)
+        assert full_text == "Flow result"
+        assert len(content_frames) == 1
+        assert len(streaming.frames) > 0
 
         result = streaming.result
         assert result is not None
 
-    @pytest.mark.vcr()
     @pytest.mark.asyncio
+    @pytest.mark.timeout(180)
+    @pytest.mark.vcr()
     async def test_async_flow_streaming_from_docs(self) -> None:
         """Test async flow streaming example from documentation."""
 
@@ -280,7 +294,7 @@ class TestStreamingFlowIntegration:
 
         streaming = await flow.kickoff_async()
 
-        assert isinstance(streaming, FlowStreamingOutput)
+        assert isinstance(streaming, AsyncStreamSession)
 
         chunks = []
         async for chunk in streaming:

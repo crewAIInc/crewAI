@@ -51,9 +51,6 @@ def _mock_response(
     return resp
 
 
-# Fixtures
-
-
 @pytest.fixture(autouse=True)
 def _brave_env_and_rate_limit():
     """Set BRAVE_API_KEY for every test. Rate limiting is per-instance (each tool starts with a fresh clock)."""
@@ -80,8 +77,6 @@ def news_tool():
 def video_tool():
     return BraveVideoSearchTool()
 
-
-# Initialization
 
 ALL_TOOL_CLASSES = [
     BraveWebSearchTool,
@@ -343,7 +338,6 @@ def test_refine_request_payload_passes_multiple_goggles_as_multiple_params(web_t
 
 
 # Null-like / empty value stripping
-#
 # crewAI's ensure_all_properties_required (pydantic_schema_utils.py) marks
 # every schema property as required for OpenAI strict-mode compatibility.
 # Because optional Brave API parameters look required to the LLM, it fills

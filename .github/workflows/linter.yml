@@ -12,25 +12,31 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
         id: filter
         with:
+          # Exclusion-only patterns match every non-excluded file under the
+          # default "some" quantifier. Require all patterns (including "**")
+          # so docs/markdown/Actions-only PRs correctly set code=false.
+          predicate-quantifier: every
           filters: |
             code:
+              - '**'
               - '!docs/**'
               - '!**/*.md'
+              - '!.github/**'
 
   lint-run:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Restore global uv cache
         id: cache-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cache/uv
@@ -41,7 +47,7 @@ jobs:
             uv-main-py3.11-
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.11.3"
           python-version: "3.11"
@@ -58,7 +64,7 @@ jobs:
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cache/uv
@@ -76,7 +82,7 @@ jobs:
       - name: Check results
         run: |
           if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
-            echo "Docs-only change, skipping lint"
+            echo "Non-code change, skipping lint"
             exit 0
           fi
           if [ "${{ needs.lint-run.result }}" == "success" ]; then

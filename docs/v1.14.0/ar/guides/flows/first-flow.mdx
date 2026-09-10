@@ -1,0 +1,278 @@
+---
+title: ابنِ أول Flow لك
+description: تعلم كيفية إنشاء سير عمل منظمة قائمة على الأحداث مع تحكم دقيق في التنفيذ.
+icon: diagram-project
+mode: "wide"
+---
+
+## التحكم في سير عمل AI مع Flows
+
+تمثل CrewAI Flows المستوى التالي في تنسيق AI - الجمع بين القوة التعاونية لفرق Agents AI مع دقة ومرونة البرمجة الإجرائية. بينما تتفوق Crews في تعاون الـ Agents، تمنحك Flows تحكمًا دقيقًا في كيفية ووقت تفاعل المكونات المختلفة لنظام AI.
+
+في هذا الدليل، سنمشي عبر إنشاء CrewAI Flow قوي ينشئ دليلًا تعليميًا شاملاً حول أي موضوع.
+
+### ما يجعل Flows قوية
+
+تمكّنك Flows من:
+
+1. **الجمع بين أنماط تفاعل AI مختلفة** - استخدام Crews للمهام التعاونية المعقدة واستدعاءات LLM المباشرة للعمليات الأبسط والكود العادي للمنطق الإجرائي
+2. **بناء أنظمة قائمة على الأحداث** - تحديد كيفية استجابة المكونات لأحداث وتغييرات بيانات محددة
+3. **الحفاظ على الحالة عبر المكونات** - مشاركة وتحويل البيانات بين أجزاء مختلفة من تطبيقك
+4. **التكامل مع الأنظمة الخارجية** - ربط سير عمل AI بسلاسة مع قواعد البيانات وواجهات API وواجهات المستخدم
+5. **إنشاء مسارات تنفيذ معقدة** - تصميم فروع شرطية ومعالجة متوازية وسير عمل ديناميكية
+
+### المتطلبات المسبقة
+
+قبل البدء، تأكد من:
+
+1. تثبيت CrewAI باتباع [دليل التثبيت](/ar/installation)
+2. إعداد مفتاح API لنموذج LLM في بيئتك، باتباع [دليل إعداد LLM](/ar/concepts/llms#setting-up-your-llm)
+3. فهم أساسي لـ Python
+
+## الخطوة 1: إنشاء مشروع CrewAI Flow جديد
+
+```bash
+crewai create flow guide_creator_flow
+cd guide_creator_flow
+```
+
+<Frame caption="نظرة عامة على إطار عمل CrewAI">
+  <img src="/images/flows.png" alt="نظرة عامة على إطار عمل CrewAI" />
+</Frame>
+
+## الخطوة 2: فهم هيكل المشروع
+
+```
+guide_creator_flow/
+├── .gitignore
+├── pyproject.toml
+├── README.md
+├── .env
+├── main.py
+├── crews/
+│   └── poem_crew/
+│       ├── config/
+│       │   ├── agents.yaml
+│       │   └── tasks.yaml
+│       └── poem_crew.py
+└── tools/
+    └── custom_tool.py
+```
+
+يوفر هذا الهيكل فصلاً واضحًا بين مكونات Flow المختلفة. سنعدّل هذا الهيكل لإنشاء Flow منشئ الدليل.
+
+## الخطوة 3: إضافة Crew كتابة المحتوى
+
+```bash
+crewai flow add-crew content-crew
+```
+
+## الخطوة 4: تهيئة Crew كتابة المحتوى
+
+1. حدّث ملف تهيئة الـ Agents. تذكر تعيين `llm` للمزود الذي تستخدمه.
+
+```yaml
+# src/guide_creator_flow/crews/content_crew/config/agents.yaml
+content_writer:
+  role: >
+    Educational Content Writer
+  goal: >
+    Create engaging, informative content that thoroughly explains the assigned topic
+    and provides valuable insights to the reader
+  backstory: >
+    You are a talented educational writer with expertise in creating clear, engaging
+    content. You have a gift for explaining complex concepts in accessible language
+    and organizing information in a way that helps readers build their understanding.
+  llm: provider/model-id
+
+content_reviewer:
+  role: >
+    Educational Content Reviewer and Editor
+  goal: >
+    Ensure content is accurate, comprehensive, well-structured, and maintains
+    consistency with previously written sections
+  backstory: >
+    You are a meticulous editor with years of experience reviewing educational
+    content. You have an eye for detail, clarity, and coherence.
+  llm: provider/model-id
+```
+
+2. حدّث ملف تهيئة المهام:
+
+```yaml
+# src/guide_creator_flow/crews/content_crew/config/tasks.yaml
+write_section_task:
+  description: >
+    Write a comprehensive section on the topic: "{section_title}"
+
+    Section description: {section_description}
+    Target audience: {audience_level} level learners
+
+    Your content should:
+    1. Begin with a brief introduction to the section topic
+    2. Explain all key concepts clearly with examples
+    3. Include practical applications or exercises where appropriate
+    4. End with a summary of key points
+    5. Be approximately 500-800 words in length
+
+    Format your content in Markdown with appropriate headings, lists, and emphasis.
+
+    Previously written sections:
+    {previous_sections}
+  expected_output: >
+    A well-structured, comprehensive section in Markdown format that thoroughly
+    explains the topic and is appropriate for the target audience.
+  agent: content_writer
+
+review_section_task:
+  description: >
+    Review and improve the following section on "{section_title}":
+
+    {draft_content}
+
+    Target audience: {audience_level} level learners
+
+    Previously written sections:
+    {previous_sections}
+
+    Your review should:
+    1. Fix any grammatical or spelling errors
+    2. Improve clarity and readability
+    3. Ensure content is comprehensive and accurate
+    4. Verify consistency with previously written sections
+    5. Enhance the structure and flow
+    6. Add any missing key information
+  expected_output: >
+    An improved, polished version of the section that maintains the original
+    structure but enhances clarity, accuracy, and consistency.
+  agent: content_reviewer
+  context:
+    - write_section_task
+```
+
+3. حدّث ملف تنفيذ Crew:
+
+```python
+# src/guide_creator_flow/crews/content_crew/content_crew.py
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase
+class ContentCrew():
+    """Content writing crew"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    @agent
+    def content_writer(self) -> Agent:
+        return Agent(
+            config=self.agents_config['content_writer'], # type: ignore[index]
+            verbose=True
+        )
+
+    @agent
+    def content_reviewer(self) -> Agent:
+        return Agent(
+            config=self.agents_config['content_reviewer'], # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def write_section_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['write_section_task'] # type: ignore[index]
+        )
+
+    @task
+    def review_section_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['review_section_task'], # type: ignore[index]
+            context=[self.write_section_task()]
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        """Creates the content writing crew"""
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+## الخطوة 5: إنشاء Flow
+
+الآن الجزء المثير - إنشاء Flow الذي سينسّق عملية إنشاء الدليل بالكامل. راجع الملف الإنجليزي الأصلي للكود الكامل لـ `main.py` حيث أن الكود يبقى كما هو.
+
+## الخطوة 6: إعداد متغيرات البيئة
+
+أنشئ ملف `.env` في جذر مشروعك بمفاتيح API. راجع [دليل إعداد LLM](/ar/concepts/llms#setting-up-your-llm) لتفاصيل تهيئة المزود.
+
+```sh .env
+OPENAI_API_KEY=your_openai_api_key
+# or
+GEMINI_API_KEY=your_gemini_api_key
+# or
+ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+## الخطوة 7: تثبيت التبعيات
+
+```bash
+crewai install
+```
+
+## الخطوة 8: تشغيل Flow
+
+```bash
+crewai flow kickoff
+```
+
+عند تشغيل هذا الأمر، ستشاهد Flow يعمل:
+1. سيطلب منك موضوعًا ومستوى الجمهور
+2. سينشئ مخططًا منظمًا لدليلك
+3. سيعالج كل قسم مع تعاون الكاتب والمراجع
+4. أخيرًا سيجمع كل شيء في دليل شامل
+
+## الخطوة 9: تصوير Flow
+
+```bash
+crewai flow plot
+```
+
+سينشئ ملف HTML يوضح هيكل Flow بما في ذلك العلاقات بين الخطوات المختلفة.
+
+## الخطوة 10: مراجعة المخرجات
+
+بمجرد اكتمال Flow، ستجد ملفين في مجلد `output`:
+
+1. `guide_outline.json`: يحتوي على المخطط المنظم للدليل
+2. `complete_guide.md`: الدليل الشامل بجميع الأقسام
+
+## الميزات الرئيسية الموضّحة
+
+يوضح Flow منشئ الدليل عدة ميزات قوية لـ CrewAI:
+
+1. **تفاعل المستخدم**: يجمع Flow مدخلات مباشرة من المستخدم
+2. **استدعاءات LLM المباشرة**: يستخدم فئة LLM لتفاعلات AI فعّالة وأحادية الغرض
+3. **بيانات منظمة مع Pydantic**: يستخدم نماذج Pydantic لضمان سلامة الأنواع
+4. **معالجة تسلسلية مع سياق**: يكتب الأقسام بالترتيب ويوفر الأقسام السابقة كسياق
+5. **Crews متعددة الـ Agents**: يستفيد من Agents متخصصة (كاتب ومراجع) لإنشاء المحتوى
+6. **إدارة الحالة**: يحافظ على الحالة عبر خطوات العملية المختلفة
+7. **بنية قائمة على الأحداث**: يستخدم مزخرف `@listen` للاستجابة للأحداث
+
+## الخطوات التالية
+
+1. جرّب هياكل Flow أكثر تعقيدًا وأنماطًا
+2. جرّب استخدام `@router()` لإنشاء فروع شرطية
+3. استكشف دوال `and_` و`or_` لتنفيذ متوازٍ أكثر تعقيدًا
+4. اربط Flow بواجهات API خارجية وقواعد بيانات وواجهات مستخدم
+5. ادمج عدة Crews متخصصة في Flow واحد
+
+<Check>
+تهانينا! لقد بنيت بنجاح أول CrewAI Flow يجمع بين الكود العادي واستدعاءات LLM المباشرة ومعالجة Crew لإنشاء دليل شامل. هذه المهارات الأساسية تمكّنك من إنشاء تطبيقات AI متطورة بشكل متزايد.
+</Check>

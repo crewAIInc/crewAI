@@ -17,7 +17,6 @@ from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledge
 def mock_vector_db():
     """Mock vector database operations."""
     with patch("crewai.knowledge.storage.knowledge_storage.KnowledgeStorage") as mock:
-        # Mock the query method to return a predefined response
         instance = mock.return_value
         instance.query.return_value = [
             {
@@ -36,7 +35,6 @@ def reset_knowledge_storage(mock_vector_db):
 
 
 def test_single_short_string(mock_vector_db):
-    # Create a knowledge base with a single short string
     content = "Brandon's favorite color is blue and he likes Mexican food."
     string_source = StringKnowledgeSource(
         content=content, metadata={"preference": "personal"}
@@ -47,15 +45,12 @@ def test_single_short_string(mock_vector_db):
     query = "What is Brandon's favorite color?"
     results = mock_vector_db.query(query)
 
-    # Assert that the results contain the expected information
     assert any("blue" in result["content"].lower() for result in results)
-    # Verify the mock was called
     mock_vector_db.query.assert_called_once()
 
 
 # @pytest.mark.vcr()
 def test_single_2k_character_string(mock_vector_db):
-    # Create a 2k character string with various facts about Brandon
     content = (
         "Brandon is a software engineer who lives in San Francisco. "
         "He enjoys hiking and often visits the trails in the Bay Area. "
@@ -88,13 +83,11 @@ def test_single_2k_character_string(mock_vector_db):
     query = "What is Brandon's favorite movie?"
     results = mock_vector_db.query(query)
 
-    # Assert that the results contain the expected information
     assert any("inception" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
 def test_multiple_short_strings(mock_vector_db):
-    # Create multiple short string sources
     contents = [
         "Brandon loves hiking.",
         "Brandon has a dog named Max.",
@@ -105,7 +98,6 @@ def test_multiple_short_strings(mock_vector_db):
         for content in contents
     ]
 
-    # Mock the vector db query response
     mock_vector_db.query.return_value = [
         {"content": "Brandon has a dog named Max.", "score": 0.9}
     ]
@@ -116,14 +108,11 @@ def test_multiple_short_strings(mock_vector_db):
     query = "What is the name of Brandon's pet?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any("max" in result["content"].lower() for result in results)
-    # Verify the mock was called
     mock_vector_db.query.assert_called_once()
 
 
 def test_multiple_2k_character_strings(mock_vector_db):
-    # Create multiple 2k character strings with various facts about Brandon
     contents = [
         (
             "Brandon is a software engineer who lives in San Francisco. "
@@ -184,7 +173,6 @@ def test_multiple_2k_character_strings(mock_vector_db):
     query = "What is Brandon's favorite book?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any(
         "the hitchhiker's guide to the galaxy" in result["content"].lower()
         for result in results
@@ -193,7 +181,6 @@ def test_multiple_2k_character_strings(mock_vector_db):
 
 
 def test_single_short_file(mock_vector_db, tmpdir):
-    # Create a single short text file
     content = "Brandon's favorite sport is basketball."
     file_path = Path(tmpdir.join("short_file.txt"))
     with open(file_path, "w") as f:
@@ -208,13 +195,11 @@ def test_single_short_file(mock_vector_db, tmpdir):
     query = "What sport does Brandon like?"
     results = mock_vector_db.query(query)
 
-    # Assert that the results contain the expected information
     assert any("basketball" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
 def test_single_2k_character_file(mock_vector_db, tmpdir):
-    # Create a single 2k character text file with various facts about Brandon
     content = (
         "Brandon is a software engineer who lives in San Francisco. "
         "He enjoys hiking and often visits the trails in the Bay Area. "
@@ -250,13 +235,11 @@ def test_single_2k_character_file(mock_vector_db, tmpdir):
     query = "What is Brandon's favorite movie?"
     results = mock_vector_db.query(query)
 
-    # Assert that the results contain the expected information
     assert any("inception" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
 def test_multiple_short_files(mock_vector_db, tmpdir):
-    # Create multiple short text files
     contents = [
         {
             "content": "Brandon works as a software engineer.",
@@ -289,13 +272,11 @@ def test_multiple_short_files(mock_vector_db, tmpdir):
     # Perform a query
     query = "What city does he reside in?"
     results = mock_vector_db.query(query)
-    # Assert that the correct information is retrieved
     assert any("new york" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
 def test_multiple_2k_character_files(mock_vector_db, tmpdir):
-    # Create multiple 2k character text files with various facts about Brandon
     contents = [
         (
             "Brandon loves traveling and has visited over 20 countries. "
@@ -366,7 +347,6 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
     query = "What is Brandon's favorite book?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any(
         "the hitchhiker's guide to the galaxy" in result["content"].lower()
         for result in results
@@ -376,7 +356,6 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
 
 @pytest.mark.vcr()
 def test_hybrid_string_and_files(mock_vector_db, tmpdir):
-    # Create string sources
     string_contents = [
         "Brandon is learning French.",
         "Brandon visited Paris last summer.",
@@ -386,7 +365,6 @@ def test_hybrid_string_and_files(mock_vector_db, tmpdir):
         for content in string_contents
     ]
 
-    # Create file sources
     file_contents = [
         "Brandon prefers tea over coffee.",
         "Brandon's favorite book is 'The Alchemist'.",
@@ -411,18 +389,14 @@ def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     query = "What is Brandon's favorite book?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any("the alchemist" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
 def test_pdf_knowledge_source(mock_vector_db):
-    # Get the directory of the current file
     current_dir = Path(__file__).parent
-    # Construct the path to the PDF file
     pdf_path = current_dir / "crewai_quickstart.pdf"
 
-    # Create a PDFKnowledgeSource
     pdf_source = PDFKnowledgeSource(
         file_paths=[pdf_path], metadata={"preference": "personal"}
     )
@@ -435,7 +409,6 @@ def test_pdf_knowledge_source(mock_vector_db):
     query = "How do you create a crew?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any(
         "crewai create crew latest-ai-development" in result["content"].lower()
         for result in results
@@ -447,7 +420,6 @@ def test_pdf_knowledge_source(mock_vector_db):
 def test_csv_knowledge_source(mock_vector_db, tmpdir):
     """Test CSVKnowledgeSource with a simple CSV file."""
 
-    # Create a CSV file with sample data
     csv_content = [
         ["Name", "Age", "City"],
         ["Brandon", "30", "New York"],
@@ -459,7 +431,6 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
         for row in csv_content:
             f.write(",".join(row) + "\n")
 
-    # Create a CSVKnowledgeSource
     csv_source = CSVKnowledgeSource(
         file_paths=[csv_path], metadata={"preference": "personal"}
     )
@@ -472,7 +443,6 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
     query = "How old is Brandon?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any("30" in result["content"] for result in results)
     mock_vector_db.query.assert_called_once()
 
@@ -480,7 +450,6 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
 def test_json_knowledge_source(mock_vector_db, tmpdir):
     """Test JSONKnowledgeSource with a simple JSON file."""
 
-    # Create a JSON file with sample data
     json_data = {
         "people": [
             {"name": "Brandon", "age": 30, "city": "New York"},
@@ -494,7 +463,6 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
 
         json.dump(json_data, f)
 
-    # Create a JSONKnowledgeSource
     json_source = JSONKnowledgeSource(
         file_paths=[json_path], metadata={"preference": "personal"}
     )
@@ -507,7 +475,6 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
     query = "Where does Alice reside?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any("los angeles" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
@@ -515,7 +482,6 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
 def test_excel_knowledge_source(mock_vector_db, tmpdir):
     """Test ExcelKnowledgeSource with a simple Excel file."""
 
-    # Create an Excel file with sample data
     import pandas as pd  # type: ignore[import-untyped]
 
     excel_data = {
@@ -527,7 +493,6 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     excel_path = Path(tmpdir.join("data.xlsx"))
     df.to_excel(excel_path, index=False)
 
-    # Create an ExcelKnowledgeSource
     excel_source = ExcelKnowledgeSource(
         file_paths=[excel_path], metadata={"preference": "personal"}
     )
@@ -540,7 +505,6 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     query = "What is Brandon's age?"
     results = mock_vector_db.query(query)
 
-    # Assert that the correct information is retrieved
     assert any("30" in result["content"] for result in results)
     mock_vector_db.query.assert_called_once()
 
@@ -567,6 +531,7 @@ def test_docling_source(mock_vector_db):
 
 
 @pytest.mark.vcr
+@pytest.mark.timeout(180)
 def test_multiple_docling_sources() -> None:
     urls: list[Path | str] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
@@ -583,19 +548,15 @@ def test_file_path_validation():
     current_dir = Path(__file__).parent
     pdf_path = current_dir / "crewai_quickstart.pdf"
 
-    # Test valid single file_path
     source = PDFKnowledgeSource(file_path=pdf_path)
     assert source.safe_file_paths == [pdf_path]
 
-    # Test valid file_paths list
     source = PDFKnowledgeSource(file_paths=[pdf_path])
     assert source.safe_file_paths == [pdf_path]
 
-    # Test both file_path and file_paths provided (should use file_paths)
     source = PDFKnowledgeSource(file_path=pdf_path, file_paths=[pdf_path])
     assert source.safe_file_paths == [pdf_path]
 
-    # Test neither file_path nor file_paths provided
     with pytest.raises(
         ValueError,
         match="file_path/file_paths must be a Path, str, or a list of these types",
@@ -613,7 +574,7 @@ def test_hash_based_id_generation_without_doc_id(mock_vector_db):
     documents: list[BaseRecord] = [
         {"content": "First document content", "metadata": {"source": "test1", "category": "research"}},
         {"content": "Second document content", "metadata": {"source": "test2", "category": "research"}},
-        {"content": "Third document content"},  # No metadata
+        {"content": "Third document content"},
     ]
 
     result = _prepare_documents_for_chromadb(documents)
@@ -625,10 +586,8 @@ def test_hash_based_id_generation_without_doc_id(mock_vector_db):
         assert len(doc_id) == 64, f"ID should be 64 characters: {doc_id}"
         assert all(c in "0123456789abcdef" for c in doc_id), f"ID should be hex: {doc_id}"
 
-    # Different documents should have different hashes
     assert result.ids[0] != result.ids[1] != result.ids[2]
 
-    # Verify hashes match expected values
     expected_hash_1 = hashlib.sha256(
         f"First document content|{json.dumps({'category': 'research', 'source': 'test1'}, sort_keys=True)}".encode()
     ).hexdigest()
@@ -637,7 +596,6 @@ def test_hash_based_id_generation_without_doc_id(mock_vector_db):
     expected_hash_3 = hashlib.sha256("Third document content".encode()).hexdigest()
     assert result.ids[2] == expected_hash_3, "Third document hash should match expected"
 
-    # Test that duplicate documents are deduplicated (same ID, only one sent)
     duplicate_documents: list[BaseRecord] = [
         {"content": "Same content", "metadata": {"source": "test"}},
         {"content": "Same content", "metadata": {"source": "test"}},
@@ -647,7 +605,6 @@ def test_hash_based_id_generation_without_doc_id(mock_vector_db):
     # Duplicates should be deduplicated - only one ID should remain
     assert len(duplicate_result.ids) == 1, "Duplicate documents should be deduplicated"
     assert len(duplicate_result.ids[0]) == 64, "Deduplicated ID should be clean hash"
-    # Verify it's the expected hash
     expected_hash = hashlib.sha256(
         f"Same content|{json.dumps({'source': 'test'}, sort_keys=True)}".encode()
     ).hexdigest()

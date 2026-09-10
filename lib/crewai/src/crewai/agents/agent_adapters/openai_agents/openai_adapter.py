@@ -81,7 +81,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         Raises:
             ImportError: If OpenAI agent dependencies are not installed.
         """
-        self.llm = kwargs.pop("model", "gpt-4o-mini")
+        self.llm = kwargs.pop("model", "gpt-5.4-mini")
         super().__init__(**kwargs)
         self._tool_adapter = OpenAIAgentToolAdapter(tools=kwargs.get("tools"))
         self._converter_adapter = OpenAIConverterAdapter(agent_adapter=self)

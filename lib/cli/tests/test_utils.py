@@ -102,6 +102,23 @@ def test_tree_copy_to_existing_directory(temp_tree):
         shutil.rmtree(dest_dir)
 
 
+@pytest.mark.parametrize("value", ["1", "true", "True", "yes", "anything"])
+def test_is_dmn_mode_enabled_for_truthy_values(monkeypatch, value):
+    monkeypatch.setenv("CREWAI_DMN", value)
+
+    assert utils.is_dmn_mode_enabled() is True
+
+
+@pytest.mark.parametrize("value", [None, "", "0", "false", "no", "off"])
+def test_is_dmn_mode_enabled_for_falsey_values(monkeypatch, value):
+    if value is None:
+        monkeypatch.delenv("CREWAI_DMN", raising=False)
+    else:
+        monkeypatch.setenv("CREWAI_DMN", value)
+
+    assert utils.is_dmn_mode_enabled() is False
+
+
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.

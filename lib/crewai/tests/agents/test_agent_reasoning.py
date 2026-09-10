@@ -8,9 +8,6 @@ from crewai import Agent, PlanningConfig, Task
 from crewai.llm import LLM
 
 
-# =============================================================================
-# Tests for PlanningConfig configuration (no LLM calls needed)
-# =============================================================================
 
 
 def test_planning_config_default_values():
@@ -23,6 +20,8 @@ def test_planning_config_default_values():
     assert config.plan_prompt is None
     assert config.refine_prompt is None
     assert config.llm is None
+    assert config.observe_steps is None
+    assert config.reasoning_effort == "medium"
 
 
 def test_planning_config_custom_values():
@@ -64,7 +63,6 @@ def test_agent_with_planning_config_custom_prompts():
         verbose=False,
     )
 
-    # Just test that the agent is created properly
     assert agent.planning_config is not None
     assert agent.planning_config.system_prompt == custom_system_prompt
     assert agent.planning_config.plan_prompt == custom_plan_prompt
@@ -88,11 +86,32 @@ def test_agent_with_planning_config_disabled():
     assert agent.planning_enabled is False
 
 
+def test_planning_true_without_config_sets_bounded_max_attempts():
+    """planning=True alone must not leave max_attempts=None (infinite refine loop)."""
+    llm = LLM("gpt-4o-mini")
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        llm=llm,
+        planning=True,
+        verbose=False,
+    )
+
+    assert agent.planning_config is not None
+    assert agent.planning_config.max_attempts == 1
+    assert agent.planning_config.reasoning_effort == "low"
+    assert agent.planning_config.max_steps == 20
+    assert agent.planning_config.max_replans == 3
+    assert agent.planning_config.max_step_iterations == 15
+    assert agent.planning_config.step_timeout is None
+
+
 def test_planning_enabled_property():
     """Test the planning_enabled property on Agent."""
     llm = LLM("gpt-4o-mini")
 
-    # With planning_config enabled
     agent_with_planning = Agent(
         role="Test Agent",
         goal="Test",
@@ -102,7 +121,6 @@ def test_planning_enabled_property():
     )
     assert agent_with_planning.planning_enabled is True
 
-    # With planning_config disabled
     agent_disabled = Agent(
         role="Test Agent",
         goal="Test",
@@ -112,7 +130,6 @@ def test_planning_enabled_property():
     )
     assert agent_disabled.planning_enabled is False
 
-    # Without planning_config
     agent_no_planning = Agent(
         role="Test Agent",
         goal="Test",
@@ -122,16 +139,13 @@ def test_planning_enabled_property():
     assert agent_no_planning.planning_enabled is False
 
 
-# =============================================================================
 # Tests for backward compatibility with reasoning=True (no LLM calls)
-# =============================================================================
 
 
 def test_agent_with_reasoning_backward_compat():
     """Test agent with reasoning=True (backward compatibility)."""
     llm = LLM("gpt-4o-mini")
 
-    # This should emit a deprecation warning
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("always")
         agent = Agent(
@@ -143,7 +157,6 @@ def test_agent_with_reasoning_backward_compat():
             verbose=False,
         )
 
-    # Should have created a PlanningConfig internally
     assert agent.planning_config is not None
     assert agent.planning_enabled is True
 
@@ -162,14 +175,10 @@ def test_agent_with_reasoning_and_max_attempts_backward_compat():
         verbose=False,
     )
 
-    # Should have created a PlanningConfig with max_attempts
     assert agent.planning_config is not None
     assert agent.planning_config.max_attempts == 5
 
 
-# =============================================================================
-# Tests for Agent.kickoff() with planning (uses AgentExecutor)
-# =============================================================================
 
 
 @pytest.mark.vcr()
@@ -222,7 +231,7 @@ def test_agent_kickoff_with_planning_disabled():
         goal="Help solve math problems",
         backstory="A helpful assistant",
         llm=llm,
-        planning=False,  # Explicitly disable planning
+        planning=False,
         verbose=False,
     )
 
@@ -256,10 +265,6 @@ def test_agent_kickoff_multi_step_task_with_planning():
     assert "20" in str(result)
 
 
-# =============================================================================
-# Tests for Agent.execute_task() with planning (uses CrewAgentExecutor)
-# These test the legacy path via handle_reasoning()
-# =============================================================================
 
 
 @pytest.mark.vcr()

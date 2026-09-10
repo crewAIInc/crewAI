@@ -9,6 +9,7 @@ import pytest
 
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.stream_context import add_stream_sink, reset_stream_sinks
 
 
 class AsyncTestEvent(BaseEvent):
@@ -51,6 +52,24 @@ async def test_aemit_with_async_handlers():
 
         assert len(received_events) == 1
         assert received_events[0] == event
+
+
+@pytest.mark.asyncio
+async def test_aemit_publishes_to_active_stream_sinks():
+    published_events = []
+
+    def sink(source: object, event: BaseEvent) -> None:
+        published_events.append((source, event))
+
+    event = AsyncTestEvent(type="async_test")
+    token = add_stream_sink(sink)
+    try:
+        await crewai_event_bus.aemit("test_source", event)
+    finally:
+        reset_stream_sinks(token)
+
+    assert published_events == [("test_source", event)]
+    assert event.emission_sequence is not None
 
 
 @pytest.mark.asyncio

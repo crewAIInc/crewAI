@@ -1,0 +1,112 @@
+---
+title: أدوات Bright Data
+description: تكاملات Bright Data للبحث في SERP واستخراج البيانات عبر Web Unlocker وDataset API.
+icon: spider
+mode: "wide"
+---
+
+# أدوات Bright Data
+
+هذه المجموعة من الأدوات تدمج خدمات Bright Data لاستخراج البيانات من الويب.
+
+## التثبيت
+
+```shell
+uv add crewai-tools requests aiohttp
+```
+
+## متغيرات البيئة
+
+- `BRIGHT_DATA_API_KEY` (مطلوب)
+- `BRIGHT_DATA_ZONE` (لـ SERP/Web Unlocker)
+
+أنشئ بيانات الاعتماد على https://brightdata.com/ (سجّل، ثم أنشئ رمز API ومنطقة).
+راجع التوثيق: https://developers.brightdata.com/
+
+## الأدوات المضمنة
+
+- `BrightDataSearchTool`: بحث SERP (Google/Bing/Yandex) مع خيارات الموقع الجغرافي واللغة والجهاز.
+- `BrightDataWebUnlockerTool`: استخراج الصفحات مع تجاوز مكافحة الروبوتات والتصيير.
+- `BrightDataDatasetTool`: تشغيل مهام Dataset API وجلب النتائج.
+
+## أمثلة
+
+### بحث SERP
+
+```python Code
+from crewai_tools import BrightDataSearchTool
+
+tool = BrightDataSearchTool(
+    query="CrewAI",
+    country="us",
+)
+
+print(tool.run())
+```
+
+### Web Unlocker
+
+```python Code
+from crewai_tools import BrightDataWebUnlockerTool
+
+tool = BrightDataWebUnlockerTool(
+    url="https://example.com",
+    format="markdown",
+)
+
+print(tool.run(url="https://example.com"))
+```
+
+### Dataset API
+
+```python Code
+from crewai_tools import BrightDataDatasetTool
+
+tool = BrightDataDatasetTool(
+    dataset_type="ecommerce",
+    url="https://example.com/product",
+)
+
+print(tool.run())
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+- 401/403: تحقق من `BRIGHT_DATA_API_KEY` و `BRIGHT_DATA_ZONE`.
+- محتوى فارغ/محظور: فعّل التصيير أو جرّب منطقة مختلفة.
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import BrightDataSearchTool
+
+tool = BrightDataSearchTool(
+    query="CrewAI",
+    country="us",
+)
+
+agent = Agent(
+    role="Web Researcher",
+    goal="Search with Bright Data",
+    backstory="Finds reliable results",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search for CrewAI and summarize top results",
+    expected_output="Short summary with links",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+

@@ -213,11 +213,9 @@ def crew(
         instantiated_agents: list[Agent] = []
         agent_roles: set[str] = set()
 
-        # Use the preserved task and agent information
         tasks = self.__crew_metadata__["original_tasks"].items()
         agents = self.__crew_metadata__["original_agents"].items()
 
-        # Instantiate tasks in order
         for _, task_method in tasks:
             task_instance = _call_method(task_method, self)
             instantiated_tasks.append(task_instance)
@@ -226,7 +224,6 @@ def crew(
                 instantiated_agents.append(agent_instance)
                 agent_roles.add(agent_instance.role)
 
-        # Instantiate agents not included by tasks
         for _, agent_method in agents:
             agent_instance = _call_method(agent_method, self)
             if agent_instance.role not in agent_roles:

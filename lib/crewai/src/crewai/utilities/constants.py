@@ -8,39 +8,65 @@ from crewai_core.constants import (
     TRAINING_DATA_FILE as TRAINING_DATA_FILE,
 )
 from crewai_core.printer import PrinterColor
+
+# Coding-assistant and runtime marker tables live in crewai_core so the CLI can
+# detect the same context without importing crewai. Re-exported here because
+# these names are the established import path.
+from crewai_core.runtime_env import (
+    ANTIGRAVITY_ENV_VARS as ANTIGRAVITY_ENV_VARS,
+    AUGMENT_ENV_VARS as AUGMENT_ENV_VARS,
+    CC_ENV_VAR as CC_ENV_VAR,
+    CC_ENV_VARS as CC_ENV_VARS,
+    CI_ENV_VARS as CI_ENV_VARS,
+    CLINE_ENV_VARS as CLINE_ENV_VARS,
+    CODEX_ENV_VARS as CODEX_ENV_VARS,
+    CODING_AGENT_ENV_MARKERS as CODING_AGENT_ENV_MARKERS,
+    CONTAINER_ENV_VARS as CONTAINER_ENV_VARS,
+    CURSOR_ENV_VARS as CURSOR_ENV_VARS,
+    GEMINI_CLI_ENV_VARS as GEMINI_CLI_ENV_VARS,
+    GENERIC_AGENT_ENV_VARS as GENERIC_AGENT_ENV_VARS,
+    HOSTED_IDE_ENV_VARS as HOSTED_IDE_ENV_VARS,
+    JUNIE_ENV_VARS as JUNIE_ENV_VARS,
+    NOTEBOOK_ENV_VARS as NOTEBOOK_ENV_VARS,
+    OPENCODE_ENV_VARS as OPENCODE_ENV_VARS,
+    PAAS_ENV_VARS as PAAS_ENV_VARS,
+    RUNTIME_CONTEXT_ENV_MARKERS as RUNTIME_CONTEXT_ENV_MARKERS,
+    SERVERLESS_ENV_VARS as SERVERLESS_ENV_VARS,
+)
 from pydantic_core import CoreSchema
 
 
 __all__ = [
+    "ANTIGRAVITY_ENV_VARS",
+    "AUGMENT_ENV_VARS",
     "CC_ENV_VAR",
+    "CC_ENV_VARS",
+    "CI_ENV_VARS",
+    "CLINE_ENV_VARS",
     "CODEX_ENV_VARS",
+    "CODING_AGENT_ENV_MARKERS",
+    "CONTAINER_ENV_VARS",
     "CREWAI_TRAINED_AGENTS_FILE_ENV",
     "CURSOR_ENV_VARS",
     "EMITTER_COLOR",
+    "GEMINI_CLI_ENV_VARS",
+    "GENERIC_AGENT_ENV_VARS",
+    "HOSTED_IDE_ENV_VARS",
+    "JUNIE_ENV_VARS",
     "KNOWLEDGE_DIRECTORY",
     "MAX_FILE_NAME_LENGTH",
+    "NOTEBOOK_ENV_VARS",
     "NOT_SPECIFIED",
+    "OPENCODE_ENV_VARS",
+    "PAAS_ENV_VARS",
+    "RUNTIME_CONTEXT_ENV_MARKERS",
+    "SERVERLESS_ENV_VARS",
     "TRAINED_AGENTS_DATA_FILE",
     "TRAINING_DATA_FILE",
 ]
 
 
 EMITTER_COLOR: Final[PrinterColor] = "bold_blue"
-CC_ENV_VAR: Final[str] = "CLAUDECODE"
-CODEX_ENV_VARS: Final[tuple[str, ...]] = (
-    "CODEX_CI",
-    "CODEX_MANAGED_BY_NPM",
-    "CODEX_SANDBOX",
-    "CODEX_SANDBOX_NETWORK_DISABLED",
-    "CODEX_THREAD_ID",
-)
-CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
-    "CURSOR_AGENT",
-    "CURSOR_EXTENSION_HOST_ROLE",
-    "CURSOR_SANDBOX",
-    "CURSOR_TRACE_ID",
-    "CURSOR_WORKSPACE_LABEL",
-)
 
 
 class _NotSpecified:

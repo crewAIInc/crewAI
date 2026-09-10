@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 class PlannerObserver:
     """Observes step execution results and decides on plan continuation.
 
-    After EVERY step execution, this class:
+    When ``observe_steps`` is enabled (see ``PlanningConfig``), after EVERY
+    step execution this class:
     1. Analyzes what the step accomplished
     2. Identifies new information learned
     3. Decides if the remaining plan is still valid
@@ -83,6 +84,32 @@ class PlannerObserver:
             return create_llm(config.llm)
         return self.agent.llm
 
+    @staticmethod
+    def heuristic_observation(
+        *,
+        step_success: bool,
+        result: str = "",
+    ) -> StepObservation:
+        """Build an observation without an LLM call.
+
+        Used when ``PlanningConfig.observe_steps`` is False or when
+        ``reasoning_effort`` is ``"low"`` (the default skips LLM observation).
+
+        Args:
+            step_success: Whether StepExecutor reported the step as successful.
+            result: The step result string (unused today; reserved for heuristics).
+
+        Returns:
+            A StepObservation derived from execution metadata only.
+        """
+        _ = result
+        return StepObservation(
+            step_completed_successfully=step_success,
+            key_information_learned="",
+            remaining_plan_still_valid=True,
+            needs_full_replan=False,
+        )
+
     def observe(
         self,
         completed_step: TodoItem,
@@ -104,7 +131,13 @@ class PlannerObserver:
             StepObservation with the Planner's analysis. Any suggested
             refinements are structured StepRefinement objects ready for
             direct application — no second LLM call needed.
+
+        Raises:
+            HookAborted: A `pre_model_call` hook denied the observation call.
+                Every other failure degrades to a conservative observation.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         agent_role = self.agent.role
 
         crewai_event_bus.emit(
@@ -161,6 +194,21 @@ class PlannerObserver:
 
             return observation
 
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the conservative-replan fallback is skipped.
+            crewai_event_bus.emit(
+                self.agent,
+                event=StepObservationFailedEvent(
+                    agent_role=agent_role,
+                    step_number=completed_step.step_number,
+                    step_description=completed_step.description,
+                    error=str(e),
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
+            raise
         except Exception as e:
             logger.warning(
                 f"Observation LLM call failed: {e}. Defaulting to conservative replan."

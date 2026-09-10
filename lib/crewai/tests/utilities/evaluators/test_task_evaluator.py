@@ -44,7 +44,6 @@ def test_evaluate_training_data(converter_mock):
 
     assert result == function_return_value
 
-    # Verify the converter was called with correct arguments
     converter_mock.assert_called_once()
     call_kwargs = converter_mock.call_args.kwargs
 

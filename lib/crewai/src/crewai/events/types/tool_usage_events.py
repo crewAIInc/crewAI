@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import ConfigDict
 
 from crewai.events.base_events import BaseEvent
+from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy
 
 
 class ToolUsageEvent(BaseEvent):
@@ -21,6 +22,8 @@ class ToolUsageEvent(BaseEvent):
     agent: Any | None = None
     task_name: str | None = None
     task_id: str | None = None
+    plan_step_number: int | None = None
+    plan_step_description: str | None = None
     from_task: Any | None = None
     from_agent: Any | None = None
 
@@ -41,7 +44,6 @@ class ToolUsageEvent(BaseEvent):
 
         super().__init__(**data)
 
-        # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
@@ -65,6 +67,11 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
     finished_at: datetime
     from_cache: bool = False
     output: Any
+    failure: ToolFailure | None = None
+    """Set when the tool ran but reported it did not succeed.
+
+    Lets a trace UI mark the call failed without correlating a second event.
+    """
     type: Literal["tool_usage_finished"] = "tool_usage_finished"
 
 
@@ -73,6 +80,20 @@ class ToolUsageErrorEvent(ToolUsageEvent):
 
     error: Any
     type: Literal["tool_usage_error"] = "tool_usage_error"
+
+
+class ToolFailureDetectedEvent(ToolUsageEvent):
+    """Event emitted when a tool completed but reported that it failed.
+
+    Distinct from :class:`ToolUsageErrorEvent`, which covers a tool *raising*.
+    This is the quieter case: the call returned normally and says the work was
+    not done. Emitted for every policy except ``IGNORE``, and before a
+    ``RAISE`` aborts, so subscribers see it even on an aborting run.
+    """
+
+    failure: ToolFailure
+    policy: ToolFailurePolicy
+    type: Literal["tool_failure_detected"] = "tool_failure_detected"
 
 
 class ToolValidateInputErrorEvent(ToolUsageEvent):
@@ -101,7 +122,6 @@ class ToolExecutionErrorEvent(BaseEvent):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"

@@ -93,7 +93,6 @@ class TestHTTPTransport:
         interceptor = TrackingInterceptor()
         transport = HTTPTransport(interceptor=interceptor)
 
-        # Create a mock parent transport that returns a response
         mock_response = httpx.Response(200, json={"success": True})
         mock_parent_handle = Mock(return_value=mock_response)
 
@@ -105,19 +104,16 @@ class TestHTTPTransport:
             request = httpx.Request("GET", "https://api.example.com/test")
             response = transport.handle_request(request)
 
-            # Verify interceptor was called
             assert len(interceptor.outbound_calls) == 1
             assert len(interceptor.inbound_calls) == 1
             assert interceptor.outbound_calls[0] is request
             assert interceptor.inbound_calls[0] is response
 
-            # Verify headers were added
             assert "X-Intercepted-Sync" in request.headers
             assert request.headers["X-Intercepted-Sync"] == "true"
             assert "X-Response-Intercepted-Sync" in response.headers
             assert response.headers["X-Response-Intercepted-Sync"] == "true"
         finally:
-            # Restore original method
             httpx.HTTPTransport.handle_request = original_handle
 
 
@@ -144,7 +140,6 @@ class TestAsyncHTTPTransport:
         interceptor = TrackingInterceptor()
         transport = AsyncHTTPTransport(interceptor=interceptor)
 
-        # Create a mock parent transport that returns a response
         mock_response = httpx.Response(200, json={"success": True})
 
         async def mock_handle(*args, **kwargs):
@@ -160,23 +155,19 @@ class TestAsyncHTTPTransport:
             request = httpx.Request("GET", "https://api.example.com/test")
             response = await transport.handle_async_request(request)
 
-            # Verify async interceptor was called
             assert len(interceptor.async_outbound_calls) == 1
             assert len(interceptor.async_inbound_calls) == 1
             assert interceptor.async_outbound_calls[0] is request
             assert interceptor.async_inbound_calls[0] is response
 
-            # Verify sync interceptor was NOT called
             assert len(interceptor.outbound_calls) == 0
             assert len(interceptor.inbound_calls) == 0
 
-            # Verify async headers were added
             assert "X-Intercepted-Async" in request.headers
             assert request.headers["X-Intercepted-Async"] == "true"
             assert "X-Response-Intercepted-Async" in response.headers
             assert response.headers["X-Response-Intercepted-Async"] == "true"
         finally:
-            # Restore original method
             httpx.AsyncHTTPTransport.handle_async_request = original_handle
 
 
@@ -196,7 +187,6 @@ class TestTransportIntegration:
         httpx.HTTPTransport.handle_request = mock_parent_handle
 
         try:
-            # Make multiple requests
             requests = [
                 httpx.Request("GET", "https://api.example.com/1"),
                 httpx.Request("POST", "https://api.example.com/2"),
@@ -206,7 +196,6 @@ class TestTransportIntegration:
             for req in requests:
                 transport.handle_request(req)
 
-            # Verify all requests were intercepted
             assert len(interceptor.outbound_calls) == 3
             assert len(interceptor.inbound_calls) == 3
             assert interceptor.outbound_calls == requests
@@ -230,7 +219,6 @@ class TestTransportIntegration:
         httpx.AsyncHTTPTransport.handle_async_request = mock_parent_handle
 
         try:
-            # Make multiple async requests
             requests = [
                 httpx.Request("GET", "https://api.example.com/1"),
                 httpx.Request("POST", "https://api.example.com/2"),
@@ -240,7 +228,6 @@ class TestTransportIntegration:
             for req in requests:
                 await transport.handle_async_request(req)
 
-            # Verify all requests were intercepted
             assert len(interceptor.async_outbound_calls) == 3
             assert len(interceptor.async_inbound_calls) == 3
             assert interceptor.async_outbound_calls == requests

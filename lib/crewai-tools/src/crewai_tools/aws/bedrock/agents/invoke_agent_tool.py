@@ -14,7 +14,6 @@ from crewai_tools.aws.bedrock.exceptions import (
 )
 
 
-# Load environment variables from .env file
 load_dotenv()
 
 
@@ -66,29 +65,24 @@ class BedrockInvokeAgentTool(BaseTool):
         self.enable_trace = enable_trace
         self.end_session = end_session
 
-        # Update the description if provided
         if description:
             self.description = description
 
-        # Validate parameters
         self._validate_parameters()
 
     def _validate_parameters(self) -> None:
         """Validate the parameters according to AWS API requirements."""
         try:
-            # Validate agent_id
             if not self.agent_id:
                 raise BedrockValidationError("agent_id cannot be empty")
             if not isinstance(self.agent_id, str):
                 raise BedrockValidationError("agent_id must be a string")
 
-            # Validate agent_alias_id
             if not self.agent_alias_id:
                 raise BedrockValidationError("agent_alias_id cannot be empty")
             if not isinstance(self.agent_alias_id, str):
                 raise BedrockValidationError("agent_alias_id must be a string")
 
-            # Validate session_id if provided
             if self.session_id and not isinstance(self.session_id, str):
                 raise BedrockValidationError("session_id must be a string")
 
@@ -113,7 +107,6 @@ class BedrockInvokeAgentTool(BaseTool):
                 ),
             )
 
-            # Format the prompt with current time
             current_utc = datetime.now(timezone.utc)
             prompt = f"""
 The current time is: {current_utc}
@@ -132,12 +125,9 @@ Below is the users query or task. Complete it and answer it consicely and to the
                 endSession=self.end_session,
             )
 
-            # Process the response
             completion = ""
 
-            # Check if response contains a completion field
             if "completion" in response:
-                # Process streaming response format
                 for event in response.get("completion", []):
                     if "chunk" in event and "bytes" in event["chunk"]:
                         chunk_bytes = event["chunk"]["bytes"]
@@ -161,7 +151,6 @@ Below is the users query or task. Complete it and answer it consicely and to the
                     "response_keys": list(response.keys()),
                 }
 
-                # Add more debug info
                 if "chunk" in response:
                     debug_info["chunk_keys"] = list(response["chunk"].keys())
 

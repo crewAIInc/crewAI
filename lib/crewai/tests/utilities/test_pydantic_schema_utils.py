@@ -303,6 +303,122 @@ class TestUnionTypes:
         assert Model(value="hello").value == "hello"
         assert Model(value=3.14).value == pytest.approx(3.14)
 
+    def test_type_array_nullable_string_with_format(self) -> None:
+        """type: ["string", "null"] -- the .NET/System.Text.Json-style way
+        of expressing an optional field, as opposed to Pydantic's own
+        anyOf-based form. Seen in real MCP tool schemas from non-Python
+        servers (e.g. Equibles' ListCompanyDocuments startDate/endDate
+        filters). The format="date-time" here (also straight from that
+        real schema) is applied by the existing FORMAT_TYPE_MAP logic once
+        the list-form type no longer raises, so the field lands as a real
+        datetime rather than str -- that's the pre-existing, correct
+        behavior for any date-time-formatted field, not something this fix
+        changes."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "startDate": {
+                    "description": "Optional start date filter in YYYY-MM-DD format",
+                    "type": ["string", "null"],
+                    "format": "date-time",
+                    "default": None,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(startDate="2026-01-01").startDate == datetime.datetime(
+            2026, 1, 1
+        )
+        assert Model(startDate=None).startDate is None
+        assert Model().startDate is None
+
+    def test_type_array_nullable_string_no_format(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "note": {"type": ["string", "null"]},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(note="hello").note == "hello"
+        assert Model(note=None).note is None
+        assert Model().note is None
+
+    def test_type_array_multiple_non_null(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {"type": ["string", "integer", "null"]},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="hello").value == "hello"
+        assert Model(value=42).value == 42
+        assert Model(value=None).value is None
+
+    def test_type_array_single_element(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {"value": {"type": ["string"]}},
+            "required": ["value"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="hello").value == "hello"
+
+    def test_type_array_required_nullable_string_with_format(self) -> None:
+        """A required-but-nullable formatted field, e.g. `{"type":
+        ["string", "null"], "format": "date-time"}` inside a "required"
+        list -- a valid JSON Schema shape meaning the key must be present
+        but its value may be null. Before this fix, the FORMAT_TYPE_MAP
+        override in `_json_schema_to_pydantic_field` replaced the whole
+        `Union[datetime, None]` with plain `datetime`, so passing `None`
+        would fail validation even though the schema explicitly allows it.
+        The `not is_required` Optional-rewrap at the end of that function
+        doesn't fire for required fields, so this case wasn't masked the
+        way the non-required version (test above) was.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "startDate": {
+                    "type": ["string", "null"],
+                    "format": "date-time",
+                },
+            },
+            "required": ["startDate"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(startDate="2026-01-01").startDate == datetime.datetime(
+            2026, 1, 1
+        )
+        assert Model(startDate=None).startDate is None
+        with pytest.raises(Exception):
+            Model()
+
+    def test_type_array_multiple_non_null_with_format(self) -> None:
+        """A list-form type with more than one non-null member plus a
+        recognized format, e.g. `{"type": ["string", "integer", "null"],
+        "format": "date-time"}`. Before this fix, the FORMAT_TYPE_MAP
+        override collapsed the entire Union down to plain `datetime`,
+        silently dropping the `integer` alternative regardless of whether
+        the field was required. The fix narrows only the `str` member of
+        the union to the formatted type, leaving `integer` and `None`
+        alone.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": ["string", "integer", "null"],
+                    "format": "date-time",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="2026-01-01").value == datetime.datetime(2026, 1, 1)
+        assert Model(value=42).value == 42
+        assert Model(value=None).value is None
+
 
 class TestAllOfMerging:
     def test_allof_merges_properties(self) -> None:
@@ -347,9 +463,7 @@ class TestAllOfMerging:
         assert obj.item.id == 1
 
 
-# ---------------------------------------------------------------------------
 # $ref resolution
-# ---------------------------------------------------------------------------
 
 
 class TestRefResolution:
@@ -374,9 +488,7 @@ class TestRefResolution:
         assert obj.item.name == "Widget"
 
 
-# ---------------------------------------------------------------------------
 # model_name parameter
-# ---------------------------------------------------------------------------
 
 
 class TestModelName:
@@ -410,9 +522,7 @@ class TestModelName:
         assert Model.__name__ == "DynamicModel"
 
 
-# ---------------------------------------------------------------------------
 # enrich_descriptions
-# ---------------------------------------------------------------------------
 
 
 class TestEnrichDescriptions:
@@ -477,9 +587,7 @@ class TestEnrichDescriptions:
         assert "Maximum: 10" in nested_field.description
 
 
-# ---------------------------------------------------------------------------
 # Edge cases
-# ---------------------------------------------------------------------------
 
 
 class TestEdgeCases:
@@ -507,9 +615,7 @@ class TestEdgeCases:
             create_model_from_schema(schema)
 
 
-# ---------------------------------------------------------------------------
 # build_rich_field_description
-# ---------------------------------------------------------------------------
 
 
 class TestBuildRichFieldDescription:
@@ -548,7 +654,6 @@ class TestBuildRichFieldDescription:
         assert "Examples:" in desc
         assert "'foo'" in desc
         assert "'baz'" in desc
-        # Only first 3 shown
         assert "'extra'" not in desc
 
     def test_combined_constraints(self) -> None:
@@ -564,9 +669,7 @@ class TestBuildRichFieldDescription:
         assert "Format: int32" in desc
 
 
-# ---------------------------------------------------------------------------
 # Schema transformation functions
-# ---------------------------------------------------------------------------
 
 
 class TestResolveRefs:
@@ -884,9 +987,7 @@ class TestEndToEndMCPSchema:
         assert obj.filters.categories == ["news", "tech"]
 
 
-# ---------------------------------------------------------------------------
 # Recursive / circular $ref schemas (GH-5490)
-# ---------------------------------------------------------------------------
 
 RECURSIVE_NODE_SCHEMA: dict = {
     "$defs": {
@@ -948,7 +1049,49 @@ class TestResolveRefsRecursive:
         assert resolved["properties"]["x"]["type"] == "integer"
 
 
-class TestSanitizeRecursiveSchemas:
+class TestSanitizeStrictSchemas:
+    def test_openai_strict_preserves_property_named_title(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "title": {"title": "Title", "type": "string"},
+                "url": {"title": "Url", "type": "string"},
+            },
+            "required": ["title", "url"],
+        }
+
+        san = sanitize_tool_params_for_openai_strict(deepcopy(schema))
+
+        assert "title" in san["properties"]
+        assert set(san["required"]) == set(san["properties"].keys())
+        assert "title" not in san["properties"]["title"]
+
+    def test_openai_strict_preserves_nested_property_named_title(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"title": "Nested Title", "type": "string"},
+                    },
+                    "required": ["title"],
+                },
+            },
+            "required": ["payload"],
+        }
+
+        san = sanitize_tool_params_for_openai_strict(deepcopy(schema))
+        payload = san["properties"]["payload"]
+
+        assert "title" in payload["properties"]
+        assert payload["required"] == ["title"]
+        assert "title" not in payload["properties"]["title"]
+
     def test_anthropic_strict_preserves_recursive_type(self) -> None:
         from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_anthropic_strict
 

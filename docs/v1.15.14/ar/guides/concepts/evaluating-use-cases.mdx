@@ -1,0 +1,485 @@
+---
+title: تقييم حالات الاستخدام لـ CrewAI
+description: تعلم كيفية تقييم احتياجات تطبيقات الذكاء الاصطناعي واختيار النهج الصحيح بين Crews وFlows بناءً على متطلبات التعقيد والدقة.
+icon: scale-balanced
+mode: "wide"
+---
+
+## فهم إطار القرار
+
+عند بناء تطبيقات ذكاء اصطناعي مع CrewAI، أحد أهم القرارات التي ستتخذها هو اختيار النهج الصحيح لحالة الاستخدام المحددة. هل يجب استخدام Crew؟ أم Flow؟ أم مزيج من كليهما؟ سيساعدك هذا الدليل على تقييم متطلباتك واتخاذ قرارات معمارية مدروسة.
+
+في جوهر هذا القرار فهم العلاقة بين **التعقيد** و**الدقة** في تطبيقك:
+
+<Frame caption="مصفوفة التعقيد مقابل الدقة لتطبيقات CrewAI">
+  <img src="/images/complexity_precision.png" alt="مصفوفة التعقيد مقابل الدقة" />
+</Frame>
+
+تساعد هذه المصفوفة في تصور كيف تتوافق النهج المختلفة مع متطلبات متفاوتة للتعقيد والدقة. لنستكشف ما يعنيه كل ربع وكيف يوجه خياراتك المعمارية.
+
+## شرح مصفوفة التعقيد-الدقة
+
+### ما هو التعقيد؟
+
+في سياق تطبيقات CrewAI، يشير **التعقيد** إلى:
+
+- عدد الخطوات أو العمليات المميزة المطلوبة
+- تنوع المهام التي يجب تنفيذها
+- التبعيات المتبادلة بين المكونات المختلفة
+- الحاجة للمنطق الشرطي والتفرع
+- تطور سير العمل الكلي
+
+### ما هي الدقة؟
+
+**الدقة** في هذا السياق تشير إلى:
+
+- الدقة المطلوبة في المخرجات النهائية
+- الحاجة لنتائج منظمة وقابلة للتنبؤ
+- أهمية إمكانية التكرار
+- مستوى التحكم المطلوب في كل خطوة
+- تحمّل التباين في المخرجات
+
+### الأرباع الأربعة
+
+#### 1. تعقيد منخفض، دقة منخفضة
+
+**الخصائص:**
+- مهام بسيطة ومباشرة
+- تحمّل بعض التباين في المخرجات
+- عدد محدود من الخطوات
+- تطبيقات إبداعية أو استكشافية
+
+**النهج الموصى به:** Crews بسيطة مع عدد قليل من الـ Agents
+
+**أمثلة على حالات الاستخدام:**
+- إنشاء محتوى أساسي
+- العصف الذهني
+- مهام التلخيص البسيطة
+- مساعدة الكتابة الإبداعية
+
+#### 2. تعقيد منخفض، دقة عالية
+
+**الخصائص:**
+- سير عمل بسيطة تتطلب مخرجات دقيقة ومنظمة
+- حاجة لنتائج قابلة للتكرار
+- خطوات محدودة مع متطلبات دقة عالية
+- غالبًا تتضمن معالجة أو تحويل بيانات
+
+**النهج الموصى به:** Flows مع استدعاءات LLM مباشرة أو Crews بسيطة مع مخرجات منظمة
+
+**أمثلة على حالات الاستخدام:**
+- استخراج البيانات وتحويلها
+- ملء النماذج والتحقق منها
+- إنشاء محتوى منظم (JSON، XML)
+- مهام التصنيف البسيطة
+
+#### 3. تعقيد عالٍ، دقة منخفضة
+
+**الخصائص:**
+- عمليات متعددة المراحل بخطوات كثيرة
+- مخرجات إبداعية أو استكشافية
+- تفاعلات معقدة بين المكونات
+- تحمّل التباين في النتائج النهائية
+
+**النهج الموصى به:** Crews معقدة مع عدة Agents متخصصة
+
+**أمثلة على حالات الاستخدام:**
+- البحث والتحليل
+- خطوط إنتاج المحتوى
+- تحليل البيانات الاستكشافي
+- حل المشكلات الإبداعي
+
+#### 4. تعقيد عالٍ، دقة عالية
+
+**الخصائص:**
+- سير عمل معقدة تتطلب مخرجات منظمة
+- خطوات مترابطة متعددة مع متطلبات دقة صارمة
+- حاجة لمعالجة متطورة ونتائج دقيقة معًا
+- غالبًا تطبيقات حرجة المهمة
+
+**النهج الموصى به:** Flows تنسّق عدة Crews مع خطوات تحقق
+
+**أمثلة على حالات الاستخدام:**
+- أنظمة دعم القرار المؤسسية
+- خطوط معالجة بيانات معقدة
+- معالجة مستندات متعددة المراحل
+- تطبيقات الصناعات المنظمة
+
+## الاختيار بين Crews وFlows
+
+### متى تختار Crews
+
+الـ Crews مثالية عندما:
+
+1. **تحتاج ذكاء تعاوني** - عدة Agents بتخصصات مختلفة تحتاج للعمل معًا
+2. **المشكلة تتطلب تفكيرًا ناشئًا** - الحل يستفيد من منظورات ونُهج مختلفة
+3. **المهمة إبداعية أو تحليلية بالأساس** - العمل يتضمن بحثًا أو إنشاء محتوى أو تحليل
+4. **تقدّر القدرة على التكيف على الهيكل الصارم** - سير العمل يمكن أن يستفيد من استقلالية الـ Agent
+5. **تنسيق المخرجات يمكن أن يكون مرنًا نوعًا ما** - بعض التباين في هيكل المخرجات مقبول
+
+```python
+# Example: Research Crew for market analysis
+from crewai import Agent, Crew, Process, Task
+
+# Create specialized agents
+researcher = Agent(
+    role="Market Research Specialist",
+    goal="Find comprehensive market data on emerging technologies",
+    backstory="You are an expert at discovering market trends and gathering data."
+)
+
+analyst = Agent(
+    role="Market Analyst",
+    goal="Analyze market data and identify key opportunities",
+    backstory="You excel at interpreting market data and spotting valuable insights."
+)
+
+# Define their tasks
+research_task = Task(
+    description="Research the current market landscape for AI-powered healthcare solutions",
+    expected_output="Comprehensive market data including key players, market size, and growth trends",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analyze the market data and identify the top 3 investment opportunities",
+    expected_output="Analysis report with 3 recommended investment opportunities and rationale",
+    agent=analyst,
+    context=[research_task]
+)
+
+# Create the crew
+market_analysis_crew = Crew(
+    agents=[researcher, analyst],
+    tasks=[research_task, analysis_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+# Run the crew
+result = market_analysis_crew.kickoff()
+```
+
+### متى تختار Flows
+
+الـ Flows مثالية عندما:
+
+1. **تحتاج تحكمًا دقيقًا في التنفيذ** - سير العمل يتطلب تسلسلًا دقيقًا وإدارة حالة
+2. **التطبيق له متطلبات حالة معقدة** - تحتاج لصيانة وتحويل الحالة عبر خطوات متعددة
+3. **تحتاج مخرجات منظمة وقابلة للتنبؤ** - التطبيق يتطلب نتائج متسقة ومنسّقة
+4. **سير العمل يتضمن منطقًا شرطيًا** - مسارات مختلفة يجب اتخاذها بناءً على نتائج وسيطة
+5. **تحتاج الجمع بين AI وكود إجرائي** - الحل يتطلب قدرات AI وبرمجة تقليدية معًا
+
+```python
+# Example: Customer Support Flow with structured processing
+from crewai.flow.flow import Flow, listen, router, start
+from pydantic import BaseModel
+from typing import List, Dict
+
+# Define structured state
+class SupportTicketState(BaseModel):
+    ticket_id: str = ""
+    customer_name: str = ""
+    issue_description: str = ""
+    category: str = ""
+    priority: str = "medium"
+    resolution: str = ""
+    satisfaction_score: int = 0
+
+class CustomerSupportFlow(Flow[SupportTicketState]):
+    @start()
+    def receive_ticket(self):
+        self.state.ticket_id = "TKT-12345"
+        self.state.customer_name = "Alex Johnson"
+        self.state.issue_description = "Unable to access premium features after payment"
+        return "Ticket received"
+
+    @listen(receive_ticket)
+    def categorize_ticket(self, _):
+        from crewai import LLM
+        llm = LLM(model="openai/gpt-4o-mini")
+
+        prompt = f"""
+        Categorize the following customer support issue into one of these categories:
+        - Billing
+        - Account Access
+        - Technical Issue
+        - Feature Request
+        - Other
+
+        Issue: {self.state.issue_description}
+
+        Return only the category name.
+        """
+
+        self.state.category = llm.call(prompt).strip()
+        return self.state.category
+
+    @router(categorize_ticket)
+    def route_by_category(self, category):
+        return category.lower().replace(" ", "_")
+
+    @listen("billing")
+    def handle_billing_issue(self):
+        self.state.priority = "high"
+        return "Billing issue handled"
+
+    @listen("account_access")
+    def handle_access_issue(self):
+        self.state.priority = "high"
+        return "Access issue handled"
+
+    @listen("billing", "account_access", "technical_issue", "feature_request", "other")
+    def resolve_ticket(self, resolution_info):
+        self.state.resolution = f"Issue resolved: {resolution_info}"
+        return self.state.resolution
+
+# Run the flow
+support_flow = CustomerSupportFlow()
+result = support_flow.kickoff()
+```
+
+### متى تجمع بين Crews وFlows
+
+أكثر التطبيقات تطورًا غالبًا تستفيد من الجمع بين Crews وFlows:
+
+1. **عمليات معقدة متعددة المراحل** - استخدم Flows لتنسيق العملية الكلية وCrews للمهام الفرعية المعقدة
+2. **تطبيقات تتطلب إبداعًا وهيكلاً معًا** - استخدم Crews للمهام الإبداعية وFlows للمعالجة المنظمة
+3. **تطبيقات AI مؤسسية** - استخدم Flows لإدارة الحالة وتدفق العمليات مع الاستفادة من Crews للعمل المتخصص
+
+```python
+# Example: Content Production Pipeline combining Crews and Flows
+from crewai.flow.flow import Flow, listen, start
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+from typing import List, Dict
+
+class ContentState(BaseModel):
+    topic: str = ""
+    target_audience: str = ""
+    content_type: str = ""
+    outline: Dict = {}
+    draft_content: str = ""
+    final_content: str = ""
+    seo_score: int = 0
+
+class ContentProductionFlow(Flow[ContentState]):
+    @start()
+    def initialize_project(self):
+        self.state.topic = "Sustainable Investing"
+        self.state.target_audience = "Millennial Investors"
+        self.state.content_type = "Blog Post"
+        return "Project initialized"
+
+    @listen(initialize_project)
+    def create_outline(self, _):
+        researcher = Agent(
+            role="Content Researcher",
+            goal=f"Research {self.state.topic} for {self.state.target_audience}",
+            backstory="You are an expert researcher with deep knowledge of content creation."
+        )
+
+        outliner = Agent(
+            role="Content Strategist",
+            goal=f"Create an engaging outline for a {self.state.content_type}",
+            backstory="You excel at structuring content for maximum engagement."
+        )
+
+        research_task = Task(
+            description=f"Research {self.state.topic} focusing on what would interest {self.state.target_audience}",
+            expected_output="Comprehensive research notes with key points and statistics",
+            agent=researcher
+        )
+
+        outline_task = Task(
+            description=f"Create an outline for a {self.state.content_type} about {self.state.topic}",
+            expected_output="Detailed content outline with sections and key points",
+            agent=outliner,
+            context=[research_task]
+        )
+
+        outline_crew = Crew(
+            agents=[researcher, outliner],
+            tasks=[research_task, outline_task],
+            process=Process.sequential,
+            verbose=True
+        )
+
+        result = outline_crew.kickoff()
+
+        import json
+        try:
+            self.state.outline = json.loads(result.raw)
+        except:
+            self.state.outline = {"sections": result.raw}
+
+        return "Outline created"
+
+    @listen(create_outline)
+    def write_content(self, _):
+        writer = Agent(
+            role="Content Writer",
+            goal=f"Write engaging content for {self.state.target_audience}",
+            backstory="You are a skilled writer who creates compelling content."
+        )
+
+        editor = Agent(
+            role="Content Editor",
+            goal="Ensure content is polished, accurate, and engaging",
+            backstory="You have a keen eye for detail and a talent for improving content."
+        )
+
+        writing_task = Task(
+            description=f"Write a {self.state.content_type} about {self.state.topic} following this outline: {self.state.outline}",
+            expected_output="Complete draft content in markdown format",
+            agent=writer
+        )
+
+        editing_task = Task(
+            description="Edit and improve the draft content for clarity, engagement, and accuracy",
+            expected_output="Polished final content in markdown format",
+            agent=editor,
+            context=[writing_task]
+        )
+
+        writing_crew = Crew(
+            agents=[writer, editor],
+            tasks=[writing_task, editing_task],
+            process=Process.sequential,
+            verbose=True
+        )
+
+        result = writing_crew.kickoff()
+        self.state.final_content = result.raw
+
+        return "Content created"
+
+    @listen(write_content)
+    def optimize_for_seo(self, _):
+        from crewai import LLM
+        llm = LLM(model="openai/gpt-4o-mini")
+
+        prompt = f"""
+        Analyze this content for SEO effectiveness for the keyword "{self.state.topic}".
+        Rate it on a scale of 1-100 and provide 3 specific recommendations for improvement.
+
+        Content: {self.state.final_content[:1000]}... (truncated for brevity)
+
+        Format your response as JSON with the following structure:
+        {{
+            "score": 85,
+            "recommendations": [
+                "Recommendation 1",
+                "Recommendation 2",
+                "Recommendation 3"
+            ]
+        }}
+        """
+
+        seo_analysis = llm.call(prompt)
+
+        import json
+        try:
+            analysis = json.loads(seo_analysis)
+            self.state.seo_score = analysis.get("score", 0)
+            return analysis
+        except:
+            self.state.seo_score = 50
+            return {"score": 50, "recommendations": ["Unable to parse SEO analysis"]}
+
+# Run the flow
+content_flow = ContentProductionFlow()
+result = content_flow.kickoff()
+```
+
+## إطار التقييم العملي
+
+لتحديد النهج الصحيح لحالة استخدامك المحددة، اتبع إطار التقييم التدريجي هذا:
+
+### الخطوة 1: تقييم التعقيد
+
+قيّم تعقيد تطبيقك على مقياس من 1-10 من خلال النظر في:
+
+1. **عدد الخطوات**: كم عدد العمليات المميزة المطلوبة؟
+   - 1-3 خطوات: تعقيد منخفض (1-3)
+   - 4-7 خطوات: تعقيد متوسط (4-7)
+   - 8+ خطوات: تعقيد عالٍ (8-10)
+
+2. **التبعيات المتبادلة**: ما مدى ترابط الأجزاء المختلفة؟
+   - تبعيات قليلة: تعقيد منخفض (1-3)
+   - بعض التبعيات: تعقيد متوسط (4-7)
+   - تبعيات معقدة كثيرة: تعقيد عالٍ (8-10)
+
+3. **المنطق الشرطي**: ما مقدار التفرع وصنع القرار المطلوب؟
+   - عملية خطية: تعقيد منخفض (1-3)
+   - بعض التفرع: تعقيد متوسط (4-7)
+   - أشجار قرار معقدة: تعقيد عالٍ (8-10)
+
+4. **المعرفة التخصصية**: ما مدى تخصص المعرفة المطلوبة؟
+   - معرفة عامة: تعقيد منخفض (1-3)
+   - بعض المعرفة المتخصصة: تعقيد متوسط (4-7)
+   - خبرة عميقة في مجالات متعددة: تعقيد عالٍ (8-10)
+
+احسب متوسط درجتك لتحديد التعقيد الكلي.
+
+### الخطوة 2: تقييم متطلبات الدقة
+
+قيّم متطلبات الدقة على مقياس من 1-10 من خلال النظر في:
+
+1. **هيكل المخرجات**: ما مدى التنظيم المطلوب في المخرجات؟
+   - نص حر: دقة منخفضة (1-3)
+   - شبه منظم: دقة متوسطة (4-7)
+   - منسّق بشكل صارم (JSON، XML): دقة عالية (8-10)
+
+2. **احتياجات الدقة**: ما أهمية الدقة الواقعية؟
+   - محتوى إبداعي: دقة منخفضة (1-3)
+   - محتوى معلوماتي: دقة متوسطة (4-7)
+   - معلومات حرجة: دقة عالية (8-10)
+
+3. **إمكانية التكرار**: ما مدى اتساق النتائج عبر التشغيلات؟
+   - التباين مقبول: دقة منخفضة (1-3)
+   - بعض الاتساق مطلوب: دقة متوسطة (4-7)
+   - تكرار دقيق مطلوب: دقة عالية (8-10)
+
+4. **تحمّل الأخطاء**: ما تأثير الأخطاء؟
+   - تأثير منخفض: دقة منخفضة (1-3)
+   - تأثير معتدل: دقة متوسطة (4-7)
+   - تأثير عالٍ: دقة عالية (8-10)
+
+احسب متوسط درجتك لتحديد متطلبات الدقة الكلية.
+
+### الخطوة 3: التعيين على المصفوفة
+
+ارسم درجات التعقيد والدقة على المصفوفة:
+
+- **تعقيد منخفض (1-4)، دقة منخفضة (1-4)**: Crews بسيطة
+- **تعقيد منخفض (1-4)، دقة عالية (5-10)**: Flows مع استدعاءات LLM مباشرة
+- **تعقيد عالٍ (5-10)، دقة منخفضة (1-4)**: Crews معقدة
+- **تعقيد عالٍ (5-10)، دقة عالية (5-10)**: Flows تنسّق Crews
+
+### الخطوة 4: مراعاة عوامل إضافية
+
+بالإضافة إلى التعقيد والدقة، ضع في اعتبارك:
+
+1. **وقت التطوير**: غالبًا ما تكون Crews أسرع في النماذج الأولية
+2. **احتياجات الصيانة**: توفر Flows قابلية صيانة أفضل على المدى الطويل
+3. **خبرة الفريق**: ضع في اعتبارك ألفة فريقك مع النُهج المختلفة
+4. **متطلبات التوسع**: عادةً ما تتوسع Flows بشكل أفضل للتطبيقات المعقدة
+5. **احتياجات التكامل**: ضع في اعتبارك كيف سيتكامل الحل مع الأنظمة الحالية
+
+## الخلاصة
+
+الاختيار بين Crews وFlows — أو الجمع بينهما — قرار معماري حاسم يؤثر على فعالية وقابلية صيانة وتوسع تطبيق CrewAI. من خلال تقييم حالة الاستخدام على أبعاد التعقيد والدقة، يمكنك اتخاذ قرارات مدروسة تتماشى مع متطلباتك المحددة.
+
+تذكر أن أفضل نهج غالبًا يتطور مع نضج تطبيقك. ابدأ بأبسط حل يلبي احتياجاتك، وكن مستعدًا لصقل بنيتك مع اكتساب الخبرة ووضوح المتطلبات.
+
+<Check>
+لديك الآن إطار لتقييم حالات استخدام CrewAI واختيار النهج الصحيح بناءً على متطلبات التعقيد والدقة. سيساعدك هذا في بناء تطبيقات AI أكثر فعالية وقابلية للصيانة والتوسع.
+</Check>
+
+## الخطوات التالية
+
+- تعلم المزيد عن [صياغة Agents فعّالة](/ar/guides/agents/crafting-effective-agents)
+- استكشف [بناء أول Crew](/ar/guides/crews/first-crew)
+- تعمّق في [إتقان إدارة حالة Flow](/ar/guides/flows/mastering-flow-state)
+- اطلع على [المفاهيم الأساسية](/ar/concepts/agents) لفهم أعمق

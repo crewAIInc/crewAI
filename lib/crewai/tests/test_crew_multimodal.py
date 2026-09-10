@@ -42,7 +42,7 @@ GEMINI_MODELS = [
 ]
 
 BEDROCK_MODELS = [
-    "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
+    "bedrock/us.anthropic.claude-sonnet-4-6",
 ]
 
 

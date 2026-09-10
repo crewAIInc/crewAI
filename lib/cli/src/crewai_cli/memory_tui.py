@@ -10,10 +10,9 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, Input, OptionList, Static, Tree
 
 
-# -- CrewAI brand palette --
-_PRIMARY = "#eb6658"  # coral
-_SECONDARY = "#1F7982"  # teal
-_TERTIARY = "#ffffff"  # white
+_PRIMARY = "#eb6658"
+_SECONDARY = "#1F7982"
+_TERTIARY = "#ffffff"
 
 
 def _format_scope_info(info: Any) -> str:
@@ -193,8 +192,6 @@ class MemoryTUI(App[None]):
             node = parent_node.add(label, data=child)
             self._add_scope_children(node, child, depth + 1, max_depth)
 
-    # -- Populating the OptionList -------------------------------------------
-
     def _populate_entry_list(self) -> None:
         """Clear the OptionList and fill it with the current scope's entries."""
         option_list = self.query_one("#entry-list", OptionList)
@@ -226,8 +223,6 @@ class MemoryTUI(App[None]):
             )
             option_list.add_option(label)
 
-    # -- Detail rendering ----------------------------------------------------
-
     def _format_record_detail(self, record: Any, context_line: str = "") -> str:
         """Format a full MemoryRecord as Rich markup for the detail view.
 
@@ -246,7 +241,6 @@ class MemoryTUI(App[None]):
             lines.append(context_line)
             lines.append("")
 
-        # -- Fields block --
         lines.append(f"[dim]ID:[/]             {record.id}")
         lines.append(f"[dim]Scope:[/]          [bold]{record.scope}[/]")
         lines.append(f"[dim]Importance:[/]      [bold]{record.importance:.2f}[/]")
@@ -264,12 +258,10 @@ class MemoryTUI(App[None]):
         lines.append(f"[dim]Source:[/]         {record.source or '-'}")
         lines.append(f"[dim]Private:[/]        {'Yes' if record.private else 'No'}")
 
-        # -- Content block --
         lines.append(f"\n{sep}")
         lines.append("[bold]Content[/]\n")
         lines.append(record.content)
 
-        # -- Metadata block --
         if record.metadata:
             lines.append(f"\n{sep}")
             lines.append("[bold]Metadata[/]\n")
@@ -277,8 +269,6 @@ class MemoryTUI(App[None]):
                 lines.append(f"[dim]{k}:[/] {v}")
 
         return "\n".join(lines)
-
-    # -- Event handlers ------------------------------------------------------
 
     def on_tree_node_selected(self, event: Tree.NodeSelected[str]) -> None:
         """Load entries for the selected scope and populate the OptionList."""

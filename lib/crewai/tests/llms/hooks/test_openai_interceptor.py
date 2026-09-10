@@ -61,24 +61,20 @@ class TestOpenAIInterceptorIntegration:
         interceptor = OpenAITestInterceptor()
         llm = LLM(model="gpt-4o-mini", interceptor=interceptor)
 
-        # Make a simple completion call
         result = llm.call(
             messages=[{"role": "user", "content": "Say 'Hello World' and nothing else"}]
         )
 
-        # Verify custom headers were added
         for request in interceptor.outbound_calls:
             assert "X-OpenAI-Interceptor" in request.headers
             assert request.headers["X-OpenAI-Interceptor"] == "openai-test-value"
             assert "X-Request-ID" in request.headers
             assert request.headers["X-Request-ID"] == "test-request-123"
 
-        # Verify response was tracked
         for response in interceptor.inbound_calls:
             assert "X-Response-Tracked" in response.headers
             assert response.headers["X-Response-Tracked"] == "true"
 
-        # Verify result is valid
         assert result is not None
         assert isinstance(result, str)
         assert len(result) > 0
@@ -158,7 +154,6 @@ class TestOpenAILoggingInterceptor:
         interceptor = LoggingInterceptor()
         llm = LLM(model="gpt-4o-mini", interceptor=interceptor)
 
-        # Make a completion call
         result = llm.call(
             messages=[{"role": "user", "content": "Count from 1 to 3"}]
         )
@@ -167,15 +162,12 @@ class TestOpenAILoggingInterceptor:
         for url in interceptor.request_urls:
             assert "openai" in url.lower() or "api" in url.lower()
 
-        # Verify methods are POST (chat completions use POST)
         for method in interceptor.request_methods:
             assert method == "POST"
 
-        # Verify successful status codes
         for status_code in interceptor.response_status_codes:
             assert 200 <= status_code < 300
 
-        # Verify result is valid
         assert result is not None
 
 
@@ -247,16 +239,13 @@ class TestOpenAIAuthInterceptor:
         interceptor = AuthInterceptor(api_key="custom-123", org_id="org-789")
         llm = LLM(model="gpt-4o-mini", interceptor=interceptor)
 
-        # Make a simple call
         result = llm.call(
             messages=[{"role": "user", "content": "Reply with just the word: SUCCESS"}]
         )
 
-        # Verify the call succeeded
         assert result is not None
         assert len(result) > 0
 
-        # Verify headers were added to outbound requests
         # (We can't directly inspect the request sent to OpenAI in this test,
         # but we verify the interceptor was configured and the call succeeded)
         assert llm.interceptor is interceptor

@@ -1,10 +1,10 @@
 interactions:
 - request:
     body: '{"messages": [{"role": "user", "content": [{"text": "Tell me a short fact"}]}],
-      "inferenceConfig": {"maxTokens": 100, "temperature": 0.7, "topP": 0.9}}'
+      "inferenceConfig": {"maxTokens": 100, "temperature": 0.7}}'
     headers:
       Content-Length:
-      - '151'
+      - '138'
       Content-Type:
       - application/json
       User-Agent:
@@ -19,22 +19,24 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":1360},"output":{"message":{"content":[{"text":"Here''s
-        a short fact: Honeybees can recognize human faces by learning and remembering
-        facial features, similar to how we do."}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":12,"outputTokens":31,"serverToolUsage":{},"totalTokens":43}}'
+      string: "{\"metrics\":{\"latencyMs\":2721},\"output\":{\"message\":{\"content\":[{\"text\":\"Here's
+        a short fact:\\n\\n**Honey never spoils.** Archaeologists have found 3,000-year-old
+        honey in Egyptian tombs that was still perfectly edible. \U0001F36F\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":12,\"outputTokens\":47,\"serverToolUsage\":{},\"totalTokens\":59}}"
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '436'
+      - '463'
       Content-Type:
       - application/json
       Date:
-      - Mon, 01 Dec 2025 08:50:57 GMT
+      - Tue, 26 May 2026 17:06:27 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:

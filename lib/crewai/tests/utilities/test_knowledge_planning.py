@@ -32,12 +32,10 @@ def mock_knowledge_source():
 @patch("crewai.rag.config.utils.get_rag_client")
 def test_knowledge_included_in_planning(mock_get_client):
     """Test that verifies knowledge sources are properly included in planning."""
-    # Mock RAG client
     mock_client = mock_get_client.return_value
     mock_client.get_or_create_collection.return_value = None
     mock_client.add_documents.return_value = None
 
-    # Create an agent with knowledge
     agent = Agent(
         role="AI Researcher",
         goal="Research and explain AI concepts",
@@ -49,20 +47,16 @@ def test_knowledge_included_in_planning(mock_get_client):
         ],
     )
 
-    # Create a task for the agent
     task = Task(
         description="Explain the basics of AI systems",
         expected_output="A clear explanation of AI fundamentals",
         agent=agent,
     )
 
-    # Create a crew planner
     planner = CrewPlanner([task], None)
 
-    # Get the task summary
     task_summary = planner._create_tasks_summary()
 
-    # Verify that knowledge is included in planning when present
     assert "AI systems require careful training" in task_summary, (
         "Knowledge content should be present in task summary when knowledge exists"
     )
@@ -70,7 +64,6 @@ def test_knowledge_included_in_planning(mock_get_client):
         "agent_knowledge field should be present in task summary when knowledge exists"
     )
 
-    # Verify that knowledge is properly formatted
     assert isinstance(task.agent.knowledge_sources, list), (
         "Knowledge sources should be stored in a list"
     )
@@ -81,7 +74,6 @@ def test_knowledge_included_in_planning(mock_get_client):
         "Knowledge source content should be included in task summary"
     )
 
-    # Verify that other expected components are still present
     assert task.description in task_summary, (
         "Task description should be present in task summary"
     )

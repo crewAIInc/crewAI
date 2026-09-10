@@ -1,12 +1,14 @@
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
 class JSONKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries JSON file content using embeddings."""
+
+    source_type: Literal["json"] = "json"
 
     def load_content(self) -> dict[Path, str]:
         """Load and preprocess JSON file content."""

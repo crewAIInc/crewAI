@@ -23,7 +23,6 @@ class KickoffTaskOutputsSQLiteStorage:
 
     def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
-            # Get the parent directory of the default db path and create our db file there
             db_path = str(Path(db_storage_path()) / "latest_kickoff_task_outputs.db")
         self.db_path = db_path
         self._lock_name = f"sqlite:{os.path.realpath(self.db_path)}"

@@ -37,7 +37,6 @@ class S3ReaderTool(BaseTool):
                 aws_secret_access_key=os.getenv("CREW_AWS_SEC_ACCESS_KEY"),
             )
 
-            # Read file content from S3
             response = s3.get_object(Bucket=bucket_name, Key=object_key)
             result: str = response["Body"].read().decode("utf-8")
             return result

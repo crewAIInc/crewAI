@@ -8,9 +8,25 @@ import json
 import os
 import re
 import sqlite3
-from typing import Any
+from typing import Any, Literal
 
 import click
+
+
+def _record_checkpoint_usage(
+    action: Literal[
+        "list", "info", "resume", "diff", "prune", "tui", "tui_resume", "tui_fork"
+    ],
+) -> None:
+    """Count a CLI action without recording checkpoint data or blocking execution."""
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span(f"cli_usage:checkpoint_{action}")
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
 
 
 _PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
@@ -222,9 +238,6 @@ def _entity_summary(entities: list[dict[str, Any]]) -> str:
     return ", ".join(parts) if parts else "empty"
 
 
-# --- JSON directory ---
-
-
 def _list_json(location: str) -> list[dict[str, Any]]:
     pattern = os.path.join(location, "**", "*.json")
     results = []
@@ -273,9 +286,6 @@ def _info_json_file(path: str) -> dict[str, Any]:
     meta["size"] = os.path.getsize(path)
     meta["path"] = path
     return meta
-
-
-# --- SQLite ---
 
 
 def _list_sqlite(db_path: str) -> list[dict[str, Any]]:
@@ -327,9 +337,6 @@ def _info_sqlite_id(db_path: str, checkpoint_id: str) -> dict[str, Any] | None:
     return meta
 
 
-# --- Public API ---
-
-
 def list_checkpoints(location: str) -> None:
     """List all checkpoints at a location."""
     if _is_sqlite(location):
@@ -367,7 +374,6 @@ def info_checkpoint(path: str) -> None:
     """Show details of a single checkpoint."""
     meta: dict[str, Any] | None = None
 
-    # db_path#checkpoint_id format
     if "#" in path:
         db_path, checkpoint_id = path.rsplit("#", 1)
         if _is_sqlite(db_path):
@@ -376,7 +382,6 @@ def info_checkpoint(path: str) -> None:
                 click.echo(f"Checkpoint not found: {checkpoint_id}")
                 return
 
-    # SQLite file — show latest
     if meta is None and _is_sqlite(path):
         meta = _info_sqlite_latest(path)
         if not meta:
@@ -384,7 +389,6 @@ def info_checkpoint(path: str) -> None:
             return
         click.echo(f"Latest checkpoint: {meta['name']}\n")
 
-    # Directory — show latest JSON
     if meta is None and os.path.isdir(path):
         meta = _info_json_latest(path)
         if not meta:
@@ -392,7 +396,6 @@ def info_checkpoint(path: str) -> None:
             return
         click.echo(f"Latest checkpoint: {meta['name']}\n")
 
-    # Specific JSON file
     if meta is None and os.path.isfile(path):
         try:
             meta = _info_json_file(path)
@@ -709,6 +712,7 @@ def prune_checkpoints(
         return
 
     duration: timedelta | None = _parse_duration(older_than) if older_than else None
+    _record_checkpoint_usage("prune")
 
     deleted: int
     if _is_sqlite(location):

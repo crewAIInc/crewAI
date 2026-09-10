@@ -1,0 +1,80 @@
+---
+title: Agents البرمجة
+description: تعلم كيفية تمكين Agents CrewAI من كتابة وتنفيذ الكود، واستكشف الميزات المتقدمة لوظائف محسّنة.
+icon: rectangle-code
+mode: "wide"
+---
+
+## مقدمة
+
+أصبح لدى CrewAI Agents القدرة القوية على كتابة وتنفيذ الكود، مما يعزز قدراتها في حل المشكلات بشكل كبير. هذه الميزة مفيدة بشكل خاص للمهام التي تتطلب حلولاً حسابية أو برمجية.
+
+## تمكين تنفيذ الكود
+
+لتمكين تنفيذ الكود لـ Agent، عيّن معامل `allow_code_execution` إلى `True` عند إنشاء الـ Agent.
+
+```python Code
+from crewai import Agent
+
+coding_agent = Agent(
+    role="Senior Python Developer",
+    goal="Craft well-designed and thought-out code",
+    backstory="You are a senior Python developer with extensive experience in software architecture and best practices.",
+    allow_code_execution=True
+)
+```
+
+<Note>
+لاحظ أن معامل `allow_code_execution` يكون `False` افتراضيًا.
+</Note>
+
+## اعتبارات مهمة
+
+1. **اختيار النموذج**: يُوصى بشدة باستخدام نماذج أكثر قدرة مثل Claude 3.5 Sonnet وGPT-4 عند تمكين تنفيذ الكود.
+
+2. **معالجة الأخطاء**: تتضمن ميزة تنفيذ الكود معالجة أخطاء. إذا أثار الكود المُنفَّذ استثناءً، سيتلقى الـ Agent رسالة الخطأ ويمكنه محاولة تصحيح الكود. يتحكم معامل `max_retry_limit` (الافتراضي 2) في الحد الأقصى لعدد المحاولات.
+
+3. **التبعيات**: لاستخدام ميزة تنفيذ الكود، تحتاج لتثبيت حزمة `crewai_tools`.
+
+## عملية تنفيذ الكود
+
+<Steps>
+    <Step title="تحليل المهمة">
+    يحلل الـ Agent المهمة ويحدد أن تنفيذ الكود ضروري.
+    </Step>
+    <Step title="صياغة الكود">
+    يصيغ كود Python اللازم لحل المشكلة.
+    </Step>
+    <Step title="تنفيذ الكود">
+    يُرسَل الكود إلى أداة تنفيذ الكود الداخلية (`CodeInterpreterTool`).
+    </Step>
+    <Step title="تفسير النتيجة">
+    يفسر الـ Agent النتيجة ويدمجها في استجابته أو يستخدمها لمزيد من حل المشكلات.
+    </Step>
+</Steps>
+
+## مثال استخدام
+
+```python Code
+from crewai import Agent, Task, Crew
+
+coding_agent = Agent(
+    role="Python Data Analyst",
+    goal="Analyze data and provide insights using Python",
+    backstory="You are an experienced data analyst with strong Python skills.",
+    allow_code_execution=True
+)
+
+data_analysis_task = Task(
+    description="Analyze the given dataset and calculate the average age of participants.",
+    agent=coding_agent
+)
+
+analysis_crew = Crew(
+    agents=[coding_agent],
+    tasks=[data_analysis_task]
+)
+
+result = analysis_crew.kickoff()
+print(result)
+```

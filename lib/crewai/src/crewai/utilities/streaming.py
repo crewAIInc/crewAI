@@ -6,19 +6,32 @@ import contextvars
 import logging
 import queue
 import threading
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 import uuid
 
 from typing_extensions import TypedDict
 
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.llm_events import LLMStreamChunkEvent
+from crewai.events.stream_context import add_stream_sink, reset_stream_sinks
+from crewai.events.types.flow_events import ConversationMessageAddedEvent, FlowEvent
+from crewai.events.types.llm_events import (
+    LLMEventBase,
+    LLMStreamChunkEvent,
+)
+from crewai.events.types.tool_usage_events import (
+    ToolExecutionErrorEvent,
+    ToolUsageEvent,
+)
 from crewai.types.streaming import (
+    AsyncStreamSession,
     CrewStreamingOutput,
     FlowStreamingOutput,
+    StreamChannel,
     StreamChunk,
     StreamChunkType,
+    StreamFrame,
+    StreamSession,
     ToolCallChunk,
 )
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -51,6 +64,16 @@ class StreamingState(NamedTuple):
     loop: asyncio.AbstractEventLoop | None
     handler: Callable[[Any, BaseEvent], None]
     stream_id: str | None = None
+
+
+class FrameStreamingState(NamedTuple):
+    """Immutable state for public frame streaming execution."""
+
+    result_holder: list[Any]
+    sync_queue: queue.Queue[StreamFrame | None | Exception]
+    async_queue: asyncio.Queue[StreamFrame | None | Exception] | None
+    loop: asyncio.AbstractEventLoop | None
+    sink: Callable[[Any, BaseEvent], None]
 
 
 def _extract_tool_call_info(
@@ -105,6 +128,207 @@ def _create_stream_chunk(
         agent_id=event.agent_id or current_task_info["agent_id"],
         tool_call=tool_call_chunk,
     )
+
+
+_FRAME_DATA_EXCLUDE = {
+    "timestamp",
+    "type",
+    "event_id",
+    "parent_event_id",
+    "previous_event_id",
+    "emission_sequence",
+}
+
+
+def _stream_channel(event: BaseEvent) -> StreamChannel:
+    if isinstance(event, LLMEventBase):
+        return "llm"
+    if isinstance(event, ConversationMessageAddedEvent):
+        return "messages"
+    if isinstance(event, FlowEvent):
+        return "flow"
+    if isinstance(event, ToolUsageEvent | ToolExecutionErrorEvent):
+        return "tools"
+    if "error" in event.type or "failed" in event.type:
+        return "lifecycle"
+    return "custom"
+
+
+def _stream_namespace(event: BaseEvent, channel: StreamChannel) -> list[str]:
+    namespace: list[str] = [channel]
+    for attr in (
+        "flow_name",
+        "method_name",
+        "session_id",
+        "call_id",
+        "tool_name",
+        "agent_role",
+        "task_name",
+    ):
+        value = getattr(event, attr, None)
+        if value is not None:
+            namespace.append(str(value))
+    return namespace
+
+
+def stream_frame_from_event(event: BaseEvent) -> StreamFrame:
+    """Convert an internal CrewAI event into the public stream frame contract."""
+    channel = _stream_channel(event)
+    data = event.to_json(exclude=_FRAME_DATA_EXCLUDE)
+    if not isinstance(data, dict):
+        data = {"value": data}
+    return StreamFrame(
+        id=event.event_id,
+        seq=event.emission_sequence,
+        type=event.type,
+        channel=channel,
+        namespace=_stream_namespace(event, channel),
+        timestamp=event.timestamp,
+        parent_id=event.parent_event_id,
+        previous_id=event.previous_event_id,
+        data=cast(dict[str, Any], data),
+    )
+
+
+def _create_frame_sink(
+    sync_queue: queue.Queue[StreamFrame | None | Exception],
+    async_queue: asyncio.Queue[StreamFrame | None | Exception] | None = None,
+    loop: asyncio.AbstractEventLoop | None = None,
+) -> Callable[[Any, BaseEvent], None]:
+    def frame_sink(_: Any, event: BaseEvent) -> None:
+        frame = stream_frame_from_event(event)
+        if async_queue is not None and loop is not None:
+            loop.call_soon_threadsafe(async_queue.put_nowait, frame)
+        else:
+            sync_queue.put(frame)
+
+    return frame_sink
+
+
+def create_frame_streaming_state(
+    result_holder: list[Any],
+    use_async: bool = False,
+) -> FrameStreamingState:
+    """Create state for a scoped public frame stream."""
+    sync_queue: queue.Queue[StreamFrame | None | Exception] = queue.Queue()
+    async_queue: asyncio.Queue[StreamFrame | None | Exception] | None = None
+    loop: asyncio.AbstractEventLoop | None = None
+    if use_async:
+        async_queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+    sink = _create_frame_sink(sync_queue, async_queue, loop)
+    return FrameStreamingState(
+        result_holder=result_holder,
+        sync_queue=sync_queue,
+        async_queue=async_queue,
+        loop=loop,
+        sink=sink,
+    )
+
+
+def _signal_frame_end(state: FrameStreamingState, is_async: bool = False) -> None:
+    if is_async and state.async_queue is not None and state.loop is not None:
+        state.loop.call_soon_threadsafe(state.async_queue.put_nowait, None)
+    else:
+        state.sync_queue.put(None)
+
+
+def _signal_frame_error(
+    state: FrameStreamingState, error: Exception, is_async: bool = False
+) -> None:
+    if is_async and state.async_queue is not None and state.loop is not None:
+        state.loop.call_soon_threadsafe(state.async_queue.put_nowait, error)
+    else:
+        state.sync_queue.put(error)
+
+
+def _finalize_frame_streaming(
+    state: FrameStreamingState,
+    stream_session: StreamSession[Any] | AsyncStreamSession[Any],
+) -> None:
+    stream_session._on_cleanup = None
+    if state.result_holder:
+        stream_session._set_result(state.result_holder[0])
+
+
+def create_frame_generator(
+    state: FrameStreamingState,
+    run_func: Callable[[], Any],
+    output_holder: list[StreamSession[Any]],
+) -> Iterator[StreamFrame]:
+    """Create a scoped synchronous public frame generator."""
+
+    def run_with_sink() -> None:
+        token = add_stream_sink(state.sink)
+        try:
+            result = run_func()
+            state.result_holder.append(result)
+        except Exception as e:
+            _signal_frame_error(state, e)
+        finally:
+            reset_stream_sinks(token)
+            _signal_frame_end(state)
+
+    ctx = contextvars.copy_context()
+    thread = threading.Thread(target=ctx.run, args=(run_with_sink,), daemon=True)
+    thread.start()
+
+    try:
+        while True:
+            item = state.sync_queue.get()
+            if item is None:
+                break
+            if isinstance(item, Exception):
+                raise item
+            yield item
+    finally:
+        thread.join()
+        if output_holder:
+            _finalize_frame_streaming(state, output_holder[0])
+
+
+async def create_async_frame_generator(
+    state: FrameStreamingState,
+    run_coro: Callable[[], Any],
+    output_holder: list[AsyncStreamSession[Any]],
+) -> AsyncIterator[StreamFrame]:
+    """Create a scoped asynchronous public frame generator."""
+    if state.async_queue is None:
+        raise RuntimeError(
+            "Async queue not initialized. Use create_frame_streaming_state(use_async=True)."
+        )
+
+    async def run_with_sink() -> None:
+        token = add_stream_sink(state.sink)
+        try:
+            result = await run_coro()
+            state.result_holder.append(result)
+        except Exception as e:
+            _signal_frame_error(state, e, is_async=True)
+        finally:
+            reset_stream_sinks(token)
+            _signal_frame_end(state, is_async=True)
+
+    task = asyncio.create_task(run_with_sink())
+    try:
+        while True:
+            item = await state.async_queue.get()
+            if item is None:
+                break
+            if isinstance(item, Exception):
+                raise item
+            yield item
+    finally:
+        if not task.done():
+            task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.debug("Background frame streaming task failed", exc_info=True)
+        if output_holder:
+            _finalize_frame_streaming(state, output_holder[0])
 
 
 def _create_stream_handler(

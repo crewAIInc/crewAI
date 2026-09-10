@@ -113,10 +113,8 @@ class EmbeddingService:
         try:
             from crewai.rag.embeddings.factory import build_embedder
 
-            # Build the configuration for CrewAI's factory
             config = self._build_provider_config()
 
-            # Create the embedding function
             self._embedding_function = build_embedder(config)
 
             logger.info(
@@ -287,7 +285,6 @@ class EmbeddingService:
         if not texts:
             return []
 
-        # Filter out empty texts
         valid_texts = [text for text in texts if text and text.strip()]
         if not valid_texts:
             logger.warning("No valid texts provided for batch embedding")

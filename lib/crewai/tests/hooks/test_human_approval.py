@@ -56,7 +56,6 @@ class TestLLMHookHumanInput:
         self, mock_event_listener, mock_input, mock_executor
     ):
         """Test that request_human_input returns the user's input."""
-        # Setup mock formatter
         mock_formatter = Mock()
         mock_event_listener.formatter = mock_formatter
 
@@ -98,10 +97,8 @@ class TestLLMHookHumanInput:
 
         context.request_human_input(prompt="Test")
 
-        # Verify pause was called
         mock_formatter.pause_live_updates.assert_called_once()
 
-        # Verify resume was called
         mock_formatter.resume_live_updates.assert_called_once()
 
     @patch("builtins.input", side_effect=Exception("Input error"))
@@ -118,7 +115,6 @@ class TestLLMHookHumanInput:
         with pytest.raises(Exception, match="Input error"):
             context.request_human_input(prompt="Test")
 
-        # Verify resume was still called (in finally block)
         mock_formatter.resume_live_updates.assert_called_once()
 
     @patch("builtins.input", return_value="  test response  ")
@@ -134,7 +130,7 @@ class TestLLMHookHumanInput:
 
         response = context.request_human_input(prompt="Test")
 
-        assert response == "test response"  # Whitespace stripped
+        assert response == "test response"
 
 
 class TestToolHookHumanInput:
@@ -221,7 +217,6 @@ class TestToolHookHumanInput:
         with pytest.raises(KeyboardInterrupt):
             context.request_human_input(prompt="Test")
 
-        # Verify resume was still called (in finally block)
         mock_formatter.resume_live_updates.assert_called_once()
 
 
@@ -251,7 +246,7 @@ class TestApprovalHookIntegration:
 
         result = approval_hook(context)
 
-        assert result is None  # Allowed
+        assert result is None
         assert mock_input.called
 
     @patch("builtins.input", return_value="deny")
@@ -277,7 +272,7 @@ class TestApprovalHookIntegration:
 
         result = approval_hook(context)
 
-        assert result is False  # Blocked
+        assert result is False
         assert mock_input.called
 
     @patch("builtins.input", return_value="modified result")
@@ -332,7 +327,7 @@ class TestApprovalHookIntegration:
 
         modified_result = review_hook(context)
 
-        assert modified_result is None  # Keep original
+        assert modified_result is None
 
 
 class TestCostControlApproval:
@@ -361,7 +356,6 @@ class TestCostControlApproval:
 
         context = LLMCallHookContext(executor=mock_executor)
 
-        # Should not raise exception and should call input
         cost_control_hook(context)
         assert mock_input.called
 

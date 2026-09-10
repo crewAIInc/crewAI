@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
 from datetime import datetime
 import logging
-from typing import Any
+from typing import Any, ClassVar
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -63,6 +63,8 @@ class RecallFlow(Flow[RecallState]):
     and iteratively deepens exploration when confidence is low.
     """
 
+    is_crewai_internal: ClassVar[bool] = True
+
     _skip_auto_memory: bool = True
 
     initial_state: type[RecallState] = RecallState
@@ -79,10 +81,6 @@ class RecallFlow(Flow[RecallState]):
         self._llm = llm
         self._embedder = embedder
         self._config = config or MemoryConfig()
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     def _merged_categories(self) -> list[str] | None:
         """Return caller-supplied categories, or None if empty."""
@@ -106,10 +104,8 @@ class RecallFlow(Flow[RecallState]):
                 limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
                 min_score=0.0,
             )
-            # Post-filter by time cutoff
             if self.state.time_cutoff and raw:
                 raw = [(r, s) for r, s in raw if r.created_at >= self.state.time_cutoff]
-            # Privacy filter
             if not self.state.include_private and raw:
                 raw = [
                     (r, s)
@@ -118,7 +114,6 @@ class RecallFlow(Flow[RecallState]):
                 ]
             return scope, raw
 
-        # Build (embedding, scope) task list
         tasks: list[tuple[list[float], str]] = [
             (embedding, scope)
             for _query_text, embedding in self.state.query_embeddings
@@ -182,10 +177,6 @@ class RecallFlow(Flow[RecallState]):
         self.state.confidence = max((f["top_score"] for f in findings), default=0.0)
         return findings
 
-    # ------------------------------------------------------------------
-    # Flow steps
-    # ------------------------------------------------------------------
-
     @start()
     def analyze_query_step(self) -> QueryAnalysis:
         """Analyze the query, embed distilled sub-queries, extract filters.
@@ -204,7 +195,6 @@ class RecallFlow(Flow[RecallState]):
         skip_llm = query_len < self._config.query_analysis_threshold
 
         if skip_llm:
-            # Short query: skip LLM, embed raw query directly
             analysis = QueryAnalysis(
                 keywords=[],
                 suggested_scopes=[],
@@ -213,7 +203,6 @@ class RecallFlow(Flow[RecallState]):
             )
             self.state.query_analysis = analysis
         else:
-            # Long query: use LLM to distill sub-queries and extract filters
             available = self._storage.list_scopes(self.state.scope or "/")
             if not available:
                 available = ["/"]
@@ -230,7 +219,6 @@ class RecallFlow(Flow[RecallState]):
             )
             self.state.query_analysis = analysis
 
-            # Parse time_filter into a datetime cutoff
             if analysis.time_filter:
                 try:
                     self.state.time_cutoff = datetime.fromisoformat(
@@ -239,7 +227,6 @@ class RecallFlow(Flow[RecallState]):
                 except ValueError:
                     pass
 
-        # Batch-embed all sub-queries in ONE call
         queries = (
             analysis.recall_queries if analysis.recall_queries else [self.state.query]
         )
@@ -249,7 +236,6 @@ class RecallFlow(Flow[RecallState]):
             (q, emb) for q, emb in zip(queries, embeddings, strict=False) if emb
         ]
         if not pairs:
-            # Fallback: embed the raw query if distilled queries all failed
             fallback_emb = embed_texts(self._embedder, [self.state.query])
             if fallback_emb and fallback_emb[0]:
                 pairs = [(self.state.query, fallback_emb[0])]
@@ -275,8 +261,9 @@ class RecallFlow(Flow[RecallState]):
                 candidates = []
         if not candidates:
             candidates = [scope_prefix]
-        self.state.candidate_scopes = candidates[:20]
-        return self.state.candidate_scopes
+        selected_scopes = candidates[:20]
+        self.state.candidate_scopes = selected_scopes
+        return selected_scopes
 
     @listen(filter_and_chunk)
     def search_chunks(self) -> list[Any]:
@@ -309,6 +296,8 @@ class RecallFlow(Flow[RecallState]):
 
         Decrements the exploration budget so the loop terminates.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         self.state.exploration_budget -= 1
 
         enhanced = []
@@ -334,6 +323,8 @@ class RecallFlow(Flow[RecallState]):
                         "results": finding["results"],
                     }
                 )
+            except HookAborted:
+                raise
             except Exception:
                 enhanced.append(
                     {
@@ -353,7 +344,7 @@ class RecallFlow(Flow[RecallState]):
     @router(re_search)
     def re_decide_depth(self) -> str:
         """Re-evaluate depth after re-search. Same logic as decide_depth."""
-        return self.decide_depth()  # type: ignore[call-arg]
+        return self.decide_depth()
 
     @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:
@@ -384,10 +375,10 @@ class RecallFlow(Flow[RecallState]):
                         )
                     )
         matches.sort(key=lambda m: m.score, reverse=True)
-        self.state.final_results = matches[: self.state.limit]
+        final_results = matches[: self.state.limit]
+        self.state.final_results = final_results
 
-        # Attach evidence gaps to the first result so callers can inspect them
         if self.state.evidence_gaps and self.state.final_results:
             self.state.final_results[0].evidence_gaps = list(self.state.evidence_gaps)
 
-        return self.state.final_results
+        return final_results

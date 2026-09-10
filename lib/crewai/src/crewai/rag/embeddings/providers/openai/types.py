@@ -9,7 +9,7 @@ class OpenAIProviderConfig(TypedDict, total=False):
     """Configuration for OpenAI provider."""
 
     api_key: str
-    model_name: Annotated[str, "text-embedding-ada-002"]
+    model_name: Annotated[str, "text-embedding-3-large"]
     api_base: str
     api_type: str
     api_version: str

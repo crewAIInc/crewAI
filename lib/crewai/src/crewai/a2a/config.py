@@ -16,6 +16,7 @@ from pydantic import (
     FilePath,
     PrivateAttr,
     SecretStr,
+    field_serializer,
     model_validator,
 )
 from typing_extensions import Self, deprecated
@@ -24,6 +25,7 @@ from crewai.a2a.auth.client_schemes import ClientAuthScheme
 from crewai.a2a.auth.server_schemes import ServerAuthScheme
 from crewai.a2a.extensions.base import ValidatedA2AExtension
 from crewai.a2a.types import ProtocolVersion, TransportType, Url
+from crewai.utilities.pydantic_schema_utils import serialize_model_class
 
 
 try:
@@ -399,6 +401,11 @@ class A2AConfig(BaseModel):
         default=None,
         description="Optional Pydantic model for structured A2A agent responses",
     )
+
+    @field_serializer("response_model", when_used="json")
+    def _serialize_response_model(self, value: Any) -> Any:
+        return serialize_model_class(value)
+
     fail_fast: bool = Field(
         default=True,
         description="If True, raise error when agent unreachable; if False, skip",
@@ -488,6 +495,11 @@ class A2AClientConfig(BaseModel):
         default=None,
         description="Optional Pydantic model for structured A2A agent responses",
     )
+
+    @field_serializer("response_model", when_used="json")
+    def _serialize_response_model(self, value: Any) -> Any:
+        return serialize_model_class(value)
+
     fail_fast: bool = Field(
         default=True,
         description="If True, raise error when agent unreachable; if False, skip",

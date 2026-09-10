@@ -6,5 +6,4 @@ class {{class_name}}(BaseTool):
     description: str = "What this tool does. It's vital for effective utilization."
 
     def _run(self, argument: str) -> str:
-        # Your tool's logic here
         return "Tool's result"

@@ -75,7 +75,6 @@ class SQLiteFlowPersistence(FlowPersistence):
             sqlite3.connect(self.db_path, timeout=30) as conn,
         ):
             conn.execute("PRAGMA journal_mode=WAL")
-            # Main state table
             conn.execute(
                 """
             CREATE TABLE IF NOT EXISTS flow_states (
@@ -87,7 +86,6 @@ class SQLiteFlowPersistence(FlowPersistence):
             )
             """
             )
-            # Add index for faster UUID lookups
             conn.execute(
                 """
             CREATE INDEX IF NOT EXISTS idx_flow_states_uuid
@@ -95,7 +93,6 @@ class SQLiteFlowPersistence(FlowPersistence):
             """
             )
 
-            # Pending feedback table for async HITL
             conn.execute(
                 """
             CREATE TABLE IF NOT EXISTS pending_feedback (
@@ -107,7 +104,6 @@ class SQLiteFlowPersistence(FlowPersistence):
             )
             """
             )
-            # Add index for faster UUID lookups on pending feedback
             conn.execute(
                 """
             CREATE INDEX IF NOT EXISTS idx_pending_feedback_uuid

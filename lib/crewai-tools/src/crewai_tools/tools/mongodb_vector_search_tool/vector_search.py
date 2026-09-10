@@ -103,7 +103,7 @@ class MongoDBVectorSearchTool(BaseTool):
             ),
         ]
     )
-    package_dependencies: list[str] = Field(default_factory=lambda: ["mongdb"])
+    package_dependencies: list[str] = Field(default_factory=lambda: ["pymongo"])
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -260,7 +260,6 @@ class MongoDBVectorSearchTool(BaseTool):
             )
         ]
         operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
-        # insert the documents in MongoDB Atlas
         result = self._coll.bulk_write(operations)
         if result.upserted_ids is None:
             raise ValueError("No documents were inserted.")
@@ -277,7 +276,6 @@ class MongoDBVectorSearchTool(BaseTool):
             include_embeddings = query_config.include_embeddings
             post_filter_pipeline = query_config.post_filter_pipeline
 
-            # Create the embedding for the query
             query_vector = self._embed_texts([query])[0]
 
             # Atlas Vector Search, potentially with filter
@@ -296,7 +294,6 @@ class MongoDBVectorSearchTool(BaseTool):
                 {"$set": {"score": {"$meta": "vectorSearchScore"}}},
             ]
 
-            # Remove embeddings unless requested
             if not include_embeddings:
                 pipeline.append({"$project": {self.embedding_key: 0}})
 
@@ -308,7 +305,6 @@ class MongoDBVectorSearchTool(BaseTool):
             cursor = self._coll.aggregate(pipeline)  # type: ignore[arg-type]
             docs = []
 
-            # Format
             for doc in cursor:
                 docs.append(doc)  # noqa: PERF402
             return json_util.dumps(docs)
