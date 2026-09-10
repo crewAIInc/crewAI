@@ -1,4 +1,5 @@
 from datetime import datetime
+from threading import Event
 import time
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -207,10 +208,89 @@ async def test_conversation_input_submits_turn() -> None:
             if app._conversation_messages[-1:] == [("assistant", "reply: hi")]:
                 break
 
+        await pilot.press("q")
+
     assert app._conversation_messages == [
         ("user", "hi"),
         ("assistant", "reply: hi"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_conversation_queue_accepts_input_during_turn() -> None:
+    first_started = Event()
+    release_first = Event()
+
+    class FakeFlow:
+        defer_trace_finalization = False
+
+        def handle_turn(
+            self, message: str, *, session_id: str | None = None
+        ) -> str:
+            if message == "first":
+                first_started.set()
+                assert release_first.wait(timeout=5)
+            return f"reply: {message}"
+
+        def finalize_session_traces(self) -> None:
+            pass
+
+    app = CrewRunApp(crew_name="Demo", conversational=True)
+    app._flow = FakeFlow()
+
+    async with app.run_test() as pilot:
+        await pilot.click("#conversation-input")
+        await pilot.press("f", "i", "r", "s", "t", "enter")
+        for _ in range(50):
+            await pilot.pause(0.05)
+            if first_started.is_set():
+                break
+
+        assert first_started.is_set()
+        assert not app.query_one("#conversation-input").disabled
+
+        await pilot.press("s", "e", "c", "o", "n", "d", "enter")
+        for _ in range(50):
+            await pilot.pause(0.05)
+            if app._conversation_messages == [("user", "first")] and (
+                app._queued_conversation_entries()
+                == [("first", "active"), ("second", "queued")]
+            ):
+                break
+
+        assert app._conversation_messages == [("user", "first")]
+        assert app._queued_conversation_entries() == [
+            ("first", "active"),
+            ("second", "queued"),
+        ]
+        app._tick()
+        queue_widget = app.query_one("#conversation-queue")
+        queue_display = str(queue_widget.render())
+        assert queue_widget.display is True
+        assert "QUEUED (1)" in queue_display
+        assert "second" in queue_display
+        assert "first" not in queue_display
+
+        release_first.set()
+        for _ in range(100):
+            await pilot.pause(0.05)
+            if app._conversation_messages[-2:] == [
+                ("assistant", "reply: first"),
+                ("assistant", "reply: second"),
+            ]:
+                break
+
+        app._tick()
+        assert app.query_one("#conversation-queue").display is False
+        await pilot.press("q")
+
+    assert app._conversation_messages == [
+        ("user", "first"),
+        ("assistant", "reply: first"),
+        ("user", "second"),
+        ("assistant", "reply: second"),
+    ]
+    assert app._queued_conversation_entries() == []
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:
