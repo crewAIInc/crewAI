@@ -101,14 +101,14 @@ at a gateway usually means. Measured against **crewai 1.15.20**:
 
 | `LLM(model=…)` | resolves |
 |---|---|
-| `gpt-4o-mini`, `o3-mini` | yes — native OpenAI provider |
-| `openai/gpt-4o-mini` | yes — same provider |
-| `my-gateway-model` | **yes** — a bare name always reaches it |
-| `openai/my-gateway-model` | **no** — `ImportError`, no known-model match |
+| `gpt-4o-mini`, `my-gateway-model` | always — a bare name reaches the native provider whatever it is called |
+| `openai/gpt-4o-mini`, `openai/o3-mini` | always — a native provider claims it |
+| `openai/my-gateway-model` | **only where LiteLLM is installed** |
 
-A bare name always reaches the native provider. A prefixed one is checked against a known-model list
-first, and a name that is not on it falls through to the LiteLLM path a default 1.x install no
-longer has (`crewai[litellm]` restores it). So for a gateway's own model names, use the bare form.
+A prefixed name no native provider claims falls through to LiteLLM, and 1.x does not install it by
+default (`crewai[litellm]` adds it). So the same line works on one machine and raises
+`ImportError: … and the LiteLLM fallback package is not installed` on another. Using the bare form
+for a gateway's own model names sidesteps the question entirely.
 
 It fails while the `LLM` is being built, before any request — so a recording of that run holds three
 events and OrcaReplay reports `capture.empty`, which is accurate and easy to read as a capture
