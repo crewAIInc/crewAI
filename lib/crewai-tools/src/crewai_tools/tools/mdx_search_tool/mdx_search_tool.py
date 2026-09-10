@@ -24,7 +24,7 @@ class MDXSearchToolSchema(FixedMDXSearchToolSchema):
 class MDXSearchTool(RagTool):
     name: str = "Search a MDX's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a MDX's content."
+        "A tool that can be used to semantically search a query from a MDX's content."
     )
     args_schema: type[BaseModel] = MDXSearchToolSchema
 

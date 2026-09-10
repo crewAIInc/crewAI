@@ -22,7 +22,7 @@ class TXTSearchToolSchema(FixedTXTSearchToolSchema):
 class TXTSearchTool(RagTool):
     name: str = "Search a txt's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a txt's content."
+        "A tool that can be used to semantically search a query from a txt's content."
     )
     args_schema: type[BaseModel] = TXTSearchToolSchema
     txt: str | None = None

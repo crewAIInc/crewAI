@@ -22,7 +22,7 @@ class PDFSearchToolSchema(FixedPDFSearchToolSchema):
 class PDFSearchTool(RagTool):
     name: str = "Search a PDF's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a PDF's content."
+        "A tool that can be used to semantically search a query from a PDF's content."
     )
     args_schema: type[BaseModel] = PDFSearchToolSchema
     pdf: str | None = None

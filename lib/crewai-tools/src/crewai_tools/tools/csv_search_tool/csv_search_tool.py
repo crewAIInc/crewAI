@@ -24,7 +24,7 @@ class CSVSearchToolSchema(FixedCSVSearchToolSchema):
 class CSVSearchTool(RagTool):
     name: str = "Search a CSV's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a CSV's content."
+        "A tool that can be used to semantically search a query from a CSV's content."
     )
     args_schema: type[BaseModel] = CSVSearchToolSchema
 

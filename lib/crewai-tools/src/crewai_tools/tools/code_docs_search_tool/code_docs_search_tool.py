@@ -24,7 +24,7 @@ class CodeDocsSearchToolSchema(FixedCodeDocsSearchToolSchema):
 class CodeDocsSearchTool(RagTool):
     name: str = "Search a Code Docs content"
     description: str = (
-        "A tool that can be used to semantic search a query from a Code Docs content."
+        "A tool that can be used to semantically search a query from a Code Docs content."
     )
     args_schema: type[BaseModel] = CodeDocsSearchToolSchema
 
