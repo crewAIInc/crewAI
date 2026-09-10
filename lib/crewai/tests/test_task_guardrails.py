@@ -10,8 +10,13 @@ from crewai.events.event_types import (
 )
 from crewai.llm import LLM
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
-from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.tasks.llm_guardrail import (
+    GuardrailExecutionError,
+    LLMGuardrail,
+    LLMGuardrailResult,
+)
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.guardrail import process_guardrail
 
 
 def create_smart_task(**kwargs):
@@ -309,8 +314,8 @@ def test_guardrail_when_an_error_occurs(sample_agent, task_output):
             side_effect=Exception("Unexpected error"),
         ),
         pytest.raises(
-            Exception,
-            match="Error while validating the task output: Unexpected error",
+            GuardrailExecutionError,
+            match="Unexpected error",
         ),
     ):
         task = create_smart_task(
@@ -321,6 +326,127 @@ def test_guardrail_when_an_error_occurs(sample_agent, task_output):
             guardrail_max_retries=0,
         )
         task.execute_sync(agent=sample_agent)
+
+
+def test_llm_guardrail_provider_error_is_not_a_validation_failure():
+    """An LLM/provider failure is not a verdict about the agent's output."""
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock())
+
+    with patch.object(
+        LLMGuardrail,
+        "_validate_output",
+        side_effect=RuntimeError(
+            "litellm.APIConnectionError: provider unavailable"
+        ),
+    ):
+        with pytest.raises(GuardrailExecutionError, match="provider unavailable") as exc:
+            guardrail(out)
+
+    assert isinstance(exc.value.__cause__, RuntimeError)
+
+
+def test_llm_guardrail_violation_is_still_a_failed_validation():
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock())
+
+    class FakeOut:
+        pydantic = LLMGuardrailResult(valid=False, feedback="too long by 40 words")
+
+    with patch.object(LLMGuardrail, "_validate_output", return_value=FakeOut()):
+        assert guardrail(out) == (False, "too long by 40 words")
+
+
+def test_llm_guardrail_passing_output_is_still_success():
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock())
+
+    class PassOut:
+        pydantic = LLMGuardrailResult(valid=True, feedback=None)
+
+    with patch.object(LLMGuardrail, "_validate_output", return_value=PassOut()):
+        assert guardrail(out) == (True, "the agent's answer")
+
+
+def test_process_guardrail_does_not_treat_execution_error_as_invalid_output():
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock())
+
+    with patch.object(
+        LLMGuardrail,
+        "_validate_output",
+        side_effect=RuntimeError(
+            "litellm.APIConnectionError: provider unavailable"
+        ),
+    ):
+        with pytest.raises(GuardrailExecutionError, match="provider unavailable"):
+            process_guardrail(output=out, guardrail=guardrail, retry_count=0)
+
+
+def test_process_guardrail_still_reports_an_execution_error_it_started():
+    from tests.utils import wait_for_event_handlers
+
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock())
+    started = []
+    completed = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
+        def _on_started(_source, event):
+            started.append(event)
+
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+        def _on_completed(_source, event):
+            completed.append(event)
+
+        with patch.object(
+            LLMGuardrail,
+            "_validate_output",
+            side_effect=RuntimeError(
+                "litellm.APIConnectionError: provider unavailable"
+            ),
+        ):
+            with pytest.raises(GuardrailExecutionError):
+                process_guardrail(output=out, guardrail=guardrail, retry_count=0)
+
+        wait_for_event_handlers()
+
+    assert len(started) == 1
+    assert len(completed) == 1
+    assert completed[0].success is False
+    assert "provider unavailable" in (completed[0].error or "")
+
+
+def test_task_does_not_retry_when_llm_guardrail_cannot_run():
+    """A guardrail that could not run must not spend guardrail_max_retries."""
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "the agent's answer"
+    agent.crew = None
+    agent.last_messages = []
+
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock())
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrail=guardrail,
+        guardrail_max_retries=3,
+    )
+
+    with patch.object(
+        LLMGuardrail,
+        "_validate_output",
+        side_effect=RuntimeError(
+            "litellm.APIConnectionError: provider unavailable"
+        ),
+    ):
+        with pytest.raises(GuardrailExecutionError, match="provider unavailable"):
+            task.execute_sync(agent=agent)
+
+    assert agent.execute_task.call_count == 1
+    assert task.retry_count == 0
 
 
 def test_hallucination_guardrail_integration():
