@@ -602,19 +602,23 @@ def test_bedrock_tool_conversion():
     assert "inputSchema" in bedrock_tools[0]["toolSpec"]
 
 
-def test_bedrock_environment_variable_credentials(bedrock_mocks):
+def test_bedrock_environment_variable_credentials():
     """Pass AWS credentials and region from the environment to boto3."""
-    mock_session_class, _ = bedrock_mocks
-
-    with patch.dict(
-        os.environ,
-        {
-            "AWS_ACCESS_KEY_ID": "test-access-key-123",
-            "AWS_SECRET_ACCESS_KEY": "test-secret-key-456",
-            "AWS_DEFAULT_REGION": "eu-west-1",
-        },
-        clear=False,
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "AWS_ACCESS_KEY_ID": "test-access-key-123",
+                "AWS_SECRET_ACCESS_KEY": "test-secret-key-456",
+                "AWS_DEFAULT_REGION": "eu-west-1",
+            },
+            clear=False,
+        ),
+        patch(
+            "crewai.llms.providers.bedrock.completion.Session"
+        ) as mock_session_class,
     ):
+        mock_session_class.return_value.client.return_value = MagicMock()
         LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     mock_session_class.assert_called_once_with(
