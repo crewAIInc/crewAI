@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Greyson R. LaLonde", email = "greyson@crewai.com" }
 ]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.15"
 dependencies = [
     "appdirs~=1.4.4",
     "cryptography>=42.0",

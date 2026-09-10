@@ -163,7 +163,7 @@ To get started with CrewAI, follow these simple steps. The full walkthrough live
 
 ### 1. Installation
 
-CrewAI requires `Python >=3.10 and <3.14`. Check your version with:
+CrewAI requires `Python >=3.10 and <3.15`. Check your version with:
 
 ```bash
 python3 --version
