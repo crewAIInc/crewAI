@@ -24,10 +24,10 @@ class YoutubeChannelLoader(BaseLoader):
             ValueError: If the URL is not a valid YouTube channel URL
         """
         try:
-            from pytube import Channel  # type: ignore[import-untyped]
+            from pytubefix import Channel  # type: ignore[import-untyped]
         except ImportError as e:
             raise ImportError(
-                "YouTube channel support requires pytube. Install with: uv add pytube"
+                "YouTube channel support requires pytubefix. Install with: uv add pytubefix"
             ) from e
 
         channel_url = source.source
@@ -55,7 +55,12 @@ class YoutubeChannelLoader(BaseLoader):
             metadata["channel_id"] = channel.channel_id
 
             max_videos = kwargs.get("max_videos", 10)
-            video_urls = list(channel.video_urls)[:max_videos]
+            
+            # --- FIX: Safely parse watch_urls from pytubefix video objects ---
+            raw_video_urls = list(channel.video_urls)[:max_videos]
+            video_urls = [v.watch_url if hasattr(v, 'watch_url') else str(v) for v in raw_video_urls]
+            # -----------------------------------------------------------------
+            
             metadata["num_videos_loaded"] = len(video_urls)
             metadata["total_videos"] = len(list(channel.video_urls))
 
@@ -68,7 +73,7 @@ class YoutubeChannelLoader(BaseLoader):
             ]
 
             try:
-                from pytube import YouTube
+                from pytubefix import YouTube
                 from youtube_transcript_api import YouTubeTranscriptApi
 
                 for i, video_url in enumerate(video_urls, 1):
