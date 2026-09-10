@@ -15,7 +15,7 @@ from crewai_files.core.resolved import (
 
 
 def _normalize_media_type(content_type: str) -> str:
-    """Normalize MIME types before provider capability checks."""
+    """Return a lowercase MIME media type without parameters."""
     return content_type.split(";", 1)[0].strip().lower()
 
 
@@ -128,7 +128,9 @@ class OpenAIFormatter:
     """Formats resolved files into OpenAI content blocks."""
 
     @staticmethod
-    def format_block(resolved: ResolvedFileType, content_type: str = "") -> dict[str, Any]:
+    def format_block(
+        resolved: ResolvedFileType, content_type: str = ""
+    ) -> dict[str, Any]:
         """Format a resolved file into an OpenAI content block.
 
         Args:
