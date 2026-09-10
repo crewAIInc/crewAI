@@ -757,8 +757,33 @@ memory = Memory(
 
 ## Backend de Armazenamento
 
+O CrewAI suporta backends de armazenamento plugáveis para persistir e consultar a memória unificada.
+
 - **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou `$CREWAI_STORAGE_DIR/memory` se a variável de ambiente estiver definida, ou o caminho que você passar como `storage="path/to/dir"`).
+- **Memória Persistente Dakera**: Servidor de memória persistente em rede alimentado pelo pacote [`crewai-dakera`](https://pypi.org/project/crewai-dakera/) ([Repositório Fonte](https://github.com/Dakera-AI/dakera-crewai)). Gerencia o embedding de conteúdo e consultas no lado do servidor com busca híbrida vetor/BM25 e recall ponderado por decaimento, eliminando a necessidade de um modelo de embedding local.
 - **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`.
+
+### Exemplo de Integração com o Dakera
+
+```bash
+pip install crewai-dakera
+```
+
+```python
+from crewai_dakera import DakeraStorage
+
+storage = DakeraStorage(
+    api_url="http://localhost:3300",
+    api_key="your-api-key",
+    agent_id="my-agent-id",  # O mesmo agent_id permite compartilhamento de memória; IDs distintos isolam os namespaces de contexto
+)
+
+# Salve e busque memórias persistentes diretamente no servidor Dakera
+storage.save(value="Agent learned API rate limit is 60 req/min")
+results = storage.search(query="API rate limit", limit=5)
+```
+
+**Por que usar armazenamento auto-hospedado**: Serviços de rede como o Dakera permitem que múltiplas crews, agentes ou nós de trabalho distribuídos compartilhem um repositório central de memória vetorial e BM25 persistente sem depender apenas do armazenamento de arquivos local. Valores de `agent_id` correspondentes compartilham memórias entre sessões, enquanto valores de `agent_id` diferentes isolam namespaces de memória no servidor.
 
 
 ## Descoberta
