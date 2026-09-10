@@ -20,10 +20,12 @@ from crewai.mcp.config import (
     MCPServerStdio,
 )
 from crewai.mcp.filters import (
+    SemanticToolFilter,
     StaticToolFilter,
     ToolFilter,
     ToolFilterContext,
     create_dynamic_tool_filter,
+    create_semantic_tool_filter,
     create_static_tool_filter,
 )
 
@@ -59,10 +61,12 @@ __all__ = [
     "MCPServerSSE",
     "MCPServerStdio",
     "MCPToolResolver",
+    "SemanticToolFilter",
     "StaticToolFilter",
     "ToolFilter",
     "ToolFilterContext",
     "TransportType",
     "create_dynamic_tool_filter",
+    "create_semantic_tool_filter",
     "create_static_tool_filter",
 ]
