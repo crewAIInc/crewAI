@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import gc
 from io import StringIO
 import json
 import threading
@@ -3060,6 +3061,58 @@ def test_replay_feature(researcher, writer):
         crew.replay(str(write.id))
         # Ensure context was passed correctly
         assert mock_execute_task.call_count == 3
+
+
+@pytest.mark.vcr()
+def test_kickoff_for_each_persists_latest_run_for_replay():
+    agent = Agent(
+        role="Researcher",
+        goal="Research a topic.",
+        backstory="You are a careful researcher.",
+    )
+    task = Task(
+        description="Research {topic}.",
+        expected_output="A concise research note.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+
+    first_output = TaskOutput(
+        description="Research first.",
+        raw="first result",
+        agent="Researcher",
+    )
+    latest_output = TaskOutput(
+        description="Research latest.",
+        raw="latest result",
+        agent="Researcher",
+    )
+    try:
+        with (
+            patch("crewai.crew.get_env_context"),
+            patch("crewai.crew.clear_files"),
+            patch("crewai.crew.get_all_files", return_value=[]),
+            patch.object(crewai_event_bus, "emit"),
+            patch.object(
+                Task,
+                "execute_sync",
+                side_effect=[first_output, latest_output],
+            ) as mock_execute_task,
+        ):
+            results = crew.kickoff_for_each(
+                inputs=[{"topic": "first"}, {"topic": "latest"}]
+            )
+
+            stored_outputs = crew._task_output_handler.load()
+            assert len(results) == 2
+            assert len(stored_outputs) == 1
+            assert stored_outputs[0]["inputs"] == {"topic": "latest"}
+            assert stored_outputs[0]["output"]["raw"] == "latest result"
+
+        assert mock_execute_task.call_count == 2
+    finally:
+        crew._task_output_handler.reset()
+        gc.collect()
 
 
 @pytest.mark.vcr()
