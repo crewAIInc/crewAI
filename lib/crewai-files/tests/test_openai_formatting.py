@@ -13,7 +13,8 @@ PDF_CONTENT_TYPES = [
 
 
 @pytest.mark.parametrize("content_type", PDF_CONTENT_TYPES)
-def test_openai_formatter_rejects_pdf_variants(content_type: str):
+def test_openai_formatter_rejects_pdf_variants(content_type: str) -> None:
+    """Reject PDF media types that Chat Completions cannot accept."""
     resolved = InlineBase64(content_type="application/pdf", data="ZmFrZS1wZGY=")
 
     with pytest.raises(TypeError, match="does not support PDF attachments"):
@@ -21,7 +22,8 @@ def test_openai_formatter_rejects_pdf_variants(content_type: str):
 
 
 @pytest.mark.parametrize("content_type", PDF_CONTENT_TYPES)
-def test_openai_responses_formatter_accepts_pdf_variants(content_type: str):
+def test_openai_responses_formatter_accepts_pdf_variants(content_type: str) -> None:
+    """Format PDF media types as Responses API input files."""
     resolved = InlineBase64(content_type="application/pdf", data="ZmFrZS1wZGY=")
 
     block = OpenAIResponsesFormatter.format_block(resolved, content_type)
