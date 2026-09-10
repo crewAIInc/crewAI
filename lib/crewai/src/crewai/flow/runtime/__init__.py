@@ -292,6 +292,24 @@ def _resolve_persistence(value: Any) -> Any:
     return value
 
 
+def _load_project_env() -> None:
+    """Load the working-directory ``.env`` into the environment.
+
+    Mirrors the declarative flow / JSON crew CLI paths
+    (``run_declarative_flow`` / ``run_crew``). This ensures env-based config —
+    including flow-persistence connection strings resolved during state or
+    pending-feedback restoration — is available regardless of where crewai is
+    installed (e.g. an editable checkout in another repo, whose own
+    module-level ``load_dotenv()`` is anchored elsewhere). No-op when no
+    ``.env`` is present (e.g. deployments injecting real env vars).
+    """
+    from dotenv import load_dotenv
+
+    env_file = Path.cwd() / ".env"
+    if env_file.exists():
+        load_dotenv(env_file, override=True)
+
+
 def _resolve_instance_ref(ref: str, *, field: str) -> Any:
     target = resolve_ref(ref, field=field)
     if not inspect.isclass(target):
@@ -1266,6 +1284,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             result = flow.resume("looks good!")
             ```
         """
+        # Load the project's .env before touching persistence so backends that
+        # resolve env-based config on first use (e.g. MongoDbFlowPersistence
+        # reading MONGODB_CONNECTION_STRING in load_pending_feedback) can find
+        # it, mirroring kickoff_async().
+        _load_project_env()
+
         if persistence is None:
             from crewai.flow.persistence.factory import default_flow_persistence
 
@@ -2161,20 +2185,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        # Load the project's .env at execution time, mirroring the declarative
-        # flow / JSON crew CLI paths (run_declarative_flow / run_crew). This
-        # ensures env-based config — including flow-persistence connection
-        # strings read during the state restore below — is available regardless
-        # of where crewai is installed (e.g. an editable checkout in another
-        # repo, whose own module-level load_dotenv() is anchored elsewhere).
-        # No-op when no .env is present (e.g. deployments injecting real env vars).
-        from pathlib import Path
-
-        from dotenv import load_dotenv
-
-        _env_file = Path.cwd() / ".env"
-        if _env_file.exists():
-            load_dotenv(_env_file, override=True)
+        # Load the project's .env at execution time so env-based config (e.g.
+        # flow-persistence connection strings read during the state restore
+        # below) is available regardless of where crewai is installed.
+        _load_project_env()
 
         if from_checkpoint is not None and restore_from_state_id is not None:
             raise ValueError(
