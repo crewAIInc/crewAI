@@ -16,6 +16,7 @@ import pytest
 from crewai_cli.deploy.validate import (
     DeployValidator,
     Severity,
+    _JSONProjectEnvironmentError,
     normalize_package_name,
 )
 
@@ -203,6 +204,33 @@ def test_json_runtime_fields_are_deploy_errors(tmp_path: Path) -> None:
     finding = next(r for r in v.results if r.code == "invalid_crew_json")
     assert finding.severity is Severity.ERROR
     assert "runtime-only" in finding.detail
+
+
+def test_json_project_environment_failure_has_actionable_hint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scaffold_json_crew(tmp_path)
+
+    def fail_in_project_environment(*args: object) -> list[str]:
+        raise _JSONProjectEnvironmentError("uv run failed")
+
+    monkeypatch.setattr(
+        "crewai_cli.deploy.validate._validate_json_project",
+        fail_in_project_environment,
+    )
+
+    validator = DeployValidator(project_root=tmp_path)
+    validator.run()
+
+    finding = next(
+        result
+        for result in validator.results
+        if result.code == "json_validation_environment_failed"
+    )
+    assert finding.title == "Could not validate the JSON crew in the project environment"
+    assert finding.detail == "uv run failed"
+    assert "Install `uv`" in finding.hint
+    assert "uv sync" in finding.hint
 
 
 def test_json_crew_requires_agents_dir_without_classic_errors(tmp_path: Path) -> None:
