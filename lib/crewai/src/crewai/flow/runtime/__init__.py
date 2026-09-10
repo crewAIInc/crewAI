@@ -2161,6 +2161,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        # Load the project's .env at execution time, mirroring the declarative
+        # flow / JSON crew CLI paths (run_declarative_flow / run_crew). This
+        # ensures env-based config — including flow-persistence connection
+        # strings read during the state restore below — is available regardless
+        # of where crewai is installed (e.g. an editable checkout in another
+        # repo, whose own module-level load_dotenv() is anchored elsewhere).
+        # No-op when no .env is present (e.g. deployments injecting real env vars).
+        from pathlib import Path
+
+        from dotenv import load_dotenv
+
+        _env_file = Path.cwd() / ".env"
+        if _env_file.exists():
+            load_dotenv(_env_file, override=True)
+
         if from_checkpoint is not None and restore_from_state_id is not None:
             raise ValueError(
                 "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
