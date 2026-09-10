@@ -10407,6 +10407,201 @@
       }
     },
     {
+      "description": "Reads official macroeconomic releases, release calendars, FX reference rates, rate differentials, COT positioning and commodity prices across 18 currencies. Use dataset='catalogue' first if you do not know an indicator slug.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "FXMacroData API key. Optional: USD data is public. Required for the other currencies and for FX, COT and commodity data.",
+          "name": "FXMACRODATA_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "FXMacroData Macroeconomic and FX Data",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "additionalProperties": true,
+        "description": "Official-source macroeconomic, FX and central-bank data for 18 currencies.\n\nFXMacroData aggregates official publishers - statistical agencies, central\nbanks and exchanges - behind one contract, so answering \"what did US core\ninflation print at, and when is the next release\" does not require knowing\nwhich of eighteen publishers to call or how each formats its data. Every\nobservation carries the instant it was published, so an agent can reason\nabout what was knowable at a point in time rather than only about now.\n\nUSD works without an API key. A key widens the history window and unlocks\nthe other seventeen currencies plus FX rates, rate differentials, COT\npositioning and commodities.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.fxmacrodata.com/v1",
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "FXMacroDataTool",
+        "type": "object"
+      },
+      "name": "FXMacroDataTool",
+      "package_dependencies": [
+        "pydantic"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Base currency for dataset='fx_rate' or 'rate_differential'.",
+            "title": "Base"
+          },
+          "currency": {
+            "default": "USD",
+            "description": "Three-letter currency code, for example 'USD', 'EUR' or 'JPY'.",
+            "title": "Currency",
+            "type": "string"
+          },
+          "dataset": {
+            "description": "Which dataset to read. 'catalogue' lists the indicator slugs available for a currency and is the right first call when the slug is unknown. 'latest' returns the most recent print of every indicator for one currency in a single request. 'history' returns one indicator's published history. 'calendar' returns upcoming scheduled releases. 'press_releases' returns official central-bank headlines. 'fx_rate' and 'rate_differential' take base and quote. 'cot' takes a currency. 'commodities', 'market_sessions' and 'risk_sentiment' take no arguments.",
+            "enum": [
+              "catalogue",
+              "latest",
+              "history",
+              "calendar",
+              "press_releases",
+              "fx_rate",
+              "rate_differential",
+              "cot",
+              "commodities",
+              "market_sessions",
+              "risk_sentiment"
+            ],
+            "title": "Dataset",
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO end date for dataset='history'.",
+            "title": "End Date"
+          },
+          "indicator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Indicator slug, required for dataset='history'. Get valid slugs from dataset='catalogue', for example 'inflation', 'non_farm_payrolls', 'policy_rate'.",
+            "title": "Indicator"
+          },
+          "limit": {
+            "default": 20,
+            "description": "Maximum rows to return; the API caps this at 100.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Quote currency for dataset='fx_rate' or 'rate_differential'.",
+            "title": "Quote"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO start date for dataset='history', e.g. '2024-01-01'.",
+            "title": "Start Date"
+          }
+        },
+        "required": [
+          "dataset"
+        ],
+        "title": "FXMacroDataToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Compresses a file or directory into an archive (.zip currently supported). Useful for archiving logs, documents, or backups.",
       "env_vars": [],
       "humanized_name": "File Compressor Tool",
