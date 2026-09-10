@@ -123,7 +123,7 @@ async def main():
 
     # Create tasks for the agents
     navigation_task = Task(
-        description="Navigate to https://example.com, then click on the the 'More information...' link.",
+        description="Navigate to https://example.com, then click on the 'More information...' link.",
         expected_output="The status of the tool calls for this task.",
         agent=navigator_agent,
     )
