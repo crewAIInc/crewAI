@@ -134,14 +134,15 @@ def test_bedrock_completion_is_used_when_bedrock_provider():
     assert llm.model == "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
 
-def test_bedrock_completion_module_is_imported():
+def test_bedrock_completion_module_is_imported(monkeypatch):
     """
     Test that the completion module is properly imported when using Bedrock provider
     """
     module_name = "crewai.llms.providers.bedrock.completion"
 
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    # Restore the original module after this test so collected class references
+    # still match the provider returned by LLM in subsequent tests.
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
