@@ -1,4 +1,4 @@
-from crewai.agents.agent_builder.base_agent import PLATFORM_APPS
+from crewai_core.platform_apps import PLATFORM_APPS
 
 
 def test_platform_apps_contains_supported_application_catalog() -> None:

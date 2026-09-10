@@ -6,7 +6,7 @@ from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, get_args
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
 
 from pydantic import (
@@ -180,27 +180,8 @@ _SLUG_RE: Final[re.Pattern[str]] = re.compile(
 )
 
 
-PlatformApp = Literal[
-    "asana",
-    "box",
-    "clickup",
-    "github",
-    "gmail",
-    "google_calendar",
-    "google_sheets",
-    "hubspot",
-    "jira",
-    "linear",
-    "notion",
-    "salesforce",
-    "shopify",
-    "slack",
-    "stripe",
-    "zendesk",
-]
-
-PLATFORM_APPS: Final[tuple[str, ...]] = get_args(PlatformApp)
-PlatformAppOrAction = PlatformApp | str
+PlatformApp = str
+PlatformAppOrAction = str
 
 
 class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
