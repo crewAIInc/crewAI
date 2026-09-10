@@ -307,7 +307,7 @@ def _load_project_env() -> None:
 
     env_file = Path.cwd() / ".env"
     if env_file.exists():
-        load_dotenv(env_file, override=True)
+        load_dotenv(env_file, override=False)
 
 
 def _resolve_instance_ref(ref: str, *, field: str) -> Any:

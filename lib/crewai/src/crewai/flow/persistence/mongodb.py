@@ -1,13 +1,18 @@
 """MongoDB (Atlas) implementation of flow state persistence.
 
-Mirrors :class:`crewai.flow.persistence.sqlite.SQLiteFlowPersistence`, using two
-collections instead of two SQLite tables:
+Mirrors :class:`crewai.flow.persistence.sqlite.SQLiteFlowPersistence`, using
+collections instead of SQLite tables:
 
-- ``flow_states``: one document per saved state; the latest is read back by
-  sorting on ``_id`` descending (ObjectId is monotonic, like SQLite's
-  autoincrement id).
+- ``flow_states``: append-only history, one document per saved state (mirrors
+  SQLite's ``INSERT`` into an ``AUTOINCREMENT`` table). SQLite's autoincrement
+  ``id`` is replaced by a server-assigned monotonic ``seq`` (see ``counters``),
+  and the latest state is read back with ``WHERE flow_uuid=? ORDER BY seq DESC``
+  — not by sorting on the client-generated ObjectId ``_id``.
 - ``pending_feedback``: one document per flow (unique on ``flow_uuid``), upserted
   to mirror SQLite's ``INSERT OR REPLACE``.
+- ``counters``: internal bookkeeping. MongoDB has no autoincrement, so a single
+  document holds an atomically ``$inc``-ed sequence that stands in for SQLite's
+  ``AUTOINCREMENT id``, giving server-assigned ordering of appended states.
 
 State is stored as a JSON string (``state_json``) via ``json.dumps`` exactly like
 the SQLite backend, guaranteeing identical round-trips and avoiding BSON edge
@@ -65,6 +70,7 @@ class MongoDbFlowPersistence(FlowPersistence):
     database_name: str | None = Field(default=None)
     states_collection: str = Field(default="flow_states")
     pending_collection: str = Field(default="pending_feedback")
+    counters_collection: str = Field(default="counters")
 
     _client: Any = PrivateAttr(default=None)
     _db: Any = PrivateAttr(default=None)
@@ -115,7 +121,12 @@ class MongoDbFlowPersistence(FlowPersistence):
         return db
 
     def init_db(self) -> None:
-        """Create the collections' indexes if they don't exist."""
+        """Create the collections' indexes if they don't exist.
+
+        Mirrors SQLite: ``flow_states`` keeps an append-only history indexed by
+        ``flow_uuid`` (non-unique, many states per flow), while
+        ``pending_feedback`` holds at most one document per flow (unique).
+        """
         db = self._ensure_client()
         db[self.states_collection].create_index("flow_uuid")
         db[self.pending_collection].create_index("flow_uuid", unique=True)
@@ -124,12 +135,30 @@ class MongoDbFlowPersistence(FlowPersistence):
     def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to a plain dict."""
         if isinstance(state_data, BaseModel):
-            return state_data.model_dump()
+            return state_data.model_dump(mode="json")
         if isinstance(state_data, dict):
             return state_data
         raise ValueError(
             f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
         )
+
+    def _next_sequence(self, name: str) -> int:
+        """Return the next value of a server-assigned monotonic counter.
+
+        MongoDB has no autoincrement, so this atomically ``$inc`` a per-name
+        sequence document server-side, standing in for SQLite's
+        ``AUTOINCREMENT id`` to order appended states reliably (independent of
+        client-generated ObjectId monotonicity).
+        """
+        from pymongo import ReturnDocument
+
+        doc = self._db_ready()[self.counters_collection].find_one_and_update(
+            {"_id": name},
+            {"$inc": {"seq": 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        return int(doc["seq"])
 
     def save_state(
         self,
@@ -137,7 +166,12 @@ class MongoDbFlowPersistence(FlowPersistence):
         method_name: str,
         state_data: dict[str, Any] | BaseModel,
     ) -> None:
-        """Persist the flow state after method completion."""
+        """Persist the flow state after method completion.
+
+        Appends a new state document (mirrors SQLite's ``INSERT``), tagged with
+        a server-assigned ``seq`` so the most recent state can be selected by
+        ordering on ``seq`` rather than the client-generated ObjectId ``_id``.
+        """
         state_dict = self._to_state_dict(state_data)
         self._db_ready()[self.states_collection].insert_one(
             {
@@ -145,13 +179,14 @@ class MongoDbFlowPersistence(FlowPersistence):
                 "method_name": method_name,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "state_json": json.dumps(state_dict),
+                "seq": self._next_sequence(self.states_collection),
             }
         )
 
     def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
         """Load the most recent state for a given flow UUID."""
         doc = self._db_ready()[self.states_collection].find_one(
-            {"flow_uuid": flow_uuid}, sort=[("_id", -1)]
+            {"flow_uuid": flow_uuid}, sort=[("seq", -1)]
         )
         if doc:
             result = json.loads(doc["state_json"])
