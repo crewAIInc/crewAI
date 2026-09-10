@@ -9,6 +9,7 @@ import re
 from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
 
+from crewai_core.platform_apps import PLATFORM_APPS, PlatformApp
 from pydantic import (
     UUID4,
     BaseModel,
@@ -55,6 +56,9 @@ from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
+
+
+__all__ = ["PLATFORM_APPS"]
 
 
 if TYPE_CHECKING:
@@ -180,8 +184,7 @@ _SLUG_RE: Final[re.Pattern[str]] = re.compile(
 )
 
 
-PlatformApp = str
-PlatformAppOrAction = str
+PlatformAppOrAction = PlatformApp | str
 
 
 class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):

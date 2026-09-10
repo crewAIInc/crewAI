@@ -1,9 +1,9 @@
 """CrewAI Platform application catalog."""
 
-from typing import Final
+from typing import Final, Literal, get_args
 
 
-PLATFORM_APPS: Final[tuple[str, ...]] = (
+PlatformApp = Literal[
     "asana",
     "box",
     "clickup",
@@ -20,4 +20,6 @@ PLATFORM_APPS: Final[tuple[str, ...]] = (
     "slack",
     "stripe",
     "zendesk",
-)
+]
+
+PLATFORM_APPS: Final[tuple[str, ...]] = (*get_args(PlatformApp),)
