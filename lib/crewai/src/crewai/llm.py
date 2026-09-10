@@ -2502,8 +2502,11 @@ class LLM(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """
-        Returns the context window size, using 75% of the maximum to avoid
-        cutting off messages mid-thread.
+        Returns the context window size, scaled by CONTEXT_WINDOW_USAGE_RATIO
+        to avoid cutting off messages mid-thread.
+
+        When several entries in LLM_CONTEXT_WINDOW_SIZES prefix-match the model
+        id, the longest (most specific) one wins.
 
         Raises:
             ValueError: If a model's context window size is outside valid bounds (1024-2097152)
@@ -2524,8 +2527,16 @@ class LLM(BaseLLM):
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
         model_name = self._context_window_model_name()
+        best_key = ""
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if model_name.startswith(key) or self.model.startswith(key):
+            if not (model_name.startswith(key) or self.model.startswith(key)):
+                continue
+            # Several keys can prefix-match one model id -- "anthropic.claude-v2:1"
+            # matches both itself and "anthropic.claude-v2". Keep the longest
+            # match, which is the most specific entry, instead of whichever one
+            # happens to come last in the dict.
+            if len(key) > len(best_key):
+                best_key = key
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 

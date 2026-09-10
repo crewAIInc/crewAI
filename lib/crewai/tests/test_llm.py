@@ -11,7 +11,12 @@ from crewai.events.event_types import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, DEFAULT_CONTEXT_WINDOW_SIZE, LLM
+from crewai.llm import (
+    CONTEXT_WINDOW_USAGE_RATIO,
+    DEFAULT_CONTEXT_WINDOW_SIZE,
+    LLM,
+    LLM_CONTEXT_WINDOW_SIZES,
+)
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
@@ -384,6 +389,77 @@ def test_unrecognized_provider_prefix_is_not_stripped() -> None:
     assert llm.get_context_window_size() == int(
         DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
     )
+
+
+def test_claude_v2_1_keeps_its_own_window() -> None:
+    """A longer key must win over a shorter one that also prefix-matches.
+
+    "anthropic.claude-v2:1" matches both itself (200k) and
+    "anthropic.claude-v2" (100k), and the shorter key is declared immediately
+    after it, so the last-match-wins loop used to hand back the 100k window --
+    half the context the model actually has.
+    """
+    llm = LLM(model="anthropic.claude-v2:1", is_litellm=True)
+    assert llm.get_context_window_size() == int(
+        200000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
+def test_claude_v2_still_gets_its_smaller_window() -> None:
+    """The shorter key keeps its own value; it is not widened by the fix."""
+    llm = LLM(model="anthropic.claude-v2", is_litellm=True)
+    assert llm.get_context_window_size() == int(
+        100000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
+def test_no_declared_model_resolves_to_a_different_window() -> None:
+    """Every entry must resolve to its own window under the real lookup rule.
+
+    This is the general form of the claude-v2:1 bug. It is checked against the
+    resolution rule rather than by constructing an LLM per model, because many
+    entries route to native providers whose SDKs are optional extras.
+
+    The list of ids that the *old* last-match-wins rule got wrong is asserted
+    to be exactly the one entry this change fixes, so a future entry that
+    reintroduces the hazard shows up here instead of silently halving someone's
+    context window.
+    """
+    broken_under_old_rule = []
+    for model, declared in LLM_CONTEXT_WINDOW_SIZES.items():
+        best_key = ""
+        longest_match = None
+        last_match = None
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if not model.startswith(key):
+                continue
+            last_match = value  # what the old loop returned: no break
+            if len(key) > len(best_key):
+                best_key = key
+                longest_match = value
+
+        assert longest_match == declared, (
+            f"{model} resolves to {longest_match} (via {best_key!r}) "
+            f"instead of its own declared {declared}"
+        )
+        if last_match != declared:
+            broken_under_old_rule.append(model)
+
+    assert broken_under_old_rule == ["anthropic.claude-v2:1"]
+
+
+def test_longest_prefix_wins_regardless_of_declaration_order() -> None:
+    """Precedence must come from specificity, not from position in the dict."""
+    with patch.dict(
+        "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
+        # the short, wrong-for-this-model key is declared last on purpose
+        {"acme-chat-v3": 200000, "acme-chat": 32000},
+        clear=True,
+    ):
+        llm = LLM(model="acme-chat-v3", is_litellm=True)
+        assert llm.get_context_window_size() == int(
+            200000 * CONTEXT_WINDOW_USAGE_RATIO
+        )
 
 
 @pytest.fixture
