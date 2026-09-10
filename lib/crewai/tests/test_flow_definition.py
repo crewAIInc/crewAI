@@ -5,6 +5,7 @@ import importlib
 import inspect
 import logging
 from pathlib import Path
+import re
 from typing import Annotated, Literal
 
 import pytest
@@ -13,12 +14,22 @@ from pydantic import BaseModel, ValidationError
 import crewai.flow.dsl as flow_dsl
 import crewai.flow.flow_definition as flow_definition
 import crewai.flow.visualization.builder as visualization_builder
-from crewai.experimental import ConversationConfig, RouterConfig
 from crewai.flow.expressions import (
     FLOW_TEMPLATE_EXPRESSION_EXAMPLES,
     FLOW_TEMPLATE_EXPRESSION_RULES,
 )
-from crewai.flow import Flow, and_, human_feedback, listen, or_, persist, router, start
+from crewai.flow import (
+    ConversationConfig,
+    Flow,
+    RouterConfig,
+    and_,
+    human_feedback,
+    listen,
+    or_,
+    persist,
+    router,
+    start,
+)
 
 
 def test_flow_public_exports_are_explicit():
@@ -450,6 +461,67 @@ def test_flow_definition_uses_collapsed_conversational_router_start():
     assert "route_conversation" in methods
     assert methods["route_conversation"].start is True
     assert methods["route_conversation"].router is True
+
+
+def test_declaring_the_conversational_block_opts_in_without_enabled():
+    definition = flow_definition.FlowDefinition.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "JsonChat",
+            "conversational": {"llm": "gpt-4o-mini"},
+            "methods": {
+                "begin": {"do": {"call": "expression", "expr": "'x'"}, "start": True}
+            },
+        }
+    )
+
+    assert definition.conversational is not None
+    assert definition.conversational.enabled is True
+    assert definition.conversational.llm == "gpt-4o-mini"
+
+
+def test_conversational_block_can_be_explicitly_disabled():
+    definition = flow_definition.FlowDefinition.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "JsonChat",
+            "conversational": {"enabled": False, "llm": "gpt-4o-mini"},
+            "methods": {
+                "begin": {"do": {"call": "expression", "expr": "'x'"}, "start": True}
+            },
+        }
+    )
+
+    assert definition.conversational is not None
+    assert definition.conversational.enabled is False
+    assert definition.conversational.llm == "gpt-4o-mini"
+
+
+def test_omitting_the_conversational_block_leaves_it_none():
+    definition = flow_definition.FlowDefinition.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "PlainJson",
+            "methods": {
+                "begin": {"do": {"call": "expression", "expr": "'x'"}, "start": True}
+            },
+        }
+    )
+
+    assert definition.conversational is None
+
+
+def test_flow_definition_includes_conversational_from_decorator_alone():
+    @ConversationConfig(llm="gpt-4o-mini")
+    class DecoratedFlow(Flow):
+        pass
+
+    definition = DecoratedFlow.flow_definition()
+
+    assert definition.conversational is not None
+    assert definition.conversational.enabled is True
+    assert "route_conversation" in definition.methods
+    assert "converse_turn" in definition.methods
 
 
 def test_flow_definition_degrades_human_feedback_metadata(caplog):
@@ -1231,7 +1303,7 @@ def test_static_string_listener_is_allowed_by_contract():
 @pytest.mark.parametrize("listen", ["publish", {"or": ["publish", "revise"]}])
 @pytest.mark.parametrize("router_enabled", [False, True])
 def test_flow_definition_rejects_method_self_listen(listen, router_enabled):
-    with pytest.raises(ValueError, match="methods.publish.listen"):
+    with pytest.raises(ValueError, match="listen condition"):
         flow_definition.FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
@@ -1250,6 +1322,49 @@ def test_flow_definition_rejects_method_self_listen(listen, router_enabled):
                 },
             }
         )
+
+
+def test_flow_definition_rejects_conversational_route_handler_name_collision():
+    with pytest.raises(ValueError, match=r"listen condition 'create_video'"):
+        flow_definition.FlowDefinition.from_declaration(contents=
+            {
+                "schema": "crewai.flow/v1",
+                "name": "VideoFlow",
+                "conversational": {
+                    "enabled": True,
+                    "router": {
+                        "route_descriptions": {
+                            "create_video": "User wants a new video.",
+                        },
+                    },
+                },
+                "methods": {
+                    "begin": {
+                        "do": {"ref": "loaded_flows:VideoFlow.begin"},
+                        "start": True,
+                    },
+                    "create_video": {
+                        "do": {"ref": "loaded_flows:VideoFlow.create_video"},
+                        "listen": "create_video",
+                    },
+                },
+            }
+        )
+
+
+def test_build_flow_definition_wraps_validation_error_with_class_name():
+    class VideoFlow(Flow):
+        conversational = True
+
+        @listen("create_video")
+        def create_video(self):
+            return "made a video"
+
+    with pytest.raises(ValueError, match="Invalid flow definition for VideoFlow"):
+        VideoFlow.flow_definition()
+
+    with pytest.raises(ValueError, match="Invalid flow definition for VideoFlow"):
+        VideoFlow()
 
 
 def test_start_false_not_classified_as_start_method():
@@ -1373,6 +1488,40 @@ def test_skill_documents_flow_wiring():
     for example in FLOW_TEMPLATE_EXPRESSION_EXAMPLES["yaml"]:
         assert example["title"] in skill
         assert example["code"] in skill
+
+
+def test_skill_renders_both_conversational_sections():
+    """Both models must render; the router shares no section with its parent.
+
+    Non-union sections render only their first model, so grouping them would
+    drop the router and leave the link to it without a target.
+    """
+    skill = flow_definition.FlowDefinition.skill()
+
+    assert "### Conversational (`conversational`)" in skill
+    assert "### Conversational Router (`conversational.router`)" in skill
+
+    link = "[Conversational Router (`conversational.router`)]"
+    assert link in skill
+    anchor = re.search(re.escape(link) + r"\((#[^)]+)\)", skill).group(1)
+    assert anchor == "#conversational-router-conversationalrouter"
+
+
+def test_skill_documents_every_conversational_field():
+    skill = flow_definition.FlowDefinition.skill()
+    section = skill[skill.index("### Conversational (`conversational`)") :]
+
+    for field in flow_definition.FlowConversationalDefinition.model_fields:
+        assert f"`{field}`" in section, field
+    for field in flow_definition.FlowConversationalRouterDefinition.model_fields:
+        assert f"`{field}`" in section, field
+
+
+def test_skill_conversational_skip_suppresses_both_sections():
+    skill = flow_definition.FlowDefinition.skill(skips=["conversational"])
+
+    assert "### Conversational" not in skill
+    assert "conversational-router" not in skill
 
 
 def test_skill_can_render_json_examples():

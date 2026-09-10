@@ -1,0 +1,878 @@
+---
+title: 메모리
+description: CrewAI의 통합 메모리 시스템을 활용하여 에이전트 역량을 강화합니다.
+icon: database
+mode: "wide"
+---
+
+## 개요
+
+CrewAI는 **통합 메모리 시스템**을 제공합니다 -- 단기, 장기, 엔터티, 외부 메모리 유형을 하나의 지능형 API인 단일 `Memory` 클래스로 대체합니다. 메모리는 저장 시 LLM을 사용하여 콘텐츠를 분석하고(범위, 카테고리, 중요도 추론) 의미 유사도, 최신성, 중요도를 혼합한 복합 점수로 적응형 깊이 recall을 지원합니다.
+
+메모리를 네 가지 방법으로 사용할 수 있습니다: **독립 실행**(스크립트, 노트북), **Crew와 함께**, **에이전트와 함께**, 또는 **Flow 내부에서**.
+
+## 빠른 시작
+
+```python
+from crewai import Memory
+
+memory = Memory()
+
+# 저장 -- LLM이 scope, categories, importance를 추론
+memory.remember("We decided to use PostgreSQL for the user database.")
+
+# 검색 -- 복합 점수(의미 + 최신성 + 중요도)로 결과 순위 매기기
+matches = memory.recall("What database did we choose?")
+for m in matches:
+    print(f"[{m.score:.2f}] {m.record.content}")
+
+# 빠르게 변하는 프로젝트를 위한 점수 조정
+memory = Memory(recency_weight=0.5, recency_half_life_days=7)
+
+# 삭제
+memory.forget(scope="/project/old")
+
+# 자동 구성된 scope 트리 탐색
+print(memory.tree())
+print(memory.info("/"))
+```
+
+## 메모리를 사용하는 네 가지 방법
+
+### 독립 실행
+
+스크립트, 노트북, CLI 도구 또는 독립 지식 베이스로 메모리를 사용합니다 -- 에이전트나 crew가 필요하지 않습니다.
+
+```python
+from crewai import Memory
+
+memory = Memory()
+
+# 지식 구축
+memory.remember("The API rate limit is 1000 requests per minute.")
+memory.remember("Our staging environment uses port 8080.")
+memory.remember("The team agreed to use feature flags for all new releases.")
+
+# 나중에 필요한 것을 recall
+matches = memory.recall("What are our API limits?", limit=5)
+for m in matches:
+    print(f"[{m.score:.2f}] {m.record.content}")
+
+# 긴 텍스트에서 원자적 사실 추출
+raw = """Meeting notes: We decided to migrate from MySQL to PostgreSQL
+next quarter. The budget is $50k. Sarah will lead the migration."""
+
+facts = memory.extract_memories(raw)
+# ["Migration from MySQL to PostgreSQL planned for next quarter",
+#  "Database migration budget is $50k",
+#  "Sarah will lead the database migration"]
+
+for fact in facts:
+    memory.remember(fact)
+```
+
+### Crew와 함께 사용
+
+기본 설정은 `memory=True`를 전달하고, 사용자 정의 동작은 설정된 `Memory` 인스턴스를 전달합니다.
+
+```python
+from crewai import Crew, Agent, Task, Process, Memory
+
+# 옵션 1: 기본 메모리
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+)
+
+# 옵션 2: 조정된 점수가 있는 사용자 정의 메모리
+memory = Memory(
+    recency_weight=0.4,
+    semantic_weight=0.4,
+    importance_weight=0.2,
+    recency_half_life_days=14,
+)
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    memory=memory,
+)
+```
+
+`memory=True`일 때 crew는 기본 `Memory()`를 생성하고 crew의 `embedder` 설정을 자동으로 전달합니다. crew의 모든 에이전트는 자체 메모리가 없는 한 crew의 메모리를 공유합니다.
+
+각 작업 후 crew는 자동으로 작업 출력에서 개별 사실을 추출하여 저장합니다. 각 작업 전에 에이전트는 메모리에서 관련 컨텍스트를 recall하여 작업 프롬프트에 주입합니다.
+
+### 에이전트와 함께 사용
+
+에이전트는 crew의 공유 메모리(기본값)를 사용하거나 비공개 컨텍스트를 위한 범위 지정 뷰를 받을 수 있습니다.
+
+```python
+from crewai import Agent, Memory
+
+memory = Memory()
+
+# 연구원은 비공개 scope를 받음 -- /agent/researcher만 볼 수 있음
+researcher = Agent(
+    role="Researcher",
+    goal="Find and analyze information",
+    backstory="Expert researcher with attention to detail",
+    memory=memory.scope("/agent/researcher"),
+)
+
+# 작성자는 crew 공유 메모리 사용 (에이전트 수준 메모리 미설정)
+writer = Agent(
+    role="Writer",
+    goal="Produce clear, well-structured content",
+    backstory="Experienced technical writer",
+    # memory 미설정 -- crew에 메모리가 활성화되면 crew._memory 사용
+)
+```
+
+이 패턴은 연구원에게 비공개 발견을 제공하면서 작성자는 crew 공유 메모리에서 읽습니다.
+
+### Flow와 함께 사용
+
+모든 Flow에는 내장 메모리가 있습니다. 모든 flow 메서드 내부에서 `self.remember()`, `self.recall()`, `self.extract_memories()`를 사용하세요.
+
+```python
+from crewai.flow.flow import Flow, listen, start
+
+class ResearchFlow(Flow):
+    @start()
+    def gather_data(self):
+        findings = "PostgreSQL handles 10k concurrent connections. MySQL caps at 5k."
+        self.remember(findings, scope="/research/databases")
+        return findings
+
+    @listen(gather_data)
+    def write_report(self, findings):
+        # 컨텍스트를 제공하기 위해 과거 연구 recall
+        past = self.recall("database performance benchmarks")
+        context = "\n".join(f"- {m.record.content}" for m in past)
+        return f"Report:\nNew findings: {findings}\nPrevious context:\n{context}"
+```
+
+Flow에서의 메모리에 대한 자세한 내용은 [Flows 문서](/concepts/flows)를 참조하세요.
+
+
+## 계층적 범위(Scopes)
+
+### 범위란 무엇인가
+
+메모리는 파일 시스템과 유사한 계층적 scope 트리로 구성됩니다. 각 scope는 `/`, `/project/alpha` 또는 `/agent/researcher/findings`와 같은 경로입니다.
+
+```
+/
+  /company
+    /company/engineering
+    /company/product
+  /project
+    /project/alpha
+    /project/beta
+  /agent
+    /agent/researcher
+    /agent/writer
+```
+
+범위는 **컨텍스트 의존적 메모리**를 제공합니다 -- 범위 내에서 recall하면 해당 트리 분기만 검색하여 정밀도와 성능을 모두 향상시킵니다.
+
+### 범위 추론 작동 방식
+
+`remember()` 호출 시 scope를 지정하지 않으면 LLM이 콘텐츠와 기존 scope 트리를 분석한 후 최적의 배치를 제안합니다. 적합한 기존 scope가 없으면 새로 생성합니다. 시간이 지남에 따라 scope 트리는 콘텐츠 자체에서 유기적으로 성장합니다 -- 미리 스키마를 설계할 필요가 없습니다.
+
+```python
+memory = Memory()
+
+# LLM이 콘텐츠에서 scope 추론
+memory.remember("We chose PostgreSQL for the user database.")
+# -> /project/decisions 또는 /engineering/database 아래에 배치될 수 있음
+
+# scope를 명시적으로 지정할 수도 있음
+memory.remember("Sprint velocity is 42 points", scope="/team/metrics")
+```
+
+### 범위 트리 시각화
+
+```python
+print(memory.tree())
+# / (15 records)
+#   /project (8 records)
+#     /project/alpha (5 records)
+#     /project/beta (3 records)
+#   /agent (7 records)
+#     /agent/researcher (4 records)
+#     /agent/writer (3 records)
+
+print(memory.info("/project/alpha"))
+# ScopeInfo(path='/project/alpha', record_count=5,
+#           categories=['architecture', 'database'],
+#           oldest_record=datetime(...), newest_record=datetime(...),
+#           child_scopes=[])
+```
+
+### MemoryScope: 하위 트리 뷰
+
+`MemoryScope`는 모든 연산을 트리의 한 분기로 제한합니다. 이를 사용하는 에이전트나 코드는 해당 하위 트리 내에서만 보고 쓸 수 있습니다.
+
+```python
+memory = Memory()
+
+# 특정 에이전트를 위한 scope 생성
+agent_memory = memory.scope("/agent/researcher")
+
+# 모든 것이 /agent/researcher 기준으로 상대적
+agent_memory.remember("Found three relevant papers on LLM memory.")
+# -> /agent/researcher 아래에 저장
+
+agent_memory.recall("relevant papers")
+# -> /agent/researcher 아래에서만 검색
+
+# subscope로 더 좁히기
+project_memory = agent_memory.subscope("project-alpha")
+# -> /agent/researcher/project-alpha
+```
+
+### 범위 설계 모범 사례
+
+- **평평하게 시작하고 LLM이 구성하게 하세요.** 범위 계층 구조를 미리 과도하게 설계하지 마세요. `memory.remember(content)`로 시작하고 콘텐츠가 축적됨에 따라 LLM의 scope 추론이 구조를 만들게 하세요.
+
+- **`/{엔터티_유형}/{식별자}` 패턴을 사용하세요.** `/project/alpha`, `/agent/researcher`, `/company/engineering`, `/customer/acme-corp` 같은 패턴에서 자연스러운 계층 구조가 나타납니다.
+
+- **데이터 유형이 아닌 관심사별로 scope를 지정하세요.** `/decisions/project/alpha` 대신 `/project/alpha/decisions`를 사용하세요. 이렇게 하면 관련 콘텐츠가 함께 유지됩니다.
+
+- **깊이를 얕게 유지하세요 (2-3 수준).** 깊이 중첩된 scope는 너무 희소해집니다. `/project/alpha/architecture`는 좋지만 `/project/alpha/architecture/decisions/databases/postgresql`은 너무 깊습니다.
+
+- **알 때는 명시적 scope를, 모를 때는 LLM 추론을 사용하세요.** 알려진 프로젝트 결정을 저장할 때는 `scope="/project/alpha/decisions"`를 전달하세요. 자유 형식 에이전트 출력을 저장할 때는 scope를 생략하고 LLM이 결정하게 하세요.
+
+### 사용 사례 예시
+
+**다중 프로젝트 팀:**
+```python
+memory = Memory()
+# 각 프로젝트가 자체 분기를 가짐
+memory.remember("Using microservices architecture", scope="/project/alpha/architecture")
+memory.remember("GraphQL API for client apps", scope="/project/beta/api")
+
+# 모든 프로젝트에서 recall
+memory.recall("API design decisions")
+
+# 특정 프로젝트 내에서만
+memory.recall("API design", scope="/project/beta")
+```
+
+**공유 지식과 에이전트별 비공개 컨텍스트:**
+```python
+memory = Memory()
+
+# 연구원은 비공개 발견을 가짐
+researcher_memory = memory.scope("/agent/researcher")
+
+# 작성자는 자체 scope와 공유 회사 지식에서 읽을 수 있음
+writer_view = memory.slice(
+    scopes=["/agent/writer", "/company/knowledge"],
+    read_only=True,
+)
+```
+
+**고객 지원 (고객별 컨텍스트):**
+```python
+memory = Memory()
+
+# 각 고객이 격리된 컨텍스트를 가짐
+memory.remember("Prefers email communication", scope="/customer/acme-corp")
+memory.remember("On enterprise plan, 50 seats", scope="/customer/acme-corp")
+
+# 공유 제품 문서는 모든 에이전트가 접근 가능
+memory.remember("Rate limit is 1000 req/min on enterprise plan", scope="/product/docs")
+```
+
+
+## 메모리 슬라이스
+
+### 슬라이스란 무엇인가
+
+`MemorySlice`는 여러 개의 분리된 scope에 대한 뷰입니다. 하나의 하위 트리로 제한하는 scope와 달리, 슬라이스는 여러 분기에서 동시에 recall할 수 있게 합니다.
+
+### 슬라이스 vs 범위 사용 시기
+
+- **범위(Scope)**: 에이전트나 코드 블록을 단일 하위 트리로 제한해야 할 때 사용. 예: `/agent/researcher`만 보는 에이전트.
+- **슬라이스(Slice)**: 여러 분기의 컨텍스트를 결합해야 할 때 사용. 예: 자체 scope와 공유 회사 지식에서 읽는 에이전트.
+
+### 읽기 전용 슬라이스
+
+가장 일반적인 패턴: 에이전트에게 여러 분기에 대한 읽기 액세스를 제공하되 공유 영역에 쓰지 못하게 합니다.
+
+```python
+memory = Memory()
+
+# 에이전트는 자체 scope와 회사 지식에서 recall 가능,
+# 하지만 회사 지식에 쓸 수 없음
+agent_view = memory.slice(
+    scopes=["/agent/researcher", "/company/knowledge"],
+    read_only=True,
+)
+
+matches = agent_view.recall("company security policies", limit=5)
+# /agent/researcher와 /company/knowledge 모두에서 검색, 결과 병합 및 순위 매기기
+
+agent_view.remember("new finding")  # PermissionError 발생 (읽기 전용)
+```
+
+### 읽기/쓰기 슬라이스
+
+읽기 전용이 비활성화되면 포함된 scope 중 어디에든 쓸 수 있지만, 어떤 scope인지 명시적으로 지정해야 합니다.
+
+```python
+view = memory.slice(scopes=["/team/alpha", "/team/beta"], read_only=False)
+
+# 쓸 때 scope를 반드시 지정
+view.remember("Cross-team decision", scope="/team/alpha", categories=["decisions"])
+```
+
+
+## 복합 점수(Composite Scoring)
+
+Recall 결과는 세 가지 신호의 가중 조합으로 순위가 매겨집니다:
+
+```
+composite = semantic_weight * similarity + recency_weight * decay + importance_weight * importance
+```
+
+여기서:
+- **similarity** = 벡터 인덱스에서 `1 / (1 + distance)` (0에서 1)
+- **decay** = `0.5^(age_days / half_life_days)` -- 지수 감쇠 (오늘은 1.0, 반감기에서 0.5)
+- **importance** = 레코드의 중요도 점수 (0에서 1), 인코딩 시 설정
+
+`Memory` 생성자에서 직접 설정합니다:
+
+```python
+# 스프린트 회고: 최근 메모리 선호, 짧은 반감기
+memory = Memory(
+    recency_weight=0.5,
+    semantic_weight=0.3,
+    importance_weight=0.2,
+    recency_half_life_days=7,
+)
+
+# 아키텍처 지식 베이스: 중요한 메모리 선호, 긴 반감기
+memory = Memory(
+    recency_weight=0.1,
+    semantic_weight=0.5,
+    importance_weight=0.4,
+    recency_half_life_days=180,
+)
+```
+
+각 `MemoryMatch`에는 결과가 해당 위치에 순위된 이유를 볼 수 있는 `match_reasons` 목록이 포함됩니다 (예: `["semantic", "recency", "importance"]`).
+
+
+## LLM 분석 레이어
+
+메모리는 LLM을 세 가지 방식으로 사용합니다:
+
+1. **저장 시** -- scope, categories, importance를 생략하면 LLM이 콘텐츠를 분석하여 scope, categories, importance, 메타데이터(엔터티, 날짜, 주제)를 제안합니다.
+2. **recall 시** -- deep/auto recall의 경우 LLM이 쿼리(키워드, 시간 힌트, 제안 scope, 복잡도)를 분석하여 검색을 안내합니다.
+3. **메모리 추출** -- `extract_memories(content)`는 원시 텍스트(예: 작업 출력)를 개별 메모리 문장으로 나눕니다. 에이전트는 각 문장에 `remember()`를 호출하기 전에 이를 사용하여 하나의 큰 블록 대신 원자적 사실이 저장되도록 합니다.
+
+모든 분석은 LLM 실패 시 우아하게 저하됩니다 -- [오류 시 동작](#오류-시-동작)을 참조하세요.
+
+
+## 메모리 통합
+
+새 콘텐츠를 저장할 때 인코딩 파이프라인은 자동으로 스토리지에서 유사한 기존 레코드를 확인합니다. 유사도가 `consolidation_threshold`(기본값 0.85) 이상이면 LLM이 처리 방법을 결정합니다:
+
+- **keep** -- 기존 레코드가 여전히 정확하고 중복이 아닙니다.
+- **update** -- 기존 레코드를 새 정보로 업데이트해야 합니다 (LLM이 병합된 콘텐츠를 제공).
+- **delete** -- 기존 레코드가 오래되었거나, 대체되었거나, 모순됩니다.
+- **insert_new** -- 새 콘텐츠를 별도의 레코드로 삽입해야 하는지 여부.
+
+이를 통해 중복이 축적되는 것을 방지합니다. 예를 들어, "CrewAI ensures reliable operation"을 세 번 저장하면 통합이 중복을 인식하고 하나의 레코드만 유지합니다.
+
+### 배치 내 중복 제거
+
+`remember_many()`를 사용할 때 동일 배치 내의 항목은 스토리지에 도달하기 전에 서로 비교됩니다. 두 항목의 코사인 유사도가 `batch_dedup_threshold`(기본값 0.98) 이상이면 나중 항목이 자동으로 삭제됩니다. 이는 LLM 호출 없이 순수 벡터 연산으로 단일 배치 내의 정확하거나 거의 정확한 중복을 잡아냅니다.
+
+```python
+# 2개의 레코드만 저장됨 (세 번째는 첫 번째의 거의 중복)
+memory.remember_many([
+    "CrewAI supports complex workflows.",
+    "Python is a great language.",
+    "CrewAI supports complex workflows.",  # 배치 내 중복 제거로 삭제
+])
+```
+
+
+## 비차단 저장
+
+`remember_many()`는 **비차단**입니다 -- 인코딩 파이프라인을 백그라운드 스레드에 제출하고 즉시 반환합니다. 이는 메모리가 저장되는 동안 에이전트가 다음 작업을 계속할 수 있음을 의미합니다.
+
+```python
+# 즉시 반환 -- 저장은 백그라운드에서 발생
+memory.remember_many(["Fact A.", "Fact B.", "Fact C."])
+
+# recall()은 검색 전에 보류 중인 저장을 자동으로 대기
+matches = memory.recall("facts")  # 3개 레코드 모두 확인 가능
+```
+
+### 읽기 배리어
+
+모든 `recall()` 호출은 검색 전에 자동으로 `drain_writes()`를 호출하여 쿼리가 항상 최신 저장된 레코드를 볼 수 있도록 합니다. 이는 투명하게 작동하므로 별도로 신경 쓸 필요가 없습니다.
+
+### Crew 종료
+
+crew가 완료되면 `kickoff()`는 `finally` 블록에서 보류 중인 모든 메모리 저장을 드레인하므로, 백그라운드 저장이 진행 중인 상태에서 crew가 완료되더라도 저장이 손실되지 않습니다.
+
+### 독립 실행 사용
+
+crew 수명 주기가 없는 스크립트나 노트북에서는 `drain_writes()` 또는 `close()`를 명시적으로 호출하세요:
+
+```python
+memory = Memory()
+memory.remember_many(["Fact A.", "Fact B."])
+
+# 옵션 1: 보류 중인 저장 대기
+memory.drain_writes()
+
+# 옵션 2: 드레인 후 백그라운드 풀 종료
+memory.close()
+```
+
+
+## 출처 및 개인정보
+
+모든 메모리 레코드는 출처 추적을 위한 `source` 태그와 접근 제어를 위한 `private` 플래그를 가질 수 있습니다.
+
+### 출처 추적
+
+`source` 매개변수는 메모리의 출처를 식별합니다:
+
+```python
+# 메모리에 출처 태그 지정
+memory.remember("User prefers dark mode", source="user:alice")
+memory.remember("System config updated", source="admin")
+memory.remember("Agent found a bug", source="agent:debugger")
+
+# 특정 출처의 메모리만 recall
+matches = memory.recall("user preferences", source="user:alice")
+```
+
+### 비공개 메모리
+
+비공개 메모리는 `source`가 일치할 때만 recall에서 볼 수 있습니다:
+
+```python
+# 비공개 메모리 저장
+memory.remember("Alice's API key is sk-...", source="user:alice", private=True)
+
+# 이 recall은 비공개 메모리를 볼 수 있음 (source 일치)
+matches = memory.recall("API key", source="user:alice")
+
+# 이 recall은 볼 수 없음 (다른 source)
+matches = memory.recall("API key", source="user:bob")
+
+# 관리자 액세스: source에 관계없이 모든 비공개 레코드 보기
+matches = memory.recall("API key", include_private=True)
+```
+
+이는 서로 다른 사용자의 메모리가 격리되어야 하는 다중 사용자 또는 엔터프라이즈 배포에서 특히 유용합니다.
+
+
+## RecallFlow (딥 Recall)
+
+`recall()`은 두 가지 깊이를 지원합니다:
+
+- **`depth="shallow"`** -- 복합 점수를 사용한 직접 벡터 검색. 빠름 (~200ms), LLM 호출 없음.
+- **`depth="deep"` (기본값)** -- 다단계 RecallFlow 실행: 쿼리 분석, scope 선택, 병렬 벡터 검색, 신뢰도 기반 라우팅, 신뢰도가 낮을 때 선택적 재귀 탐색.
+
+**스마트 LLM 건너뛰기**: `query_analysis_threshold`(기본값 200자)보다 짧은 쿼리는 deep 모드에서도 LLM 쿼리 분석을 완전히 건너뜁니다. "What database do we use?"와 같은 짧은 쿼리는 이미 좋은 검색 구문이므로 LLM 분석이 큰 가치를 더하지 않습니다. 이를 통해 일반적인 짧은 쿼리에서 recall당 ~1-3초를 절약합니다. 긴 쿼리(예: 전체 작업 설명)만 대상 하위 쿼리로의 LLM 분석을 거칩니다.
+
+```python
+# Shallow: 순수 벡터 검색, LLM 없음
+matches = memory.recall("What did we decide?", limit=10, depth="shallow")
+
+# Deep (기본값): 긴 쿼리에 대한 LLM 분석을 포함한 지능형 검색
+matches = memory.recall(
+    "Summarize all architecture decisions from this quarter",
+    limit=10,
+    depth="deep",
+)
+```
+
+RecallFlow 라우터를 제어하는 신뢰도 임계값은 설정 가능합니다:
+
+```python
+memory = Memory(
+    confidence_threshold_high=0.9,   # 매우 확신할 때만 합성
+    confidence_threshold_low=0.4,    # 더 적극적으로 깊이 탐색
+    exploration_budget=2,            # 최대 2라운드 탐색 허용
+    query_analysis_threshold=200,    # 이보다 짧은 쿼리는 LLM 건너뛰기
+)
+```
+
+
+## Embedder 설정
+
+메모리는 의미 검색을 위해 텍스트를 벡터로 변환하는 임베딩 모델이 필요합니다. 세 가지 방법으로 설정할 수 있습니다.
+
+### Memory에 직접 전달
+
+```python
+from crewai import Memory
+
+# 설정 dict로
+memory = Memory(embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}})
+
+# 사전 구축된 callable로
+from crewai.rag.embeddings.factory import build_embedder
+embedder = build_embedder({"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}})
+memory = Memory(embedder=embedder)
+```
+
+### Crew Embedder 설정으로
+
+`memory=True` 사용 시 crew의 `embedder` 설정이 전달됩니다:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}},
+)
+```
+
+### 제공자 예시
+
+<AccordionGroup>
+<Accordion title="OpenAI (기본)">
+```python
+memory = Memory(embedder={
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-3-small",
+        # "api_key": "sk-...",  # 또는 OPENAI_API_KEY 환경 변수 설정
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Ollama (로컬, 비공개)">
+```python
+memory = Memory(embedder={
+    "provider": "ollama",
+    "config": {
+        "model_name": "mxbai-embed-large",
+        "url": "http://localhost:11434/api/embeddings",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Azure OpenAI">
+```python
+memory = Memory(embedder={
+    "provider": "azure",
+    "config": {
+        "deployment_id": "your-embedding-deployment",
+        "api_key": "your-azure-api-key",
+        "api_base": "https://your-resource.openai.azure.com",
+        "api_version": "2024-02-01",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Google AI">
+```python
+memory = Memory(embedder={
+    "provider": "google-generativeai",
+    "config": {
+        "model_name": "gemini-embedding-001",
+        # "api_key": "...",  # 또는 GOOGLE_API_KEY 환경 변수 설정
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Google Vertex AI">
+```python
+memory = Memory(embedder={
+    "provider": "google-vertex",
+    "config": {
+        "model_name": "gemini-embedding-001",
+        "project_id": "your-gcp-project-id",
+        "location": "us-central1",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Cohere">
+```python
+memory = Memory(embedder={
+    "provider": "cohere",
+    "config": {
+        "model_name": "embed-english-v3.0",
+        # "api_key": "...",  # 또는 COHERE_API_KEY 환경 변수 설정
+    },
+})
+```
+</Accordion>
+
+<Accordion title="VoyageAI">
+```python
+memory = Memory(embedder={
+    "provider": "voyageai",
+    "config": {
+        "model": "voyage-3",
+        # "api_key": "...",  # 또는 VOYAGE_API_KEY 환경 변수 설정
+    },
+})
+```
+</Accordion>
+
+<Accordion title="AWS Bedrock">
+```python
+memory = Memory(embedder={
+    "provider": "amazon-bedrock",
+    "config": {
+        "model_name": "amazon.titan-embed-text-v1",
+        # 기본 AWS 자격 증명 사용 (boto3 세션)
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Hugging Face">
+```python
+memory = Memory(embedder={
+    "provider": "huggingface",
+    "config": {
+        "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Jina">
+```python
+memory = Memory(embedder={
+    "provider": "jina",
+    "config": {
+        "model_name": "jina-embeddings-v2-base-en",
+        # "api_key": "...",  # 또는 JINA_API_KEY 환경 변수 설정
+    },
+})
+```
+</Accordion>
+
+<Accordion title="IBM WatsonX">
+```python
+memory = Memory(embedder={
+    "provider": "watsonx",
+    "config": {
+        "model_id": "ibm/slate-30m-english-rtrvr",
+        "api_key": "your-watsonx-api-key",
+        "project_id": "your-project-id",
+        "url": "https://us-south.ml.cloud.ibm.com",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="사용자 정의 Embedder">
+```python
+# 문자열 목록을 받아 벡터 목록을 반환하는 callable 전달
+def my_embedder(texts: list[str]) -> list[list[float]]:
+    # 임베딩 로직
+    return [[0.1, 0.2, ...] for _ in texts]
+
+memory = Memory(embedder=my_embedder)
+```
+</Accordion>
+</AccordionGroup>
+
+### 제공자 참조
+
+| 제공자 | 키 | 일반적인 모델 | 참고 |
+| :--- | :--- | :--- | :--- |
+| OpenAI | `openai` | `text-embedding-3-small` | 기본값. `OPENAI_API_KEY` 설정. |
+| Ollama | `ollama` | `mxbai-embed-large` | 로컬, API 키 불필요. |
+| Azure OpenAI | `azure` | `text-embedding-ada-002` | `deployment_id` 필요. |
+| Google AI | `google-generativeai` | `gemini-embedding-001` | `GOOGLE_API_KEY` 설정. |
+| Google Vertex | `google-vertex` | `gemini-embedding-001` | `project_id` 필요. |
+| Cohere | `cohere` | `embed-english-v3.0` | 강력한 다국어 지원. |
+| VoyageAI | `voyageai` | `voyage-3` | 검색에 최적화. |
+| AWS Bedrock | `amazon-bedrock` | `amazon.titan-embed-text-v1` | boto3 자격 증명 사용. |
+| Hugging Face | `huggingface` | `all-MiniLM-L6-v2` | 로컬 sentence-transformers. |
+| Jina | `jina` | `jina-embeddings-v2-base-en` | `JINA_API_KEY` 설정. |
+| IBM WatsonX | `watsonx` | `ibm/slate-30m-english-rtrvr` | `project_id` 필요. |
+| Sentence Transformer | `sentence-transformer` | `all-MiniLM-L6-v2` | 로컬, API 키 불필요. |
+| Custom | `custom` | -- | `embedding_callable` 필요. |
+
+
+## LLM 설정
+
+메모리는 저장 분석(scope, categories, importance 추론), 통합 결정, 딥 recall 쿼리 분석에 LLM을 사용합니다. 사용할 모델을 설정할 수 있습니다.
+
+```python
+from crewai import Memory, LLM
+
+# 기본값: gpt-4o-mini
+memory = Memory()
+
+# 다른 OpenAI 모델 사용
+memory = Memory(llm="gpt-4o")
+
+# Anthropic 사용
+memory = Memory(llm="anthropic/claude-3-haiku-20240307")
+
+# 완전한 로컬/비공개 분석을 위해 Ollama 사용
+memory = Memory(llm="ollama/llama3.2")
+
+# Google Gemini 사용
+memory = Memory(llm="gemini/gemini-2.0-flash")
+
+# 사용자 정의 설정이 있는 사전 구성된 LLM 인스턴스 전달
+llm = LLM(model="gpt-4o", temperature=0)
+memory = Memory(llm=llm)
+```
+
+LLM은 **지연 초기화**됩니다 -- 처음 필요할 때만 생성됩니다. 즉, API 키가 설정되지 않아도 `Memory()` 생성 시에는 실패하지 않습니다. 오류는 LLM이 실제로 호출될 때만 발생합니다(예: 명시적 scope/categories 없이 저장할 때 또는 딥 recall 중).
+
+완전한 오프라인/비공개 운영을 위해 LLM과 embedder 모두에 로컬 모델을 사용하세요:
+
+```python
+memory = Memory(
+    llm="ollama/llama3.2",
+    embedder={"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}},
+)
+```
+
+
+## 스토리지 백엔드
+
+- **기본값**: LanceDB, `./.crewai/memory` 아래에 저장 (또는 환경 변수가 설정된 경우 `$CREWAI_STORAGE_DIR/memory`, 또는 `storage="path/to/dir"`로 전달한 경로).
+- **사용자 정의 백엔드**: `StorageBackend` 프로토콜을 구현하고(`crewai.memory.storage.backend` 참조) `Memory(storage=your_backend)`에 인스턴스를 전달합니다.
+
+
+## 탐색(Discovery)
+
+scope 계층 구조, 카테고리, 레코드를 검사합니다:
+
+```python
+memory.tree()                        # scope 및 레코드 수의 포맷된 트리
+memory.tree("/project", max_depth=2) # 하위 트리 뷰
+memory.info("/project")              # ScopeInfo: record_count, categories, oldest/newest
+memory.list_scopes("/")              # 직계 자식 scope
+memory.list_categories()             # 카테고리 이름 및 개수
+memory.list_records(scope="/project/alpha", limit=20)  # scope의 레코드, 최신순
+```
+
+
+## 오류 시 동작
+
+분석 중 LLM이 실패하면(네트워크 오류, 속도 제한, 잘못된 응답) 메모리는 우아하게 저하됩니다:
+
+- **저장 분석** -- 경고가 로깅되고 메모리는 기본 scope `/`, 빈 categories, importance `0.5`로 저장됩니다.
+- **메모리 추출** -- 전체 콘텐츠가 단일 메모리로 저장되어 누락되지 않습니다.
+- **쿼리 분석** -- recall은 단순 scope 선택 및 벡터 검색으로 폴백하여 결과를 계속 반환합니다.
+
+이러한 분석 실패에서는 예외가 발생하지 않으며, 스토리지 또는 embedder 실패만 예외를 발생시킵니다.
+
+
+## 개인정보 참고
+
+메모리 콘텐츠는 분석을 위해 설정된 LLM으로 전송됩니다(저장 시 scope/categories/importance, 쿼리 분석 및 선택적 딥 recall). 민감한 데이터의 경우 로컬 LLM(예: Ollama)을 사용하거나 제공자가 규정 요구 사항을 충족하는지 확인하세요.
+
+
+## 메모리 이벤트
+
+모든 메모리 연산은 `source_type="unified_memory"`로 이벤트를 발생시킵니다. 시간, 오류, 콘텐츠를 수신할 수 있습니다.
+
+| 이벤트 | 설명 | 주요 속성 |
+| :---- | :---------- | :------------- |
+| **MemoryQueryStartedEvent** | 쿼리 시작 | `query`, `limit` |
+| **MemoryQueryCompletedEvent** | 쿼리 성공 | `query`, `results`, `query_time_ms` |
+| **MemoryQueryFailedEvent** | 쿼리 실패 | `query`, `error` |
+| **MemorySaveStartedEvent** | 저장 시작 | `value`, `metadata` |
+| **MemorySaveCompletedEvent** | 저장 성공 | `value`, `save_time_ms` |
+| **MemorySaveFailedEvent** | 저장 실패 | `value`, `error` |
+| **MemoryRetrievalStartedEvent** | 에이전트 검색 시작 | `task_id` |
+| **MemoryRetrievalCompletedEvent** | 에이전트 검색 완료 | `task_id`, `memory_content`, `retrieval_time_ms` |
+
+예: 쿼리 시간 모니터링:
+
+```python
+from crewai.events import BaseEventListener, MemoryQueryCompletedEvent
+
+class MemoryMonitor(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_done(source, event):
+            if getattr(event, "source_type", None) == "unified_memory":
+                print(f"Query '{event.query}' completed in {event.query_time_ms:.0f}ms")
+```
+
+
+## 문제 해결
+
+**메모리가 유지되지 않나요?**
+- 저장 경로에 쓰기 권한이 있는지 확인하세요(기본값 `./.crewai/memory`). 다른 디렉터리를 사용하려면 `storage="./your_path"`를 전달하거나 `CREWAI_STORAGE_DIR` 환경 변수를 설정하세요.
+- crew 사용 시 `memory=True` 또는 `memory=Memory(...)`가 설정되었는지 확인하세요.
+
+**recall이 느린가요?**
+- 일상적인 에이전트 컨텍스트에는 `depth="shallow"`를 사용하세요. 복잡한 쿼리에만 `depth="deep"`을 사용하세요.
+- 더 많은 쿼리에서 LLM 분석을 건너뛰려면 `query_analysis_threshold`를 높이세요.
+
+**로그에 LLM 분석 오류가 있나요?**
+- 메모리는 안전한 기본값으로 계속 저장/recall합니다. 전체 LLM 분석을 원하면 API 키, 속도 제한, 모델 가용성을 확인하세요.
+
+**로그에 백그라운드 저장 오류가 있나요?**
+- 메모리 저장은 백그라운드 스레드에서 실행됩니다. 오류는 `MemorySaveFailedEvent`로 발생하지만 에이전트를 중단시키지 않습니다. 근본 원인(보통 LLM 또는 embedder 연결 문제)은 로그를 확인하세요.
+
+**동시 쓰기 충돌이 있나요?**
+- LanceDB 연산은 공유 잠금으로 직렬화되며 충돌 시 자동으로 재시도됩니다. 이는 동일 데이터베이스를 가리키는 여러 `Memory` 인스턴스(예: 에이전트 메모리 + crew 메모리)를 처리합니다. 별도의 조치가 필요하지 않습니다.
+
+**터미널에서 메모리 탐색:**
+```bash
+crewai memory                              # TUI 브라우저 열기
+crewai memory --storage-path ./my_memory   # 특정 디렉터리 지정
+```
+
+**메모리 초기화(예: 테스트용):**
+```python
+crew.reset_memories(command_type="memory")  # 통합 메모리 초기화
+# 또는 Memory 인스턴스에서:
+memory.reset()                    # 모든 scope
+memory.reset(scope="/project/old")  # 해당 하위 트리만
+```
+
+
+## 설정 참조
+
+모든 설정은 `Memory(...)`에 키워드 인수로 전달됩니다. 모든 매개변수에는 합리적인 기본값이 있습니다.
+
+| 매개변수 | 기본값 | 설명 |
+| :--- | :--- | :--- |
+| `llm` | `"gpt-4o-mini"` | 분석용 LLM (모델 이름 또는 `BaseLLM` 인스턴스). |
+| `storage` | `"lancedb"` | 스토리지 백엔드 (`"lancedb"`, 경로 문자열 또는 `StorageBackend` 인스턴스). |
+| `embedder` | `None` (OpenAI 기본값) | Embedder (설정 dict, callable 또는 `None`으로 기본 OpenAI). |
+| `recency_weight` | `0.3` | 복합 점수에서 최신성 가중치. |
+| `semantic_weight` | `0.5` | 복합 점수에서 의미 유사도 가중치. |
+| `importance_weight` | `0.2` | 복합 점수에서 중요도 가중치. |
+| `recency_half_life_days` | `30` | 최신성 점수가 절반으로 줄어드는 일수(지수 감쇠). |
+| `consolidation_threshold` | `0.85` | 저장 시 통합이 트리거되는 유사도. `1.0`으로 설정하면 비활성화. |
+| `consolidation_limit` | `5` | 통합 중 비교할 기존 레코드 최대 수. |
+| `default_importance` | `0.5` | 미제공 시 및 LLM 분석이 생략될 때 할당되는 중요도. |
+| `batch_dedup_threshold` | `0.98` | `remember_many()` 배치 내 거의 중복 삭제를 위한 코사인 유사도. |
+| `confidence_threshold_high` | `0.8` | recall 신뢰도가 이 값 이상이면 결과를 직접 반환. |
+| `confidence_threshold_low` | `0.5` | recall 신뢰도가 이 값 미만이면 더 깊은 탐색 트리거. |
+| `complex_query_threshold` | `0.7` | 복잡한 쿼리의 경우 이 신뢰도 미만에서 더 깊이 탐색. |
+| `exploration_budget` | `1` | 딥 recall 중 LLM 기반 탐색 라운드 수. |
+| `query_analysis_threshold` | `200` | 이 길이(문자 수)보다 짧은 쿼리는 딥 recall 중 LLM 분석을 건너뜀. |

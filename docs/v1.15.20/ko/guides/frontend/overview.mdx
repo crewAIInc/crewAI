@@ -1,0 +1,238 @@
+---
+title: Frontend Overview
+description: CopilotKit과 AG-UI 프로토콜로 CrewAI 에이전트를 위한 인터랙티브 사용자 인터페이스를 구축하세요.
+icon: browser
+mode: "wide"
+---
+
+## 에이전트에 사용자 인터페이스를 부여하세요
+
+CrewAI는 여러분의 에이전트를 실행합니다. [CopilotKit](https://copilotkit.ai)은 그 에이전트에 프론트엔드를 제공합니다. 이 둘을 함께 사용하면 사용자가 Crew 또는 Flow와 대화하고, 실시간으로 작동하는 모습을 지켜보고, 그 결정을 승인하며, 출력을 장황한 텍스트 대신 살아 있는 UI로 렌더링하여 볼 수 있는 애플리케이션을 구축할 수 있습니다.
+
+이 둘은 [AG-UI 프로토콜](https://docs.ag-ui.com)을 통해 연결됩니다. `ag-ui-crewai` 패키지는 어떤 Crew나 Flow든 AG-UI 엔드포인트로 노출합니다. CopilotKit의 React 훅과 컴포넌트가 그 엔드포인트를 소비합니다. 이를 통해 채팅 상자를 훨씬 뛰어넘는 경험이 열립니다:
+
+<CardGroup cols={2}>
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    에이전트 도구 호출과 상태를 여러분만의 React 컴포넌트로 렌더링하세요.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    실행 도중 사용자 승인이나 입력을 수집하기 위해 에이전트를 일시 중지하세요.
+  </Card>
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
+    에이전트 상태와 앱 UI를 양방향으로 동기화하세요.
+  </Card>
+  <Card title="Channels" icon="messages" href="/edge/ko/guides/frontend/channels">
+    동일한 에이전트를 Slack, Discord 또는 Teams 봇으로 실행하세요.
+  </Card>
+</CardGroup>
+
+이 가이드는 Crew 또는 Flow를 Next.js 프론트엔드와 처음부터 끝까지 연동시킵니다. 이 섹션의 나머지 내용은 여기서 설정한 앱을 기반으로 합니다.
+
+## 아키텍처
+
+세 가지 구성 요소가 있습니다:
+
+1. **CrewAI 에이전트 서버** — AG-UI를 통해 Crew 또는 Flow를 제공하는 Python 프로세스(FastAPI + `ag-ui-crewai`).
+2. **CopilotKit 런타임** — 에이전트를 등록하고 요청을 프록시하는 Next.js 라우트.
+3. **React 프론트엔드** — `<CopilotKit>` 프로바이더와 채팅 및 generative-UI 컴포넌트.
+
+```
+React app  ──►  CopilotKit runtime (/api/copilotkit)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+<Note>
+이 가이드는 **셀프 호스팅** 경로를 다룹니다. `ag-ui-crewai`로 CrewAI 에이전트 서버를 직접 실행하며, 관리형 서비스 없이 로컬에서 동작합니다. CopilotKit은 호스팅된 스레드와 인스펙터를 갖춘 **관리형** 경로(CopilotKit Cloud / Enterprise Intelligence)도 제공합니다. 그 방식을 원한다면 [CopilotKit CrewAI 퀵스타트](https://docs.copilotkit.ai/crewai-crews/quickstart)를 참조하세요. 이 섹션의 프론트엔드 코드는 어느 쪽이든 동일합니다. 에이전트를 호스팅하고 등록하는 방식만 다릅니다.
+</Note>
+
+<Note>
+CrewAI는 AG-UI 뒤에서 세 가지 형태로 실행됩니다: 일반 **Flows**(이 가이드 전반에서 사용), **[Conversational Flows](/edge/en/guides/frontend/conversational-flows)**(네이티브, 세션 인식, 턴 기반, 완전한 기능 동등성), 그리고 **Crews**(기본 채팅). 이 섹션의 프론트엔드는 이들 전반에서 동일합니다. 백엔드 작성과 등록만 다릅니다.
+</Note>
+
+## 통합 가이드
+
+<Steps>
+
+<Step title="AG-UI를 통해 에이전트 제공">
+
+통합 패키지를 CrewAI 프로젝트에 설치하세요:
+
+```bash
+pip install ag-ui-crewai
+```
+
+FastAPI 앱에서 에이전트를 노출하세요. Flows는 `add_crewai_flow_fastapi_endpoint`를, Crews는 `add_crewai_crew_fastapi_endpoint`를 사용합니다. 원하는 만큼 등록할 수 있으며, 각각 자신의 경로에 배치됩니다.
+
+<CodeGroup>
+
+```python Flow
+# server.py
+from fastapi import FastAPI
+from ag_ui_crewai.endpoint import add_crewai_flow_fastapi_endpoint
+from my_agents.recipe_flow import RecipeFlow
+
+app = FastAPI(title="CrewAI Agent Server")
+
+add_crewai_flow_fastapi_endpoint(
+    app=app,
+    flow=RecipeFlow(),
+    path="/recipe",
+)
+```
+
+```python Crew
+# server.py
+from fastapi import FastAPI
+from ag_ui_crewai.endpoint import add_crewai_crew_fastapi_endpoint
+from my_agents.research_crew import ResearchCrew
+
+app = FastAPI(title="CrewAI Agent Server")
+
+add_crewai_crew_fastapi_endpoint(
+    app=app,
+    crew=ResearchCrew().crew(),
+    path="/research",
+)
+```
+
+</CodeGroup>
+
+실행하세요:
+
+```bash
+uvicorn server:app --port 8000
+```
+
+<Note>
+서버를 시작하기 전에 LLM 제공자를 위한 환경 변수(예: `OPENAI_API_KEY`)를 설정하세요.
+</Note>
+
+</Step>
+
+<Step title="Next.js 앱 생성">
+
+아직 프론트엔드가 없다면 하나를 스캐폴딩하세요:
+
+```bash
+npx create-next-app@latest my-app
+cd my-app
+```
+
+CopilotKit과 CrewAI AG-UI 클라이언트를 설치하세요:
+
+```bash
+npm install @copilotkit/react-core @copilotkit/react-ui @copilotkit/runtime @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="CopilotKit 런타임 추가">
+
+CrewAI 에이전트를 CopilotKit 런타임에 등록하는 라우트를 생성하세요. 각 에이전트는 `CrewAIAgent`를 통해 Python 서버의 경로를 가리킵니다.
+
+```ts
+// app/api/copilotkit/route.ts
+import {
+  CopilotRuntime,
+  InMemoryAgentRunner,
+  createCopilotEndpoint,
+} from "@copilotkit/runtime/v2";
+import { CrewAIAgent } from "@ag-ui/crewai";
+import { handle } from "hono/vercel";
+
+const runtime = new CopilotRuntime({
+  agents: {
+    recipe: new CrewAIAgent({ url: "http://localhost:8000/recipe" }),
+  },
+  runner: new InMemoryAgentRunner(),
+});
+
+const app = createCopilotEndpoint({
+  runtime,
+  basePath: "/api/copilotkit",
+});
+
+const handler = handle(app);
+export const GET = handler;
+export const POST = handler;
+```
+
+</Step>
+
+<Step title="프로바이더로 앱 감싸기">
+
+`<CopilotKit>`을 런타임 라우트로 가리키고 등록한 에이전트의 이름을 지정하세요.
+
+```tsx
+// app/page.tsx
+"use client";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+export default function Page() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="recipe">
+      <YourApp />
+      <CopilotSidebar agentId="recipe" labels={{ modalHeaderTitle: "Assistant" }} />
+    </CopilotKit>
+  );
+}
+```
+
+</Step>
+
+<Step title="실행">
+
+두 프로세스를 모두 시작하고 앱을 여세요. 이제 사이드바에서 채팅하면 Crew 또는 Flow가 실행됩니다.
+
+```bash
+uvicorn server:app --port 8000   # terminal 1
+npm run dev                       # terminal 2
+```
+
+</Step>
+
+</Steps>
+
+## 채팅 UI 옵션
+
+CopilotKit은 서로 교체 가능한 세 가지 채팅 표면을 제공합니다. 컴포넌트만 바꾸면 되며, 연결 방식은 동일합니다.
+
+<CodeGroup>
+
+```tsx Sidebar
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+<CopilotSidebar agentId="recipe" />
+```
+
+```tsx Popup
+import { CopilotPopup } from "@copilotkit/react-core/v2";
+
+<CopilotPopup agentId="recipe" />
+```
+
+```tsx Inline
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+<CopilotChat agentId="recipe" />
+```
+
+</CodeGroup>
+
+## 다음으로 갈 곳
+
+<CardGroup cols={2}>
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    도구 호출과 에이전트 상태를 커스텀 컴포넌트로 렌더링하세요.
+  </Card>
+  <Card title="Frontend Actions" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
+    에이전트가 브라우저에서 실행되는 함수를 호출하도록 하세요.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    에이전트 동작을 사용자 승인 뒤에 두세요.
+  </Card>
+  <Card title="Predictive State" icon="gauge-high" href="/edge/en/guides/frontend/predictive-state-updates">
+    에이전트가 작동하는 동안 진행 중인 상태를 UI로 스트리밍하세요.
+  </Card>
+</CardGroup>

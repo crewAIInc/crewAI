@@ -417,6 +417,8 @@ def generate_input_description_with_ai(
     Returns:
         A concise description of the input.
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -460,6 +462,8 @@ def generate_input_description_with_ai(
     )
     try:
         response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except HookAborted:
+        raise
     except Exception as exc:
         click.secho(
             f"Warning: failed to generate input description for '{input_name}' "
@@ -480,6 +484,8 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     Returns:
         A concise description of the crew's purpose (15 words or less).
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -514,6 +520,8 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     )
     try:
         response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except HookAborted:
+        raise
     except Exception as exc:
         click.secho(
             f"Warning: failed to generate crew description ({exc}); using default.",

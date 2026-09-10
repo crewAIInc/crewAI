@@ -5,6 +5,7 @@ from urllib.parse import quote
 import webbrowser
 
 from crewai_core.plus_api import CreateCrewPayload
+from crewai_core.telemetry import DeploySource
 from rich.console import Console
 
 from crewai_cli import git
@@ -74,6 +75,14 @@ def _display_git_remote_help() -> None:
         "No origin remote found. Deploying from a ZIP upload instead.",
         style="yellow",
     )
+
+
+def _zip_deployment_flag(status: dict[str, Any] | None) -> bool | None:
+    """Return the AMP zip_deployment flag, or None when it cannot be used."""
+    if not status or "zip_deployment" not in status:
+        return None
+    value = status["zip_deployment"]
+    return value if isinstance(value, bool) else None
 
 
 def _env_summary(env_vars: dict[str, str]) -> str:
@@ -285,44 +294,122 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
         return _deployment_identifier(status_response)
 
-    def deploy(self, uuid: str | None = None, skip_validate: bool = False) -> None:
+    def deploy(
+        self,
+        uuid: str | None = None,
+        skip_validate: bool = False,
+        source: DeploySource = "cli",
+    ) -> None:
         """
         Deploy a crew using either UUID or project name.
 
         Args:
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
+            source (DeploySource): Where the deployment was initiated from.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
-        self._telemetry.start_deployment_span(uuid)
+        self._telemetry.start_deployment_span(uuid, source=source)
         console.print("Starting deployment...", style="bold blue")
         repository = self._prepare_git_repository()
         remote_repo_url = repository.origin_url() if repository else None
 
-        if remote_repo_url and uuid:
-            response = self.plus_api_client.deploy_by_uuid(uuid)
-        elif remote_repo_url and self.project_name:
-            response = self.plus_api_client.deploy_by_name(self.project_name)
-        elif uuid:
-            _display_git_remote_help()
-            env_vars = fetch_and_json_env_file()
-            response = self._update_crew_from_zip(uuid, repository, env_vars)
-        elif self.project_name:
-            _display_git_remote_help()
-            deployment_uuid = self._deployment_uuid_by_name()
-            env_vars = fetch_and_json_env_file()
-            response = self._update_crew_from_zip(
-                deployment_uuid,
-                repository,
-                env_vars,
+        status = self._deployment_status(uuid, self.project_name)
+        if status is not None and self._can_deploy_from_amp(
+            uuid, self.project_name, status
+        ):
+            response = self._deploy_from_amp_source(
+                uuid, self.project_name, repository, status
             )
         else:
-            self._standard_no_param_error_message()
-            return
+            response = self._deploy_from_local_source(
+                uuid, self.project_name, repository, remote_repo_url
+            )
+            if response is None:
+                self._standard_no_param_error_message()
+                return
 
         self._validate_response(response)
         self._display_deployment_info(response.json())
+
+    def _deployment_status(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+    ) -> dict[str, Any] | None:
+        """Fetch deployment status without failing the command."""
+        try:
+            if uuid:
+                response = self.plus_api_client.crew_status_by_uuid(uuid)
+            elif project_name:
+                response = self.plus_api_client.crew_status_by_name(project_name)
+            else:
+                return None
+            if not response.is_success:
+                return None
+            payload = response.json()
+        except Exception:
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    def _can_deploy_from_amp(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        status: dict[str, Any] | None,
+    ) -> bool:
+        """Return True when AMP reported a usable zip_deployment flag."""
+        zip_deployment = _zip_deployment_flag(status)
+        if zip_deployment is None:
+            return False
+        if zip_deployment:
+            return bool(uuid or (status and status.get("uuid")))
+        return bool(uuid or project_name)
+
+    def _deploy_from_amp_source(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        repository: git.Repository | None,
+        status: dict[str, Any],
+    ) -> Any:
+        """Deploy using AMP zip_deployment."""
+        if _zip_deployment_flag(status):
+            deployment_uuid = uuid or str(status["uuid"])
+            env_vars = fetch_and_json_env_file()
+            return self._update_crew_from_zip(deployment_uuid, repository, env_vars)
+        if uuid:
+            return self.plus_api_client.deploy_by_uuid(uuid)
+        if not project_name:
+            raise ValueError("project_name is required to deploy by name")
+        return self.plus_api_client.deploy_by_name(project_name)
+
+    def _deploy_from_local_source(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        repository: git.Repository | None,
+        remote_repo_url: str | None,
+    ) -> Any | None:
+        """Deploy using local origin, as before AMP zip_deployment existed."""
+        if remote_repo_url and uuid:
+            return self.plus_api_client.deploy_by_uuid(uuid)
+        if remote_repo_url and project_name:
+            return self.plus_api_client.deploy_by_name(project_name)
+        if uuid:
+            _display_git_remote_help()
+            env_vars = fetch_and_json_env_file()
+            return self._update_crew_from_zip(uuid, repository, env_vars)
+        if project_name:
+            _display_git_remote_help()
+            env_vars = fetch_and_json_env_file()
+            return self._update_crew_from_zip(
+                self._deployment_uuid_by_name(),
+                repository,
+                env_vars,
+            )
+        return None
 
     def _deployment_uuid_by_name(self) -> str:
         """Resolve the current project's deployment UUID by project name."""
@@ -337,17 +424,23 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             raise ValueError("Deployment status response did not include a uuid")
         return str(uuid)
 
-    def create_crew(self, confirm: bool = False, skip_validate: bool = False) -> None:
+    def create_crew(
+        self,
+        confirm: bool = False,
+        skip_validate: bool = False,
+        source: DeploySource = "cli",
+    ) -> None:
         """
         Create a new crew deployment.
 
         Args:
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
+            source (DeploySource): Where the deployment was initiated from.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
-        self._telemetry.create_crew_deployment_span()
+        self._telemetry.create_crew_deployment_span(source=source)
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         repository = self._prepare_git_repository()
@@ -362,7 +455,16 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             response = self._create_crew_from_zip(env_vars, repository, confirm)
 
         self._validate_response(response)
-        self._display_creation_success(response.json())
+        json_response = response.json()
+        # After _validate_response, not before: it raises SystemExit on a failed
+        # create, so the span cannot fire for a deployment that was not made. This
+        # is the first point at which the uuid exists -- the pre-flight span at the
+        # top of this method counts the attempt and cannot carry it.
+        created_uuid = json_response.get("uuid")
+        self._telemetry.crew_deployment_created_span(
+            uuid=str(created_uuid) if created_uuid else None, source=source
+        )
+        self._display_creation_success(json_response)
 
     def _prepare_git_repository(self) -> git.Repository | None:
         """Prepare Git for deploy while preserving remote deploy when possible."""

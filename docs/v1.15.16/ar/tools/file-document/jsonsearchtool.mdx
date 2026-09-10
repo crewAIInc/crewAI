@@ -1,0 +1,91 @@
+---
+title: بحث RAG في JSON
+description: أداة `JSONSearchTool` مصممة للبحث في ملفات JSON وإرجاع النتائج الأكثر صلة.
+icon: file-code
+mode: "wide"
+---
+
+# `JSONSearchTool`
+
+<Note>
+  أداة JSONSearchTool حالياً في مرحلة تجريبية. هذا يعني أن الأداة قيد التطوير
+  النشط، وقد يواجه المستخدمون سلوكاً غير متوقع أو تغييرات. نشجع بشدة التعليقات
+  حول أي مشكلات أو اقتراحات للتحسين.
+</Note>
+
+## الوصف
+
+صُممت أداة JSONSearchTool لتسهيل عمليات البحث الفعالة والدقيقة داخل محتوى ملفات JSON. تستخدم آلية بحث RAG (الاسترجاع والتوليد)، مما يتيح للمستخدمين تحديد مسار JSON لعمليات بحث مستهدفة داخل ملف JSON معين. تحسّن هذه القدرة بشكل ملحوظ دقة نتائج البحث وصلتها.
+
+## التثبيت
+
+لتثبيت JSONSearchTool، استخدم أمر pip التالي:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## أمثلة على الاستخدام
+
+فيما يلي أمثلة محدّثة حول كيفية استخدام JSONSearchTool بفعالية للبحث داخل ملفات JSON. تأخذ هذه الأمثلة بعين الاعتبار التنفيذ الحالي وأنماط الاستخدام المحددة في قاعدة الكود.
+
+```python Code
+from crewai_tools import JSONSearchTool
+
+# General JSON content search
+# This approach is suitable when the JSON path is either known beforehand or can be dynamically identified.
+tool = JSONSearchTool()
+
+# Restricting search to a specific JSON file
+# Use this initialization method when you want to limit the search scope to a specific JSON file.
+tool = JSONSearchTool(json_path='./path/to/your/file.json')
+```
+
+## المعاملات
+
+- `json_path` (str, اختياري): يحدد مسار ملف JSON المراد البحث فيه. هذا المعامل غير مطلوب إذا تمت تهيئة الأداة لبحث عام. عند تقديمه، يقتصر البحث على ملف JSON المحدد.
+
+## خيارات التكوين
+
+تدعم أداة JSONSearchTool تخصيصاً واسعاً من خلال قاموس تكوين. يتيح هذا للمستخدمين اختيار نماذج مختلفة للتضمينات والتلخيص بناءً على متطلباتهم.
+
+```python Code
+tool = JSONSearchTool(
+    config={
+        "llm": {
+            "provider": "ollama",  # Other options include google, openai, anthropic, llama2, etc.
+            "config": {
+                "model": "llama2",
+                # Additional optional configurations can be specified here.
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            },
+        },
+        "embedding_model": {
+            "provider": "google-generativeai", # or openai, ollama, ...
+            "config": {
+                "model_name": "gemini-embedding-001",
+                "task_type": "RETRIEVAL_DOCUMENT",
+                # Further customization options can be added here.
+            },
+        },
+    }
+)
+```
+
+## الأمان
+
+### التحقق من صحة المسارات
+
+يتم التحقق من مسارات الملفات المقدمة لهذه الأداة مقابل مجلد العمل الحالي. يتم رفض المسارات التي تحل خارج مجلد العمل وإطلاق `ValueError`.
+
+للسماح بالمسارات خارج مجلد العمل (مثلاً في الاختبارات أو خطوط الأنابيب الموثوقة)، عيّن متغير البيئة التالي:
+
+```shell
+CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true
+```
+
+### التحقق من صحة الروابط
+
+يتم التحقق من مدخلات الروابط: يتم حظر مخطط `file://` والطلبات التي تستهدف نطاقات IP الخاصة أو المحجوزة لمنع هجمات تزوير الطلبات من جانب الخادم (SSRF).

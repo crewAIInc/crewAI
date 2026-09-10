@@ -3,14 +3,217 @@
 from pathlib import Path
 from textwrap import dedent
 
+from crewai_devtools import cli as devtools_cli
 from crewai_devtools.cli import (
     _DEFAULT_WORKSPACE_PACKAGES,
     _pin_crewai_deps,
     _repin_crewai_install,
+    _validate_deployment_repo_crewai_pin,
     update_pyproject_dependencies,
     update_pyproject_version,
     update_template_dependencies,
 )
+import pytest
+
+
+def test_release_updates_crew_and_flow_canary_repositories(monkeypatch) -> None:
+    updates = []
+    monkeypatch.setattr(
+        devtools_cli,
+        "_update_deployment_test_repo",
+        lambda repo, version, is_prerelease: updates.append(
+            (repo, version, is_prerelease)
+        ),
+    )
+
+    devtools_cli._update_deployment_test_repos("2.0.0a1", True)
+
+    assert updates == [
+        ("crewAIInc/crew_deployment_test", "2.0.0a1", True),
+        ("crewAIInc/flow_deployment_test", "2.0.0a1", True),
+    ]
+
+
+def test_deployment_repo_validation_rejects_missing_crewai_pin(tmp_path: Path) -> None:
+    with pytest.raises(RuntimeError, match="No effective CrewAI dependency"):
+        _validate_deployment_repo_crewai_pin(
+            tmp_path,
+            '[project]\ndependencies = ["requests>=2"]\n',
+            "2.0.0",
+        )
+
+
+def test_deployment_repo_validation_accepts_workflow_pin(tmp_path: Path) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text('run: uv pip install "crewai[a2a]==2.0.0"\n')
+
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        '[project]\ndependencies = ["requests>=2"]\n',
+        "2.0.0",
+    )
+
+
+@pytest.mark.parametrize(
+    "run_value",
+    [
+        "'uv pip install \"crewai==2.0.0\"'",
+        '"uv pip install \\"crewai==2.0.0\\""',
+    ],
+)
+def test_deployment_repo_validation_accepts_quoted_workflow_pin(
+    tmp_path: Path,
+    run_value: str,
+) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text(
+        f"run: {run_value}\n",
+        encoding="utf-8",
+    )
+
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        '[project]\ndependencies = ["requests>=2"]\n',
+        "2.0.0",
+    )
+
+
+def test_deployment_repo_validation_rejects_mixed_versions(tmp_path: Path) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text('run: uv pip install "crewai[a2a]==2.0.0"\n')
+
+    with pytest.raises(RuntimeError, match=r"must all pin 2\.0\.0"):
+        _validate_deployment_repo_crewai_pin(
+            tmp_path,
+            '[project]\ndependencies = ["crewai==1.0.0"]\n',
+            "2.0.0",
+        )
+
+
+def test_deployment_repo_validation_ignores_comments_and_echo(tmp_path: Path) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text(
+        'run: echo "crewai==2.0.0"\n# run: pip install crewai==2.0.0\n'
+    )
+
+    with pytest.raises(RuntimeError, match="No effective CrewAI dependency"):
+        _validate_deployment_repo_crewai_pin(
+            tmp_path,
+            '[project]\ndependencies = ["requests>=2"]\n',
+            "2.0.0",
+        )
+
+
+def test_deployment_repo_validation_ignores_pyproject_comment_pin(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(RuntimeError, match=r"must all pin 2\.0\.0"):
+        _validate_deployment_repo_crewai_pin(
+            tmp_path,
+            (
+                "# documented pin: crewai==2.0.0\n"
+                '[project]\ndependencies = ["crewai>=1.0"]\n'
+            ),
+            "2.0.0",
+        )
+
+
+def test_deployment_repo_validation_accepts_spaced_extras_and_marker(
+    tmp_path: Path,
+) -> None:
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        (
+            "[project]\ndependencies = [\n"
+            "  \"crewai[tools, embeddings]==2.0.0; python_version >= '3.10'\",\n"
+            "]\n"
+        ),
+        "2.0.0",
+    )
+
+
+def test_deployment_repo_validation_reads_multiline_workflow_install(
+    tmp_path: Path,
+) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text(
+        "steps:\n"
+        "  - name: Install\n"
+        "    run: |\n"
+        "      uv pip install \\\n"
+        "        \"crewai[tools, embeddings]==2.0.0; python_version >= '3.10'\"\n"
+    )
+
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        '[project]\ndependencies = ["requests>=2"]\n',
+        "2.0.0",
+    )
+
+
+def test_deployment_repo_validation_reads_install_after_comment(
+    tmp_path: Path,
+) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text(
+        "steps:\n"
+        "  - name: Install\n"
+        "    run: |\n"
+        "      # Install the canary dependency\n"
+        '      uv pip install "crewai==2.0.0"\n',
+        encoding="utf-8",
+    )
+
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        '[project]\ndependencies = ["requests>=2"]\n',
+        "2.0.0",
+    )
+
+
+def test_deployment_repo_validation_reads_folded_workflow_install(
+    tmp_path: Path,
+) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text(
+        "steps:\n"
+        "  - name: Install\n"
+        "    run: >\n"
+        "      uv pip install\n"
+        '      "crewai==2.0.0"\n',
+        encoding="utf-8",
+    )
+
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        '[project]\ndependencies = ["requests>=2"]\n',
+        "2.0.0",
+    )
+
+
+def test_deployment_repo_validation_skips_non_file_workflow_entries(
+    tmp_path: Path,
+) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "ignored.yml").mkdir()
+    (workflows / "test.yaml").write_text(
+        '# UTF-8 workflow: déploiement\nrun: uv pip install "crewai==2.0.0"\n',
+        encoding="utf-8",
+    )
+
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        '[project]\ndependencies = ["requests>=2"]\n',
+        "2.0.0",
+    )
 
 
 class TestUpdatePyprojectVersion:
