@@ -89,7 +89,7 @@ class MongoDbFlowPersistence(FlowPersistence):
 
     def _resolve_database_name(self) -> str:
         """Resolve the database name, reading the env var at call time."""
-        return self.database_name or os.getenv("MONGODB_DATABASE", "flow_persistence")
+        return self.database_name or os.getenv("MONGODB_DATABASE") or "flow_persistence"
 
     def _ensure_client(self) -> Any:
         """Create the Mongo client/database on first use and return the db."""
