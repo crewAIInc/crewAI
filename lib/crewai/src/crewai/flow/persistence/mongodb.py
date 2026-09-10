@@ -7,7 +7,10 @@ collections instead of SQLite tables:
   SQLite's ``INSERT`` into an ``AUTOINCREMENT`` table). SQLite's autoincrement
   ``id`` is replaced by a server-assigned monotonic ``seq`` (see ``counters``),
   and the latest state is read back with ``WHERE flow_uuid=? ORDER BY seq DESC``
-  — not by sorting on the client-generated ObjectId ``_id``.
+  — not by sorting on the client-generated ObjectId ``_id``. A compound
+  ``{flow_uuid: 1, seq: -1}`` index serves this latest-state query with an index
+  scan and no blocking SORT (the Mongo-idiomatic equivalent of SQLite's
+  single-column ``idx_flow_states_uuid``).
 - ``pending_feedback``: one document per flow (unique on ``flow_uuid``), upserted
   to mirror SQLite's ``INSERT OR REPLACE``.
 - ``counters``: internal bookkeeping. MongoDB has no autoincrement, so a single
@@ -123,12 +126,21 @@ class MongoDbFlowPersistence(FlowPersistence):
     def init_db(self) -> None:
         """Create the collections' indexes if they don't exist.
 
-        Mirrors SQLite: ``flow_states`` keeps an append-only history indexed by
-        ``flow_uuid`` (non-unique, many states per flow), while
-        ``pending_feedback`` holds at most one document per flow (unique).
+        Mirrors SQLite: ``flow_states`` keeps an append-only history (many states
+        per flow), while ``pending_feedback`` holds at most one document per flow
+        (unique).
+
+        The ``flow_states`` index is compound ``{flow_uuid: 1, seq: -1}`` so
+        ``load_state``'s latest-state query (``find({flow_uuid}).sort(seq desc)``)
+        is served entirely from the index (IXSCAN, no blocking SORT); its
+        ``flow_uuid`` prefix also covers plain ``flow_uuid`` lookups. This is the
+        Mongo-idiomatic equivalent of SQLite's single-column
+        ``idx_flow_states_uuid`` (SQLite gets latest-state ordering for free from
+        rowid/``id``, which Mongo lacks), so behavior parity holds even though the
+        index DDL differs.
         """
         db = self._ensure_client()
-        db[self.states_collection].create_index("flow_uuid")
+        db[self.states_collection].create_index([("flow_uuid", 1), ("seq", -1)])
         db[self.pending_collection].create_index("flow_uuid", unique=True)
 
     @staticmethod
