@@ -12,7 +12,7 @@ Thank you for your interest in contributing to CrewAI. This guide covers everyth
 
 ## Prerequisites
 
-- Python 3.10–3.14 (development targets 3.12)
+- Python 3.10–3.14 (development targets 3.13)
 - [uv](https://docs.astral.sh/uv/) for package management
 - [pre-commit](https://pre-commit.com/) for Git hooks
 

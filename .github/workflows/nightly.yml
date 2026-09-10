@@ -47,7 +47,7 @@ jobs:
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.11.3"
-          python-version: "3.12"
+          python-version: "3.13"
           enable-cache: false
 
       - name: Stamp nightly versions
@@ -106,7 +106,7 @@ jobs:
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.11.3"
-          python-version: "3.12"
+          python-version: "3.13"
           enable-cache: false
 
       - name: Download artifacts
