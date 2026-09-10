@@ -1337,6 +1337,75 @@ class TestNativeToolCallingJsonParseError:
 
         assert result["result"] == "ran: x = 42"
 
+    def test_bedrock_converse_tooluse_args_pass_through(self) -> None:
+        """A raw Bedrock Converse toolUse block must yield its ``input`` as the
+        tool args, not an empty dict. Regression guard for #4972, where the
+        Converse args were dropped and every tool received ``{}``.
+
+        Bedrock returns blocks shaped as
+        ``{"toolUseId": ..., "name": ..., "input": {...}}`` (no ``function``
+        wrapper and no ``arguments`` key), so the parser must read ``input``.
+        """
+
+        class SearchTool(BaseTool):
+            name: str = "my_tool"
+            description: str = "Search for information"
+
+            def _run(self, search_query: str) -> str:
+                return f"searched: {search_query}"
+
+        executor = self._make_executor([SearchTool()])
+
+        bedrock_tool_use = {
+            "toolUseId": "abc",
+            "name": "my_tool",
+            "input": {"search_query": "test"},
+        }
+
+        parsed = executor._parse_native_tool_call(bedrock_tool_use)
+        assert parsed is not None
+        call_id, func_name, func_args = parsed
+
+        assert call_id == "abc"
+        assert func_name == "my_tool"
+        assert func_args == {"search_query": "test"}  # not {}
+
+    def test_bedrock_converse_tooluse_args_reach_the_tool(self) -> None:
+        """End-to-end: args parsed from a Bedrock Converse block execute the
+        tool with the real arguments (not an empty dict)."""
+
+        class SearchTool(BaseTool):
+            name: str = "my_tool"
+            description: str = "Search for information"
+
+            def _run(self, search_query: str) -> str:
+                return f"searched: {search_query}"
+
+        tool = SearchTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        bedrock_tool_use = {
+            "toolUseId": "abc",
+            "name": "my_tool",
+            "input": {"search_query": "test"},
+        }
+        call_id, func_name, func_args = executor._parse_native_tool_call(
+            bedrock_tool_use
+        )
+
+        result = executor._execute_single_native_tool_call(
+            call_id=call_id,
+            func_name=func_name,
+            func_args=func_args,
+            available_functions=available_functions,
+        )
+
+        assert result["result"] == "searched: test"
+
     def test_schema_validation_catches_missing_args_on_native_path(self) -> None:
         """The native function calling path should now enforce args_schema,
         catching missing required fields before _run is called."""
