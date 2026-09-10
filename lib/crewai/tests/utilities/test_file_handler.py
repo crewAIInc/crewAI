@@ -131,10 +131,13 @@ class TestPickleHandler(unittest.TestCase):
         """On Windows os.getuid() is unavailable; validation must skip POSIX checks."""
         key_dir = tempfile.mkdtemp(prefix="crewai_key_")
         key_path = os.path.join(key_dir, "key.bin")
+        original_mode = stat.S_IMODE(os.stat(key_dir).st_mode)
         try:
+            os.chmod(key_dir, 0o777)
             with patch("os.name", "nt"):
                 self.assertTrue(PickleHandler._validate_key_storage(key_dir, key_path))
         finally:
+            os.chmod(key_dir, original_mode)
             os.rmdir(key_dir)
 
     def test_validate_key_storage_rejects_symlinked_directory(self):
@@ -150,8 +153,9 @@ class TestPickleHandler(unittest.TestCase):
         """A symlinked key file must be rejected before any ownership checks."""
         key_dir = "/nonexistent/key/dir"
         key_path = "/nonexistent/key/dir/key.bin"
-        dir_stat = os.stat_result((0o40700, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-        file_stat = os.stat_result((stat.S_IFLNK | 0o777, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        uid = os.getuid() if hasattr(os, "getuid") else 0
+        dir_stat = os.stat_result((0o40700, 0, 0, 0, uid, 0, 0, 0, 0, 0))
+        file_stat = os.stat_result((stat.S_IFLNK | 0o777, 0, 0, 0, uid, 0, 0, 0, 0, 0))
 
         def fake_lstat(path):
             if path == key_dir:
@@ -161,5 +165,5 @@ class TestPickleHandler(unittest.TestCase):
         with patch("crewai.utilities.file_handler.os.lstat", side_effect=fake_lstat), patch(
             "crewai.utilities.file_handler.os.path.exists", return_value=True
         ):
-            with self.assertRaises(PermissionError):
+            with self.assertRaisesRegex(PermissionError, "key file must not be a symlink"):
                 PickleHandler._validate_key_storage(key_dir, key_path)
