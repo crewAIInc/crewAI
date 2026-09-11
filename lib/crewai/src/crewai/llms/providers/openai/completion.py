@@ -2358,7 +2358,24 @@ class OpenAICompletion(BaseLLM):
                         self._extract_chat_finish_reason_and_id(final_completion)
                     )
                     if final_completion.choices:
-                        parsed_result = final_completion.choices[0].message.parsed
+                        message = final_completion.choices[0].message
+                        if not message.content and not message.tool_calls:
+                            self._emit_call_completed_event(
+                                response="",
+                                call_type=LLMCallType.LLM_CALL,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                messages=params["messages"],
+                                usage=usage,
+                                finish_reason=parsed_finish_reason,
+                                response_id=parsed_response_id,
+                            )
+                            raise LLMEmptyResponseError(
+                                finish_reason=parsed_finish_reason,
+                                response_id=parsed_response_id,
+                                usage=usage,
+                            )
+                        parsed_result = message.parsed
                         if parsed_result:
                             self._emit_call_completed_event(
                                 response=parsed_result.model_dump_json(),
@@ -2716,6 +2733,23 @@ class OpenAICompletion(BaseLLM):
 
             if usage_data:
                 self._track_token_usage_internal(usage_data)
+
+            if not accumulated_content:
+                self._emit_call_completed_event(
+                    response="",
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage_data,
+                    finish_reason=parsed_stream_finish_reason,
+                    response_id=parsed_stream_response_id,
+                )
+                raise LLMEmptyResponseError(
+                    finish_reason=parsed_stream_finish_reason,
+                    response_id=parsed_stream_response_id,
+                    usage=usage_data,
+                )
 
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)

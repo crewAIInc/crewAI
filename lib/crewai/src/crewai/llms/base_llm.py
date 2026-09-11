@@ -103,6 +103,7 @@ class LLMEmptyResponseError(ValueError):
         response_id: str | None,
         usage: Mapping[str, Any] | None = None,
     ) -> None:
+        """Capture per-response diagnostics while retaining ValueError compatibility."""
         self.finish_reason = finish_reason
         self.response_id = response_id
         self.usage = dict(usage) if usage is not None else {}

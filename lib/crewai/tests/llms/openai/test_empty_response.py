@@ -13,6 +13,7 @@ from unittest.mock import Mock
 import httpx
 import openai
 import pytest
+from pydantic import BaseModel
 
 from crewai.llms.base_llm import LLMEmptyResponseError
 from crewai.llms.providers.openai.completion import OpenAICompletion
@@ -52,9 +53,11 @@ def make_llm(
     with_usage: bool = True,
     tool_calls: list[dict[str, Any]] | None = None,
 ) -> tuple[OpenAICompletion, list[httpx.Request]]:
+    """Build a real OpenAI SDK client backed by deterministic HTTP responses."""
     requests: list[httpx.Request] = []
 
     def respond(request: httpx.Request) -> httpx.Response:
+        """Return completion JSON or SSE chunks without network access."""
         requests.append(request)
         common = {"id": "chatcmpl-empty", "created": 1, "model": "gpt-4o-mini"}
         if not stream:
@@ -127,6 +130,7 @@ def make_llm(
 async def test_empty_response_exposes_provider_metadata(
     stream: bool, is_async: bool, finish_reason: str | None
 ) -> None:
+    """Preserve termination metadata across sync, async, and streaming calls."""
     llm, requests = make_llm(stream=stream, finish_reason=finish_reason)
     with pytest.raises(LLMEmptyResponseError) as caught:
         if is_async:
@@ -147,6 +151,7 @@ async def test_empty_response_exposes_provider_metadata(
 async def test_tool_loop_accepts_stop_after_tool_result(
     stream: bool, is_async: bool, with_post_tool_reasoning: bool
 ) -> None:
+    """Accept an empty stop after a tool, including the synthetic follow-up."""
     llm, requests = make_llm(stream=stream)
     messages = list(MESSAGES)
     if with_post_tool_reasoning:
@@ -179,6 +184,7 @@ async def test_tool_loop_accepts_stop_after_tool_result(
 def test_empty_turn_is_only_accepted_after_a_stop_tool_result(
     finish_reason: str, last_role: str
 ) -> None:
+    """Reject truncation and empty responses without a qualifying tool result."""
     llm, requests = make_llm(stream=False, finish_reason=finish_reason)
     messages = list(MESSAGES)
     if last_role == "user":
@@ -202,6 +208,7 @@ def test_empty_turn_is_only_accepted_after_a_stop_tool_result(
 
 
 def test_native_executor_finishes_after_tool_result_empty_turn() -> None:
+    """Finish the native executor after a successful tool and empty stop."""
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
     from crewai.tools.base_tool import BaseTool, to_langchain
 
@@ -210,6 +217,7 @@ def test_native_executor_finishes_after_tool_result_empty_turn() -> None:
         description: str = "Send a reply"
 
         def _run(self, text: str) -> str:
+            """Simulate delivery of a reply and return a successful tool result."""
             return '{"status":"success"}'
 
     llm = Mock()
@@ -265,6 +273,7 @@ def test_native_executor_finishes_after_tool_result_empty_turn() -> None:
 
 
 def test_experimental_native_executor_finishes_after_tool_result_empty_turn() -> None:
+    """Finish the experimental executor after a tool and empty stop."""
     from crewai.experimental.agent_executor import AgentExecutor
     from crewai.tools.base_tool import BaseTool, to_langchain
 
@@ -273,6 +282,7 @@ def test_experimental_native_executor_finishes_after_tool_result_empty_turn() ->
         description: str = "Send a reply"
 
         def _run(self, text: str) -> str:
+            """Simulate delivery of a reply and return a successful tool result."""
             return '{"status":"success"}'
 
     llm = Mock()
@@ -331,6 +341,7 @@ def test_experimental_native_executor_finishes_after_tool_result_empty_turn() ->
 async def test_first_turn_empty_response_remains_an_error(
     stream: bool, is_async: bool
 ) -> None:
+    """Keep first-call empty responses distinguishable from successful output."""
     llm, requests = make_llm(stream=stream, content=None, with_usage=False)
     with pytest.raises(LLMEmptyResponseError) as caught:
         if is_async:
@@ -349,6 +360,7 @@ async def test_first_turn_empty_response_remains_an_error(
 async def test_nonempty_text_and_tool_calls_are_unchanged(
     stream: bool, is_async: bool, tool_call: bool
 ) -> None:
+    """Preserve normal text and tool-call responses."""
     calls = MESSAGES[1]["tool_calls"] if tool_call else None
     llm, requests = make_llm(
         stream=stream,
@@ -362,4 +374,103 @@ async def test_nonempty_text_and_tool_calls_are_unchanged(
         if tool_call
         else result == "hello"
     )
+    assert len(requests) == 1
+
+
+class StructuredReply(BaseModel):
+    """A structured response used to exercise the SDK parsing paths."""
+
+    text: str
+
+
+@pytest.mark.parametrize("is_async", [False, True])
+@pytest.mark.parametrize("with_usage", [False, True])
+@pytest.mark.parametrize("content", [None, ""])
+@pytest.mark.asyncio
+async def test_structured_stream_empty_response(
+    is_async: bool, with_usage: bool, content: str | None
+) -> None:
+    """Empty structured streams must expose metadata on the first call."""
+    llm, requests = make_llm(stream=True, with_usage=with_usage, content=content)
+    with pytest.raises(LLMEmptyResponseError) as caught:
+        if is_async:
+            await llm.acall("hello", response_model=StructuredReply)
+        else:
+            llm.call("hello", response_model=StructuredReply)
+    assert caught.value.finish_reason == "stop"
+    assert caught.value.response_id == "chatcmpl-empty"
+    if with_usage:
+        assert caught.value.usage["completion_tokens"] == 3
+    else:
+        assert "reasoning_tokens" not in caught.value.usage
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize("is_async", [False, True])
+@pytest.mark.asyncio
+async def test_structured_stream_valid_response(is_async: bool) -> None:
+    """Valid structured streams continue returning the requested model."""
+    llm, requests = make_llm(stream=True, content='{"text":"hello"}')
+    result = (
+        await llm.acall("hello", response_model=StructuredReply)
+        if is_async
+        else llm.call("hello", response_model=StructuredReply)
+    )
+    assert result == StructuredReply(text="hello")
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize("finish_reason", ["length", "content_filter", None])
+@pytest.mark.asyncio
+async def test_async_structured_empty_termination_metadata(
+    finish_reason: str | None,
+) -> None:
+    """Structured async failures retain non-stop and absent finish reasons."""
+    llm, requests = make_llm(stream=True, finish_reason=finish_reason)
+    with pytest.raises(LLMEmptyResponseError) as caught:
+        await llm.acall("hello", response_model=StructuredReply)
+    assert caught.value.finish_reason == finish_reason
+    assert caught.value.response_id == "chatcmpl-empty"
+    assert caught.value.usage["completion_tokens"] == 3
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize(
+    ("finish_reason", "error_type"),
+    [
+        ("length", openai.LengthFinishReasonError),
+        ("content_filter", openai.ContentFilterFinishReasonError),
+    ],
+)
+def test_sync_structured_sdk_failures_remain_errors(
+    finish_reason: str, error_type: type[Exception]
+) -> None:
+    """Preserve the SDK's explicit truncation and content-filter exceptions."""
+    llm, requests = make_llm(stream=True, finish_reason=finish_reason)
+    with pytest.raises(error_type):
+        llm.call("hello", response_model=StructuredReply)
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize("is_async", [False, True])
+@pytest.mark.asyncio
+async def test_structured_stream_tool_turn_finishes(is_async: bool) -> None:
+    """The structured path accepts an empty terminal turn after tool execution."""
+    llm, requests = make_llm(stream=True)
+    messages = list(MESSAGES)
+    kwargs = {
+        "llm": llm,
+        "messages": messages,
+        "callbacks": [],
+        "printer": Printer(),
+        "executor_context": SimpleNamespace(
+            before_llm_call_hooks=[], after_llm_call_hooks=[], messages=messages
+        ),
+        "response_model": StructuredReply,
+        "verbose": False,
+    }
+    result = (
+        await aget_llm_response(**kwargs) if is_async else get_llm_response(**kwargs)
+    )
+    assert result == ""
     assert len(requests) == 1
