@@ -1113,14 +1113,15 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
-        if not self.agent_executor:
+        executor = self._active_executor()
+        if not executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        result = await self.agent_executor.ainvoke(
+        result = await executor.ainvoke(
             {
                 "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
+                "tool_names": executor.tools_names,
+                "tools": executor.tools_description,
                 "ask_for_human_input": task.human_input,
             }
         )
