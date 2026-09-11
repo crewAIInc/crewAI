@@ -1,0 +1,78 @@
+---
+title: AntiBrow Load Tool
+description: The `AntibrowLoadTool` loads pages in a persistent browser profile that stays signed in between runs.
+icon: globe
+mode: "wide"
+---
+
+# `AntibrowLoadTool`
+
+## Description
+
+The `AntibrowLoadTool` loads a page in an [AntiBrow](https://antibrow.com) profile and returns its visible text. The difference from the other scraping tools here is where the state lives: the unit is a *profile*, so cookies, storage, an engine-level fingerprint and the profile's own proxy persist between runs. A page behind a login opens already signed in instead of starting over in a fresh browser.
+
+Key Features:
+- Persistent identity - the same profile name always gets the same fingerprint, cookies and storage
+- One proxy per profile - answered inside the browser engine, so nothing is loaded as an extension
+- Standard Playwright underneath - the SDK returns ordinary Playwright objects
+- Runs locally - the browser is on your machine, so there are no browser-hours to buy
+
+## Installation
+
+To use this tool, you need to install the AntiBrow SDK:
+
+```shell
+uv add antibrow
+```
+
+## Steps to Get Started
+
+1. **Sign Up**: Head to [AntiBrow](https://antibrow.com/dashboard) to sign up and generate an API key.
+2. **API Key**: Set the `ANTIBROW_API_KEY` environment variable or pass it directly to the tool constructor.
+3. **Install SDK**: Install the AntiBrow SDK using the command above. The browser engine downloads on the first launch and is cached.
+
+## Example
+
+```python Code
+from crewai_tools import AntibrowLoadTool
+from crewai import Agent
+
+# The profile name is the identity. Reuse it and the session is still there.
+tool = AntibrowLoadTool(profile="research-01")  # api_key read from the environment
+
+@agent
+def web_researcher(self) -> Agent:
+    '''
+    This agent reads pages through a persistent AntiBrow profile, so pages
+    that need a login keep working across runs.
+    '''
+    return Agent(
+        config=self.agents_config["web_researcher"],
+        tools=[tool]
+    )
+```
+
+## Parameters
+
+The tool accepts the following arguments when it runs:
+
+- **url**: Required. The URL to load.
+- **selector**: Optional. A CSS selector to read instead of the whole page, for example `main` or `h1`.
+
+And the following options on the constructor:
+
+- **api_key**: Optional. Your AntiBrow API key. Falls back to `ANTIBROW_API_KEY`.
+- **profile**: Optional. Profile name, `agent` by default. Unlimited and free locally.
+- **proxy**: Optional. Proxy URL for this profile (`http`, `https` or `socks5`, credentials in the URL).
+- **temporary**: Optional. Discard the profile when the browser closes. `False` by default.
+- **headless**: Optional. Hide the browser window. `False` by default.
+- **keep_open**: Optional. Reuse one browser across calls, so a login survives between steps of a crew. `True` by default.
+- **max_content_length**: Optional. Truncate page text at this many characters. `100000` by default.
+
+## Notes
+
+Call `tool.close()` when the crew is done. An abandoned browser is a whole browser still running.
+
+Two agents that must not share an identity need two profile names, not two tabs. How many profiles may run at once is your plan's concurrency limit.
+
+A persistent identity removes the tells that come from starting over every run - a fresh profile, a stock automation fingerprint, your own IP. It does not promise that a given site will accept an automated session.

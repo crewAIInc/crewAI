@@ -1,0 +1,78 @@
+---
+title: AntiBrow Load Tool
+description: O `AntibrowLoadTool` carrega páginas em um perfil de navegador persistente que continua logado entre execuções.
+icon: globe
+mode: "wide"
+---
+
+# `AntibrowLoadTool`
+
+## Descrição
+
+O `AntibrowLoadTool` carrega uma página em um perfil do [AntiBrow](https://antibrow.com) e devolve o texto visível dela. A diferença em relação às outras ferramentas de scraping daqui está em onde fica o estado: a unidade é um *perfil*, então cookies, storage, uma impressão digital aplicada no motor do navegador e o proxy do próprio perfil persistem entre execuções. Uma página atrás de um login abre já autenticada, em vez de começar de novo em um navegador limpo.
+
+Principais recursos:
+- Identidade persistente - o mesmo nome de perfil sempre recebe a mesma impressão digital, os mesmos cookies e o mesmo storage
+- Um proxy por perfil - respondido dentro do motor do navegador, então nada é carregado como extensão
+- Playwright padrão por baixo - o SDK devolve objetos comuns do Playwright
+- Execução local - o navegador roda na sua máquina, então não há horas de navegador para comprar
+
+## Instalação
+
+Para usar esta ferramenta, instale o SDK do AntiBrow:
+
+```shell
+uv add antibrow
+```
+
+## Como começar
+
+1. **Cadastro**: acesse o [AntiBrow](https://antibrow.com/dashboard) para se cadastrar e gerar uma API key.
+2. **API Key**: defina a variável de ambiente `ANTIBROW_API_KEY` ou passe a chave direto no construtor da ferramenta.
+3. **Instale o SDK**: instale o SDK do AntiBrow com o comando acima. O motor do navegador é baixado na primeira execução e fica em cache.
+
+## Exemplo
+
+```python Code
+from crewai_tools import AntibrowLoadTool
+from crewai import Agent
+
+# The profile name is the identity. Reuse it and the session is still there.
+tool = AntibrowLoadTool(profile="research-01")  # api_key read from the environment
+
+@agent
+def web_researcher(self) -> Agent:
+    '''
+    This agent reads pages through a persistent AntiBrow profile, so pages
+    that need a login keep working across runs.
+    '''
+    return Agent(
+        config=self.agents_config["web_researcher"],
+        tools=[tool]
+    )
+```
+
+## Parâmetros
+
+A ferramenta aceita os seguintes argumentos na execução:
+
+- **url**: obrigatório. A URL a carregar.
+- **selector**: opcional. Um seletor CSS para ler em vez da página inteira, por exemplo `main` ou `h1`.
+
+E as seguintes opções no construtor:
+
+- **api_key**: opcional. Sua API key do AntiBrow. Cai para `ANTIBROW_API_KEY`.
+- **profile**: opcional. Nome do perfil, `agent` por padrão. Ilimitado e gratuito localmente.
+- **proxy**: opcional. URL de proxy para este perfil (`http`, `https` ou `socks5`, com as credenciais na URL).
+- **temporary**: opcional. Descarta o perfil quando o navegador fecha. `False` por padrão.
+- **headless**: opcional. Esconde a janela do navegador. `False` por padrão.
+- **keep_open**: opcional. Reaproveita um navegador entre chamadas, para que um login sobreviva entre as etapas de uma crew. `True` por padrão.
+- **max_content_length**: opcional. Trunca o texto da página nesta quantidade de caracteres. `100000` por padrão.
+
+## Observações
+
+Chame `tool.close()` quando a crew terminar. Um navegador abandonado é um navegador inteiro ainda em execução.
+
+Dois agentes que não podem compartilhar identidade precisam de dois nomes de perfil, não de duas abas. Quantos perfis podem rodar ao mesmo tempo é o limite de concorrência do seu plano.
+
+Uma identidade persistente remove os sinais que aparecem quando tudo começa de novo a cada execução - um perfil novo, uma impressão digital padrão de automação, o seu próprio IP. Ela não promete que um site específico vá aceitar uma sessão automatizada.
