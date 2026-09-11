@@ -373,6 +373,99 @@ class TestAsyncTaskExecution:
         assert result is not None
         assert mock_execute.call_count == 2
 
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_async_task_receives_previous_task_outputs_as_context(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Regression test for #6417.
+
+        Async tasks were given `[last_sync_output] if last_sync_output else []`
+        as context, but `last_sync_output` is never populated during a normal
+        run, so async tasks received an empty context instead of the outputs
+        of prior tasks.
+        """
+        sync_task = Task(
+            description="Sync task",
+            expected_output="Sync output",
+            agent=test_agent,
+        )
+        async_task = Task(
+            description="Async task",
+            expected_output="Async output",
+            agent=test_agent,
+            async_execution=True,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[sync_task, async_task],
+            verbose=False,
+        )
+
+        mock_execute.side_effect = [
+            TaskOutput(
+                description="Sync task", raw="Sync result", agent="Test Agent"
+            ),
+            TaskOutput(
+                description="Async task", raw="Async result", agent="Test Agent"
+            ),
+        ]
+
+        await crew._aexecute_tasks(crew.tasks)
+
+        async_task_context = mock_execute.call_args_list[1].kwargs["context"]
+        assert "Sync result" in async_task_context
+
+    @patch("crewai.task.Task.execute_sync")
+    def test_sync_executor_async_task_receives_previous_task_outputs_as_context(
+        self, mock_execute_sync: MagicMock, test_agent: Agent
+    ) -> None:
+        """Regression test for #6417 on the thread-based executor path."""
+        from concurrent.futures import Future
+
+        sync_task = Task(
+            description="Sync task",
+            expected_output="Sync output",
+            agent=test_agent,
+        )
+        async_task = Task(
+            description="Async task",
+            expected_output="Async output",
+            agent=test_agent,
+            async_execution=True,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[sync_task, async_task],
+            verbose=False,
+        )
+
+        mock_execute_sync.return_value = TaskOutput(
+            description="Sync task", raw="Sync result", agent="Test Agent"
+        )
+
+        captured: dict[str, str | None] = {}
+
+        def fake_execute_async(agent=None, context=None, tools=None):
+            captured["context"] = context
+            future: Future[TaskOutput] = Future()
+            future.set_result(
+                TaskOutput(
+                    description="Async task",
+                    raw="Async result",
+                    agent="Test Agent",
+                )
+            )
+            return future
+
+        with patch(
+            "crewai.task.Task.execute_async", side_effect=fake_execute_async
+        ):
+            crew._execute_tasks(crew.tasks)
+
+        assert captured["context"] is not None
+        assert "Sync result" in captured["context"]
+
 
 class TestAsyncProcessAsyncTasks:
     """Tests for _aprocess_async_tasks method."""
