@@ -18,6 +18,7 @@ from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
+from crewai.telemetry.otel import operation
 
 
 _KNOWN_SOURCES: dict[str, type[BaseKnowledgeSource]] = {
@@ -145,11 +146,15 @@ class Knowledge(BaseModel):
         if self.storage is None:
             raise ValueError("Storage is not initialized.")
 
-        return self.storage.search(
-            query,
-            limit=results_limit,
-            score_threshold=score_threshold,
-        )
+        with operation(
+            "query knowledge",
+            {"crewai.knowledge.sources": len(self.sources)},
+        ):
+            return self.storage.search(
+                query,
+                limit=results_limit,
+                score_threshold=score_threshold,
+            )
 
     def add_sources(self) -> None:
         try:
@@ -183,11 +188,15 @@ class Knowledge(BaseModel):
         if self.storage is None:
             raise ValueError("Storage is not initialized.")
 
-        return await self.storage.asearch(
-            query,
-            limit=results_limit,
-            score_threshold=score_threshold,
-        )
+        with operation(
+            "query knowledge",
+            {"crewai.knowledge.sources": len(self.sources)},
+        ):
+            return await self.storage.asearch(
+                query,
+                limit=results_limit,
+                score_threshold=score_threshold,
+            )
 
     async def aadd_sources(self) -> None:
         """Add all knowledge sources to storage asynchronously."""

@@ -60,10 +60,12 @@ from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
 from crewai.flow.flow_definition import FlowDefinition, FlowMethodDefinition
 from crewai.flow.types import FlowMethodName
 from crewai.project.crew_definition import PythonReferenceDefinition
+from crewai.telemetry.tracing.context import get_trace_session
 from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from crewai.execution import ExecutionTrace
     from crewai.llms.base_llm import BaseLLM
 
 
@@ -267,6 +269,7 @@ class _ConversationalMixin:
         _pending_events: dict[Any, Any]
         _method_call_counts: dict[Any, int]
         _is_execution_resuming: bool
+        _deferred_execution_trace: ExecutionTrace | None
         _conversation_messages: list[LLMMessage]
         _pending_user_message: str | dict[str, Any] | None
         _pending_intents: Sequence[str] | None
@@ -1579,6 +1582,22 @@ class _ConversationalMixin:
         Safe to call when not deferring — it's a no-op if the trace batch
         was already finalized per-turn or never started.
         """
+        tracing = self._deferred_execution_trace
+        if tracing is None:
+            if getattr(self, "_deferred_flow_started_event_id", None):
+                self._finalize_session_trace_events()
+            return
+        self._deferred_execution_trace = None
+        with tracing.session.activate():
+            try:
+                self._finalize_session_trace_events()
+            except BaseException as error:
+                tracing.finish(type(error), error, error.__traceback__)
+                raise
+            else:
+                tracing.finish()
+
+    def _finalize_session_trace_events(self) -> None:
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.event_context import restore_event_scope
         from crewai.events.listeners.tracing.trace_listener import (
@@ -1626,6 +1645,8 @@ class _ConversationalMixin:
                 restore_event_scope(())
                 object.__setattr__(self, "_deferred_flow_started_event_id", None)
 
+        if get_trace_session() is not None:
+            return
         trace_listener = TraceCollectionListener()
         batch_manager = trace_listener.batch_manager
         try:

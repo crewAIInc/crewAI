@@ -2187,9 +2187,12 @@ class TestNestedCrewTracing:
             listener.batch_manager.event_buffer.clear()
 
     def test_nested_agent_executor_flow_does_not_finalize_parent_batch(
-        self,
+        self, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        # This regression exercises legacy batch ownership, not direct OTel export.
+        monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
         from crewai import Agent, Crew, Task
+        from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
         from crewai.llms.base_llm import BaseLLM
 
         class StaticLLM(BaseLLM):
@@ -2236,13 +2239,8 @@ class TestNestedCrewTracing:
                 return Crew(agents=[agent], tasks=[task], verbose=False).kickoff().raw
 
         listener = TraceCollectionListener()
-        listener.batch_manager.current_batch = None
-        listener.batch_manager.batch_owner_type = None
-        listener.batch_manager.batch_owner_id = None
-        listener.batch_manager.trace_batch_id = None
-        listener.batch_manager.defer_session_finalization = False
-        listener.batch_manager.event_buffer.clear()
-        listener.first_time_handler.is_first_time = False
+        monkeypatch.setattr(listener, "batch_manager", TraceBatchManager())
+        monkeypatch.setattr(listener.first_time_handler, "is_first_time", False)
 
         def initialize_backend_batch(*_: Any, **__: Any) -> None:
             listener.batch_manager.trace_batch_id = "debug-trace-batch"

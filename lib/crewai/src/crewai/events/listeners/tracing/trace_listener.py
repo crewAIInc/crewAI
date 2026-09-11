@@ -1,5 +1,6 @@
 """Trace collection listener for orchestrating trace collection."""
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 import os
 from typing import Any, ClassVar
@@ -153,6 +154,25 @@ class TraceCollectionListener(BaseEventListener):
     _initialized: bool = False
     _listeners_setup: bool = False
 
+    def _on(
+        self, event_bus: CrewAIEventsBus, event_type: type[BaseEvent]
+    ) -> Callable[[Callable[[Any, Any], None]], Callable[[Any, Any], None]]:
+        from functools import wraps
+
+        from crewai.telemetry.tracing.context import get_trace_session
+
+        def register(handler: Callable[[Any, Any], None]) -> Callable[[Any, Any], None]:
+            @wraps(handler)
+            def legacy_handler(source: Any, event: Any) -> None:
+                if get_trace_session() is None:
+                    return handler(source, event)
+                return None
+
+            event_bus.on(event_type)(legacy_handler)
+            return legacy_handler
+
+        return register
+
     def __new__(cls, batch_manager: TraceBatchManager | None = None) -> Self:
         """Create or return singleton instance."""
         if cls._instance is None:
@@ -231,11 +251,11 @@ class TraceCollectionListener(BaseEventListener):
     def _register_flow_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for flow events."""
 
-        @event_bus.on(FlowCreatedEvent)
+        @self._on(event_bus, FlowCreatedEvent)
         def on_flow_created(source: Any, event: FlowCreatedEvent) -> None:
             pass
 
-        @event_bus.on(FlowStartedEvent)
+        @self._on(event_bus, FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
             # Only the first execution to open the session batch owns it. A flow
             # that starts while a batch already exists is nested -- inside a crew
@@ -247,48 +267,48 @@ class TraceCollectionListener(BaseEventListener):
                 self._initialize_flow_batch(source, event)
             self._handle_trace_event("flow_started", source, event)
 
-        @event_bus.on(MethodExecutionStartedEvent)
+        @self._on(event_bus, MethodExecutionStartedEvent)
         def on_method_started(source: Any, event: MethodExecutionStartedEvent) -> None:
             self._handle_trace_event("method_execution_started", source, event)
 
-        @event_bus.on(MethodExecutionFinishedEvent)
+        @self._on(event_bus, MethodExecutionFinishedEvent)
         def on_method_finished(
             source: Any, event: MethodExecutionFinishedEvent
         ) -> None:
             self._handle_trace_event("method_execution_finished", source, event)
 
-        @event_bus.on(MethodExecutionFailedEvent)
+        @self._on(event_bus, MethodExecutionFailedEvent)
         def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
             self._handle_trace_event("method_execution_failed", source, event)
 
-        @event_bus.on(ConversationMessageAddedEvent)
+        @self._on(event_bus, ConversationMessageAddedEvent)
         def on_conversation_message_added(
             source: Any, event: ConversationMessageAddedEvent
         ) -> None:
             self._handle_action_event("conversation_message_added", source, event)
 
-        @event_bus.on(ConversationRouteSelectedEvent)
+        @self._on(event_bus, ConversationRouteSelectedEvent)
         def on_conversation_route_selected(
             source: Any, event: ConversationRouteSelectedEvent
         ) -> None:
             self._handle_action_event("conversation_route_selected", source, event)
 
-        @event_bus.on(FlowFinishedEvent)
+        @self._on(event_bus, FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._handle_trace_event("flow_finished", source, event)
 
-        @event_bus.on(FlowFailedEvent)
+        @self._on(event_bus, FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
             self._handle_trace_event("flow_failed", source, event)
 
-        @event_bus.on(FlowPlotEvent)
+        @self._on(event_bus, FlowPlotEvent)
         def on_flow_plot(source: Any, event: FlowPlotEvent) -> None:
             self._handle_action_event("flow_plot", source, event)
 
     def _register_context_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for context events (start/end)."""
 
-        @event_bus.on(CrewKickoffStartedEvent)
+        @self._on(event_bus, CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             # Nested crew inside Flow.kickoff: never claim an existing flow session batch.
             if not self._nested_in_flow_execution() and (
@@ -297,7 +317,7 @@ class TraceCollectionListener(BaseEventListener):
                 self._initialize_crew_batch(source, event)
             self._handle_trace_event("crew_kickoff_started", source, event)
 
-        @event_bus.on(CrewKickoffCompletedEvent)
+        @self._on(event_bus, CrewKickoffCompletedEvent)
         def on_crew_completed(source: Any, event: CrewKickoffCompletedEvent) -> None:
             self._handle_trace_event("crew_kickoff_completed", source, event)
             if self._should_defer_session_finalization():
@@ -317,7 +337,7 @@ class TraceCollectionListener(BaseEventListener):
                 else:
                     self.batch_manager.finalize_batch()
 
-        @event_bus.on(CrewKickoffFailedEvent)
+        @self._on(event_bus, CrewKickoffFailedEvent)
         def on_crew_failed(source: Any, event: CrewKickoffFailedEvent) -> None:
             self._handle_trace_event("crew_kickoff_failed", source, event)
             if self._should_defer_session_finalization():
@@ -336,55 +356,55 @@ class TraceCollectionListener(BaseEventListener):
             elif self.batch_manager.batch_owner_type == "crew":
                 self.batch_manager.finalize_batch()
 
-        @event_bus.on(TaskStartedEvent)
+        @self._on(event_bus, TaskStartedEvent)
         def on_task_started(source: Any, event: TaskStartedEvent) -> None:
             self._handle_trace_event("task_started", source, event)
 
-        @event_bus.on(TaskCompletedEvent)
+        @self._on(event_bus, TaskCompletedEvent)
         def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
             self._handle_trace_event("task_completed", source, event)
 
-        @event_bus.on(TaskFailedEvent)
+        @self._on(event_bus, TaskFailedEvent)
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
             self._handle_trace_event("task_failed", source, event)
 
-        @event_bus.on(AgentExecutionStartedEvent)
+        @self._on(event_bus, AgentExecutionStartedEvent)
         def on_agent_started(source: Any, event: AgentExecutionStartedEvent) -> None:
             self._handle_trace_event("agent_execution_started", source, event)
 
-        @event_bus.on(AgentExecutionCompletedEvent)
+        @self._on(event_bus, AgentExecutionCompletedEvent)
         def on_agent_completed(
             source: Any, event: AgentExecutionCompletedEvent
         ) -> None:
             self._handle_trace_event("agent_execution_completed", source, event)
 
-        @event_bus.on(LiteAgentExecutionStartedEvent)
+        @self._on(event_bus, LiteAgentExecutionStartedEvent)
         def on_lite_agent_started(
             source: Any, event: LiteAgentExecutionStartedEvent
         ) -> None:
             self._handle_trace_event("lite_agent_execution_started", source, event)
 
-        @event_bus.on(LiteAgentExecutionCompletedEvent)
+        @self._on(event_bus, LiteAgentExecutionCompletedEvent)
         def on_lite_agent_completed(
             source: Any, event: LiteAgentExecutionCompletedEvent
         ) -> None:
             self._handle_trace_event("lite_agent_execution_completed", source, event)
 
-        @event_bus.on(LiteAgentExecutionErrorEvent)
+        @self._on(event_bus, LiteAgentExecutionErrorEvent)
         def on_lite_agent_error(
             source: Any, event: LiteAgentExecutionErrorEvent
         ) -> None:
             self._handle_trace_event("lite_agent_execution_error", source, event)
 
-        @event_bus.on(AgentExecutionErrorEvent)
+        @self._on(event_bus, AgentExecutionErrorEvent)
         def on_agent_error(source: Any, event: AgentExecutionErrorEvent) -> None:
             self._handle_trace_event("agent_execution_error", source, event)
 
-        @event_bus.on(LLMGuardrailStartedEvent)
+        @self._on(event_bus, LLMGuardrailStartedEvent)
         def on_guardrail_started(source: Any, event: LLMGuardrailStartedEvent) -> None:
             self._handle_trace_event("llm_guardrail_started", source, event)
 
-        @event_bus.on(LLMGuardrailCompletedEvent)
+        @self._on(event_bus, LLMGuardrailCompletedEvent)
         def on_guardrail_completed(
             source: Any, event: LLMGuardrailCompletedEvent
         ) -> None:
@@ -393,49 +413,49 @@ class TraceCollectionListener(BaseEventListener):
     def _register_action_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for action events (LLM calls, tool usage)."""
 
-        @event_bus.on(LLMCallStartedEvent)
+        @self._on(event_bus, LLMCallStartedEvent)
         def on_llm_call_started(source: Any, event: LLMCallStartedEvent) -> None:
             self._handle_action_event("llm_call_started", source, event)
 
-        @event_bus.on(LLMCallCompletedEvent)
+        @self._on(event_bus, LLMCallCompletedEvent)
         def on_llm_call_completed(source: Any, event: LLMCallCompletedEvent) -> None:
             self._handle_action_event("llm_call_completed", source, event)
 
-        @event_bus.on(LLMCallFailedEvent)
+        @self._on(event_bus, LLMCallFailedEvent)
         def on_llm_call_failed(source: Any, event: LLMCallFailedEvent) -> None:
             self._handle_action_event("llm_call_failed", source, event)
 
-        @event_bus.on(ToolUsageStartedEvent)
+        @self._on(event_bus, ToolUsageStartedEvent)
         def on_tool_started(source: Any, event: ToolUsageStartedEvent) -> None:
             self._handle_action_event("tool_usage_started", source, event)
 
-        @event_bus.on(ToolUsageFinishedEvent)
+        @self._on(event_bus, ToolUsageFinishedEvent)
         def on_tool_finished(source: Any, event: ToolUsageFinishedEvent) -> None:
             self._handle_action_event("tool_usage_finished", source, event)
 
-        @event_bus.on(ToolUsageErrorEvent)
+        @self._on(event_bus, ToolUsageErrorEvent)
         def on_tool_error(source: Any, event: ToolUsageErrorEvent) -> None:
             self._handle_action_event("tool_usage_error", source, event)
 
-        @event_bus.on(ToolFailureDetectedEvent)
+        @self._on(event_bus, ToolFailureDetectedEvent)
         def on_tool_failure_detected(
             source: Any, event: ToolFailureDetectedEvent
         ) -> None:
             self._handle_action_event("tool_failure_detected", source, event)
 
-        @event_bus.on(MemoryQueryStartedEvent)
+        @self._on(event_bus, MemoryQueryStartedEvent)
         def on_memory_query_started(
             source: Any, event: MemoryQueryStartedEvent
         ) -> None:
             self._handle_action_event("memory_query_started", source, event)
 
-        @event_bus.on(MemoryQueryCompletedEvent)
+        @self._on(event_bus, MemoryQueryCompletedEvent)
         def on_memory_query_completed(
             source: Any, event: MemoryQueryCompletedEvent
         ) -> None:
             self._handle_action_event("memory_query_completed", source, event)
 
-        @event_bus.on(MemoryQueryFailedEvent)
+        @self._on(event_bus, MemoryQueryFailedEvent)
         def on_memory_query_failed(source: Any, event: MemoryQueryFailedEvent) -> None:
             self._handle_action_event("memory_query_failed", source, event)
             if self.formatter and self.memory_retrieval_in_progress:
@@ -444,7 +464,7 @@ class TraceCollectionListener(BaseEventListener):
                     event.source_type or "memory",
                 )
 
-        @event_bus.on(MemorySaveStartedEvent)
+        @self._on(event_bus, MemorySaveStartedEvent)
         def on_memory_save_started(source: Any, event: MemorySaveStartedEvent) -> None:
             self._handle_action_event("memory_save_started", source, event)
             if self.formatter:
@@ -455,7 +475,7 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.formatter.handle_memory_save_started()
 
-        @event_bus.on(MemorySaveCompletedEvent)
+        @self._on(event_bus, MemorySaveCompletedEvent)
         def on_memory_save_completed(
             source: Any, event: MemorySaveCompletedEvent
         ) -> None:
@@ -471,7 +491,7 @@ class TraceCollectionListener(BaseEventListener):
                     event.source_type or "memory",
                 )
 
-        @event_bus.on(MemorySaveFailedEvent)
+        @self._on(event_bus, MemorySaveFailedEvent)
         def on_memory_save_failed(source: Any, event: MemorySaveFailedEvent) -> None:
             self._handle_action_event("memory_save_failed", source, event)
             if self.formatter and self.memory_save_in_progress:
@@ -480,7 +500,7 @@ class TraceCollectionListener(BaseEventListener):
                     event.source_type or "memory",
                 )
 
-        @event_bus.on(MemoryRetrievalStartedEvent)
+        @self._on(event_bus, MemoryRetrievalStartedEvent)
         def on_memory_retrieval_started(
             source: Any, event: MemoryRetrievalStartedEvent
         ) -> None:
@@ -492,7 +512,7 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.formatter.handle_memory_retrieval_started()
 
-        @event_bus.on(MemoryRetrievalCompletedEvent)
+        @self._on(event_bus, MemoryRetrievalCompletedEvent)
         def on_memory_retrieval_completed(
             source: Any, event: MemoryRetrievalCompletedEvent
         ) -> None:
@@ -506,111 +526,111 @@ class TraceCollectionListener(BaseEventListener):
                     event.retrieval_time_ms,
                 )
 
-        @event_bus.on(AgentReasoningStartedEvent)
+        @self._on(event_bus, AgentReasoningStartedEvent)
         def on_agent_reasoning_started(
             source: Any, event: AgentReasoningStartedEvent
         ) -> None:
             self._handle_action_event("agent_reasoning_started", source, event)
 
-        @event_bus.on(AgentReasoningCompletedEvent)
+        @self._on(event_bus, AgentReasoningCompletedEvent)
         def on_agent_reasoning_completed(
             source: Any, event: AgentReasoningCompletedEvent
         ) -> None:
             self._handle_action_event("agent_reasoning_completed", source, event)
 
-        @event_bus.on(AgentReasoningFailedEvent)
+        @self._on(event_bus, AgentReasoningFailedEvent)
         def on_agent_reasoning_failed(
             source: Any, event: AgentReasoningFailedEvent
         ) -> None:
             self._handle_action_event("agent_reasoning_failed", source, event)
 
-        @event_bus.on(StepObservationStartedEvent)
+        @self._on(event_bus, StepObservationStartedEvent)
         def on_step_observation_started(
             source: Any, event: StepObservationStartedEvent
         ) -> None:
             self._handle_action_event("step_observation_started", source, event)
 
-        @event_bus.on(StepObservationCompletedEvent)
+        @self._on(event_bus, StepObservationCompletedEvent)
         def on_step_observation_completed(
             source: Any, event: StepObservationCompletedEvent
         ) -> None:
             self._handle_action_event("step_observation_completed", source, event)
 
-        @event_bus.on(StepObservationFailedEvent)
+        @self._on(event_bus, StepObservationFailedEvent)
         def on_step_observation_failed(
             source: Any, event: StepObservationFailedEvent
         ) -> None:
             self._handle_action_event("step_observation_failed", source, event)
 
-        @event_bus.on(PlanRefinementEvent)
+        @self._on(event_bus, PlanRefinementEvent)
         def on_plan_refinement(source: Any, event: PlanRefinementEvent) -> None:
             self._handle_action_event("plan_refinement", source, event)
 
-        @event_bus.on(PlanReplanTriggeredEvent)
+        @self._on(event_bus, PlanReplanTriggeredEvent)
         def on_plan_replan_triggered(
             source: Any, event: PlanReplanTriggeredEvent
         ) -> None:
             self._handle_action_event("plan_replan_triggered", source, event)
 
-        @event_bus.on(GoalAchievedEarlyEvent)
+        @self._on(event_bus, GoalAchievedEarlyEvent)
         def on_goal_achieved_early(source: Any, event: GoalAchievedEarlyEvent) -> None:
             self._handle_action_event("goal_achieved_early", source, event)
 
-        @event_bus.on(KnowledgeRetrievalStartedEvent)
+        @self._on(event_bus, KnowledgeRetrievalStartedEvent)
         def on_knowledge_retrieval_started(
             source: Any, event: KnowledgeRetrievalStartedEvent
         ) -> None:
             self._handle_action_event("knowledge_retrieval_started", source, event)
 
-        @event_bus.on(KnowledgeRetrievalCompletedEvent)
+        @self._on(event_bus, KnowledgeRetrievalCompletedEvent)
         def on_knowledge_retrieval_completed(
             source: Any, event: KnowledgeRetrievalCompletedEvent
         ) -> None:
             self._handle_action_event("knowledge_retrieval_completed", source, event)
 
-        @event_bus.on(KnowledgeQueryStartedEvent)
+        @self._on(event_bus, KnowledgeQueryStartedEvent)
         def on_knowledge_query_started(
             source: Any, event: KnowledgeQueryStartedEvent
         ) -> None:
             self._handle_action_event("knowledge_query_started", source, event)
 
-        @event_bus.on(KnowledgeQueryCompletedEvent)
+        @self._on(event_bus, KnowledgeQueryCompletedEvent)
         def on_knowledge_query_completed(
             source: Any, event: KnowledgeQueryCompletedEvent
         ) -> None:
             self._handle_action_event("knowledge_query_completed", source, event)
 
-        @event_bus.on(KnowledgeQueryFailedEvent)
+        @self._on(event_bus, KnowledgeQueryFailedEvent)
         def on_knowledge_query_failed(
             source: Any, event: KnowledgeQueryFailedEvent
         ) -> None:
             self._handle_action_event("knowledge_query_failed", source, event)
 
-        @event_bus.on(SkillDiscoveryStartedEvent)
+        @self._on(event_bus, SkillDiscoveryStartedEvent)
         def on_skill_discovery_started(
             source: Any, event: SkillDiscoveryStartedEvent
         ) -> None:
             self._handle_action_event("skill_discovery_started", source, event)
 
-        @event_bus.on(SkillDiscoveryCompletedEvent)
+        @self._on(event_bus, SkillDiscoveryCompletedEvent)
         def on_skill_discovery_completed(
             source: Any, event: SkillDiscoveryCompletedEvent
         ) -> None:
             self._handle_action_event("skill_discovery_completed", source, event)
 
-        @event_bus.on(SkillLoadedEvent)
+        @self._on(event_bus, SkillLoadedEvent)
         def on_skill_loaded(source: Any, event: SkillLoadedEvent) -> None:
             self._handle_action_event("skill_loaded", source, event)
 
-        @event_bus.on(SkillActivatedEvent)
+        @self._on(event_bus, SkillActivatedEvent)
         def on_skill_activated(source: Any, event: SkillActivatedEvent) -> None:
             self._handle_action_event("skill_activated", source, event)
 
-        @event_bus.on(SkillLoadFailedEvent)
+        @self._on(event_bus, SkillLoadFailedEvent)
         def on_skill_load_failed(source: Any, event: SkillLoadFailedEvent) -> None:
             self._handle_action_event("skill_load_failed", source, event)
 
-        @event_bus.on(SkillUsedEvent)
+        @self._on(event_bus, SkillUsedEvent)
         def on_skill_used(source: Any, event: SkillUsedEvent) -> None:
             # The other five describe setup; this is the only one that says a
             # skill was actually used, and the only one that re-fires per
@@ -620,137 +640,137 @@ class TraceCollectionListener(BaseEventListener):
     def _register_a2a_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for A2A (Agent-to-Agent) events."""
 
-        @event_bus.on(A2ADelegationStartedEvent)
+        @self._on(event_bus, A2ADelegationStartedEvent)
         def on_a2a_delegation_started(
             source: Any, event: A2ADelegationStartedEvent
         ) -> None:
             self._handle_action_event("a2a_delegation_started", source, event)
 
-        @event_bus.on(A2ADelegationCompletedEvent)
+        @self._on(event_bus, A2ADelegationCompletedEvent)
         def on_a2a_delegation_completed(
             source: Any, event: A2ADelegationCompletedEvent
         ) -> None:
             self._handle_action_event("a2a_delegation_completed", source, event)
 
-        @event_bus.on(A2AConversationStartedEvent)
+        @self._on(event_bus, A2AConversationStartedEvent)
         def on_a2a_conversation_started(
             source: Any, event: A2AConversationStartedEvent
         ) -> None:
             self._handle_action_event("a2a_conversation_started", source, event)
 
-        @event_bus.on(A2AMessageSentEvent)
+        @self._on(event_bus, A2AMessageSentEvent)
         def on_a2a_message_sent(source: Any, event: A2AMessageSentEvent) -> None:
             self._handle_action_event("a2a_message_sent", source, event)
 
-        @event_bus.on(A2AResponseReceivedEvent)
+        @self._on(event_bus, A2AResponseReceivedEvent)
         def on_a2a_response_received(
             source: Any, event: A2AResponseReceivedEvent
         ) -> None:
             self._handle_action_event("a2a_response_received", source, event)
 
-        @event_bus.on(A2AConversationCompletedEvent)
+        @self._on(event_bus, A2AConversationCompletedEvent)
         def on_a2a_conversation_completed(
             source: Any, event: A2AConversationCompletedEvent
         ) -> None:
             self._handle_action_event("a2a_conversation_completed", source, event)
 
-        @event_bus.on(A2APollingStartedEvent)
+        @self._on(event_bus, A2APollingStartedEvent)
         def on_a2a_polling_started(source: Any, event: A2APollingStartedEvent) -> None:
             self._handle_action_event("a2a_polling_started", source, event)
 
-        @event_bus.on(A2APollingStatusEvent)
+        @self._on(event_bus, A2APollingStatusEvent)
         def on_a2a_polling_status(source: Any, event: A2APollingStatusEvent) -> None:
             self._handle_action_event("a2a_polling_status", source, event)
 
-        @event_bus.on(A2APushNotificationRegisteredEvent)
+        @self._on(event_bus, A2APushNotificationRegisteredEvent)
         def on_a2a_push_notification_registered(
             source: Any, event: A2APushNotificationRegisteredEvent
         ) -> None:
             self._handle_action_event("a2a_push_notification_registered", source, event)
 
-        @event_bus.on(A2APushNotificationReceivedEvent)
+        @self._on(event_bus, A2APushNotificationReceivedEvent)
         def on_a2a_push_notification_received(
             source: Any, event: A2APushNotificationReceivedEvent
         ) -> None:
             self._handle_action_event("a2a_push_notification_received", source, event)
 
-        @event_bus.on(A2APushNotificationSentEvent)
+        @self._on(event_bus, A2APushNotificationSentEvent)
         def on_a2a_push_notification_sent(
             source: Any, event: A2APushNotificationSentEvent
         ) -> None:
             self._handle_action_event("a2a_push_notification_sent", source, event)
 
-        @event_bus.on(A2APushNotificationTimeoutEvent)
+        @self._on(event_bus, A2APushNotificationTimeoutEvent)
         def on_a2a_push_notification_timeout(
             source: Any, event: A2APushNotificationTimeoutEvent
         ) -> None:
             self._handle_action_event("a2a_push_notification_timeout", source, event)
 
-        @event_bus.on(A2AStreamingStartedEvent)
+        @self._on(event_bus, A2AStreamingStartedEvent)
         def on_a2a_streaming_started(
             source: Any, event: A2AStreamingStartedEvent
         ) -> None:
             self._handle_action_event("a2a_streaming_started", source, event)
 
-        @event_bus.on(A2AStreamingChunkEvent)
+        @self._on(event_bus, A2AStreamingChunkEvent)
         def on_a2a_streaming_chunk(source: Any, event: A2AStreamingChunkEvent) -> None:
             self._handle_action_event("a2a_streaming_chunk", source, event)
 
-        @event_bus.on(A2AAgentCardFetchedEvent)
+        @self._on(event_bus, A2AAgentCardFetchedEvent)
         def on_a2a_agent_card_fetched(
             source: Any, event: A2AAgentCardFetchedEvent
         ) -> None:
             self._handle_action_event("a2a_agent_card_fetched", source, event)
 
-        @event_bus.on(A2AAuthenticationFailedEvent)
+        @self._on(event_bus, A2AAuthenticationFailedEvent)
         def on_a2a_authentication_failed(
             source: Any, event: A2AAuthenticationFailedEvent
         ) -> None:
             self._handle_action_event("a2a_authentication_failed", source, event)
 
-        @event_bus.on(A2AArtifactReceivedEvent)
+        @self._on(event_bus, A2AArtifactReceivedEvent)
         def on_a2a_artifact_received(
             source: Any, event: A2AArtifactReceivedEvent
         ) -> None:
             self._handle_action_event("a2a_artifact_received", source, event)
 
-        @event_bus.on(A2AConnectionErrorEvent)
+        @self._on(event_bus, A2AConnectionErrorEvent)
         def on_a2a_connection_error(
             source: Any, event: A2AConnectionErrorEvent
         ) -> None:
             self._handle_action_event("a2a_connection_error", source, event)
 
-        @event_bus.on(A2AServerTaskStartedEvent)
+        @self._on(event_bus, A2AServerTaskStartedEvent)
         def on_a2a_server_task_started(
             source: Any, event: A2AServerTaskStartedEvent
         ) -> None:
             self._handle_action_event("a2a_server_task_started", source, event)
 
-        @event_bus.on(A2AServerTaskCompletedEvent)
+        @self._on(event_bus, A2AServerTaskCompletedEvent)
         def on_a2a_server_task_completed(
             source: Any, event: A2AServerTaskCompletedEvent
         ) -> None:
             self._handle_action_event("a2a_server_task_completed", source, event)
 
-        @event_bus.on(A2AServerTaskCanceledEvent)
+        @self._on(event_bus, A2AServerTaskCanceledEvent)
         def on_a2a_server_task_canceled(
             source: Any, event: A2AServerTaskCanceledEvent
         ) -> None:
             self._handle_action_event("a2a_server_task_canceled", source, event)
 
-        @event_bus.on(A2AServerTaskFailedEvent)
+        @self._on(event_bus, A2AServerTaskFailedEvent)
         def on_a2a_server_task_failed(
             source: Any, event: A2AServerTaskFailedEvent
         ) -> None:
             self._handle_action_event("a2a_server_task_failed", source, event)
 
-        @event_bus.on(A2AParallelDelegationStartedEvent)
+        @self._on(event_bus, A2AParallelDelegationStartedEvent)
         def on_a2a_parallel_delegation_started(
             source: Any, event: A2AParallelDelegationStartedEvent
         ) -> None:
             self._handle_action_event("a2a_parallel_delegation_started", source, event)
 
-        @event_bus.on(A2AParallelDelegationCompletedEvent)
+        @self._on(event_bus, A2AParallelDelegationCompletedEvent)
         def on_a2a_parallel_delegation_completed(
             source: Any, event: A2AParallelDelegationCompletedEvent
         ) -> None:

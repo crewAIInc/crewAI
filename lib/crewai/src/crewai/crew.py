@@ -117,6 +117,7 @@ from crewai.state.checkpoint_config import (
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
+from crewai.telemetry.otel import operation
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
@@ -1045,30 +1046,39 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
-            inputs = prepare_kickoff(self, inputs, input_files)
+            execution_token = begin_execution(tracing=self.tracing)
+            with operation(
+                "execute crew",
+                {"crewai.crew.name": self.name or "", "crewai.crew.id": str(self.id)},
+            ):
+                inputs = prepare_kickoff(self, inputs, input_files)
 
-            if self.process == Process.sequential:
-                result = self._run_sequential_process()
-            elif self.process == Process.hierarchical:
-                result = self._run_hierarchical_process()
-            else:
-                raise NotImplementedError(
-                    f"The process '{self.process}' is not implemented yet."
-                )
+                if self.process == Process.sequential:
+                    result = self._run_sequential_process()
+                elif self.process == Process.hierarchical:
+                    result = self._run_hierarchical_process()
+                else:
+                    raise NotImplementedError(
+                        f"The process '{self.process}' is not implemented yet."
+                    )
 
-            for after_callback in self.after_kickoff_callbacks:
-                result = after_callback(result)
+                for after_callback in self.after_kickoff_callbacks:
+                    result = after_callback(result)
 
-            result = self._post_kickoff(result)
+                result = self._post_kickoff(result)
 
-            self.usage_metrics = self.calculate_usage_metrics()
+                self.usage_metrics = self.calculate_usage_metrics()
 
-            return result
+                return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
@@ -1262,30 +1272,39 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
-            inputs = prepare_kickoff(self, inputs, input_files)
+            execution_token = begin_execution(tracing=self.tracing)
+            with operation(
+                "execute crew",
+                {"crewai.crew.name": self.name or "", "crewai.crew.id": str(self.id)},
+            ):
+                inputs = prepare_kickoff(self, inputs, input_files)
 
-            if self.process == Process.sequential:
-                result = await self._arun_sequential_process()
-            elif self.process == Process.hierarchical:
-                result = await self._arun_hierarchical_process()
-            else:
-                raise NotImplementedError(
-                    f"The process '{self.process}' is not implemented yet."
-                )
+                if self.process == Process.sequential:
+                    result = await self._arun_sequential_process()
+                elif self.process == Process.hierarchical:
+                    result = await self._arun_hierarchical_process()
+                else:
+                    raise NotImplementedError(
+                        f"The process '{self.process}' is not implemented yet."
+                    )
 
-            for after_callback in self.after_kickoff_callbacks:
-                result = after_callback(result)
+                for after_callback in self.after_kickoff_callbacks:
+                    result = after_callback(result)
 
-            result = self._post_kickoff(result)
+                result = self._post_kickoff(result)
 
-            self.usage_metrics = self.calculate_usage_metrics()
+                self.usage_metrics = self.calculate_usage_metrics()
 
-            return result
+                return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,

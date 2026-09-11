@@ -484,10 +484,13 @@ def _is_interactive_terminal() -> bool:
         return False
 
 
-def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
+def prompt_user_for_trace_viewing(
+    timeout_seconds: int = 20, *, sharing: bool = False
+) -> bool:
     """
     Prompt user if they want to see their traces with timeout.
-    Returns True if user wants to see traces, False otherwise.
+    Returns True if user agrees, False otherwise. ``sharing`` explicitly asks
+    permission to upload locally buffered spans rather than merely view a trace.
     """
     if _is_test_environment():
         return False
@@ -514,6 +517,12 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         content.append("  • Agent decision-making process\n", style="bright_blue")
         content.append("  • Task execution flow and timing\n", style="bright_blue")
         content.append("  • Tool usage details", style="bright_blue")
+        if sharing:
+            content.append(
+                "\n\nThese traces are stored locally and may contain prompts, inputs, "
+                "and outputs. Sharing uploads them to CrewAI.",
+                style="white",
+            )
 
         panel = Panel(
             content,
@@ -524,8 +533,13 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         console.print("\n")
         console.print(panel)
 
+        question = (
+            "Share this execution trace with CrewAI?"
+            if sharing
+            else "Would you like to view your execution traces?"
+        )
         prompt_text = click.style(
-            f"Would you like to view your execution traces? [y/N] ({timeout_seconds}s timeout): ",
+            f"{question} [y/N] ({timeout_seconds}s timeout): ",
             fg="white",
             bold=True,
         )

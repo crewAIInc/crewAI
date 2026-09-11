@@ -23,6 +23,8 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from crewai.state.runtime import RuntimeState
 
+from opentelemetry import context as otel_context
+
 from crewai.events.base_events import BaseEvent, get_next_emission_sequence
 from crewai.events.depends import Depends
 from crewai.events.event_context import (
@@ -60,6 +62,21 @@ from crewai.utilities.rw_lock import RWLock
 
 
 logger = logging.getLogger(__name__)
+
+
+async def _ctx_run_coro(ctx: otel_context.Context, coro: Any) -> Any:
+    """Attach an OTel context for the duration of ``coro``.
+
+    ``asyncio.run_coroutine_threadsafe`` schedules ``coro`` on a
+    different event loop with a fresh context; without re-attaching the
+    caller's OTel context the trace tree shears at every async dispatch.
+    """
+    token = otel_context.attach(ctx)
+    try:
+        return await coro
+    finally:
+        otel_context.detach(token)
+
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -569,6 +586,12 @@ class CrewAIEventsBus:
         publish_stream_event(source, event)
         self._record_event(event)
 
+        # Enrich on the execution thread before operation() ends its span.
+        from crewai.telemetry.tracing.context import get_trace_session
+
+        if session := get_trace_session():
+            session.record_event(source, event)
+
     def emit(self, source: Any, event: BaseEvent) -> Future[None] | None:
         """Emit an event to all registered handlers.
 
@@ -617,10 +640,15 @@ class CrewAIEventsBus:
 
         state = self._runtime_state
 
+        otel_ctx = otel_context.get_current()
+
         if has_dependencies:
             return self._track_future(
                 asyncio.run_coroutine_threadsafe(
-                    self._emit_with_dependencies(source, event, state),
+                    _ctx_run_coro(
+                        otel_ctx,
+                        self._emit_with_dependencies(source, event, state),
+                    ),
                     self._loop,
                 )
             )
@@ -639,7 +667,10 @@ class CrewAIEventsBus:
         if async_handlers:
             return self._track_future(
                 asyncio.run_coroutine_threadsafe(
-                    self._acall_handlers(source, event, async_handlers, state),
+                    _ctx_run_coro(
+                        otel_ctx,
+                        self._acall_handlers(source, event, async_handlers, state),
+                    ),
                     self._loop,
                 )
             )
@@ -701,12 +732,18 @@ class CrewAIEventsBus:
         self._has_pending_events = True
 
         state = self._runtime_state
+        otel_ctx = otel_context.get_current()
         token = _replaying.set(True)
         try:
             if has_dependencies:
                 return self._track_future(
                     asyncio.run_coroutine_threadsafe(
-                        self._emit_with_dependencies_replaying(source, event, state),
+                        _ctx_run_coro(
+                            otel_ctx,
+                            self._emit_with_dependencies_replaying(
+                                source, event, state
+                            ),
+                        ),
                         self._loop,
                     )
                 )
@@ -722,8 +759,11 @@ class CrewAIEventsBus:
 
             return self._track_future(
                 asyncio.run_coroutine_threadsafe(
-                    self._acall_handlers_replaying(
-                        source, event, async_handlers, state
+                    _ctx_run_coro(
+                        otel_ctx,
+                        self._acall_handlers_replaying(
+                            source, event, async_handlers, state
+                        ),
                     ),
                     self._loop,
                 )
