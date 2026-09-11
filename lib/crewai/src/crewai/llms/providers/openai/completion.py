@@ -50,6 +50,7 @@ from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
     LLMCallBlockedError,
+    LLMEmptyResponseError,
     llm_call_context,
 )
 from crewai.llms.hooks.base import BaseInterceptor
@@ -589,6 +590,8 @@ class OpenAICompletion(BaseLLM):
             except (HookAborted, LLMCallBlockedError) as e:
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
+            except LLMEmptyResponseError:
+                raise
             except Exception as e:
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
@@ -726,6 +729,8 @@ class OpenAICompletion(BaseLLM):
 
             except (HookAborted, LLMCallBlockedError) as e:
                 self._emit_call_denied_event(e, from_task, from_agent)
+                raise
+            except LLMEmptyResponseError:
                 raise
             except Exception as e:
                 error_msg = f"OpenAI API call failed: {e!s}"
@@ -2097,6 +2102,23 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
+            if not content and not message.tool_calls:
+                self._emit_call_completed_event(
+                    response=content,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
+                )
+                raise LLMEmptyResponseError(
+                    finish_reason=finish_reason,
+                    response_id=response_id,
+                    usage=usage,
+                )
+
             if self.response_format and isinstance(self.response_format, type):
                 try:
                     structured_result = self._validate_structured_output(
@@ -2156,6 +2178,8 @@ class OpenAICompletion(BaseLLM):
 
             # `_call_completions` retries this one, so reporting a failed call
             # here would surface an error the caller never experiences.
+            if isinstance(e, LLMEmptyResponseError):
+                raise
             if self._rejects_reasoning_effort_with_tools(e):
                 raise
 
@@ -2257,6 +2281,23 @@ class OpenAICompletion(BaseLLM):
 
                 if result is not None:
                     return result
+
+        if not full_response and not tool_calls:
+            self._emit_call_completed_event(
+                response=full_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+                usage=usage_data,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
+            raise LLMEmptyResponseError(
+                finish_reason=finish_reason,
+                response_id=response_id,
+                usage=usage_data,
+            )
 
         full_response = self._apply_stop_words(full_response)
 
@@ -2539,6 +2580,23 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
+            if not content and not message.tool_calls:
+                self._emit_call_completed_event(
+                    response=content,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
+                )
+                raise LLMEmptyResponseError(
+                    finish_reason=finish_reason,
+                    response_id=response_id,
+                    usage=usage,
+                )
+
             if self.response_format and isinstance(self.response_format, type):
                 try:
                     structured_result = self._validate_structured_output(
@@ -2594,6 +2652,8 @@ class OpenAICompletion(BaseLLM):
 
             # `_call_completions` retries this one, so reporting a failed call
             # here would surface an error the caller never experiences.
+            if isinstance(e, LLMEmptyResponseError):
+                raise
             if self._rejects_reasoning_effort_with_tools(e):
                 raise
 
