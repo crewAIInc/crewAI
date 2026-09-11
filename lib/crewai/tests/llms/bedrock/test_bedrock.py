@@ -1,6 +1,4 @@
 import os
-import sys
-import types
 from unittest.mock import patch, MagicMock
 import pytest
 
@@ -8,6 +6,7 @@ from crewai.llm import LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
+from crewai.llms.providers.bedrock import completion as bedrock_completion
 
 
 def _create_bedrock_mocks():
@@ -132,25 +131,6 @@ def test_bedrock_completion_is_used_when_bedrock_provider():
     assert llm.__class__.__name__ == "BedrockCompletion"
     assert llm.provider == "bedrock"
     assert llm.model == "anthropic.claude-3-5-sonnet-20241022-v2:0"
-
-
-def test_bedrock_completion_module_is_imported(monkeypatch):
-    """
-    Test that the completion module is properly imported when using Bedrock provider
-    """
-    module_name = "crewai.llms.providers.bedrock.completion"
-
-    # Restore the original module after this test so collected class references
-    # still match the provider returned by LLM in subsequent tests.
-    monkeypatch.delitem(sys.modules, module_name, raising=False)
-
-    LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
-
-    assert module_name in sys.modules
-    completion_mod = sys.modules[module_name]
-    assert isinstance(completion_mod, types.ModuleType)
-
-    assert hasattr(completion_mod, 'BedrockCompletion')
 
 
 def test_native_bedrock_raises_error_when_initialization_fails():
@@ -602,8 +582,10 @@ def test_bedrock_tool_conversion():
     assert "inputSchema" in bedrock_tools[0]["toolSpec"]
 
 
-def test_bedrock_environment_variable_credentials():
+def test_bedrock_environment_variable_credentials(monkeypatch):
     """Pass AWS credentials and region from the environment to boto3."""
+    monkeypatch.delenv("AWS_SESSION_TOKEN", raising=False)
+
     with (
         patch.dict(
             os.environ,
@@ -614,13 +596,12 @@ def test_bedrock_environment_variable_credentials():
             },
             clear=False,
         ),
-        patch(
-            "crewai.llms.providers.bedrock.completion.Session"
-        ) as mock_session_class,
+        patch.object(bedrock_completion, "Session") as mock_session_class,
     ):
         mock_session_class.return_value.client.return_value = MagicMock()
-        LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+        llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
+    assert type(llm) is bedrock_completion.BedrockCompletion
     mock_session_class.assert_called_once_with(
         aws_access_key_id="test-access-key-123",
         aws_secret_access_key="test-secret-key-456",
