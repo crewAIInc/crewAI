@@ -222,7 +222,7 @@ class BaseTool(BaseModel, ABC):
         fields: dict[str, Any] = {}
 
         for param_name, param in run_sig.parameters.items():
-            if param_name in ("self", "return"):
+            if param_name in ("self", "return", "config"):
                 continue
             if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                 continue
@@ -237,7 +237,7 @@ class BaseTool(BaseModel, ABC):
         if not fields:
             arun_sig = signature(cls._arun)
             for param_name, param in arun_sig.parameters.items():
-                if param_name in ("self", "return"):
+                if param_name in ("self", "return", "config"):
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
@@ -368,6 +368,7 @@ class BaseTool(BaseModel, ABC):
     async def _arun(
         self,
         *args: Any,
+        config: Any | None = None,
         **kwargs: Any,
     ) -> Any:
         """Async implementation of the tool. Override for async support."""
@@ -388,6 +389,7 @@ class BaseTool(BaseModel, ABC):
     def _run(
         self,
         *args: Any,
+        config: Any | None = None,
         **kwargs: Any,
     ) -> Any:
         """Sync implementation of the tool.
@@ -474,7 +476,7 @@ class BaseTool(BaseModel, ABC):
             fields: dict[str, Any] = {}
 
             for param_name, param in run_sig.parameters.items():
-                if param_name in ("self", "return"):
+                if param_name in ("self", "return", "config"):
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
