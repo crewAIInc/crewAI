@@ -1834,18 +1834,11 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1
     )
 
-    # Usage for a run is the growth of each LLM's counters across it, so the
-    # summaries read empty until the task runs and report totals afterwards.
-    consumed = {"done": False}
-    researcher.llm.get_token_usage_summary = (
-        lambda: researcher_metrics if consumed["done"] else UsageMetrics()
-    )
-    manager.llm.get_token_usage_summary = (
-        lambda: manager_metrics if consumed["done"] else UsageMetrics()
-    )
-
+    # Stand in for the LLM calls each agent makes during the task: every call
+    # is credited to the agent that made it, and the crew sums those.
     def _execute(*_args, **_kwargs) -> TaskOutput:
-        consumed["done"] = True
+        researcher._record_llm_usage(researcher.llm, researcher_metrics)
+        manager._record_llm_usage(manager.llm, manager_metrics)
         return TaskOutput(
             description="dummy", raw="Hello", agent=researcher.role, messages=[]
         )

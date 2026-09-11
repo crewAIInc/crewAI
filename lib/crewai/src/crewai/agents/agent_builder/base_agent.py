@@ -50,6 +50,7 @@ from crewai.tools.tool_failure import (
     collect_tool_failures,
 )
 from crewai.types.callback import SerializableCallable
+from crewai.types.usage_metrics import UsageMetrics, add_usage_metrics_locked
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
@@ -268,6 +269,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
+    _usage_metrics: UsageMetrics = PrivateAttr(default_factory=UsageMetrics)
     _kickoff_event_id: str | None = PrivateAttr(default=None)
     _tool_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
@@ -643,6 +645,16 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if not self._token_process:
             self._token_process = TokenProcess()
         return self
+
+    def _record_llm_usage(self, llm: BaseLLM, usage: UsageMetrics) -> None:
+        """Credit one LLM call's usage to this agent.
+
+        Called by ``BaseLLM`` for every call made while this agent is running.
+        Only calls made through the agent's own LLMs count, so an LLM owned by
+        something else (a memory store, say) stays out of the agent's usage.
+        """
+        if llm is self.llm or llm is getattr(self, "function_calling_llm", None):
+            add_usage_metrics_locked(self._usage_metrics, usage)
 
     @model_validator(mode="after")
     def resolve_memory(self) -> Self:
