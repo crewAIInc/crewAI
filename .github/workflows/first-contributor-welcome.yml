@@ -1,0 +1,116 @@
+name: Welcome First-Time Contributors
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  welcome:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Thank first-time contributors
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const pullRequest = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const marker = "<!-- crewai-first-merged-pr-welcome -->";
+
+            const closedIssues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner,
+                repo,
+                state: "closed",
+                creator: pullRequest.user.login,
+                per_page: 100,
+              },
+            );
+            const mergedPullRequests = await Promise.all(
+              closedIssues
+                .filter((issue) => issue.pull_request)
+                .map((issue) =>
+                  github.rest.pulls.get({
+                    owner,
+                    repo,
+                    pull_number: issue.number,
+                  }),
+                ),
+            );
+            const mergedCount = mergedPullRequests.filter(
+              ({ data }) => data.merged_at !== null,
+            ).length;
+
+            if (mergedCount !== 1) {
+              core.info(
+                `${pullRequest.user.login} has ${mergedCount} merged pull requests; skipping welcome comment.`,
+              );
+              return;
+            }
+
+            const existingComments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner,
+                repo,
+                issue_number: pullRequest.number,
+                per_page: 100,
+              },
+            );
+            if (existingComments.some((comment) => comment.body?.includes(marker))) {
+              core.info("Welcome comment already exists; skipping duplicate.");
+              return;
+            }
+
+            const prUrl = pullRequest.html_url;
+            const shareText = [
+              "I just made my first contribution to @crewAIInc!",
+              "",
+              "Excited to help build the future of AI agents with CrewAI.",
+              "",
+              prUrl,
+              "",
+              "#OpenSource #AI #CrewAI",
+            ].join("\n");
+            const xShareUrl = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}`;
+            const linkedInShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(prUrl)}`;
+
+            const body = [
+              marker,
+              "",
+              `## Thanks for your first contribution to CrewAI, @${pullRequest.user.login}!`,
+              "",
+              "We really appreciate the time and care you put into this PR. Your work is now part of CrewAI — welcome to the contributor community.",
+              "",
+              "Want to share your contribution? Totally optional:",
+              "",
+              `[Share on X](${xShareUrl}) · [Share the PR on LinkedIn](${linkedInShareUrl})`,
+              "",
+              "If the links don't work, feel free to copy and personalize this:",
+              "",
+              "```text",
+              "I just made my first contribution to @crewAIInc!",
+              "",
+              "Excited to help build the future of AI agents with CrewAI.",
+              "",
+              prUrl,
+              "",
+              "#OpenSource #AI #CrewAI",
+              "```",
+              "",
+              "If you share, we'd love to see it — tag **@crewAIInc** on X and **CrewAI** on LinkedIn.",
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pullRequest.number,
+              body,
+            });
