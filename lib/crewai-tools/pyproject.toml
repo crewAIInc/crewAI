@@ -41,6 +41,9 @@ firecrawl-py = [
 composio-core = [
     "composio-core>=0.6.11.post1",
 ]
+antibrow = [
+    "antibrow>=0.22.0",
+]
 browserbase = [
     "browserbase>=1.0.5",
 ]
