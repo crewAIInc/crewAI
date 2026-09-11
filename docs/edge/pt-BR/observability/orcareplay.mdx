@@ -1,0 +1,148 @@
+---
+title: Integração com OrcaReplay
+description: Grave uma execução do CrewAI e reproduza-a offline, byte a byte, sem chamar o modelo
+icon: rotate-left
+mode: "wide"
+---
+
+# Grave e reproduza sua Crew
+
+[OrcaReplay](https://github.com/Continuum-AI-Corp/OrcaReplay) é um depurador de gravação/reprodução
+de código aberto para agentes. Ele grava uma execução em um arquivo em disco e depois reproduz esse
+arquivo com o modelo servido a partir da gravação — de modo que a mesma execução se reproduz
+exatamente, offline, quantas vezes você quiser, sem gastar tokens.
+
+Há uma diferença em relação às outras ferramentas desta seção que vale conhecer antes de continuar:
+**não há nada a acrescentar ao seu código.** Sem SDK, sem callback, sem decorator, sem `import`. O
+OrcaReplay executa o seu script e captura o tráfego que passa por baixo dele.
+
+## Primeiros passos
+
+```bash
+pip install crewai
+npm install -g orcareplay
+```
+
+Execute a sua crew como você já faz, com `orca record` à frente:
+
+```bash
+orca record generic-openai -- python your_crew.py
+```
+
+Essa é a integração inteira. Quando terminar:
+
+```bash
+orca show last        # a linha do tempo: cada requisição, resposta, chamada de ferramenta e resultado
+orca replay last      # a mesma execução de novo — a partir da gravação, sem chamar o modelo
+```
+
+## O que é capturado
+
+APIs de modelo não guardam estado, então uma crew reenvia toda a conversa a cada turno — incluindo
+os resultados de ferramentas do turno anterior. Um proxy à frente do modelo enxerga, portanto, o
+laço inteiro, e não apenas a chamada ao LLM: cada requisição, cada resposta transmitida, cada
+chamada de ferramenta que o modelo emitiu e cada resultado que a sua crew produziu.
+
+```console
+$ orca show last
+run_0ec7e5de1f25  generic-openai@0.2.3  6 events  exit 0
+
+SEQ  KIND   WHAT                                           DETAIL
+0    RUN    run started                                    generic-openai
+1    SNAP   tree ee2d5836718ef5ac09bfc73e3b3d4c7e6f27cf93   0 changed
+2    MODEL  gpt-4o-mini                                    1 messages
+3    MODEL  gpt-4o-mini                                    stop: end_turn · 9 in · 4 out
+4    SNAP   tree ee2d5836718ef5ac09bfc73e3b3d4c7e6f27cf93   0 changed
+5    RUN    run ended                                      exit 0
+```
+
+Essa é uma crew de um agente e uma tarefa. Uma crew com ferramentas mostra as linhas `tool.call` e
+`tool.result` entre as linhas de modelo, reconstruídas a partir da conversa que o harness reenviou —
+que é como o laço inteiro fica visível para algo que só viu HTTP.
+
+Junto com o tráfego de modelo, ele grava alterações de arquivos por turno e comandos de shell com
+seus códigos de saída e durações reais.
+
+## Reprodução, e bifurcação a partir de um passo
+
+A reprodução é a parte que não é observabilidade. A gravação é um arquivo, então uma execução que
+você capturou na semana passada se reproduz hoje com a rede desligada:
+
+```console
+$ orca replay last
+info replaying run=run_0ec7e5de1f25 exchanges=1 egress=blocked
+info replay.done reused=1/1 exact=1 divergences=0 unmatched=0 exit=0
+```
+
+`egress=blocked` vale para o tráfego de modelo: o proxy se recusa a encaminhar qualquer coisa que
+não consiga servir a partir da gravação, então nada é chamado e nada é gasto. Uma reprodução ainda
+*executa de verdade as chamadas de ferramenta gravadas* — uma ferramenta que abre o próprio socket
+continua alcançando a rede — portanto a reprodução não é um sandbox.
+
+A bifurcação é a outra metade. Use a gravação até um checkpoint e continue ao vivo em outro modelo:
+
+```bash
+orca replay last --from 4 --model gpt-5.2
+```
+
+Mesma tarefa, mesmo prefixo de conversa, mesmos arquivos, modelo diferente a partir do passo 4 — que
+é o que dá sentido a comparar dois modelos. Essa parte chama o modelo e custa tokens.
+
+## Apontando uma Crew para um gravador, ou para um gateway
+
+`orca record generic-openai` define `OPENAI_API_BASE` e `OPENAI_BASE_URL`, e o provedor nativo do
+CrewAI 1.x lê ambos — por isso o comando acima não precisa de argumentos nem de mudanças na sua
+crew. Passar pelo código com `LLM(base_url=…)` também funciona; o ambiente é simplesmente a rota que
+o `orca record` já configura.
+
+Um ponto a saber quando você usa um nome de modelo que o provedor nunca publicou — que é o que
+normalmente significa apontar uma crew para um gateway. Medido contra o **crewai 1.15.20**:
+
+| `LLM(model=…)` | resolve |
+|---|---|
+| `gpt-4o-mini`, `my-gateway-model` | sempre — um nome sem prefixo chega ao provedor nativo, qualquer que seja |
+| `openai/gpt-4o-mini`, `openai/o3-mini` | sempre — um provedor nativo o reivindica |
+| `openai/my-gateway-model` | **apenas onde o LiteLLM estiver instalado** |
+
+Um nome com prefixo que nenhum provedor nativo reivindica cai no LiteLLM, e o 1.x não o instala por
+padrão (`crewai[litellm]` adiciona). Então a mesma linha funciona em uma máquina e levanta
+`ImportError: … and the LiteLLM fallback package is not installed` em outra. Usar a forma sem
+prefixo para os nomes de modelo do seu gateway evita a questão por completo.
+
+A falha ocorre enquanto o `LLM` está sendo construído, antes de qualquer requisição — então a
+gravação dessa execução tem três eventos e o OrcaReplay informa `capture.empty`, o que é exato e
+fácil de ler como um problema de captura quando é um problema de nome de modelo.
+
+## A telemetria é uma conexão separada
+
+O CrewAI envia a própria telemetria, que não é tráfego de modelo e não é capturada aqui. Se você
+preferir que a execução converse apenas com o gravador:
+
+```python
+import os
+
+os.environ["CREWAI_DISABLE_TELEMETRY"] = "true"
+os.environ["OTEL_SDK_DISABLED"] = "true"
+```
+
+Defina antes de importar `crewai` — o cliente de telemetria é configurado no momento do import.
+
+## Verificado em CI
+
+O CrewAI tem sua própria verificação na matriz de integração do OrcaReplay: um `Agent`, uma `Task` e
+uma `Crew` reais gravados contra uma origem de teste, a origem encerrada, e a gravação reproduzida
+offline.
+
+```
+── crewai            1 exchanges, replayed exact with the origin down
+```
+
+Ela roda a cada commit, então a afirmação que esta página faz quebra um build em vez de envelhecer
+em silêncio. A verificação é
+[`test/integrations/agents/crewai_agent.py`](https://github.com/Continuum-AI-Corp/OrcaReplay/blob/main/test/integrations/agents/crewai_agent.py).
+
+## Saiba mais
+
+- [OrcaReplay no GitHub](https://github.com/Continuum-AI-Corp/OrcaReplay) — Apache-2.0
+- [Gravando um framework](https://github.com/Continuum-AI-Corp/OrcaReplay/blob/main/docs/integrations.md) —
+  as notas medidas para o CrewAI e os demais frameworks

@@ -363,6 +363,7 @@
                       "edge/en/observability/patronus-evaluation",
                       "edge/en/observability/portkey",
                       "edge/en/observability/weave",
+                      "edge/en/observability/orcareplay",
                       "edge/en/observability/truefoundry"
                     ]
                   },
@@ -15221,6 +15222,7 @@
                       "edge/pt-BR/observability/patronus-evaluation",
                       "edge/pt-BR/observability/portkey",
                       "edge/pt-BR/observability/weave",
+                      "edge/pt-BR/observability/orcareplay",
                       "edge/pt-BR/observability/truefoundry"
                     ]
                   },
@@ -29043,7 +29045,8 @@
                       "edge/ko/observability/opik",
                       "edge/ko/observability/patronus-evaluation",
                       "edge/ko/observability/portkey",
-                      "edge/ko/observability/weave"
+                      "edge/ko/observability/weave",
+                      "edge/ko/observability/orcareplay"
                     ]
                   },
                   {
@@ -43321,7 +43324,8 @@
                       "edge/ar/observability/opik",
                       "edge/ar/observability/patronus-evaluation",
                       "edge/ar/observability/portkey",
-                      "edge/ar/observability/weave"
+                      "edge/ar/observability/weave",
+                      "edge/ar/observability/orcareplay"
                     ]
                   },
                   {
