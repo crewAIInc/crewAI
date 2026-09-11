@@ -403,6 +403,37 @@ class TestLoadAgentFromDefinition:
 
 
 class TestResolveTools:
+    def test_platform_tool_refs_materialize_multiple_application_tools(
+        self, monkeypatch
+    ):
+        from crewai.project.json_loader import _resolve_tools
+
+        github_tools = [object()]
+        linear_tools = [object(), object()]
+        calls: list[list[str]] = []
+
+        def build_platform_tools(apps: list[str]):
+            calls.append(apps)
+            return {
+                "github": github_tools,
+                "linear": linear_tools,
+            }[apps[0]]
+
+        monkeypatch.setattr(
+            "crewai_tools.CrewaiPlatformTools", build_platform_tools
+        )
+
+        tools = _resolve_tools(["platform:github", "platform:linear"])
+
+        assert tools == github_tools + linear_tools
+        assert calls == [["github"], ["linear"]]
+
+    def test_empty_platform_tool_ref_raises_with_guidance(self):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        with pytest.raises(JSONProjectError, match="platform:<application>"):
+            _resolve_tools(["platform:"])
+
     def test_import_ref_tool_resolves(self, tmp_path, monkeypatch):
         from crewai.project.json_loader import _resolve_tools
 

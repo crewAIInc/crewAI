@@ -16,6 +16,7 @@ from rich.text import Text
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
+from crewai_cli.platform_tools_catalog import PLATFORM_TOOLS
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     enable_prompt_line_editing,
@@ -218,6 +219,7 @@ _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
             ("PatronusLocalEvaluatorTool", "Run local Patronus evaluations"),
         ],
     ),
+    ("CrewAI Platform", PLATFORM_TOOLS),
 ]
 
 _FLAT_TOOLS: list[tuple[str, str]] = [

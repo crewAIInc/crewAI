@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 import tomli
 from click.testing import CliRunner
+from crewai_core.platform_apps import PLATFORM_APPS
 from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
@@ -618,6 +619,49 @@ def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypat
         "ScrapegraphScrapeToolSchema",
         "SnowflakeConfig",
     }.isdisjoint(tool_names)
+
+
+def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
+    picker_calls = 0
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        nonlocal picker_calls
+        picker_calls += 1
+        if picker_calls == 1:
+            platform_row = next(
+                idx for idx, label in enumerate(labels) if "CrewAI Platform" in label
+            )
+            return [], platform_row
+
+        github = next(
+            idx for idx, label in enumerate(labels) if label.endswith("platform:github")
+        )
+        return [github], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+    monkeypatch.setattr(
+        json_crew, "_prompt_text", lambda label, **kwargs: label.lower()
+    )
+    monkeypatch.setattr(json_crew, "_select_model", lambda: "openai/gpt-5.5")
+    monkeypatch.setattr(json_crew, "_confirm", lambda *_args, **_kwargs: False)
+
+    agent = json_crew._wizard_agent(agent_num=1, existing_names=[])
+
+    assert agent is not None
+    assert agent["tools"] == ["platform:github"]
+    assert '"tools": ["platform:github"]' in json_crew._agent_to_jsonc(agent)
+
+
+def test_json_wizard_platform_catalog_contains_every_supported_app():
+    platform_category = next(
+        tools
+        for category, tools in json_crew._TOOL_CATEGORIES
+        if category == "CrewAI Platform"
+    )
+
+    assert [name for name, _description in platform_category] == [
+        f"platform:{app}" for app in PLATFORM_APPS
+    ]
 
 
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
