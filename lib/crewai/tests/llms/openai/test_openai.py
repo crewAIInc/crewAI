@@ -664,6 +664,8 @@ def test_openai_streaming_with_response_model():
         mock_parsed = TestResponse(answer="test", confidence=0.95)
         mock_message = MagicMock()
         mock_message.parsed = mock_parsed
+        mock_message.content = mock_parsed.model_dump_json()
+        mock_message.tool_calls = None
         mock_choice = MagicMock()
         mock_choice.message = mock_message
         mock_final_completion = MagicMock()

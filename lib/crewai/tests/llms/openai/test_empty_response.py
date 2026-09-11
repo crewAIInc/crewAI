@@ -52,6 +52,7 @@ def make_llm(
     content: str | None = "",
     with_usage: bool = True,
     tool_calls: list[dict[str, Any]] | None = None,
+    stream_deltas: list[dict[str, Any]] | None = None,
 ) -> tuple[OpenAICompletion, list[httpx.Request]]:
     """Build a real OpenAI SDK client backed by deterministic HTTP responses."""
     requests: list[httpx.Request] = []
@@ -94,6 +95,23 @@ def make_llm(
                 ],
             }
         ]
+        if stream_deltas is not None:
+            chunks = [
+                {
+                    **common,
+                    "object": "chat.completion.chunk",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": part,
+                            "finish_reason": finish_reason
+                            if index == len(stream_deltas) - 1
+                            else None,
+                        }
+                    ],
+                }
+                for index, part in enumerate(stream_deltas)
+            ]
         if with_usage:
             chunks.append(
                 {
@@ -474,3 +492,69 @@ async def test_structured_stream_tool_turn_finishes(is_async: bool) -> None:
     )
     assert result == ""
     assert len(requests) == 1
+
+
+@pytest.mark.parametrize("is_async", [False, True])
+@pytest.mark.parametrize("execute", [False, True])
+@pytest.mark.parametrize("with_text", [False, True])
+@pytest.mark.asyncio
+async def test_structured_stream_preserves_tool_calls(
+    is_async: bool, execute: bool, with_text: bool
+) -> None:
+    """Fragmented tool calls take precedence over structured text and run once."""
+    llm, requests = make_llm(
+        stream=True,
+        finish_reason="tool_calls",
+        stream_deltas=[
+            {
+                "content": '{"text":"planning"}' if with_text else None,
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "id": "call_reply",
+                        "type": "function",
+                        "function": {"name": "reply", "arguments": '{"text":'},
+                    }
+                ],
+            },
+            {"tool_calls": [{"index": 0, "function": {"arguments": '"hello"}'}}]},
+        ],
+    )
+    reply = Mock(return_value="delivered")
+    kwargs = {
+        "response_model": StructuredReply,
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": "reply",
+                    "description": "Send a reply",
+                    "strict": True,
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"text": {"type": "string"}},
+                        "required": ["text"],
+                        "additionalProperties": False,
+                    },
+                },
+            }
+        ],
+        "available_functions": {"reply": reply} if execute else None,
+    }
+    result = (
+        await llm.acall("hello", **kwargs) if is_async else llm.call("hello", **kwargs)
+    )
+    if execute:
+        assert result == "delivered"
+        reply.assert_called_once_with(text="hello")
+    else:
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["id"] == "call_reply"
+        assert result[0]["function"] == {
+            "name": "reply",
+            "arguments": '{"text":"hello"}',
+        }
+        reply.assert_not_called()
+    assert len(requests) == 1
+    assert llm.get_token_usage_summary().total_tokens == USAGE["total_tokens"]

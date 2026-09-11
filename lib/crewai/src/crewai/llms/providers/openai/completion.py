@@ -2353,12 +2353,33 @@ class OpenAICompletion(BaseLLM):
                 final_completion = stream.get_final_completion()
                 if final_completion:
                     usage = self._extract_openai_token_usage(final_completion)
-                    self._track_token_usage_internal(usage)
                     parsed_finish_reason, parsed_response_id = (
                         self._extract_chat_finish_reason_and_id(final_completion)
                     )
                     if final_completion.choices:
                         message = final_completion.choices[0].message
+                        if message.tool_calls:
+                            return self._finalize_streaming_response(
+                                full_response=message.content or "",
+                                tool_calls={
+                                    index: {
+                                        "id": call.id,
+                                        "name": call.function.name,
+                                        "arguments": call.function.arguments,
+                                        "index": index,
+                                    }
+                                    for index, call in enumerate(message.tool_calls)
+                                    if call.type == "function"
+                                },
+                                usage_data=usage,
+                                params=params,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                finish_reason=parsed_finish_reason,
+                                response_id=parsed_response_id,
+                            )
+                        self._track_token_usage_internal(usage)
                         if not message.content and not message.tool_calls:
                             self._emit_call_completed_event(
                                 response="",
@@ -2695,96 +2716,11 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        if response_model:
-            completion_stream: AsyncIterator[
-                ChatCompletionChunk
-            ] = await self._get_async_client().chat.completions.create(**params)
-
-            accumulated_content = ""
-            usage_data: dict[str, Any] | None = None
-            parsed_stream_finish_reason: str | None = None
-            parsed_stream_response_id: str | None = None
-            async for chunk in completion_stream:
-                response_id_stream = chunk.id if hasattr(chunk, "id") else None
-                if response_id_stream:
-                    parsed_stream_response_id = response_id_stream
-
-                if hasattr(chunk, "usage") and chunk.usage:
-                    usage_data = self._extract_openai_token_usage(chunk)
-                    continue
-
-                if not chunk.choices:
-                    continue
-
-                choice = chunk.choices[0]
-                delta: ChoiceDelta = choice.delta
-                chunk_finish = getattr(choice, "finish_reason", None)
-                if chunk_finish:
-                    parsed_stream_finish_reason = chunk_finish
-
-                if delta.content:
-                    accumulated_content += delta.content
-                    self._emit_stream_chunk_event(
-                        chunk=delta.content,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_id=response_id_stream,
-                    )
-
-            if usage_data:
-                self._track_token_usage_internal(usage_data)
-
-            if not accumulated_content:
-                self._emit_call_completed_event(
-                    response="",
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                    usage=usage_data,
-                    finish_reason=parsed_stream_finish_reason,
-                    response_id=parsed_stream_response_id,
-                )
-                raise LLMEmptyResponseError(
-                    finish_reason=parsed_stream_finish_reason,
-                    response_id=parsed_stream_response_id,
-                    usage=usage_data,
-                )
-
-            try:
-                parsed_object = response_model.model_validate_json(accumulated_content)
-
-                self._emit_call_completed_event(
-                    response=parsed_object.model_dump_json(),
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                    usage=usage_data,
-                    finish_reason=parsed_stream_finish_reason,
-                    response_id=parsed_stream_response_id,
-                )
-
-                return parsed_object
-            except Exception as e:
-                logging.error(f"Failed to parse structured output from stream: {e}")
-                self._emit_call_completed_event(
-                    response=accumulated_content,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                    usage=usage_data,
-                    finish_reason=parsed_stream_finish_reason,
-                    response_id=parsed_stream_response_id,
-                )
-                return accumulated_content
-
         stream: AsyncIterator[
             ChatCompletionChunk
         ] = await self._get_async_client().chat.completions.create(**params)
 
-        usage_data = None
+        usage_data: dict[str, Any] | None = None
         stream_finish_reason: str | None = None
         stream_response_id: str | None = None
 
@@ -2853,6 +2789,39 @@ class OpenAICompletion(BaseLLM):
                         call_type=LLMCallType.TOOL_CALL,
                         response_id=response_id_stream,
                     )
+
+        if response_model and full_response and not tool_calls:
+            if usage_data:
+                self._track_token_usage_internal(usage_data)
+
+            try:
+                parsed_object = response_model.model_validate_json(full_response)
+
+                self._emit_call_completed_event(
+                    response=parsed_object.model_dump_json(),
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage_data,
+                    finish_reason=stream_finish_reason,
+                    response_id=stream_response_id,
+                )
+
+                return parsed_object
+            except Exception as e:
+                logging.error(f"Failed to parse structured output from stream: {e}")
+                self._emit_call_completed_event(
+                    response=full_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage_data,
+                    finish_reason=stream_finish_reason,
+                    response_id=stream_response_id,
+                )
+                return full_response
 
         return self._finalize_streaming_response(
             full_response=full_response,
