@@ -151,9 +151,17 @@ class InvokeCrewAIAutomationTool(BaseTool):
         else:
             args_schema = InvokeCrewAIAutomationInput
 
-        # Explicit constructor arguments win over the environment variables.
-        resolved_api_url = crew_api_url or os.getenv("CREWAI_API_URL")
-        resolved_bearer_token = crew_bearer_token or os.getenv("CREWAI_BEARER_TOKEN")
+        # Explicit constructor arguments win over the environment variables, including
+        # an explicit empty string: that is a caller mistake worth surfacing through
+        # _ensure_configured(), not something to silently paper over with the environment.
+        resolved_api_url = (
+            crew_api_url if crew_api_url is not None else os.getenv("CREWAI_API_URL")
+        )
+        resolved_bearer_token = (
+            crew_bearer_token
+            if crew_bearer_token is not None
+            else os.getenv("CREWAI_BEARER_TOKEN")
+        )
 
         super().__init__(
             name=crew_name or DEFAULT_TOOL_NAME,

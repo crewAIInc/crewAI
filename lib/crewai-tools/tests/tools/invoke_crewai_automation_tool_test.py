@@ -59,6 +59,7 @@ def test_existing_positional_keyword_call_shape_still_works():
 
 
 def test_env_var_fallback_for_url_and_token():
+    """Omitted url/token are read from CREWAI_API_URL/CREWAI_BEARER_TOKEN."""
     with patch.dict(
         os.environ,
         {
@@ -77,6 +78,7 @@ def test_env_var_fallback_for_url_and_token():
 
 
 def test_explicit_arguments_take_precedence_over_env_vars():
+    """An explicitly passed url/token wins over whatever the environment holds."""
     with patch.dict(
         os.environ,
         {
@@ -130,6 +132,7 @@ def test_partial_configuration_raises_clear_error_on_use():
 @patch("requests.get")
 @patch("requests.post")
 def test_successful_run_with_env_var_configuration(mock_post, mock_get):
+    """End-to-end run (mocked HTTP) using only environment-provided credentials."""
     with patch.dict(
         os.environ,
         {
@@ -164,6 +167,7 @@ def test_successful_run_with_env_var_configuration(mock_post, mock_get):
 
 
 def test_dynamic_crew_inputs_schema_still_works():
+    """crew_inputs keeps building a dynamic args schema for the automation inputs."""
     custom_inputs = {
         "year": Field(..., description="Year to retrieve the report for (integer)"),
         "region": Field(default="global", description="Geographic region"),
@@ -180,3 +184,29 @@ def test_dynamic_crew_inputs_schema_still_works():
     schema_fields = tool.args_schema.model_fields
     assert "year" in schema_fields
     assert "region" in schema_fields
+
+
+def test_explicit_empty_value_is_not_replaced_by_env_var():
+    """An explicit empty string is a caller mistake, not a request to read the
+    environment: it must reach _ensure_configured() and be reported as missing."""
+    with patch.dict(
+        os.environ,
+        {
+            "CREWAI_API_URL": "https://from-env.crewai.com",
+            "CREWAI_BEARER_TOKEN": "env_token",
+        },
+    ):
+        tool = InvokeCrewAIAutomationTool(
+            crew_api_url="",
+            crew_name="My Crew",
+            crew_description="Does things",
+        )
+
+    assert tool.crew_api_url == ""
+    assert tool.crew_bearer_token == "env_token"
+    with pytest.raises(ValueError) as exc_info:
+        tool.run(prompt="hello")
+
+    message = str(exc_info.value)
+    assert "CREWAI_API_URL" in message
+    assert "CREWAI_BEARER_TOKEN" not in message
