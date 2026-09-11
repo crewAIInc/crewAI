@@ -478,7 +478,14 @@ def test_persist_complex_types_structured_state(tmp_path):
     """Test persisting state with datetime, UUID, and set fields."""
     from datetime import datetime, timezone
     import uuid
+    from typing import Any
     from pydantic import Field
+
+    class CustomPayload:
+        """Custom un-serializable class for testing."""
+
+        def __str__(self) -> str:
+            return "custom_payload_str"
 
     class ComplexState(FlowState):
         """Structured state with non-primitive types for testing."""
@@ -488,6 +495,7 @@ def test_persist_complex_types_structured_state(tmp_path):
         )
         user_id: uuid.UUID = Field(default_factory=uuid.uuid4)
         tags: set[str] = Field(default_factory=lambda: {"alpha", "beta"})
+        payload: Any = Field(default_factory=CustomPayload)
         counter: int = 0
 
     db_path = os.path.join(tmp_path, "test_complex_flows.db")
@@ -517,6 +525,7 @@ def test_persist_complex_types_structured_state(tmp_path):
     assert isinstance(saved["created_at"], str)
     assert isinstance(saved["user_id"], str)
     assert set(saved["tags"]) == {"alpha", "beta"}
+    assert saved["payload"] == "custom_payload_str"
 
     flow2 = ComplexFlow(persistence=persistence)
     flow2.kickoff(inputs={"id": flow1_id})
