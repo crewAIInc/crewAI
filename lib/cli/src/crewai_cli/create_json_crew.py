@@ -1039,8 +1039,8 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         if not failed_apps and not token_invalid:
             _success("CrewAI Platform integration token set", bold=True)
             _success(
-                f"{len(apps)} CrewAI Platform integration"
-                f"{'s' if len(apps) != 1 else ''} connected"
+                "CrewAI Platform integrations connected: "
+                f"{', '.join(_platform_app_name(app) for app in apps)}"
             )
             return token
 
