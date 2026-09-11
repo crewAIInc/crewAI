@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import sys
 from typing import Any
+import warnings
 
 import click
 from crewai_core.telemetry import Telemetry
@@ -619,6 +621,10 @@ def _wizard_agents_and_tasks(
         "inputs": {},
     }
 
+    # Platform authentication belongs to the final wizard step, after the
+    # user has finished configuring agents, tasks, and crew settings.
+    _setup_platform_auth(agents)
+
     return agents, tasks, crew_settings
 
 
@@ -871,6 +877,131 @@ def _setup_env(folder_path: Path, llm_model: str) -> None:
         click.secho("  API keys and model saved to .env file", fg="green")
 
 
+def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
+    """Return unique platform applications selected across all agents."""
+    apps: list[str] = []
+    for agent in agents:
+        for tool in agent.get("tools", []):
+            if isinstance(tool, str) and tool.startswith("platform:"):
+                app = tool.removeprefix("platform:")
+                if app and app not in apps:
+                    apps.append(app)
+    return apps
+
+
+def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
+    """Get and validate AMP authentication for selected platform applications."""
+    apps = _platform_apps_from_agents(agents)
+    if not apps:
+        return None
+
+    click.echo()
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message='Field name "validate" in "UploadSarifAnalysisRequest"',
+                category=UserWarning,
+            )
+            from crewai_tools import CrewaiPlatformTools
+    except ImportError as error:
+        raise click.ClickException(
+            "Platform tools require the 'crewai-tools' package. "
+            "Install it with `uv add crewai-tools` or "
+            "`pip install 'crewai[tools]'`."
+        ) from error
+
+    while True:
+        token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
+        if not token:
+            click.secho(
+                "  To use CrewAI Platform tools, you need a CrewAI Platform "
+                "Integration Token.",
+                fg="yellow",
+            )
+            click.secho(
+                "  Get your token from CrewAI AMP: https://app.crewai.com "
+                "→ Settings → Integration Tokens.",
+                fg="cyan",
+            )
+            token = click.prompt(
+                click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
+                hide_input=True,
+                prompt_suffix=click.style(" > ", fg="bright_white"),
+            ).strip()
+        if not token:
+            click.secho(
+                "  A CrewAI Platform Integration Token is required to validate "
+                "the selected integrations.",
+                fg="yellow",
+            )
+            continue
+
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+        failed: list[str] = []
+        for app in apps:
+            app_name = (
+                dict(PLATFORM_TOOLS)
+                .get(f"platform:{app}", app.replace("_", " ").title())
+                .removesuffix(" Integration")
+            )
+            click.secho(
+                "  Checking CrewAI Platform Integration Token and "
+                f"{app_name} integration on AMP...",
+                fg="cyan",
+            )
+            try:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message='Field name "validate" in "UploadSarifAnalysisRequest"',
+                        category=UserWarning,
+                    )
+                    app_tools = CrewaiPlatformTools(apps=[app])
+                if not app_tools:
+                    failed.append(app)
+                else:
+                    _success(f"{app_name} integration is connected on CrewAI Platform")
+            except Exception as error:
+                click.secho(f"  Could not connect to {app}: {error}", fg="yellow")
+                failed.append(app)
+
+        if not failed:
+            _success("CrewAI Platform integration token set", bold=True)
+            _success(
+                f"{len(apps)} CrewAI Platform integration"
+                f"{'s' if len(apps) != 1 else ''} connected"
+            )
+            return token
+
+        failed_app_names = [
+            dict(PLATFORM_TOOLS)
+            .get(f"platform:{app}", app.replace("_", " ").title())
+            .removesuffix(" Integration")
+            for app in failed
+        ]
+        click.secho(
+            "  Check the "
+            f"{', '.join(failed_app_names)} integration"
+            f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
+            "Platform Integration Token in AMP.",
+            fg="yellow",
+        )
+        replacement_token = click.prompt(
+            click.style(
+                "  Press Enter to revalidate, or enter a replacement token",
+                fg="cyan",
+            ),
+            default="",
+            show_default=False,
+            hide_input=True,
+            prompt_suffix=click.style(" > ", fg="bright_white"),
+        ).strip()
+        if replacement_token:
+            token = replacement_token
+            os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+
+
 # ── Main ────────────────────────────────────────────────────────
 
 
@@ -923,12 +1054,24 @@ def create_json_crew(
             default_llm=default_llm,
         )
 
-    # Create directories
+    platform_token = (
+        os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN")
+        if _platform_apps_from_agents(agents) and not dmn_mode
+        else None
+    )
+
+    # Create directories only after platform authentication succeeds.
     folder_path.mkdir(parents=True)
     (folder_path / "agents").mkdir()
     (folder_path / "tools").mkdir()
     (folder_path / "skills").mkdir()
     (folder_path / "knowledge").mkdir()
+
+    if platform_token:
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        env_vars = load_env_vars(folder_path)
+        env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        write_env_file(folder_path, env_vars)
 
     for agent in agents:
         _write_jsonc(
