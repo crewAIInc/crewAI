@@ -1039,6 +1039,18 @@ class BedrockCompletion(BaseLLM):
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
+                            # Fold accumulated streaming deltas back into
+                            # current_tool_use so downstream code (and the
+                            # toolUse block appended to messages) carries
+                            # the parsed arguments.
+                            if accumulated_tool_input:
+                                try:
+                                    current_tool_use["input"] = json.loads(
+                                        accumulated_tool_input
+                                    )
+                                except json.JSONDecodeError:
+                                    current_tool_use["input"] = {}
+
                             function_name = current_tool_use["name"]
                             # Streamed tool input arrives as JSON string deltas in
                             # accumulated_tool_input; fold it back into the tool-use
@@ -1650,6 +1662,18 @@ class BedrockCompletion(BaseLLM):
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
+                            # Fold accumulated streaming deltas back into
+                            # current_tool_use so downstream code (and the
+                            # toolUse block appended to messages) carries
+                            # the parsed arguments.
+                            if accumulated_tool_input:
+                                try:
+                                    current_tool_use["input"] = json.loads(
+                                        accumulated_tool_input
+                                    )
+                                except json.JSONDecodeError:
+                                    current_tool_use["input"] = {}
+
                             function_name = current_tool_use["name"]
                             # Streamed tool input arrives as JSON string deltas in
                             # accumulated_tool_input; fold it back into the tool-use
