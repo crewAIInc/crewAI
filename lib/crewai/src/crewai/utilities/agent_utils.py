@@ -24,7 +24,12 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
+from crewai.llms.base_llm import (
+    BaseLLM,
+    LLMCallBlockedError,
+    LLMEmptyResponseError,
+    call_stop_override,
+)
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -523,6 +528,7 @@ def _validate_and_finalize_llm_response(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     printer: Printer,
     verbose: bool = True,
+    allow_empty: bool = False,
 ) -> str | BaseModel | Any:
     """Shared post-call logic: validate response and run after hooks.
 
@@ -531,6 +537,7 @@ def _validate_and_finalize_llm_response(
         executor_context: Optional executor context for hook invocation.
         printer: Printer instance for output.
         verbose: Whether to print output.
+        allow_empty: Whether an intentional empty terminal turn is valid.
 
     Returns:
         The potentially modified response.
@@ -538,7 +545,7 @@ def _validate_and_finalize_llm_response(
     Raises:
         ValueError: If the response is None or empty.
     """
-    if not answer:
+    if not answer and not allow_empty:
         if verbose:
             printer.print(
                 content="Received None or empty response from LLM call.",
@@ -548,6 +555,50 @@ def _validate_and_finalize_llm_response(
 
     return _setup_after_llm_call_hooks(
         executor_context, answer, printer, verbose=verbose
+    )
+
+
+def _can_accept_empty_llm_response(
+    error: LLMEmptyResponseError,
+    messages: list[LLMMessage],
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+) -> bool:
+    """Recognize an intentional empty terminal turn after a tool result.
+
+    Native tool execution appends a synthetic ``post_tool_reasoning`` user
+    message after each tool result. That prompt is still part of the next
+    provider request, so the tool message is not necessarily the final item.
+    """
+    if executor_context is None or error.finish_reason != "stop":
+        return False
+
+    post_tool_reasoning = I18N_DEFAULT.slice("post_tool_reasoning")
+    last_tool_index = next(
+        (
+            index
+            for index in range(len(messages) - 1, -1, -1)
+            if messages[index].get("role") == "tool"
+        ),
+        None,
+    )
+    if last_tool_index is None:
+        return False
+
+    last_user_index = next(
+        (
+            index
+            for index in range(last_tool_index - 1, -1, -1)
+            if messages[index].get("role") == "user"
+            and messages[index].get("content") != post_tool_reasoning
+        ),
+        -1,
+    )
+    if last_tool_index <= last_user_index:
+        return False
+
+    return all(
+        message.get("role") == "user" and message.get("content") == post_tool_reasoning
+        for message in messages[last_tool_index + 1 :]
     )
 
 
@@ -587,21 +638,30 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
+    allow_empty = False
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        answer = llm.call(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            answer = llm.call(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+        except LLMEmptyResponseError as error:
+            if not _can_accept_empty_llm_response(
+                error, prepared_messages, executor_context
+            ):
+                raise
+            answer = ""
+            allow_empty = True
 
     return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+        answer, executor_context, printer, verbose=verbose, allow_empty=allow_empty
     )
 
 
@@ -641,21 +701,30 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
+    allow_empty = False
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        answer = await llm.acall(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            answer = await llm.acall(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+        except LLMEmptyResponseError as error:
+            if not _can_accept_empty_llm_response(
+                error, prepared_messages, executor_context
+            ):
+                raise
+            answer = ""
+            allow_empty = True
 
     return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+        answer, executor_context, printer, verbose=verbose, allow_empty=allow_empty
     )
 
 

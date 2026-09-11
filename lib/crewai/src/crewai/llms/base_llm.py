@@ -7,7 +7,7 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
@@ -79,6 +79,38 @@ class LLMCallBlockedError(ValueError):
     absorbing it, and its own type so a provider can report it as the decision
     it is instead of letting it read as a provider outage.
     """
+
+
+class LLMEmptyResponseError(ValueError):
+    """A provider returned neither text nor tool calls.
+
+    ``finish_reason`` is a provider generation status, not proof that an agent
+    completed its task. Callers may use it together with their own tool/turn
+    state to handle an intentional empty turn without swallowing real failures.
+    Missing usage fields remain missing; in particular, absent reasoning usage
+    must not be interpreted as zero. Existing ``ValueError`` handlers still work.
+
+    Attributes:
+        finish_reason: Raw provider finish reason, or None when unavailable.
+        response_id: Provider response identifier, or None when unavailable.
+        usage: Per-response token usage, rather than the model's cumulative usage.
+    """
+
+    def __init__(
+        self,
+        *,
+        finish_reason: str | None,
+        response_id: str | None,
+        usage: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Capture per-response diagnostics while retaining ValueError compatibility."""
+        self.finish_reason = finish_reason
+        self.response_id = response_id
+        self.usage = dict(usage) if usage is not None else {}
+        super().__init__(
+            "Invalid response from LLM call - None or empty. "
+            f"finish_reason={finish_reason!r}, response_id={response_id!r}"
+        )
 
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
