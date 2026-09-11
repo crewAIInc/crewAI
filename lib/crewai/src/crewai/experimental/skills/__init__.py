@@ -12,8 +12,10 @@ import sys
 from crewai.skills import cache, events, registry
 from crewai.skills.cache import SkillCacheManager
 from crewai.skills.registry import (
+    SkillRef,
     is_registry_ref,
     parse_registry_ref,
+    parse_skill_ref,
     resolve_registry_ref,
 )
 
@@ -26,10 +28,12 @@ sys.modules[__name__ + ".registry"] = registry
 
 __all__ = [
     "SkillCacheManager",
+    "SkillRef",
     "cache",
     "events",
     "is_registry_ref",
     "parse_registry_ref",
+    "parse_skill_ref",
     "registry",
     "resolve_registry_ref",
 ]

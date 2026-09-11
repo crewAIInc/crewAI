@@ -1,0 +1,878 @@
+---
+title: Memória
+description: Aproveitando o sistema de memória unificado no CrewAI para aprimorar as capacidades dos agentes.
+icon: database
+mode: "wide"
+---
+
+## Visão Geral
+
+O CrewAI oferece um **sistema de memória unificado** -- uma única classe `Memory` que substitui memórias de curto prazo, longo prazo, entidades e externa por uma API inteligente. A memória usa um LLM para analisar o conteúdo ao salvar (inferindo escopo, categorias e importância) e suporta recall com profundidade adaptativa e pontuação composta que combina similaridade semântica, recência e importância.
+
+Você pode usar a memória de quatro formas: **standalone** (scripts, notebooks), **com Crews**, **com Agentes** ou **dentro de Flows**.
+
+## Início Rápido
+
+```python
+from crewai import Memory
+
+memory = Memory()
+
+# Armazenar -- o LLM infere escopo, categorias e importância
+memory.remember("Decidimos usar PostgreSQL para o banco de dados de usuários.")
+
+# Recuperar -- resultados ranqueados por pontuação composta (semântica + recência + importância)
+matches = memory.recall("Qual banco de dados escolhemos?")
+for m in matches:
+    print(f"[{m.score:.2f}] {m.record.content}")
+
+# Ajustar pontuação para um projeto dinâmico
+memory = Memory(recency_weight=0.5, recency_half_life_days=7)
+
+# Esquecer
+memory.forget(scope="/project/old")
+
+# Explorar a árvore de escopos auto-organizada
+print(memory.tree())
+print(memory.info("/"))
+```
+
+## Quatro Formas de Usar Memória
+
+### Standalone
+
+Use memória em scripts, notebooks, ferramentas CLI ou como base de conhecimento independente -- sem agentes ou crews necessários.
+
+```python
+from crewai import Memory
+
+memory = Memory()
+
+# Construir conhecimento
+memory.remember("O limite da API é 1000 requisições por minuto.")
+memory.remember("Nosso ambiente de staging usa a porta 8080.")
+memory.remember("A equipe concordou em usar feature flags para todos os novos lançamentos.")
+
+# Depois, recupere o que precisar
+matches = memory.recall("Quais são nossos limites de API?", limit=5)
+for m in matches:
+    print(f"[{m.score:.2f}] {m.record.content}")
+
+# Extrair fatos atômicos de um texto mais longo
+raw = """Notas da reunião: Decidimos migrar do MySQL para PostgreSQL
+no próximo trimestre. O orçamento é de $50k. Sarah liderará a migração."""
+
+facts = memory.extract_memories(raw)
+# ["Migração de MySQL para PostgreSQL planejada para o próximo trimestre",
+#  "Orçamento da migração de banco de dados é $50k",
+#  "Sarah liderará a migração do banco de dados"]
+
+for fact in facts:
+    memory.remember(fact)
+```
+
+### Com Crews
+
+Passe `memory=True` para configurações padrão, ou passe uma instância `Memory` configurada para comportamento customizado.
+
+```python
+from crewai import Crew, Agent, Task, Process, Memory
+
+# Opção 1: Memória padrão
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+)
+
+# Opção 2: Memória customizada com pontuação ajustada
+memory = Memory(
+    recency_weight=0.4,
+    semantic_weight=0.4,
+    importance_weight=0.2,
+    recency_half_life_days=14,
+)
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    memory=memory,
+)
+```
+
+Quando `memory=True`, a crew cria um `Memory()` padrão e repassa a configuração de `embedder` da crew automaticamente. Todos os agentes compartilham a memória da crew, a menos que um agente tenha sua própria.
+
+Após cada tarefa, a crew extrai automaticamente fatos discretos da saída da tarefa e os armazena. Antes de cada tarefa, o agente recupera contexto relevante da memória e o injeta no prompt da tarefa.
+
+### Com Agentes
+
+Agentes podem usar a memória compartilhada da crew (padrão) ou receber uma visão com escopo para contexto privado.
+
+```python
+from crewai import Agent, Memory
+
+memory = Memory()
+
+# Pesquisador recebe um escopo privado -- só vê /agent/researcher
+researcher = Agent(
+    role="Researcher",
+    goal="Encontrar e analisar informações",
+    backstory="Pesquisador experiente com atenção aos detalhes",
+    memory=memory.scope("/agent/researcher"),
+)
+
+# Escritor usa memória compartilhada da crew (sem memória própria)
+writer = Agent(
+    role="Writer",
+    goal="Produzir conteúdo claro e bem estruturado",
+    backstory="Escritor técnico experiente",
+    # memory não definido -- usa crew._memory quando a crew tem memória habilitada
+)
+```
+
+Esse padrão dá ao pesquisador descobertas privadas enquanto o escritor lê da memória compartilhada da crew.
+
+### Com Flows
+
+Todo Flow possui memória integrada. Use `self.remember()`, `self.recall()` e `self.extract_memories()` dentro de qualquer método do flow.
+
+```python
+from crewai.flow.flow import Flow, listen, start
+
+class ResearchFlow(Flow):
+    @start()
+    def gather_data(self):
+        findings = "PostgreSQL suporta 10k conexões simultâneas. MySQL limita a 5k."
+        self.remember(findings, scope="/research/databases")
+        return findings
+
+    @listen(gather_data)
+    def write_report(self, findings):
+        # Recuperar pesquisas anteriores para fornecer contexto
+        past = self.recall("benchmarks de performance de banco de dados")
+        context = "\n".join(f"- {m.record.content}" for m in past)
+        return f"Relatório:\nNovas descobertas: {findings}\nContexto anterior:\n{context}"
+```
+
+Veja a [documentação de Flows](/concepts/flows) para mais informações sobre memória em Flows.
+
+
+## Escopos Hierárquicos
+
+### O Que São Escopos
+
+As memórias são organizadas em uma árvore hierárquica de escopos, similar a um sistema de arquivos. Cada escopo é um caminho como `/`, `/project/alpha` ou `/agent/researcher/findings`.
+
+```
+/
+  /company
+    /company/engineering
+    /company/product
+  /project
+    /project/alpha
+    /project/beta
+  /agent
+    /agent/researcher
+    /agent/writer
+```
+
+Escopos fornecem **memória dependente de contexto** -- quando você faz recall dentro de um escopo, busca apenas naquela ramificação da árvore, melhorando tanto a precisão quanto o desempenho.
+
+### Como a Inferência de Escopo Funciona
+
+Quando você chama `remember()` sem especificar um escopo, o LLM analisa o conteúdo e a árvore de escopos existente, e sugere o melhor posicionamento. Se nenhum escopo existente é adequado, ele cria um novo. Com o tempo, a árvore de escopos cresce organicamente a partir do conteúdo -- você não precisa projetar um esquema antecipadamente.
+
+```python
+memory = Memory()
+
+# LLM infere escopo a partir do conteúdo
+memory.remember("Escolhemos PostgreSQL para o banco de dados de usuários.")
+# -> pode ser colocado em /project/decisions ou /engineering/database
+
+# Você também pode especificar o escopo explicitamente
+memory.remember("Velocidade do sprint é 42 pontos", scope="/team/metrics")
+```
+
+### Visualizando a Árvore de Escopos
+
+```python
+print(memory.tree())
+# / (15 records)
+#   /project (8 records)
+#     /project/alpha (5 records)
+#     /project/beta (3 records)
+#   /agent (7 records)
+#     /agent/researcher (4 records)
+#     /agent/writer (3 records)
+
+print(memory.info("/project/alpha"))
+# ScopeInfo(path='/project/alpha', record_count=5,
+#           categories=['architecture', 'database'],
+#           oldest_record=datetime(...), newest_record=datetime(...),
+#           child_scopes=[])
+```
+
+### MemoryScope: Visões de Subárvore
+
+Um `MemoryScope` restringe todas as operações a uma ramificação da árvore. O agente ou código que o utiliza só pode ver e escrever dentro daquela subárvore.
+
+```python
+memory = Memory()
+
+# Criar um escopo para um agente específico
+agent_memory = memory.scope("/agent/researcher")
+
+# Tudo é relativo a /agent/researcher
+agent_memory.remember("Encontrados três papers relevantes sobre memória de LLM.")
+# -> armazenado em /agent/researcher
+
+agent_memory.recall("papers relevantes")
+# -> busca apenas em /agent/researcher
+
+# Restringir ainda mais com subscope
+project_memory = agent_memory.subscope("project-alpha")
+# -> /agent/researcher/project-alpha
+```
+
+### Boas Práticas para Design de Escopos
+
+- **Comece plano, deixe o LLM organizar.** Não projete demais sua hierarquia de escopos antecipadamente. Comece com `memory.remember(content)` e deixe a inferência de escopo do LLM criar estrutura conforme o conteúdo se acumula.
+
+- **Use padrões `/{tipo_entidade}/{identificador}`.** Hierarquias naturais emergem de padrões como `/project/alpha`, `/agent/researcher`, `/company/engineering`, `/customer/acme-corp`.
+
+- **Escopo por preocupação, não por tipo de dado.** Use `/project/alpha/decisions` em vez de `/decisions/project/alpha`. Isso mantém conteúdo relacionado junto.
+
+- **Mantenha profundidade rasa (2-3 níveis).** Escopos profundamente aninhados ficam muito esparsos. `/project/alpha/architecture` é bom; `/project/alpha/architecture/decisions/databases/postgresql` é demais.
+
+- **Use escopos explícitos quando souber, deixe o LLM inferir quando não souber.** Se está armazenando uma decisão de projeto conhecida, passe `scope="/project/alpha/decisions"`. Se está armazenando saída livre de um agente, omita o escopo e deixe o LLM decidir.
+
+### Exemplos de Casos de Uso
+
+**Equipe multi-projeto:**
+```python
+memory = Memory()
+# Cada projeto recebe sua própria ramificação
+memory.remember("Usando arquitetura de microsserviços", scope="/project/alpha/architecture")
+memory.remember("API GraphQL para apps cliente", scope="/project/beta/api")
+
+# Recall em todos os projetos
+memory.recall("decisões de design de API")
+
+# Ou dentro de um projeto específico
+memory.recall("design de API", scope="/project/beta")
+```
+
+**Contexto privado por agente com conhecimento compartilhado:**
+```python
+memory = Memory()
+
+# Pesquisador tem descobertas privadas
+researcher_memory = memory.scope("/agent/researcher")
+
+# Escritor pode ler de seu próprio escopo e do conhecimento compartilhado da empresa
+writer_view = memory.slice(
+    scopes=["/agent/writer", "/company/knowledge"],
+    read_only=True,
+)
+```
+
+**Suporte ao cliente (contexto por cliente):**
+```python
+memory = Memory()
+
+# Cada cliente recebe contexto isolado
+memory.remember("Prefere comunicação por email", scope="/customer/acme-corp")
+memory.remember("Plano enterprise, 50 licenças", scope="/customer/acme-corp")
+
+# Docs de produto compartilhados são acessíveis a todos os agentes
+memory.remember("Limite de taxa é 1000 req/min no plano enterprise", scope="/product/docs")
+```
+
+
+## Fatias de Memória (Memory Slices)
+
+### O Que São Fatias
+
+Um `MemorySlice` é uma visão sobre múltiplos escopos, possivelmente disjuntos. Diferente de um escopo (que restringe a uma subárvore), uma fatia permite recall de várias ramificações simultaneamente.
+
+### Quando Usar Fatias vs Escopos
+
+- **Escopo**: Use quando um agente ou bloco de código deve ser restrito a uma única subárvore. Exemplo: um agente que só vê `/agent/researcher`.
+- **Fatia**: Use quando precisar combinar contexto de múltiplas ramificações. Exemplo: um agente que lê de seu próprio escopo mais conhecimento compartilhado da empresa.
+
+### Fatias Somente Leitura
+
+O padrão mais comum: dar a um agente acesso de leitura a múltiplas ramificações sem permitir que ele escreva em áreas compartilhadas.
+
+```python
+memory = Memory()
+
+# Agente pode fazer recall de seu próprio escopo E do conhecimento da empresa,
+# mas não pode escrever no conhecimento da empresa
+agent_view = memory.slice(
+    scopes=["/agent/researcher", "/company/knowledge"],
+    read_only=True,
+)
+
+matches = agent_view.recall("políticas de segurança da empresa", limit=5)
+# Busca em /agent/researcher e /company/knowledge, mescla e ranqueia resultados
+
+agent_view.remember("nova descoberta")  # Levanta PermissionError (somente leitura)
+```
+
+### Fatias de Leitura e Escrita
+
+Quando somente leitura está desabilitado, você pode escrever em qualquer um dos escopos incluídos, mas deve especificar qual escopo explicitamente.
+
+```python
+view = memory.slice(scopes=["/team/alpha", "/team/beta"], read_only=False)
+
+# Deve especificar escopo ao escrever
+view.remember("Decisão entre equipes", scope="/team/alpha", categories=["decisions"])
+```
+
+
+## Pontuação Composta
+
+Os resultados do recall são ranqueados por uma combinação ponderada de três sinais:
+
+```
+composite = semantic_weight * similarity + recency_weight * decay + importance_weight * importance
+```
+
+Onde:
+- **similarity** = `1 / (1 + distance)` do índice vetorial (0 a 1)
+- **decay** = `0.5^(age_days / half_life_days)` -- decaimento exponencial (1.0 para hoje, 0.5 na meia-vida)
+- **importance** = pontuação de importância do registro (0 a 1), definida no momento da codificação
+
+Configure diretamente no construtor do `Memory`:
+
+```python
+# Retrospectiva de sprint: favorecer memórias recentes, meia-vida curta
+memory = Memory(
+    recency_weight=0.5,
+    semantic_weight=0.3,
+    importance_weight=0.2,
+    recency_half_life_days=7,
+)
+
+# Base de conhecimento de arquitetura: favorecer memórias importantes, meia-vida longa
+memory = Memory(
+    recency_weight=0.1,
+    semantic_weight=0.5,
+    importance_weight=0.4,
+    recency_half_life_days=180,
+)
+```
+
+Cada `MemoryMatch` inclui uma lista `match_reasons` para que você possa ver por que um resultado ficou na posição que ficou (ex.: `["semantic", "recency", "importance"]`).
+
+
+## Camada de Análise LLM
+
+A memória usa o LLM de três formas:
+
+1. **Ao salvar** -- Quando você omite escopo, categorias ou importância, o LLM analisa o conteúdo e sugere escopo, categorias, importância e metadados (entidades, datas, tópicos).
+2. **Ao fazer recall** -- Para recall profundo/automático, o LLM analisa a consulta (palavras-chave, dicas temporais, escopos sugeridos, complexidade) para guiar a recuperação.
+3. **Extrair memórias** -- `extract_memories(content)` quebra texto bruto (ex.: saída de tarefa) em afirmações de memória discretas. Os agentes usam isso antes de chamar `remember()` em cada afirmação para que fatos atômicos sejam armazenados em vez de um bloco grande.
+
+Toda análise degrada graciosamente em caso de falha do LLM -- veja [Comportamento em Caso de Falha](#comportamento-em-caso-de-falha).
+
+
+## Consolidação de Memória
+
+Ao salvar novo conteúdo, o pipeline de codificação verifica automaticamente registros similares existentes no armazenamento. Se a similaridade estiver acima de `consolidation_threshold` (padrão 0.85), o LLM decide o que fazer:
+
+- **keep** -- O registro existente ainda é preciso e não é redundante.
+- **update** -- O registro existente deve ser atualizado com novas informações (o LLM fornece o conteúdo mesclado).
+- **delete** -- O registro existente está desatualizado, substituído ou contradito.
+- **insert_new** -- Se o novo conteúdo também deve ser inserido como um registro separado.
+
+Isso evita o acúmulo de duplicatas. Por exemplo, se você salvar "CrewAI garante operação confiável" três vezes, a consolidação reconhece as duplicatas e mantém apenas um registro.
+
+### Dedup Intra-batch
+
+Ao usar `remember_many()`, os itens dentro do mesmo batch são comparados entre si antes de atingir o armazenamento. Se dois itens tiverem similaridade de cosseno >= `batch_dedup_threshold` (padrão 0.98), o posterior é silenciosamente descartado. Isso captura duplicatas exatas ou quase exatas dentro de um único batch sem chamadas ao LLM (pura matemática vetorial).
+
+```python
+# Apenas 2 registros são armazenados (o terceiro é quase duplicata do primeiro)
+memory.remember_many([
+    "CrewAI supports complex workflows.",
+    "Python is a great language.",
+    "CrewAI supports complex workflows.",  # descartado pelo dedup intra-batch
+])
+```
+
+
+## Saves Não-Bloqueantes
+
+`remember_many()` é **não-bloqueante** -- ele envia o pipeline de codificação para uma thread em background e retorna imediatamente. Isso significa que o agente pode continuar para a próxima tarefa enquanto as memórias estão sendo salvas.
+
+```python
+# Retorna imediatamente -- save acontece em background
+memory.remember_many(["Fato A.", "Fato B.", "Fato C."])
+
+# recall() espera automaticamente saves pendentes antes de buscar
+matches = memory.recall("fatos")  # vê todos os 3 registros
+```
+
+### Barreira de Leitura
+
+Cada chamada `recall()` executa automaticamente `drain_writes()` antes de buscar, garantindo que a consulta sempre veja os registros mais recentes persistidos. Isso é transparente -- você nunca precisa pensar nisso.
+
+### Encerramento da Crew
+
+Quando uma crew termina, `kickoff()` drena todos os saves de memória pendentes em seu bloco `finally`, então nenhum save é perdido mesmo que a crew complete enquanto saves em background estão em andamento.
+
+### Uso Standalone
+
+Para scripts ou notebooks onde não há ciclo de vida de crew, chame `drain_writes()` ou `close()` explicitamente:
+
+```python
+memory = Memory()
+memory.remember_many(["Fato A.", "Fato B."])
+
+# Opção 1: Esperar saves pendentes
+memory.drain_writes()
+
+# Opção 2: Drenar e encerrar o pool de background
+memory.close()
+```
+
+
+## Origem e Privacidade
+
+Cada registro de memória pode carregar uma tag `source` para rastreamento de procedência e uma flag `private` para controle de acesso.
+
+### Rastreamento de Origem
+
+O parâmetro `source` identifica de onde uma memória veio:
+
+```python
+# Marcar memórias com sua origem
+memory.remember("Usuário prefere modo escuro", source="user:alice")
+memory.remember("Configuração do sistema atualizada", source="admin")
+memory.remember("Agente encontrou um bug", source="agent:debugger")
+
+# Recuperar apenas memórias de uma origem específica
+matches = memory.recall("preferências do usuário", source="user:alice")
+```
+
+### Memórias Privadas
+
+Memórias privadas só são visíveis no recall quando o `source` corresponde:
+
+```python
+# Armazenar uma memória privada
+memory.remember("A chave de API da Alice é sk-...", source="user:alice", private=True)
+
+# Este recall vê a memória privada (source corresponde)
+matches = memory.recall("chave de API", source="user:alice")
+
+# Este recall NÃO a vê (source diferente)
+matches = memory.recall("chave de API", source="user:bob")
+
+# Acesso admin: ver todos os registros privados independente do source
+matches = memory.recall("chave de API", include_private=True)
+```
+
+Isso é particularmente útil em implantações multi-usuário ou corporativas onde memórias de diferentes usuários devem ser isoladas.
+
+
+## RecallFlow (Recall Profundo)
+
+`recall()` suporta duas profundidades:
+
+- **`depth="shallow"`** -- Busca vetorial direta com pontuação composta. Rápido (~200ms), sem chamadas ao LLM.
+- **`depth="deep"` (padrão)** -- Executa um RecallFlow em múltiplas etapas: análise da consulta, seleção de escopo, busca vetorial paralela, roteamento baseado em confiança e exploração recursiva opcional quando a confiança é baixa.
+
+**Pulo inteligente do LLM**: Consultas com menos de `query_analysis_threshold` (padrão 200 caracteres) pulam a análise de consulta do LLM inteiramente, mesmo no modo deep. Consultas curtas como "Qual banco de dados usamos?" já são boas frases de busca -- a análise do LLM agrega pouco valor. Isso economiza ~1-3s por recall para consultas curtas típicas. Apenas consultas mais longas (ex.: descrições completas de tarefas) passam pela destilação do LLM em sub-consultas direcionadas.
+
+```python
+# Shallow: busca vetorial pura, sem LLM
+matches = memory.recall("O que decidimos?", limit=10, depth="shallow")
+
+# Deep (padrão): recuperação inteligente com análise LLM para consultas longas
+matches = memory.recall(
+    "Resuma todas as decisões de arquitetura deste trimestre",
+    limit=10,
+    depth="deep",
+)
+```
+
+Os limiares de confiança que controlam o roteador do RecallFlow são configuráveis:
+
+```python
+memory = Memory(
+    confidence_threshold_high=0.9,   # Só sintetizar quando muito confiante
+    confidence_threshold_low=0.4,    # Explorar mais profundamente de forma mais agressiva
+    exploration_budget=2,            # Permitir até 2 rodadas de exploração
+    query_analysis_threshold=200,    # Pular LLM para consultas menores que isso
+)
+```
+
+
+## Configuração de Embedder
+
+A memória precisa de um modelo de embedding para converter texto em vetores para busca semântica. Você pode configurar de três formas.
+
+### Passando Diretamente para o Memory
+
+```python
+from crewai import Memory
+
+# Como um dict de configuração
+memory = Memory(embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}})
+
+# Como um callable pré-construído
+from crewai.rag.embeddings.factory import build_embedder
+embedder = build_embedder({"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}})
+memory = Memory(embedder=embedder)
+```
+
+### Via Configuração de Embedder da Crew
+
+Quando usar `memory=True`, a configuração de `embedder` da crew é repassada:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}},
+)
+```
+
+### Exemplos por Provedor
+
+<AccordionGroup>
+<Accordion title="OpenAI (padrão)">
+```python
+memory = Memory(embedder={
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-3-small",
+        # "api_key": "sk-...",  # ou defina OPENAI_API_KEY
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Ollama (local, privado)">
+```python
+memory = Memory(embedder={
+    "provider": "ollama",
+    "config": {
+        "model_name": "mxbai-embed-large",
+        "url": "http://localhost:11434/api/embeddings",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Azure OpenAI">
+```python
+memory = Memory(embedder={
+    "provider": "azure",
+    "config": {
+        "deployment_id": "your-embedding-deployment",
+        "api_key": "your-azure-api-key",
+        "api_base": "https://your-resource.openai.azure.com",
+        "api_version": "2024-02-01",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Google AI">
+```python
+memory = Memory(embedder={
+    "provider": "google-generativeai",
+    "config": {
+        "model_name": "gemini-embedding-001",
+        # "api_key": "...",  # ou defina GOOGLE_API_KEY
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Google Vertex AI">
+```python
+memory = Memory(embedder={
+    "provider": "google-vertex",
+    "config": {
+        "model_name": "gemini-embedding-001",
+        "project_id": "your-gcp-project-id",
+        "location": "us-central1",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Cohere">
+```python
+memory = Memory(embedder={
+    "provider": "cohere",
+    "config": {
+        "model_name": "embed-english-v3.0",
+        # "api_key": "...",  # ou defina COHERE_API_KEY
+    },
+})
+```
+</Accordion>
+
+<Accordion title="VoyageAI">
+```python
+memory = Memory(embedder={
+    "provider": "voyageai",
+    "config": {
+        "model": "voyage-3",
+        # "api_key": "...",  # ou defina VOYAGE_API_KEY
+    },
+})
+```
+</Accordion>
+
+<Accordion title="AWS Bedrock">
+```python
+memory = Memory(embedder={
+    "provider": "amazon-bedrock",
+    "config": {
+        "model_name": "amazon.titan-embed-text-v1",
+        # Usa credenciais AWS padrão (sessão boto3)
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Hugging Face">
+```python
+memory = Memory(embedder={
+    "provider": "huggingface",
+    "config": {
+        "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Jina">
+```python
+memory = Memory(embedder={
+    "provider": "jina",
+    "config": {
+        "model_name": "jina-embeddings-v2-base-en",
+        # "api_key": "...",  # ou defina JINA_API_KEY
+    },
+})
+```
+</Accordion>
+
+<Accordion title="IBM WatsonX">
+```python
+memory = Memory(embedder={
+    "provider": "watsonx",
+    "config": {
+        "model_id": "ibm/slate-30m-english-rtrvr",
+        "api_key": "your-watsonx-api-key",
+        "project_id": "your-project-id",
+        "url": "https://us-south.ml.cloud.ibm.com",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Embedder Customizado">
+```python
+# Passe qualquer callable que receba uma lista de strings e retorne uma lista de vetores
+def my_embedder(texts: list[str]) -> list[list[float]]:
+    # Sua lógica de embedding aqui
+    return [[0.1, 0.2, ...] for _ in texts]
+
+memory = Memory(embedder=my_embedder)
+```
+</Accordion>
+</AccordionGroup>
+
+### Referência de Provedores
+
+| Provedor | Chave | Modelo Típico | Notas |
+| :--- | :--- | :--- | :--- |
+| OpenAI | `openai` | `text-embedding-3-small` | Padrão. Defina `OPENAI_API_KEY`. |
+| Ollama | `ollama` | `mxbai-embed-large` | Local, sem API key. |
+| Azure OpenAI | `azure` | `text-embedding-ada-002` | Requer `deployment_id`. |
+| Google AI | `google-generativeai` | `gemini-embedding-001` | Defina `GOOGLE_API_KEY`. |
+| Google Vertex | `google-vertex` | `gemini-embedding-001` | Requer `project_id`. |
+| Cohere | `cohere` | `embed-english-v3.0` | Forte suporte multilíngue. |
+| VoyageAI | `voyageai` | `voyage-3` | Otimizado para retrieval. |
+| AWS Bedrock | `amazon-bedrock` | `amazon.titan-embed-text-v1` | Usa credenciais boto3. |
+| Hugging Face | `huggingface` | `all-MiniLM-L6-v2` | Sentence-transformers local. |
+| Jina | `jina` | `jina-embeddings-v2-base-en` | Defina `JINA_API_KEY`. |
+| IBM WatsonX | `watsonx` | `ibm/slate-30m-english-rtrvr` | Requer `project_id`. |
+| Sentence Transformer | `sentence-transformer` | `all-MiniLM-L6-v2` | Local, sem API key. |
+| Custom | `custom` | -- | Requer `embedding_callable`. |
+
+
+## Configuração de LLM
+
+A memória usa um LLM para análise de save (inferência de escopo, categorias e importância), decisões de consolidação e análise de consulta no recall profundo. Você pode configurar qual modelo usar.
+
+```python
+from crewai import Memory, LLM
+
+# Padrão: gpt-4o-mini
+memory = Memory()
+
+# Usar um modelo OpenAI diferente
+memory = Memory(llm="gpt-4o")
+
+# Usar Anthropic
+memory = Memory(llm="anthropic/claude-3-haiku-20240307")
+
+# Usar Ollama para análise totalmente local/privada
+memory = Memory(llm="ollama/llama3.2")
+
+# Usar Google Gemini
+memory = Memory(llm="gemini/gemini-2.0-flash")
+
+# Passar uma instância LLM pré-configurada com configurações customizadas
+llm = LLM(model="gpt-4o", temperature=0)
+memory = Memory(llm=llm)
+```
+
+O LLM é inicializado **lazily** -- ele só é criado quando necessário pela primeira vez. Isso significa que `Memory()` nunca falha no momento da construção, mesmo que chaves de API não estejam definidas. Erros só aparecem quando o LLM é realmente chamado (ex.: ao salvar sem escopo/categorias explícitos, ou durante recall profundo).
+
+Para operação totalmente offline/privada, use um modelo local tanto para o LLM quanto para o embedder:
+
+```python
+memory = Memory(
+    llm="ollama/llama3.2",
+    embedder={"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}},
+)
+```
+
+
+## Backend de Armazenamento
+
+- **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou `$CREWAI_STORAGE_DIR/memory` se a variável de ambiente estiver definida, ou o caminho que você passar como `storage="path/to/dir"`).
+- **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`.
+
+
+## Descoberta
+
+Inspecione a hierarquia de escopos, categorias e registros:
+
+```python
+memory.tree()                        # Árvore formatada de escopos e contagem de registros
+memory.tree("/project", max_depth=2) # Visão de subárvore
+memory.info("/project")              # ScopeInfo: record_count, categories, oldest/newest
+memory.list_scopes("/")              # Escopos filhos imediatos
+memory.list_categories()             # Nomes e contagens de categorias
+memory.list_records(scope="/project/alpha", limit=20)  # Registros em um escopo, mais recentes primeiro
+```
+
+
+## Comportamento em Caso de Falha
+
+Se o LLM falhar durante a análise (erro de rede, limite de taxa, resposta inválida), a memória degrada graciosamente:
+
+- **Análise de save** -- Um aviso é registrado e a memória ainda é armazenada com escopo padrão `/`, categorias vazias e importância `0.5`.
+- **Extrair memórias** -- O conteúdo completo é armazenado como uma única memória para que nada seja descartado.
+- **Análise de consulta** -- O recall usa fallback para seleção simples de escopo e busca vetorial, então você ainda obtém resultados.
+
+Nenhuma exceção é levantada para essas falhas de análise; apenas falhas de armazenamento ou do embedder irão levantar.
+
+
+## Nota sobre Privacidade
+
+O conteúdo da memória é enviado ao LLM configurado para análise (escopo/categorias/importância no save, análise de consulta e recall profundo opcional). Para dados sensíveis, use um LLM local (ex.: Ollama) ou garanta que seu provedor atenda aos requisitos de conformidade.
+
+
+## Eventos de Memória
+
+Todas as operações de memória emitem eventos com `source_type="unified_memory"`. Você pode escutar para timing, erros e conteúdo.
+
+| Evento | Descrição | Propriedades Principais |
+| :---- | :---------- | :------------- |
+| **MemoryQueryStartedEvent** | Consulta inicia | `query`, `limit` |
+| **MemoryQueryCompletedEvent** | Consulta bem-sucedida | `query`, `results`, `query_time_ms` |
+| **MemoryQueryFailedEvent** | Consulta falha | `query`, `error` |
+| **MemorySaveStartedEvent** | Save inicia | `value`, `metadata` |
+| **MemorySaveCompletedEvent** | Save bem-sucedido | `value`, `save_time_ms` |
+| **MemorySaveFailedEvent** | Save falha | `value`, `error` |
+| **MemoryRetrievalStartedEvent** | Retrieval do agente inicia | `task_id` |
+| **MemoryRetrievalCompletedEvent** | Retrieval do agente completo | `task_id`, `memory_content`, `retrieval_time_ms` |
+
+Exemplo: monitorar tempo de consulta:
+
+```python
+from crewai.events import BaseEventListener, MemoryQueryCompletedEvent
+
+class MemoryMonitor(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_done(source, event):
+            if getattr(event, "source_type", None) == "unified_memory":
+                print(f"Query '{event.query}' completou em {event.query_time_ms:.0f}ms")
+```
+
+
+## Solução de Problemas
+
+**Memória não persiste?**
+- Garanta que o caminho de armazenamento seja gravável (padrão `./.crewai/memory`). Passe `storage="./your_path"` para usar outro diretório, ou defina a variável de ambiente `CREWAI_STORAGE_DIR`.
+- Ao usar uma crew, confirme que `memory=True` ou `memory=Memory(...)` está definido.
+
+**Recall lento?**
+- Use `depth="shallow"` para contexto rotineiro do agente. Reserve `depth="deep"` para consultas complexas.
+- Aumente `query_analysis_threshold` para pular a análise do LLM em mais consultas.
+
+**Erros de análise LLM nos logs?**
+- A memória ainda salva/recupera com padrões seguros. Verifique chaves de API, limites de taxa e disponibilidade do modelo se quiser análise LLM completa.
+
+**Erros de save em background nos logs?**
+- Os saves de memória rodam em uma thread em background. Erros são emitidos como `MemorySaveFailedEvent` mas não derrubam o agente. Verifique os logs para a causa raiz (geralmente problemas de conexão com LLM ou embedder).
+
+**Conflitos de escrita concorrente?**
+- As operações do LanceDB são serializadas com um lock compartilhado e reexecutadas automaticamente em caso de conflito. Isso lida com múltiplas instâncias `Memory` apontando para o mesmo banco de dados (ex.: memória do agente + memória da crew). Nenhuma ação necessária.
+
+**Navegar na memória pelo terminal:**
+```bash
+crewai memory                              # Abre o navegador TUI
+crewai memory --storage-path ./my_memory   # Apontar para um diretório específico
+```
+
+**Resetar memória (ex.: para testes):**
+```python
+crew.reset_memories(command_type="memory")  # Reseta memória unificada
+# Ou em uma instância Memory:
+memory.reset()                    # Todos os escopos
+memory.reset(scope="/project/old")  # Apenas essa subárvore
+```
+
+
+## Referência de Configuração
+
+Toda a configuração é passada como argumentos nomeados para `Memory(...)`. Cada parâmetro tem um padrão sensato.
+
+| Parâmetro | Padrão | Descrição |
+| :--- | :--- | :--- |
+| `llm` | `"gpt-4o-mini"` | LLM para análise (nome do modelo ou instância `BaseLLM`). |
+| `storage` | `"lancedb"` | Backend de armazenamento (`"lancedb"`, string de caminho ou instância `StorageBackend`). |
+| `embedder` | `None` (OpenAI padrão) | Embedder (dict de config, callable ou `None` para OpenAI padrão). |
+| `recency_weight` | `0.3` | Peso da recência na pontuação composta. |
+| `semantic_weight` | `0.5` | Peso da similaridade semântica na pontuação composta. |
+| `importance_weight` | `0.2` | Peso da importância na pontuação composta. |
+| `recency_half_life_days` | `30` | Dias para a pontuação de recência cair pela metade (decaimento exponencial). |
+| `consolidation_threshold` | `0.85` | Similaridade acima da qual a consolidação é ativada no save. Defina `1.0` para desativar. |
+| `consolidation_limit` | `5` | Máx. de registros existentes para comparar durante consolidação. |
+| `default_importance` | `0.5` | Importância atribuída quando não fornecida e a análise LLM é pulada. |
+| `batch_dedup_threshold` | `0.98` | Similaridade de cosseno para descartar quase-duplicatas dentro de um batch `remember_many()`. |
+| `confidence_threshold_high` | `0.8` | Confiança de recall acima da qual resultados são retornados diretamente. |
+| `confidence_threshold_low` | `0.5` | Confiança de recall abaixo da qual exploração mais profunda é ativada. |
+| `complex_query_threshold` | `0.7` | Para consultas complexas, explorar mais profundamente abaixo desta confiança. |
+| `exploration_budget` | `1` | Número de rodadas de exploração por LLM durante recall profundo. |
+| `query_analysis_threshold` | `200` | Consultas menores que isso (em caracteres) pulam análise LLM durante recall profundo. |

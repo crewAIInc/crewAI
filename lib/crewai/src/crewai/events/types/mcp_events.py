@@ -49,6 +49,7 @@ class MCPConnectionFailedEvent(MCPEvent):
     type: Literal["mcp_connection_failed"] = "mcp_connection_failed"
     error: str
     error_type: str | None = None  # "timeout", "authentication", "network", etc.
+    status_code: int | None = None
     started_at: datetime | None = None
     failed_at: datetime | None = None
 

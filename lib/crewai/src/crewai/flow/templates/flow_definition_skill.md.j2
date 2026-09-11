@@ -148,6 +148,10 @@ Dynamic value rules:
 - Do not set `config.stream: true` unless the caller is expected to consume a streaming result. For normal generated flows and CLI smoke tests, omit it.
 {% if include_conversational %}
 - Do not put conversational settings under `state`, `config`, or a method. Use top-level `conversational` only when the user asks for a chat or conversation flow.
+- Do not configure or override the deprecated `answer_from_history` route; `converse` already answers from canonical history. Do not declare `route_conversation`, `converse_turn`, or `end_conversation` unless you are deliberately replacing one. Declaring the `conversational` block adds them for you, and a method you declare under one of those names overrides the built-in.
+- Do not name a route handler the same as the route it listens to. Route labels and method names share one trigger namespace, so `create_video` listening to `create_video` is rejected. Use `handle_create_video`.
+- Do not declare `state` for a chat flow unless it needs extra fields. The conversational state shape is supplied by default, and a custom state must extend it.
+- Do describe every custom route, either with the handler's `description` or an entry in `conversational.router.route_descriptions`. That text is what the routing model reads to choose between routes; a route with neither is offered to it unlabelled.
 {% endif %}
 {% if include_each_action %}
 - Do not use `each` without at least one named step.

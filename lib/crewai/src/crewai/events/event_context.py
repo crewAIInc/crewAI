@@ -269,6 +269,7 @@ SCOPE_STARTING_EVENTS: frozenset[str] = frozenset(
 SCOPE_ENDING_EVENTS: frozenset[str] = frozenset(
     {
         "flow_finished",
+        "flow_failed",
         "flow_paused",
         "method_execution_finished",
         "method_execution_failed",
@@ -320,6 +321,7 @@ SCOPE_ENDING_EVENTS: frozenset[str] = frozenset(
 
 VALID_EVENT_PAIRS: dict[str, str] = {
     "flow_finished": "flow_started",
+    "flow_failed": "flow_started",
     "flow_paused": "flow_started",
     "method_execution_finished": "method_execution_started",
     "method_execution_failed": "method_execution_started",

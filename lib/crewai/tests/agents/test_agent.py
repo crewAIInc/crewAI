@@ -700,9 +700,8 @@ def test_agent_step_callback():
         callback.assert_called()
 
 
-@pytest.mark.vcr()
-@pytest.mark.skip(reason="result_as_answer feature not yet implemented in native tool calling path")
-def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
+def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
+    """Use a native tool result as the Crew's final answer without another LLM call."""
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -710,13 +709,16 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
         description: str = "Get a random greeting back"
 
         def _run(self) -> str:
+            """Return a deterministic greeting for the integration test."""
             return "Howdy!"
 
+    llm = LLM(model="gpt-4o-mini")
     agent1 = Agent(
         role="Data Scientist",
         goal="Product amazing resports on AI",
         backstory="You work with data and AI",
         tools=[MyCustomTool(result_as_answer=True)],
+        llm=llm,
     )
 
     essay = Task(
@@ -727,8 +729,18 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
 
-    result = crew.kickoff()
+    tool_call = {
+        "id": "call_greeting",
+        "function": {"name": "get_greetings", "arguments": "{}"},
+    }
+    with patch(
+        "crewai.experimental.agent_executor.get_llm_response",
+        return_value=[tool_call],
+    ) as mock_llm_response:
+        result = crew.kickoff()
+
     assert result.raw == "Howdy!"
+    mock_llm_response.assert_called_once()
 
 
 def test_agent_definition_based_on_dict():
@@ -2373,6 +2385,42 @@ def test_agent_from_repository_ignores_empty_skills(
 
     assert agent.role == "test role"
     assert agent.skills is None
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_pins_skills_to_recorded_versions(
+    mock_get_agent, mock_get_auth_token
+):
+    """The repository records a version per skill; without the pin the runtime
+    resolves whatever is newest, so publishing a skill would silently change
+    every agent using it."""
+    from crewai.utilities.agent_utils import load_agent_from_repository
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "skills": [
+            "@acme/crewai-brand",
+            "@acme/already-pinned@3.0.0",
+            "@acme/unrecorded",
+        ],
+        "skill_versions": [
+            {"registry_ref": "@acme/crewai-brand", "version": "2.1.0"},
+            {"registry_ref": "@acme/already-pinned", "version": "1.0.0"},
+        ],
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    attributes = load_agent_from_repository("test_agent")
+
+    assert attributes["skills"] == [
+        "@acme/crewai-brand@2.1.0",
+        "@acme/already-pinned@3.0.0",  # keeps the pin it already carried
+        "@acme/unrecorded",  # no recorded version to apply
+    ]
+    # Not an Agent field — it only exists to carry the pins.
+    assert "skill_versions" not in attributes
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")

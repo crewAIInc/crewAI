@@ -20,6 +20,13 @@ def test_huggingface_models():
     assert len(MODELS["huggingface"]) > 0
 
 
+def test_openai_models_include_gpt56_family() -> None:
+    """Curated OpenAI list should include Sol, Terra, Luna, and the alias."""
+    openai_models = MODELS["openai"]
+    for model in ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6"):
+        assert model in openai_models
+
+
 def test_atlascloud_provider_configuration():
     """Test that Atlas Cloud is available with credentials and model presets."""
     assert "atlascloud" in PROVIDERS

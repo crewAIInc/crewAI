@@ -1,0 +1,214 @@
+---
+title: CrewAI Tracing
+description: Rastreamento integrado para Crews e Flows do CrewAI com a plataforma CrewAI AMP
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# Rastreamento Integrado do CrewAI
+
+O CrewAI fornece recursos de rastreamento integrados que permitem monitorar e depurar seus Crews e Flows em tempo real. Este guia demonstra como habilitar o rastreamento para **Crews** e **Flows** usando a plataforma de observabilidade integrada do CrewAI.
+
+> **O que é o CrewAI Tracing?** O rastreamento integrado do CrewAI fornece observabilidade abrangente para seus agentes de IA, incluindo decisões de agentes, cronogramas de execução de tarefas, uso de ferramentas e chamadas de LLM - tudo acessível através da [plataforma CrewAI AMP](https://app.crewai.com).
+
+![CrewAI Tracing Interface](/images/crewai-tracing.png)
+
+## Pré-requisitos
+
+Antes de usar o rastreamento do CrewAI, você precisa:
+
+1. **Conta CrewAI AMP**: Cadastre-se para uma conta gratuita em [app.crewai.com](https://app.crewai.com)
+2. **Autenticação CLI**: Use a CLI do CrewAI para autenticar seu ambiente local
+
+```bash
+crewai login
+```
+
+## Instruções de Configuração
+
+### Passo 1: Crie sua Conta CrewAI AMP
+
+Visite [app.crewai.com](https://app.crewai.com) e crie sua conta gratuita. Isso lhe dará acesso à plataforma CrewAI AMP, onde você pode visualizar rastreamentos, métricas e gerenciar seus crews.
+
+### Passo 2: Instale a CLI do CrewAI e Autentique
+
+Se você ainda não o fez, instale o CrewAI com as ferramentas CLI:
+
+```bash
+uv add crewai[tools]
+```
+
+Em seguida, autentique sua CLI com sua conta CrewAI AMP:
+
+```bash
+crewai login
+```
+
+Este comando irá:
+
+1. Abrir seu navegador na página de autenticação
+2. Solicitar que você insira um código de dispositivo
+3. Autenticar seu ambiente local com sua conta CrewAI AMP
+4. Habilitar recursos de rastreamento para seu desenvolvimento local
+
+### Passo 3: Habilite o Rastreamento em seu Crew
+
+Você pode habilitar o rastreamento para seu Crew definindo o parâmetro `tracing` como `True`:
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+
+# Define your agents
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Uncover cutting-edge developments in AI and data science",
+    backstory=\"\"\"You work at a leading tech think tank.
+    Your expertise lies in identifying emerging trends.
+    You have a knack for dissecting complex data and presenting actionable insights.\"\"\",
+    verbose=True,
+    tools=[SerperDevTool()],
+)
+
+writer = Agent(
+    role="Tech Content Strategist",
+    goal="Craft compelling content on tech advancements",
+    backstory=\"\"\"You are a renowned Content Strategist, known for your insightful and engaging articles.
+    You transform complex concepts into compelling narratives.\"\"\",
+    verbose=True,
+)
+
+# Create tasks for your agents
+research_task = Task(
+    description=\"\"\"Conduct a comprehensive analysis of the latest advancements in AI in 2024.
+    Identify key trends, breakthrough technologies, and potential industry impacts.\"\"\",
+    expected_output="Full analysis report in bullet points",
+    agent=researcher,
+)
+
+writing_task = Task(
+    description=\"\"\"Using the insights provided, develop an engaging blog
+    post that highlights the most significant AI advancements.
+    Your post should be informative yet accessible, catering to a tech-savvy audience.\"\"\",
+    expected_output="Full blog post of at least 4 paragraphs",
+    agent=writer,
+)
+
+# Enable tracing in your crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+    tracing=True,  # Enable built-in tracing
+    verbose=True
+)
+
+# Execute your crew
+result = crew.kickoff()
+```
+
+### Passo 4: Habilite o Rastreamento em seu Flow
+
+Da mesma forma, você pode habilitar o rastreamento para Flows do CrewAI:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from pydantic import BaseModel
+
+class ExampleState(BaseModel):
+    counter: int = 0
+    message: str = ""
+
+class ExampleFlow(Flow[ExampleState]):
+    def __init__(self):
+        super().__init__(tracing=True)  # Enable tracing for the flow
+
+    @start()
+    def first_method(self):
+        print("Starting the flow")
+        self.state.counter = 1
+        self.state.message = "Flow started"
+        return "continue"
+
+    @listen("continue")
+    def second_method(self):
+        print("Continuing the flow")
+        self.state.counter += 1
+        self.state.message = "Flow continued"
+        return "finish"
+
+    @listen("finish")
+    def final_method(self):
+        print("Finishing the flow")
+        self.state.counter += 1
+        self.state.message = "Flow completed"
+
+# Create and run the flow with tracing enabled
+flow = ExampleFlow(tracing=True)
+result = flow.kickoff()
+```
+
+### Passo 5: Visualize os Rastreamentos no Painel CrewAI AMP
+
+Após executar o crew ou flow, você pode visualizar os rastreamentos gerados pela sua aplicação CrewAI no painel CrewAI AMP. Você verá etapas detalhadas das interações dos agentes, usos de ferramentas e chamadas de LLM.
+Basta clicar no link abaixo para visualizar os rastreamentos ou ir para a aba de rastreamentos no painel [aqui](https://app.crewai.com/crewai_plus/trace_batches)
+![CrewAI Tracing Interface](/images/view-traces.png)
+
+### Alternativa: Configuração de Variável de Ambiente
+
+Você também pode habilitar o rastreamento globalmente definindo uma variável de ambiente:
+
+```bash
+export CREWAI_TRACING_ENABLED=true
+```
+
+Ou adicione-a ao seu arquivo `.env`:
+
+```env
+CREWAI_TRACING_ENABLED=true
+```
+
+Quando esta variável de ambiente estiver definida, todos os Crews e Flows terão automaticamente o rastreamento habilitado, mesmo sem definir explicitamente `tracing=True`.
+
+## Visualizando seus Rastreamentos
+
+### Acesse o Painel CrewAI AMP
+
+1. Visite [app.crewai.com](https://app.crewai.com) e faça login em sua conta
+2. Navegue até o painel do seu projeto
+3. Clique na aba **Traces** para visualizar os detalhes de execução
+
+### O que Você Verá nos Rastreamentos
+
+O rastreamento do CrewAI fornece visibilidade abrangente sobre:
+
+- **Decisões dos Agentes**: Veja como os agentes raciocinam através das tarefas e tomam decisões
+- **Cronograma de Execução de Tarefas**: Representação visual de sequências e dependências de tarefas
+- **Uso de Ferramentas**: Monitore quais ferramentas são chamadas e seus resultados
+- **Chamadas de LLM**: Rastreie todas as interações do modelo de linguagem, incluindo prompts e respostas
+- **Métricas de Desempenho**: Tempos de execução, uso de tokens e custos
+- **Rastreamento de Erros**: Informações detalhadas de erros e rastreamentos de pilha
+
+### Recursos de Rastreamento
+
+- **Cronograma de Execução**: Clique através de diferentes estágios de execução
+- **Logs Detalhados**: Acesse logs abrangentes para depuração
+- **Análise de Desempenho**: Analise padrões de execução e otimize o desempenho
+- **Capacidades de Exportação**: Baixe rastreamentos para análise adicional
+
+### Problemas de Autenticação
+
+Se você encontrar problemas de autenticação:
+
+1. Certifique-se de estar logado: `crewai login`
+2. Verifique sua conexão com a internet
+3. Verifique sua conta em [app.crewai.com](https://app.crewai.com)
+
+### Rastreamentos Não Aparecem
+
+Se os rastreamentos não estiverem aparecendo no painel:
+
+1. Confirme que `tracing=True` está definido em seu Crew/Flow
+2. Verifique se `CREWAI_TRACING_ENABLED=true` se estiver usando variáveis de ambiente
+3. Certifique-se de estar autenticado com `crewai login`
+4. Verifique se seu crew/flow está realmente executando

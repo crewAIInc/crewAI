@@ -295,8 +295,12 @@ class FlowHumanFeedbackDefinition(BaseModel):
         examples=[["approved", "revise"]],
     )
     llm: Any = Field(
-        default="gpt-4o-mini",
-        description="LLM configuration used to assist or process human feedback.",
+        default=None,
+        description=(
+            "LLM used to collapse feedback to an emit outcome. "
+            "None resolves at runtime via create_llm (project MODEL env, "
+            "then DEFAULT_LLM_MODEL)."
+        ),
         examples=["gpt-4o-mini"],
     )
     default_outcome: str | None = Field(
@@ -775,7 +779,11 @@ class FlowDefinition(BaseModel):
         for method_name, method in self.methods.items():
             if _condition_references(method.listen, method_name):
                 raise ValueError(
-                    f"methods.{method_name}.listen must not reference itself"
+                    _self_listen_error(
+                        method_name=method_name,
+                        listen=method.listen,
+                        definition=self,
+                    )
                 )
         return self
 
@@ -888,6 +896,39 @@ def _condition_references(condition: FlowDefinitionCondition | None, name: str) 
     )
 
 
+def _format_listen_condition(condition: FlowDefinitionCondition | None) -> str:
+    if condition is None:
+        return "None"
+    return repr(condition)
+
+
+def _self_listen_error(
+    *,
+    method_name: str,
+    listen: FlowDefinitionCondition | None,
+    definition: FlowDefinition,
+) -> str:
+    path = f"methods.{method_name}.listen"
+    listen_display = _format_listen_condition(listen)
+    conversational = (
+        definition.conversational is not None and definition.conversational.enabled
+    )
+    if conversational:
+        return (
+            f"{path} listen condition {listen_display} matches the handler name "
+            f"{method_name!r}. In conversational flows, @listen labels are router "
+            "route names — they share the same trigger namespace as method completion "
+            "events, so this handler would re-run in a loop. Rename the handler "
+            f"(for example, handle_{method_name}) or use a different route label."
+        )
+
+    return (
+        f"{path} listen condition {listen_display} references the handler name "
+        f"{method_name!r}. A listener triggered by its own completion creates an "
+        "infinite loop. Listen to a different method or event, or rename the handler."
+    )
+
+
 def _validate_action_cel(
     action: FlowActionDefinition,
     *,
@@ -969,14 +1010,6 @@ def log_flow_definition_issues(definition: FlowDefinition) -> None:
             )
         if method.human_feedback:
             human_feedback_config = method.human_feedback
-            if human_feedback_config.emit and not human_feedback_config.llm:
-                _log_flow_definition_issue(
-                    definition.name,
-                    code="human_feedback_llm_required",
-                    severity="error",
-                    path=f"{path}.human_feedback.llm",
-                    message="llm is required when human_feedback.emit is set",
-                )
             if (
                 human_feedback_config.default_outcome is not None
                 and not human_feedback_config.emit

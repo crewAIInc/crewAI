@@ -11,6 +11,11 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    handle_tool_failure,
+)
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -21,6 +26,7 @@ if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
+    from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
     from crewai.task import Task
@@ -33,7 +39,7 @@ async def aexecute_tool_and_check_finality(
     agent_role: str | None = None,
     tools_handler: ToolsHandler | None = None,
     task: Task | None = None,
-    agent: Agent | BaseAgent | None = None,
+    agent: Agent | BaseAgent | LiteAgent | None = None,
     function_calling_llm: BaseLLM | LLM | None = None,
     fingerprint_context: dict[str, str] | None = None,
     crew: Crew | None = None,
@@ -80,11 +86,25 @@ async def aexecute_tool_and_check_finality(
         task=task,
         agent=agent,
         action=agent_action,
+        crew=crew,
     )
 
     tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
     if isinstance(tool_calling, ToolUsageError):
+        # Mirrors the native paths, which report a malformed call as
+        # INVALID_INPUT rather than passing the message along silently.
+        handle_tool_failure(
+            ToolFailure(
+                message=tool_calling.message,
+                reason=ToolFailureReason.INVALID_INPUT,
+            ),
+            tool_name=getattr(agent_action, "tool", "") or "unknown",
+            tool_args=getattr(agent_action, "tool_input", None),
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
         return ToolResult(tool_calling.message, False)
 
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)
@@ -138,14 +158,41 @@ async def aexecute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
+        # After the hooks, so post_tool_call can still inspect or rewrite the
+        # result before the policy aborts.
+        if tool_usage.last_failure is not None:
+            handle_tool_failure(
+                tool_usage.last_failure,
+                tool_name=sanitized_tool_name,
+                tool_args=tool_input,
+                tool=tool,
+                agent=agent,
+                task=task,
+                crew=crew,
+            )
+
         return ToolResult(
             modified_result if modified_result is not None else tool_result,
-            tool.result_as_answer,
+            # A failed tool must not become the final answer -- the same
+            # exclusion the native paths already apply to raised errors.
+            tool.result_as_answer and tool_usage.last_failure is None,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
         tools=", ".join(tool_name_to_tool_map.keys()),
+    )
+    handle_tool_failure(
+        ToolFailure(
+            message=tool_result,
+            reason=ToolFailureReason.UNKNOWN_TOOL,
+            code=sanitized_tool_name,
+        ),
+        tool_name=sanitized_tool_name,
+        tool_args=tool_calling.arguments,
+        agent=agent,
+        task=task,
+        crew=crew,
     )
     return ToolResult(result=tool_result, result_as_answer=False)
 
@@ -157,7 +204,7 @@ def execute_tool_and_check_finality(
     agent_role: str | None = None,
     tools_handler: ToolsHandler | None = None,
     task: Task | None = None,
-    agent: Agent | BaseAgent | None = None,
+    agent: Agent | BaseAgent | LiteAgent | None = None,
     function_calling_llm: BaseLLM | LLM | None = None,
     fingerprint_context: dict[str, str] | None = None,
     crew: Crew | None = None,
@@ -202,11 +249,25 @@ def execute_tool_and_check_finality(
         task=task,
         agent=agent,
         action=agent_action,
+        crew=crew,
     )
 
     tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
     if isinstance(tool_calling, ToolUsageError):
+        # Mirrors the native paths, which report a malformed call as
+        # INVALID_INPUT rather than passing the message along silently.
+        handle_tool_failure(
+            ToolFailure(
+                message=tool_calling.message,
+                reason=ToolFailureReason.INVALID_INPUT,
+            ),
+            tool_name=getattr(agent_action, "tool", "") or "unknown",
+            tool_args=getattr(agent_action, "tool_input", None),
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
         return ToolResult(tool_calling.message, False)
 
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)
@@ -260,13 +321,40 @@ def execute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
+        # After the hooks, so post_tool_call can still inspect or rewrite the
+        # result before the policy aborts.
+        if tool_usage.last_failure is not None:
+            handle_tool_failure(
+                tool_usage.last_failure,
+                tool_name=sanitized_tool_name,
+                tool_args=tool_input,
+                tool=tool,
+                agent=agent,
+                task=task,
+                crew=crew,
+            )
+
         return ToolResult(
             modified_result if modified_result is not None else tool_result,
-            tool.result_as_answer,
+            # A failed tool must not become the final answer -- the same
+            # exclusion the native paths already apply to raised errors.
+            tool.result_as_answer and tool_usage.last_failure is None,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
         tools=", ".join(tool_name_to_tool_map.keys()),
+    )
+    handle_tool_failure(
+        ToolFailure(
+            message=tool_result,
+            reason=ToolFailureReason.UNKNOWN_TOOL,
+            code=sanitized_tool_name,
+        ),
+        tool_name=sanitized_tool_name,
+        tool_args=tool_calling.arguments,
+        agent=agent,
+        task=task,
+        crew=crew,
     )
     return ToolResult(result=tool_result, result_as_answer=False)

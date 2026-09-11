@@ -4,13 +4,11 @@ on:
   pull_request:
     paths:
       - "docs/**"
-      - "docs.json"
   push:
     branches:
       - main
     paths:
       - "docs/**"
-      - "docs.json"
   workflow_dispatch:
 
 permissions:
@@ -28,11 +26,40 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install Mintlify CLI
-        run: npm i -g mintlify
+      - name: Install Mint CLI
+        run: npm i -g mint@4.2.741
+
+      # Pruning immutable snapshots keeps the check fast (--files still parses every
+      # page); the default version must stay because unprefixed links resolve to it.
+      - name: Prune frozen doc versions (keep edge and latest)
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          python3 - <<'EOF'
+          import json
+          import shutil
+          from pathlib import Path
+
+          docs = Path("docs")
+          spec_path = docs / "docs.json"
+          spec = json.loads(spec_path.read_text())
+
+          keep_dirs = {"edge"}
+          for lang in spec["navigation"]["languages"]:
+              kept = [v for v in lang["versions"] if v["version"] == "Edge" or v.get("default")]
+              lang["versions"] = kept
+              keep_dirs.update(v["version"] for v in kept if v["version"] != "Edge")
+
+          missing = [d for d in keep_dirs if not (docs / d).is_dir()]
+          if missing:
+              raise SystemExit(f"docs.json version labels do not match directories: {missing}")
+
+          spec_path.write_text(json.dumps(spec, indent=2))
+
+          for path in docs.glob("v*"):
+              if path.is_dir() and path.name not in keep_dirs:
+                  shutil.rmtree(path)
+          EOF
 
       - name: Run broken link checker
-        run: |
-          # Auto-answer the prompt with yes command
-          yes "" | mintlify broken-links || test $? -eq 141
+        run: mint broken-links
         working-directory: ./docs

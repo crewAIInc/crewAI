@@ -123,12 +123,12 @@ def test_gemini_completion_initialization_parameters():
 
 
 def test_gemini_started_event_surfaces_max_output_tokens():
-    from crewai.events.event_bus import CrewAIEventsBus
+    from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallStartedEvent
 
     llm = LLM(model="google/gemini-2.0-flash-001", max_output_tokens=2000, api_key="test-key")
 
-    with patch.object(CrewAIEventsBus, "emit") as mock_emit:
+    with patch.object(crewai_event_bus, "emit") as mock_emit:
         llm._emit_call_started_event(messages="hi")
 
     event = mock_emit.call_args[1]["event"]
@@ -498,6 +498,66 @@ def test_gemini_message_formatting():
 
     assert formatted_contents[0].role == "user"
     assert formatted_contents[1].role == "model"
+
+
+def test_gemini_message_formatting_appends_user_turn_after_trailing_model_turn():
+    """
+    Gemini's generateContent API rejects a request whose history ends on a
+    model turn ("Requests ending with a model turn are not supported"). Agent
+    loops can produce this (e.g. after max-iteration handling or a guardrail
+    retry), so formatting must append a synthetic user turn to recover.
+    """
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert [content.role for content in formatted_contents] == [
+        "user",
+        "model",
+        "user",
+    ]
+    assert formatted_contents[0].parts[0].text == "Hello"
+    assert formatted_contents[1].parts[0].text == "Hi there!"
+    assert formatted_contents[2].parts[0].text == "Please continue."
+    assert test_messages == [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+
+def test_gemini_message_formatting_leaves_user_terminated_history_unchanged():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [{"role": "user", "content": "Hello"}]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert len(formatted_contents) == 1
+    assert formatted_contents[0].role == "user"
+    assert formatted_contents[0].parts[0].text == "Hello"
+
+
+def test_gemini_message_formatting_raises_on_unresolved_function_call():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [
+        {"role": "user", "content": "What's the weather?"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"function": {"name": "get_weather", "arguments": "{}"}}
+            ],
+        },
+    ]
+
+    with pytest.raises(ValueError, match="unresolved function call"):
+        llm._format_messages_for_gemini(test_messages)
 
 
 def test_gemini_streaming_parameter():

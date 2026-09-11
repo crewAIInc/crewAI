@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools.tool_failure import ToolFailureRecord
 from crewai.types.usage_metrics import UsageMetrics
 
 
@@ -30,6 +31,20 @@ class CrewOutput(BaseModel):
         ),
         default_factory=UsageMetrics,
     )
+
+    @property
+    def tool_failures(self) -> list[ToolFailureRecord]:
+        """Every tool failure recorded across all tasks, in task order.
+
+        A crew can finish successfully with a non-empty list -- agents narrate a
+        failed step and carry on. Check it before treating ``raw`` as complete.
+        """
+        return [failure for task in self.tasks_output for failure in task.tool_failures]
+
+    @property
+    def has_tool_failures(self) -> bool:
+        """Whether any tool reported a failure during this crew run."""
+        return any(task.tool_failures for task in self.tasks_output)
 
     @property
     def usage_metrics(self) -> dict[str, Any]:

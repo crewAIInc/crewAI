@@ -12,4 +12,4 @@ Please submit reports through one of the following channels:
 
 - **Please do not** disclose vulnerabilities via public GitHub issues, pull requests,
   or social media
-- Reports submitted via channels other than this Bugcrowd submission email will not be reviewed and will be dismissed
+- Reports submitted via channels other than the methods above will not be reviewed and will be dismissed

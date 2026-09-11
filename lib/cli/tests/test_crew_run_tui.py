@@ -104,8 +104,8 @@ def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
     run_crew._chain_deploy()
 
     assert create_calls == [
-        {"confirm": True, "skip_validate": True},
-        {"confirm": True, "skip_validate": True},
+        {"confirm": True, "skip_validate": True, "source": "tui"},
+        {"confirm": True, "skip_validate": True, "source": "tui"},
     ]
     assert login_calls == [True]
 
@@ -131,7 +131,7 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
 
     run_crew._chain_deploy()
 
-    assert create_calls == [{"confirm": True, "skip_validate": True}]
+    assert create_calls == [{"confirm": True, "skip_validate": True, "source": "tui"}]
     assert login_calls == []
     assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
@@ -1721,3 +1721,86 @@ async def test_declarative_flow_runs_on_tui() -> None:
     assert app._final_output == "flow result"
     assert app._crew_result == "flow result"
     assert app._flow_steps[0]["status"] == "done"
+
+
+def test_view_traces_keybinding_records_telemetry(monkeypatch) -> None:
+    """The `t` binding reaches the action directly, never on_button_pressed."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._trace_url = "https://app.crewai.com/traces/test"
+    app._telemetry = Mock()
+    opened_urls: list[str] = []
+
+    monkeypatch.setattr("webbrowser.open", lambda url: opened_urls.append(url))
+
+    app.action_view_traces()
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
+    assert opened_urls == ["https://app.crewai.com/traces/test"]
+
+
+def test_deploy_keybinding_records_telemetry() -> None:
+    """The `d` binding reaches the action directly, never on_button_pressed."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
+
+    app.action_deploy_crew()
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:deploy")
+    assert app._want_deploy is True
+    assert exits == [app._crew_result]
+
+
+def test_view_traces_before_completion_records_nothing() -> None:
+    """A keypress mid-run is a no-op, so it must not be counted as usage."""
+    app = CrewRunApp()
+    app._status = "running"
+    app._telemetry = Mock()
+
+    app.action_view_traces()
+
+    app._telemetry.feature_usage_span.assert_not_called()
+
+
+def test_deploy_before_completion_records_nothing() -> None:
+    app = CrewRunApp()
+    app._status = "running"
+    app._telemetry = Mock()
+
+    app.action_deploy_crew()
+
+    app._telemetry.feature_usage_span.assert_not_called()
+    assert app._want_deploy is False
+
+
+def test_button_press_records_exactly_once(monkeypatch) -> None:
+    """Recording moved into the action; the button must not double-count."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._trace_url = "https://app.crewai.com/traces/test"
+    app._telemetry = Mock()
+
+    monkeypatch.setattr("webbrowser.open", lambda url: None)
+
+    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces")))
+
+    assert app._telemetry.feature_usage_span.call_count == 1
+
+
+def test_finished_traces_button_still_records(monkeypatch) -> None:
+    """The button's id is swapped to btn-traces-done once a trace URL exists."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._trace_url = "https://app.crewai.com/traces/test"
+    app._telemetry = Mock()
+
+    monkeypatch.setattr("webbrowser.open", lambda url: None)
+
+    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces-done")))
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
