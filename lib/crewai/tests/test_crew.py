@@ -4989,3 +4989,40 @@ def test_memory_remember_receives_task_content():
     assert "Researcher" in raw
     assert "Expected result:" in raw
     assert "Result:" in raw
+
+
+def test_crew_copy_preserves_context_with_duplicate_task_text(researcher):
+    """Tasks sharing description/expected_output must not collide when copied.
+
+    ``Task.key`` is an md5 of description + expected_output, so identical tasks
+    share a key. Keying the clone mapping by that value made the second task
+    overwrite the first and re-wired context to the wrong clone.
+    """
+    first = Task(description="same", expected_output="same", agent=researcher)
+    second = Task(description="same", expected_output="same", agent=researcher)
+    third = Task(
+        description="third", expected_output="third", agent=researcher, context=[first]
+    )
+
+    assert first.key == second.key  # documents the collision this guards against
+
+    crew_copy = Crew(agents=[researcher], tasks=[first, second, third]).copy()
+
+    assert crew_copy.tasks[2].context[0] is crew_copy.tasks[0]
+
+
+def test_crew_copy_keeps_context_task_outside_the_crew(researcher):
+    """A context task that is not a crew member must not break copying.
+
+    ``validate_context_no_future_tasks`` skips context tasks that are not crew
+    members, so such a crew is valid and can be kicked off; copying it must not
+    raise.
+    """
+    outside = Task(description="outside", expected_output="o", agent=researcher)
+    inside = Task(
+        description="inside", expected_output="i", agent=researcher, context=[outside]
+    )
+
+    crew_copy = Crew(agents=[researcher], tasks=[inside]).copy()
+
+    assert crew_copy.tasks[0].context[0] is outside
