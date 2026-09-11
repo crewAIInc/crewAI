@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import suppress
 import contextvars
 import copy
 from datetime import datetime
+import logging
 import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -36,6 +38,9 @@ from crewai.memory.types import (
 from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+
+
+_logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -86,7 +91,7 @@ class Memory(BaseModel):
     memory_kind: Literal["memory"] = "memory"
 
     llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
-        default="gpt-5.4-mini",
+        default="gpt-4o-mini",
         description="LLM for analysis (model name or BaseLLM instance).",
     )
     storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
@@ -243,6 +248,18 @@ class Memory(BaseModel):
                 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
                 self._storage = LanceDBStorage()
+            elif self.storage == "valkey":
+                from crewai.memory.storage.valkey_storage import ValkeyStorage
+                from crewai.utilities.cache_config import parse_cache_url
+
+                conn = parse_cache_url() or {}
+                self._storage = ValkeyStorage(
+                    host=conn.get("host", "localhost"),
+                    port=conn.get("port", 6379),
+                    db=conn.get("db", 0),
+                    password=conn.get("password"),
+                    use_tls=conn.get("use_tls", False),
+                )
             else:
                 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
@@ -265,7 +282,7 @@ class Memory(BaseModel):
                 raise RuntimeError(
                     f"Memory requires an LLM for analysis but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    "  - Set OPENAI_API_KEY for the default model (gpt-5.4-mini)\n"
+                    "  - Set OPENAI_API_KEY for the default model (gpt-4o-mini)\n"
                     '  - Pass a different model: Memory(llm="anthropic/claude-3-haiku-20240307")\n'
                     '  - Pass any LLM instance: Memory(llm=LLM(model="your-model"))\n'
                     "  - To skip LLM analysis, pass all fields explicitly to remember()\n"
@@ -287,7 +304,7 @@ class Memory(BaseModel):
                 raise RuntimeError(
                     f"Memory requires an embedder for vector search but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    "  - Set OPENAI_API_KEY for the default embedder (text-embedding-3-large)\n"
+                    "  - Set OPENAI_API_KEY for the default embedder (text-embedding-3-small)\n"
                     '  - Pass a different embedder: Memory(embedder={{"provider": "google", "config": {{...}}}})\n'
                     "  - Pass a callable: Memory(embedder=my_embedding_function)\n\n"
                     f"Docs: {self._MEMORY_DOCS_URL}"
@@ -347,20 +364,60 @@ class Memory(BaseModel):
         except Exception:  # noqa: S110
             pass  # swallow everything during shutdown
 
-    def drain_writes(self) -> None:
+    def drain_writes(self, timeout_per_save: float = 60.0) -> None:
         """Block until all pending background saves have completed.
 
         Called automatically by ``recall()`` and should be called by the
-        crew at shutdown to ensure no saves are lost. Background save failures
-        are already reported through ``MemorySaveFailedEvent`` and should not
-        fail the task, crew, or flow that produced the output.
+        crew at shutdown to ensure no saves are lost.
+
+        Args:
+            timeout_per_save: Maximum seconds to wait per save operation.
+                             Default 60s. If a save times out, logs warning
+                             but continues to avoid blocking crew completion.
         """
         with self._pending_lock:
             pending = list(self._pending_saves)
-        for future in pending:
-            if future.cancelled():
-                continue
-            future.exception()  # blocks until done without re-raising failures
+
+        if pending:
+            _logger.debug(
+                "[DRAIN_WRITES] Waiting for %d pending saves...", len(pending)
+            )
+
+        failed_saves = 0
+        for i, future in enumerate(pending):
+            try:
+                _logger.debug(
+                    "[DRAIN_WRITES] Waiting for save %d/%d...", i + 1, len(pending)
+                )
+                future.result(timeout=timeout_per_save)
+                _logger.debug(
+                    "[DRAIN_WRITES] Save %d/%d completed", i + 1, len(pending)
+                )
+            except (TimeoutError, concurrent.futures.TimeoutError):  # noqa: PERF203
+                failed_saves += 1
+                _logger.warning(
+                    "[DRAIN_WRITES] Save %d/%d timed out after %ss. "
+                    "This save will be abandoned. Consider increasing timeout or checking "
+                    "LLM/embedder performance.",
+                    i + 1,
+                    len(pending),
+                    timeout_per_save,
+                )
+                # Don't raise - just log and continue to avoid blocking crew completion
+            except Exception as e:
+                failed_saves += 1
+                _logger.error(
+                    "[DRAIN_WRITES] Save %d/%d failed: %s", i + 1, len(pending), e
+                )
+                # Don't raise - just log and continue
+
+        if failed_saves > 0:
+            _logger.warning(
+                "[DRAIN_WRITES] %d/%d saves failed or timed out. "
+                "Some memories may not have been persisted.",
+                failed_saves,
+                len(pending),
+            )
 
     def close(self) -> None:
         """Drain pending saves, flush storage, and shut down the background thread pool."""
@@ -638,16 +695,12 @@ class Memory(BaseModel):
                 root_scope,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
-        except RuntimeError as e:
+        except RuntimeError:
             # The encoding pipeline uses asyncio.run() -> to_thread() internally.
             # If the process is shutting down, the default executor is closed and
             # to_thread raises "cannot schedule new futures after shutdown".
             # Silently abandon the save -- the process is exiting anyway.
-            # Any other RuntimeError must propagate so the save future's
-            # done-callback reports it via MemorySaveFailedEvent.
-            if "cannot schedule new futures" in str(e):
-                return []
-            raise
+            return []
 
         try:
             crewai_event_bus.emit(
