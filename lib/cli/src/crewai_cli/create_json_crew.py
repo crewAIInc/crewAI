@@ -888,6 +888,119 @@ def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
     return apps
 
 
+def _platform_app_name(app: str) -> str:
+    """Return the display name for a platform application slug."""
+    return (
+        dict(PLATFORM_TOOLS)
+        .get(f"platform:{app}", app.replace("_", " ").title())
+        .removesuffix(" Integration")
+    )
+
+
+def _prompt_platform_token() -> str:
+    """Explain how to obtain and securely prompt for an AMP integration token."""
+    click.secho(
+        "  To use CrewAI Platform tools, you need a CrewAI Platform Integration Token.",
+        fg="yellow",
+    )
+    click.secho(
+        "  Get your token from CrewAI AMP: https://app.crewai.com "
+        "→ Settings → Integration Tokens.",
+        fg="cyan",
+    )
+    return str(
+        click.prompt(
+            click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
+            hide_input=True,
+            prompt_suffix=click.style(" > ", fg="bright_white"),
+        )
+    ).strip()
+
+
+def _validate_platform_apps(
+    apps: list[str], application_selector: Any, client_for_selector: Any
+) -> tuple[list[str], bool]:
+    """Check selected AMP applications and return failures and token validity."""
+    failed: list[str] = []
+    for app in apps:
+        app_name = _platform_app_name(app)
+        click.echo()
+        click.secho(
+            "  Checking CrewAI Platform Integration Token and "
+            f"{app_name} integration on AMP...",
+            fg="cyan",
+        )
+        try:
+            selector = application_selector.from_string(app)
+            actions = client_for_selector(selector).get_actions([selector])
+        except Exception as error:
+            status_code = getattr(getattr(error, "response", None), "status_code", None)
+            if status_code in {401, 403}:
+                click.secho(
+                    "  ✘ CrewAI Platform Integration Token is invalid or expired",
+                    fg="red",
+                )
+                return failed, True
+            click.secho(
+                f"  ✘ {app_name} integration could not be validated: {error}",
+                fg="red",
+            )
+            failed.append(app)
+            continue
+
+        if not actions:
+            click.secho(
+                f"  ✘ {app_name} integration is not connected on CrewAI Platform",
+                fg="red",
+            )
+            failed.append(app)
+        else:
+            click.secho(
+                f"  ✔ {app_name} integration is connected on CrewAI Platform",
+                fg="green",
+            )
+    return failed, False
+
+
+def _show_platform_validation_guidance(
+    failed_apps: list[str], token_invalid: bool
+) -> None:
+    """Tell the user what to fix before revalidating AMP integrations."""
+    click.echo()
+    if token_invalid:
+        click.secho(
+            "  Check your CrewAI Platform Integration Token in AMP.",
+            fg="yellow",
+        )
+        return
+
+    failed_app_names = [_platform_app_name(app) for app in failed_apps]
+    click.secho(
+        "  Check the "
+        f"{', '.join(failed_app_names)} integration"
+        f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
+        "Platform Integration Token in AMP.",
+        fg="yellow",
+    )
+
+
+def _prompt_platform_revalidation_token() -> str:
+    """Prompt for an optional replacement token before the next validation pass."""
+    click.echo()
+    return str(
+        click.prompt(
+            click.style(
+                "  Press Enter to revalidate, or enter a replacement token",
+                fg="cyan",
+            ),
+            default="",
+            show_default=False,
+            hide_input=True,
+            prompt_suffix=click.style(" > ", fg="bright_white"),
+        )
+    ).strip()
+
+
 def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
     """Get and validate AMP authentication for selected platform applications."""
     apps = _platform_apps_from_agents(agents)
@@ -907,24 +1020,10 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             "`pip install 'crewai[tools]'`."
         ) from error
 
+    token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
     while True:
-        token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
         if not token:
-            click.secho(
-                "  To use CrewAI Platform tools, you need a CrewAI Platform "
-                "Integration Token.",
-                fg="yellow",
-            )
-            click.secho(
-                "  Get your token from CrewAI AMP: https://app.crewai.com "
-                "→ Settings → Integration Tokens.",
-                fg="cyan",
-            )
-            token = click.prompt(
-                click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
-                hide_input=True,
-                prompt_suffix=click.style(" > ", fg="bright_white"),
-            ).strip()
+            token = _prompt_platform_token()
         if not token:
             click.secho(
                 "  A CrewAI Platform Integration Token is required to validate "
@@ -934,52 +1033,10 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             continue
 
         os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
-        failed: list[str] = []
-        token_invalid = False
-        for app in apps:
-            app_name = (
-                dict(PLATFORM_TOOLS)
-                .get(f"platform:{app}", app.replace("_", " ").title())
-                .removesuffix(" Integration")
-            )
-            click.echo()
-            click.secho(
-                "  Checking CrewAI Platform Integration Token and "
-                f"{app_name} integration on AMP...",
-                fg="cyan",
-            )
-            try:
-                selector = ApplicationSelector.from_string(app)
-                actions = client_for_selector(selector).get_actions([selector])
-                if not actions:
-                    failed.append(app)
-                    click.secho(
-                        f"  ✘ {app_name} integration is not connected on CrewAI Platform",
-                        fg="red",
-                    )
-                else:
-                    click.secho(
-                        f"  ✔ {app_name} integration is connected on CrewAI Platform",
-                        fg="green",
-                    )
-            except Exception as error:
-                status_code = getattr(
-                    getattr(error, "response", None), "status_code", None
-                )
-                if status_code in {401, 403}:
-                    click.secho(
-                        "  ✘ CrewAI Platform Integration Token is invalid or expired",
-                        fg="red",
-                    )
-                    token_invalid = True
-                    break
-                click.secho(
-                    f"  ✘ {app_name} integration could not be validated: {error}",
-                    fg="red",
-                )
-                failed.append(app)
-
-        if not failed and not token_invalid:
+        failed_apps, token_invalid = _validate_platform_apps(
+            apps, ApplicationSelector, client_for_selector
+        )
+        if not failed_apps and not token_invalid:
             _success("CrewAI Platform integration token set", bold=True)
             _success(
                 f"{len(apps)} CrewAI Platform integration"
@@ -987,37 +1044,8 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             )
             return token
 
-        click.echo()
-        if token_invalid:
-            click.secho(
-                "  Check your CrewAI Platform Integration Token in AMP.",
-                fg="yellow",
-            )
-        else:
-            failed_app_names = [
-                dict(PLATFORM_TOOLS)
-                .get(f"platform:{app}", app.replace("_", " ").title())
-                .removesuffix(" Integration")
-                for app in failed
-            ]
-            click.secho(
-                "  Check the "
-                f"{', '.join(failed_app_names)} integration"
-                f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
-                "Platform Integration Token in AMP.",
-                fg="yellow",
-            )
-        click.echo()
-        replacement_token = click.prompt(
-            click.style(
-                "  Press Enter to revalidate, or enter a replacement token",
-                fg="cyan",
-            ),
-            default="",
-            show_default=False,
-            hide_input=True,
-            prompt_suffix=click.style(" > ", fg="bright_white"),
-        ).strip()
+        _show_platform_validation_guidance(failed_apps, token_invalid)
+        replacement_token = _prompt_platform_revalidation_token()
         if replacement_token:
             token = replacement_token
             os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
