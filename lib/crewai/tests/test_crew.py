@@ -253,6 +253,58 @@ def test_context_no_future_tasks(researcher, writer):
         Crew(tasks=[task1, task2, task3, task4], agents=[researcher, writer])
 
 
+def test_context_no_circular_dependencies(researcher, writer):
+    task1 = Task(
+        description="Task 1",
+        expected_output="output",
+        agent=researcher,
+    )
+    task2 = Task(
+        description="Task 2",
+        expected_output="output",
+        agent=researcher,
+    )
+    task3 = Task(
+        description="Task 3",
+        expected_output="output",
+        agent=researcher,
+    )
+
+    task1.context = [task2]
+    task2.context = [task3]
+    task3.context = [task1]
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Task context dependencies contain a circular dependency: "
+            "Task 1 -> Task 2 -> Task 3 -> Task 1."
+        ),
+    ):
+        Crew(tasks=[task1, task2, task3], agents=[researcher, writer])
+
+
+def test_context_no_circular_dependencies_handles_long_chains(researcher, writer):
+    tasks = [
+        Task(
+            description=f"Task {index}",
+            expected_output="output",
+            agent=researcher,
+        )
+        for index in range(1100)
+    ]
+    for task, context_task in zip(tasks, tasks[1:]):
+        task.context = [context_task]
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Task 'Task 0' has a context dependency on a future task 'Task 1', which is not allowed."
+        ),
+    ):
+        Crew(tasks=tasks, agents=[researcher, writer])
+
+
 def test_crew_config_with_wrong_keys():
     no_tasks_config = json.dumps(
         {
