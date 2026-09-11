@@ -1,0 +1,26 @@
+# SupabaseTool
+
+The `SupabaseTool` allows CrewAI agents to interact with Supabase databases.
+
+## Supported Actions
+- `select`
+- `insert`
+- `update`
+- `delete`
+
+## Environment Variables
+- SUPABASE_URL
+- SUPABASE_KEY
+
+## Example Usage
+
+```python
+from crewai.tools import SupabaseTool
+
+tool = SupabaseTool()
+
+result = tool.run({
+    "action": "select",
+    "table": "messages",
+    "filters": {"id": "eq.1"}
+})
