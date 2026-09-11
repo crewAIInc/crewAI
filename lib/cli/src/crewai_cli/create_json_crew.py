@@ -104,6 +104,7 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 # ── Common tools for picker ────────────────────────────────────
 
 _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
+    ("CrewAI Platform", PLATFORM_TOOLS),
     (
         "Search & Research",
         [
@@ -219,7 +220,6 @@ _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
             ("PatronusLocalEvaluatorTool", "Run local Patronus evaluations"),
         ],
     ),
-    ("CrewAI Platform", PLATFORM_TOOLS),
 ]
 
 _FLAT_TOOLS: list[tuple[str, str]] = [
@@ -306,6 +306,9 @@ def _show_interpolation_hint(kind: str) -> None:
 
 
 def _tool_label(name: str, description: str) -> str:
+    if name.startswith("platform:"):
+        app_name = description.removesuffix(" Integration").replace(" ", "")
+        return f"{description:<48s} Platform: {app_name.replace(' ', '')}Integration"
     return f"{description:<48s} {name}"
 
 

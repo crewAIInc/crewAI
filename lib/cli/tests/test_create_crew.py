@@ -634,7 +634,10 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
             return [], platform_row
 
         github = next(
-            idx for idx, label in enumerate(labels) if label.endswith("platform:github")
+            idx
+            for idx, label in enumerate(labels)
+            if label.startswith("GitHub Integration")
+            and label.endswith("Platform: GitHubIntegration")
         )
         return [github], None
 
