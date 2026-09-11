@@ -6,7 +6,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import suppress
 import contextvars
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -877,7 +877,7 @@ class Memory(BaseModel):
         existing = self._storage.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         updates: dict[str, Any] = {"last_accessed": now}
         if content is not None:
             updates["content"] = content

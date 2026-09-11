@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -44,11 +44,11 @@ class MemoryRecord(BaseModel):
         description="Importance score from 0.0 to 1.0, affects retrieval ranking.",
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="When the memory was created.",
     )
     last_accessed: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="When the memory was last accessed.",
     )
     embedding: list[float] | None = Field(
@@ -361,7 +361,7 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
+    age_seconds = (datetime.now(timezone.utc) - _ensure_aware(record.created_at)).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 
@@ -378,3 +378,10 @@ def compute_composite_score(
         reasons.append("importance")
 
     return composite, reasons
+
+
+def _ensure_aware(dt: datetime) -> datetime:
+    """Ensure datetime is timezone-aware, assuming UTC if naive."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
