@@ -16,6 +16,7 @@ from rich.text import Text
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
+from crewai_cli.platform_tools_catalog import PLATFORM_TOOLS
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     enable_prompt_line_editing,
@@ -103,6 +104,7 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 # ── Common tools for picker ────────────────────────────────────
 
 _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
+    ("CrewAI Platform", PLATFORM_TOOLS),
     (
         "Search & Research",
         [
@@ -304,6 +306,9 @@ def _show_interpolation_hint(kind: str) -> None:
 
 
 def _tool_label(name: str, description: str) -> str:
+    if name.startswith("platform:"):
+        app_name = description.removesuffix(" Integration").replace(" ", "")
+        return f"{description:<48s} Platform: {app_name.replace(' ', '')}Integration"
     return f"{description:<48s} {name}"
 
 
@@ -351,6 +356,7 @@ def _select_tools() -> list[str]:
     selected: set[str] = set()
     expanded: str | None = None
     focus_category: str | None = None
+    first_render = True
 
     while True:
         labels: list[str] = []
@@ -387,13 +393,14 @@ def _select_tools() -> list[str]:
                     labels.append(_tool_label(name, desc))
 
         indices, action = pick_many(
-            "Tools (space to toggle, enter to confirm):",
+            "Tools (space to toggle, enter to confirm):" if first_render else "",
             labels,
             action_indices=action_indices,
             separator_indices=separator_indices,
             preselected=preselected,
             initial_cursor=initial_cursor,
         )
+        first_render = False
 
         # Carry over toggles made on this screen; tools not visible in this
         # render keep their previous state.
