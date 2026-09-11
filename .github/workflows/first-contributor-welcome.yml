@@ -1,7 +1,7 @@
 name: Welcome First-Time Contributors
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 
 permissions:
