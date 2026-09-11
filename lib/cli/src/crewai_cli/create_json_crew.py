@@ -356,6 +356,7 @@ def _select_tools() -> list[str]:
     selected: set[str] = set()
     expanded: str | None = None
     focus_category: str | None = None
+    first_render = True
 
     while True:
         labels: list[str] = []
@@ -392,13 +393,14 @@ def _select_tools() -> list[str]:
                     labels.append(_tool_label(name, desc))
 
         indices, action = pick_many(
-            "Tools (space to toggle, enter to confirm):",
+            "Tools (space to toggle, enter to confirm):" if first_render else "",
             labels,
             action_indices=action_indices,
             separator_indices=separator_indices,
             preselected=preselected,
             initial_cursor=initial_cursor,
         )
+        first_render = False
 
         # Carry over toggles made on this screen; tools not visible in this
         # render keep their previous state.
