@@ -134,14 +134,15 @@ def test_bedrock_completion_is_used_when_bedrock_provider():
     assert llm.model == "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
 
-def test_bedrock_completion_module_is_imported():
+def test_bedrock_completion_module_is_imported(monkeypatch):
     """
     Test that the completion module is properly imported when using Bedrock provider
     """
     module_name = "crewai.llms.providers.bedrock.completion"
 
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    # Restore the original module after this test so collected class references
+    # still match the provider returned by LLM in subsequent tests.
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
@@ -601,24 +602,31 @@ def test_bedrock_tool_conversion():
     assert "inputSchema" in bedrock_tools[0]["toolSpec"]
 
 
-def test_bedrock_environment_variable_credentials(bedrock_mocks):
-    """
-    Test that AWS credentials are properly loaded from environment
-    """
-    mock_session_class, _ = bedrock_mocks
+def test_bedrock_environment_variable_credentials():
+    """Pass AWS credentials and region from the environment to boto3."""
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "AWS_ACCESS_KEY_ID": "test-access-key-123",
+                "AWS_SECRET_ACCESS_KEY": "test-secret-key-456",
+                "AWS_DEFAULT_REGION": "eu-west-1",
+            },
+            clear=False,
+        ),
+        patch(
+            "crewai.llms.providers.bedrock.completion.Session"
+        ) as mock_session_class,
+    ):
+        mock_session_class.return_value.client.return_value = MagicMock()
+        LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    mock_session_class.reset_mock()
-
-    with patch.dict(os.environ, {
-        "AWS_ACCESS_KEY_ID": "test-access-key-123",
-        "AWS_SECRET_ACCESS_KEY": "test-secret-key-456"
-    }):
-        llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
-
-        assert mock_session_class.called
-        call_kwargs = mock_session_class.call_args[1] if mock_session_class.call_args else {}
-        assert call_kwargs.get('aws_access_key_id') == "test-access-key-123"
-        assert call_kwargs.get('aws_secret_access_key') == "test-secret-key-456"
+    mock_session_class.assert_called_once_with(
+        aws_access_key_id="test-access-key-123",
+        aws_secret_access_key="test-secret-key-456",
+        aws_session_token=None,
+        region_name="eu-west-1",
+    )
 
 
 def test_bedrock_token_usage_tracking():

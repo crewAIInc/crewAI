@@ -170,7 +170,7 @@ ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "cla
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
-    "gpt-4o-mini": 200000,
+    "gpt-4o-mini": 128000,
     "gpt-5.4-mini": 200000,
     "gpt-5.6": 1050000,  # sol, terra, luna, and the gpt-5.6 alias
     "gpt-4-turbo": 128000,
@@ -573,7 +573,8 @@ class LLM(BaseLLM):
             return True
 
         if provider == "dashscope":
-            return model_lower.startswith("qwen")
+            # DashScope's OpenAI-compatible endpoint serves Qwen plus DeepSeek/Kimi/GLM/etc.
+            return True
 
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything
@@ -661,6 +662,19 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        # Bedrock namespaces Anthropic models as "anthropic.claude-*", optionally
+        # region-prefixed ("us.anthropic.claude-*"). That form also satisfies the
+        # anthropic pattern below, so it has to be settled first.
+        if "anthropic." in model.lower():
+            return "bedrock"
+
+        # Only anthropic and gemini have prefixes unambiguous enough to infer from.
+        # Bedrock matches any model containing a dot (so "gpt-3.5-turbo") and Azure
+        # matches every OpenAI prefix, so both would steal models from openai here.
+        for provider in ("anthropic", "gemini"):
+            if cls._matches_provider_pattern(model, provider):
+                return provider
 
         return "openai"
 
@@ -2377,6 +2391,14 @@ class LLM(BaseLLM):
             and messages[-1]["role"] == "assistant"
         ):
             return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
+
+        # Handle Gemini models - they require the last message to not be 'assistant'
+        if (
+            ("gemini" in self.model.lower() or "google" in self.model.lower())
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
+            return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
 
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]

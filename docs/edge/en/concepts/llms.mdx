@@ -1525,6 +1525,38 @@ llm = LLM(
     llm = LLM(model="gpt-4")
     ```
   </Tab>
+  <Tab title="Gateway Errors">
+    <Tip>
+      Gateways such as OpenRouter return `200 OK` as soon as the upstream provider accepts the request, so a provider timeout arrives in the response body instead of the status code.
+    </Tip>
+
+    CrewAI raises the same exception the upstream code would have produced as a real HTTP status, so a masked failure is caught by the retry handling you already have:
+
+    ```python
+    import openai
+    from pydantic import BaseModel
+
+    from crewai import LLM
+
+
+    class Report(BaseModel):
+        summary: str
+
+
+    llm = LLM(model="openrouter/z-ai/glm-5.3", response_format=Report)
+
+    try:
+        result = llm.call("Summarize the incident", response_model=Report)
+    except openai.InternalServerError as e:
+        # "z-ai/glm-5.3 via openrouter.ai returned HTTP 200 with an upstream error
+        #  and no choices: The operation was aborted (upstream code 504)"
+        print(f"Upstream provider failed, safe to retry: {e}")
+    ```
+
+    <Warning>
+      A large or deeply nested `response_model` makes upstream timeouts more likely. Treat these as transient provider failures, not as the model producing malformed structured output.
+    </Warning>
+  </Tab>
   <Tab title="Context Length">
     <Tip>
       Use larger context models for extensive tasks

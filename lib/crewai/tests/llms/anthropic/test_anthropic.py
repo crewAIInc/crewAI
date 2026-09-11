@@ -3,6 +3,7 @@ import sys
 import types
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
+from pydantic import BaseModel
 
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.crew import Crew
@@ -1761,3 +1762,196 @@ def test_anthropic_missing_cache_fields_default_to_zero():
     usage = llm._extract_anthropic_token_usage(mock_response)
     assert usage["cached_prompt_tokens"] == 0
     assert usage["cache_creation_tokens"] == 0
+
+
+# --- Native structured outputs: model gate -----------------------------------
+
+NATIVE_STRUCTURED_OUTPUT_MODELS_UNDER_TEST = [
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-fable-5",
+    "claude-opus-4-8",
+    "claude-haiku-4-5",
+]
+
+
+class _Answer(BaseModel):
+    answer: str
+
+
+_ANSWER_JSON = '{"answer": "42"}'
+
+_WEATHER_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get the weather for a city",
+        "parameters": {
+            "type": "object",
+            "properties": {"city": {"type": "string"}},
+            "required": ["city"],
+        },
+    },
+}
+
+
+def _structured_text_response():
+    """A response whose single text block holds the structured JSON payload."""
+    from anthropic.types.beta import BetaTextBlock
+
+    mock_response = MagicMock()
+    mock_response.content = [
+        BetaTextBlock(type="text", text=_ANSWER_JSON, citations=None)
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    mock_response.stop_reason = "end_turn"
+    mock_response.id = "msg_structured"
+    return mock_response
+
+
+def _structured_stream_events():
+    return [
+        types.SimpleNamespace(
+            type="content_block_delta",
+            index=0,
+            delta=types.SimpleNamespace(type="text_delta", text=_ANSWER_JSON),
+        )
+    ]
+
+
+@pytest.mark.parametrize("model", NATIVE_STRUCTURED_OUTPUT_MODELS_UNDER_TEST)
+def test_native_structured_output_sync(model):
+    """Current Claude models ask the API for JSON directly, not via a forced tool."""
+    from crewai.llms.providers.anthropic.completion import (
+        ANTHROPIC_STRUCTURED_OUTPUTS_BETA,
+        AnthropicCompletion,
+    )
+
+    llm = AnthropicCompletion(model=model)
+    mock_client = MagicMock()
+    mock_client.beta.messages.create.return_value = _structured_text_response()
+    llm._client = mock_client
+
+    result = llm.call("What is the answer?", response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    kwargs = mock_client.beta.messages.create.call_args.kwargs
+    assert ANTHROPIC_STRUCTURED_OUTPUTS_BETA in kwargs["betas"]
+    assert kwargs["extra_body"]["output_format"]["type"] == "json_schema"
+    mock_client.messages.create.assert_not_called()
+
+
+@pytest.mark.parametrize("model", NATIVE_STRUCTURED_OUTPUT_MODELS_UNDER_TEST)
+@pytest.mark.asyncio
+async def test_native_structured_output_async(model):
+    from crewai.llms.providers.anthropic.completion import (
+        ANTHROPIC_STRUCTURED_OUTPUTS_BETA,
+        AnthropicCompletion,
+    )
+
+    llm = AnthropicCompletion(model=model)
+    mock_client = MagicMock()
+    mock_client.beta.messages.create = AsyncMock(
+        return_value=_structured_text_response()
+    )
+    llm._async_client = mock_client
+
+    result = await llm.acall("What is the answer?", response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    kwargs = mock_client.beta.messages.create.call_args.kwargs
+    assert ANTHROPIC_STRUCTURED_OUTPUTS_BETA in kwargs["betas"]
+    assert kwargs["extra_body"]["output_format"]["type"] == "json_schema"
+
+
+@pytest.mark.parametrize("model", NATIVE_STRUCTURED_OUTPUT_MODELS_UNDER_TEST)
+def test_native_structured_output_sync_streaming(model):
+    from crewai.llms.providers.anthropic.completion import (
+        ANTHROPIC_STRUCTURED_OUTPUTS_BETA,
+        AnthropicCompletion,
+    )
+
+    llm = AnthropicCompletion(model=model, stream=True)
+    mock_client = MagicMock()
+    mock_client.beta.messages.stream.return_value = _SyncAnthropicStream(
+        _structured_stream_events(), _structured_text_response()
+    )
+    llm._client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = llm.call("What is the answer?", response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    kwargs = mock_client.beta.messages.stream.call_args.kwargs
+    assert ANTHROPIC_STRUCTURED_OUTPUTS_BETA in kwargs["betas"]
+    assert kwargs["extra_body"]["output_format"]["type"] == "json_schema"
+
+
+@pytest.mark.parametrize("model", NATIVE_STRUCTURED_OUTPUT_MODELS_UNDER_TEST)
+@pytest.mark.asyncio
+async def test_native_structured_output_async_streaming(model):
+    from crewai.llms.providers.anthropic.completion import (
+        ANTHROPIC_STRUCTURED_OUTPUTS_BETA,
+        AnthropicCompletion,
+    )
+
+    llm = AnthropicCompletion(model=model, stream=True)
+    mock_client = MagicMock()
+    mock_client.beta.messages.stream.return_value = _AsyncAnthropicStream(
+        _structured_stream_events(), _structured_text_response()
+    )
+    llm._async_client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = await llm.acall("What is the answer?", response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    kwargs = mock_client.beta.messages.stream.call_args.kwargs
+    assert ANTHROPIC_STRUCTURED_OUTPUTS_BETA in kwargs["betas"]
+    assert kwargs["extra_body"]["output_format"]["type"] == "json_schema"
+
+
+def test_native_structured_output_keeps_caller_tools():
+    """The native path leaves the caller's tools in place; the fallback replaces them."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.beta.messages.create.return_value = _structured_text_response()
+    llm._client = mock_client
+
+    llm.call("What is the answer?", tools=[_WEATHER_TOOL], response_model=_Answer)
+
+    sent_tools = mock_client.beta.messages.create.call_args.kwargs["tools"]
+    assert [tool["name"] for tool in sent_tools] == ["get_weather"]
+
+
+def test_tool_fallback_still_used_for_models_without_native_support():
+    """Models outside the supported set keep the forced-tool-call behavior."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-haiku-20241022")
+    mock_response = MagicMock()
+    mock_response.content = [
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "structured_output",
+            "input": {"answer": "42"},
+        }
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_fallback"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("What is the answer?", response_model=_Answer)
+
+    assert result == _Answer(answer="42")
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert kwargs["tool_choice"] == {"type": "tool", "name": "structured_output"}
+    assert "betas" not in kwargs
+    mock_client.beta.messages.create.assert_not_called()

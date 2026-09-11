@@ -1374,6 +1374,38 @@ llm = LLM(
     llm = LLM(model="gpt-4")
     ```
   </Tab>
+  <Tab title="أخطاء البوابة">
+    <Tip>
+      تُعيد البوابات مثل OpenRouter الرمز `200 OK` بمجرد قبول المزود الأساسي للطلب، لذلك يصل انتهاء مهلة المزود داخل جسم الاستجابة بدلًا من رمز الحالة.
+    </Tip>
+
+    تُطلق CrewAI الاستثناء نفسه الذي كان رمز الحالة الأصلي سيُنتجه، ومن ثم يلتقط منطق إعادة المحاولة الموجود لديك هذا الفشل المُقنَّع:
+
+    ```python
+    import openai
+    from pydantic import BaseModel
+
+    from crewai import LLM
+
+
+    class Report(BaseModel):
+        summary: str
+
+
+    llm = LLM(model="openrouter/z-ai/glm-5.3", response_format=Report)
+
+    try:
+        result = llm.call("Summarize the incident", response_model=Report)
+    except openai.InternalServerError as e:
+        # "z-ai/glm-5.3 via openrouter.ai returned HTTP 200 with an upstream error
+        #  and no choices: The operation was aborted (upstream code 504)"
+        print(f"Upstream provider failed, safe to retry: {e}")
+    ```
+
+    <Warning>
+      إن استخدام `response_model` كبير أو متداخل بعمق يزيد احتمال انتهاء مهلة المزود. تعامل مع هذه الحالات كأعطال مؤقتة في المزود، وليس كإنتاج النموذج مخرجات منظمة تالفة.
+    </Warning>
+  </Tab>
   <Tab title="طول السياق">
     <Tip>
       استخدم نماذج سياق أكبر للمهام الواسعة

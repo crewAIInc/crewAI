@@ -954,6 +954,38 @@ Saiba como obter o máximo da configuração do seu LLM:
     llm = LLM(model="gpt-4")
     ```
   </Tab>
+  <Tab title="Erros de Gateway">
+    <Tip>
+      Gateways como o OpenRouter retornam `200 OK` assim que o provedor upstream aceita a requisição, então um timeout do provedor chega no corpo da resposta em vez do código de status.
+    </Tip>
+
+    O CrewAI lança a mesma exceção que o código upstream produziria como um status HTTP real, portanto uma falha mascarada é capturada pelo tratamento de retry que você já possui:
+
+    ```python
+    import openai
+    from pydantic import BaseModel
+
+    from crewai import LLM
+
+
+    class Report(BaseModel):
+        summary: str
+
+
+    llm = LLM(model="openrouter/z-ai/glm-5.3", response_format=Report)
+
+    try:
+        result = llm.call("Summarize the incident", response_model=Report)
+    except openai.InternalServerError as e:
+        # "z-ai/glm-5.3 via openrouter.ai returned HTTP 200 with an upstream error
+        #  and no choices: The operation was aborted (upstream code 504)"
+        print(f"Upstream provider failed, safe to retry: {e}")
+    ```
+
+    <Warning>
+      Um `response_model` grande ou profundamente aninhado aumenta a chance de timeouts upstream. Trate esses casos como falhas transitórias do provedor, e não como o modelo produzindo saída estruturada malformada.
+    </Warning>
+  </Tab>
   <Tab title="Comprimento do Contexto">
     <Tip>
       Use modelos de contexto expandido para tarefas extensas
