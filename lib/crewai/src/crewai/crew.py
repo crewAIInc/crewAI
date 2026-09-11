@@ -1047,6 +1047,7 @@ class Crew(FlowTrackable, BaseModel):
 
         execution_token = begin_execution()
 
+        self._reset_usage_metrics()
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
@@ -1264,6 +1265,7 @@ class Crew(FlowTrackable, BaseModel):
 
         execution_token = begin_execution()
 
+        self._reset_usage_metrics()
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
@@ -2068,6 +2070,7 @@ class Crew(FlowTrackable, BaseModel):
             )
             self.tasks[i].output = task_output
 
+        self._reset_usage_metrics()
         self._logging_color = "bold_blue"
         return self._execute_tasks(self.tasks, start_index, True)
 
@@ -2201,28 +2204,46 @@ class Crew(FlowTrackable, BaseModel):
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
 
+    def _usage_agents(self) -> list[BaseAgent]:
+        """Return each distinct agent that can do work in this crew.
+
+        Task agents missing from ``agents`` and the manager are included. The
+        list is de-duplicated by identity, so an agent assigned to several
+        tasks appears once.
+        """
+        agents: list[BaseAgent] = []
+        seen: set[int] = set()
+        for agent in (
+            *self.agents,
+            *(task.agent for task in self.tasks),
+            self.manager_agent,
+        ):
+            if agent is not None and id(agent) not in seen:
+                seen.add(id(agent))
+                agents.append(agent)
+        return agents
+
+    def _reset_usage_metrics(self) -> None:
+        """Clear every agent's usage so a run reports only its own calls."""
+        for agent in self._usage_agents():
+            agent._usage_metrics = UsageMetrics()
+
     def calculate_usage_metrics(self) -> UsageMetrics:
-        """Calculates and returns the usage metrics."""
+        """Return the token usage the crew's agents accrued in the latest run.
+
+        Each LLM call is credited to the agent that made it when the call
+        completes, so an LLM shared by several agents counts each call once
+        and tasks running concurrently cannot overlap.
+        """
         total_usage_metrics = UsageMetrics()
 
-        for agent in self.agents:
-            if isinstance(agent.llm, BaseLLM):
-                llm_usage = agent.llm.get_token_usage_summary()
-
-                total_usage_metrics.add_usage_metrics(llm_usage)
-            else:
-                if hasattr(agent, "_token_process"):
-                    token_sum = agent._token_process.get_summary()
-                    total_usage_metrics.add_usage_metrics(token_sum)
-
-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
-            token_sum = self.manager_agent._token_process.get_summary()
-            total_usage_metrics.add_usage_metrics(token_sum)
-
-        if self.manager_agent:
-            if isinstance(self.manager_agent.llm, BaseLLM):
-                llm_usage = self.manager_agent.llm.get_token_usage_summary()
-                total_usage_metrics.add_usage_metrics(llm_usage)
+        for agent in self._usage_agents():
+            total_usage_metrics.add_usage_metrics(agent._usage_metrics)
+            if isinstance(getattr(agent, "llm", None), BaseLLM):
+                continue
+            token_process = getattr(agent, "_token_process", None)
+            if token_process is not None:
+                total_usage_metrics.add_usage_metrics(token_process.get_summary())
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
