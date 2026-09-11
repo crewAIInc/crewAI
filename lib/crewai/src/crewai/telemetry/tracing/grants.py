@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from ipaddress import ip_address
 import logging
 import os
 from threading import Lock
@@ -54,8 +55,22 @@ class TraceGrant:
     expires_at: datetime
 
 
+def _is_local_collector(hostname: str) -> bool:
+    hostname = hostname.rstrip(".")
+    if hostname == "localhost" or hostname.endswith(".localhost"):
+        return True
+    try:
+        return ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
 class TraceGrantClient:
-    """Use credentials only with AMP; trace payloads never pass through here."""
+    """Use credentials only with AMP; trace payloads never pass through here.
+
+    Collector grants require HTTPS, except local-development HTTP endpoints
+    on localhost, its subdomains, or loopback IP addresses.
+    """
 
     def __init__(self, amp_credential: str | None, *, base_url: str | None = None):
         if amp_credential is not None and not amp_credential.strip():
@@ -95,7 +110,13 @@ class TraceGrantClient:
                 or str(UUID(data["execution_uuid"])) != execution_uuid
                 or not isinstance(data["token"], str)
                 or not data["token"].strip()
-                or endpoint.scheme not in {"http", "https"}
+                or not (
+                    endpoint.scheme == "https"
+                    or (
+                        endpoint.scheme == "http"
+                        and _is_local_collector(endpoint.hostname or "")
+                    )
+                )
                 or not endpoint.hostname
                 or endpoint.username is not None
                 or endpoint.password is not None

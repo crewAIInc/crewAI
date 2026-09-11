@@ -29,20 +29,33 @@ from crewai.telemetry.tracing.session import TraceSession
 logger = logging.getLogger(__name__)
 
 
+def _positive_limit(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+        if value > 0:
+            return value
+    except ValueError:
+        pass
+    logger.warning("Invalid %s; using default limit %d", name, default)
+    return default
+
+
 class EphemeralSpanBuffer(SpanExporter):
     """Retain recent spans within count and encoded OTLP byte limits.
 
     Defaults are 1,000 spans and 8 MiB, configurable with
     ``CREWAI_EPHEMERAL_TRACE_MAX_SPANS`` and ``CREWAI_EPHEMERAL_TRACE_MAX_BYTES``.
+    Invalid or nonpositive limits warn and fall back to these defaults.
     Overflow evicts the oldest spans; an individually oversized span is dropped.
     Nothing leaves the process through ``export``.
     """
 
     def __init__(self) -> None:
-        self._max_spans = int(os.getenv("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", "1000"))
-        self._max_bytes = int(os.getenv("CREWAI_EPHEMERAL_TRACE_MAX_BYTES", "8388608"))
-        if self._max_spans <= 0 or self._max_bytes <= 0:
-            raise ValueError("Ephemeral trace buffer limits must be positive integers")
+        self._max_spans = _positive_limit("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", 1000)
+        self._max_bytes = _positive_limit("CREWAI_EPHEMERAL_TRACE_MAX_BYTES", 8388608)
         self._spans: deque[tuple[ReadableSpan, int]] = deque()
         self._size = 0
         self._dropped = 0
@@ -123,6 +136,7 @@ def ephemeral_tracing(execution_uuid: str) -> Iterator[TraceSession]:
     session = TraceSession(execution_uuid, processors=[SimpleSpanProcessor(buffer)])
     try:
         yield session
+        session.finish_spans()
         if session.flush():
             buffer.share(execution_uuid)
     finally:

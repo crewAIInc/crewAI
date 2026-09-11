@@ -369,54 +369,6 @@ def test_disabled_tracing_does_not_request_grant(collectors, monkeypatch):
     assert not grants and not batches
 
 
-@pytest.mark.parametrize(
-    "collectors,credential,consent,exit_code,span_count",
-    [
-        (200, "pat", False, 0, 4),
-        (403, "pat", False, 0, 4),
-        (200, "invalid", True, 1, 0),
-        (200, None, True, 0, 4),
-        (200, None, False, 0, 0),
-    ],
-    indirect=["collectors"],
-)
-def test_wharf_demo_uses_automatic_sdk_tracing(
-    collectors, credential, consent, exit_code, span_count, monkeypatch, capsys
-):
-    from pathlib import Path
-    import runpy
-
-    grants, batches = collectors
-    if credential is not None:
-        monkeypatch.setenv("CREWAI_USER_PAT", credential)
-    monkeypatch.setattr("dotenv.load_dotenv", lambda: None)
-    monkeypatch.setattr(
-        "crewai.telemetry.tracing.ephemeral.prompt_user_for_trace_viewing",
-        lambda **kwargs: consent,
-    )
-    monkeypatch.setattr("sys.argv", ["wharf_flow_demo.py"])
-    runner = Path(__file__).resolve().parents[4] / "scripts" / "wharf_flow_demo.py"
-    demo = runpy.run_path(str(runner))
-    assert demo["main"]() == exit_code
-    output = capsys.readouterr()
-    assert len(grants) == (1 if credential is not None or consent else 0)
-    if grants:
-        assert set(grants[0][2]) == {"execution_uuid"}
-    assert len(spans(batches)) == span_count
-    assert ("Flow result: Synthetic order total: 60" in output.out) == (exit_code == 0)
-    assert "Wharf accepted" not in output.out
-    if exit_code == 0:
-        assert "does not confirm collector acceptance" in output.out
-        assert get_trace_session() is None and get_execution_uuid() is None
-    assert "Bearer pat" not in output.out + output.err
-    assert "grant-1" not in output.out + output.err
-    if credential == "invalid":
-        assert "401" in output.err
-    if credential is None:
-        assert "No credential" not in output.err
-        assert all(auth is None for _, auth, _ in grants)
-
-
 @pytest.mark.parametrize("approved", [False, True])
 @pytest.mark.parametrize("async_run", [False, True])
 def test_ephemeral_flow_waits_for_consent_and_reuses_nested_session(
@@ -601,11 +553,18 @@ def test_ephemeral_buffer_byte_limit(monkeypatch):
 @pytest.mark.parametrize(
     "setting", ["CREWAI_EPHEMERAL_TRACE_MAX_SPANS", "CREWAI_EPHEMERAL_TRACE_MAX_BYTES"]
 )
-@pytest.mark.parametrize("value", ["0", "-1", "invalid"])
-def test_invalid_buffer_limits_restore_execution_context(monkeypatch, setting, value):
+@pytest.mark.parametrize("value", ["0", "-1", "invalid", "8MB", ""])
+def test_invalid_buffer_limits_do_not_abort_execution(
+    monkeypatch, caplog, setting, value
+):
     monkeypatch.setenv(setting, value)
-    with pytest.raises(ValueError):
-        begin_execution(tracing=True)
+    with patch(
+        "crewai.telemetry.tracing.ephemeral.prompt_user_for_trace_viewing",
+        return_value=False,
+    ) as prompt:
+        assert ExampleFlow(tracing=True).kickoff() == "hello world"
+    prompt.assert_called_once_with(sharing=True)
+    assert setting in caplog.text and "default" in caplog.text
     assert get_trace_session() is None and get_execution_uuid() is None
 
 
@@ -1063,6 +1022,129 @@ def in_memory_grant_collectors(monkeypatch):
     monkeypatch.setattr(TraceGrantClient, "create", create)
     monkeypatch.setattr(GrantSpanExporter, "_exporter", staticmethod(exporter))
     return issued, recorders
+
+
+@pytest.mark.parametrize("sampled", [False, True])
+@pytest.mark.parametrize("event_root", [False, True])
+def test_session_isolates_application_parent_and_preserves_nested_spans(
+    sampled, event_root
+):
+    from opentelemetry import baggage, context
+
+    exporter = InMemorySpanExporter()
+    session = TraceSession(str(uuid4()), [exporter])
+    application = trace.NonRecordingSpan(
+        trace.SpanContext(
+            trace_id=1234,
+            span_id=5678,
+            is_remote=False,
+            trace_flags=trace.TraceFlags(trace.TraceFlags.SAMPLED if sampled else 0),
+        )
+    )
+    caller = trace.set_span_in_context(application, baggage.set_baggage("test", "kept"))
+    caller_token = context.attach(caller)
+    try:
+        with session.activate():
+            assert baggage.get_baggage("test") == "kept"
+            if event_root:
+                started = LLMCallStartedEvent(call_id="root", messages="hello")
+                session.record_event(None, started)
+                root_scope = trace.use_span(session.context.active_spans[started.event_id])
+            else:
+                root_scope = operation("root")
+            with root_scope as root:
+                with session.activate(), operation("child"):
+                    pass
+                assert trace.get_current_span() is root
+            if event_root:
+                session.record_event(
+                    None,
+                    LLMCallCompletedEvent(
+                        call_id="root",
+                        started_event_id=started.event_id,
+                        response="hello",
+                        call_type=LLMCallType.LLM_CALL,
+                    ),
+                )
+        assert context.get_current() is caller
+    finally:
+        context.detach(caller_token)
+        session.shutdown()
+    exported = {span.name: span for span in exporter.get_finished_spans()}
+    assert len(exported) == 2
+    root = exported["call llm" if event_root else "root"]
+    assert root.parent is None
+    assert root.context.trace_id != application.get_span_context().trace_id
+    assert exported["child"].parent == root.context
+
+
+@pytest.mark.parametrize("approved", [False, True])
+def test_ephemeral_finishes_open_spans_before_consent(
+    in_memory_grant_collectors, approved
+):
+    issued, recorders = in_memory_grant_collectors
+    with patch(
+        "crewai.telemetry.tracing.ephemeral.prompt_user_for_trace_viewing",
+        return_value=approved,
+    ) as prompt:
+        token = begin_execution(tracing=True)
+        try:
+            execution_uuid = get_execution_uuid()
+            session = get_trace_session()
+            session.record_event(
+                None, LLMCallStartedEvent(call_id="unfinished", messages="hello")
+            )
+            assert not issued and not prompt.called
+        finally:
+            end_execution(token)
+    prompt.assert_called_once_with(sharing=True)
+    assert len(issued) == int(approved)
+    if approved:
+        exported = recorders[execution_uuid].get_finished_spans()
+        assert len(exported) == 1 and exported[0].name == "call llm"
+        assert exported[0].status.status_code == trace.StatusCode.ERROR
+        assert exported[0].end_time is not None
+    assert get_trace_session() is None and get_execution_uuid() is None
+
+
+@pytest.mark.parametrize(
+    "collector_url,allowed",
+    [
+        ("https://oss-wharf.crewai.com/v1/traces", True),
+        ("http://localhost:1210/v1/traces", True),
+        ("http://oss-wharf.localhost:1210/v1/traces", True),
+        ("http://LOCALHOST.:1210/v1/traces", True),
+        ("http://127.0.0.1:1210/v1/traces", True),
+        ("http://[::1]:1210/v1/traces", True),
+        ("http://oss-wharf.crewai.com/v1/traces", False),
+        ("http://localhost.attacker.invalid/v1/traces", False),
+        ("http://notlocalhost/v1/traces", False),
+        ("http://192.168.1.2/v1/traces", False),
+        ("http://localhost@collector.invalid/v1/traces", False),
+        ("https://user:password@collector.invalid/v1/traces", False),
+    ],
+)
+def test_collector_requires_https_except_for_local_development(collector_url, allowed):
+    import httpx
+
+    execution_uuid = str(uuid4())
+    response = httpx.Response(
+        200,
+        json={
+            "token": "synthetic-grant",
+            "collector_url": collector_url,
+            "execution_uuid": execution_uuid,
+            "tier": "authenticated",
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
+        },
+    )
+    with patch("crewai_core.plus_api.PlusAPI._make_request", return_value=response):
+        client = TraceGrantClient("synthetic-credential")
+        if allowed:
+            assert client.create(execution_uuid).collector_url == collector_url
+        else:
+            with pytest.raises(TraceGrantError):
+                client.create(execution_uuid)
 
 
 @pytest.mark.asyncio

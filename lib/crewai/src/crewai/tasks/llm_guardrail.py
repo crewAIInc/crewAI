@@ -116,6 +116,7 @@ class LLMGuardrail:
             with operation(
                 "guard llm",
                 {"crewai.guardrail.type": "llm"},
+                expected_exceptions=(HookAborted,),
             ):
                 result = self._validate_output(task_output)
                 if not isinstance(result.pydantic, LLMGuardrailResult):

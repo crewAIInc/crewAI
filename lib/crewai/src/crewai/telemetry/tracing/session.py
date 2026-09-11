@@ -8,7 +8,7 @@ import logging
 from typing import Any, cast
 
 from opentelemetry import trace
-from opentelemetry.context import Context
+from opentelemetry.context import Context, attach, detach
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor, TracerProvider
@@ -182,6 +182,13 @@ class TraceSession:
     @contextmanager
     def activate(self) -> Iterator[TelemetryExecutionContext]:
         """Bind the session to this context; lifecycle remains with its owner."""
+        # Isolate a new execution from the application's sampling and parent,
+        # preserving baggage and parents when re-entering the same session.
+        parent_token = (
+            attach(trace.set_span_in_context(trace.INVALID_SPAN))
+            if _trace_session.get() is not self
+            else None
+        )
         session_token = _trace_session.set(self)
         context_token = _telemetry_context.set(self.context)
         execution_token = set_execution_uuid(self.context.kickoff_id)
@@ -195,14 +202,14 @@ class TraceSession:
             clear_execution_uuid(execution_token)
             _telemetry_context.reset(context_token)
             _trace_session.reset(session_token)
+            if parent_token is not None:
+                detach(parent_token)
 
     def flush(self, timeout_millis: int = 30000) -> bool:
         return self.tracer_provider.force_flush(timeout_millis)
 
-    def shutdown(self, timeout_millis: int = 30000) -> bool:
-        if self._closed:
-            return True
-        self._closed = True
+    def finish_spans(self) -> None:
+        """End incomplete event spans before flushing or sharing the execution."""
         for span in self.context.active_spans.values():
             if span.is_recording():
                 span.set_status(
@@ -212,6 +219,12 @@ class TraceSession:
                 )
                 span.end()
         self.context.active_spans.clear()
+
+    def shutdown(self, timeout_millis: int = 30000) -> bool:
+        if self._closed:
+            return True
+        self._closed = True
+        self.finish_spans()
         try:
             return self.flush(timeout_millis)
         finally:

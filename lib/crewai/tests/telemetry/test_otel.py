@@ -17,9 +17,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
-import contextvars
 import logging
+from threading import get_ident
 from typing import Any
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from crewai import Agent, Crew, Task
@@ -302,6 +303,26 @@ class TestOperation:
         assert span.status.status_code == StatusCode.UNSET
         assert not any(e.name == "exception" for e in span.events)
 
+    def test_guardrail_hook_abort_is_expected_control_flow(
+        self, span_exporter, monkeypatch
+    ) -> None:
+        from crewai.hooks.dispatch import HookAborted
+        from crewai.tasks.llm_guardrail import LLMGuardrail
+        from crewai.tasks.task_output import TaskOutput
+
+        guardrail = LLMGuardrail("test", _RecordingLLM())
+        monkeypatch.setattr(
+            guardrail, "_validate_output", Mock(side_effect=HookAborted("denied"))
+        )
+        output = TaskOutput(description="test", raw="answer", agent="tester")
+        with pytest.raises(HookAborted, match="denied"):
+            guardrail(output)
+
+        finished = span_exporter.get_finished_spans()
+        assert len(finished) == 1
+        assert finished[0].status.status_code == StatusCode.UNSET
+        assert not any(event.name == "exception" for event in finished[0].events)
+
     def test_follows_from_link_carries_attribute(self) -> None:
         link = follows_from(trace_id=0xABC123, span_id=0xDEF456)
         assert link.context.trace_id == 0xABC123
@@ -361,9 +382,7 @@ class TestHotPathSpans:
         tool = _RecordingTool()
         with operation("execute crew", {"crewai.crew.name": "x"}):
             with operation("execute task", {"crewai.task.name": "t"}):
-                with operation(
-                    "execute agent", {"crewai.agent.role": agent.role}
-                ):
+                with operation("execute agent", {"crewai.agent.role": agent.role}):
                     tool.run()
 
         spans_by_name = {s.name: s for s in span_exporter.get_finished_spans()}
@@ -546,162 +565,204 @@ class TestContextPropagation:
             # Re-enter sync helper while we have a running loop; this is
             # the path that forces the helper to take its
             # ThreadPoolExecutor + copy_context branch.
-            return await asyncio.get_running_loop().run_in_executor(
-                None,
-                contextvars.copy_context().run,
-                _run_coroutine_sync,
-                _emit_log_inside_loop(),
-            )
+            return _run_coroutine_sync(_emit_log_inside_loop())
 
         with operation("parent") as parent:
             parent_trace_id = parent.get_span_context().trace_id
             handler_trace_id = asyncio.run(_outer())
 
         assert handler_trace_id == parent_trace_id
-        assert (
-            _capture_log_trace_id(log_exporter, "guardrail log") == parent_trace_id
-        )
+        assert _capture_log_trace_id(log_exporter, "guardrail log") == parent_trace_id
 
-    def test_mcp_native_tool_thread_pool_preserves_context(
-        self,
-        span_exporter: InMemorySpanExporter,
-        log_exporter: InMemoryLogExporter,
+    @pytest.mark.asyncio
+    async def test_mcp_native_tool_thread_pool_preserves_context(
+        self, span_exporter, log_exporter
     ) -> None:
-        # We can't easily instantiate MCPNativeTool without a real MCP
-        # server, but the spawn site is a generic
-        # ``ThreadPoolExecutor().submit(copy_context().run, ...)`` pattern.
-        # Replicate it locally to verify the propagation contract holds.
-        from concurrent.futures import ThreadPoolExecutor
+        from crewai.tools.mcp_native_tool import MCPNativeTool
 
-        async def _body() -> int:
+        caller_thread = get_ident()
+        observed = []
+
+        async def call_tool(*args):
+            observed.append(
+                (get_ident(), trace.get_current_span().get_span_context().trace_id)
+            )
             logging.getLogger("crewai.tests.mcp").info("mcp log")
-            return trace.get_current_span().get_span_context().trace_id
+            return Mock(content="done", is_error=False)
 
-        def _runner() -> int:
-            ctx = contextvars.copy_context()
-            with ThreadPoolExecutor() as pool:
-                return pool.submit(ctx.run, asyncio.run, _body()).result()
-
+        client = Mock(
+            connect=AsyncMock(),
+            disconnect=AsyncMock(),
+            call_tool_result=AsyncMock(side_effect=call_tool),
+        )
+        tool = MCPNativeTool(lambda: client, "test", {}, "local")
         with operation("parent") as parent:
             parent_trace_id = parent.get_span_context().trace_id
-            inner = _runner()
+            # Calling the sync entry point inside this running loop forces its pool path.
+            assert tool._run() == "done"
 
-        assert inner == parent_trace_id
+        assert len(observed) == 1
+        assert all(
+            thread != caller_thread and trace_id == parent_trace_id
+            for thread, trace_id in observed
+        )
         assert _capture_log_trace_id(log_exporter, "mcp log") == parent_trace_id
+        client.disconnect.assert_awaited_once()
 
     def test_unified_memory_save_pool_preserves_context(
-        self,
-        span_exporter: InMemorySpanExporter,
-        log_exporter: InMemoryLogExporter,
+        self, span_exporter, log_exporter
     ) -> None:
-        # The save pool's submission helper is private; exercise the same
-        # contract directly to assert this spawn-site stays correct
-        # across refactors.
-        from concurrent.futures import ThreadPoolExecutor
+        from crewai.memory.unified_memory import Memory
 
-        pool = ThreadPoolExecutor(max_workers=1)
+        caller_thread = get_ident()
+        memory = Memory(storage=Mock())
 
-        def _save() -> int:
+        def save():
             logging.getLogger("crewai.tests.memory").info("memory log")
-            return trace.get_current_span().get_span_context().trace_id
+            return get_ident(), trace.get_current_span().get_span_context().trace_id
 
         try:
             with operation("parent") as parent:
                 parent_trace_id = parent.get_span_context().trace_id
-                ctx = contextvars.copy_context()
-                inner = pool.submit(ctx.run, _save).result()
+                thread, inner = memory._submit_save(save).result()
         finally:
-            pool.shutdown(wait=True)
+            memory.close()
 
+        assert thread != caller_thread
         assert inner == parent_trace_id
         assert _capture_log_trace_id(log_exporter, "memory log") == parent_trace_id
 
     def test_encoding_flow_pool_preserves_context(
-        self,
-        span_exporter: InMemorySpanExporter,
-        log_exporter: InMemoryLogExporter,
+        self, span_exporter, log_exporter
     ) -> None:
-        from concurrent.futures import ThreadPoolExecutor
+        from crewai.memory.encoding_flow import EncodingFlow, ItemState
 
-        def _task() -> int:
+        caller_thread = get_ident()
+        observed = []
+
+        def search(*args, **kwargs):
+            observed.append(
+                (get_ident(), trace.get_current_span().get_span_context().trace_id)
+            )
             logging.getLogger("crewai.tests.encoding").info("encoding log")
-            return trace.get_current_span().get_span_context().trace_id
+            return []
 
+        flow = EncodingFlow(storage=Mock(search=search), llm=None, embedder=None)
+        flow.state.items = [
+            ItemState(content=str(i), embedding=[float(i)]) for i in range(2)
+        ]
         with operation("parent") as parent:
             parent_trace_id = parent.get_span_context().trace_id
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                inner = pool.submit(
-                    contextvars.copy_context().run, _task
-                ).result()
+            flow.parallel_find_similar()
 
-        assert inner == parent_trace_id
-        assert (
-            _capture_log_trace_id(log_exporter, "encoding log") == parent_trace_id
+        assert len(observed) == 2
+        assert all(
+            thread != caller_thread and trace_id == parent_trace_id
+            for thread, trace_id in observed
         )
+        assert _capture_log_trace_id(log_exporter, "encoding log") == parent_trace_id
 
     def test_recall_flow_pool_preserves_context(
-        self,
-        span_exporter: InMemorySpanExporter,
-        log_exporter: InMemoryLogExporter,
+        self, span_exporter, log_exporter
     ) -> None:
-        from concurrent.futures import ThreadPoolExecutor
+        from crewai.memory.recall_flow import RecallFlow
 
-        def _search() -> int:
+        caller_thread = get_ident()
+        observed = []
+
+        def search(*args, **kwargs):
+            observed.append(
+                (get_ident(), trace.get_current_span().get_span_context().trace_id)
+            )
             logging.getLogger("crewai.tests.recall").info("recall log")
-            return trace.get_current_span().get_span_context().trace_id
+            return []
 
+        flow = RecallFlow(storage=Mock(search=search), llm=None, embedder=None)
+        flow.state.query_embeddings = [("query", [1.0])]
+        flow.state.candidate_scopes = ["/one", "/two"]
         with operation("parent") as parent:
             parent_trace_id = parent.get_span_context().trace_id
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                inner = pool.submit(
-                    contextvars.copy_context().run, _search
-                ).result()
+            assert flow._do_search() == []
 
-        assert inner == parent_trace_id
+        assert len(observed) == 2
+        assert all(
+            thread != caller_thread and trace_id == parent_trace_id
+            for thread, trace_id in observed
+        )
         assert _capture_log_trace_id(log_exporter, "recall log") == parent_trace_id
 
     def test_a2a_wrapper_pool_preserves_context(
-        self,
-        span_exporter: InMemorySpanExporter,
-        log_exporter: InMemoryLogExporter,
+        self, span_exporter, log_exporter, monkeypatch
     ) -> None:
-        from concurrent.futures import ThreadPoolExecutor
+        pytest.importorskip("a2a")
+        from crewai.a2a.config import A2AConfig
+        from crewai.a2a.wrapper import _fetch_agent_cards_concurrently
 
-        def _fetch_card() -> int:
+        caller_thread = get_ident()
+        observed = []
+        card = Mock()
+
+        def fetch_card(**kwargs):
+            observed.append(
+                (get_ident(), trace.get_current_span().get_span_context().trace_id)
+            )
             logging.getLogger("crewai.tests.a2a").info("a2a log")
-            return trace.get_current_span().get_span_context().trace_id
+            return card
 
+        monkeypatch.setattr("crewai.a2a.wrapper.fetch_agent_card", fetch_card)
+        configs = [A2AConfig(endpoint=f"https://agent-{i}.invalid") for i in range(2)]
         with operation("parent") as parent:
             parent_trace_id = parent.get_span_context().trace_id
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                inner = pool.submit(
-                    contextvars.copy_context().run, _fetch_card
-                ).result()
+            cards, failures = _fetch_agent_cards_concurrently(configs)
 
-        assert inner == parent_trace_id
+        assert cards == {config.endpoint: card for config in configs}
+        assert not failures
+        assert len(observed) == 2
+        assert all(
+            thread != caller_thread and trace_id == parent_trace_id
+            for thread, trace_id in observed
+        )
         assert _capture_log_trace_id(log_exporter, "a2a log") == parent_trace_id
 
     def test_agent_executor_pool_preserves_context(
-        self,
-        span_exporter: InMemorySpanExporter,
-        log_exporter: InMemoryLogExporter,
+        self, span_exporter, log_exporter, monkeypatch
     ) -> None:
-        # Mirror the parallel native-tool-call dispatch from
-        # ``experimental/agent_executor.py``.
-        from concurrent.futures import ThreadPoolExecutor
+        from crewai.experimental.agent_executor import AgentExecutor
 
-        def _tool_call() -> int:
+        caller_thread = get_ident()
+        observed = []
+
+        def execute_tool(self, tool_call):
+            observed.append(
+                (get_ident(), trace.get_current_span().get_span_context().trace_id)
+            )
             logging.getLogger("crewai.tests.agent_exec").info("agent exec log")
-            return trace.get_current_span().get_span_context().trace_id
+            return {
+                "call_id": tool_call["id"],
+                "func_name": "test",
+                "result": "done",
+                "from_cache": False,
+                "original_tool": None,
+            }
 
+        monkeypatch.setattr(
+            AgentExecutor, "_execute_single_native_tool_call", execute_tool
+        )
+        executor = AgentExecutor()
+        executor.state.pending_tool_calls = [
+            {"id": f"call_{i}", "function": {"name": "test", "arguments": "{}"}}
+            for i in range(2)
+        ]
         with operation("parent") as parent:
             parent_trace_id = parent.get_span_context().trace_id
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                inner = pool.submit(
-                    contextvars.copy_context().run, _tool_call
-                ).result()
+            assert executor.execute_native_tool() == "native_tool_completed"
 
-        assert inner == parent_trace_id
-        assert (
-            _capture_log_trace_id(log_exporter, "agent exec log") == parent_trace_id
+        assert len(observed) == 2
+        assert all(
+            thread != caller_thread and trace_id == parent_trace_id
+            for thread, trace_id in observed
         )
+        assert _capture_log_trace_id(log_exporter, "agent exec log") == parent_trace_id
+        assert [
+            m["tool_call_id"] for m in executor.state.messages if m["role"] == "tool"
+        ] == ["call_0", "call_1"]
