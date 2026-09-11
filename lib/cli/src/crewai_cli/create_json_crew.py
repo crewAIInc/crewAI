@@ -8,7 +8,6 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
-import warnings
 
 import click
 from crewai_core.telemetry import Telemetry
@@ -897,13 +896,10 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
 
     click.echo()
     try:
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message='Field name "validate" in "UploadSarifAnalysisRequest"',
-                category=UserWarning,
-            )
-            from crewai_tools import CrewaiPlatformTools
+        from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+            ApplicationSelector,
+            client_for_selector,
+        )
     except ImportError as error:
         raise click.ClickException(
             "Platform tools require the 'crewai-tools' package. "
@@ -939,34 +935,51 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
 
         os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
         failed: list[str] = []
+        token_invalid = False
         for app in apps:
             app_name = (
                 dict(PLATFORM_TOOLS)
                 .get(f"platform:{app}", app.replace("_", " ").title())
                 .removesuffix(" Integration")
             )
+            click.echo()
             click.secho(
                 "  Checking CrewAI Platform Integration Token and "
                 f"{app_name} integration on AMP...",
                 fg="cyan",
             )
             try:
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        "ignore",
-                        message='Field name "validate" in "UploadSarifAnalysisRequest"',
-                        category=UserWarning,
-                    )
-                    app_tools = CrewaiPlatformTools(apps=[app])
-                if not app_tools:
+                selector = ApplicationSelector.from_string(app)
+                actions = client_for_selector(selector).get_actions([selector])
+                if not actions:
                     failed.append(app)
+                    click.secho(
+                        f"  ✘ {app_name} integration is not connected on CrewAI Platform",
+                        fg="red",
+                    )
                 else:
-                    _success(f"{app_name} integration is connected on CrewAI Platform")
+                    click.secho(
+                        f"  ✔ {app_name} integration is connected on CrewAI Platform",
+                        fg="green",
+                    )
             except Exception as error:
-                click.secho(f"  Could not connect to {app}: {error}", fg="yellow")
+                status_code = getattr(
+                    getattr(error, "response", None), "status_code", None
+                )
+                if status_code in {401, 403}:
+                    click.secho(
+                        "  ✘ CrewAI Platform Integration Token is invalid or expired",
+                        fg="red",
+                    )
+                    token_invalid = True
+                    break
+                click.secho(
+                    f"  ✘ {app_name} integration could not be validated: {error}",
+                    fg="red",
+                )
                 failed.append(app)
 
-        if not failed:
+        if not failed and not token_invalid:
             _success("CrewAI Platform integration token set", bold=True)
             _success(
                 f"{len(apps)} CrewAI Platform integration"
@@ -974,19 +987,27 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             )
             return token
 
-        failed_app_names = [
-            dict(PLATFORM_TOOLS)
-            .get(f"platform:{app}", app.replace("_", " ").title())
-            .removesuffix(" Integration")
-            for app in failed
-        ]
-        click.secho(
-            "  Check the "
-            f"{', '.join(failed_app_names)} integration"
-            f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
-            "Platform Integration Token in AMP.",
-            fg="yellow",
-        )
+        click.echo()
+        if token_invalid:
+            click.secho(
+                "  Check your CrewAI Platform Integration Token in AMP.",
+                fg="yellow",
+            )
+        else:
+            failed_app_names = [
+                dict(PLATFORM_TOOLS)
+                .get(f"platform:{app}", app.replace("_", " ").title())
+                .removesuffix(" Integration")
+                for app in failed
+            ]
+            click.secho(
+                "  Check the "
+                f"{', '.join(failed_app_names)} integration"
+                f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
+                "Platform Integration Token in AMP.",
+                fg="yellow",
+            )
+        click.echo()
         replacement_token = click.prompt(
             click.style(
                 "  Press Enter to revalidate, or enter a replacement token",
