@@ -1,0 +1,74 @@
+---
+title: بحث SearchApi
+description: أداة `SearchApiTool` تبحث في الإنترنت عبر SearchApi، الذي يجمع عدة محركات بحث خلف نقطة نهاية واحدة.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `SearchApiTool`
+
+## الوصف
+
+أداة `SearchApiTool` تبحث في الإنترنت عبر [SearchApi](https://www.searchapi.io). نقطة نهاية واحدة تجمع عدة محركات، تُختار بالمعامل `engine`، لذا تغطي أداة واحدة بحث Google على الويب والأخبار والأبحاث الأكاديمية والوظائف، إضافة إلى Bing و YouTube و Baidu وبقية [المحركات المدعومة](https://www.searchapi.io/docs). تُرجع الأداة JSON الخاص بالمحرك نفسه، لذا تتطابق النتائج مع توثيق ذلك المحرك.
+
+يحدث أمران للاستجابة قبل أن يراها الـ Agent:
+
+- تُحذف روابط `data:` المضمّنة. يُرجع SearchApi الأيقونات والصور المصغّرة كسلاسل base64، وقد تبلغ الواحدة منها عشرات الكيلوبايتات من السياق الذي لا يعني شيئًا للـ Agent.
+- تُقتطع السلاسل الطويلة عند `max_string_length`، وتُحدَّد كل قائمة `*_results` بعدد `n_results`.
+
+## التثبيت
+
+1. **تثبيت الحزمة**: تأكد من تثبيت حزمة `crewai[tools]` في بيئة Python لديك.
+2. **الحصول على مفتاح API**: احصل على مفتاح SearchApi من https://www.searchapi.io (تتوفر خطة مجانية).
+3. **إعداد البيئة**: احفظ المفتاح في متغير بيئة باسم `SEARCHAPI_API_KEY`.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+يُرسَل المفتاح في ترويسة `Authorization` بدلًا من سلسلة الاستعلام، لذا يبقى خارج سجلات الطلبات وخارج `request_url` الذي يعيده SearchApi في `search_metadata`.
+
+## مثال
+
+```python Code
+from crewai_tools import SearchApiTool
+
+# Initialize the tool for internet searching capabilities
+tool = SearchApiTool()
+```
+
+## المعاملات
+
+- **engine**: محرك SearchApi المطلوب، مثل `google` أو `google_news` أو `google_scholar` أو `google_jobs` أو `bing` أو `youtube` أو `baidu`. القيمة الافتراضية `google`. ويمكن تمريره مع كل استدعاء.
+- **n_results**: الحد الأقصى لطول كل قائمة `*_results` في الاستجابة. القيمة الافتراضية `10`.
+- **country**: اختياري. بلد البحث، يُرسَل باسم `gl` (مثل `uk`).
+- **locale**: اختياري. لغة الواجهة، تُرسَل باسم `hl` (مثل `en`).
+- **location**: اختياري. الموقع المعياري للبحث، مثل `London,England`.
+- **max_string_length**: أطول سلسلة تبقى كما هي في الاستجابة. القيمة الافتراضية `1000`.
+- **timeout**: مهلة الطلب بالثواني. القيمة الافتراضية `30`.
+- **api_key**: اختياري. مفتاح SearchApi الخاص بك. وإن لم يُحدَّد، يُقرأ من متغير البيئة `SEARCHAPI_API_KEY`.
+- **search_url**: نقطة النهاية التي تُستدعى. القيمة الافتراضية `https://www.searchapi.io/api/v1/search`.
+
+## مثال مع المعاملات
+
+```python Code
+from crewai_tools import SearchApiTool
+
+# Recent news, localized to the UK
+news_tool = SearchApiTool(
+    engine="google_news",
+    country="uk",
+    locale="en",
+    location="London,England",
+    n_results=5,
+)
+
+# Academic search through the same tool
+scholar_tool = SearchApiTool(engine="google_scholar")
+```
+
+## الأخطاء
+
+يؤدي فشل الطلب إلى إطلاق `RuntimeError` يحمل رسالة SearchApi نفسها، مثل `SearchApi request failed (HTTP 401): Invalid API key.`.
+
+أما البحث الناجح الذي لم يجد شيئًا فليس خطأً: يُرجع SearchApi استجابة HTTP 200 مع رسالة `error` مثل `"Google didn't return any results."`، وتمرّر الأداة هذه الرسالة كما هي ليقرأ الـ Agent سبب خلو الصفحة.

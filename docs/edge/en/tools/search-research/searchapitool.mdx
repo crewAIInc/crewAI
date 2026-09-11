@@ -1,0 +1,74 @@
+---
+title: SearchApi Search
+description: The `SearchApiTool` searches the internet through SearchApi, which fronts many search engines behind one endpoint.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `SearchApiTool`
+
+## Description
+
+The `SearchApiTool` searches the internet through [SearchApi](https://www.searchapi.io). One endpoint fronts many engines, chosen with the `engine` parameter, so a single tool covers Google web search, news, scholar and jobs, plus Bing, YouTube, Baidu and the rest of the [supported engines](https://www.searchapi.io/docs). The tool returns the engine's own JSON, so results line up with the engine's documentation.
+
+Two things happen to the response before an agent sees it:
+
+- Inline `data:` URIs are dropped. SearchApi returns favicons and thumbnails as base64 strings, and a single one can run to tens of kilobytes of context that means nothing to an agent.
+- Long strings are truncated at `max_string_length`, and every `*_results` list is capped at `n_results`.
+
+## Installation
+
+1. **Package Installation**: Confirm that the `crewai[tools]` package is installed in your Python environment.
+2. **API Key Acquisition**: Get a SearchApi key at https://www.searchapi.io (free tier available).
+3. **Environment Configuration**: Store the key in an environment variable named `SEARCHAPI_API_KEY`.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+The key is sent in the `Authorization` header rather than the query string, so it stays out of request logs and out of the `request_url` SearchApi echoes back in `search_metadata`.
+
+## Example
+
+```python Code
+from crewai_tools import SearchApiTool
+
+# Initialize the tool for internet searching capabilities
+tool = SearchApiTool()
+```
+
+## Parameters
+
+- **engine**: The SearchApi engine to query, such as `google`, `google_news`, `google_scholar`, `google_jobs`, `bing`, `youtube` or `baidu`. Default is `google`. Can also be passed per call.
+- **n_results**: Cap on the length of each `*_results` list in the response. Default is `10`.
+- **country**: Optional. Country of the search, sent as `gl` (for example `uk`).
+- **locale**: Optional. Interface language, sent as `hl` (for example `en`).
+- **location**: Optional. Canonical location of the search, for example `London,England`.
+- **max_string_length**: Longest string kept intact in the response. Default is `1000`.
+- **timeout**: Request timeout in seconds. Default is `30`.
+- **api_key**: Optional. Your SearchApi key. Falls back to the `SEARCHAPI_API_KEY` environment variable.
+- **search_url**: The endpoint to call. Default is `https://www.searchapi.io/api/v1/search`.
+
+## Example with Parameters
+
+```python Code
+from crewai_tools import SearchApiTool
+
+# Recent news, localized to the UK
+news_tool = SearchApiTool(
+    engine="google_news",
+    country="uk",
+    locale="en",
+    location="London,England",
+    n_results=5,
+)
+
+# Academic search through the same tool
+scholar_tool = SearchApiTool(engine="google_scholar")
+```
+
+## Errors
+
+A failed request raises a `RuntimeError` carrying SearchApi's own message, for example `SearchApi request failed (HTTP 401): Invalid API key.`.
+
+A successful search that found nothing is not an error: SearchApi returns HTTP 200 with an `error` message such as `"Google didn't return any results."`, and the tool passes that through so the agent can read why the page was empty.
