@@ -24,7 +24,10 @@ if TYPE_CHECKING:
 def _json_default(obj: Any) -> Any:
     """Fallback serializer for non-primitive types in JSON dumps."""
     if isinstance(obj, BaseModel):
-        return obj.model_dump(mode="python")
+        try:
+            return obj.model_dump(mode="json")
+        except Exception:
+            return obj.model_dump(mode="python")
     if isinstance(obj, (set, tuple)):
         return list(obj)
     if isinstance(obj, (date, datetime)):
@@ -158,7 +161,10 @@ class SQLiteFlowPersistence(FlowPersistence):
     def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to a plain dict."""
         if isinstance(state_data, BaseModel):
-            return state_data.model_dump(mode="python")
+            try:
+                return state_data.model_dump(mode="json")
+            except Exception:
+                return state_data.model_dump(mode="python")
         if isinstance(state_data, dict):
             return state_data
         raise ValueError(
