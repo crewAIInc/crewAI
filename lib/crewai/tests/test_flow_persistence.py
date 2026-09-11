@@ -531,8 +531,10 @@ def test_persist_complex_types_structured_state(tmp_path):
 
 
 def test_persist_complex_types_dict_state(tmp_path):
-    """Test persisting dictionary state containing datetime and UUID."""
+    """Test persisting dictionary state containing datetime, UUID, Decimal, and Path."""
     from datetime import datetime, timezone
+    from decimal import Decimal
+    from pathlib import Path
     import uuid
     from typing import Any
 
@@ -555,6 +557,8 @@ def test_persist_complex_types_dict_state(tmp_path):
             self.state["created_at"] = now
             self.state["user_id"] = uid
             self.state["tags"] = {"x", "y"}
+            self.state["price"] = Decimal("19.99")
+            self.state["file_path"] = Path("/tmp/data.txt")
             self.state["nested"] = {"l1": {"l2": {"l3": {"l4": {"l5": {"l6": "deep_value"}}}}}}
             return "done"
 
@@ -566,6 +570,8 @@ def test_persist_complex_types_dict_state(tmp_path):
     assert saved["created_at"] == now.isoformat()
     assert saved["user_id"] == str(uid)
     assert set(saved["tags"]) == {"x", "y"}
+    assert saved["price"] == "19.99"
+    assert saved["file_path"] == "/tmp/data.txt"
     assert saved["nested"]["l1"]["l2"]["l3"]["l4"]["l5"]["l6"] == "deep_value"
 
 

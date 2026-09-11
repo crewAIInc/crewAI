@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import json
 import os
 from pathlib import Path
 import sqlite3
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from crewai_core.lock_store import lock as store_lock
 from crewai_core.paths import db_storage_path
@@ -15,11 +15,21 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.utilities.serialization import to_serializable
 
 
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+
+def _json_default(obj: Any) -> Any:
+    """Fallback serializer for non-primitive types in JSON dumps."""
+    if isinstance(obj, BaseModel):
+        return obj.model_dump(mode="json")
+    if isinstance(obj, (set, tuple)):
+        return list(obj)
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -140,7 +150,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 flow_uuid,
                 method_name,
                 datetime.now(timezone.utc).isoformat(),
-                json.dumps(state_dict, default=str),
+                json.dumps(state_dict, default=_json_default),
             ),
         )
 
@@ -150,7 +160,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         if isinstance(state_data, BaseModel):
             return state_data.model_dump(mode="json")
         if isinstance(state_data, dict):
-            return cast(dict[str, Any], to_serializable(state_data, max_depth=0))
+            return state_data
         raise ValueError(
             f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
         )
@@ -238,8 +248,8 @@ class SQLiteFlowPersistence(FlowPersistence):
             """,
                 (
                     flow_uuid,
-                    json.dumps(context.to_dict(), default=str),
-                    json.dumps(state_dict, default=str),
+                    json.dumps(context.to_dict(), default=_json_default),
+                    json.dumps(state_dict, default=_json_default),
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
