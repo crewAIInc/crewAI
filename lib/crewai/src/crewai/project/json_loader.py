@@ -2017,19 +2017,25 @@ def _tool_definition_errors(
                 f"got {type(tool_def).__name__}"
             )
             continue
-        if not tool_def.startswith("custom:"):
+        if tool_def.startswith("platform:"):
+            if not tool_def.removeprefix("platform:"):
+                errors.append(
+                    f"{source}: invalid platform tool reference 'platform:': "
+                    "expected 'platform:<application>'"
+                )
             continue
-        try:
-            tool_file = _custom_tool_file(tool_def[7:], project_root)
-        except JSONProjectError as exc:
-            errors.append(f"{source}: {exc}")
-            continue
-        if not tool_file.exists():
-            errors.append(
-                f"{source}: custom tool '{tool_def}' not found: expected "
-                f"{tool_file}. Create the file with a BaseTool subclass, or "
-                f"remove the tool from your crew JSON."
-            )
+        if tool_def.startswith("custom:"):
+            try:
+                tool_file = _custom_tool_file(tool_def[7:], project_root)
+            except JSONProjectError as exc:
+                errors.append(f"{source}: {exc}")
+                continue
+            if not tool_file.exists():
+                errors.append(
+                    f"{source}: custom tool '{tool_def}' not found: expected "
+                    f"{tool_file}. Create the file with a BaseTool subclass, or "
+                    f"remove the tool from your crew JSON."
+                )
     return errors
 
 

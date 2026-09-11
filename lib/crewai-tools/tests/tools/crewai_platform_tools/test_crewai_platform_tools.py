@@ -157,10 +157,8 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     def test_crewai_platform_tools_api_error_handling(self, mock_get):
         mock_get.side_effect = Exception("API Error")
 
-        tools = CrewaiPlatformTools(apps=["github"])
-        assert tools is not None
-        assert isinstance(tools, list)
-        assert len(tools) == 0
+        with self.assertRaisesRegex(Exception, "API Error"):
+            CrewaiPlatformTools(apps=["github"])
 
     def test_crewai_platform_tools_no_token(self):
         with patch.dict("os.environ", {}, clear=True):
