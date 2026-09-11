@@ -28,7 +28,7 @@ class SentenceTransformerProvider(
     )
     device: str = Field(
         default="cpu",
-        description="Device to run model on (cpu or cuda)",
+        description="Device to run model on (e.g., cpu, cuda, mps, xpu)",
         validation_alias=AliasChoices(
             "EMBEDDINGS_SENTENCE_TRANSFORMER_DEVICE", "SENTENCE_TRANSFORMER_DEVICE"
         ),
