@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from typing import Any, ClassVar
 from uuid import uuid4
@@ -221,11 +221,16 @@ class RecallFlow(Flow[RecallState]):
 
             if analysis.time_filter:
                 try:
-                    self.state.time_cutoff = datetime.fromisoformat(
-                        analysis.time_filter
-                    )
+                    cutoff = datetime.fromisoformat(analysis.time_filter)
                 except ValueError:
-                    pass
+                    cutoff = None
+                if cutoff is not None:
+                    # MemoryRecord.created_at is naive; comparing against a
+                    # tz-aware cutoff would raise TypeError and silently drop
+                    # every scope's results.
+                    if cutoff.tzinfo is not None:
+                        cutoff = cutoff.astimezone(timezone.utc).replace(tzinfo=None)
+                    self.state.time_cutoff = cutoff
 
         queries = (
             analysis.recall_queries if analysis.recall_queries else [self.state.query]
