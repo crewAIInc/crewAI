@@ -3,7 +3,6 @@
 import contextvars
 import json
 from pathlib import Path
-import platform
 import re
 import sys
 import threading
@@ -175,11 +174,11 @@ def create_tool_function(crew: Crew, messages: list[LLMMessage]) -> Any:
 
 def flush_input() -> None:
     """Flush any pending input from the user."""
-    if platform.system() == "Windows":
+    if sys.platform == "win32":
         import msvcrt
 
-        while msvcrt.kbhit():  # type: ignore[attr-defined]
-            msvcrt.getch()  # type: ignore[attr-defined]
+        while msvcrt.kbhit():
+            msvcrt.getch()
     else:
         import termios
 
