@@ -1,0 +1,78 @@
+---
+title: Live Tennis Tool
+description: Live tennis scores, fixtures, player profiles and rankings for CrewAI agents via the Live Tennis API.
+icon: trophy
+mode: "wide"
+---
+
+# `LiveTennisTool`
+
+## Description
+
+Query professional tennis data from the [Live Tennis API](https://livetennisapi.com): matches currently in play with live scores, upcoming matches, scheduled fixtures, player search and profiles (including current ranking), published ranking tables, and your API quota usage.
+
+The tool is scoped to REST endpoints, most of which are available on the API's free tier (keyed, 30 requests/minute, 100 requests/day), so it can be tried without payment. Completed-match history is a paid feature of the API and is not part of this tool.
+
+## Environment Variables
+
+```bash
+LIVETENNIS_API_KEY=your_api_key   # Free key at livetennisapi.com
+```
+
+## Actions
+
+| `action` | What it returns | Plan |
+|---|---|---|
+| `live_matches` | Matches in play with current scores (optional `tour` filter) | Free |
+| `upcoming_matches` | Matches starting soon (optional `tour` filter) | Free |
+| `fixtures` | Scheduled matches (optional `tour` filter) | Free |
+| `search_players` | Player search by name (requires `search`) | Free |
+| `player_profile` | Single player detail, including current ranking (requires `player_id`, the numeric id from `search_players`) | Free |
+| `rankings` | Published ranking table (requires `system`: `atp`, `wta`, `itf_jt`, `itf_mt`, `itf_wt`; UTR has no listing — it is a rating, not a ranking) | PRO |
+| `usage` | Your API quota vs. consumption | Free |
+
+### Parameters
+
+- `tour` — optional filter for `live_matches`, `upcoming_matches` and `fixtures`: one of `atp`, `wta`, `challenger`, `itf`, `juniors`. Omit for all tours.
+- `limit` / `offset` — pagination for the list actions (`live_matches`, `upcoming_matches`, `fixtures`, `search_players`, `rankings`). The API default is 50 results.
+
+## Basic Usage
+
+```python
+from crewai import Agent
+from crewai_tools import LiveTennisTool
+
+tool = LiveTennisTool()
+
+reporter = Agent(
+    role="Tennis Reporter",
+    goal="Summarise what is happening on tour right now",
+    backstory="You follow professional tennis and report live developments.",
+    tools=[tool],
+)
+```
+
+## Direct Invocation
+
+```python
+import json
+
+from crewai_tools import LiveTennisTool
+
+tool = LiveTennisTool()
+
+# Matches in play right now
+print(tool.run(action="live_matches", tour="atp"))
+
+# Find a player, then load their profile using the id from the search result
+result = tool.run(action="search_players", search="alcaraz")
+players = json.loads(result).get("data", []) if result.startswith("{") else []
+if players:  # result is a readable error string when the call fails
+    profile = tool.run(action="player_profile", player_id=players[0]["id"])
+```
+
+## Error Handling
+
+The tool returns readable messages (rather than raising) when the API key is missing, invalid (401), the endpoint needs a higher plan (403), or the rate limit is hit (429), so an agent can recover or report the problem.
+
+Full API documentation: [docs.livetennisapi.com](https://docs.livetennisapi.com).
