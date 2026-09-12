@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import asyncio
+from collections.abc import Callable, Coroutine, Mapping, Sequence
 from contextlib import AsyncExitStack
 import json
 import logging
 import os
+import time
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
@@ -13,6 +15,7 @@ from typing_extensions import Required
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
+from crewai.llms.providers.bedrock.throttling import is_bedrock_throttling_error
 from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -244,6 +247,9 @@ class BedrockCompletion(BaseLLM):
     supports_tools: bool = True
     supports_streaming: bool = True
     model_id: str = ""
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    max_retry_delay: float = 30.0
 
     _client: Any = PrivateAttr(default=None)
     _async_exit_stack: Any = PrivateAttr(default=None)
@@ -348,7 +354,87 @@ class BedrockCompletion(BaseLLM):
             config["top_k"] = self.top_k
         if self.guardrail_config:
             config["guardrail_config"] = self.guardrail_config
+        if self.max_retries != 3:
+            config["max_retries"] = self.max_retries
+        if self.retry_delay != 1.0:
+            config["retry_delay"] = self.retry_delay
+        if self.max_retry_delay != 30.0:
+            config["max_retry_delay"] = self.max_retry_delay
         return config
+
+    def _calculate_backoff_delay(self, attempt: int) -> float:
+        """Calculate bounded exponential backoff delay."""
+        return min(self.retry_delay * (2**attempt), self.max_retry_delay)
+
+    def _execute_single_call(
+        self, api_func: Callable[[], Any]
+    ) -> tuple[Any, Exception | None]:
+        try:
+            return api_func(), None
+        except Exception as e:
+            return None, e
+
+    async def _aexecute_single_call(
+        self, api_func: Callable[[], Coroutine[Any, Any, Any]]
+    ) -> tuple[Any, Exception | None]:
+        try:
+            return await api_func(), None
+        except Exception as e:
+            return None, e
+
+    def _call_with_retry(self, api_func: Callable[[], Any]) -> Any:
+        """Execute a sync Bedrock API call with bounded exponential backoff for throttling errors."""
+        max_retries = max(0, self.max_retries)
+        last_error: Exception | None = None
+        for attempt in range(max_retries + 1):
+            result, error = self._execute_single_call(api_func)
+            if error is None:
+                return result
+            last_error = error
+            if is_bedrock_throttling_error(error) and attempt < max_retries:
+                delay = self._calculate_backoff_delay(attempt)
+                logging.warning(
+                    "AWS Bedrock throttled (%s). Retrying in %.1fs (attempt %d/%d)...",
+                    error,
+                    delay,
+                    attempt + 1,
+                    max_retries,
+                )
+                time.sleep(delay)
+                continue
+            raise error
+
+        if last_error is not None:
+            raise last_error
+        return None
+
+    async def _acall_with_retry(
+        self, api_func: Callable[[], Coroutine[Any, Any, Any]]
+    ) -> Any:
+        """Execute an async Bedrock API call with bounded exponential backoff for throttling errors."""
+        max_retries = max(0, self.max_retries)
+        last_error: Exception | None = None
+        for attempt in range(max_retries + 1):
+            result, error = await self._aexecute_single_call(api_func)
+            if error is None:
+                return result
+            last_error = error
+            if is_bedrock_throttling_error(error) and attempt < max_retries:
+                delay = self._calculate_backoff_delay(attempt)
+                logging.warning(
+                    "AWS Bedrock throttled (%s). Retrying in %.1fs (attempt %d/%d)...",
+                    error,
+                    delay,
+                    attempt + 1,
+                    max_retries,
+                )
+                await asyncio.sleep(delay)
+                continue
+            raise error
+
+        if last_error is not None:
+            raise last_error
+        return None
 
     def call(
         self,
@@ -449,6 +535,14 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
+                if is_bedrock_throttling_error(e):
+                    error_msg = f"AWS Bedrock throttling limit reached: {e!s}"
+                    logging.error(error_msg)
+                    self._emit_call_failed_event(
+                        error=error_msg, from_task=from_task, from_agent=from_agent
+                    )
+                    raise
+
                 if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
@@ -582,6 +676,14 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
+                if is_bedrock_throttling_error(e):
+                    error_msg = f"AWS Bedrock throttling limit reached: {e!s}"
+                    logging.error(error_msg)
+                    self._emit_call_failed_event(
+                        error=error_msg, from_task=from_task, from_agent=from_agent
+                    )
+                    raise
+
                 if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
@@ -668,14 +770,16 @@ class BedrockCompletion(BaseLLM):
                 ):
                     raise ValueError(f"Invalid message format at index {i}")
 
-            # Call Bedrock Converse API with proper error handling
-            response = self._get_sync_client().converse(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            # Call Bedrock Converse API with proper error handling and retry
+            response = self._call_with_retry(
+                lambda: self._get_sync_client().converse(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             # Track token usage according to AWS response format
@@ -953,13 +1057,15 @@ class BedrockCompletion(BaseLLM):
         usage_data: dict[str, Any] | None = None
 
         try:
-            response = self._get_sync_client().converse_stream(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            response = self._call_with_retry(
+                lambda: self._get_sync_client().converse_stream(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             stream = response.get("stream")
@@ -1285,13 +1391,15 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             async_client = await self._ensure_async_client()
-            response = await async_client.converse(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            response = await self._acall_with_retry(
+                lambda: async_client.converse(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             usage = response.get("usage")
@@ -1563,13 +1671,15 @@ class BedrockCompletion(BaseLLM):
 
         try:
             async_client = await self._ensure_async_client()
-            response = await async_client.converse_stream(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            response = await self._acall_with_retry(
+                lambda: async_client.converse_stream(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             stream = response.get("stream")
