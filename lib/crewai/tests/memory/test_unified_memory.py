@@ -179,6 +179,66 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
     assert info.path == "/"
 
 
+def test_lancedb_list_records_order_and_pagination(lancedb_path: Path) -> None:
+    """Test that LanceDBStorage.list_records returns newest records first with correct pagination."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    base_time = datetime(2025, 1, 1, 12, 0, 0)
+    records = [
+        MemoryRecord(
+            id=f"rec_{i}",
+            content=f"content {i}",
+            scope="/test",
+            created_at=base_time + timedelta(minutes=i),
+            embedding=[0.0] * 4,
+        )
+        for i in range(10)
+    ]
+    other_records = [
+        MemoryRecord(
+            id=f"other_{i}",
+            content=f"other content {i}",
+            scope="/other",
+            created_at=base_time + timedelta(minutes=i),
+            embedding=[0.0] * 4,
+        )
+        for i in range(5)
+    ]
+    storage.save(records + other_records)
+
+    # 1. Page 1: limit=3, offset=0 returns 3 newest records (rec_9, rec_8, rec_7)
+    page1 = storage.list_records(scope_prefix="/test", limit=3, offset=0)
+    assert [r.id for r in page1] == ["rec_9", "rec_8", "rec_7"]
+    assert page1[0].created_at > page1[1].created_at > page1[2].created_at
+
+    # 2. Page 2: limit=3, offset=3 returns next 3 newest (rec_6, rec_5, rec_4)
+    page2 = storage.list_records(scope_prefix="/test", limit=3, offset=3)
+    assert [r.id for r in page2] == ["rec_6", "rec_5", "rec_4"]
+
+    # 3. Page 3: limit=3, offset=6 returns next 3 newest (rec_3, rec_2, rec_1)
+    page3 = storage.list_records(scope_prefix="/test", limit=3, offset=6)
+    assert [r.id for r in page3] == ["rec_3", "rec_2", "rec_1"]
+
+    # 4. Page 4: limit=3, offset=9 returns last 1 record (rec_0)
+    page4 = storage.list_records(scope_prefix="/test", limit=3, offset=9)
+    assert [r.id for r in page4] == ["rec_0"]
+
+    # 5. Page 5: offset beyond total count returns empty list
+    page5 = storage.list_records(scope_prefix="/test", limit=3, offset=10)
+    assert page5 == []
+
+    # 6. Global listing without scope_prefix returns newest across all scopes
+    all_newest = storage.list_records(limit=4, offset=0)
+    assert len(all_newest) == 4
+    assert (
+        all_newest[0].created_at
+        >= all_newest[1].created_at
+        >= all_newest[2].created_at
+        >= all_newest[3].created_at
+    )
+
+
 
 
 @pytest.fixture
