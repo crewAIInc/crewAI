@@ -1,6 +1,9 @@
-import os
+﻿import os
+import stat
+import tempfile
 import unittest
 import uuid
+from unittest.mock import patch
 
 import pytest
 from crewai.utilities.file_handler import PickleHandler
@@ -8,15 +11,31 @@ from crewai.utilities.file_handler import PickleHandler
 
 class TestPickleHandler(unittest.TestCase):
     def setUp(self):
-        # Use a unique file name for each test to avoid race conditions in parallel test execution
+        self._home_patcher = patch.dict(os.environ, {})
+        self._home_patcher.start()
+
+        self._tmp_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        self._home_patch = patch("os.path.expanduser", return_value=self._tmp_home)
+        self._home_patch.start()
+
         unique_id = str(uuid.uuid4())
         self.file_name = f"test_data_{unique_id}.pkl"
         self.file_path = os.path.join(os.getcwd(), self.file_name)
         self.handler = PickleHandler(self.file_name)
 
     def tearDown(self):
+        self._home_patch.stop()
+        self._home_patcher.stop()
+
         if os.path.exists(self.file_path):
             os.remove(self.file_path)
+        sig_path = self.file_path + ".sig"
+        if os.path.exists(sig_path):
+            os.remove(sig_path)
+
+        import shutil
+
+        shutil.rmtree(self._tmp_home, ignore_errors=True)
 
     def test_initialize_file(self):
         assert os.path.exists(self.file_path) is False
@@ -32,18 +51,115 @@ class TestPickleHandler(unittest.TestCase):
         loaded_data = self.handler.load()
         assert loaded_data == data
 
+    def test_save_creates_signature_file(self):
+        data = {"key": "value"}
+        self.handler.save(data)
+        sig_path = self.file_path + ".sig"
+        assert os.path.exists(sig_path)
+        assert os.path.getsize(sig_path) == 32  # SHA-256 digest size
+
     def test_load_empty_file(self):
         loaded_data = self.handler.load()
         assert loaded_data == {}
 
-    def test_load_corrupted_file(self):
+    def test_load_corrupted_file_without_signature(self):
         with open(self.file_path, "wb") as file:
             file.write(b"corrupted data")
             file.flush()
-            os.fsync(file.fileno())  # Ensure data is written to disk
+            os.fsync(file.fileno())
 
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(ValueError, match="no signature file found"):
             self.handler.load()
 
-        assert str(exc.value) == "pickle data was truncated"
-        assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+    def test_load_tampered_file_raises_error(self):
+        data = {"key": "value"}
+        self.handler.save(data)
+
+        with open(self.file_path, "wb") as f:
+            f.write(b"tampered pickle data")
+
+        with pytest.raises(ValueError, match="signature mismatch"):
+            self.handler.load()
+
+    def test_load_unsigned_file_rejected(self):
+        import pickle
+
+        with open(self.file_path, "wb") as f:
+            pickle.dump({"legacy": True}, f)
+
+        with pytest.raises(ValueError, match="no signature file found"):
+            self.handler.load()
+
+    def test_overwrite_preserves_signature(self):
+        data1 = {"first": True}
+        self.handler.save(data1)
+        loaded1 = self.handler.load()
+        assert loaded1 == data1
+
+        data2 = {"second": True}
+        self.handler.save(data2)
+        loaded2 = self.handler.load()
+        assert loaded2 == data2
+
+    def test_initialize_file_creates_valid_signature(self):
+        self.handler.initialize_file()
+        sig_path = self.file_path + ".sig"
+        assert os.path.exists(sig_path)
+
+        loaded_data = self.handler.load()
+        assert loaded_data == {}
+
+    def test_load_rejects_disappearing_signature(self):
+        """If the signature file is removed after the existence check, load should raise ValueError."""
+        data = {"key": "value"}
+        self.handler.save(data)
+
+        original_exists = os.path.exists
+        sig_path = self.file_path + ".sig"
+
+        def remove_sig_after_check(path):
+            if path == sig_path and original_exists(path):
+                os.remove(sig_path)
+                return True  # exists() must report True so open() hits FileNotFoundError
+            return original_exists(path)
+
+        with patch("os.path.exists", side_effect=remove_sig_after_check):
+            with pytest.raises(ValueError, match="signature file"):
+                self.handler.load()
+
+    def test_validate_key_storage_skips_posix_checks_on_windows(self):
+        """On Windows os.getuid() is unavailable; validation must skip POSIX checks."""
+        key_dir = tempfile.mkdtemp(prefix="crewai_key_")
+        key_path = os.path.join(key_dir, "key.bin")
+        try:
+            with patch("os.name", "nt"):
+                self.assertTrue(PickleHandler._validate_key_storage(key_dir, key_path))
+        finally:
+            os.rmdir(key_dir)
+
+    def test_validate_key_storage_rejects_symlinked_directory(self):
+        """A symlinked key directory must be rejected before any ownership checks."""
+        key_dir = "/nonexistent/key/dir"
+        key_path = os.path.join(key_dir, "key.bin")
+        fake_stat = os.stat_result((stat.S_IFLNK | 0o777, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        with patch("crewai.utilities.file_handler.os.lstat", return_value=fake_stat):
+            with self.assertRaises(PermissionError):
+                PickleHandler._validate_key_storage(key_dir, key_path)
+
+    def test_validate_key_storage_rejects_symlinked_key_file(self):
+        """A symlinked key file must be rejected before any ownership checks."""
+        key_dir = "/nonexistent/key/dir"
+        key_path = "/nonexistent/key/dir/key.bin"
+        dir_stat = os.stat_result((0o40700, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        file_stat = os.stat_result((stat.S_IFLNK | 0o777, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+        def fake_lstat(path):
+            if path == key_dir:
+                return dir_stat
+            return file_stat
+
+        with patch("crewai.utilities.file_handler.os.lstat", side_effect=fake_lstat), patch(
+            "crewai.utilities.file_handler.os.path.exists", return_value=True
+        ):
+            with self.assertRaises(PermissionError):
+                PickleHandler._validate_key_storage(key_dir, key_path)
