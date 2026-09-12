@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import re
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -33,6 +34,35 @@ logger = logging.getLogger(__name__)
 # Cache for query results
 _query_cache: dict[str, list[dict[str, Any]]] = {}
 _cache_lock = threading.Lock()
+
+# Unquoted Snowflake identifiers: letter/underscore start, then letters, digits, $, _.
+# Keep these unquoted after validation so Snowflake can still case-fold them.
+_SNOWFLAKE_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*$")
+
+
+def _validate_snowflake_identifier(name: str, *, allow_qualified: bool = False) -> str:
+    """Return *name* if it is a safe Snowflake identifier, else raise ValueError.
+
+    ``database`` is a single identifier. ``snowflake_schema`` may be
+    ``schema`` or ``database.schema``. Anything else (spaces, semicolons,
+    comments, extra dots) is rejected so it cannot be interpolated into
+    ``USE DATABASE`` / ``USE SCHEMA``.
+    """
+    parts = name.split(".")
+    max_parts = 2 if allow_qualified else 1
+    if (
+        not name
+        or not parts
+        or len(parts) > max_parts
+        or any(not _SNOWFLAKE_IDENTIFIER_PATTERN.fullmatch(part) for part in parts)
+    ):
+        kind = (
+            "identifier or database.schema identifier"
+            if allow_qualified
+            else "identifier"
+        )
+        raise ValueError(f"Snowflake database/schema must be a valid {kind}")
+    return name
 
 
 class SnowflakeConfig(BaseModel):
@@ -256,9 +286,13 @@ class SnowflakeSearchTool(BaseTool):
         """Execute the search query."""
         try:
             if database:
-                await self._execute_query(f"USE DATABASE {database}")
+                safe_database = _validate_snowflake_identifier(database)
+                await self._execute_query(f"USE DATABASE {safe_database}")
             if snowflake_schema:
-                await self._execute_query(f"USE SCHEMA {snowflake_schema}")
+                safe_schema = _validate_snowflake_identifier(
+                    snowflake_schema, allow_qualified=True
+                )
+                await self._execute_query(f"USE SCHEMA {safe_schema}")
 
             return await self._execute_query(query, timeout)
         except Exception as e:
