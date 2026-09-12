@@ -46,6 +46,13 @@ jobs:
         with:
           name: dist
           path: dist/
+          
+      # 🛡️ ProofCore: Cryptographic provenance for PyPI distribution packages (.whl / .tar.gz)
+      - name: Notarize Package Artifacts via ProofCore
+        uses: ProofCore-Protocol/proofcore-action@bbc4e5b0a2cd1e9bcb08eac5b78d1a09e01d4805 # v1.1.0
+        continue-on-error: true
+        with:
+          files: "dist/*"
 
   publish:
     name: Publish to PyPI
