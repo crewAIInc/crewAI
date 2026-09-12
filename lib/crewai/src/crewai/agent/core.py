@@ -1803,6 +1803,52 @@ class Agent(BaseAgent):
 
         return output
 
+    async def _finalize_kickoff_async(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None,
+        messages: str | list[LLMMessage],
+        agent_info: dict[str, Any],
+        usage_baseline: UsageMetrics | None = None,
+    ) -> LiteAgentOutput:
+        """Apply guardrails, save to memory, and emit completion event asynchronously.
+
+        Args:
+            output: The execution output.
+            executor: The agent executor.
+            inputs: The execution inputs.
+            response_format: Optional response format.
+            messages: The original messages.
+            agent_info: Agent metadata for events.
+            usage_baseline: Usage snapshot taken at kickoff start, so retries
+                report per-call usage relative to it.
+
+        Returns:
+            The finalized output.
+        """
+        if self.guardrail is not None:
+            output = await self._process_kickoff_guardrail_async(
+                output=output,
+                executor=executor,
+                inputs=inputs,
+                response_format=response_format,
+                usage_baseline=usage_baseline,
+            )
+
+        self._save_kickoff_to_memory(messages, output.raw)
+
+        crewai_event_bus.emit(
+            self,
+            event=LiteAgentExecutionCompletedEvent(
+                agent_info=agent_info,
+                output=output.raw,
+            ),
+        )
+
+        return output
+
     def _emit_kickoff_error(self, agent_info: dict[str, Any], e: Exception) -> NoReturn:
         """Emit a kickoff error event and re-raise."""
         crewai_event_bus.emit(
@@ -2056,6 +2102,90 @@ class Agent(BaseAgent):
 
         return output
 
+    async def _process_kickoff_guardrail_async(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+        retry_count: int = 0,
+        usage_baseline: UsageMetrics | None = None,
+    ) -> LiteAgentOutput:
+        """Process guardrail for async kickoff execution with retry logic.
+
+        Args:
+            output: Current agent output.
+            executor: The executor instance.
+            inputs: Input dictionary for re-execution.
+            response_format: Optional response format.
+            retry_count: Current retry count.
+            usage_baseline: Usage snapshot taken at kickoff start, so a
+                retried output reports the whole call's usage, not just the
+                last attempt's.
+
+        Returns:
+            Validated/updated output.
+        """
+        guardrail_callable: GuardrailCallable
+        if isinstance(self.guardrail, str):
+            from crewai.tasks.llm_guardrail import LLMGuardrail
+
+            guardrail_callable = cast(
+                GuardrailCallable,
+                LLMGuardrail(description=self.guardrail, llm=cast(BaseLLM, self.llm)),
+            )
+        elif callable(self.guardrail):
+            guardrail_callable = self.guardrail
+        else:
+            return output
+
+        guardrail_result = process_guardrail(
+            output=output,
+            guardrail=guardrail_callable,
+            retry_count=retry_count,
+            event_source=self,
+            from_agent=self,
+        )
+
+        if not guardrail_result.success:
+            if retry_count >= self.guardrail_max_retries:
+                raise ValueError(
+                    f"Agent's guardrail failed validation after {self.guardrail_max_retries} retries. "
+                    f"Last error: {guardrail_result.error}"
+                )
+
+            executor._append_message_to_state(
+                guardrail_result.error or "Guardrail validation failed",
+                role="user",
+            )
+
+            retried = await self._execute_and_build_output_async(
+                executor, inputs, response_format, usage_baseline
+            )
+            # The retry opens its own collector, so carry the blocked attempt's
+            # failures forward or they vanish from the final output.
+            retried.tool_failures = merge_tool_failures(
+                output.tool_failures, retried.tool_failures
+            )
+            output = retried
+
+            return await self._process_kickoff_guardrail_async(
+                output=output,
+                executor=executor,
+                inputs=inputs,
+                response_format=response_format,
+                retry_count=retry_count + 1,
+                usage_baseline=usage_baseline,
+            )
+
+        if guardrail_result.result is not None:
+            if isinstance(guardrail_result.result, str):
+                output.raw = guardrail_result.result
+            elif isinstance(guardrail_result.result, BaseModel):
+                output.pydantic = guardrail_result.result
+
+        return output
+
     async def kickoff_async(
         self,
         messages: str | list[LLMMessage],
@@ -2118,7 +2248,7 @@ class Agent(BaseAgent):
             output = await self._execute_and_build_output_async(
                 executor, inputs, response_format, usage_baseline
             )
-            return self._finalize_kickoff(
+            return await self._finalize_kickoff_async(
                 output,
                 executor,
                 inputs,
