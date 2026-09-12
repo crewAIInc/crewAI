@@ -17,7 +17,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-09-02T06:30:33.5794045Z"
+exclude-newer = "2026-09-09T06:30:13.4015594Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -1909,7 +1909,7 @@ requires-dist = [
     { name = "tiktoken", specifier = ">=0.8.0,<0.13" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version >= '3.11' and extra == 'xml'", specifier = ">=0.24.0" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version < '3.11' and extra == 'xml'", specifier = ">=0.17.2" },
-    { name = "velaris-lang", marker = "extra == 'velaris'", specifier = ">=2.57.0" },
+    { name = "velaris-lang", marker = "extra == 'velaris'", specifier = ">=2.59.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
@@ -10353,11 +10353,11 @@ wheels = [
 
 [[package]]
 name = "velaris-lang"
-version = "2.57.0"
+version = "2.59.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/55/a2/2b70b597550fbf8377686e803deb591122aee761e1e4e9e908190fbbc1de/velaris_lang-2.57.0.tar.gz", hash = "sha256:8c67c2745b7d741d94d648c82dacad0d75a9369eb9f9296344cd4b6dd2beb6fb", size = 63690769, upload-time = "2026-08-26T21:33:44.139Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/e3/b39b7e32d0b8023c008cb3d088f65f040b50dd8fae901d6e8bf41e93ff0a/velaris_lang-2.59.0.tar.gz", hash = "sha256:790a2af213b37f7dade424feb824d28f8cc67b70847417ab3238b675218cbfbf", size = 63698538, upload-time = "2026-09-05T09:40:24.165Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9a/c4/bf2c58ea1b65bb6e7910445701d5cdb0e27e44ff8d25996ad9829fdc9b4f/velaris_lang-2.57.0-py3-none-any.whl", hash = "sha256:5d8a7f61f4d0e3a98248507b560f2a12d6b501661c9f704a5c1c5b1ed6612594", size = 102931, upload-time = "2026-08-26T21:33:39.813Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/34/243ba36dc2d5320f3c71b737507cabf8af10f4a6396540ae09e686fd5791/velaris_lang-2.59.0-py3-none-any.whl", hash = "sha256:ccc0dc154e4b92db96b4cd7229f03922fd1c9503f822b6a573b5b4b25e5c9af9", size = 104450, upload-time = "2026-09-05T09:40:20.876Z" },
 ]
 
 [[package]]
