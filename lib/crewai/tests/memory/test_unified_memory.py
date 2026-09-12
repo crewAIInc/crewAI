@@ -180,6 +180,7 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
 
 
 def test_lancedb_list_records_order_and_pagination(lancedb_path: Path) -> None:
+    """Test that LanceDBStorage.list_records returns newest records first with correct pagination."""
     from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
     storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)

@@ -507,6 +507,7 @@ class LanceDBStorage:
         rows = self._scan_rows(scope_prefix)
 
         def _get_created_at(row: dict[str, Any]) -> datetime:
+            """Extract and parse created_at into a timezone-aware UTC datetime."""
             val = row.get("created_at")
             if val is None:
                 return datetime.min.replace(tzinfo=timezone.utc)
