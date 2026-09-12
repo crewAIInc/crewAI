@@ -67,7 +67,17 @@ class TestCrewaiPlatformTools(unittest.TestCase):
                 ],
             }
         }
-        mock_get.return_value = mock_response
+        github_response = Mock()
+        github_response.raise_for_status.return_value = None
+        github_response.json.return_value = {
+            "actions": {"github": mock_response.json.return_value["actions"]["github"]}
+        }
+        slack_response = Mock()
+        slack_response.raise_for_status.return_value = None
+        slack_response.json.return_value = {
+            "actions": {"slack": mock_response.json.return_value["actions"]["slack"]}
+        }
+        mock_get.side_effect = [github_response, slack_response]
 
         tools = CrewaiPlatformTools(apps=["github", "slack"])
         assert tools is not None
@@ -147,10 +157,8 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     def test_crewai_platform_tools_api_error_handling(self, mock_get):
         mock_get.side_effect = Exception("API Error")
 
-        tools = CrewaiPlatformTools(apps=["github"])
-        assert tools is not None
-        assert isinstance(tools, list)
-        assert len(tools) == 0
+        with self.assertRaisesRegex(Exception, "API Error"):
+            CrewaiPlatformTools(apps=["github"])
 
     def test_crewai_platform_tools_no_token(self):
         with patch.dict("os.environ", {}, clear=True):
@@ -312,7 +320,17 @@ class TestCrewaiPlatformTools(unittest.TestCase):
                 ],
             }
         }
-        mock_get.return_value = response
+        github_response = Mock()
+        github_response.raise_for_status.return_value = None
+        github_response.json.return_value = {
+            "actions": {"github": response.json.return_value["actions"]["github"]}
+        }
+        slack_response = Mock()
+        slack_response.raise_for_status.return_value = None
+        slack_response.json.return_value = {
+            "actions": {"slack": response.json.return_value["actions"]["slack"]}
+        }
+        mock_get.side_effect = [github_response, slack_response]
 
         tools = CrewaiPlatformTools(apps=["github", "slack"])
 

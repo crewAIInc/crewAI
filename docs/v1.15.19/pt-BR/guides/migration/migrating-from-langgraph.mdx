@@ -1,0 +1,518 @@
+---
+title: "Migrando do LangGraph para o CrewAI: um guia prático para engenheiros"
+description: Se você já construiu com LangGraph, saiba como portar rapidamente seus projetos para o CrewAI
+icon: switch
+mode: "wide"
+---
+
+Você construiu agentes com LangGraph. Já lutou com o `StateGraph`, ligou arestas condicionais e depurou dicionários de estado às 2 da manhã. Funciona — mas, em algum momento, você começou a se perguntar se existe um caminho melhor para produção.
+
+Existe. **CrewAI Flows** entrega o mesmo poder — orquestração orientada a eventos, roteamento condicional, estado compartilhado — com muito menos boilerplate e um modelo mental que se alinha a como você realmente pensa sobre fluxos de trabalho de IA em múltiplas etapas.
+
+Este artigo apresenta os conceitos principais lado a lado, mostra comparações reais de código e demonstra por que o CrewAI Flows é o framework que você vai querer usar a seguir.
+
+---
+
+## A Mudança de Modelo Mental
+
+LangGraph pede que você pense em **grafos**: nós, arestas e dicionários de estado. Todo workflow é um grafo direcionado em que você conecta explicitamente as transições entre as etapas de computação. É poderoso, mas a abstração traz overhead — especialmente quando o seu fluxo é fundamentalmente sequencial com alguns pontos de decisão.
+
+CrewAI Flows pede que você pense em **eventos**: métodos que iniciam, métodos que escutam resultados e métodos que roteiam a execução. A topologia do workflow emerge de anotações com decorators, em vez de construção explícita do grafo. Isso não é apenas açúcar sintático — muda como você projeta, lê e mantém seus pipelines.
+
+Veja o mapeamento principal:
+
+| Conceito no LangGraph | Equivalente no CrewAI Flows |
+| --- | --- |
+| `StateGraph` class | `Flow` class |
+| `add_node()` | Methods decorated with `@start`, `@listen` |
+| `add_edge()` / `add_conditional_edges()` | `@listen()` / `@router()` decorators |
+| `TypedDict` state | Pydantic `BaseModel` state |
+| `START` / `END` constants | `@start()` decorator / natural method return |
+| `graph.compile()` | `flow.kickoff()` |
+| Checkpointer / persistence | Built-in memory (LanceDB-backed) |
+
+Vamos ver como isso fica na prática.
+
+---
+
+## Demo 1: Um Pipeline Sequencial Simples
+
+Imagine que você está construindo um pipeline que recebe um tema, pesquisa, escreve um resumo e formata a saída. Veja como cada framework lida com isso.
+
+### Abordagem com LangGraph
+
+```python
+from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+
+class ResearchState(TypedDict):
+    topic: str
+    raw_research: str
+    summary: str
+    formatted_output: str
+
+def research_topic(state: ResearchState) -> dict:
+    # Call an LLM or search API
+    result = llm.invoke(f"Research the topic: {state['topic']}")
+    return {"raw_research": result}
+
+def write_summary(state: ResearchState) -> dict:
+    result = llm.invoke(
+        f"Summarize this research:\n{state['raw_research']}"
+    )
+    return {"summary": result}
+
+def format_output(state: ResearchState) -> dict:
+    result = llm.invoke(
+        f"Format this summary as a polished article section:\n{state['summary']}"
+    )
+    return {"formatted_output": result}
+
+# Build the graph
+graph = StateGraph(ResearchState)
+graph.add_node("research", research_topic)
+graph.add_node("summarize", write_summary)
+graph.add_node("format", format_output)
+
+graph.add_edge(START, "research")
+graph.add_edge("research", "summarize")
+graph.add_edge("summarize", "format")
+graph.add_edge("format", END)
+
+# Compile and run
+app = graph.compile()
+result = app.invoke({"topic": "quantum computing advances in 2026"})
+print(result["formatted_output"])
+```
+
+Você define funções, registra-as como nós e conecta manualmente cada transição. Para uma sequência simples como essa, há muita cerimônia.
+
+### Abordagem com CrewAI Flows
+
+```python
+from crewai import LLM, Agent, Crew, Process, Task
+from crewai.flow.flow import Flow, listen, start
+from pydantic import BaseModel
+
+llm = LLM(model="openai/gpt-5.2")
+
+class ResearchState(BaseModel):
+    topic: str = ""
+    raw_research: str = ""
+    summary: str = ""
+    formatted_output: str = ""
+
+class ResearchFlow(Flow[ResearchState]):
+    @start()
+    def research_topic(self):
+        # Option 1: Direct LLM call
+        result = llm.call(f"Research the topic: {self.state.topic}")
+        self.state.raw_research = result
+        return result
+
+    @listen(research_topic)
+    def write_summary(self, research_output):
+        # Option 2: A single agent
+        summarizer = Agent(
+            role="Research Summarizer",
+            goal="Produce concise, accurate summaries of research content",
+            backstory="You are an expert at distilling complex research into clear, "
+            "digestible summaries.",
+            llm=llm,
+            verbose=True,
+        )
+        result = summarizer.kickoff(
+            f"Summarize this research:\n{self.state.raw_research}"
+        )
+        self.state.summary = str(result)
+        return self.state.summary
+
+    @listen(write_summary)
+    def format_output(self, summary_output):
+        # Option 3: a complete crew (with one or more agents)
+        formatter = Agent(
+            role="Content Formatter",
+            goal="Transform research summaries into polished, publication-ready article sections",
+            backstory="You are a skilled editor with expertise in structuring and "
+            "presenting technical content for a general audience.",
+            llm=llm,
+            verbose=True,
+        )
+        format_task = Task(
+            description=f"Format this summary as a polished article section:\n{self.state.summary}",
+            expected_output="A well-structured, polished article section ready for publication.",
+            agent=formatter,
+        )
+        crew = Crew(
+            agents=[formatter],
+            tasks=[format_task],
+            process=Process.sequential,
+            verbose=True,
+        )
+        result = crew.kickoff()
+        self.state.formatted_output = str(result)
+        return self.state.formatted_output
+
+# Run the flow
+flow = ResearchFlow()
+flow.state.topic = "quantum computing advances in 2026"
+result = flow.kickoff()
+print(flow.state.formatted_output)
+
+```
+
+Repare a diferença: nada de construção de grafo, de ligação de arestas, nem de etapa de compilação. A ordem de execução é declarada exatamente onde a lógica vive. `@start()` marca o ponto de entrada, e `@listen(method_name)` encadeia as etapas. O estado é um modelo Pydantic de verdade, com segurança de tipos, validação e auto-complete na IDE.
+
+---
+
+## Demo 2: Roteamento Condicional
+
+Aqui é que fica interessante. Digamos que você está construindo um pipeline de conteúdo que roteia para diferentes caminhos de processamento com base no tipo de conteúdo detectado.
+
+### Abordagem com LangGraph
+
+```python
+from typing import TypedDict, Literal
+from langgraph.graph import StateGraph, START, END
+
+class ContentState(TypedDict):
+    input_text: str
+    content_type: str
+    result: str
+
+def classify_content(state: ContentState) -> dict:
+    content_type = llm.invoke(
+        f"Classify this content as 'technical', 'creative', or 'business':\n{state['input_text']}"
+    )
+    return {"content_type": content_type.strip().lower()}
+
+def process_technical(state: ContentState) -> dict:
+    result = llm.invoke(f"Process as technical doc:\n{state['input_text']}")
+    return {"result": result}
+
+def process_creative(state: ContentState) -> dict:
+    result = llm.invoke(f"Process as creative writing:\n{state['input_text']}")
+    return {"result": result}
+
+def process_business(state: ContentState) -> dict:
+    result = llm.invoke(f"Process as business content:\n{state['input_text']}")
+    return {"result": result}
+
+# Routing function
+def route_content(state: ContentState) -> Literal["technical", "creative", "business"]:
+    return state["content_type"]
+
+# Build the graph
+graph = StateGraph(ContentState)
+graph.add_node("classify", classify_content)
+graph.add_node("technical", process_technical)
+graph.add_node("creative", process_creative)
+graph.add_node("business", process_business)
+
+graph.add_edge(START, "classify")
+graph.add_conditional_edges(
+    "classify",
+    route_content,
+    {
+        "technical": "technical",
+        "creative": "creative",
+        "business": "business",
+    }
+)
+graph.add_edge("technical", END)
+graph.add_edge("creative", END)
+graph.add_edge("business", END)
+
+app = graph.compile()
+result = app.invoke({"input_text": "Explain how TCP handshakes work"})
+```
+
+Você precisa de uma função de roteamento separada, de um mapeamento explícito de arestas condicionais e de arestas de término para cada ramificação. A lógica de roteamento fica desacoplada do nó que produz a decisão.
+
+### Abordagem com CrewAI Flows
+
+```python
+from crewai import LLM, Agent
+from crewai.flow.flow import Flow, listen, router, start
+from pydantic import BaseModel
+
+llm = LLM(model="openai/gpt-5.2")
+
+class ContentState(BaseModel):
+    input_text: str = ""
+    content_type: str = ""
+    result: str = ""
+
+class ContentFlow(Flow[ContentState]):
+    @start()
+    def classify_content(self):
+        self.state.content_type = (
+            llm.call(
+                f"Classify this content as 'technical', 'creative', or 'business':\n"
+                f"{self.state.input_text}"
+            )
+            .strip()
+            .lower()
+        )
+        return self.state.content_type
+
+    @router(classify_content)
+    def route_content(self, classification):
+        if classification == "technical":
+            return "process_technical"
+        elif classification == "creative":
+            return "process_creative"
+        else:
+            return "process_business"
+
+    @listen("process_technical")
+    def handle_technical(self):
+        agent = Agent(
+            role="Technical Writer",
+            goal="Produce clear, accurate technical documentation",
+            backstory="You are an expert technical writer who specializes in "
+            "explaining complex technical concepts precisely.",
+            llm=llm,
+            verbose=True,
+        )
+        self.state.result = str(
+            agent.kickoff(f"Process as technical doc:\n{self.state.input_text}")
+        )
+
+    @listen("process_creative")
+    def handle_creative(self):
+        agent = Agent(
+            role="Creative Writer",
+            goal="Craft engaging and imaginative creative content",
+            backstory="You are a talented creative writer with a flair for "
+            "compelling storytelling and vivid expression.",
+            llm=llm,
+            verbose=True,
+        )
+        self.state.result = str(
+            agent.kickoff(f"Process as creative writing:\n{self.state.input_text}")
+        )
+
+    @listen("process_business")
+    def handle_business(self):
+        agent = Agent(
+            role="Business Writer",
+            goal="Produce professional, results-oriented business content",
+            backstory="You are an experienced business writer who communicates "
+            "strategy and value clearly to professional audiences.",
+            llm=llm,
+            verbose=True,
+        )
+        self.state.result = str(
+            agent.kickoff(f"Process as business content:\n{self.state.input_text}")
+        )
+
+flow = ContentFlow()
+flow.state.input_text = "Explain how TCP handshakes work"
+flow.kickoff()
+print(flow.state.result)
+
+```
+
+O decorator `@router()` transforma um método em um ponto de decisão. Ele retorna uma string que corresponde a um listener — sem dicionários de mapeamento, sem funções de roteamento separadas. A lógica de ramificação parece um `if` em Python porque *é* um.
+
+---
+
+## Demo 3: Integrando Crews de Agentes de IA em Flows
+
+É aqui que o verdadeiro poder do CrewAI aparece. Flows não servem apenas para encadear chamadas de LLM — elas orquestram **Crews** completas de agentes autônomos. Isso é algo para o qual o LangGraph simplesmente não tem um equivalente nativo.
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.flow.flow import Flow, listen, start
+from pydantic import BaseModel
+
+class ArticleState(BaseModel):
+    topic: str = ""
+    research: str = ""
+    draft: str = ""
+    final_article: str = ""
+
+class ArticleFlow(Flow[ArticleState]):
+
+    @start()
+    def run_research_crew(self):
+        """A full Crew of agents handles research."""
+        researcher = Agent(
+            role="Senior Research Analyst",
+            goal=f"Produce comprehensive research on: {self.state.topic}",
+            backstory="You're a veteran analyst known for thorough, "
+                       "well-sourced research reports.",
+            llm="gpt-4o"
+        )
+
+        research_task = Task(
+            description=f"Research '{self.state.topic}' thoroughly. "
+                        "Cover key trends, data points, and expert opinions.",
+            expected_output="A detailed research brief with sources.",
+            agent=researcher
+        )
+
+        crew = Crew(agents=[researcher], tasks=[research_task])
+        result = crew.kickoff()
+        self.state.research = result.raw
+        return result.raw
+
+    @listen(run_research_crew)
+    def run_writing_crew(self, research_output):
+        """A different Crew handles writing."""
+        writer = Agent(
+            role="Technical Writer",
+            goal="Write a compelling article based on provided research.",
+            backstory="You turn complex research into engaging, clear prose.",
+            llm="gpt-4o"
+        )
+
+        editor = Agent(
+            role="Senior Editor",
+            goal="Review and polish articles for publication quality.",
+            backstory="20 years of editorial experience at top tech publications.",
+            llm="gpt-4o"
+        )
+
+        write_task = Task(
+            description=f"Write an article based on this research:\n{self.state.research}",
+            expected_output="A well-structured draft article.",
+            agent=writer
+        )
+
+        edit_task = Task(
+            description="Review, fact-check, and polish the draft article.",
+            expected_output="A publication-ready article.",
+            agent=editor
+        )
+
+        crew = Crew(agents=[writer, editor], tasks=[write_task, edit_task])
+        result = crew.kickoff()
+        self.state.final_article = result.raw
+        return result.raw
+
+# Run the full pipeline
+flow = ArticleFlow()
+flow.state.topic = "The Future of Edge AI"
+flow.kickoff()
+print(flow.state.final_article)
+```
+
+Este é o insight-chave: **Flows fornecem a camada de orquestração, e Crews fornecem a camada de inteligência.** Cada etapa em um Flow pode subir uma equipe completa de agentes colaborativos, cada um com seus próprios papéis, objetivos e ferramentas. Você obtém fluxo de controle estruturado e previsível *e* colaboração autônoma de agentes — o melhor dos dois mundos.
+
+No LangGraph, alcançar algo similar significa implementar manualmente protocolos de comunicação entre agentes, loops de chamada de ferramentas e lógica de delegação dentro das funções dos nós. É possível, mas é encanamento que você constrói do zero todas as vezes.
+
+---
+
+## Demo 4: Execução Paralela e Sincronização
+
+Pipelines do mundo real frequentemente precisam dividir o trabalho e juntar os resultados. O CrewAI Flows lida com isso de forma elegante com os operadores `and_` e `or_`.
+
+```python
+from crewai import LLM
+from crewai.flow.flow import Flow, and_, listen, start
+from pydantic import BaseModel
+
+llm = LLM(model="openai/gpt-5.2")
+
+class AnalysisState(BaseModel):
+    topic: str = ""
+    market_data: str = ""
+    tech_analysis: str = ""
+    competitor_intel: str = ""
+    final_report: str = ""
+
+class ParallelAnalysisFlow(Flow[AnalysisState]):
+    @start()
+    def start_method(self):
+        pass
+
+    @listen(start_method)
+    def gather_market_data(self):
+        # Your agentic or deterministic code
+        pass
+
+    @listen(start_method)
+    def run_tech_analysis(self):
+        # Your agentic or deterministic code
+        pass
+
+    @listen(start_method)
+    def gather_competitor_intel(self):
+        # Your agentic or deterministic code
+        pass
+
+    @listen(and_(gather_market_data, run_tech_analysis, gather_competitor_intel))
+    def synthesize_report(self):
+        # Your agentic or deterministic code
+        pass
+
+flow = ParallelAnalysisFlow()
+flow.state.topic = "AI-powered developer tools"
+flow.kickoff()
+
+```
+
+Vários decorators `@start()` disparam em paralelo. O combinador `and_()` no decorator `@listen` garante que `synthesize_report` só execute depois que *todos os três* métodos upstream forem concluídos. Também existe `or_()` para quando você quer prosseguir assim que *qualquer* tarefa upstream terminar.
+
+No LangGraph, você precisaria construir um padrão fan-out/fan-in com ramificações paralelas, um nó de sincronização e uma mesclagem de estado cuidadosa — tudo conectado explicitamente por arestas.
+
+---
+
+## Por que CrewAI Flows em Produção
+
+Além de uma sintaxe mais limpa, Flows entrega várias vantagens críticas para produção:
+
+**Persistência de estado integrada.** O estado do Flow é respaldado pelo LanceDB, o que significa que seus workflows podem sobreviver a falhas, ser retomados e acumular conhecimento entre execuções. No LangGraph, você precisa configurar um checkpointer separado.
+
+**Gerenciamento de estado com segurança de tipos.** Modelos Pydantic oferecem validação, serialização e suporte de IDE prontos para uso. Estados `TypedDict` do LangGraph não validam em runtime.
+
+**Orquestração de agentes de primeira classe.** Crews são um primitivo nativo. Você define agentes com papéis, objetivos, histórias e ferramentas — e eles colaboram de forma autônoma dentro do envelope estruturado de um Flow. Não é preciso reinventar a coordenação multiagente.
+
+**Modelo mental mais simples.** Decorators declaram intenção. `@start` significa "comece aqui". `@listen(x)` significa "execute depois de x". `@router(x)` significa "decida para onde ir depois de x". O código lê como o workflow que ele descreve.
+
+**Integração com CLI.** Execute flows com `crewai run`. Sem etapa de compilação separada, sem serialização de grafo. Seu Flow é uma classe Python, e ele roda como tal.
+
+---
+
+## Cheat Sheet de Migração
+
+Se você está com uma base de código LangGraph e quer migrar para o CrewAI Flows, aqui vai um guia prático de conversão:
+
+1. **Mapeie seu estado.** Converta seu `TypedDict` para um `BaseModel` do Pydantic. Adicione valores padrão para todos os campos.
+2. **Converta nós em métodos.** Cada função de `add_node` vira um método na sua subclasse de `Flow`. Substitua leituras `state["field"]` por `self.state.field`.
+3. **Substitua arestas por decorators.** `add_edge(START, "first_node")` vira `@start()` no primeiro método. A sequência `add_edge("a", "b")` vira `@listen(a)` no método `b`.
+4. **Substitua arestas condicionais por `@router`.** A função de roteamento e o mapeamento do `add_conditional_edges()` viram um único método `@router()` que retorna a string de rota.
+5. **Troque compile + invoke por kickoff.** Remova `graph.compile()`. Chame `flow.kickoff()`.
+6. **Considere onde as Crews se encaixam.** Qualquer nó com lógica complexa de agentes em múltiplas etapas é um candidato a extração para uma Crew. É aqui que você verá a maior melhoria de qualidade.
+
+---
+
+## Primeiros Passos
+
+Instale o CrewAI e crie o scaffold de um novo projeto Flow:
+
+```bash
+pip install crewai
+crewai create flow my_first_flow
+cd my_first_flow
+```
+
+Isso gera uma estrutura de projeto com uma classe Flow pronta para edição, arquivos de configuração e um `pyproject.toml` com `type = "flow"` já definido. Execute com:
+
+```bash
+crewai run
+```
+
+A partir daí, adicione seus agentes, conecte seus listeners e publique.
+
+---
+
+## Considerações Finais
+
+O LangGraph ensinou ao ecossistema que workflows de IA precisam de estrutura. Essa foi uma lição importante. Mas o CrewAI Flows pega essa lição e a entrega de um jeito mais rápido de escrever, mais fácil de ler e mais poderoso em produção — especialmente quando seus workflows envolvem múltiplos agentes colaborando.
+
+Se você está construindo algo além de uma cadeia de agente único, dê uma olhada séria no Flows. O modelo baseado em decorators, a integração nativa com Crews e o gerenciamento de estado embutido significam menos tempo com encanamento e mais tempo nos problemas que importam.
+
+Comece com `crewai create flow`. Você não vai olhar para trás.

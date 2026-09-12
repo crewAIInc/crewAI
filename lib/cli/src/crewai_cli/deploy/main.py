@@ -77,6 +77,14 @@ def _display_git_remote_help() -> None:
     )
 
 
+def _zip_deployment_flag(status: dict[str, Any] | None) -> bool | None:
+    """Return the AMP zip_deployment flag, or None when it cannot be used."""
+    if not status or "zip_deployment" not in status:
+        return None
+    value = status["zip_deployment"]
+    return value if isinstance(value, bool) else None
+
+
 def _env_summary(env_vars: dict[str, str]) -> str:
     """Return a compact description of environment variables for prompts."""
     if not env_vars:
@@ -307,29 +315,101 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         repository = self._prepare_git_repository()
         remote_repo_url = repository.origin_url() if repository else None
 
-        if remote_repo_url and uuid:
-            response = self.plus_api_client.deploy_by_uuid(uuid)
-        elif remote_repo_url and self.project_name:
-            response = self.plus_api_client.deploy_by_name(self.project_name)
-        elif uuid:
-            _display_git_remote_help()
-            env_vars = fetch_and_json_env_file()
-            response = self._update_crew_from_zip(uuid, repository, env_vars)
-        elif self.project_name:
-            _display_git_remote_help()
-            deployment_uuid = self._deployment_uuid_by_name()
-            env_vars = fetch_and_json_env_file()
-            response = self._update_crew_from_zip(
-                deployment_uuid,
-                repository,
-                env_vars,
+        status = self._deployment_status(uuid, self.project_name)
+        if status is not None and self._can_deploy_from_amp(
+            uuid, self.project_name, status
+        ):
+            response = self._deploy_from_amp_source(
+                uuid, self.project_name, repository, status
             )
         else:
-            self._standard_no_param_error_message()
-            return
+            response = self._deploy_from_local_source(
+                uuid, self.project_name, repository, remote_repo_url
+            )
+            if response is None:
+                self._standard_no_param_error_message()
+                return
 
         self._validate_response(response)
         self._display_deployment_info(response.json())
+
+    def _deployment_status(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+    ) -> dict[str, Any] | None:
+        """Fetch deployment status without failing the command."""
+        try:
+            if uuid:
+                response = self.plus_api_client.crew_status_by_uuid(uuid)
+            elif project_name:
+                response = self.plus_api_client.crew_status_by_name(project_name)
+            else:
+                return None
+            if not response.is_success:
+                return None
+            payload = response.json()
+        except Exception:
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    def _can_deploy_from_amp(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        status: dict[str, Any] | None,
+    ) -> bool:
+        """Return True when AMP reported a usable zip_deployment flag."""
+        zip_deployment = _zip_deployment_flag(status)
+        if zip_deployment is None:
+            return False
+        if zip_deployment:
+            return bool(uuid or (status and status.get("uuid")))
+        return bool(uuid or project_name)
+
+    def _deploy_from_amp_source(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        repository: git.Repository | None,
+        status: dict[str, Any],
+    ) -> Any:
+        """Deploy using AMP zip_deployment."""
+        if _zip_deployment_flag(status):
+            deployment_uuid = uuid or str(status["uuid"])
+            env_vars = fetch_and_json_env_file()
+            return self._update_crew_from_zip(deployment_uuid, repository, env_vars)
+        if uuid:
+            return self.plus_api_client.deploy_by_uuid(uuid)
+        if not project_name:
+            raise ValueError("project_name is required to deploy by name")
+        return self.plus_api_client.deploy_by_name(project_name)
+
+    def _deploy_from_local_source(
+        self,
+        uuid: str | None,
+        project_name: str | None,
+        repository: git.Repository | None,
+        remote_repo_url: str | None,
+    ) -> Any | None:
+        """Deploy using local origin, as before AMP zip_deployment existed."""
+        if remote_repo_url and uuid:
+            return self.plus_api_client.deploy_by_uuid(uuid)
+        if remote_repo_url and project_name:
+            return self.plus_api_client.deploy_by_name(project_name)
+        if uuid:
+            _display_git_remote_help()
+            env_vars = fetch_and_json_env_file()
+            return self._update_crew_from_zip(uuid, repository, env_vars)
+        if project_name:
+            _display_git_remote_help()
+            env_vars = fetch_and_json_env_file()
+            return self._update_crew_from_zip(
+                self._deployment_uuid_by_name(),
+                repository,
+                env_vars,
+            )
+        return None
 
     def _deployment_uuid_by_name(self) -> str:
         """Resolve the current project's deployment UUID by project name."""
