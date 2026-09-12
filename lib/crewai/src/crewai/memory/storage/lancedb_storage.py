@@ -504,7 +504,7 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        rows = self._scan_rows(scope_prefix, limit=limit + offset)
+        rows = self._scan_rows(scope_prefix)
         records = [self._row_to_record(r) for r in rows]
         records.sort(key=lambda r: r.created_at, reverse=True)
         return records[offset : offset + limit]
