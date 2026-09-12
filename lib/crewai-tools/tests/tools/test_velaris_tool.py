@@ -98,6 +98,18 @@ def test_run_stops_a_program_that_never_ends():
     assert "REACHED THE END" not in out
 
 
+def test_the_fallback_path_stops_a_program_that_never_ends(monkeypatch):
+    """The same stop on the subprocess path an older compiler takes, which
+    the lock no longer reaches on its own."""
+    monkeypatch.setattr(
+        "crewai_tools.tools.velaris_tool.velaris_tool._supports_limits",
+        lambda _velaris: False,
+    )
+    out = VelarisRunTool(allow=["io"], timeout=2).run(source=FOREVER)
+    assert "ran longer than 2" in out
+    assert "REACHED THE END" not in out
+
+
 @pytest.mark.skipif(
     sys.platform != "linux", reason="RLIMIT_AS is only reliably honoured on Linux"
 )
