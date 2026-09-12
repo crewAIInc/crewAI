@@ -68,3 +68,9 @@ def test_add_texts(mongodb_vector_search_tool):
         args = bulk_write.mock_calls[0].args
         assert "ReplaceOne" in str(args[0][0])
         assert "foo" in str(args[0][0])
+
+
+def test_env_vars_metadata_lists_openai_credentials():
+    env_vars = MongoDBVectorSearchTool.model_fields["env_vars"].default_factory()
+
+    assert [env_var.name for env_var in env_vars] == ["OPENAI_API_KEY"]

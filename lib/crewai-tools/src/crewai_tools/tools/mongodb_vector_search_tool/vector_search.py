@@ -92,14 +92,9 @@ class MongoDBVectorSearchTool(BaseTool):
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
-                name="BROWSERBASE_API_KEY",
-                description="API key for Browserbase services",
-                required=False,
-            ),
-            EnvVar(
-                name="BROWSERBASE_PROJECT_ID",
-                description="Project ID for Browserbase services",
-                required=False,
+                name="OPENAI_API_KEY",
+                description="OpenAI API key for embeddings",
+                required=True,
             ),
         ]
     )
