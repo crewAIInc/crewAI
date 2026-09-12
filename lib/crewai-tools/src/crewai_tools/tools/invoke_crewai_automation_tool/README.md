@@ -39,6 +39,28 @@ tool = InvokeCrewAIAutomationTool(
 result = tool.run()
 ```
 
+### Using Environment Variables
+
+`crew_api_url` and `crew_bearer_token` can also be provided via environment variables
+instead of constructor arguments, which is convenient for keeping credentials out of code:
+
+```shell
+export CREWAI_API_URL="https://data-analysis-crew-[...].crewai.com"
+export CREWAI_BEARER_TOKEN="your_bearer_token_here"
+```
+
+```python
+from crewai_tools import InvokeCrewAIAutomationTool
+
+# crew_api_url/crew_bearer_token are read from CREWAI_API_URL/CREWAI_BEARER_TOKEN
+tool = InvokeCrewAIAutomationTool(
+    crew_name="Data Analysis Crew",
+    crew_description="Analyzes data and generates insights"
+)
+```
+
+Explicit constructor arguments always take precedence over the environment variables.
+
 ### Advanced Usage with Custom Inputs
 
 ```python
@@ -109,17 +131,28 @@ result = crew.kickoff()
 
 ## Arguments
 
-### Required Parameters
-
-- `crew_api_url` (str): Base URL of the CrewAI Platform automation API
-- `crew_bearer_token` (str): Bearer token for API authentication
-- `crew_name` (str): Name of the crew automation
-- `crew_description` (str): Description of what the crew automation does
-
 ### Optional Parameters
 
+- `crew_api_url` (str): Base URL of the CrewAI Platform automation API. Falls back to the
+  `CREWAI_API_URL` environment variable when omitted.
+- `crew_bearer_token` (str): Bearer token for API authentication. Falls back to the
+  `CREWAI_BEARER_TOKEN` environment variable when omitted.
+- `crew_name` (str): Name of the crew automation. Defaults to a generic tool name; set it
+  explicitly so the LLM sees a meaningful tool name and description in its tool list.
+- `crew_description` (str): Description of what the crew automation does. Defaults to a
+  generic description for the same reason as `crew_name`.
 - `max_polling_time` (int): Maximum time in seconds to wait for task completion (default: 600 seconds = 10 minutes)
 - `crew_inputs` (dict): Dictionary defining custom input schema fields using Pydantic Field objects
+
+All of the above are optional at construction time, so `InvokeCrewAIAutomationTool()` never
+fails to instantiate. If `crew_api_url`/`crew_bearer_token` are still missing (neither passed
+explicitly nor available via `CREWAI_API_URL`/`CREWAI_BEARER_TOKEN`) when the tool is actually
+run, it raises a clear `ValueError` explaining what is missing.
+
+## Environment Variables
+
+- `CREWAI_API_URL`: Alternative to passing `crew_api_url`.
+- `CREWAI_BEARER_TOKEN`: Alternative to passing `crew_bearer_token`.
 
 ## Custom Input Schema
 
