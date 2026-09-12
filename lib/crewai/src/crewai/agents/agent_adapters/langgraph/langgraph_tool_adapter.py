@@ -9,7 +9,13 @@ import inspect
 from typing import Any
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
+)
 from crewai.tools.base_tool import BaseTool
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 class LangGraphToolAdapter(BaseToolAdapter):
@@ -65,18 +71,48 @@ class LangGraphToolAdapter(BaseToolAdapter):
                 Returns:
                     The result from the tool execution.
                 """
-                output: Any | Awaitable[Any]
-                if len(args) > 0 and isinstance(args[0], str):
-                    output = tool.run(args[0])
-                elif "input" in kwargs:
-                    output = tool.run(kwargs["input"])
+                # A bare string (positional or under ``input``) is passed to the
+                # tool positionally; anything else is keyword arguments. The
+                # hook context carries the same value under ``input`` so a hook
+                # can inspect or rewrite it in place before the body runs.
+                positional = (len(args) > 0 and isinstance(args[0], str)) or (
+                    "input" in kwargs
+                )
+                tool_input: dict[str, Any] = (
+                    {"input": args[0] if len(args) > 0 else kwargs["input"]}
+                    if positional
+                    else kwargs
+                )
+                tool_name = sanitize_tool_name(tool.name)
+                before_hook_context = ToolCallHookContext(
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    tool=tool,  # type: ignore[arg-type]
+                )
+                result: Any
+                if run_before_tool_call_hooks(before_hook_context):
+                    result = f"Tool execution blocked by hook. Tool: {tool_name}"
                 else:
-                    output = tool.run(**kwargs)
+                    output: Any | Awaitable[Any]
+                    if positional:
+                        output = tool.run(tool_input["input"])
+                    else:
+                        output = tool.run(**tool_input)
+                    if inspect.isawaitable(output):
+                        result = await output
+                    else:
+                        result = output
 
-                if inspect.isawaitable(output):
-                    result: Any = await output
-                else:
-                    result = output
+                after_hook_context = ToolCallHookContext(
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    tool=tool,  # type: ignore[arg-type]
+                    tool_result=result,
+                    raw_tool_result=result,
+                )
+                modified_result = run_after_tool_call_hooks(after_hook_context)
+                if modified_result is not None:
+                    result = modified_result
                 return result
 
             converted_tool: StructuredTool = StructuredTool(
