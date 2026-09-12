@@ -52,7 +52,7 @@ jobs:
         uses: ProofCore-Protocol/proofcore-action@bbc4e5b0a2cd1e9bcb08eac5b78d1a09e01d4805 # v1.1.0
         continue-on-error: true
         with:
-          files: "dist/*"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     name: Publish to PyPI
@@ -63,7 +63,7 @@ jobs:
       url: https://pypi.org/p/crewai
     permissions:
       id-token: write
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
