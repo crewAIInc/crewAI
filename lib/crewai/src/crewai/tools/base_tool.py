@@ -6,7 +6,9 @@ from collections.abc import Awaitable, Callable
 import importlib
 from inspect import Parameter, signature
 import threading
+import warnings
 from typing import (
+    Annotated,
     Any,
     Generic,
     ParamSpec,
@@ -17,6 +19,7 @@ from typing import (
 from pydantic import (
     BaseModel,
     BaseModel as PydanticBaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     GetCoreSchemaHandler,
@@ -26,6 +29,7 @@ from pydantic import (
     field_serializer,
     field_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import CoreSchema, core_schema
 from typing_extensions import TypeIs
 
@@ -39,7 +43,12 @@ from crewai.tools.structured_tool import (
     format_description_for_llm,
 )
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
-from crewai.types.callback import SerializableCallable, _resolve_dotted_path
+from crewai.types.callback import (
+    SerializableCallable,
+    _resolve_dotted_path,
+    callable_to_string,
+    string_to_callable,
+)
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -67,7 +76,7 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
     # Pre-resolve serialized callback strings so SerializableCallable's
     # BeforeValidator sees a callable and skips the env-var guard.
     data = dict(value)
-    for key in ("cache_function",):
+    for key in ("cache_function", "func"):
         val = data.get(key)
         if isinstance(val, str):
             try:
@@ -91,6 +100,32 @@ def _is_async_callable(func: Callable[..., Any]) -> bool:
 def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:
     """Type narrowing check for awaitable values."""
     return asyncio.iscoroutine(value) or asyncio.isfuture(value)
+
+
+def _serialize_tool_func_for_json(fn: Any) -> str | None:
+    """Serialize a Tool func for JSON checkpointing.
+
+    Module-level functions become dotted-path strings so checkpoints can
+    restore them. Anything else (lambdas, partials, callable objects)
+    cannot round-trip and is dropped with a warning instead of raising,
+    so auto-checkpointing still writes the rest of the snapshot.
+    """
+    if fn is None:
+        return None
+    try:
+        dotted = callable_to_string(fn)
+    except ValueError:
+        dotted = None
+    if dotted is None:
+        warnings.warn(
+            "Tool func cannot be JSON-serialized and will be dropped "
+            "during checkpointing; restored checkpoints will not run this tool. "
+            "Use a module-level named function for checkpointable tools.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return None
+    return dotted
 
 
 class EnvVar(BaseModel):
@@ -527,7 +562,15 @@ class Tool(BaseTool, Generic[P, R]):
         R: The return type of the function.
     """
 
-    func: Callable[P, R | Awaitable[R]]
+    func: Annotated[
+        Callable[P, R | Awaitable[R]],
+        BeforeValidator(string_to_callable),
+        PlainSerializer(
+            _serialize_tool_func_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ]
 
     def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the tool synchronously.
