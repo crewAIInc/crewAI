@@ -116,6 +116,10 @@ file-processing = [
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]
+mongodb = [
+    "pymongo>=4.17,<5",
+    "dnspython>=2.8,<3",
+]
 
 
 [tool.uv]
