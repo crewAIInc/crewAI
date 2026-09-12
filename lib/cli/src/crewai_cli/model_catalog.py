@@ -65,6 +65,7 @@ _LITELLM_TTL = 24 * 3600
 #: either name, matching crewai's own Gemini provider.
 _PROVIDER_KEY_ENV: dict[str, tuple[str, ...]] = {
     "openai": ("OPENAI_API_KEY",),
+    "atlascloud": ("ATLASCLOUD_API_KEY",),
     "anthropic": ("ANTHROPIC_API_KEY",),
     "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
     "groq": ("GROQ_API_KEY",),
@@ -212,6 +213,10 @@ def _fetch_openai(api_key: str | None) -> list[dict[str, Any]]:
     return _fetch_openai_compatible("https://api.openai.com/v1", api_key)
 
 
+def _fetch_atlascloud(api_key: str | None) -> list[dict[str, Any]]:
+    return _fetch_openai_compatible("https://api.atlascloud.ai/v1", api_key)
+
+
 def _fetch_groq(api_key: str | None) -> list[dict[str, Any]]:
     return _fetch_openai_compatible("https://api.groq.com/openai/v1", api_key)
 
@@ -327,6 +332,7 @@ def _fetch_ollama(_api_key: str | None) -> list[dict[str, Any]]:
 
 _VENDOR_FETCHERS: dict[str, Callable[[str | None], list[dict[str, Any]]]] = {
     "openai": _fetch_openai,
+    "atlascloud": _fetch_atlascloud,
     "anthropic": _fetch_anthropic,
     "gemini": _fetch_gemini,
     "groq": _fetch_groq,
