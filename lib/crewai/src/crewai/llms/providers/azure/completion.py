@@ -1302,36 +1302,14 @@ class AzureCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            AZURE_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        # Longest prefix first. Always insert new keys in that order so
-        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
-        context_windows = {
-            "text-embedding": 8191,
-            "gpt-3.5-turbo": 16385,
-            "gpt-5.4-mini": 200000,
-            "gpt-35-turbo": 16385,
-            "gpt-4o-mini": 128000,
-            "gpt-4-turbo": 128000,
-            "gpt-5.6": 1050000,
-            "gpt-4o": 128000,
-            "gpt-4": 8192,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model, AZURE_CONTEXT_WINDOWS, default=8192
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""
