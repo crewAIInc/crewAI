@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -16,6 +17,7 @@ from rich.text import Text
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
+from crewai_cli.platform_tools_catalog import PLATFORM_TOOLS
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     enable_prompt_line_editing,
@@ -104,6 +106,7 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 # ── Common tools for picker ────────────────────────────────────
 
 _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
+    ("CrewAI Platform", PLATFORM_TOOLS),
     (
         "Search & Research",
         [
@@ -305,6 +308,9 @@ def _show_interpolation_hint(kind: str) -> None:
 
 
 def _tool_label(name: str, description: str) -> str:
+    if name.startswith("platform:"):
+        app_name = description.removesuffix(" Integration").replace(" ", "")
+        return f"{description:<48s} Platform: {app_name.replace(' ', '')}Integration"
     return f"{description:<48s} {name}"
 
 
@@ -352,6 +358,7 @@ def _select_tools() -> list[str]:
     selected: set[str] = set()
     expanded: str | None = None
     focus_category: str | None = None
+    first_render = True
 
     while True:
         labels: list[str] = []
@@ -388,13 +395,14 @@ def _select_tools() -> list[str]:
                     labels.append(_tool_label(name, desc))
 
         indices, action = pick_many(
-            "Tools (space to toggle, enter to confirm):",
+            "Tools (space to toggle, enter to confirm):" if first_render else "",
             labels,
             action_indices=action_indices,
             separator_indices=separator_indices,
             preselected=preselected,
             initial_cursor=initial_cursor,
         )
+        first_render = False
 
         # Carry over toggles made on this screen; tools not visible in this
         # render keep their previous state.
@@ -612,6 +620,10 @@ def _wizard_agents_and_tasks(
         "memory": memory,
         "inputs": {},
     }
+
+    # Platform authentication belongs to the final wizard step, after the
+    # user has finished configuring agents, tasks, and crew settings.
+    _setup_platform_auth(agents)
 
     return agents, tasks, crew_settings
 
@@ -865,6 +877,181 @@ def _setup_env(folder_path: Path, llm_model: str) -> None:
         click.secho("  API keys and model saved to .env file", fg="green")
 
 
+def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
+    """Return unique platform applications selected across all agents."""
+    apps: list[str] = []
+    for agent in agents:
+        for tool in agent.get("tools", []):
+            if isinstance(tool, str) and tool.startswith("platform:"):
+                app = tool.removeprefix("platform:")
+                if app and app not in apps:
+                    apps.append(app)
+    return apps
+
+
+def _platform_app_name(app: str) -> str:
+    """Return the display name for a platform application slug."""
+    return (
+        dict(PLATFORM_TOOLS)
+        .get(f"platform:{app}", app.replace("_", " ").title())
+        .removesuffix(" Integration")
+    )
+
+
+def _prompt_platform_token() -> str:
+    """Explain how to obtain and securely prompt for an AMP integration token."""
+    click.secho(
+        "  To use CrewAI Platform tools, you need a CrewAI Platform Integration Token.",
+        fg="yellow",
+    )
+    click.secho(
+        "  Get your token from CrewAI AMP: https://app.crewai.com "
+        "→ Settings → Integration Tokens.",
+        fg="cyan",
+    )
+    return str(
+        click.prompt(
+            click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
+            hide_input=True,
+            prompt_suffix=click.style(" > ", fg="bright_white"),
+        )
+    ).strip()
+
+
+def _validate_platform_apps(
+    apps: list[str], application_selector: Any, client_for_selector: Any
+) -> tuple[list[str], bool]:
+    """Check selected AMP applications and return failures and token validity."""
+    failed: list[str] = []
+    for app in apps:
+        app_name = _platform_app_name(app)
+        click.echo()
+        click.secho(
+            "  Checking CrewAI Platform Integration Token and "
+            f"{app_name} integration on AMP...",
+            fg="cyan",
+        )
+        try:
+            selector = application_selector.from_string(app)
+            actions = client_for_selector(selector).get_actions([selector])
+        except Exception as error:
+            status_code = getattr(getattr(error, "response", None), "status_code", None)
+            if status_code in {401, 403}:
+                click.secho(
+                    "  ✘ CrewAI Platform Integration Token is invalid or expired",
+                    fg="red",
+                )
+                return failed, True
+            click.secho(
+                f"  ✘ {app_name} integration could not be validated: {error}",
+                fg="red",
+            )
+            failed.append(app)
+            continue
+
+        if not actions:
+            click.secho(
+                f"  ✘ {app_name} integration is not connected on CrewAI Platform",
+                fg="red",
+            )
+            failed.append(app)
+        else:
+            click.secho(
+                f"  ✔ {app_name} integration is connected on CrewAI Platform",
+                fg="green",
+            )
+    return failed, False
+
+
+def _show_platform_validation_guidance(
+    failed_apps: list[str], token_invalid: bool
+) -> None:
+    """Tell the user what to fix before revalidating AMP integrations."""
+    click.echo()
+    if token_invalid:
+        click.secho(
+            "  Check your CrewAI Platform Integration Token in AMP.",
+            fg="yellow",
+        )
+        return
+
+    failed_app_names = [_platform_app_name(app) for app in failed_apps]
+    click.secho(
+        "  Check the "
+        f"{', '.join(failed_app_names)} integration"
+        f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
+        "Platform Integration Token in AMP.",
+        fg="yellow",
+    )
+
+
+def _prompt_platform_revalidation_token() -> str:
+    """Prompt for an optional replacement token before the next validation pass."""
+    click.echo()
+    return str(
+        click.prompt(
+            click.style(
+                "  Press Enter to revalidate, or enter a replacement token",
+                fg="cyan",
+            ),
+            default="",
+            show_default=False,
+            hide_input=True,
+            prompt_suffix=click.style(" > ", fg="bright_white"),
+        )
+    ).strip()
+
+
+def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
+    """Get and validate AMP authentication for selected platform applications."""
+    apps = _platform_apps_from_agents(agents)
+    if not apps:
+        return None
+
+    click.echo()
+    try:
+        from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+            ApplicationSelector,
+            client_for_selector,
+        )
+    except ImportError as error:
+        raise click.ClickException(
+            "Platform tools require the 'crewai-tools' package. "
+            "Install it with `uv add crewai-tools` or "
+            "`pip install 'crewai[tools]'`."
+        ) from error
+
+    token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
+    while True:
+        if not token:
+            token = _prompt_platform_token()
+        if not token:
+            click.secho(
+                "  A CrewAI Platform Integration Token is required to validate "
+                "the selected integrations.",
+                fg="yellow",
+            )
+            continue
+
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+        failed_apps, token_invalid = _validate_platform_apps(
+            apps, ApplicationSelector, client_for_selector
+        )
+        if not failed_apps and not token_invalid:
+            _success("CrewAI Platform integration token set", bold=True)
+            _success(
+                "CrewAI Platform integrations connected: "
+                f"{', '.join(_platform_app_name(app) for app in apps)}"
+            )
+            return token
+
+        _show_platform_validation_guidance(failed_apps, token_invalid)
+        replacement_token = _prompt_platform_revalidation_token()
+        if replacement_token:
+            token = replacement_token
+            os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+
+
 # ── Main ────────────────────────────────────────────────────────
 
 
@@ -917,12 +1104,24 @@ def create_json_crew(
             default_llm=default_llm,
         )
 
-    # Create directories
+    platform_token = (
+        os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN")
+        if _platform_apps_from_agents(agents) and not dmn_mode
+        else None
+    )
+
+    # Create directories only after platform authentication succeeds.
     folder_path.mkdir(parents=True)
     (folder_path / "agents").mkdir()
     (folder_path / "tools").mkdir()
     (folder_path / "skills").mkdir()
     (folder_path / "knowledge").mkdir()
+
+    if platform_token:
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        env_vars = load_env_vars(folder_path)
+        env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        write_env_file(folder_path, env_vars)
 
     for agent in agents:
         _write_jsonc(
