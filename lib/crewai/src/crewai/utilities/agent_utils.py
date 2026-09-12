@@ -618,7 +618,7 @@ async def aget_llm_response(
     executor_context: CrewAgentExecutor | AgentExecutor | None = None,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
-    """Call the LLM asynchronously and return the response.
+    """Call the LLM asynchronously, fall back to sync-call and return the response.
 
     Args:
         llm: The LLM instance to call.
@@ -644,15 +644,27 @@ async def aget_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        answer = await llm.acall(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            answer = await llm.acall(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+        except NotImplementedError:
+            answer = await asyncio.to_thread(
+                llm.call,
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose

@@ -86,13 +86,13 @@ from crewai.tools.tool_failure import (
 )
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
+    aget_llm_response,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
     format_native_tool_output_for_agent,
-    get_llm_response,
     handle_agent_action_core,
     handle_context_length,
     handle_max_iterations_exceeded,
@@ -1453,7 +1453,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         return "agent_finished"
 
     @router("continue_reasoning")
-    def call_llm_and_parse(self) -> Literal["parsed", "parser_error", "context_error"]:
+    async def call_llm_and_parse(
+        self,
+    ) -> Literal["parsed", "parser_error", "context_error"]:
         """Execute LLM call with hooks and parse the response.
 
         Returns routing decision based on parsing result.
@@ -1468,7 +1470,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 None if self.original_tools else self.response_model
             )
 
-            answer = get_llm_response(
+            answer = await aget_llm_response(
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,
@@ -1526,7 +1528,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             raise
 
     @router("continue_reasoning_native")
-    def call_llm_native_tools(
+    async def call_llm_native_tools(
         self,
     ) -> Literal[
         "native_tool_calls",
@@ -1558,7 +1560,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             enforce_rpm_limit(self.request_within_rpm_limit)
 
             # Call LLM with native tools
-            answer = get_llm_response(
+            answer = await aget_llm_response(
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,
