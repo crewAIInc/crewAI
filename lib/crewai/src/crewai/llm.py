@@ -177,6 +177,12 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4.1": 1047576,  # Based on official docs
     "gpt-4.1-mini-2025-04-14": 1047576,
     "gpt-4.1-nano-2025-04-14": 1047576,
+    # Shorter o-series prefixes must precede longer ones: lookup iterates the
+    # whole table and the last startswith match wins, so "o1-preview"/"o1-mini"
+    # can still override the shared "o1" entry with their 128k windows.
+    "o1": 200000,
+    "o1-pro": 200000,
+    "o3": 200000,
     "o1-preview": 128000,
     "o1-mini": 128000,
     "o3-mini": 200000,
