@@ -799,6 +799,16 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
+    try:
+        from crewai.llms.providers.bedrock.throttling import (
+            is_bedrock_throttling_error,
+        )
+
+        if is_bedrock_throttling_error(exception):
+            return False
+    except ImportError:
+        pass
+
     return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
         str(exception)
     )

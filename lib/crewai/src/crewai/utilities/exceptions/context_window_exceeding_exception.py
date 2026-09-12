@@ -12,6 +12,18 @@ CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
     "exceeds token limit",
 ]
 
+THROTTLING_OR_RATE_LIMIT_INDICATORS: Final[list[str]] = [
+    "please wait before trying again",
+    "throttlingexception",
+    "throttling",
+    "rate exceeded",
+    "rate limit",
+    "too many requests",
+    "requestlimitexceeded",
+    "toomanyrequestsexception",
+    "throughput limit exceeded",
+]
+
 
 class LLMContextLengthExceededError(Exception):
     """Exception raised when the context length of a language model is exceeded.
@@ -39,9 +51,13 @@ class LLMContextLengthExceededError(Exception):
         Returns:
             True if the error message indicates a context length limit error, False otherwise.
         """
-        return any(
-            phrase.lower() in error_message.lower() for phrase in CONTEXT_LIMIT_ERRORS
-        )
+        lower_msg = error_message.lower()
+        if any(
+            indicator in lower_msg for indicator in THROTTLING_OR_RATE_LIMIT_INDICATORS
+        ):
+            return False
+
+        return any(phrase.lower() in lower_msg for phrase in CONTEXT_LIMIT_ERRORS)
 
     @staticmethod
     def _get_error_message(error_message: str) -> str:
