@@ -45,6 +45,8 @@ class BrowserbaseLoadTool(BaseTool):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self.api_key = api_key or os.getenv("BROWSERBASE_API_KEY")
+        self.project_id = project_id or os.getenv("BROWSERBASE_PROJECT_ID")
         if not self.api_key:
             raise EnvironmentError(
                 "BROWSERBASE_API_KEY environment variable is required for initialization"
