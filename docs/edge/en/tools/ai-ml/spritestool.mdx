@@ -1,0 +1,65 @@
+---
+title: Fly.io Sprites Exec Tool
+description: Give CrewAI agents shell access to an existing, persistent Fly.io Sprite.
+icon: terminal
+mode: "wide"
+---
+
+## Overview
+
+`SpritesExecTool` runs shell commands in an existing [Fly.io Sprite](https://sprites.dev), using the official Python SDK. Files persist across calls. Each call starts a new Bash shell, so shell variables and working-directory changes do not carry over.
+
+The caller manages the Sprite lifecycle: this tool neither creates nor deletes Sprites.
+
+## Installation and authentication
+
+Install the optional dependency:
+
+```shell
+uv add "crewai-tools[sprites]"
+```
+
+Create a Sprite using the [Sprites CLI](https://docs.sprites.dev/cli/) before using the tool. Set `SPRITE_TOKEN` in the CrewAI process environment to a token authorized for that Sprite, or pass it as `api_key` when constructing the tool. The token is not an agent argument, is excluded from tool serialization, and is not injected into remote commands.
+
+## Usage
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import SpritesExecTool
+
+tool = SpritesExecTool(sprite_name="crew-workspace", timeout=60)
+agent = Agent(
+    role="Python developer",
+    goal="Run and verify Python programs in the provided Fly.io Sprite",
+    backstory="You check program output and report failures accurately.",
+    tools=[tool],
+)
+task = Task(
+    description="Use the Sprite to print the sum of the integers from 1 to 100.",
+    expected_output="The command used, its exit code, and the computed sum.",
+    agent=agent,
+)
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+The example also requires your chosen LLM provider's credentials. For a direct call without an LLM:
+
+```python
+result = tool.run(command="python -c 'print(sum(range(1, 101)))'")
+# {"exit_code": 0, "stdout": "5050\n", "stderr": "",
+#  "stdout_truncated": False, "stderr_truncated": False}
+```
+
+## Configuration and arguments
+
+Configure `sprite_name` (required), `api_key` (defaults to `SPRITE_TOKEN`), `timeout` (default 60 seconds, greater than 0 and at most 300), and `max_output_chars` (default 20,000 per stream) on the tool. The agent only supplies `command` and optional `cwd`, both interpreted inside the Sprite.
+
+Results include `exit_code`, UTF-8 `stdout` and `stderr` (invalid bytes are replaced), and a truncation flag for each stream. Non-zero exits are returned to the agent, not treated as transport failures. Async calls use `await tool.arun(command="...")`. Results are not cached by default because commands can change persistent state.
+
+## Safety and limits
+
+- Commands have shell access and can modify or delete data and access the Sprite's network and credentials. Use a dedicated Sprite with only the data and permissions the agent needs. Binding a Sprite name is not a server-side authorization boundary.
+- `timeout` limits how long the client waits; it does **not** guarantee remote process termination. Async cancellation closes the local connection without leaving an executor worker running, but also does not guarantee remote termination. After cancellation, a timeout, or a connection failure, inspect the Sprite before retrying a command with side effects.
+- Output collection retains at most `max_output_chars` characters per stream, decoding UTF-8 incrementally. Excess output is discarded before SDK accumulation while the connection is drained until command exit or timeout. This bounds retained output, not network traffic or per-frame transport overhead. Redirect verbose output to files in the Sprite.
+- No host environment variables are forwarded automatically. Files remain until you manage or remove them yourself.

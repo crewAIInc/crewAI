@@ -17,7 +17,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer = "2026-09-04T04:51:35.712943Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -1126,6 +1126,15 @@ wheels = [
 ]
 
 [[package]]
+name = "client-signals"
+version = "0.4.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/dd/5002f106210ebb4772171e80f206c395e1ac38532c7d601a883903b9b7e6/client_signals-0.4.4.tar.gz", hash = "sha256:1fc1846b9992706349a10c10886f0f326bc56eeedd9af612c41cf9ff1a89562d", size = 3851, upload-time = "2026-08-05T14:46:53.105Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/76/e8f0947c8a26ec9fd0ccc960ed3875aec55035afb19bd6c08e9eac574861/client_signals-0.4.4-py3-none-any.whl", hash = "sha256:672551d797c004cfc9d5ae87ed0dca4ba5a64fc35d1edcf1218cc11f12fdfb25", size = 4347, upload-time = "2026-08-05T14:46:52.186Z" },
+]
+
+[[package]]
 name = "cloudpathlib"
 version = "0.25.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1830,6 +1839,9 @@ snowflake = [
 spider-client = [
     { name = "spider-client" },
 ]
+sprites = [
+    { name = "sprites-py" },
+]
 sqlalchemy = [
     { name = "sqlalchemy" },
 ]
@@ -1899,6 +1911,7 @@ requires-dist = [
     { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=3.12.4" },
     { name = "snowflake-sqlalchemy", marker = "extra == 'snowflake'", specifier = ">=1.11.0" },
     { name = "spider-client", marker = "extra == 'spider-client'", specifier = ">=0.1.25" },
+    { name = "sprites-py", marker = "extra == 'sprites'", specifier = ">=0.6.0,<0.7" },
     { name = "sqlalchemy", marker = "extra == 'singlestore'", specifier = ">=2.0.40" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0.35" },
     { name = "stagehand", marker = "extra == 'stagehand'", specifier = ">=0.4.1" },
@@ -1909,7 +1922,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sprites", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -9008,6 +9021,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0d/f6/2f613cff7f57f17a2f33651550b61bcddb189e29a5865522af84c444b7a6/spider_client-0.1.88.tar.gz", hash = "sha256:bd3246b6e4f68631936d15da997a479cd9a58f0503a35e6565b4c2e2b6d5bad0", size = 18982, upload-time = "2026-03-20T01:42:05.18Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/89/0f/76a88ab646d57e64079830c73a183d55b030ba5b334276850837998ceb9f/spider_client-0.1.88-py3-none-any.whl", hash = "sha256:5f72acfc979cf45223c4fec3a099ffaab28921dc1867abc965aeb62582768be5", size = 16782, upload-time = "2026-03-20T01:42:03.983Z" },
+]
+
+[[package]]
+name = "sprites-py"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "client-signals" },
+    { name = "httpx" },
+    { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/75/11/63fac634575f187541d2a4aba02a6996ea934672569de6ab44c214817775/sprites_py-0.6.0.tar.gz", hash = "sha256:a48682faeaa39b8f635c1c18ac3d5a3709859050206c2977efdc5dd3fa886fc6", size = 54091, upload-time = "2026-09-01T15:53:30.365Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/62/bf5fb2465921556c2739b1daeee290b5f7920993cc6b0c102b25497b8393/sprites_py-0.6.0-py3-none-any.whl", hash = "sha256:26c8f038fd9c8e3cae39e254c04214ff7e4d6edaf46c9bb2806e2bc0d3752064", size = 46659, upload-time = "2026-09-01T15:53:29.019Z" },
 ]
 
 [[package]]

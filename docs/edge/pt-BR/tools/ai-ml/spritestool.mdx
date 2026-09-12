@@ -1,0 +1,65 @@
+---
+title: Ferramenta de execução do Fly.io Sprites
+description: Dê aos agentes CrewAI acesso ao shell de um Fly.io Sprite existente e persistente.
+icon: terminal
+mode: "wide"
+---
+
+## Visão geral
+
+`SpritesExecTool` executa comandos de shell em um [Fly.io Sprite](https://sprites.dev) existente usando o SDK oficial de Python. Os arquivos persistem entre chamadas. Cada chamada inicia um novo shell Bash, portanto variáveis de shell e alterações no diretório de trabalho não são mantidas.
+
+O chamador gerencia o ciclo de vida do Sprite: esta ferramenta não cria nem exclui Sprites.
+
+## Instalação e autenticação
+
+Instale a dependência opcional:
+
+```shell
+uv add "crewai-tools[sprites]"
+```
+
+Crie um Sprite usando a [CLI do Sprites](https://docs.sprites.dev/cli/) antes de usar a ferramenta. Defina `SPRITE_TOKEN` no ambiente do processo CrewAI com um token autorizado para esse Sprite ou passe-o como `api_key` ao construir a ferramenta. O token não é um argumento do agente, é excluído da serialização da ferramenta e não é injetado nos comandos remotos.
+
+## Uso
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import SpritesExecTool
+
+tool = SpritesExecTool(sprite_name="crew-workspace", timeout=60)
+agent = Agent(
+    role="Python developer",
+    goal="Run and verify Python programs in the provided Fly.io Sprite",
+    backstory="You check program output and report failures accurately.",
+    tools=[tool],
+)
+task = Task(
+    description="Use the Sprite to print the sum of the integers from 1 to 100.",
+    expected_output="The command used, its exit code, and the computed sum.",
+    agent=agent,
+)
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+O exemplo também requer as credenciais do provedor de LLM escolhido. Para uma chamada direta sem LLM:
+
+```python
+result = tool.run(command="python -c 'print(sum(range(1, 101)))'")
+# {"exit_code": 0, "stdout": "5050\n", "stderr": "",
+#  "stdout_truncated": False, "stderr_truncated": False}
+```
+
+## Configuração e argumentos
+
+Configure `sprite_name` (obrigatório), `api_key` (usa `SPRITE_TOKEN` por padrão), `timeout` (padrão de 60 segundos, maior que 0 e no máximo 300) e `max_output_chars` (padrão de 20.000 por fluxo) na ferramenta. O agente fornece apenas `command` e o `cwd` opcional, ambos interpretados dentro do Sprite.
+
+Os resultados incluem `exit_code`, `stdout` e `stderr` em UTF-8 (bytes inválidos são substituídos) e um indicador de truncamento para cada fluxo. Códigos de saída diferentes de zero são retornados ao agente, não tratados como falhas de transporte. Chamadas assíncronas usam `await tool.arun(command="...")`. Por padrão, os resultados não são armazenados em cache porque os comandos podem alterar o estado persistente.
+
+## Segurança e limites
+
+- Os comandos têm acesso ao shell e podem modificar ou excluir dados e acessar a rede e as credenciais do Sprite. Use um Sprite dedicado com apenas os dados e permissões necessários ao agente. Fixar um nome de Sprite não é um limite de autorização no servidor.
+- `timeout` limita o tempo de espera do cliente; **não** garante o encerramento do processo remoto. O cancelamento assíncrono fecha a conexão local sem deixar uma thread do executor em execução, mas também não garante o encerramento remoto. Após um cancelamento, timeout ou falha de conexão, inspecione o Sprite antes de repetir um comando com efeitos colaterais.
+- A coleta de saída retém no máximo `max_output_chars` caracteres por fluxo, decodificando UTF-8 incrementalmente. A saída excedente é descartada antes de se acumular no SDK, enquanto a conexão continua sendo lida até o comando terminar ou ocorrer um timeout. Isso limita a saída retida, não o tráfego de rede nem a sobrecarga de transporte por frame. Redirecione saídas extensas para arquivos no Sprite.
+- Nenhuma variável de ambiente do host é encaminhada automaticamente. Os arquivos permanecem até que você os gerencie ou remova.
