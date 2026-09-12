@@ -118,6 +118,18 @@ def test_the_call_is_seen_exactly_once_with_its_input(_label, invoke, seen):
 
 
 @pytest.mark.parametrize(("_label", "invoke"), PATHS, ids=[p[0] for p in PATHS])
+def test_a_pre_hook_input_rewrite_reaches_the_body_and_caller(_label, invoke, seen):
+    @on(InterceptionPoint.PRE_TOOL_CALL)
+    def rewrite(ctx: Any) -> None:
+        ctx.tool_input["text"] = "rewritten"
+
+    assert invoke("hi") == "echo:rewritten"
+
+    assert seen == [(TOOL_NAME, {"text": "hi"})]
+    assert BODY_CALLS == ["rewritten"]
+
+
+@pytest.mark.parametrize(("_label", "invoke"), PATHS, ids=[p[0] for p in PATHS])
 def test_a_deny_keeps_the_body_from_running(_label, invoke):
     @on(InterceptionPoint.PRE_TOOL_CALL)
     def deny(ctx: Any) -> bool:
