@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -504,10 +504,25 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        rows = self._scan_rows(scope_prefix, limit=limit + offset)
-        records = [self._row_to_record(r) for r in rows]
-        records.sort(key=lambda r: r.created_at, reverse=True)
-        return records[offset : offset + limit]
+        rows = self._scan_rows(scope_prefix)
+
+        def _get_created_at(row: dict[str, Any]) -> datetime:
+            val = row.get("created_at")
+            if val is None:
+                return datetime.min.replace(tzinfo=timezone.utc)
+            if isinstance(val, datetime):
+                dt = val
+            else:
+                try:
+                    dt = datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+                except Exception:
+                    return datetime.min.replace(tzinfo=timezone.utc)
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+
+        rows.sort(key=_get_created_at, reverse=True)
+        return [self._row_to_record(r) for r in rows[offset : offset + limit]]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
