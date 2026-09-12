@@ -104,6 +104,11 @@ def _memory_limiter(max_memory_mb: int) -> Callable[[], None] | None:
     limit = max_memory_mb * 1024 * 1024
 
     def _apply() -> None:
+        """Cap the address space of the calling process.
+
+        Runs in the forked child, before exec, so the limit is in place
+        before the compiler starts allocating.
+        """
         resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
 
     return _apply
@@ -139,6 +144,17 @@ class VelarisCardTool(BaseTool):
     package_dependencies: list[str] = Field(default_factory=lambda: ["velaris-lang"])
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize the VelarisCardTool.
+
+        The compiler is imported here, when the crew is built, so a missing
+        ``velaris-lang`` is reported before an agent asks for the card.
+
+        Args:
+            **kwargs: Additional keyword arguments passed to BaseTool.
+
+        Raises:
+            ImportError: If ``velaris-lang`` is not installed.
+        """
         super().__init__(**kwargs)
         _import_velaris()
 
@@ -167,6 +183,17 @@ class VelarisAuditTool(BaseTool):
     package_dependencies: list[str] = Field(default_factory=lambda: ["velaris-lang"])
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize the VelarisAuditTool.
+
+        The compiler is imported here, when the crew is built, so a missing
+        ``velaris-lang`` is reported before an agent submits a program.
+
+        Args:
+            **kwargs: Additional keyword arguments passed to BaseTool.
+
+        Raises:
+            ImportError: If ``velaris-lang`` is not installed.
+        """
         super().__init__(**kwargs)
         _import_velaris()
 
@@ -242,6 +269,27 @@ class VelarisRunTool(BaseTool):
         max_memory_mb: int | None = None,
         **kwargs: Any,
     ) -> None:
+        """Initialize the VelarisRunTool.
+
+        The budget and the limits are accepted positionally as well as by
+        keyword, and only the ones actually passed are forwarded, so an
+        omitted setting keeps its field default instead of being overwritten
+        with None.
+
+        Args:
+            allow: The effects the program may perform, chosen from io, fs,
+                net, clock, rand and ffi. Defaults to ``["io"]``: the program
+                can print and nothing else. Copied, so a later change to the
+                caller's list cannot widen the budget.
+            timeout: Seconds the program may run before it is stopped.
+                Defaults to 30.
+            max_memory_mb: Memory the program may use, in MB, before it is
+                stopped. Defaults to 512.
+            **kwargs: Additional keyword arguments passed to BaseTool.
+
+        Raises:
+            ImportError: If ``velaris-lang`` is not installed.
+        """
         if allow is not None:
             kwargs["allow"] = list(allow)
         if timeout is not None:

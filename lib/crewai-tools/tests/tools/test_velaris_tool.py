@@ -70,12 +70,16 @@ def reads_a_file(tmp_path):
 
 
 def test_audit_names_every_effect():
+    """The audit names every effect the program reaches for, in the
+    versioned format - fs through a helper as well as io in main."""
     report = json.loads(VelarisAuditTool().run(source=READS_A_FILE))
     assert report["schema"] == "velaris.audit/1"
     assert report["effects"] == ["fs", "io"]
 
 
 def test_run_refuses_an_effect_outside_the_budget():
+    """An effect outside the budget is refused whatever the source claims,
+    and the refusal is not a failure the program can catch."""
     out = VelarisRunTool(allow=["io"]).run(source=READS_A_FILE)
     assert "REFUSED" in out and "'fs'" in out
     assert "READ IT" not in out
@@ -85,6 +89,8 @@ def test_run_refuses_an_effect_outside_the_budget():
 
 
 def test_run_stops_a_program_that_never_ends():
+    """A program that never ends is stopped at the timeout, before the
+    line that follows its loop."""
     out = VelarisRunTool(allow=["io"], timeout=2).run(source=FOREVER)
     assert "ran longer than 2" in out
     # the marker only the program could print must be absent; the
@@ -96,6 +102,8 @@ def test_run_stops_a_program_that_never_ends():
     sys.platform != "linux", reason="RLIMIT_AS is only reliably honoured on Linux"
 )
 def test_run_stops_a_program_that_eats_memory():
+    """A program that outgrows the memory cap is stopped, before it
+    finishes the string it was doubling."""
     out = VelarisRunTool(allow=["io"], max_memory_mb=150, timeout=60).run(
         source=EATS_MEMORY
     )
@@ -105,18 +113,26 @@ def test_run_stops_a_program_that_eats_memory():
 
 
 def test_the_default_limits_are_set():
+    """The time and memory limits have defaults, so a tool made with no
+    arguments is still bounded."""
     tool = VelarisRunTool()
     assert tool.timeout == 30.0 and tool.max_memory_mb == 512
 
 
 def test_run_permits_what_the_budget_allows(reads_a_file):
+    """An effect inside the budget runs: with fs granted, the program
+    reads the file."""
     out = VelarisRunTool(allow=["io", "fs"]).run(source=reads_a_file)
     assert "READ IT" in out
 
 
 def test_run_returns_output():
+    """A run that succeeds returns what the program printed, and nothing
+    else."""
     assert VelarisRunTool(allow=["io"]).run(source=PURE).strip() == "42"
 
 
 def test_the_default_budget_is_io_only():
+    """The default budget is io alone: a tool made with no arguments can
+    print and nothing more."""
     assert VelarisRunTool().allow == ["io"]
