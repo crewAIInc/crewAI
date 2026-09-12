@@ -221,7 +221,10 @@ class RecallFlow(Flow[RecallState]):
 
             if analysis.time_filter:
                 try:
-                    cutoff = datetime.fromisoformat(analysis.time_filter)
+                    # Python 3.10's fromisoformat rejects the "Z" suffix.
+                    cutoff = datetime.fromisoformat(
+                        analysis.time_filter.replace("Z", "+00:00")
+                    )
                 except ValueError:
                     cutoff = None
                 if cutoff is not None:
