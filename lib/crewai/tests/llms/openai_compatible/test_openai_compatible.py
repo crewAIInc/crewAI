@@ -289,6 +289,7 @@ class TestLLMIntegration:
     def test_llm_creates_openai_compatible_for_requesty(self):
         """Test LLM factory creates OpenAICompatibleCompletion for Requesty."""
         with patch.dict(os.environ, {"REQUESTY_API_KEY": "test-key"}):
+            os.environ.pop("REQUESTY_BASE_URL", None)
             llm = LLM(model="requesty/openai/gpt-4o-mini")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "requesty"
