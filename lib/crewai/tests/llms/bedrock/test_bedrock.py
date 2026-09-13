@@ -511,6 +511,14 @@ def test_bedrock_context_window_size():
     assert context_size_titan > 5000
 
 
+def test_bedrock_claude_v2_1_context_window_size():
+    """
+    Claude 2.1 (anthropic.claude-v2:1) has a 200k window, not Claude 2.0's 100k.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-v2:1")
+    assert llm.get_context_window_size() > 150000
+
+
 def test_bedrock_message_formatting():
     """
     Test that messages are properly formatted for Bedrock Converse API
