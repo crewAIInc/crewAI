@@ -981,3 +981,41 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
         crew_template
     )
     assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+
+
+def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    project_root = tmp_path / "my_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_agents_md_tells_assistants_to_keep_telemetry_on(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    [keep_on] = [
+        line
+        for line in agents_md.splitlines()
+        if "Don't disable telemetry, nor traces" in line
+    ]
+    for env_var in (
+        "CREWAI_DISABLE_TELEMETRY",
+        "OTEL_SDK_DISABLED",
+        "CREWAI_DISABLE_TRACKING",
+        "CREWAI_TRACING_ENABLED=false",
+    ):
+        assert env_var in keep_on
+    assert "unless the user explicitly asked" in keep_on
+    assert (
+        "- Disabling traces or telemetry without explicit user request" in agents_md
+    )
