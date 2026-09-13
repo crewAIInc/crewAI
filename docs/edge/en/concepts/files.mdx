@@ -98,6 +98,47 @@ result = crew.kickoff(
 )
 ```
 
+### Transcribing Audio Before Kickoff
+
+Use an external speech-to-text endpoint when you want spoken instructions to
+become normal CrewAI inputs before the crew starts. For example, a local FunASR
+server exposes an OpenAI-compatible transcription API, so the transcript can be
+passed into `crew.kickoff(inputs=...)` without changing the crew definition.
+
+Start FunASR locally:
+
+```bash
+funasr-server --model sensevoice --device cuda --host 127.0.0.1 --port 8000
+```
+
+Transcribe the recording and pass the text into the crew:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="EMPTY",
+    base_url="http://127.0.0.1:8000/v1",
+)
+
+with open("voice-command.wav", "rb") as audio:
+    transcription = client.audio.transcriptions.create(
+        model="sensevoice",
+        file=audio,
+        response_format="json",
+    )
+
+result = crew.kickoff(
+    inputs={
+        "voice_command": transcription.text,
+    }
+)
+```
+
+This pattern keeps audio recognition outside the agent loop. The crew receives
+plain text, while the ASR service can be self-hosted, GPU-backed, or replaced by
+another OpenAI-compatible transcription endpoint.
+
 ### With Tasks
 
 Attach files to specific tasks:
