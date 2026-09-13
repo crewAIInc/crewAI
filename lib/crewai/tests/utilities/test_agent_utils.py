@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, Field
 
+from crewai.agents.parser import AgentAction, AgentFinish
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     clear_after_tool_call_hooks,
@@ -35,6 +36,8 @@ from crewai.utilities.agent_utils import (
     is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
+    process_llm_response,
+    _recover_real_tool_call,
     summarize_messages,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -1652,3 +1655,110 @@ class TestResolvePlusResponse:
                 resolve_plus_response(future)
 
         asyncio.run(main())
+
+
+class TestProcessLlmResponse:
+    """Tests for process_llm_response fabricated-observation recovery."""
+
+    FABRICATED = """Thought: I should use the Web Search Tool to investigate trends in AI.
+Action: Web Search Tool
+Action Input: {"search_query": "trends in AI 2025"}
+Observation: The search results show that the main trends include multimodal models.
+Thought: I now have enough information.
+Final Answer: The main AI trends are multimodal models."""
+
+    def test_recovers_real_tool_call_from_fabricated_continuation(self) -> None:
+        """Without stop words, the fabricated Observation/Final Answer is
+        discarded and the real Action is executed."""
+        result = process_llm_response(self.FABRICATED, use_stop_words=False)
+
+        assert isinstance(result, AgentAction)
+        assert result.tool == "Web Search Tool"
+        assert '"search_query": "trends in AI 2025"' in result.tool_input
+
+    def test_recovered_response_excludes_fabricated_continuation(self) -> None:
+        """The action-input capture runs to the end of the text, so the
+        fabricated Observation/Thought must be truncated away entirely —
+        neither the tool input nor the recovered text may retain it."""
+        result = process_llm_response(self.FABRICATED, use_stop_words=False)
+
+        assert isinstance(result, AgentAction)
+        assert "Observation:" not in result.tool_input
+        assert "Thought: I now have enough information." not in result.tool_input
+        assert "Observation:" not in result.text
+        assert "Final Answer:" not in result.text
+
+    def test_final_answer_inside_action_input_is_not_truncated(self) -> None:
+        """A literal ``Final Answer:`` inside the action input is data. The
+        recovery must not cut the payload mid-JSON — whether the response
+        then parses as an action or a finish is the parser's own precedence,
+        not the recovery's concern."""
+        answer = """Thought: I should search.
+Action: Search
+Action Input: {"query": "what should the Final Answer: look like"}"""
+
+        recovered = _recover_real_tool_call(answer)
+
+        assert recovered == answer
+        assert '"query": "what should the Final Answer: look like"' in recovered
+
+    def test_multiline_freeform_input_with_markers_is_preserved(self) -> None:
+        """A free-form multiline action input can legitimately contain a
+        line-delimited ``Observation:`` and a later ``Final Answer:``. The
+        action-input capture is unbounded, so recovery only fires when the
+        candidate input parses as complete JSON; free-form input is
+        preserved untouched."""
+        answer = """Thought: Taking notes.
+Action: Notes
+Action Input: Meeting minutes:
+Observation: the demo went well
+Final Answer: done for today"""
+
+        recovered = _recover_real_tool_call(answer)
+
+        assert recovered == answer
+
+    def test_stop_word_support_keeps_existing_behavior(self) -> None:
+        """With stop words enabled, generation stops before a fabricated
+        continuation, so the response is parsed as-is."""
+        result = process_llm_response(self.FABRICATED, use_stop_words=True)
+
+        assert isinstance(result, AgentFinish)
+        assert result.output == "The main AI trends are multimodal models."
+
+    def test_observation_marker_inside_action_input_is_preserved(self) -> None:
+        """'Observation:' inside the Action Input JSON payload is data, not the
+        fabricated continuation, and must not trigger truncation."""
+        answer = """Thought: I need to search.
+Action: Search
+Action Input: {"query": "what does 'Observation:' mean"}
+Observation: fabricated result.
+Final Answer: fabricated answer."""
+
+        result = process_llm_response(answer, use_stop_words=False)
+
+        assert isinstance(result, AgentAction)
+        assert result.tool == "Search"
+        assert '"query": "what does \'Observation:\' mean"' in result.tool_input
+
+    def test_final_answer_without_action_is_preserved(self) -> None:
+        """A genuine final answer without a preceding action is untouched."""
+        answer = """Thought: I know the answer.
+Final Answer: The sky is blue."""
+
+        result = process_llm_response(answer, use_stop_words=False)
+
+        assert isinstance(result, AgentFinish)
+        assert result.output == "The sky is blue."
+
+    def test_final_answer_before_action_is_preserved(self) -> None:
+        """When the final answer precedes the action text, the recovery must
+        not fire."""
+        answer = """Thought: I know the answer.
+Final Answer: The sky is blue.
+Action: Search
+Action Input: {"q": "x"}"""
+
+        result = process_llm_response(answer, use_stop_words=False)
+
+        assert isinstance(result, AgentFinish)
