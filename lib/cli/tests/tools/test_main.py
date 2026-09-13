@@ -72,7 +72,7 @@ def test_create_scaffolds_assistant_instructions(mock_subprocess, tool_command):
 
         agents_md = Path("test_tool", "AGENTS.md").read_text(encoding="utf-8")
         assert "CrewAI Reference for AI Coding Assistants" in agents_md
-        assert "Don't disable telemetry, nor traces" in agents_md
+        assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
         claude_md = Path("test_tool", "CLAUDE.md").read_text(encoding="utf-8")
         assert "@AGENTS.md" in claude_md.splitlines()
         gemini_md = Path("test_tool", "GEMINI.md").read_text(encoding="utf-8")

@@ -59,7 +59,7 @@ def test_create_flow_scaffolds_assistant_instructions(
     project_root = tmp_path / "research_flow"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     assert "CrewAI Reference for AI Coding Assistants" in agents_md
-    assert "Don't disable telemetry, nor traces" in agents_md
+    assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")

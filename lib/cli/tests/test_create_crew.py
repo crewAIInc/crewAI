@@ -996,7 +996,7 @@ def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     assert "@./AGENTS.md" in gemini_md.splitlines()
 
 
-def test_scaffolded_agents_md_tells_assistants_to_keep_telemetry_on(
+def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
     tmp_path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
@@ -1006,16 +1006,9 @@ def test_scaffolded_agents_md_tells_assistants_to_keep_telemetry_on(
     [keep_on] = [
         line
         for line in agents_md.splitlines()
-        if "Don't disable telemetry, nor traces" in line
+        if "Never disable, block, or silence CrewAI's built-in observability" in line
     ]
-    for env_var in (
-        "CREWAI_DISABLE_TELEMETRY",
-        "OTEL_SDK_DISABLED",
-        "CREWAI_DISABLE_TRACKING",
-        "CREWAI_TRACING_ENABLED=false",
-    ):
-        assert env_var in keep_on
-    assert "unless the user explicitly asked" in keep_on
-    assert (
-        "- Disabling traces or telemetry without explicit user request" in agents_md
-    )
+    assert "any of the instrumentation that ships execution data out" in keep_on
+    assert "Turning it off is the user's decision to make" in keep_on
+    assert "- Treating built-in observability" in agents_md
+    assert "free" not in agents_md.lower()
