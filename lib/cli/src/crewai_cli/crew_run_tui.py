@@ -92,7 +92,10 @@ def _try_parse_structured(text: str) -> Any | None:
         import ast
 
         obj = ast.literal_eval(text)
+        # literal_eval accepts values json.dumps cannot encode (e.g. [Ellipsis]
+        # from "[...]"), which would crash the renderer later; reject those.
         if isinstance(obj, (dict, list)):
+            _json.dumps(obj, ensure_ascii=False)
             return obj
     except Exception:  # noqa: S110
         pass

@@ -41,6 +41,8 @@ from crewai_cli.crew_run_tui import (
     _LOG_ARGS_TEXT_LIMIT,
     _LOG_RESULT_TEXT_LIMIT,
     _LOG_TRUNCATION_SUFFIX,
+    _format_json_in_text,
+    _try_parse_structured,
 )
 
 
@@ -1804,3 +1806,27 @@ def test_finished_traces_button_still_records(monkeypatch) -> None:
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces-done")))
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
+
+
+def test_try_parse_structured_rejects_non_serializable_literals() -> None:
+    """ast.literal_eval("[...]") is a valid [Ellipsis] list but cannot be JSON-encoded."""
+    assert _try_parse_structured("[...]") is None
+    assert _try_parse_structured("{'a': ...}") is None
+    assert _try_parse_structured("[1+2j]") is None
+
+
+def test_try_parse_structured_still_accepts_serializable_values() -> None:
+    assert _try_parse_structured('{"a": 1}') == {"a": 1}
+    assert _try_parse_structured("['x', 'y']") == ["x", "y"]
+    assert _try_parse_structured("{'a': 1}") == {"a": 1}
+
+
+def test_format_json_in_text_survives_literal_ellipsis() -> None:
+    """A streamed [...] must render as-is instead of crashing the TUI (issue #7434)."""
+    assert _format_json_in_text("pandas,[...]") == "pandas,[...]"
+
+
+def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
+    assert _format_json_in_text('data: {"a": 1} and [...]') == (
+        'data: ' + '{\n  "a": 1\n}' + ' and [...]'
+    )
