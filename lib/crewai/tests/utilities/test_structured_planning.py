@@ -17,7 +17,64 @@ from crewai.utilities.reasoning_handler import (
     FUNCTION_SCHEMA,
     AgentReasoning,
     ReasoningPlan,
+    _detect_plan_ready,
 )
+
+
+class TestDetectPlanReady:
+    """Readiness detection must accept a bare READY marker, not only the full
+    'READY: I am ready to execute the task.' sentence (#6204)."""
+
+    def test_bare_ready_marker_is_ready(self):
+        assert _detect_plan_ready("1. do X\n2. do Y\n\n---\n\nREADY") is True
+
+    def test_full_sentence_still_ready(self):
+        assert _detect_plan_ready("plan...\nREADY: I am ready to execute the task.")
+
+    def test_not_ready_marker_is_not_ready(self):
+        assert (
+            _detect_plan_ready("plan...\n\nNOT READY: I need more detail.") is False
+        )
+
+    def test_last_marker_wins_over_mid_text_not_ready(self):
+        text = "Step 1 is not ready to run yet without input.\n\nREADY"
+        assert _detect_plan_ready(text) is True
+
+    def test_case_insensitive(self):
+        assert _detect_plan_ready("plan...\n\nready") is True
+        assert _detect_plan_ready("plan...\n\nnot ready") is False
+
+    def test_no_marker_defaults_to_not_ready(self):
+        assert _detect_plan_ready("just a plan with no verdict") is False
+
+    def test_ready_substring_inside_words_is_ignored(self):
+        # "already" contains "ready" but is not a READY marker (word boundaries).
+        assert _detect_plan_ready("I am already prepared") is False
+        assert _detect_plan_ready("The steps are already documented") is False
+
+    def test_trailing_already_does_not_flip_not_ready(self):
+        # A trailing "already" must not override a concluding NOT READY.
+        assert (
+            _detect_plan_ready("NOT READY. I already have the tools.") is False
+        )
+
+    def test_ready_as_ordinary_prose_word_is_not_a_verdict(self):
+        # "ready" mid-sentence is prose, not a verdict marker (line-anchored).
+        assert _detect_plan_ready("I am ready to begin researching.") is False
+        assert _detect_plan_ready("The tool is ready when the file exists.") is False
+
+    def test_verdict_on_its_own_line_after_prose(self):
+        # A concluding marker on its own line is still detected past prose.
+        assert (
+            _detect_plan_ready("I am ready to begin researching.\n\nREADY") is True
+        )
+        assert (
+            _detect_plan_ready("Everything looks ready.\n\nNOT READY: gap") is False
+        )
+
+    def test_parse_planning_response_detects_bare_ready(self):
+        _plan, ready = AgentReasoning._parse_planning_response("my plan\n\nREADY")
+        assert ready is True
 
 
 class TestFunctionSchema:
