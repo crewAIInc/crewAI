@@ -36,6 +36,26 @@ class _FakeLLM:
         )
 
 
+class _TimeFilterThenNoneLLM:
+    """Return a time filter on the first call and none afterwards."""
+
+    def __init__(self) -> None:
+        self._calls = 0
+
+    def call(self, *_args: object, **_kwargs: object) -> str:
+        self._calls += 1
+        time_filter = "2026-01-01T00:00:00Z" if self._calls == 1 else None
+        return json.dumps(
+            {
+                "keywords": [],
+                "suggested_scopes": [],
+                "complexity": "simple",
+                "recall_queries": ["dummy query"],
+                "time_filter": time_filter,
+            }
+        )
+
+
 def _recall_flow(record: MemoryRecord) -> RecallFlow:
     return RecallFlow(
         storage=_FakeStorage(record),
@@ -53,3 +73,40 @@ def test_tz_aware_time_filter_is_normalized_to_naive_utc():
     assert flow.state.time_cutoff is not None
     assert flow.state.time_cutoff.tzinfo is None
     assert [match.record.content for match in results] == ["remembered fact"]
+
+
+class _TwoRecordStorage:
+    def __init__(self, records: list[MemoryRecord]) -> None:
+        self._records = records
+
+    def list_scopes(self, _prefix: str) -> list[str]:
+        return ["/"]
+
+    def get_scope_info(self, _prefix: str) -> None:
+        return None
+
+    def search(
+        self, *_args: object, **_kwargs: object
+    ) -> list[tuple[MemoryRecord, float]]:
+        return [(record, 0.9) for record in self._records]
+
+
+def test_stale_time_cutoff_is_reset_between_kickoffs():
+    older = MemoryRecord(content="older fact", created_at=datetime(2025, 6, 1))
+    newer = MemoryRecord(content="newer fact", created_at=datetime(2026, 2, 1))
+    flow = RecallFlow(
+        storage=_TwoRecordStorage([older, newer]),
+        llm=_TimeFilterThenNoneLLM(),
+        embedder=lambda texts: [[0.1] for _ in texts],
+    )
+
+    first = flow.kickoff(inputs={"query": "what happened since january? " * 10})
+    assert [match.record.content for match in first] == ["newer fact"]
+
+    second = flow.kickoff(inputs={"query": "anything"})
+
+    assert flow.state.time_cutoff is None
+    assert sorted(match.record.content for match in second) == [
+        "newer fact",
+        "older fact",
+    ]
