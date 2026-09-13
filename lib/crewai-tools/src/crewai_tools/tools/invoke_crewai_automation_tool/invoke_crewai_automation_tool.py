@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any
 
@@ -65,29 +66,45 @@ class InvokeCrewAIAutomationTool(BaseTool):
     description: str = "Invokes an CrewAI Platform Automation using API"
     args_schema: type[BaseModel] = InvokeCrewAIAutomationInput
 
-    crew_api_url: str
-    crew_bearer_token: str
+    crew_api_url: str = Field(
+        default_factory=lambda: os.getenv("CREWAI_API_URL", ""),
+        description="Base URL of the crew API service",
+    )
+    crew_bearer_token: str = Field(
+        default_factory=lambda: os.getenv("CREWAI_BEARER_TOKEN", ""),
+        description="Bearer token for API authentication",
+    )
     max_polling_time: int = 10 * 60
+
+    env_vars: list[str] = ["CREWAI_API_URL", "CREWAI_BEARER_TOKEN"]
 
     def __init__(
         self,
-        crew_api_url: str,
-        crew_bearer_token: str,
-        crew_name: str,
-        crew_description: str,
+        crew_api_url: str | None = None,
+        crew_bearer_token: str | None = None,
+        crew_name: str | None = None,
+        crew_description: str | None = None,
         max_polling_time: int = 10 * 60,
         crew_inputs: dict[str, Any] | None = None,
     ):
         """Initialize the InvokeCrewAIAutomationTool.
 
         Args:
-            crew_api_url: Base URL of the crew API service
-            crew_bearer_token: Bearer token for API authentication
-            crew_name: Name of the crew to invoke
-            crew_description: Description of the crew to invoke
-            max_polling_time: Maximum time in seconds to wait for task completion (default: 600 seconds = 10 minutes)
+            crew_api_url: Base URL of the crew API service. Falls back to
+                CREWAI_API_URL environment variable.
+            crew_bearer_token: Bearer token for API authentication. Falls back
+                to CREWAI_BEARER_TOKEN environment variable.
+            crew_name: Name of the crew to invoke.
+            crew_description: Description of the crew to invoke.
+            max_polling_time: Maximum time in seconds to wait for task completion
+                (default: 600 seconds = 10 minutes)
             crew_inputs: Optional dictionary defining custom input schema fields
         """
+        api_url = crew_api_url or os.getenv("CREWAI_API_URL", "")
+        bearer_token = crew_bearer_token or os.getenv("CREWAI_BEARER_TOKEN", "")
+        name = crew_name or "invoke_amp_automation"
+        description = crew_description or "Invokes a CrewAI Platform Automation using API"
+
         if crew_inputs:
             fields = {}
 
@@ -103,11 +120,11 @@ class InvokeCrewAIAutomationTool(BaseTool):
             args_schema = InvokeCrewAIAutomationInput
 
         super().__init__(
-            name=crew_name,
-            description=crew_description,
+            name=name,
+            description=description,
             args_schema=args_schema,
-            crew_api_url=crew_api_url,
-            crew_bearer_token=crew_bearer_token,
+            crew_api_url=api_url,
+            crew_bearer_token=bearer_token,
             max_polling_time=max_polling_time,
         )
 
