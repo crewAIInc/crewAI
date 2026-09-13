@@ -165,7 +165,9 @@ class Converter(OutputConverter):
         try:
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
-            return json.dumps(self.llm.call(self._build_messages()))
+            response = self.llm.call(self._build_messages())
+            pydantic_instance = self._coerce_response_to_pydantic(response)
+            return pydantic_instance.model_dump_json(indent=2)
         except HookAborted:
             raise
         except Exception as e:
@@ -185,7 +187,9 @@ class Converter(OutputConverter):
         try:
             if self.llm.supports_function_calling():
                 return await asyncio.to_thread(self._create_instructor().to_json)
-            return json.dumps(await self.llm.acall(self._build_messages()))
+            response = await self.llm.acall(self._build_messages())
+            pydantic_instance = self._coerce_response_to_pydantic(response)
+            return pydantic_instance.model_dump_json(indent=2)
         except HookAborted:
             raise
         except Exception as e:

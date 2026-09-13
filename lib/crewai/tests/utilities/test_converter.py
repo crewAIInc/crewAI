@@ -1,7 +1,7 @@
 from enum import Enum
 import json
 import os
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from crewai.llm import LLM
 from crewai.utilities.converter import (
@@ -1022,3 +1022,46 @@ def test_internal_instructor_does_not_double_prefix_qualified_models() -> None:
         InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
 
         mock_from_provider.assert_called_once_with("groq/llama-3.3-70b")
+
+
+def test_converter_to_json_text_only_llm_single_encoding() -> None:
+    """Issue #7429: to_json with non-function-calling LLM should not double-encode JSON."""
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.call.return_value = '{"name": "Alice", "age": 30}'
+
+    converter = Converter(
+        llm=mock_llm,
+        text="Alice is 30 years old.",
+        model=SimpleModel,
+        instructions="Return person as JSON.",
+    )
+
+    result = converter.to_json()
+    assert isinstance(result, str)
+    parsed = json.loads(result)
+    assert isinstance(parsed, dict)
+    assert parsed == {"name": "Alice", "age": 30}
+
+
+def test_converter_ato_json_text_only_llm_single_encoding() -> None:
+    """Issue #7429: ato_json with non-function-calling LLM should not double-encode JSON."""
+    import asyncio
+
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.acall = AsyncMock(return_value='{"name": "Bob", "age": 25}')
+
+    converter = Converter(
+        llm=mock_llm,
+        text="Bob is 25 years old.",
+        model=SimpleModel,
+        instructions="Return person as JSON.",
+    )
+
+    result = asyncio.run(converter.ato_json())
+    assert isinstance(result, str)
+    parsed = json.loads(result)
+    assert isinstance(parsed, dict)
+    assert parsed == {"name": "Bob", "age": 25}
+
