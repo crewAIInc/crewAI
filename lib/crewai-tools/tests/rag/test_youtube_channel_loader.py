@@ -142,6 +142,19 @@ class TestYoutubeChannelLoader:
             _normalize_channel_url("https://www.youtube.com/channel/UC123?feature=shared#section")
             == "https://www.youtube.com/channel/UC123?feature=shared#section"
         )
+        # Verify case-insensitive scheme and hostname handling
+        assert (
+            _normalize_channel_url("HTTPS://WWW.YOUTUBE.COM/@crewAI")
+            == "https://www.youtube.com/@crewAI"
+        )
+        assert (
+            _normalize_channel_url("WWW.YOUTUBE.COM/@crewAI")
+            == "https://www.youtube.com/@crewAI"
+        )
+        assert (
+            _normalize_channel_url("HTTP://YOUTUBE.COM/CHANNEL/UC123?feature=shared#section")
+            == "http://youtube.com/CHANNEL/UC123?feature=shared#section"
+        )
 
     @patch("pytube.Channel")
     def test_load_with_at_handle(self, mock_channel_cls: Any) -> None:

@@ -283,6 +283,7 @@ def test_youtube_channel_search_tool_urls(mock_adapter):
 
     for url in [
         "https://www.youtube.com/@crewai",
+        "HTTPS://WWW.YOUTUBE.COM/@crewai",
         "https://www.youtube.com/channel/UC123456",
         "https://www.youtube.com/c/CustomChannel",
     ]:

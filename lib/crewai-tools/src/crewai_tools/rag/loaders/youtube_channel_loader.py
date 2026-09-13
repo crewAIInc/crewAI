@@ -22,29 +22,31 @@ def _normalize_channel_url(raw_input: str) -> str:
         scheme = "https"
         query = ""
         fragment = ""
-    elif not any(
-        p in cleaned
-        for p in [
-            "youtube.com/",
-            "youtu.be/",
-            "http://",
-            "https://",
-        ]
-    ):
-        path = f"/@{cleaned}"
-        netloc = "www.youtube.com"
-        scheme = "https"
-        query = ""
-        fragment = ""
     else:
-        if not cleaned.startswith(("http://", "https://")):
-            cleaned = f"https://{cleaned}"
-        parts = urlsplit(cleaned)
-        scheme = parts.scheme or "https"
-        netloc = parts.netloc or "www.youtube.com"
-        path = parts.path
-        query = parts.query
-        fragment = parts.fragment
+        lower_cleaned = cleaned.lower()
+        if not any(
+            p in lower_cleaned
+            for p in [
+                "youtube.com/",
+                "youtu.be/",
+                "http://",
+                "https://",
+            ]
+        ):
+            path = f"/@{cleaned}"
+            netloc = "www.youtube.com"
+            scheme = "https"
+            query = ""
+            fragment = ""
+        else:
+            if not lower_cleaned.startswith(("http://", "https://")):
+                cleaned = f"https://{cleaned}"
+            parts = urlsplit(cleaned)
+            scheme = (parts.scheme or "https").lower()
+            netloc = (parts.netloc or "www.youtube.com").lower()
+            path = parts.path
+            query = parts.query
+            fragment = parts.fragment
 
     encoded_path = quote(unquote(path), safe="/:@%~_.-")
     return str(urlunsplit((scheme, netloc, encoded_path, query, fragment)))
