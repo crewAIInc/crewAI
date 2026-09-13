@@ -1953,7 +1953,17 @@ class Agent(BaseAgent):
     ) -> LiteAgentOutput:
         """Execute the agent synchronously and build the output object."""
         with tool_failure_collector() as kickoff_failures:
-            result = cast(dict[str, Any], executor.invoke(inputs))
+            result = executor.invoke(inputs)
+            # When called from async context, executor.invoke() may return a
+            # coroutine instead of a dict. Run it in a dedicated thread with
+            # its own event loop so the retry completes synchronously.
+            if inspect.iscoroutine(result):
+                loop = asyncio.new_event_loop()
+                try:
+                    result = loop.run_until_complete(result)
+                finally:
+                    loop.close()
+            result = cast(dict[str, Any], result)
         return self._build_output_from_result(
             result, executor, response_format, usage_baseline, kickoff_failures
         )
