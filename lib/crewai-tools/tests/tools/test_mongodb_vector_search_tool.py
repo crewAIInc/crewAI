@@ -74,3 +74,4 @@ def test_env_vars_metadata_lists_openai_credentials():
     env_vars = MongoDBVectorSearchTool.model_fields["env_vars"].default_factory()
 
     assert [env_var.name for env_var in env_vars] == ["OPENAI_API_KEY"]
+    assert all(env_var.required for env_var in env_vars)
