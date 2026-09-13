@@ -59,10 +59,10 @@ def test_contextual_parse_tool_timeout(mock_file):
          patch("requests.get", return_value=mock_status_resp), \
          patch("time.monotonic", side_effect=monotonic_times), \
          patch("time.sleep", return_value=None):
-        result = tool._run(file_path=mock_file)
+        with pytest.raises(TimeoutError) as exc_info:
+            tool._run(file_path=mock_file)
 
-        assert "Failed to parse document" in result
-        assert "Document parsing did not complete within 10 seconds" in result
+        assert "Document parsing did not complete within 10 seconds" in str(exc_info.value)
 
 
 def test_contextual_parse_tool_failed_status(mock_file):

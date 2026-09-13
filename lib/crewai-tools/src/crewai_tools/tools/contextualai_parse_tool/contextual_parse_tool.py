@@ -141,5 +141,7 @@ class ContextualAIParseTool(BaseTool):
                 else str(e)
             )
             return f"Failed to parse document: {error_details}"
+        except TimeoutError:
+            raise
         except Exception as e:
             return f"Failed to parse document: {e!s}"
