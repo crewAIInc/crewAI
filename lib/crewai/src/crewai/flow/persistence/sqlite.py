@@ -139,7 +139,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 flow_uuid,
                 method_name,
                 datetime.now(timezone.utc).isoformat(),
-                json.dumps(state_dict),
+                json.dumps(state_dict, default=str),
             ),
         )
 
@@ -147,7 +147,7 @@ class SQLiteFlowPersistence(FlowPersistence):
     def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to a plain dict."""
         if isinstance(state_data, BaseModel):
-            return state_data.model_dump()
+            return state_data.model_dump(mode="json")
         if isinstance(state_data, dict):
             return state_data
         raise ValueError(
@@ -238,7 +238,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 (
                     flow_uuid,
                     json.dumps(context.to_dict()),
-                    json.dumps(state_dict),
+                    json.dumps(state_dict, default=str),
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
