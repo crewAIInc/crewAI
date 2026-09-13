@@ -1399,6 +1399,26 @@ def track_delegation_if_needed(
         task.increment_delegations(coworker)
 
 
+def _extract_provider_tool_call_id(tool_call: Any) -> str | None:
+    """Return a provider-supplied tool call ID, if one is available.
+
+    CrewAI still needs a local fallback ID to pair assistant and tool messages,
+    but that fallback is not a stable provider correlation key for telemetry.
+    """
+    if isinstance(tool_call, dict):
+        for key in ("call_id", "id", "toolUseId"):
+            call_id = tool_call.get(key)
+            if isinstance(call_id, str) and call_id:
+                return call_id
+        return None
+
+    for attribute in ("call_id", "id", "toolUseId"):
+        call_id = getattr(tool_call, attribute, None)
+        if isinstance(call_id, str) and call_id:
+            return call_id
+    return None
+
+
 def extract_tool_call_info(
     tool_call: Any,
 ) -> tuple[str, str, dict[str, Any] | str] | None:
@@ -1412,7 +1432,7 @@ def extract_tool_call_info(
     """
     if hasattr(tool_call, "function"):
         # OpenAI-style: has .function.name and .function.arguments
-        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        call_id = _extract_provider_tool_call_id(tool_call) or f"call_{id(tool_call)}"
         return (
             call_id,
             sanitize_tool_name(tool_call.function.name),
@@ -1420,7 +1440,7 @@ def extract_tool_call_info(
         )
     if hasattr(tool_call, "function_call") and tool_call.function_call:
         # Gemini-style: has .function_call.name and .function_call.args
-        call_id = f"call_{id(tool_call)}"
+        call_id = _extract_provider_tool_call_id(tool_call) or f"call_{id(tool_call)}"
         return (
             call_id,
             sanitize_tool_name(tool_call.function_call.name),
@@ -1428,7 +1448,7 @@ def extract_tool_call_info(
         )
     if hasattr(tool_call, "name") and hasattr(tool_call, "input"):
         # Anthropic format: has .name and .input (ToolUseBlock)
-        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        call_id = _extract_provider_tool_call_id(tool_call) or f"call_{id(tool_call)}"
         return call_id, sanitize_tool_name(tool_call.name), tool_call.input
     if isinstance(tool_call, dict):
         # Prefer the Responses API "call_id", then OpenAI "id", then Bedrock
@@ -1436,12 +1456,7 @@ def extract_tool_call_info(
         # both "id" (fc_...) and "call_id" (call_...) with different values, and the
         # matching function_call_output must reference "call_id" -- reading "id"
         # would produce a tool result that can't be correlated to its invocation.
-        call_id = (
-            tool_call.get("call_id")
-            or tool_call.get("id")
-            or tool_call.get("toolUseId")
-            or f"call_{id(tool_call)}"
-        )
+        call_id = _extract_provider_tool_call_id(tool_call) or f"call_{id(tool_call)}"
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
         # "arguments" is also read from the top level for the OpenAI Responses API,
@@ -1691,6 +1706,7 @@ def execute_single_native_tool_call(
         )
 
     call_id, func_name, func_args = info
+    provider_call_id = _extract_provider_tool_call_id(tool_call)
 
     parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
     if parse_error is not None:
@@ -1752,6 +1768,7 @@ def execute_single_native_tool_call(
         event_source,
         event=ToolUsageStartedEvent(
             tool_name=func_name,
+            call_id=provider_call_id,
             tool_args=args_dict,
             from_agent=agent,
             from_task=task,
@@ -1810,6 +1827,7 @@ def execute_single_native_tool_call(
                     event_source,
                     event=ToolUsageErrorEvent(
                         tool_name=func_name,
+                        call_id=provider_call_id,
                         tool_args=args_dict,
                         from_agent=agent,
                         from_task=task,
@@ -1849,6 +1867,7 @@ def execute_single_native_tool_call(
             event=ToolUsageFinishedEvent(
                 output=result,
                 tool_name=func_name,
+                call_id=provider_call_id,
                 tool_args=args_dict,
                 from_agent=agent,
                 from_task=task,
