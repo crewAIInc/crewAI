@@ -188,10 +188,22 @@ _MIN_REASONING_GPT_GENERATION: Final[int] = 5
 # ft:<base model>:<org>:<suffix>:<id>
 _FINE_TUNE_PREFIX: Final = "ft:"
 _OPENAI_API_HOST: Final = "api.openai.com"
-# Wording that marks a 400 as being about the parameter's value -- or, for the
-# case the tools retry owns, its combination with tools -- rather than about the
-# parameter itself being unknown.
-_REASONING_EFFORT_VALUE_COMPLAINTS: Final = ("value", "one of", "function tools")
+# How servers say a request field is not one they know: OpenAI's own two shapes
+# alongside the wordings of compatible servers (pydantic, serde, Go). A 400 that
+# names the parameter without one of these -- a bad value, the tools case -- is
+# not a rejection of the parameter and must surface.
+_UNKNOWN_PARAMETER_PHRASES: Final = (
+    "unsupported parameter",
+    "unrecognized request argument",
+    "unknown field",
+    "unknown parameter",
+    "unknown argument",
+    "unexpected field",
+    "unexpected parameter",
+    "extra inputs",
+    "not permitted",
+    "additional properties",
+)
 
 
 def _supports_reasoning_effort(model: str) -> bool:
@@ -1926,7 +1938,13 @@ class OpenAICompletion(BaseLLM):
         return self._on_compatible_server() or _supports_reasoning_effort(self.model)
 
     def _effective_base_url(self) -> str | None:
-        """The base URL the client is built with; None means OpenAI's own API."""
+        """The base URL the client is built with; None means OpenAI's own API.
+
+        Same precedence as `_get_client_params`, where `client_params` win.
+        """
+        override = (self.client_params or {}).get("base_url")
+        if isinstance(override, str) and override:
+            return override
         return (
             self.base_url
             or self.api_base
@@ -1981,11 +1999,12 @@ class OpenAICompletion(BaseLLM):
         return for a bad *value* -- the model does support the parameter, so
         silently dropping it would restore the very bug this recovers from.
 
-        A compatible server words its rejection its own way, so there any 400
-        (or 422) naming the parameter counts, unless it reads as a complaint
-        about the value, where the parameter itself is evidently accepted. The
-        wording is read from the body's `message`, or from the error text when
-        the body is not the OpenAI shape.
+        A compatible server words the same rejection its own way -- "unknown
+        field", "Extra inputs are not permitted" -- so the message is matched
+        against the common phrasings, read from the body's `message` or from
+        the error text when the body is not the OpenAI shape. A 400 (or 422)
+        that names the parameter without saying it is unknown is a bad value,
+        or the tools case, and surfaces.
         """
         if not isinstance(error, (BadRequestError, UnprocessableEntityError)):
             return False
@@ -2001,13 +2020,7 @@ class OpenAICompletion(BaseLLM):
             return False
         if source.get("code") == "unsupported_parameter":
             return True
-        if "unrecognized request argument" in message:
-            return True
-        if not self._on_compatible_server():
-            return False
-        if source.get("code") in {"unsupported_value", "invalid_value"}:
-            return False
-        return not any(hint in message for hint in _REASONING_EFFORT_VALUE_COMPLAINTS)
+        return any(phrase in message for phrase in _UNKNOWN_PARAMETER_PHRASES)
 
     @staticmethod
     def _without_reasoning_effort(params: dict[str, Any]) -> dict[str, Any] | None:

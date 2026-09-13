@@ -397,6 +397,12 @@ class TestCompatibleServers:
 
         assert params["reasoning_effort"] == "low"
 
+    def test_a_client_params_base_url_marks_a_server_compatible(self):
+        """`client_params` win over the standard fields when the client is built."""
+        llm = build("gpt-4o", client_params={"base_url": GATEWAY}, reasoning_effort="low")
+
+        assert llm._prepare_completion_params(MESSAGES)["reasoning_effort"] == "low"
+
     def test_an_env_base_url_marks_a_server_compatible(self, monkeypatch):
         monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
 
@@ -513,6 +519,48 @@ class TestCompatibleServers:
         monkeypatch.setattr(llm, "_handle_completion", always_fail)
 
         with pytest.raises(BadRequestError, match="Invalid value"):
+            llm._call_completions(MESSAGES)
+
+        assert len(calls) == 1
+        assert not completion_module._LEARNED_NO_REASONING_EFFORT_MODELS
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            _status_error(
+                UnprocessableEntityError,
+                422,
+                {
+                    "detail": [
+                        {
+                            "loc": ["body", "reasoning_effort"],
+                            "msg": "Input should be 'low', 'medium' or 'high'",
+                            "type": "literal_error",
+                        }
+                    ]
+                },
+            ),
+            _status_error(
+                BadRequestError, 400, {"error": "reasoning_effort: something odd"}
+            ),
+        ],
+        ids=["pydantic-enum", "ambiguous"],
+    )
+    def test_without_evidence_the_parameter_is_unknown_the_error_surfaces(
+        self, monkeypatch, error
+    ):
+        """Only a rejection of the parameter itself is recovered; anything else
+        naming it is the caller's to see."""
+        llm = gateway("qwen3-235b", reasoning_effort="minimal")
+        calls: list[dict] = []
+
+        def always_fail(params, **kwargs):
+            calls.append(params)
+            raise error
+
+        monkeypatch.setattr(llm, "_handle_completion", always_fail)
+
+        with pytest.raises(type(error)):
             llm._call_completions(MESSAGES)
 
         assert len(calls) == 1
