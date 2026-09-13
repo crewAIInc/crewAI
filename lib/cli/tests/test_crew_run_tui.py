@@ -1826,6 +1826,18 @@ def test_format_json_in_text_survives_literal_ellipsis() -> None:
     assert _format_json_in_text("pandas,[...]") == "pandas,[...]"
 
 
+def test_try_parse_structured_rejects_deeply_nested_input() -> None:
+    """A nesting depth no JSON backend can walk must parse as nothing, not recurse."""
+    deep = "[" * 100_000 + "]" * 100_000
+    assert _try_parse_structured(deep) is None
+
+
+def test_format_json_in_text_survives_deep_nesting() -> None:
+    """The render path must contain the failure instead of losing the TUI update."""
+    deep = "data: " + "[" * 4000 + "]" * 4000
+    assert isinstance(_format_json_in_text(deep), str)
+
+
 def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
     assert _format_json_in_text('data: {"a": 1} and [...]') == (
         'data: ' + '{\n  "a": 1\n}' + ' and [...]'
