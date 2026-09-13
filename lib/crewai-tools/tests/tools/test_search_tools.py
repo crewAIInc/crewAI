@@ -263,6 +263,61 @@ def test_youtube_channel_search_tool(mock_adapter):
     )
 
 
+def test_youtube_channel_search_tool_bare_handle(mock_adapter):
+    mock_adapter.query.return_value = "channel description"
+
+    tool = YoutubeChannelSearchTool(
+        youtube_channel_handle="crewai", adapter=mock_adapter
+    )
+    result = tool._run(search_query="what is the channel about?")
+    assert "channel description" in result
+    mock_adapter.add.assert_called_once_with(
+        "@crewai", data_type=DataType.YOUTUBE_CHANNEL
+    )
+
+
+def test_youtube_channel_search_tool_urls(mock_adapter):
+    mock_adapter.query.return_value = "channel description"
+
+    for url in [
+        "https://www.youtube.com/@crewai",
+        "https://www.youtube.com/channel/UC123456",
+        "https://www.youtube.com/c/CustomChannel",
+    ]:
+        mock_adapter.reset_mock()
+        tool = YoutubeChannelSearchTool(
+            youtube_channel_handle=url, adapter=mock_adapter
+        )
+        result = tool._run(search_query="what is the channel about?")
+        assert "channel description" in result
+        mock_adapter.add.assert_called_once_with(
+            url, data_type=DataType.YOUTUBE_CHANNEL
+        )
+
+
+def test_youtube_channel_search_tool_multilingual(mock_adapter):
+    mock_adapter.query.return_value = "channel description"
+
+    tool = YoutubeChannelSearchTool(
+        youtube_channel_handle="@日本語", adapter=mock_adapter
+    )
+    result = tool._run(search_query="what is the channel about?")
+    assert "channel description" in result
+    mock_adapter.add.assert_called_once_with(
+        "@日本語", data_type=DataType.YOUTUBE_CHANNEL
+    )
+
+    mock_adapter.reset_mock()
+    tool_bare = YoutubeChannelSearchTool(
+        youtube_channel_handle="日本語", adapter=mock_adapter
+    )
+    result_bare = tool_bare._run(search_query="what is the channel about?")
+    assert "channel description" in result_bare
+    mock_adapter.add.assert_called_once_with(
+        "@日本語", data_type=DataType.YOUTUBE_CHANNEL
+    )
+
+
 def test_code_docs_search_tool(mock_adapter):
     mock_adapter.query.return_value = "test documentation"
 
