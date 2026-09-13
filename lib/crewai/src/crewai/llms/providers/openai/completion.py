@@ -7,6 +7,7 @@ import logging
 import os
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, TypedDict
+from urllib.parse import urlsplit
 
 import httpx
 from openai import (
@@ -78,6 +79,12 @@ if TYPE_CHECKING:
 # `_remember_responses_only_model` so the wasted round trip is paid once per model
 # per process rather than on every call.
 _LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+
+# (endpoint, model) pairs a 400 has shown to reject `reasoning_effort` in this
+# process, so the rejected call is paid once rather than on every request. Keyed
+# by endpoint as well as name because the same name on a gateway and on OpenAI
+# itself are different models, and one must not silence the other.
+_LEARNED_NO_REASONING_EFFORT_MODELS: set[tuple[str, str]] = set()
 
 # Upstream status codes carried inside a 200 body, mapped to the exception the SDK
 # raises when the same code arrives as a real HTTP status. Keeping the classes
@@ -168,19 +175,28 @@ def _raise_for_upstream_error(
     )
     raise error_cls(message, response=http_response, body=error)
 
+
 # `reasoning_effort` is accepted by the o-series and by GPT generation 5 onwards.
 # Matched by shape rather than by a list of names so a new member of an existing
 # family works without a release here; `gpt-4o` and `gpt-4.1` parse to generation
-# 4 and are excluded. An over-match is recovered rather than fatal -- the call is
-# retried without the parameter when the API rejects it.
-_O_SERIES_MODEL = re.compile(r"^o\d")
-_GPT_GENERATION = re.compile(r"^gpt-(\d+)")
+# 4 and are excluded, and a fine-tune is judged by its base model. An over-match
+# is recovered rather than fatal -- the call is retried without the parameter
+# when the API rejects it.
+_O_SERIES_MODEL: Final = re.compile(r"^o\d")
+_GPT_GENERATION: Final = re.compile(r"^gpt-(\d+)")
 _MIN_REASONING_GPT_GENERATION: Final[int] = 5
+# ft:<base model>:<org>:<suffix>:<id>
+_FINE_TUNE_PREFIX: Final = "ft:"
+_OPENAI_API_HOST: Final = "api.openai.com"
+# Wording that marks a 400 as being about the parameter's value -- or, for the
+# case the tools retry owns, its combination with tools -- rather than about the
+# parameter itself being unknown.
+_REASONING_EFFORT_VALUE_COMPLAINTS: Final = ("value", "one of", "function tools")
 
 
 def _supports_reasoning_effort(model: str) -> bool:
     """Whether the model accepts `reasoning_effort` on /v1/chat/completions."""
-    name = model.rsplit("/", 1)[-1].lower()
+    name = model.rsplit("/", 1)[-1].lower().removeprefix(_FINE_TUNE_PREFIX)
     if _O_SERIES_MODEL.match(name):
         return True
     generation = _GPT_GENERATION.match(name)
@@ -674,11 +690,7 @@ class OpenAICompletion(BaseLLM):
             if self._rejects_reasoning_effort_as_unsupported(cause):
                 retry_params = self._without_reasoning_effort(completion_params)
                 if retry_params is not None:
-                    logging.debug(
-                        "Retrying %r without reasoning_effort: the model does "
-                        "not support the parameter.",
-                        self.model,
-                    )
+                    self._remember_no_reasoning_effort_model()
                     return dispatch(retry_params)
 
             if self.custom_openai or not self._is_responses_only_error(cause):
@@ -815,11 +827,7 @@ class OpenAICompletion(BaseLLM):
             if self._rejects_reasoning_effort_as_unsupported(cause):
                 retry_params = self._without_reasoning_effort(completion_params)
                 if retry_params is not None:
-                    logging.debug(
-                        "Retrying %r without reasoning_effort: the model does "
-                        "not support the parameter.",
-                        self.model,
-                    )
+                    self._remember_no_reasoning_effort_model()
                     return await dispatch(retry_params)
 
             if self.custom_openai or not self._is_responses_only_error(cause):
@@ -1904,9 +1912,58 @@ class OpenAICompletion(BaseLLM):
         message = str(source.get("message") or "").lower()
         return "function tools" in message and "reasoning_effort" in message
 
-    @staticmethod
-    def _rejects_reasoning_effort_as_unsupported(error: BaseException) -> bool:
-        """Whether a 400 is OpenAI refusing `reasoning_effort` for this model.
+    def _sends_reasoning_effort(self) -> bool:
+        """Whether `reasoning_effort` goes on the wire for this model.
+
+        OpenAI's own models are matched by shape. A compatible server names its
+        models in its own namespace, so the name says nothing about support
+        there and the explicit setting is honoured. Either way, a model that
+        has rejected the parameter on this endpoint in this process is not
+        sent it again.
+        """
+        if self._reasoning_effort_key() in _LEARNED_NO_REASONING_EFFORT_MODELS:
+            return False
+        return self._on_compatible_server() or _supports_reasoning_effort(self.model)
+
+    def _effective_base_url(self) -> str | None:
+        """The base URL the client is built with; None means OpenAI's own API."""
+        return (
+            self.base_url
+            or self.api_base
+            or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
+        )
+
+    def _on_compatible_server(self) -> bool:
+        """Whether requests go to an OpenAI-compatible server rather than OpenAI.
+
+        Decided by where the client actually points -- an explicit ``base_url``
+        or ``api_base``, the ``OPENAI_BASE_URL``/``OPENAI_API_BASE`` env, or the
+        URL a provider subclass resolves -- because ``custom_openai`` is only
+        set on some of those paths.
+        """
+        if self.custom_openai:
+            return True
+        url = self._effective_base_url()
+        if not url:
+            return False
+        return urlsplit(url).hostname != _OPENAI_API_HOST
+
+    def _reasoning_effort_key(self) -> tuple[str, str]:
+        return (self._effective_base_url() or _OPENAI_API_HOST, self.model)
+
+    def _remember_no_reasoning_effort_model(self) -> None:
+        """Record that this model rejected `reasoning_effort`, ahead of the retry."""
+        logging.warning(
+            "%r rejected reasoning_effort=%r; retrying without it, and not "
+            "sending it to this model again in this process.",
+            self.model,
+            self.reasoning_effort,
+        )
+        _LEARNED_NO_REASONING_EFFORT_MODELS.add(self._reasoning_effort_key())
+
+    def _rejects_reasoning_effort_as_unsupported(self, error: BaseException) -> bool:
+        """Whether a 400 is the server refusing `reasoning_effort` for this model.
 
         Non-reasoning models reject the parameter itself, in one of two shapes:
 
@@ -1923,22 +1980,34 @@ class OpenAICompletion(BaseLLM):
         deliberately does not match the "Unsupported value" 400 that o1/o3
         return for a bad *value* -- the model does support the parameter, so
         silently dropping it would restore the very bug this recovers from.
+
+        A compatible server words its rejection its own way, so there any 400
+        (or 422) naming the parameter counts, unless it reads as a complaint
+        about the value, where the parameter itself is evidently accepted. The
+        wording is read from the body's `message`, or from the error text when
+        the body is not the OpenAI shape.
         """
-        if not isinstance(error, BadRequestError):
+        if not isinstance(error, (BadRequestError, UnprocessableEntityError)):
             return False
         body = getattr(error, "body", None)
-        source = None
+        source: dict[str, Any] = {}
         if isinstance(body, dict):
             inner = body.get("error")
             source = inner if isinstance(inner, dict) else body
-        if not isinstance(source, dict):
-            return False
-        message = str(source.get("message") or "").lower()
+        message = str(
+            source.get("message") or getattr(error, "message", "") or error
+        ).lower()
         if "reasoning_effort" not in message:
             return False
         if source.get("code") == "unsupported_parameter":
             return True
-        return "unrecognized request argument" in message
+        if "unrecognized request argument" in message:
+            return True
+        if not self._on_compatible_server():
+            return False
+        if source.get("code") in {"unsupported_value", "invalid_value"}:
+            return False
+        return not any(hint in message for hint in _REASONING_EFFORT_VALUE_COMPLAINTS)
 
     @staticmethod
     def _without_reasoning_effort(params: dict[str, Any]) -> dict[str, Any] | None:
@@ -2015,7 +2084,7 @@ class OpenAICompletion(BaseLLM):
         # gpt-5, o3 and o4-mini failed it and silently thought at the server
         # default. It also drives tool support and message rewriting, so it
         # cannot be widened to mean "is a reasoning model".
-        if self.reasoning_effort and _supports_reasoning_effort(self.model):
+        if self.reasoning_effort and self._sends_reasoning_effort():
             params["reasoning_effort"] = self.reasoning_effort
 
         if self.response_format is not None:

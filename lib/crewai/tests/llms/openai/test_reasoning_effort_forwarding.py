@@ -22,12 +22,16 @@ from typing import Any
 
 import httpx
 import pytest
-from openai import BadRequestError
+from openai import BadRequestError, UnprocessableEntityError
 
 from crewai.llm import LLM
+from crewai.llms.providers.openai import completion as completion_module
 from crewai.llms.providers.openai.completion import (
     OpenAICompletion,
     _supports_reasoning_effort,
+)
+from crewai.llms.providers.openai_compatible.completion import (
+    OpenAICompatibleCompletion,
 )
 
 
@@ -38,6 +42,33 @@ REASONING_MODELS = ["gpt-5", "gpt-5-mini", "o3", "o3-mini", "o4-mini", "o1"]
 
 def build(model: str = "gpt-5", **kwargs: Any) -> OpenAICompletion:
     return OpenAICompletion(model=model, api_key="sk-test", **kwargs)
+
+
+GATEWAY = "https://gateway.example/v1"
+
+
+def gateway(model: str = "gpt-4o", **kwargs: Any) -> OpenAICompletion:
+    """An OpenAI-compatible server fronting whatever it calls `model`."""
+    return build(model, base_url=GATEWAY, **kwargs)
+
+
+def _status_error(cls: type, status: int, body: Any) -> Any:
+    """A rejection whose body is not the OpenAI shape, as the SDK raises it."""
+    message = f"Error code: {status} - {body}"
+    return cls(
+        message,
+        response=httpx.Response(
+            status, json=body, request=httpx.Request("POST", GATEWAY)
+        ),
+        body=body,
+    )
+
+
+@pytest.fixture(autouse=True)
+def forget_rejecting_models():
+    completion_module._LEARNED_NO_REASONING_EFFORT_MODELS.clear()
+    yield
+    completion_module._LEARNED_NO_REASONING_EFFORT_MODELS.clear()
 
 
 def _bad_request(message: str, **source: Any) -> BadRequestError:
@@ -128,6 +159,7 @@ class TestSupportedModelShape:
             "gpt-5.1",
             "gpt-5.6-sol",
             "openai/gpt-5",
+            "ft:o4-mini-2025-04-16:acme::abc123",
         ],
     )
     def test_supported(self, model):
@@ -144,6 +176,7 @@ class TestSupportedModelShape:
             "chatgpt-4o-latest",
             "omni-moderation-latest",
             "text-embedding-3-small",
+            "ft:gpt-4o-mini-2024-07-18:acme::abc123",
         ],
     )
     def test_unsupported(self, model):
@@ -177,23 +210,23 @@ class TestO1FlagUntouched:
 
 class TestErrorDetection:
     def test_matches_unsupported_parameter(self):
-        assert OpenAICompletion._rejects_reasoning_effort_as_unsupported(
+        assert build()._rejects_reasoning_effort_as_unsupported(
             unsupported_parameter_error()
         )
 
     def test_matches_unrecognized_argument(self):
-        assert OpenAICompletion._rejects_reasoning_effort_as_unsupported(
+        assert build()._rejects_reasoning_effort_as_unsupported(
             unrecognized_argument_error()
         )
 
     def test_ignores_an_unsupported_value(self):
         """Dropping the key here would silently restore the original bug."""
-        assert not OpenAICompletion._rejects_reasoning_effort_as_unsupported(
+        assert not build()._rejects_reasoning_effort_as_unsupported(
             unsupported_value_error()
         )
 
     def test_ignores_a_400_about_another_parameter(self):
-        assert not OpenAICompletion._rejects_reasoning_effort_as_unsupported(
+        assert not build()._rejects_reasoning_effort_as_unsupported(
             _bad_request(
                 "Unsupported parameter: 'temperature' is not supported.",
                 param="temperature",
@@ -202,7 +235,7 @@ class TestErrorDetection:
         )
 
     def test_ignores_unrelated_exceptions(self):
-        assert not OpenAICompletion._rejects_reasoning_effort_as_unsupported(
+        assert not build()._rejects_reasoning_effort_as_unsupported(
             RuntimeError("boom")
         )
 
@@ -319,9 +352,211 @@ class TestRetryBehaviour:
 
         assert len(calls) == 1, "a bad value must not be retried"
 
+    def test_a_model_that_rejected_the_parameter_is_not_sent_it_again(
+        self, monkeypatch
+    ):
+        """The rejected call is paid once per process, not on every request."""
+        llm = build("gpt-6-future", reasoning_effort="high")
+        seen: list[dict] = []
+
+        def fake_handle(params, **kwargs):
+            seen.append(params)
+            if "reasoning_effort" in params:
+                raise unsupported_parameter_error()
+            return "ok"
+
+        monkeypatch.setattr(llm, "_handle_completion", fake_handle)
+
+        llm._call_completions(MESSAGES)
+        llm._call_completions(MESSAGES)
+
+        assert ["reasoning_effort" in params for params in seen] == [
+            True,
+            False,
+            False,
+        ]
+
+
+class TestCompatibleServers:
+    """The model name is the server's namespace, so it says nothing about support."""
+
+    @pytest.mark.parametrize(
+        "model", ["gpt-4o", "gpt-oss-120b", "qwen3-235b", "deepseek-r1"]
+    )
+    def test_explicit_setting_is_forwarded_whatever_the_name(self, model):
+        params = gateway(model, reasoning_effort="low")._prepare_completion_params(
+            MESSAGES
+        )
+
+        assert params["reasoning_effort"] == "low"
+
+    def test_the_flag_marks_a_server_compatible(self):
+        params = gateway(
+            "gpt-4o", custom_openai=True, reasoning_effort="low"
+        )._prepare_completion_params(MESSAGES)
+
+        assert params["reasoning_effort"] == "low"
+
+    def test_an_env_base_url_marks_a_server_compatible(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+
+        params = build("qwen3", reasoning_effort="low")._prepare_completion_params(
+            MESSAGES
+        )
+
+        assert params["reasoning_effort"] == "low"
+
+    def test_openais_own_url_is_not_a_compatible_server(self):
+        llm = build("gpt-4o", base_url="https://api.openai.com/v1", reasoning_effort="low")
+
+        assert "reasoning_effort" not in llm._prepare_completion_params(MESSAGES)
+
+    def test_reaches_the_wire_through_the_llm_factory(self):
+        """gpt-oss looks like an OpenAI name to the factory, so it never flags it."""
+        llm = LLM(
+            model="gpt-oss-120b",
+            base_url="http://localhost:8000/v1",
+            api_key="sk-test",
+            reasoning_effort="high",
+        )
+
+        assert llm._prepare_completion_params(MESSAGES)["reasoning_effort"] == "high"
+
+    def test_forwarded_through_a_provider_subclass(self):
+        llm = OpenAICompatibleCompletion(
+            model="openai/gpt-oss-120b",
+            provider="openrouter",
+            api_key="sk-test",
+            reasoning_effort="low",
+        )
+
+        assert llm._prepare_completion_params(MESSAGES)["reasoning_effort"] == "low"
+
+    def test_unset_stays_off_the_wire(self):
+        params = gateway("gpt-oss-120b")._prepare_completion_params(MESSAGES)
+
+        assert "reasoning_effort" not in params
+
+    def test_a_rejection_in_the_servers_own_words_is_recovered(self, monkeypatch):
+        llm = gateway("qwen3-235b", reasoning_effort="low")
+        seen: list[dict] = []
+
+        def fake_handle(params, **kwargs):
+            seen.append(params)
+            if "reasoning_effort" in params:
+                raise _bad_request(
+                    "[{'loc': ('body', 'reasoning_effort'), "
+                    "'msg': 'Extra inputs are not permitted'}]",
+                    param=None,
+                )
+            return "ok"
+
+        monkeypatch.setattr(llm, "_handle_completion", fake_handle)
+
+        assert llm._call_completions(MESSAGES) == "ok"
+        assert len(seen) == 2
+        assert "reasoning_effort" not in seen[1]
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            _status_error(
+                BadRequestError, 400, {"error": "unknown field `reasoning_effort`"}
+            ),
+            _status_error(
+                UnprocessableEntityError,
+                422,
+                {
+                    "detail": [
+                        {
+                            "loc": ["body", "reasoning_effort"],
+                            "msg": "Extra inputs are not permitted",
+                        }
+                    ]
+                },
+            ),
+        ],
+        ids=["string-body", "fastapi-422"],
+    )
+    def test_a_rejection_outside_the_openai_shape_is_recovered(
+        self, monkeypatch, error
+    ):
+        llm = gateway("qwen3-235b", reasoning_effort="low")
+        seen: list[dict] = []
+
+        def fake_handle(params, **kwargs):
+            seen.append(params)
+            if "reasoning_effort" in params:
+                raise error
+            return "ok"
+
+        monkeypatch.setattr(llm, "_handle_completion", fake_handle)
+
+        assert llm._call_completions(MESSAGES) == "ok"
+        assert "reasoning_effort" not in seen[1]
+
+    def test_a_complaint_about_the_value_surfaces_and_is_not_remembered(
+        self, monkeypatch
+    ):
+        """The server takes the parameter; the value is the caller's mistake."""
+        llm = gateway("o3", reasoning_effort="minimal")
+        calls: list[dict] = []
+
+        def always_fail(params, **kwargs):
+            calls.append(params)
+            raise _bad_request(
+                "Invalid value 'minimal' for reasoning_effort; "
+                "must be one of low, medium, high.",
+                param="reasoning_effort",
+            )
+
+        monkeypatch.setattr(llm, "_handle_completion", always_fail)
+
+        with pytest.raises(BadRequestError, match="Invalid value"):
+            llm._call_completions(MESSAGES)
+
+        assert len(calls) == 1
+        assert not completion_module._LEARNED_NO_REASONING_EFFORT_MODELS
+
+    def test_a_gateway_rejection_does_not_silence_the_model_on_openai(
+        self, monkeypatch
+    ):
+        llm = gateway("gpt-5", reasoning_effort="high")
+
+        def reject(params, **kwargs):
+            if "reasoning_effort" in params:
+                raise unsupported_parameter_error()
+            return "ok"
+
+        monkeypatch.setattr(llm, "_handle_completion", reject)
+        llm._call_completions(MESSAGES)
+
+        params = build("gpt-5", reasoning_effort="high")._prepare_completion_params(
+            MESSAGES
+        )
+        assert params["reasoning_effort"] == "high"
+
+    def test_openai_itself_is_held_to_the_known_shapes(self, monkeypatch):
+        """The lenient match is for other servers; OpenAI's 400s stay precise."""
+        llm = build("gpt-5", reasoning_effort="low")
+        calls: list[dict] = []
+
+        def always_fail(params, **kwargs):
+            calls.append(params)
+            raise _bad_request("Something else about reasoning_effort.", param=None)
+
+        monkeypatch.setattr(llm, "_handle_completion", always_fail)
+
+        with pytest.raises(BadRequestError, match="Something else"):
+            llm._call_completions(MESSAGES)
+
+        assert len(calls) == 1
+
 
 class TestLLMSurface:
-    @pytest.mark.parametrize("effort", ["none", "minimal", "low", "medium", "high"])
+    @pytest.mark.parametrize(
+        "effort", ["none", "minimal", "low", "medium", "high", "xhigh"]
+    )
     def test_llm_accepts_every_documented_effort(self, effort):
         llm = LLM(model="gpt-5", reasoning_effort=effort, is_litellm=True)
 
