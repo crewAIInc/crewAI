@@ -420,26 +420,63 @@ class LanceDBStorage:
             return 0
         with store_lock(self._lock_name):
             if record_ids and not (categories or metadata_filter):
+                # Fast path: delete by IDs with optional scope/age filters.
+                rows = self._scan_rows(
+                    scope_prefix,
+                    columns=["id", "scope", "created_at"],
+                )
+                allowed = set(record_ids)
+                to_delete: list[str] = []
+                for row in rows:
+                    rid = str(row.get("id", ""))
+                    if rid not in allowed:
+                        continue
+                    if older_than is not None:
+                        created = row.get("created_at")
+                        if created is not None:
+                            dt = (
+                                datetime.fromisoformat(
+                                    str(created).replace("Z", "+00:00")
+                                )
+                                if isinstance(created, str)
+                                else created
+                            )
+                            if isinstance(dt, datetime) and dt >= older_than:
+                                continue
+                    to_delete.append(rid)
+                if not to_delete:
+                    return 0
                 before = int(self._table.count_rows())
-                ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
+                ids_expr = ", ".join(f"'{rid}'" for rid in to_delete)
                 self._do_write("delete", f"id IN ({ids_expr})")
                 return before - int(self._table.count_rows())
             if categories or metadata_filter:
                 rows = self._scan_rows(scope_prefix)
-                to_delete: list[str] = []
+                to_delete_ids: list[str] = []
+                allowed_ids = set(record_ids) if record_ids else None
                 for row in rows:
                     record = self._row_to_record(row)
+                    # When record_ids are provided, only delete matching IDs.
+                    if allowed_ids is not None and record.id not in allowed_ids:
+                        continue
                     if categories and not any(
                         c in record.categories for c in categories
                     ):
                         continue
                     if metadata_filter and not all(
-                        record.metadata.get(k) == v for k, v in metadata_filter.items()
+                        record.metadata.get(k) == v
+                        for k, v in metadata_filter.items()
                     ):
                         continue
                     if older_than and record.created_at >= older_than:
                         continue
-                    to_delete.append(record.id)
+                    to_delete_ids.append(record.id)
+                if not to_delete_ids:
+                    return 0
+                before = int(self._table.count_rows())
+                ids_expr = ", ".join(f"'{rid}'" for rid in to_delete_ids)
+                self._do_write("delete", f"id IN ({ids_expr})")
+                return before - int(self._table.count_rows())
                 if not to_delete:
                     return 0
                 before = int(self._table.count_rows())
