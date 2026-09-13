@@ -6,10 +6,11 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
+import random
 import time
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
-from pydantic import BaseModel, PrivateAttr, model_validator
+from pydantic import BaseModel, PrivateAttr, field_validator, model_validator
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
@@ -251,6 +252,22 @@ class BedrockCompletion(BaseLLM):
     retry_delay: float = 1.0
     max_retry_delay: float = 30.0
 
+    @field_validator("max_retries", mode="after")
+    @classmethod
+    def _validate_max_retries(cls, v: int) -> int:
+        """Validate that max_retries is non-negative."""
+        if v < 0:
+            raise ValueError("max_retries must be non-negative")
+        return v
+
+    @field_validator("retry_delay", "max_retry_delay", mode="after")
+    @classmethod
+    def _validate_retry_delays(cls, v: float) -> float:
+        """Validate that retry delays are non-negative."""
+        if v < 0:
+            raise ValueError("retry delays must be non-negative")
+        return v
+
     _client: Any = PrivateAttr(default=None)
     _async_exit_stack: Any = PrivateAttr(default=None)
     _async_client_initialized: bool = PrivateAttr(default=False)
@@ -363,12 +380,34 @@ class BedrockCompletion(BaseLLM):
         return config
 
     def _calculate_backoff_delay(self, attempt: int) -> float:
-        """Calculate bounded exponential backoff delay."""
-        return min(self.retry_delay * (2**attempt), self.max_retry_delay)
+        """Calculate bounded exponential backoff delay with jitter.
+
+        Applies equal jitter to prevent thundering herds while preserving
+        exponential growth up to `max_retry_delay`.
+
+        Args:
+            attempt: The 0-based retry attempt index.
+
+        Returns:
+            float: Delay in seconds with bounded jitter applied.
+        """
+        base_delay = min(self.retry_delay * (2**attempt), self.max_retry_delay)
+        if base_delay <= 0:
+            return 0.0
+        jitter = random.uniform(0.5 * base_delay, base_delay)  # noqa: S311
+        return min(jitter, self.max_retry_delay)
 
     def _execute_single_call(
         self, api_func: Callable[[], Any]
     ) -> tuple[Any, Exception | None]:
+        """Execute a single synchronous Bedrock call and catch any exception.
+
+        Args:
+            api_func: Zero-argument callable invoking the Bedrock API.
+
+        Returns:
+            tuple[Any, Exception | None]: (result, None) on success or (None, error) on exception.
+        """
         try:
             return api_func(), None
         except Exception as e:
@@ -377,13 +416,31 @@ class BedrockCompletion(BaseLLM):
     async def _aexecute_single_call(
         self, api_func: Callable[[], Coroutine[Any, Any, Any]]
     ) -> tuple[Any, Exception | None]:
+        """Execute a single asynchronous Bedrock call and catch any exception.
+
+        Args:
+            api_func: Zero-argument callable returning a coroutine for Bedrock API.
+
+        Returns:
+            tuple[Any, Exception | None]: (result, None) on success or (None, error) on exception.
+        """
         try:
             return await api_func(), None
         except Exception as e:
             return None, e
 
     def _call_with_retry(self, api_func: Callable[[], Any]) -> Any:
-        """Execute a sync Bedrock API call with bounded exponential backoff for throttling errors."""
+        """Execute a sync Bedrock API call with bounded exponential backoff for throttling errors.
+
+        Args:
+            api_func: Zero-argument callable invoking the sync Bedrock API.
+
+        Returns:
+            Any: The response from api_func on success.
+
+        Raises:
+            Exception: If retries are exhausted or an unretryable error occurs.
+        """
         max_retries = max(0, self.max_retries)
         last_error: Exception | None = None
         for attempt in range(max_retries + 1):
@@ -411,7 +468,17 @@ class BedrockCompletion(BaseLLM):
     async def _acall_with_retry(
         self, api_func: Callable[[], Coroutine[Any, Any, Any]]
     ) -> Any:
-        """Execute an async Bedrock API call with bounded exponential backoff for throttling errors."""
+        """Execute an async Bedrock API call with bounded exponential backoff for throttling errors.
+
+        Args:
+            api_func: Zero-argument callable returning a coroutine for Bedrock API.
+
+        Returns:
+            Any: The response from api_func on success.
+
+        Raises:
+            Exception: If retries are exhausted or an unretryable error occurs.
+        """
         max_retries = max(0, self.max_retries)
         last_error: Exception | None = None
         for attempt in range(max_retries + 1):
@@ -1049,16 +1116,19 @@ class BedrockCompletion(BaseLLM):
                         ),
                     )
 
-        full_response = ""
-        current_tool_use: dict[str, Any] | None = None
-        tool_use_id: str | None = None
-        tool_use_index = 0
-        accumulated_tool_input = ""
-        usage_data: dict[str, Any] | None = None
+        max_retries = max(0, self.max_retries)
+        last_streaming_error: Exception | None = None
+        for attempt in range(max_retries + 1):
+            full_response = ""
+            current_tool_use: dict[str, Any] | None = None
+            tool_use_id: str | None = None
+            tool_use_index = 0
+            accumulated_tool_input = ""
+            usage_data: dict[str, Any] | None = None
+            output_emitted = False
 
-        try:
-            response = self._call_with_retry(
-                lambda: self._get_sync_client().converse_stream(
+            try:
+                response = self._get_sync_client().converse_stream(
                     modelId=self.model_id,
                     messages=cast(
                         "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -1066,75 +1136,40 @@ class BedrockCompletion(BaseLLM):
                     ),
                     **body,
                 )
-            )
 
-            stream = response.get("stream")
-            _, stream_response_id = self._extract_finish_reason_and_id(response)
-            response_id = stream_response_id
-            stream_finish_reason: str | None = None
-            if stream:
-                for event in stream:
-                    if "messageStart" in event:
-                        role = event["messageStart"].get("role")
-                        logging.debug(f"Streaming message started with role: {role}")
-
-                    elif "contentBlockStart" in event:
-                        start = event["contentBlockStart"].get("start", {})
-                        content_block_index = event["contentBlockStart"].get(
-                            "contentBlockIndex", 0
-                        )
-                        if "toolUse" in start:
-                            tool_use_block = start["toolUse"]
-                            current_tool_use = cast(dict[str, Any], tool_use_block)
-                            tool_use_id = current_tool_use.get("toolUseId")
-                            tool_use_index = content_block_index
-                            accumulated_tool_input = ""
-                            self._emit_stream_chunk_event(
-                                chunk="",
-                                from_task=from_task,
-                                from_agent=from_agent,
-                                tool_call={
-                                    "id": tool_use_id or "",
-                                    "function": {
-                                        "name": current_tool_use.get("name", ""),
-                                        "arguments": "",
-                                    },
-                                    "type": "function",
-                                    "index": tool_use_index,
-                                },
-                                call_type=LLMCallType.TOOL_CALL,
-                                response_id=response_id,
+                stream = response.get("stream")
+                _, stream_response_id = self._extract_finish_reason_and_id(response)
+                response_id = stream_response_id
+                stream_finish_reason: str | None = None
+                if stream:
+                    for event in stream:
+                        if "messageStart" in event:
+                            role = event["messageStart"].get("role")
+                            logging.debug(
+                                f"Streaming message started with role: {role}"
                             )
-                        logging.debug(
-                            f"Tool use started in stream: {json.dumps(current_tool_use)} (ID: {tool_use_id})"
-                        )
 
-                    elif "contentBlockDelta" in event:
-                        delta = event["contentBlockDelta"]["delta"]
-                        if "text" in delta:
-                            text_chunk = delta["text"]
-                            logging.debug(f"Streaming text chunk: {text_chunk[:50]}...")
-                            full_response += text_chunk
-                            self._emit_stream_chunk_event(
-                                chunk=text_chunk,
-                                from_task=from_task,
-                                from_agent=from_agent,
-                                response_id=response_id,
+                        elif "contentBlockStart" in event:
+                            start = event["contentBlockStart"].get("start", {})
+                            content_block_index = event["contentBlockStart"].get(
+                                "contentBlockIndex", 0
                             )
-                        elif "toolUse" in delta and current_tool_use:
-                            tool_input = delta["toolUse"].get("input", "")
-                            if tool_input:
-                                accumulated_tool_input += tool_input
-                                logging.debug(f"Tool input delta: {tool_input}")
+                            if "toolUse" in start:
+                                tool_use_block = start["toolUse"]
+                                current_tool_use = cast(dict[str, Any], tool_use_block)
+                                tool_use_id = current_tool_use.get("toolUseId")
+                                tool_use_index = content_block_index
+                                accumulated_tool_input = ""
+                                output_emitted = True
                                 self._emit_stream_chunk_event(
-                                    chunk=tool_input,
+                                    chunk="",
                                     from_task=from_task,
                                     from_agent=from_agent,
                                     tool_call={
                                         "id": tool_use_id or "",
                                         "function": {
                                             "name": current_tool_use.get("name", ""),
-                                            "arguments": accumulated_tool_input,
+                                            "arguments": "",
                                         },
                                         "type": "function",
                                         "index": tool_use_index,
@@ -1142,155 +1177,230 @@ class BedrockCompletion(BaseLLM):
                                     call_type=LLMCallType.TOOL_CALL,
                                     response_id=response_id,
                                 )
-                    elif "contentBlockStop" in event:
-                        logging.debug("Content block stopped in stream")
-                        if current_tool_use:
-                            function_name = current_tool_use["name"]
-                            # Streamed tool input arrives as JSON string deltas in
-                            # accumulated_tool_input; fold it back into the tool-use
-                            # block so function_args (and the message history below)
-                            # carry the real arguments instead of an empty input.
-                            try:
-                                parsed_input = json.loads(accumulated_tool_input)
-                                current_tool_use["input"] = (
-                                    parsed_input
-                                    if isinstance(parsed_input, dict)
-                                    else {}
-                                )
-                            except (json.JSONDecodeError, ValueError, TypeError):
-                                current_tool_use["input"] = {}
-                            function_args = cast(
-                                dict[str, Any], current_tool_use.get("input", {})
+                            logging.debug(
+                                f"Tool use started in stream: {json.dumps(current_tool_use)} (ID: {tool_use_id})"
                             )
 
-                            # Check if this is the structured_output tool
-                            if (
-                                function_name == STRUCTURED_OUTPUT_TOOL_NAME
-                                and response_model
-                            ):
-                                function_args = _preprocess_structured_data(
-                                    function_args, response_model
+                        elif "contentBlockDelta" in event:
+                            delta = event["contentBlockDelta"]["delta"]
+                            if "text" in delta:
+                                text_chunk = delta["text"]
+                                logging.debug(
+                                    f"Streaming text chunk: {text_chunk[:50]}..."
                                 )
-                                try:
-                                    result = response_model.model_validate(
-                                        function_args
-                                    )
-                                    # contentBlockStop fires before messageStop sets
-                                    # stream_finish_reason; structured output always
-                                    # completes via the tool-call path.
-                                    self._emit_call_completed_event(
-                                        response=result.model_dump_json(),
-                                        call_type=LLMCallType.LLM_CALL,
-                                        from_task=from_task,
-                                        from_agent=from_agent,
-                                        messages=messages,
-                                        usage=usage_data,
-                                        finish_reason=stream_finish_reason
-                                        or "tool_use",
-                                        response_id=response_id,
-                                    )
-                                    return result  # type: ignore[return-value]
-                                except Exception as e:
-                                    error_msg = (
-                                        f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
-                                        f"with model {response_model.__name__}: {e}"
-                                    )
-                                    logging.error(error_msg)
-                                    raise ValueError(error_msg) from e
-
-                            # Handle regular tool execution
-                            if available_functions:
-                                tool_result = self._handle_tool_execution(
-                                    function_name=function_name,
-                                    function_args=function_args,
-                                    available_functions=available_functions,
+                                full_response += text_chunk
+                                output_emitted = True
+                                self._emit_stream_chunk_event(
+                                    chunk=text_chunk,
                                     from_task=from_task,
                                     from_agent=from_agent,
+                                    response_id=response_id,
                                 )
-                                if tool_result is not None and tool_use_id:
-                                    messages.append(
-                                        {
-                                            "role": "assistant",
-                                            "content": [{"toolUse": current_tool_use}],
-                                        }
+                            elif "toolUse" in delta and current_tool_use:
+                                tool_input = delta["toolUse"].get("input", "")
+                                if tool_input:
+                                    accumulated_tool_input += tool_input
+                                    logging.debug(f"Tool input delta: {tool_input}")
+                                    output_emitted = True
+                                    self._emit_stream_chunk_event(
+                                        chunk=tool_input,
+                                        from_task=from_task,
+                                        from_agent=from_agent,
+                                        tool_call={
+                                            "id": tool_use_id or "",
+                                            "function": {
+                                                "name": current_tool_use.get(
+                                                    "name", ""
+                                                ),
+                                                "arguments": accumulated_tool_input,
+                                            },
+                                            "type": "function",
+                                            "index": tool_use_index,
+                                        },
+                                        call_type=LLMCallType.TOOL_CALL,
+                                        response_id=response_id,
                                     )
-                                    messages.append(
-                                        {
-                                            "role": "user",
-                                            "content": [
-                                                {
-                                                    "toolResult": {
-                                                        "toolUseId": tool_use_id,
-                                                        "content": [
-                                                            {"text": str(tool_result)}
-                                                        ],
+                        elif "contentBlockStop" in event:
+                            logging.debug("Content block stopped in stream")
+                            if current_tool_use:
+                                function_name = current_tool_use["name"]
+                                # Streamed tool input arrives as JSON string deltas in
+                                # accumulated_tool_input; fold it back into the tool-use
+                                # block so function_args (and the message history below)
+                                # carry the real arguments instead of an empty input.
+                                try:
+                                    parsed_input = json.loads(accumulated_tool_input)
+                                    current_tool_use["input"] = (
+                                        parsed_input
+                                        if isinstance(parsed_input, dict)
+                                        else {}
+                                    )
+                                except (json.JSONDecodeError, ValueError, TypeError):
+                                    current_tool_use["input"] = {}
+                                function_args = cast(
+                                    dict[str, Any], current_tool_use.get("input", {})
+                                )
+
+                                # Check if this is the structured_output tool
+                                if (
+                                    function_name == STRUCTURED_OUTPUT_TOOL_NAME
+                                    and response_model
+                                ):
+                                    function_args = _preprocess_structured_data(
+                                        function_args, response_model
+                                    )
+                                    try:
+                                        result = response_model.model_validate(
+                                            function_args
+                                        )
+                                        # contentBlockStop fires before messageStop sets
+                                        # stream_finish_reason; structured output always
+                                        # completes via the tool-call path.
+                                        self._emit_call_completed_event(
+                                            response=result.model_dump_json(),
+                                            call_type=LLMCallType.LLM_CALL,
+                                            from_task=from_task,
+                                            from_agent=from_agent,
+                                            messages=messages,
+                                            usage=usage_data,
+                                            finish_reason=stream_finish_reason
+                                            or "tool_use",
+                                            response_id=response_id,
+                                        )
+                                        return result  # type: ignore[return-value]
+                                    except Exception as e:
+                                        error_msg = (
+                                            f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
+                                            f"with model {response_model.__name__}: {e}"
+                                        )
+                                        logging.error(error_msg)
+                                        raise ValueError(error_msg) from e
+
+                                # Handle regular tool execution
+                                if available_functions:
+                                    tool_result = self._handle_tool_execution(
+                                        function_name=function_name,
+                                        function_args=function_args,
+                                        available_functions=available_functions,
+                                        from_task=from_task,
+                                        from_agent=from_agent,
+                                    )
+                                    if tool_result is not None and tool_use_id:
+                                        messages.append(
+                                            {
+                                                "role": "assistant",
+                                                "content": [
+                                                    {"toolUse": current_tool_use}
+                                                ],
+                                            }
+                                        )
+                                        messages.append(
+                                            {
+                                                "role": "user",
+                                                "content": [
+                                                    {
+                                                        "toolResult": {
+                                                            "toolUseId": tool_use_id,
+                                                            "content": [
+                                                                {
+                                                                    "text": str(
+                                                                        tool_result
+                                                                    )
+                                                                }
+                                                            ],
+                                                        }
                                                     }
-                                                }
-                                            ],
-                                        }
-                                    )
-                                    return self._handle_converse(
-                                        messages,
-                                        body,
-                                        available_functions,
-                                        from_task,
-                                        from_agent,
-                                        response_model,
-                                    )
-                            current_tool_use = None
-                            tool_use_id = None
-                    elif "messageStop" in event:
-                        stop_reason = event["messageStop"].get("stopReason")
-                        stream_finish_reason = stop_reason
-                        logging.debug(f"Streaming message stopped: {stop_reason}")
-                        if stop_reason == "max_tokens":
-                            logging.warning(
-                                "Streaming response truncated due to max_tokens"
-                            )
-                        elif stop_reason == "content_filtered":
-                            logging.warning(
-                                "Streaming response filtered due to content policy"
-                            )
-                            break
-                    elif "metadata" in event:
-                        metadata = event["metadata"]
-                        if "usage" in metadata:
-                            usage_metrics = metadata["usage"]
-                            usage_data = usage_metrics
-                            self._track_token_usage_internal(usage_metrics)
-                            logging.debug(f"Token usage: {usage_metrics}")
+                                                ],
+                                            }
+                                        )
+                                        return self._handle_converse(
+                                            messages,
+                                            body,
+                                            available_functions,
+                                            from_task,
+                                            from_agent,
+                                            response_model,
+                                        )
+                                current_tool_use = None
+                                tool_use_id = None
+                        elif "messageStop" in event:
+                            stop_reason = event["messageStop"].get("stopReason")
+                            stream_finish_reason = stop_reason
+                            logging.debug(f"Streaming message stopped: {stop_reason}")
+                            if stop_reason == "max_tokens":
+                                logging.warning(
+                                    "Streaming response truncated due to max_tokens"
+                                )
+                            elif stop_reason == "content_filtered":
+                                logging.warning(
+                                    "Streaming response filtered due to content policy"
+                                )
+                                break
+                        elif "metadata" in event:
+                            metadata = event["metadata"]
+                            if "usage" in metadata:
+                                usage_metrics = metadata["usage"]
+                                usage_data = usage_metrics
+                                self._track_token_usage_internal(usage_metrics)
+                                logging.debug(f"Token usage: {usage_metrics}")
                             if "trace" in metadata:
                                 logging.debug(
                                     f"Trace information available: {metadata['trace']}"
                                 )
 
-        except ClientError as e:
-            error_msg = self._handle_client_error(e)
-            raise RuntimeError(error_msg) from e
-        except BotoCoreError as e:
-            error_msg = f"Bedrock streaming connection error: {e}"
+                full_response = self._apply_stop_words(full_response)
+
+                if not full_response or full_response.strip() == "":
+                    logging.warning(
+                        "Bedrock streaming returned empty content, using fallback"
+                    )
+                    full_response = "I apologize, but I couldn't generate a response. Please try again."
+
+                self._emit_call_completed_event(
+                    response=full_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages,
+                    usage=usage_data,
+                    finish_reason=stream_finish_reason,
+                    response_id=response_id,
+                )
+
+                return full_response
+
+            except (ClientError, BotoCoreError) as e:
+                last_streaming_error = e
+                if (
+                    not output_emitted
+                    and is_bedrock_throttling_error(e)
+                    and attempt < max_retries
+                ):
+                    delay = self._calculate_backoff_delay(attempt)
+                    logging.warning(
+                        "AWS Bedrock streaming throttled before output emitted (%s). Retrying in %.1fs (attempt %d/%d)...",
+                        e,
+                        delay,
+                        attempt + 1,
+                        max_retries,
+                    )
+                    time.sleep(delay)
+                    continue
+
+                if isinstance(e, ClientError):
+                    error_msg = self._handle_client_error(e)
+                    raise RuntimeError(error_msg) from e
+                error_msg = f"Bedrock streaming connection error: {e}"
+                logging.error(error_msg)
+                raise ConnectionError(error_msg) from e
+
+        if last_streaming_error is not None:
+            if isinstance(last_streaming_error, ClientError):
+                error_msg = self._handle_client_error(last_streaming_error)
+                raise RuntimeError(error_msg) from last_streaming_error
+            error_msg = f"Bedrock streaming connection error: {last_streaming_error}"
             logging.error(error_msg)
-            raise ConnectionError(error_msg) from e
-
-        full_response = self._apply_stop_words(full_response)
-
-        if not full_response or full_response.strip() == "":
-            logging.warning("Bedrock streaming returned empty content, using fallback")
-            full_response = (
-                "I apologize, but I couldn't generate a response. Please try again."
-            )
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
-            from_task=from_task,
-            from_agent=from_agent,
-            messages=messages,
-            usage=usage_data,
-            finish_reason=stream_finish_reason,
-            response_id=response_id,
-        )
-
+            raise ConnectionError(error_msg) from last_streaming_error
         return full_response
 
     async def _ensure_async_client(self) -> Any:
@@ -1662,17 +1772,20 @@ class BedrockCompletion(BaseLLM):
                         ),
                     )
 
-        full_response = ""
-        current_tool_use: dict[str, Any] | None = None
-        tool_use_id: str | None = None
-        tool_use_index = 0
-        accumulated_tool_input = ""
-        usage_data: dict[str, Any] | None = None
+        max_retries = max(0, self.max_retries)
+        last_streaming_error: Exception | None = None
+        for attempt in range(max_retries + 1):
+            full_response = ""
+            current_tool_use: dict[str, Any] | None = None
+            tool_use_id: str | None = None
+            tool_use_index = 0
+            accumulated_tool_input = ""
+            usage_data: dict[str, Any] | None = None
+            output_emitted = False
 
-        try:
-            async_client = await self._ensure_async_client()
-            response = await self._acall_with_retry(
-                lambda: async_client.converse_stream(
+            try:
+                async_client = await self._ensure_async_client()
+                response = await async_client.converse_stream(
                     modelId=self.model_id,
                     messages=cast(
                         "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -1680,75 +1793,40 @@ class BedrockCompletion(BaseLLM):
                     ),
                     **body,
                 )
-            )
 
-            stream = response.get("stream")
-            _, stream_response_id = self._extract_finish_reason_and_id(response)
-            response_id = stream_response_id
-            stream_finish_reason: str | None = None
-            if stream:
-                async for event in stream:
-                    if "messageStart" in event:
-                        role = event["messageStart"].get("role")
-                        logging.debug(f"Streaming message started with role: {role}")
-
-                    elif "contentBlockStart" in event:
-                        start = event["contentBlockStart"].get("start", {})
-                        content_block_index = event["contentBlockStart"].get(
-                            "contentBlockIndex", 0
-                        )
-                        if "toolUse" in start:
-                            tool_use_block = start["toolUse"]
-                            current_tool_use = cast(dict[str, Any], tool_use_block)
-                            tool_use_id = current_tool_use.get("toolUseId")
-                            tool_use_index = content_block_index
-                            accumulated_tool_input = ""
-                            self._emit_stream_chunk_event(
-                                chunk="",
-                                from_task=from_task,
-                                from_agent=from_agent,
-                                tool_call={
-                                    "id": tool_use_id or "",
-                                    "function": {
-                                        "name": current_tool_use.get("name", ""),
-                                        "arguments": "",
-                                    },
-                                    "type": "function",
-                                    "index": tool_use_index,
-                                },
-                                call_type=LLMCallType.TOOL_CALL,
-                                response_id=response_id,
-                            )
+                stream = response.get("stream")
+                _, stream_response_id = self._extract_finish_reason_and_id(response)
+                response_id = stream_response_id
+                stream_finish_reason: str | None = None
+                if stream:
+                    async for event in stream:
+                        if "messageStart" in event:
+                            role = event["messageStart"].get("role")
                             logging.debug(
-                                f"Tool use started in stream: {current_tool_use.get('name')} (ID: {tool_use_id})"
+                                f"Streaming message started with role: {role}"
                             )
 
-                    elif "contentBlockDelta" in event:
-                        delta = event["contentBlockDelta"]["delta"]
-                        if "text" in delta:
-                            text_chunk = delta["text"]
-                            logging.debug(f"Streaming text chunk: {text_chunk[:50]}...")
-                            full_response += text_chunk
-                            self._emit_stream_chunk_event(
-                                chunk=text_chunk,
-                                from_task=from_task,
-                                from_agent=from_agent,
-                                response_id=response_id,
+                        elif "contentBlockStart" in event:
+                            start = event["contentBlockStart"].get("start", {})
+                            content_block_index = event["contentBlockStart"].get(
+                                "contentBlockIndex", 0
                             )
-                        elif "toolUse" in delta and current_tool_use:
-                            tool_input = delta["toolUse"].get("input", "")
-                            if tool_input:
-                                accumulated_tool_input += tool_input
-                                logging.debug(f"Tool input delta: {tool_input}")
+                            if "toolUse" in start:
+                                tool_use_block = start["toolUse"]
+                                current_tool_use = cast(dict[str, Any], tool_use_block)
+                                tool_use_id = current_tool_use.get("toolUseId")
+                                tool_use_index = content_block_index
+                                accumulated_tool_input = ""
+                                output_emitted = True
                                 self._emit_stream_chunk_event(
-                                    chunk=tool_input,
+                                    chunk="",
                                     from_task=from_task,
                                     from_agent=from_agent,
                                     tool_call={
                                         "id": tool_use_id or "",
                                         "function": {
                                             "name": current_tool_use.get("name", ""),
-                                            "arguments": accumulated_tool_input,
+                                            "arguments": "",
                                         },
                                         "type": "function",
                                         "index": tool_use_index,
@@ -1756,166 +1834,240 @@ class BedrockCompletion(BaseLLM):
                                     call_type=LLMCallType.TOOL_CALL,
                                     response_id=response_id,
                                 )
-
-                    elif "contentBlockStop" in event:
-                        logging.debug("Content block stopped in stream")
-                        if current_tool_use:
-                            function_name = current_tool_use["name"]
-                            # Streamed tool input arrives as JSON string deltas in
-                            # accumulated_tool_input; fold it back into the tool-use
-                            # block so function_args (and the message history below)
-                            # carry the real arguments instead of an empty input.
-                            try:
-                                parsed_input = json.loads(accumulated_tool_input)
-                                current_tool_use["input"] = (
-                                    parsed_input
-                                    if isinstance(parsed_input, dict)
-                                    else {}
+                                logging.debug(
+                                    f"Tool use started in stream: {current_tool_use.get('name')} (ID: {tool_use_id})"
                                 )
-                            except (json.JSONDecodeError, ValueError, TypeError):
-                                current_tool_use["input"] = {}
-                            function_args = cast(
-                                dict[str, Any], current_tool_use.get("input", {})
-                            )
 
-                            # Check if this is the structured_output tool
-                            if (
-                                function_name == STRUCTURED_OUTPUT_TOOL_NAME
-                                and response_model
-                            ):
-                                function_args = _preprocess_structured_data(
-                                    function_args, response_model
+                        elif "contentBlockDelta" in event:
+                            delta = event["contentBlockDelta"]["delta"]
+                            if "text" in delta:
+                                text_chunk = delta["text"]
+                                logging.debug(
+                                    f"Streaming text chunk: {text_chunk[:50]}..."
                                 )
-                                try:
-                                    result = response_model.model_validate(
-                                        function_args
-                                    )
-                                    # contentBlockStop fires before messageStop sets
-                                    # stream_finish_reason; structured output always
-                                    # completes via the tool-call path.
-                                    self._emit_call_completed_event(
-                                        response=result.model_dump_json(),
-                                        call_type=LLMCallType.LLM_CALL,
-                                        from_task=from_task,
-                                        from_agent=from_agent,
-                                        messages=messages,
-                                        usage=usage_data,
-                                        finish_reason=stream_finish_reason
-                                        or "tool_use",
-                                        response_id=response_id,
-                                    )
-                                    return result  # type: ignore[return-value]
-                                except Exception as e:
-                                    error_msg = (
-                                        f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
-                                        f"with model {response_model.__name__}: {e}"
-                                    )
-                                    logging.error(error_msg)
-                                    raise ValueError(error_msg) from e
-
-                            # Handle regular tool execution
-                            if available_functions:
-                                tool_result = self._handle_tool_execution(
-                                    function_name=function_name,
-                                    function_args=function_args,
-                                    available_functions=available_functions,
+                                full_response += text_chunk
+                                output_emitted = True
+                                self._emit_stream_chunk_event(
+                                    chunk=text_chunk,
                                     from_task=from_task,
                                     from_agent=from_agent,
+                                    response_id=response_id,
+                                )
+                            elif "toolUse" in delta and current_tool_use:
+                                tool_input = delta["toolUse"].get("input", "")
+                                if tool_input:
+                                    accumulated_tool_input += tool_input
+                                    logging.debug(f"Tool input delta: {tool_input}")
+                                    output_emitted = True
+                                    self._emit_stream_chunk_event(
+                                        chunk=tool_input,
+                                        from_task=from_task,
+                                        from_agent=from_agent,
+                                        tool_call={
+                                            "id": tool_use_id or "",
+                                            "function": {
+                                                "name": current_tool_use.get(
+                                                    "name", ""
+                                                ),
+                                                "arguments": accumulated_tool_input,
+                                            },
+                                            "type": "function",
+                                            "index": tool_use_index,
+                                        },
+                                        call_type=LLMCallType.TOOL_CALL,
+                                        response_id=response_id,
+                                    )
+                        elif "contentBlockStop" in event:
+                            logging.debug("Content block stopped in stream")
+                            if current_tool_use:
+                                function_name = current_tool_use["name"]
+                                # Streamed tool input arrives as JSON string deltas in
+                                # accumulated_tool_input; fold it back into the tool-use
+                                # block so function_args (and the message history below)
+                                # carry the real arguments instead of an empty input.
+                                try:
+                                    parsed_input = json.loads(accumulated_tool_input)
+                                    current_tool_use["input"] = (
+                                        parsed_input
+                                        if isinstance(parsed_input, dict)
+                                        else {}
+                                    )
+                                except (json.JSONDecodeError, ValueError, TypeError):
+                                    current_tool_use["input"] = {}
+                                function_args = cast(
+                                    dict[str, Any], current_tool_use.get("input", {})
                                 )
 
-                                if tool_result is not None and tool_use_id:
-                                    messages.append(
-                                        {
-                                            "role": "assistant",
-                                            "content": [{"toolUse": current_tool_use}],
-                                        }
+                                # Check if this is the structured_output tool
+                                if (
+                                    function_name == STRUCTURED_OUTPUT_TOOL_NAME
+                                    and response_model
+                                ):
+                                    function_args = _preprocess_structured_data(
+                                        function_args, response_model
+                                    )
+                                    try:
+                                        result = response_model.model_validate(
+                                            function_args
+                                        )
+                                        # contentBlockStop fires before messageStop sets
+                                        # stream_finish_reason; structured output always
+                                        # completes via the tool-call path.
+                                        self._emit_call_completed_event(
+                                            response=result.model_dump_json(),
+                                            call_type=LLMCallType.LLM_CALL,
+                                            from_task=from_task,
+                                            from_agent=from_agent,
+                                            messages=messages,
+                                            usage=usage_data,
+                                            finish_reason=stream_finish_reason
+                                            or "tool_use",
+                                            response_id=response_id,
+                                        )
+                                        return result  # type: ignore[return-value]
+                                    except Exception as e:
+                                        error_msg = (
+                                            f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
+                                            f"with model {response_model.__name__}: {e}"
+                                        )
+                                        logging.error(error_msg)
+                                        raise ValueError(error_msg) from e
+
+                                # Handle regular tool execution
+                                if available_functions:
+                                    tool_result = await self._ahandle_tool_execution(
+                                        function_name=function_name,
+                                        function_args=function_args,
+                                        available_functions=available_functions,
+                                        from_task=from_task,
+                                        from_agent=from_agent,
                                     )
 
-                                    messages.append(
-                                        {
-                                            "role": "user",
-                                            "content": [
-                                                {
-                                                    "toolResult": {
-                                                        "toolUseId": tool_use_id,
-                                                        "content": [
-                                                            {"text": str(tool_result)}
-                                                        ],
+                                    if tool_result is not None and tool_use_id:
+                                        messages.append(
+                                            {
+                                                "role": "assistant",
+                                                "content": [
+                                                    {"toolUse": current_tool_use}
+                                                ],
+                                            }
+                                        )
+
+                                        messages.append(
+                                            {
+                                                "role": "user",
+                                                "content": [
+                                                    {
+                                                        "toolResult": {
+                                                            "toolUseId": tool_use_id,
+                                                            "content": [
+                                                                {
+                                                                    "text": str(
+                                                                        tool_result
+                                                                    )
+                                                                }
+                                                            ],
+                                                        }
                                                     }
-                                                }
-                                            ],
-                                        }
-                                    )
+                                                ],
+                                            }
+                                        )
 
-                                    return await self._ahandle_converse(
-                                        messages,
-                                        body,
-                                        available_functions,
-                                        from_task,
-                                        from_agent,
-                                        response_model,
-                                    )
-                            current_tool_use = None
-                            tool_use_id = None
+                                        return await self._ahandle_converse(
+                                            messages,
+                                            body,
+                                            available_functions,
+                                            from_task,
+                                            from_agent,
+                                            response_model,
+                                        )
+                                current_tool_use = None
+                                tool_use_id = None
 
-                    elif "messageStop" in event:
-                        stop_reason = event["messageStop"].get("stopReason")
-                        stream_finish_reason = stop_reason
-                        logging.debug(f"Streaming message stopped: {stop_reason}")
-                        if stop_reason == "max_tokens":
-                            logging.warning(
-                                "Streaming response truncated due to max_tokens"
-                            )
-                        elif stop_reason == "content_filtered":
-                            logging.warning(
-                                "Streaming response filtered due to content policy"
-                            )
-                        break
+                        elif "messageStop" in event:
+                            stop_reason = event["messageStop"].get("stopReason")
+                            stream_finish_reason = stop_reason
+                            logging.debug(f"Streaming message stopped: {stop_reason}")
+                            if stop_reason == "max_tokens":
+                                logging.warning(
+                                    "Streaming response truncated due to max_tokens"
+                                )
+                            elif stop_reason == "content_filtered":
+                                logging.warning(
+                                    "Streaming response filtered due to content policy"
+                                )
+                                break
 
-                    elif "metadata" in event:
-                        metadata = event["metadata"]
-                        if "usage" in metadata:
-                            usage_metrics = metadata["usage"]
-                            usage_data = usage_metrics
-                            self._track_token_usage_internal(usage_metrics)
-                            logging.debug(f"Token usage: {usage_metrics}")
-                        if "trace" in metadata:
-                            logging.debug(
-                                f"Trace information available: {metadata['trace']}"
-                            )
+                        elif "metadata" in event:
+                            metadata = event["metadata"]
+                            if "usage" in metadata:
+                                usage_metrics = metadata["usage"]
+                                usage_data = usage_metrics
+                                self._track_token_usage_internal(usage_metrics)
+                                logging.debug(f"Token usage: {usage_metrics}")
+                            if "trace" in metadata:
+                                logging.debug(
+                                    f"Trace information available: {metadata['trace']}"
+                                )
 
-        except ClientError as e:
-            error_msg = self._handle_client_error(e)
-            raise RuntimeError(error_msg) from e
-        except BotoCoreError as e:
-            error_msg = f"Bedrock streaming connection error: {e}"
+                full_response = self._apply_stop_words(full_response)
+
+                if not full_response or full_response.strip() == "":
+                    logging.warning(
+                        "Bedrock streaming returned empty content, using fallback"
+                    )
+                    full_response = "I apologize, but I couldn't generate a response. Please try again."
+
+                self._emit_call_completed_event(
+                    response=full_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages,
+                    usage=usage_data,
+                    finish_reason=stream_finish_reason,
+                    response_id=response_id,
+                )
+
+                return self._invoke_after_llm_call_hooks(
+                    messages,
+                    full_response,
+                    from_agent,
+                )
+
+            except (ClientError, BotoCoreError) as e:
+                last_streaming_error = e
+                if (
+                    not output_emitted
+                    and is_bedrock_throttling_error(e)
+                    and attempt < max_retries
+                ):
+                    delay = self._calculate_backoff_delay(attempt)
+                    logging.warning(
+                        "AWS Bedrock streaming throttled before output emitted (%s). Retrying in %.1fs (attempt %d/%d)...",
+                        e,
+                        delay,
+                        attempt + 1,
+                        max_retries,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+
+                if isinstance(e, ClientError):
+                    error_msg = self._handle_client_error(e)
+                    raise RuntimeError(error_msg) from e
+                error_msg = f"Bedrock streaming connection error: {e}"
+                logging.error(error_msg)
+                raise ConnectionError(error_msg) from e
+
+        if last_streaming_error is not None:
+            if isinstance(last_streaming_error, ClientError):
+                error_msg = self._handle_client_error(last_streaming_error)
+                raise RuntimeError(error_msg) from last_streaming_error
+            error_msg = f"Bedrock streaming connection error: {last_streaming_error}"
             logging.error(error_msg)
-            raise ConnectionError(error_msg) from e
-
-        full_response = self._apply_stop_words(full_response)
-
-        if not full_response or full_response.strip() == "":
-            logging.warning("Bedrock streaming returned empty content, using fallback")
-            full_response = (
-                "I apologize, but I couldn't generate a response. Please try again."
-            )
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
-            from_task=from_task,
-            from_agent=from_agent,
-            messages=messages,
-            usage=usage_data,
-            finish_reason=stream_finish_reason,
-            response_id=response_id,
-        )
-
-        return self._invoke_after_llm_call_hooks(
-            messages,
-            full_response,
-            from_agent,
-        )
+            raise ConnectionError(error_msg) from last_streaming_error
+        return self._invoke_after_llm_call_hooks(messages, full_response, from_agent)
 
     def _format_messages_for_converse(
         self, messages: str | list[LLMMessage]
