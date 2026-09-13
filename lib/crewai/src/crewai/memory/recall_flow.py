@@ -219,21 +219,24 @@ class RecallFlow(Flow[RecallState]):
             )
             self.state.query_analysis = analysis
 
-            if analysis.time_filter:
-                try:
-                    # Python 3.10's fromisoformat rejects the "Z" suffix.
-                    cutoff = datetime.fromisoformat(
-                        analysis.time_filter.replace("Z", "+00:00")
-                    )
-                except ValueError:
-                    cutoff = None
-                if cutoff is not None:
-                    # MemoryRecord.created_at is naive; comparing against a
-                    # tz-aware cutoff would raise TypeError and silently drop
-                    # every scope's results.
-                    if cutoff.tzinfo is not None:
-                        cutoff = cutoff.astimezone(timezone.utc).replace(tzinfo=None)
-                    self.state.time_cutoff = cutoff
+        # State is reused across kickoffs of the same flow instance, so a
+        # cutoff derived from a previous query must not filter this one.
+        self.state.time_cutoff = None
+        if analysis.time_filter:
+            try:
+                # Python 3.10's fromisoformat rejects the "Z" suffix.
+                cutoff = datetime.fromisoformat(
+                    analysis.time_filter.replace("Z", "+00:00")
+                )
+            except ValueError:
+                cutoff = None
+            if cutoff is not None:
+                # MemoryRecord.created_at is naive; comparing against a
+                # tz-aware cutoff would raise TypeError and silently drop
+                # every scope's results.
+                if cutoff.tzinfo is not None:
+                    cutoff = cutoff.astimezone(timezone.utc).replace(tzinfo=None)
+                self.state.time_cutoff = cutoff
 
         queries = (
             analysis.recall_queries if analysis.recall_queries else [self.state.query]
