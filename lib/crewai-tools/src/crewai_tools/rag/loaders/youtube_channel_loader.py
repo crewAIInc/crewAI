@@ -104,14 +104,17 @@ class YoutubeChannelLoader(BaseLoader):
 
         raw_source = source.source
         request_url = _normalize_channel_url(raw_source)
+        parsed = urlsplit(request_url)
+        allowed_hosts = {"www.youtube.com", "youtube.com", "m.youtube.com"}
+        lower_path = parsed.path.lower()
 
-        if not any(
-            pattern in request_url
-            for pattern in [
-                "youtube.com/channel/",
-                "youtube.com/c/",
-                "youtube.com/@",
-                "youtube.com/user/",
+        if parsed.netloc not in allowed_hosts or not any(
+            lower_path.startswith(prefix)
+            for prefix in [
+                "/channel/",
+                "/c/",
+                "/@",
+                "/user/",
             ]
         ):
             raise ValueError(f"Invalid YouTube channel URL: {raw_source}")

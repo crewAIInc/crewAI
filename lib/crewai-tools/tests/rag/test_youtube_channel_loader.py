@@ -898,3 +898,35 @@ class TestYoutubeChannelLoader:
             ValueError, match="Unable to load YouTube channel.*Channel not found"
         ):
             loader.load(SourceContent("@NonExistentChannel"))
+
+    @patch("crewai_tools.rag.loaders.youtube_channel_loader.YoutubeChannelLoader._create_channel")
+    def test_load_attacker_host_rejected(self, mock_create: Any) -> None:
+        """Test that non-YouTube hostnames with youtube.com in path are rejected before channel creation."""
+        loader = YoutubeChannelLoader()
+        with pytest.raises(ValueError, match="Invalid YouTube channel URL"):
+            loader.load(SourceContent("https://attacker.example/youtube.com/channel/UC123"))
+        mock_create.assert_not_called()
+
+    @patch("pytube.Channel")
+    def test_load_with_uppercase_channel_url_and_query_fragment(
+        self, mock_channel_cls: Any
+    ) -> None:
+        """Test loading a channel with uppercase route and query/fragment parameters."""
+        mock_channel = MagicMock()
+        mock_channel.channel_name = "UC123"
+        mock_channel.channel_id = "UC123"
+        mock_channel.video_urls = []
+        mock_channel.html = "<html>mock</html>"
+        mock_channel_cls.return_value = mock_channel
+
+        loader = YoutubeChannelLoader()
+        with (
+            patch("pytube.extract.initial_data", return_value={}),
+            patch("pytube.YouTube"),
+            patch("youtube_transcript_api.YouTubeTranscriptApi"),
+        ):
+            result = loader.load(
+                SourceContent("HTTP://YOUTUBE.COM/CHANNEL/UC123?feature=shared#section")
+            )
+            assert result.source == "HTTP://YOUTUBE.COM/CHANNEL/UC123?feature=shared#section"
+            assert mock_channel_cls.call_count == 1
