@@ -264,6 +264,7 @@ def test_youtube_channel_search_tool(mock_adapter):
 
 
 def test_youtube_channel_search_tool_bare_handle(mock_adapter):
+    """Verify that bare handle input is prefixed with @ when added."""
     mock_adapter.query.return_value = "channel description"
 
     tool = YoutubeChannelSearchTool(
@@ -277,6 +278,7 @@ def test_youtube_channel_search_tool_bare_handle(mock_adapter):
 
 
 def test_youtube_channel_search_tool_urls(mock_adapter):
+    """Verify that full YouTube channel URLs are preserved without adding @."""
     mock_adapter.query.return_value = "channel description"
 
     for url in [
@@ -296,6 +298,7 @@ def test_youtube_channel_search_tool_urls(mock_adapter):
 
 
 def test_youtube_channel_search_tool_multilingual(mock_adapter):
+    """Verify that multilingual handles and URLs are handled correctly."""
     mock_adapter.query.return_value = "channel description"
 
     tool = YoutubeChannelSearchTool(

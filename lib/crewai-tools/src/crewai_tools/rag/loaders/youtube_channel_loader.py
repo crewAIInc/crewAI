@@ -245,6 +245,7 @@ class YoutubeChannelLoader(BaseLoader):
         seen_ids: set[str] = set()
 
         def _add_video(vid: str | None, title: str | None = None) -> bool:
+            """Add a video item if valid and not already processed."""
             if vid and vid not in seen_ids and len(vid) == 11:
                 seen_ids.add(vid)
                 item: dict[str, str] = {
@@ -347,8 +348,12 @@ class YoutubeChannelLoader(BaseLoader):
             )
             from pytube import request
 
-            resp_str = request.post(url, extra_headers=headers, data=data)
-            resp_data: Any = json.loads(resp_str)
+            try:
+                resp_str = request.post(url, extra_headers=headers, data=data)
+                resp_data: Any = json.loads(resp_str)
+            except Exception as e:
+                logger.debug("Failed to fetch YouTube continuation page: %s", e)
+                break
 
             actions: list[dict[str, Any]] | None = None
             if isinstance(resp_data, dict):
@@ -445,6 +450,7 @@ class YoutubeChannelLoader(BaseLoader):
         header = init_data.get("header", {})
 
         def _parse_count(text: str) -> int | None:
+            """Parse numeric video count from localized or abbreviated header text."""
             if not text:
                 return None
             m = re.search(
@@ -507,6 +513,7 @@ class YoutubeChannelLoader(BaseLoader):
 
         # 3. Fallback: recursively search header
         def _search_dict(d: Any) -> int | None:
+            """Recursively search dictionary or list structures for video count text."""
             if isinstance(d, dict):
                 for v in d.values():
                     res = _search_dict(v)

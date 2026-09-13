@@ -42,6 +42,7 @@ class YoutubeChannelSearchTool(RagTool):
         self,
         youtube_channel_handle: str,
     ) -> None:
+        """Add a YouTube channel handle or URL to the tool knowledge base."""
         is_url = any(
             pattern in youtube_channel_handle
             for pattern in [

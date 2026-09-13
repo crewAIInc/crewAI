@@ -324,6 +324,7 @@ class TestYoutubeChannelLoader:
             patch("youtube_transcript_api.YouTubeTranscriptApi") as mock_transcript_api,
         ):
             def make_mock_yt(url: str) -> MagicMock:
+                """Create a mock YouTube video instance matching the given URL."""
                 yt = MagicMock()
                 if "7xTGNNLPyMI" in url:
                     yt.title = "Detailed: 100+ Computer Science Concepts"
@@ -801,6 +802,52 @@ class TestYoutubeChannelLoader:
                 loader.load(SourceContent("@CircularChannel"), max_videos=10)
 
         assert mock_post.call_count == 1
+
+    @patch("pytube.Channel")
+    def test_load_modern_structure_pagination_request_failure_preserves_partial(
+        self, mock_channel_cls: Any
+    ) -> None:
+        """Test that continuation request or JSON parse failures stop pagination and preserve already collected videos."""
+        mock_channel = MagicMock()
+        mock_channel.channel_name = "TransientFailChannel"
+        mock_channel.channel_id = "UCtrans123"
+        mock_channel.video_urls = []
+        mock_channel.html = "<html>mock</html>"
+        mock_channel._build_continuation_url.return_value = (
+            "https://www.youtube.com/youtubei/v1/browse?key=dummy_key",
+            {"header": "val"},
+            {"continuation": "token_fail"},
+        )
+        mock_channel_cls.return_value = mock_channel
+
+        mock_init_data = make_init_data([
+            make_lockup_item("video000001", "Video 1"),
+            make_continuation_item("token_fail"),
+        ])
+
+        with (
+            patch("pytube.extract.initial_data", return_value=mock_init_data),
+            patch(
+                "pytube.request.post",
+                side_effect=RuntimeError("Connection reset by peer"),
+            ) as mock_post,
+            patch("pytube.YouTube") as mock_youtube_cls,
+            patch("youtube_transcript_api.YouTubeTranscriptApi") as mock_transcript_api,
+        ):
+            mock_yt = MagicMock()
+            mock_yt.title = "Video 1"
+            mock_yt.description = "Desc 1"
+            mock_youtube_cls.return_value = mock_yt
+            mock_transcript_api.return_value.list.side_effect = Exception("No transcript")
+
+            loader = YoutubeChannelLoader()
+            result = loader.load(SourceContent("@TransientFailChannel"), max_videos=10)
+
+        assert mock_post.call_count == 1
+        assert result.metadata["num_videos_loaded"] == 1
+        assert result.metadata["total_videos"] is None
+        assert "Total Videos: Unknown" in result.content
+        assert "1. Video 1" in result.content
 
     @patch("pytube.Channel")
     def test_load_video_list_error_propagates(self, mock_channel_cls: Any) -> None:
