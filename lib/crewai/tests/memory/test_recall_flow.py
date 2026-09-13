@@ -24,6 +24,9 @@ class _FakeStorage:
 
 
 class _FakeLLM:
+    def __init__(self, time_filter: str | None = "2026-01-01T00:00:00Z") -> None:
+        self._time_filter = time_filter
+
     def call(self, *_args: object, **_kwargs: object) -> str:
         return json.dumps(
             {
@@ -31,7 +34,7 @@ class _FakeLLM:
                 "suggested_scopes": [],
                 "complexity": "simple",
                 "recall_queries": ["dummy query"],
-                "time_filter": "2026-01-01T00:00:00Z",
+                "time_filter": self._time_filter,
             }
         )
 
@@ -56,10 +59,12 @@ class _TimeFilterThenNoneLLM:
         )
 
 
-def _recall_flow(record: MemoryRecord) -> RecallFlow:
+def _recall_flow(
+    record: MemoryRecord, llm: _FakeLLM | None = None
+) -> RecallFlow:
     return RecallFlow(
         storage=_FakeStorage(record),
-        llm=_FakeLLM(),
+        llm=llm or _FakeLLM(),
         embedder=lambda texts: [[0.1] for _ in texts],
     )
 
@@ -71,6 +76,19 @@ def test_tz_aware_time_filter_is_normalized_to_naive_utc():
     results = flow.kickoff(inputs={"query": "what happened since january? " * 10})
 
     assert flow.state.time_cutoff is not None
+    assert flow.state.time_cutoff.tzinfo is None
+    assert [match.record.content for match in results] == ["remembered fact"]
+
+
+def test_non_zero_offset_time_filter_is_converted_to_naive_utc():
+    record = MemoryRecord(content="remembered fact", created_at=datetime(2026, 2, 1))
+    flow = _recall_flow(
+        record, llm=_FakeLLM(time_filter="2026-01-01T05:30:00+05:30")
+    )
+
+    results = flow.kickoff(inputs={"query": "what happened since january? " * 10})
+
+    assert flow.state.time_cutoff == datetime(2026, 1, 1)
     assert flow.state.time_cutoff.tzinfo is None
     assert [match.record.content for match in results] == ["remembered fact"]
 
