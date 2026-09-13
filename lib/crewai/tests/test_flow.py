@@ -206,6 +206,62 @@ def test_or_listener_fires_once_across_parallel_starts():
     assert fire_count == 1
 
 
+def test_or_listener_does_not_cancel_parallel_fanout_branches():
+    """An OR join must not cancel the event-producing listener branches."""
+    completed_branches: list[str] = []
+    join_count = 0
+
+    class ParallelFanoutOrFlow(Flow):
+        @start()
+        def begin(self):
+            return "begin"
+
+        @listen(begin)
+        async def fast_branch(self):
+            await asyncio.sleep(0)
+            completed_branches.append("fast")
+
+        @listen(begin)
+        async def slow_branch(self):
+            await asyncio.sleep(0.05)
+            completed_branches.append("slow")
+
+        @listen(or_(fast_branch, slow_branch))
+        def join(self):
+            nonlocal join_count
+            join_count += 1
+
+    asyncio.run(ParallelFanoutOrFlow().kickoff_async())
+
+    assert set(completed_branches) == {"fast", "slow"}
+    assert join_count == 1
+
+
+def test_parallel_listener_failure_waits_for_siblings():
+    """A failed listener must not cancel independently triggered siblings."""
+    completed_branches: list[str] = []
+
+    class FailingParallelFanoutFlow(Flow):
+        @start()
+        def begin(self):
+            return "begin"
+
+        @listen(begin)
+        async def fast_failure(self):
+            await asyncio.sleep(0)
+            raise RuntimeError("listener failed")
+
+        @listen(begin)
+        async def slow_branch(self):
+            await asyncio.sleep(0.05)
+            completed_branches.append("slow")
+
+    with pytest.raises(RuntimeError, match="listener failed"):
+        asyncio.run(FailingParallelFanoutFlow().kickoff_async())
+
+    assert completed_branches == ["slow"]
+
+
 def test_or_listener_re_arms_across_router_loop():
     """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
     fire_count = 0
