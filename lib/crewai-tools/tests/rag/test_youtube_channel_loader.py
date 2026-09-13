@@ -153,7 +153,7 @@ class TestYoutubeChannelLoader:
         )
         assert (
             _normalize_channel_url("HTTP://YOUTUBE.COM/CHANNEL/UC123?feature=shared#section")
-            == "http://youtube.com/CHANNEL/UC123?feature=shared#section"
+            == "https://youtube.com/CHANNEL/UC123?feature=shared#section"
         )
 
     @patch("pytube.Channel")

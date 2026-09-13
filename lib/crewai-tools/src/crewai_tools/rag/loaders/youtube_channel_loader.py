@@ -42,7 +42,7 @@ def _normalize_channel_url(raw_input: str) -> str:
             if not lower_cleaned.startswith(("http://", "https://")):
                 cleaned = f"https://{cleaned}"
             parts = urlsplit(cleaned)
-            scheme = (parts.scheme or "https").lower()
+            scheme = "https"
             netloc = (parts.netloc or "www.youtube.com").lower()
             path = parts.path
             query = parts.query
