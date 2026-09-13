@@ -296,6 +296,8 @@ class RecallFlow(Flow[RecallState]):
 
         Decrements the exploration budget so the loop terminates.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         self.state.exploration_budget -= 1
 
         enhanced = []
@@ -321,6 +323,8 @@ class RecallFlow(Flow[RecallState]):
                         "results": finding["results"],
                     }
                 )
+            except HookAborted:
+                raise
             except Exception:
                 enhanced.append(
                     {

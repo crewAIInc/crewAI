@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from io import BytesIO
+import csv
+from io import BytesIO, StringIO
 from itertools import islice
 import re
 from typing import Any, Final
 from urllib.parse import urlparse
+import zipfile
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -22,6 +24,9 @@ _DEFAULT_TIMEOUT: Final[int] = 30
 _PDF_TYPE: Final[str] = "application/pdf"
 _DOCX_TYPE: Final[str] = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
+_XLSX_TYPE: Final[str] = (
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 _HTML_TYPES: Final[frozenset[str]] = frozenset({"text/html", "application/xhtml+xml"})
 _TEXT_TYPES: Final[frozenset[str]] = frozenset(
@@ -39,7 +44,8 @@ _TEXT_TYPES: Final[frozenset[str]] = frozenset(
 _TEXT_TYPE_SUFFIXES: Final[tuple[str, ...]] = ("+json", "+xml", "+yaml")
 
 # Servers commonly serve static files as octet-stream, or send no type at all,
-# so the extension is consulted when the header carries no usable answer.
+# so the extension and then the body itself are consulted when the header
+# carries no usable answer.
 _UNINFORMATIVE_TYPES: Final[frozenset[str]] = frozenset(
     {"", "application/octet-stream", "binary/octet-stream"}
 )
@@ -52,10 +58,23 @@ _EXTENSION_TYPES: Final[dict[str, str]] = {
     ".md": "text/markdown",
     ".pdf": _PDF_TYPE,
     ".txt": "text/plain",
+    ".xlsx": _XLSX_TYPE,
     ".xml": "application/xml",
     ".yaml": "application/yaml",
     ".yml": "application/yaml",
 }
+
+_PDF_MAGIC: Final[bytes] = b"%PDF-"
+_ZIP_MAGIC: Final[bytes] = b"PK\x03\x04"
+_DOCX_ZIP_ENTRY: Final[str] = "word/document.xml"
+_XLSX_ZIP_ENTRY: Final[str] = "xl/workbook.xml"
+# A workbook is bounded by max_bytes on the wire but not by what it expands
+# into. Two separate ceilings: how much is handed to an agent, and how much
+# work a hostile sheet can demand before that decision is even reached.
+_XLSX_MAX_CELLS: Final[int] = 200_000
+_XLSX_MAX_SCANNED_CELLS: Final[int] = 5_000_000
+_HTML_PREFIXES: Final[tuple[str, ...]] = ("<!doctype html", "<html")
+_HTML_PREFIX_LEN: Final[int] = max(len(prefix) for prefix in _HTML_PREFIXES)
 
 _SPACES_PATTERN: Final[re.Pattern[str]] = re.compile(r"[ \t]+")
 _NEWLINE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\s+\n\s+")
@@ -100,11 +119,22 @@ class URLReadTool(BaseTool):
     egress, and that should be a deliberate choice rather than a flag on a
     filesystem tool.
 
-    Responses are decoded to text according to their content type. PDF and DOCX
-    bodies have their text extracted, HTML is stripped to visible text, and
-    text-shaped types (plain text, Markdown, JSON, XML, YAML, CSV) are decoded
-    as-is. Any other type is refused rather than returned as base64, keeping
-    this tool's output text-only.
+    Responses are decoded to text according to their content type. PDF, DOCX
+    and XLSX bodies have their text extracted, HTML is stripped to visible
+    text, and text-shaped types (plain text, Markdown, JSON, XML, YAML, CSV)
+    are decoded as-is. When a server names no usable type -- ``octet-stream``
+    from a presigned link, say -- the URL extension and then the body's own
+    leading bytes are consulted before giving up. Any content that none of
+    those identify is refused rather than returned as base64, keeping this
+    tool's output text-only.
+
+    That last step is what makes this a good fit for cloud storage. Presigned
+    S3 and Cloudflare R2 URLs, and Google Drive, OneDrive and SharePoint
+    download links, routinely serve a real document as
+    ``application/octet-stream`` from a path that is a content hash with no
+    extension, so neither the header nor the URL says what the file is. The
+    tool reads a URL and does not authenticate, so the link has to already
+    grant access -- which is exactly what a presigned or shared link is.
 
     Security:
         Requests go through :func:`~crewai_tools.security.safe_requests.safe_get_bounded`,
@@ -135,15 +165,24 @@ class URLReadTool(BaseTool):
         >>> tool = URLReadTool()
         >>> content = tool.run(url="https://example.com/report.pdf")
         >>> head = tool.run(url="https://example.com/data.csv", line_count=20)
+        >>> # A presigned link: no extension, served as octet-stream, read anyway.
+        >>> sheet = tool.run(
+        ...     url="https://bucket.r2.cloudflarestorage.com/a1b2c3?X-Amz-Signature=..."
+        ... )
     """
 
     name: str = "Read content from a URL"
     description: str = (
         "A tool that reads the content at a URL and returns it as text. To use "
         "this tool, provide a 'url' parameter with an http:// or https:// "
-        "address. PDF, DOCX, HTML, JSON, XML, CSV and plain-text responses are "
-        "converted to text; other binary types are rejected. URLs that resolve "
-        "to private or internal network addresses are refused, as are responses "
+        "address. PDF, DOCX, XLSX, HTML, JSON, XML, CSV and plain-text "
+        "responses are converted to text; other binary types are rejected. "
+        "Well suited to presigned and share links from S3, Cloudflare R2, "
+        "Google Drive, OneDrive and SharePoint, which serve real documents "
+        "with a generic content type and no file extension; the type is "
+        "detected from the response bytes. The link must already grant "
+        "access, as a presigned or shared link does. URLs that resolve to "
+        "private or internal network addresses are refused, as are responses "
         "over the tool's size limit. Optionally provide 'start_line' and "
         "'line_count' to read only part of the content."
     )
@@ -191,6 +230,8 @@ class URLReadTool(BaseTool):
             return "pdf"
         if media_type == _DOCX_TYPE:
             return "docx"
+        if media_type == _XLSX_TYPE:
+            return "xlsx"
         if media_type in _HTML_TYPES:
             return "html"
         if (
@@ -201,10 +242,68 @@ class URLReadTool(BaseTool):
             return "text"
         return None
 
-    def _resolve_kind(self, content_type: str, *urls: str) -> str | None:
-        """Decide how to extract text, by content type then by URL extension.
+    @staticmethod
+    def _sniff(body: bytes) -> str | None:
+        """Identify a supported type from the body's own bytes.
+
+        Presigned object-store links routinely serve every file as
+        octet-stream from an extensionless path, which leaves the bytes as
+        the only remaining evidence of what was fetched.
+
+        Fails closed: anything this cannot positively identify is refused
+        rather than decoded speculatively, which is what keeps binary
+        payloads from reaching an agent's context as mojibake.
+        """
+        # An empty body identifies nothing. Without this it would strict-decode
+        # to "" and read as a successful empty text response.
+        if not body:
+            return None
+
+        if body.startswith(_PDF_MAGIC):
+            return "pdf"
+
+        if body.startswith(_ZIP_MAGIC):
+            try:
+                with zipfile.ZipFile(BytesIO(body)) as archive:
+                    # Central directory only -- nothing is decompressed, so a
+                    # zip bomb costs nothing here. Naming the part that must be
+                    # present is what keeps a .pptx from reaching python-docx
+                    # and surfacing as a misleading "failed to read DOCX"
+                    # instead of an honest refusal.
+                    names = set(archive.namelist())
+            except zipfile.BadZipFile:
+                return None
+            # Exactly one marker, or nothing: a package claiming to be both a
+            # Word document and a workbook has not been positively identified.
+            is_docx = _DOCX_ZIP_ENTRY in names
+            if is_docx == (_XLSX_ZIP_ENTRY in names):
+                return None
+            return "docx" if is_docx else "xlsx"
+
+        # Strict, whole-body decode: a prefix would split a multi-byte
+        # character and reject valid text. The body is already resident and
+        # already capped at max_bytes, so there is nothing to save by slicing.
+        try:
+            text = body.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+        if "\x00" in text:
+            return None
+
+        leading = text.lstrip("\ufeff").lstrip()[:_HTML_PREFIX_LEN].lower()
+        return "html" if leading.startswith(_HTML_PREFIXES) else "text"
+
+    def _resolve_kind(self, body: bytes, content_type: str, *urls: str) -> str | None:
+        """Decide how to extract text: content type, URL extension, then bytes.
+
+        Each source is consulted only when every earlier one came back with
+        nothing, and none may override an answer an earlier one gave. That
+        ordering is what makes the byte sniff a pure widening of what the tool
+        accepts: it can turn a refusal into a read, never a read into a
+        different read.
 
         Args:
+            body: The fetched body, sniffed last when nothing else identifies it.
             content_type: The raw Content-Type header value.
             *urls: URLs to consult for an extension, most authoritative first.
                 A ``.pdf`` link that redirects to an extensionless CDN or
@@ -212,7 +311,7 @@ class URLReadTool(BaseTool):
                 both ends of the chain are worth checking.
 
         Returns:
-            The extractor name, or None when the content type is unsupported.
+            The extractor name, or None when nothing identifies the content.
         """
         declared = content_type.split(";", 1)[0].strip().lower()
         if declared not in _UNINFORMATIVE_TYPES:
@@ -223,7 +322,8 @@ class URLReadTool(BaseTool):
             for extension, media_type in _EXTENSION_TYPES.items():
                 if path.endswith(extension):
                     return self._classify(media_type)
-        return None
+
+        return self._sniff(body)
 
     def _decode(self, body: bytes, content_type: str) -> str:
         """Decode *body* using the configured, declared, or default encoding.
@@ -281,6 +381,73 @@ class URLReadTool(BaseTool):
             if paragraph.text.strip()
         )
 
+    @staticmethod
+    def _extract_xlsx(body: bytes) -> str:
+        """Extract cell values from XLSX bytes, sheet by sheet, as CSV."""
+        try:
+            # openpyxl ships no stubs; same treatment as pymupdf above.
+            from openpyxl import load_workbook  # type: ignore[import-untyped]
+        except ImportError as e:
+            raise ImportError(
+                "Reading XLSX URLs requires openpyxl. Install with: uv add openpyxl"
+            ) from e
+
+        # read_only streams the sheets rather than building the whole object
+        # graph, and data_only takes cached values so formulas do not come
+        # back as "=SUM(A1:A9)". Both matter for a workbook off an untrusted URL.
+        workbook = load_workbook(BytesIO(body), read_only=True, data_only=True)
+        try:
+            sheets = []
+            scannable = _XLSX_MAX_SCANNED_CELLS
+            emittable = _XLSX_MAX_CELLS
+            truncated = False
+            for worksheet in workbook.worksheets:
+                # csv rather than a join: a cell may itself hold a comma, a
+                # quote or a newline, any of which would corrupt the grid.
+                buffer = StringIO()
+                writer = csv.writer(buffer, lineterminator="\n")
+                for row in worksheet.iter_rows(values_only=True):
+                    # Charged before the row is touched. openpyxl pads every
+                    # row out to the sheet's declared width, and a forged
+                    # dimension makes each *skipped* blank row cost 16k
+                    # normalizations -- 4.8 KB of upload drove 1.6e9 of them.
+                    # Budgeting only what is emitted bounds none of that work.
+                    if len(row) > scannable:
+                        truncated = True
+                        break
+                    scannable -= len(row)
+
+                    values = ["" if value is None else str(value) for value in row]
+                    # Excel reports a sheet's dimension generously and openpyxl
+                    # pads every row up to it, so one stray far-down cell turns
+                    # a 5 KB upload into 100k blank rows. Padding arrives as
+                    # None, so testing for exactly-empty drops it while leaving
+                    # a cell the author really did fill with spaces alone.
+                    if not any(values):
+                        continue
+                    if len(values) > emittable:
+                        truncated = True
+                        break
+                    emittable -= len(values)
+                    writer.writerow(values)
+
+                if buffer.tell():
+                    # Only the line terminator: a bare rstrip() would also eat
+                    # a trailing space the final cell legitimately holds.
+                    grid = buffer.getvalue().rstrip("\n")
+                    sheets.append(f"Sheet {worksheet.title}:\n{grid}")
+                if truncated:
+                    break
+        finally:
+            workbook.close()
+
+        if not sheets:
+            return "[XLSX with no extractable cells]"
+        text = "\n\n".join(sheets)
+        if truncated:
+            text += "\n\n[Truncated: workbook is too large to read in full]"
+        return text
+
     def _extract_html(self, body: bytes, content_type: str) -> str:
         """Strip HTML bytes down to visible text."""
         try:
@@ -304,6 +471,8 @@ class URLReadTool(BaseTool):
             return self._extract_pdf(body)
         if kind == "docx":
             return self._extract_docx(body)
+        if kind == "xlsx":
+            return self._extract_xlsx(body)
         if kind == "html":
             return self._extract_html(body, content_type)
         return self._decode(body, content_type)
@@ -355,7 +524,7 @@ class URLReadTool(BaseTool):
         except requests.RequestException as e:
             return f"Error: Failed to fetch '{url}'. {format_error_for_display(e)}"
 
-        kind = self._resolve_kind(content_type, final_url, url)
+        kind = self._resolve_kind(body, content_type, final_url, url)
         if kind is None:
             return (
                 f"Error: Unsupported content type "

@@ -14,6 +14,23 @@ Follow these guidelines when contributing:
 6. Follow software principles such as DRY and YAGNI.
 7. Keep diffs as minimal as possible.
 
+## Message Content
+
+`LLMMessage.content` is `str | list[dict[str, Any]] | None`; the list form is
+multimodal content parts. Never `str()` it — that puts a Python repr
+(`[{'type': 'text', 'text': 'hi'}]`) in front of the model and into memory.
+Collapse a message to text with the helper instead:
+
+```python
+from crewai.utilities.agent_utils import message_content_text
+
+text = message_content_text(msg)  # "" for None; joined text for a parts list
+```
+
+Parts arrive from a model and are typed `dict[str, Any]`, so a `text` key that
+is not a string is possible. `_content_parts_text` skips those blocks rather
+than raising, and names a list with no usable text `[multimodal content]`.
+
 ## Changing Docs
 
 1. Edit MDX under `docs/edge/en/*` and reference it from `docs/docs.json` if

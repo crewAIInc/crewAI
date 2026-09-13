@@ -93,6 +93,8 @@ class Converter(OutputConverter):
         Raises:
             ConverterError: If conversion fails after maximum attempts.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         try:
             if self.llm.supports_function_calling():
                 response = self.llm.call(
@@ -108,6 +110,8 @@ class Converter(OutputConverter):
             raise ConverterError(
                 f"Failed to convert text into a Pydantic model due to validation error: {e}"
             ) from e
+        except HookAborted:
+            raise
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
@@ -117,6 +121,8 @@ class Converter(OutputConverter):
 
     async def ato_pydantic(self, current_attempt: int = 1) -> BaseModel:
         """Async equivalent of ``to_pydantic`` — uses ``acall`` so the event loop is not blocked."""
+        from crewai.hooks.dispatch import HookAborted
+
         try:
             if self.llm.supports_function_calling():
                 response = await self.llm.acall(
@@ -132,6 +138,8 @@ class Converter(OutputConverter):
             raise ConverterError(
                 f"Failed to convert text into a Pydantic model due to validation error: {e}"
             ) from e
+        except HookAborted:
+            raise
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return await self.ato_pydantic(current_attempt + 1)
@@ -152,10 +160,14 @@ class Converter(OutputConverter):
             ConverterError: If conversion fails after maximum attempts.
 
         """
+        from crewai.hooks.dispatch import HookAborted
+
         try:
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
             return json.dumps(self.llm.call(self._build_messages()))
+        except HookAborted:
+            raise
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
@@ -168,10 +180,14 @@ class Converter(OutputConverter):
         sync-only); we run it via ``asyncio.to_thread`` so the event loop stays
         free.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         try:
             if self.llm.supports_function_calling():
                 return await asyncio.to_thread(self._create_instructor().to_json)
             return json.dumps(await self.llm.acall(self._build_messages()))
+        except HookAborted:
+            raise
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return await self.ato_json(current_attempt + 1)
