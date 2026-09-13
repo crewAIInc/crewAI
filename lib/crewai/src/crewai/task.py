@@ -1390,6 +1390,13 @@ Follow these guidelines:
                     f"Last error: {guardrail_result.error}"
                 )
 
+            # If the guardrail itself errored (e.g. LLM provider down),
+            # raise immediately without retrying or consuming retries.
+            if getattr(guardrail_result, "errored", False):
+                raise Exception(
+                    f"Guardrail could not execute: {guardrail_result.error}"
+                )
+
             if guardrail_index is not None:
                 current_retry_count += 1
                 self._guardrail_retry_counts[guardrail_index] = current_retry_count
@@ -1509,6 +1516,13 @@ Follow these guidelines:
                 raise Exception(
                     f"Task failed {guardrail_name} validation after {self.guardrail_max_retries} retries. "
                     f"Last error: {guardrail_result.error}"
+                )
+
+            # If the guardrail itself errored (e.g. LLM provider down),
+            # raise immediately without retrying or consuming retries.
+            if getattr(guardrail_result, "errored", False):
+                raise Exception(
+                    f"Guardrail could not execute: {guardrail_result.error}"
                 )
 
             if guardrail_index is not None:

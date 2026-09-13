@@ -77,6 +77,11 @@ class GuardrailResult(BaseModel):
     error: str | None = Field(
         default=None, description="Error message if validation failed"
     )
+    errored: bool = Field(
+        default=False,
+        description="True when the guardrail could not execute (e.g. LLM provider "
+        "error), as opposed to the output failing validation.",
+    )
 
     @field_validator("result", "error")
     @classmethod
@@ -103,15 +108,25 @@ class GuardrailResult(BaseModel):
         return v
 
     @classmethod
-    def from_tuple(cls, result: tuple[bool, Any | str]) -> Self:
+    def from_tuple(cls, result: tuple[bool, Any | str] | tuple[bool, Any | str, bool]) -> Self:
         """Create a GuardrailResult from a validation tuple.
 
         Args:
-            result: A tuple of (success, data) where data is either the validated result or error message.
+            result: A tuple of (success, data) or (success, data, errored)
+                where data is either the validated result or error message.
+                When errored is True, the guardrail could not execute.
 
         Returns:
             A new instance with the tuple data.
         """
+        if len(result) == 3:
+            success, data, errored = result
+            return cls(
+                success=success,
+                result=data if success else None,
+                error=data if not success else None,
+                errored=errored,
+            )
         success, data = result
         return cls(
             success=success,

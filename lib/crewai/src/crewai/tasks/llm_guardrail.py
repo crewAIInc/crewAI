@@ -122,4 +122,4 @@ class LLMGuardrail:
         except HookAborted:
             raise
         except Exception as e:
-            return False, f"Error while validating the task output: {e!s}"
+            return (False, f"Error while validating the task output: {e!s}", True)

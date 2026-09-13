@@ -2018,6 +2018,12 @@ class Agent(BaseAgent):
         )
 
         if not guardrail_result.success:
+            # If the guardrail itself errored (e.g. LLM provider down),
+            # raise immediately without retrying or consuming retries.
+            if getattr(guardrail_result, "errored", False):
+                raise ValueError(
+                    f"Agent's guardrail could not execute: {guardrail_result.error}"
+                )
             if retry_count >= self.guardrail_max_retries:
                 raise ValueError(
                     f"Agent's guardrail failed validation after {self.guardrail_max_retries} retries. "
