@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 import logging
+import os
 import threading
 from unittest.mock import patch
 
@@ -31,7 +32,10 @@ FINAL_ERROR = "Failed to export span batch due to timeout, max retries or shutdo
 
 def _finished_span() -> ReadableSpan:
     memory = InMemorySpanExporter()
-    provider = TracerProvider()
+    # The suite runs with OTEL_SDK_DISABLED=true, which makes a fresh
+    # TracerProvider a no-op that records nothing.
+    with patch.dict(os.environ, {"OTEL_SDK_DISABLED": "false"}):
+        provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(memory))
     provider.get_tracer("test").start_span("probe").end()
     (span,) = memory.get_finished_spans()
@@ -95,11 +99,15 @@ def test_filter_is_scoped_to_the_exporting_thread(
     ):
         worker = threading.Thread(target=exporter.export, args=([_finished_span()],))
         worker.start()
-        assert entered.wait(5)
-        logging.getLogger(OTLP_LOGGER).warning("user exporter: collector down")
-        release.set()
-        worker.join(10)
+        try:
+            assert entered.wait(5)
+            logging.getLogger(OTLP_LOGGER).warning("user exporter: collector down")
+        finally:
+            release.set()
+            exporter.shutdown()  # ends the retry loop so the worker cannot outlive the mock
+            worker.join(10)
 
+    assert not worker.is_alive()
     assert _otlp_messages(caplog) == ["user exporter: collector down"]
 
 

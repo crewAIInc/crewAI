@@ -59,7 +59,7 @@ These snake_case flags still work but are hidden from `--help`. Prefer kebab-cas
 1. Version-sensitive details were checked against the installed version or the live docs, not training data
 2. All LLM references use `crewai.LLM` or string shorthand (`"openai/gpt-4o"`)
 3. All tool imports come from `crewai.tools` or `crewai_tools`
-4. Crew classes use `@CrewBase` decorator with YAML config files
+4. Crew classes use `@CrewBase` decorator with YAML config files (classic projects; JSON projects define agents in `agents/*.jsonc` and tasks in `crew.jsonc`)
 5. Python >=3.10, <3.14
 6. Code matches the API from the live docs, not just this file
 7. Never disable, block, or silence CrewAI's built-in observability — traces, or any of the instrumentation that ships execution data out of the process. Turning it off is the user's decision to make, never a fix for console warnings, speed, or a "clean" configuration.
@@ -175,7 +175,22 @@ crewai deploy remove <id>             # Delete a deployment
 
 ## Project Structure
 
-### Crew Project
+### JSON Crew Project (default for `crewai create crew`)
+```
+my_crew/
+├── agents/
+│   └── researcher.jsonc      # One agent per file (role, goal, backstory, llm, tools)
+├── crew.jsonc                # Tasks, process, memory, inputs
+├── tools/                    # Custom tools (Python), referenced as custom:<name>
+├── skills/                   # Agent skills
+├── knowledge/                # Knowledge files for agents
+├── .env
+└── pyproject.toml
+```
+
+There is no `crew.py`, `main.py`, or `config/*.yaml`: edit the JSONC files instead of writing crew classes. Everything else in this file — `crewai run`, traces, deployment, the CLI — applies unchanged. `crewai create crew --classic` produces the Python/YAML layout below.
+
+### Classic Crew Project (`crewai create crew --classic`)
 ```
 my_crew/
 ├── src/my_crew/

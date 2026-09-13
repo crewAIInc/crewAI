@@ -12,7 +12,6 @@ import time
 from typing import cast
 from unittest.mock import MagicMock, patch
 
-import crewai_core.telemetry as telemetry_module
 from crewai_core.telemetry import SafeOTLPSpanExporter, Telemetry
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 import pytest
@@ -52,7 +51,7 @@ def test_exit_hook_stops_waiting_at_the_flush_deadline(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    monkeypatch.setattr(telemetry_module, "FINAL_FLUSH_SECONDS", 1)
+    monkeypatch.setattr("crewai_core.telemetry.FINAL_FLUSH_SECONDS", 1)
     live_telemetry.provider.get_tracer("test").start_span("probe").end()
 
     with (
