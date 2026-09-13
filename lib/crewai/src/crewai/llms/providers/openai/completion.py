@@ -1,20 +1,28 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass, field
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, TypedDict
 
 import httpx
 from openai import (
     APIConnectionError,
+    APIResponseValidationError,
+    APIStatusError,
     AsyncOpenAI,
+    AuthenticationError,
     BadRequestError,
+    ConflictError,
+    InternalServerError,
     NotFoundError,
     OpenAI,
+    PermissionDeniedError,
+    RateLimitError,
     Stream,
+    UnprocessableEntityError,
 )
 from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import (
@@ -69,6 +77,95 @@ if TYPE_CHECKING:
 # `_remember_responses_only_model` so the wasted round trip is paid once per model
 # per process rather than on every call.
 _LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+
+# Upstream status codes carried inside a 200 body, mapped to the exception the SDK
+# raises when the same code arrives as a real HTTP status. Keeping the classes
+# identical means a gateway-masked failure is catchable by whatever already handles
+# the honest one. Codes outside this table fall back to `InternalServerError` for
+# 5xx, otherwise `APIStatusError`.
+_UPSTREAM_STATUS_ERRORS: Final[dict[int, type[APIStatusError]]] = {
+    400: BadRequestError,
+    401: AuthenticationError,
+    403: PermissionDeniedError,
+    404: NotFoundError,
+    409: ConflictError,
+    422: UnprocessableEntityError,
+    429: RateLimitError,
+}
+
+
+def _upstream_status_code(error: Mapping[str, Any]) -> int | None:
+    """Read an HTTP-like status code out of a gateway error object.
+
+    OpenAI-style bodies put a slug in `code` ("model_not_found"), gateways put the
+    upstream status there instead; only the latter is a status code.
+    """
+    code = error.get("code")
+    if isinstance(code, bool):
+        return None
+    if isinstance(code, int):
+        return code if 400 <= code <= 599 else None
+    if isinstance(code, str) and code.isdigit():
+        parsed = int(code)
+        return parsed if 400 <= parsed <= 599 else None
+    return None
+
+
+def _raise_for_upstream_error(
+    body: str,
+    *,
+    model: str,
+    http_response: httpx.Response,
+) -> None:
+    """Raise when a 200 response carries an upstream error instead of choices.
+
+    Gateways commit `200 OK` as soon as a provider accepts the request, so a later
+    provider failure is reported in the body -- an `error` object and no `choices`.
+    The OpenAI SDK guards this for streams (`openai/_streaming.py`) but not for
+    non-streaming responses, where the absent `choices` surfaces from inside the
+    parse helper as `TypeError: 'NoneType' object is not iterable`, naming neither
+    the provider nor the status.
+    """
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        # Not JSON, so not an error envelope. A non-JSON 200 already has its own
+        # (pre-existing) handling in the SDK, which returns the body as `str`.
+        return
+
+    if not isinstance(payload, Mapping) or payload.get("choices"):
+        return
+
+    host = http_response.request.url.host
+    error = payload.get("error")
+
+    if not isinstance(error, Mapping):
+        raise APIResponseValidationError(
+            response=http_response,
+            body=payload,
+            message=(
+                f"{model} via {host} returned HTTP 200 with no choices and no error "
+                f"object; the response does not describe a completion"
+            ),
+        )
+
+    detail = error.get("message") or "no message given"
+    code = _upstream_status_code(error)
+    suffix = f" (upstream code {code})" if code is not None else ""
+    message = (
+        f"{model} via {host} returned HTTP 200 with an upstream error and no "
+        f"choices: {detail}{suffix}"
+    )
+
+    if code is None:
+        raise APIResponseValidationError(
+            response=http_response, body=error, message=message
+        )
+
+    error_cls = _UPSTREAM_STATUS_ERRORS.get(code) or (
+        InternalServerError if code >= 500 else APIStatusError
+    )
+    raise error_cls(message, response=http_response, body=error)
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -1904,10 +2001,16 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = self._get_sync_client().beta.chat.completions.parse(
+                raw_parsed = self._get_sync_client().beta.chat.completions.with_raw_response.parse(
                     **parse_params,
                     response_format=response_model,
                 )
+                _raise_for_upstream_error(
+                    raw_parsed.text,
+                    model=self.model,
+                    http_response=raw_parsed.http_response,
+                )
+                parsed_response = raw_parsed.parse()
                 math_reasoning = parsed_response.choices[0].message
 
                 if math_reasoning.refusal:
@@ -1933,9 +2036,17 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            response: ChatCompletion = self._get_sync_client().chat.completions.create(
-                **params
+            raw_response = (
+                self._get_sync_client().chat.completions.with_raw_response.create(
+                    **params
+                )
             )
+            _raise_for_upstream_error(
+                raw_response.text,
+                model=self.model,
+                http_response=raw_response.http_response,
+            )
+            response: ChatCompletion = raw_response.parse()
 
             usage = self._extract_openai_token_usage(response)
 
@@ -2330,12 +2441,16 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = (
-                    await self._get_async_client().beta.chat.completions.parse(
-                        **parse_params,
-                        response_format=response_model,
-                    )
+                raw_parsed = await self._get_async_client().beta.chat.completions.with_raw_response.parse(
+                    **parse_params,
+                    response_format=response_model,
                 )
+                _raise_for_upstream_error(
+                    raw_parsed.text,
+                    model=self.model,
+                    http_response=raw_parsed.http_response,
+                )
+                parsed_response = raw_parsed.parse()
                 math_reasoning = parsed_response.choices[0].message
 
                 if math_reasoning.refusal:
@@ -2361,9 +2476,15 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            response: ChatCompletion = (
-                await self._get_async_client().chat.completions.create(**params)
+            raw_response = await self._get_async_client().chat.completions.with_raw_response.create(
+                **params
             )
+            _raise_for_upstream_error(
+                raw_response.text,
+                model=self.model,
+                http_response=raw_response.http_response,
+            )
+            response: ChatCompletion = raw_response.parse()
 
             usage = self._extract_openai_token_usage(response)
 
