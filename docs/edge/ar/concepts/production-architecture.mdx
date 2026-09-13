@@ -154,9 +154,14 @@ flow.kickoff(restore_from_state_id="<previous-run-state-id>")
 
 يحصل التشغيل الجديد على `state.id` جديد (مولّد تلقائيًا، أو `inputs["id"]` إذا تم تثبيته) لذا لا تمتد كتابات `@persist` الخاصة به إلى تاريخ المصدر. الجمع مع `from_checkpoint` يطلق `ValueError`؛ اختر مصدر ترطيب واحدًا.
 
+## الأمان
+
+يمكن للـ Agents المزودة بأدوات تنفيذ إجراءات حقيقية. راجع [تصميم Agent الآمن](/edge/ar/guides/agents/secure-agent-design) للحد من هذا الخطر.
+
 ## الخلاصة
 
 - **ابدأ بتدفق.**
 - **حدد حالة واضحة.**
 - **استخدم الأطقم للمهام المعقدة.**
 - **انشر مع API واستمرارية.**
+- اتبع [تصميم Agent الآمن](/edge/ar/guides/agents/secure-agent-design).

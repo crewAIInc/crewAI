@@ -582,6 +582,35 @@ agent = Agent(
   `respect_context_window` conforme deseja e o CrewAI cuida do resto!
 </Note>
 
+## Interação direta com o agente via `kickoff()` {#direct-agent-interaction-with-kickoff}
+
+Agentes podem ser usados diretamente, sem passar por uma Task ou um fluxo de Crew, com o método `kickoff()`. Isso oferece uma forma mais simples de interagir com um agente quando você não precisa da orquestração completa do crew.
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# Criar um agente
+researcher = Agent(
+    role="AI Technology Researcher",
+    goal="Research the latest AI developments",
+    tools=[SerperDevTool()],
+    verbose=True
+)
+
+# Usar kickoff() para interagir diretamente com o agente
+result = researcher.kickoff("What are the latest developments in language models?")
+
+# Acessar a resposta bruta
+print(result.raw)
+```
+
+<Note>
+  `kickoff()` executa um `AgentExecutor`. Ele não cria uma Task nem um Crew.
+  O agente mantém role, goal, backstory e tools. O método retorna
+  `LiteAgentOutput`.
+</Note>
+
 ## Considerações e Boas Práticas Importantes
 
 ### Segurança e Execução de Código
