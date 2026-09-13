@@ -17,6 +17,7 @@ from uuid import uuid4
 import pytest
 from pydantic import BaseModel
 
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
 from crewai.core.providers.human_input import SyncHumanInputProvider
 from crewai.agents.step_executor import StepExecutor
@@ -67,6 +68,7 @@ from crewai.experimental.agent_executor import (
 )
 from crewai.agents.parser import AgentAction, AgentFinish
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.events.types.observation_events import (
     PlanStepCompletedEvent,
     PlanStepStartedEvent,
@@ -238,6 +240,38 @@ class TestAgentExecutor:
         assert executor.state.is_finished is True
         assert executor._finalize_called is True
         assert executor._is_feedback_iteration is False
+
+    def test_show_logs_is_visible_when_human_input_requested(self):
+        """Human review should show the answer even when normal verbose logs are off."""
+        agent = SimpleNamespace(role="Tester", verbose=False)
+        crew = SimpleNamespace(verbose=False)
+        executor = _build_executor(agent=agent, crew=crew)
+        executor.state.ask_for_human_input = True
+        final_answer = AgentFinish(thought="", output="The sky is blue.", text="done")
+
+        with patch.object(crewai_event_bus, "emit") as mock_emit:
+            executor._show_logs(final_answer)
+
+        event = mock_emit.call_args.args[1]
+        assert isinstance(event, AgentLogsExecutionEvent)
+        assert event.formatted_answer is final_answer
+        assert event.verbose is True
+
+    def test_legacy_show_logs_is_visible_when_human_input_requested(self):
+        """Legacy executor should follow the same human review visibility rule."""
+        agent = SimpleNamespace(role="Tester", verbose=False)
+        crew = SimpleNamespace(verbose=False)
+        executor = CrewAgentExecutor.model_construct(agent=agent, crew=crew)
+        executor.ask_for_human_input = True
+        final_answer = AgentFinish(thought="", output="The sky is blue.", text="done")
+
+        with patch.object(crewai_event_bus, "emit") as mock_emit:
+            executor._show_logs(final_answer)
+
+        event = mock_emit.call_args.args[1]
+        assert isinstance(event, AgentLogsExecutionEvent)
+        assert event.formatted_answer is final_answer
+        assert event.verbose is True
 
     @pytest.mark.asyncio
     async def test_async_human_feedback_reruns_flow_with_state_messages(self):

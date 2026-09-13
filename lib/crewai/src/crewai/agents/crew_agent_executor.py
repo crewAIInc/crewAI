@@ -1542,13 +1542,18 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
+        should_show_output = (
+            self.agent.verbose
+            or (hasattr(self, "crew") and getattr(self.crew, "verbose", False))
+            or self.ask_for_human_input
+        )
+
         future = crewai_event_bus.emit(
             self.agent,
             AgentLogsExecutionEvent(
                 agent_role=self.agent.role,
                 formatted_answer=formatted_answer,
-                verbose=self.agent.verbose
-                or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
+                verbose=should_show_output,
             ),
         )
 
