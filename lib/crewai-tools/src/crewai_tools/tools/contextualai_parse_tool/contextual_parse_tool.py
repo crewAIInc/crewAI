@@ -35,10 +35,14 @@ class ContextualAIParseTool(BaseTool):
         default_factory=lambda: ["contextual-client"]
     )
     poll_timeout: int = Field(
-        default=300, description="Maximum polling duration in seconds for document parsing"
+        default=300,
+        gt=0,
+        description="Maximum polling duration in seconds for document parsing",
     )
     poll_interval: int = Field(
-        default=5, description="Interval in seconds between polling attempts"
+        default=5,
+        gt=0,
+        description="Interval in seconds between polling attempts",
     )
 
     def _run(
@@ -94,7 +98,15 @@ class ContextualAIParseTool(BaseTool):
             status_url = f"{base_url}/parse/jobs/{job_id}/status"
             started = monotonic()
             while True:
-                result = requests.get(status_url, headers=headers, timeout=30)
+                remaining = self.poll_timeout - (monotonic() - started)
+                if remaining <= 0:
+                    raise TimeoutError(
+                        f"Document parsing did not complete within {self.poll_timeout} seconds"
+                    )
+
+                result = requests.get(
+                    status_url, headers=headers, timeout=min(30, remaining)
+                )
                 result.raise_for_status()
                 parse_response = json.loads(result.text)["status"]
 
@@ -103,12 +115,13 @@ class ContextualAIParseTool(BaseTool):
                 if parse_response == "failed":
                     raise RuntimeError("Document parsing failed")
 
-                if monotonic() - started >= self.poll_timeout:
+                remaining = self.poll_timeout - (monotonic() - started)
+                if remaining <= 0:
                     raise TimeoutError(
                         f"Document parsing did not complete within {self.poll_timeout} seconds"
                     )
 
-                sleep(self.poll_interval)
+                sleep(min(self.poll_interval, remaining))
 
             results_url = f"{base_url}/parse/jobs/{job_id}/results"
             result = requests.get(
@@ -121,5 +134,12 @@ class ContextualAIParseTool(BaseTool):
 
             return json.dumps(json.loads(result.text), indent=2)
 
+        except requests.HTTPError as e:
+            error_details = (
+                f"{e} - {e.response.text}"
+                if e.response is not None and e.response.text
+                else str(e)
+            )
+            return f"Failed to parse document: {error_details}"
         except Exception as e:
             return f"Failed to parse document: {e!s}"

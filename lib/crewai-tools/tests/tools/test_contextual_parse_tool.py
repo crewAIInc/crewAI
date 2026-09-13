@@ -82,3 +82,32 @@ def test_contextual_parse_tool_failed_status(mock_file):
         result = tool._run(file_path=mock_file)
 
         assert "Failed to parse document: Document parsing failed" in result
+
+
+def test_contextual_parse_tool_http_error(mock_file):
+    import requests
+
+    tool = ContextualAIParseTool(api_key="test-key")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 400
+    mock_resp.text = '{"error": "Invalid file format"}'
+    http_error = requests.HTTPError("400 Client Error", response=mock_resp)
+    mock_resp.raise_for_status.side_effect = http_error
+
+    with patch("requests.post", return_value=mock_resp):
+        result = tool._run(file_path=mock_file)
+
+        assert "Failed to parse document" in result
+        assert "Invalid file format" in result
+
+
+def test_contextual_parse_tool_validation_positive_values():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        ContextualAIParseTool(api_key="test-key", poll_timeout=0)
+
+    with pytest.raises(ValidationError):
+        ContextualAIParseTool(api_key="test-key", poll_interval=-1)
+
