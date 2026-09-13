@@ -951,6 +951,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_index = 0
         accumulated_tool_input = ""
         usage_data: dict[str, Any] | None = None
+        tool_uses: list[dict[str, Any]] = []
 
         try:
             response = self._get_sync_client().converse_stream(
@@ -1092,6 +1093,13 @@ class BedrockCompletion(BaseLLM):
                                     logging.error(error_msg)
                                     raise ValueError(error_msg) from e
 
+                            if not available_functions:
+                                # The caller runs the tools itself (the agent executor passes no
+                                # available_functions), so hand the calls back as the
+                                # non-streaming path does instead of dropping them.
+                                if function_name != STRUCTURED_OUTPUT_TOOL_NAME:
+                                    tool_uses.append(current_tool_use)
+
                             # Handle regular tool execution
                             if available_functions:
                                 tool_result = self._handle_tool_execution(
@@ -1165,6 +1173,19 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock streaming connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+
+        if tool_uses:
+            self._emit_call_completed_event(
+                response=tool_uses,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=messages,
+                usage=usage_data,
+                finish_reason=stream_finish_reason,
+                response_id=response_id,
+            )
+            return tool_uses  # type: ignore[return-value]
 
         full_response = self._apply_stop_words(full_response)
 
@@ -1560,6 +1581,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_index = 0
         accumulated_tool_input = ""
         usage_data: dict[str, Any] | None = None
+        tool_uses: list[dict[str, Any]] = []
 
         try:
             async_client = await self._ensure_async_client()
@@ -1703,6 +1725,13 @@ class BedrockCompletion(BaseLLM):
                                     logging.error(error_msg)
                                     raise ValueError(error_msg) from e
 
+                            if not available_functions:
+                                # The caller runs the tools itself (the agent executor passes no
+                                # available_functions), so hand the calls back as the
+                                # non-streaming path does instead of dropping them.
+                                if function_name != STRUCTURED_OUTPUT_TOOL_NAME:
+                                    tool_uses.append(current_tool_use)
+
                             # Handle regular tool execution
                             if available_functions:
                                 tool_result = self._handle_tool_execution(
@@ -1781,6 +1810,19 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock streaming connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+
+        if tool_uses:
+            self._emit_call_completed_event(
+                response=tool_uses,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=messages,
+                usage=usage_data,
+                finish_reason=stream_finish_reason,
+                response_id=response_id,
+            )
+            return tool_uses  # type: ignore[return-value]
 
         full_response = self._apply_stop_words(full_response)
 
