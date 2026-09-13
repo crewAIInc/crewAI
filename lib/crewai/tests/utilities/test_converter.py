@@ -1065,3 +1065,85 @@ def test_converter_ato_json_text_only_llm_single_encoding() -> None:
     assert isinstance(parsed, dict)
     assert parsed == {"name": "Bob", "age": 25}
 
+
+def test_converter_to_json_text_only_llm_mapping_response() -> None:
+    """Non-function-calling LLM returning already-decoded mapping response."""
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.call.return_value = {"name": "Charlie", "age": 35}
+
+    converter = Converter(
+        llm=mock_llm,
+        text="Charlie is 35 years old.",
+        model=SimpleModel,
+        instructions="Return person as JSON.",
+    )
+
+    result = converter.to_json()
+    assert isinstance(result, str)
+    parsed = json.loads(result)
+    assert isinstance(parsed, dict)
+    assert parsed == {"name": "Charlie", "age": 35}
+
+
+def test_converter_ato_json_text_only_llm_mapping_response() -> None:
+    """Async non-function-calling LLM returning already-decoded mapping response."""
+    import asyncio
+
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.acall = AsyncMock(return_value={"name": "Diana", "age": 28})
+
+    converter = Converter(
+        llm=mock_llm,
+        text="Diana is 28 years old.",
+        model=SimpleModel,
+        instructions="Return person as JSON.",
+    )
+
+    result = asyncio.run(converter.ato_json())
+    assert isinstance(result, str)
+    parsed = json.loads(result)
+    assert isinstance(parsed, dict)
+    assert parsed == {"name": "Diana", "age": 28}
+
+
+def test_converter_to_pydantic_text_only_llm_mapping_response() -> None:
+    """to_pydantic with non-function-calling LLM returning already-decoded mapping."""
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.call.return_value = {"name": "Eve", "age": 22}
+
+    converter = Converter(
+        llm=mock_llm,
+        text="Eve is 22 years old.",
+        model=SimpleModel,
+        instructions="Return person as Pydantic.",
+    )
+
+    result = converter.to_pydantic()
+    assert isinstance(result, SimpleModel)
+    assert result.name == "Eve"
+    assert result.age == 22
+
+
+def test_converter_ato_pydantic_text_only_llm_mapping_response() -> None:
+    """ato_pydantic with non-function-calling LLM returning already-decoded mapping."""
+    import asyncio
+
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.acall = AsyncMock(return_value={"name": "Frank", "age": 45})
+
+    converter = Converter(
+        llm=mock_llm,
+        text="Frank is 45 years old.",
+        model=SimpleModel,
+        instructions="Return person as Pydantic.",
+    )
+
+    result = asyncio.run(converter.ato_pydantic())
+    assert isinstance(result, SimpleModel)
+    assert result.name == "Frank"
+    assert result.age == 45
+

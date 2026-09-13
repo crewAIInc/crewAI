@@ -57,6 +57,8 @@ class Converter(OutputConverter):
         """
         if isinstance(response, BaseModel):
             return response
+        if not isinstance(response, (str, bytes, bytearray)):
+            return self.model.model_validate(response)
         try:
             return self.model.model_validate_json(response)
         except ValidationError:
