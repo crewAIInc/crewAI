@@ -34,6 +34,12 @@ class ContextualAIParseTool(BaseTool):
     package_dependencies: list[str] = Field(
         default_factory=lambda: ["contextual-client"]
     )
+    poll_timeout: int = Field(
+        default=300, description="Maximum polling duration in seconds for document parsing"
+    )
+    poll_interval: int = Field(
+        default=5, description="Interval in seconds between polling attempts"
+    )
 
     def _run(
         self,
@@ -51,7 +57,7 @@ class ContextualAIParseTool(BaseTool):
         try:
             import json
             import os
-            from time import sleep
+            from time import monotonic, sleep
 
             import requests
 
@@ -80,13 +86,16 @@ class ContextualAIParseTool(BaseTool):
                 result = requests.post(
                     url, headers=headers, data=config, files=file, timeout=30
                 )
+                result.raise_for_status()
                 response = json.loads(result.text)
                 job_id = response["job_id"]
 
-            # Monitor job status
+            # Monitor job status with bounded timeout
             status_url = f"{base_url}/parse/jobs/{job_id}/status"
+            started = monotonic()
             while True:
                 result = requests.get(status_url, headers=headers, timeout=30)
+                result.raise_for_status()
                 parse_response = json.loads(result.text)["status"]
 
                 if parse_response == "completed":
@@ -94,7 +103,12 @@ class ContextualAIParseTool(BaseTool):
                 if parse_response == "failed":
                     raise RuntimeError("Document parsing failed")
 
-                sleep(5)
+                if monotonic() - started >= self.poll_timeout:
+                    raise TimeoutError(
+                        f"Document parsing did not complete within {self.poll_timeout} seconds"
+                    )
+
+                sleep(self.poll_interval)
 
             results_url = f"{base_url}/parse/jobs/{job_id}/results"
             result = requests.get(
@@ -103,6 +117,7 @@ class ContextualAIParseTool(BaseTool):
                 params={"output_types": ",".join(output_types)},
                 timeout=30,
             )
+            result.raise_for_status()
 
             return json.dumps(json.loads(result.text), indent=2)
 
