@@ -1367,7 +1367,11 @@ class BedrockCompletion(BaseLLM):
                     response_id=response_id,
                 )
 
-                return full_response
+                return self._invoke_after_llm_call_hooks(
+                    messages,
+                    full_response,
+                    from_agent,
+                )
 
             except (ClientError, BotoCoreError) as e:
                 last_streaming_error = e
@@ -1401,7 +1405,7 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock streaming connection error: {last_streaming_error}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from last_streaming_error
-        return full_response
+        return self._invoke_after_llm_call_hooks(messages, full_response, from_agent)
 
     async def _ensure_async_client(self) -> Any:
         """Ensure async client is initialized and return it."""
