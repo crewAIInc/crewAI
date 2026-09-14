@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import tempfile
 import zipfile
 
 import pytest
@@ -333,3 +334,32 @@ def test_create_project_zip_wraps_a_write_failure_and_removes_the_partial_file(
         create_project_zip("demo", project_dir=tmp_path)
 
     assert created and not created[0].exists()
+
+
+@pytest.mark.parametrize(
+    "failing_step",
+    [
+        "crewai_cli.deploy.archive.shutil.copy2",
+        "crewai_cli.deploy.archive.tempfile.NamedTemporaryFile",
+    ],
+)
+def test_create_project_zip_wraps_staging_and_temp_file_failures_and_cleans_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failing_step: str
+):
+    """A full disk while staging or creating the archive is an archive failure too."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+
+    def fail(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(failing_step, fail)
+
+    with pytest.raises(ArchiveError, match="Could not build the project ZIP: disk full"):
+        create_project_zip("demo", project_dir=project)
+
+    assert list(scratch.iterdir()) == []

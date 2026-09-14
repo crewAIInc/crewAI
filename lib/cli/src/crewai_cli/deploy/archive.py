@@ -51,33 +51,25 @@ def create_project_zip(
     project_dir: Path | None = None,
     repository: git.Repository | None = None,
 ) -> Path:
-    """Create a deployable ZIP archive for a CrewAI project."""
+    """Create a deployable ZIP archive for a CrewAI project.
+
+    Raises:
+        ArchiveError: Nothing deployable was found, or the project could not be
+            staged or written to the archive. No partial archive is left behind.
+    """
     root = (project_dir or Path.cwd()).resolve()
     files = _project_files(root, repository)
     if not files:
         raise ArchiveError("No deployable project files were found.")
 
-    staged_root = _stage_project(root, files)
-    archive_handle = tempfile.NamedTemporaryFile(
-        prefix=f"{project_name}-",
-        suffix=".zip",
-        delete=False,
-    )
-    archive_path = Path(archive_handle.name)
-    archive_handle.close()
-
     try:
-        with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for relative_path in _walk_files(staged_root):
-                absolute_path = staged_root / relative_path
-                zip_file.write(absolute_path, relative_path.as_posix())
+        staged_root = _stage_project(root, files)
+        try:
+            return _write_archive(project_name, staged_root)
+        finally:
+            shutil.rmtree(staged_root, ignore_errors=True)
     except (OSError, zipfile.BadZipFile) as exc:
-        archive_path.unlink(missing_ok=True)
         raise ArchiveError(f"Could not build the project ZIP: {exc}") from exc
-    finally:
-        shutil.rmtree(staged_root, ignore_errors=True)
-
-    return archive_path
 
 
 def _project_files(root: Path, repository: git.Repository | None = None) -> list[Path]:
@@ -153,3 +145,24 @@ def _stage_project(root: Path, files: list[Path]) -> Path:
         shutil.rmtree(staging_root, ignore_errors=True)
         raise
     return staging_root
+
+
+def _write_archive(project_name: str, staged_root: Path) -> Path:
+    """Zip the staged tree into a new temporary file, removing it if the write fails."""
+    archive_handle = tempfile.NamedTemporaryFile(
+        prefix=f"{project_name}-",
+        suffix=".zip",
+        delete=False,
+    )
+    archive_path = Path(archive_handle.name)
+    archive_handle.close()
+
+    try:
+        with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for relative_path in _walk_files(staged_root):
+                absolute_path = staged_root / relative_path
+                zip_file.write(absolute_path, relative_path.as_posix())
+    except (OSError, zipfile.BadZipFile):
+        archive_path.unlink(missing_ok=True)
+        raise
+    return archive_path
