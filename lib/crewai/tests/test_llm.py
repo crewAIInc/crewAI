@@ -353,6 +353,23 @@ def test_gpt56_family_uses_official_context_window(model: str) -> None:
     assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+@pytest.mark.parametrize(
+    "model",
+    ["o1", "o1-pro", "o3", "o1-2024-12-17", "o3-2025-04-16"],
+)
+def test_o_series_reasoning_models_use_official_context_window(model: str) -> None:
+    """o1/o1-pro/o3 (and dated snapshots) have a 200k window, not the 8k default."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize("model", ["o1-preview", "o1-mini"])
+def test_o1_preview_and_mini_keep_128k_context_window(model: str) -> None:
+    """The shared "o1" entry must not swallow the longer 128k o1-preview/o1-mini prefixes."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_gpt56_does_not_override_gpt54_mini_window() -> None:
     """A more specific older prefix must keep its own window."""
     llm = LLM(model="gpt-5.4-mini", is_litellm=True)
