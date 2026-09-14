@@ -3197,6 +3197,41 @@ def test_replay_rejects_ambiguous_task_identities(researcher):
             crew.replay(str(second_task.id))
 
 
+def test_replay_uses_task_key_before_interpolating_new_inputs(researcher):
+    """A replayed template remains identifiable when the new inputs differ."""
+    task = Task(
+        description="Say hello to {name}",
+        expected_output="A greeting for {name}",
+        agent=researcher,
+    )
+    task.interpolate_inputs_and_add_conversation_history({"name": "John"})
+    stored_output = {
+        "task_id": str(task.id),
+        "task_key": task.key,
+        "expected_output": task.expected_output,
+        "output": {"description": task.description},
+        "inputs": {"name": "John"},
+    }
+    replay_task = Task(
+        description="Say hello to {name}",
+        expected_output="A greeting for {name}",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[replay_task])
+
+    with (
+        patch(
+            "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+            return_value=[stored_output],
+        ),
+        patch.object(crew, "_execute_tasks"),
+    ):
+        crew.replay(str(task.id), inputs={"name": "Maria"})
+
+    assert replay_task.description == "Say hello to Maria"
+    assert replay_task.expected_output == "A greeting for Maria"
+
+
 @pytest.mark.vcr()
 def test_crew_replay_error(researcher, writer):
     task = Task(
@@ -3531,6 +3566,7 @@ def test_replay_with_invalid_task_id():
         return_value=[
             {
                 "task_id": str(task1.id),
+                "task_key": task1.key,
                 "output": {
                     "description": context_output.description,
                     "summary": context_output.summary,
@@ -3544,6 +3580,7 @@ def test_replay_with_invalid_task_id():
             },
             {
                 "task_id": str(task2.id),
+                "task_key": task2.key,
                 "output": {
                     "description": "Test Task Output",
                     "summary": None,
@@ -3597,6 +3634,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
         return_value=[
             {
                 "task_id": str(task1.id),
+                "task_key": task1.key,
                 "output": {
                     "description": context_output.description,
                     "summary": context_output.summary,
@@ -3610,6 +3648,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
             },
             {
                 "task_id": str(task2.id),
+                "task_key": task2.key,
                 "output": {
                     "description": "Test Task Output",
                     "summary": None,

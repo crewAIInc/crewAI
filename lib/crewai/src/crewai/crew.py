@@ -2041,6 +2041,23 @@ class Crew(FlowTrackable, BaseModel):
             )
 
         stored_prefix = stored_outputs[: start_index + 1]
+        stored_task_keys = [
+            stored_output.get("task_key") for stored_output in stored_prefix
+        ]
+        current_task_keys = [task.key for task in self.tasks[: start_index + 1]]
+        if all(stored_task_keys):
+            if len(set(stored_task_keys)) != len(stored_task_keys) or len(
+                set(current_task_keys)
+            ) != len(current_task_keys):
+                raise ValueError(
+                    "Cannot replay because the stored task identities are ambiguous."
+                )
+            if stored_task_keys != current_task_keys:
+                raise ValueError(
+                    "Cannot replay because the current crew does not match the stored task outputs."
+                )
+            return
+
         stored_identities = [
             (
                 stored_output["output"].get("description"),
