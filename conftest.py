@@ -203,6 +203,38 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
 
 
 @pytest.fixture(autouse=True, scope="function")
+def reset_tracing_state() -> Generator[None, Any, None]:
+    """Drop the tracing singleton and its context after each test.
+
+    `TraceCollectionListener` is a singleton, so without this three things leak
+    for the rest of the xdist worker:
+
+    - `TraceBatchManager.trace_batch_id`, which moves later trace POSTs from
+      `/tracing/ephemeral/batches` to `/tracing/batches/<id>/events` until some
+      unrelated cassette stops matching, naming neither the leak nor its source.
+    - `_listeners_setup`, which makes `setup_listeners` return early
+      (`trace_listener.py:208`) after `cleanup_event_handlers` has wiped the bus,
+      so tracing silently registers nothing and collects no events.
+    - the `_tracing_enabled` context var, which leaves tracing on for later tests
+      and re-registers `on_task_failed` alongside telemetry's — breaking
+      `test_task_failure_instrumentation`, which requires one handler per event.
+
+    All three go together: clearing the context vars is what makes dropping the
+    singleton safe, because the replacement listener then sees tracing disabled
+    and registers nothing. Dropping the singleton alone re-registers handlers and
+    breaks the telemetry test.
+    """
+    yield
+
+    from crewai.events.listeners.tracing import utils as tracing_utils
+    from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+
+    tracing_utils._tracing_enabled.set(None)
+    tracing_utils._tui_mode.set(False)
+    TraceCollectionListener._instance = None
+
+
+@pytest.fixture(autouse=True, scope="function")
 def reset_event_state() -> None:
     """Reset event system state before each test for isolation."""
     from crewai.events.base_events import reset_emission_counter

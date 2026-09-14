@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.15.20",
+    "crewai==1.15.21",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4>=4.13.4,<5",
     "python-docx~=1.2.0",
@@ -141,7 +141,9 @@ xml = [
     "nltk>=3.10.3",
 ]
 oxylabs = [
-    "oxylabs==2.0.0"
+    # 3.x keeps the RealtimeClient surface these tools use and adds sources;
+    # allow it rather than pinning consumers to a single release.
+    "oxylabs>=2.0.0,<4",
 ]
 mongodb = [
     "pymongo>=4.13"

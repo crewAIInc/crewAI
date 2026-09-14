@@ -80,6 +80,7 @@ from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem, TodoList
 from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.file_store import clear_files, clear_task_files, store_files
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai_files import TextFile
 
 class TestAgentExecutorState:
@@ -2640,3 +2641,40 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+class TestEnsureForceFinalAnswer:
+    """The forced final answer is requested with a trailing user turn."""
+
+    def test_forced_answer_request_ends_on_a_user_turn(self):
+        llm = Mock()
+        llm.call.return_value = "Final Answer: forced"
+        executor = _build_executor(
+            llm=llm, agent=SimpleNamespace(verbose=False), callbacks=[]
+        )
+        executor.state.messages = [
+            {"role": "user", "content": "Collect all the data."},
+            {"role": "assistant", "content": "Thought: I need data\nObservation: partial"},
+        ]
+
+        result = AgentExecutor.ensure_force_final_answer(executor)
+
+        assert result == "agent_finished"
+        sent = llm.call.call_args.args[0]
+        assert sent[-1] == {
+            "role": "user",
+            "content": I18N_DEFAULT.errors("force_final_answer"),
+        }
+        assert isinstance(executor.state.current_answer, AgentFinish)
+        assert executor.state.current_answer.output == "forced"
+        assert executor.state.is_finished is True
+
+    def test_skips_the_llm_call_once_finished(self):
+        llm = Mock()
+        executor = _build_executor(
+            llm=llm, agent=SimpleNamespace(verbose=False), callbacks=[]
+        )
+        executor.state.is_finished = True
+
+        assert AgentExecutor.ensure_force_final_answer(executor) == "agent_finished"
+        llm.call.assert_not_called()

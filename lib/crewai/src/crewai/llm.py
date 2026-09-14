@@ -170,7 +170,7 @@ ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "cla
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
-    "gpt-4o-mini": 200000,
+    "gpt-4o-mini": 128000,
     "gpt-5.4-mini": 200000,
     "gpt-5.6": 1050000,  # sol, terra, luna, and the gpt-5.6 alias
     "gpt-4-turbo": 128000,
@@ -386,7 +386,9 @@ class LLM(BaseLLM):
     api_base: str | None = None
     api_version: str | None = None
     callbacks: list[Any] | None = None
-    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    reasoning_effort: (
+        Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None
+    ) = None
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
@@ -573,7 +575,8 @@ class LLM(BaseLLM):
             return True
 
         if provider == "dashscope":
-            return model_lower.startswith("qwen")
+            # DashScope's OpenAI-compatible endpoint serves Qwen plus DeepSeek/Kimi/GLM/etc.
+            return True
 
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything

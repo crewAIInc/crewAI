@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import httpx
 import pytest
 
 from crewai.llm import LLM
@@ -411,9 +413,26 @@ class TestSnowflakeRequests:
                 )
             ],
         )
-        create = Mock(return_value=fake_response)
+        # The provider reads the raw body first, to spot upstream errors that a
+        # gateway reported inside an HTTP 200.
+        create = Mock(
+            return_value=SimpleNamespace(
+                text=json.dumps({"choices": [{"index": 0}]}),
+                parse=lambda: fake_response,
+                http_response=httpx.Response(
+                    200,
+                    request=httpx.Request(
+                        "POST", "https://acct.snowflakecomputing.com/api/v2/cortex"
+                    ),
+                ),
+            )
+        )
         fake_client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+            chat=SimpleNamespace(
+                completions=SimpleNamespace(
+                    with_raw_response=SimpleNamespace(create=create)
+                )
+            )
         )
 
         with patch.object(llm, "_get_sync_client", return_value=fake_client):
