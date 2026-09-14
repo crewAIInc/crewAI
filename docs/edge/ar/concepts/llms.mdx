@@ -1012,6 +1012,37 @@ mode: "wide"
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="DeepInfra">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    DEEPINFRA_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    DEEPINFRA_BASE_URL=https://api.deepinfra.com/v1/openai
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات DeepInfra:
+      - نماذج مفتوحة الأوزان (Llama وQwen وDeepSeek وGLM وMistral وغيرها) خلف API واحد متوافق مع OpenAI
+      - استدعاء الأدوات والبث والمخرجات المنظمة بمخطط JSON
+      - تسعير لكل token وطول السياق منشوران في كتالوج النماذج
+    </Info>
+
+    معرّفات النماذج بصيغة `org/model` أصلًا، لذا يتكوّن المرجع الكامل من ثلاثة أجزاء،
+    مثل `deepinfra/meta-llama/Llama-4-Scout-17B-16E-Instruct`. راجع
+    [كتالوج النماذج المنسّق لـ CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)،
+    وهو عام ولا يتطلب مصادقة، للحصول على المعرّفات الحالية وأطوال السياق والأسعار.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

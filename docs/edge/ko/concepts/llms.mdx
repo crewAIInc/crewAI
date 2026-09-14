@@ -755,6 +755,37 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="DeepInfra">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    DEEPINFRA_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    DEEPINFRA_BASE_URL=https://api.deepinfra.com/v1/openai
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      DeepInfra 특징:
+      - 하나의 OpenAI 호환 API로 제공되는 오픈 웨이트 모델 (Llama, Qwen, DeepSeek, GLM, Mistral 등)
+      - 도구 호출, 스트리밍, JSON 스키마 구조화 출력 지원
+      - 모델 카탈로그에 공개된 토큰 단위 가격과 컨텍스트 길이
+    </Info>
+
+    모델 ID는 이미 `org/model` 형식이므로 전체 참조는 세 개의 세그먼트로 구성됩니다.
+    예: `deepinfra/meta-llama/Llama-4-Scout-17B-16E-Instruct`. 현재 ID, 컨텍스트 길이, 가격은
+    인증 없이 공개된 [CrewAI용으로 선별된 모델 카탈로그](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai)를
+    참조하세요.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
