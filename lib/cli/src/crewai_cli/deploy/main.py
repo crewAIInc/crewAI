@@ -1,11 +1,14 @@
+import json
 from pathlib import Path
 import subprocess
 from typing import Any
 from urllib.parse import quote
 import webbrowser
+import zipfile
 
 from crewai_core.plus_api import CreateCrewPayload
-from crewai_core.telemetry import DeploySource
+from crewai_core.telemetry import DeployFailureReason, DeploySource
+import httpx
 from rich.console import Console
 
 from crewai_cli import git
@@ -124,6 +127,37 @@ def _deployment_page_url(base_url: str, json_response: dict[str, Any]) -> str | 
     return (
         f"{base_url.rstrip('/')}/crewai_plus/deployments/{quote(identifier, safe='')}"
     )
+
+
+def _creation_failure_reason(exc: BaseException) -> DeployFailureReason:
+    """Classify an exception raised while requesting a deployment, for telemetry.
+
+    Only the archive step raises ``ValueError`` / ``OSError`` inside that request
+    (the project name is validated at construction), so those read as zip errors.
+    """
+    if isinstance(exc, (KeyboardInterrupt, EOFError)):
+        return "user_declined"
+    if isinstance(exc, httpx.HTTPError):
+        return "network_error"
+    if isinstance(exc, (ValueError, OSError, zipfile.BadZipFile)):
+        return "zip_error"
+    return "unexpected"
+
+
+def _response_failure_reason(response: httpx.Response) -> DeployFailureReason | None:
+    """Classify a create response that ``_validate_response`` will reject.
+
+    Mirrors its checks in the same order; ``None`` means the response will pass.
+    """
+    try:
+        response.json()
+    except (json.JSONDecodeError, ValueError):
+        return "invalid_response"
+    if response.status_code >= 500:
+        return "api_5xx"
+    if not response.is_success:
+        return "api_4xx"
+    return None
 
 
 def _needs_lockfile_for_deploy(project_root: Path | None = None) -> bool:
@@ -442,18 +476,22 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             return
         self._telemetry.create_crew_deployment_span(source=source)
         console.print("Creating deployment...", style="bold blue")
-        env_vars = fetch_and_json_env_file()
-        repository = self._prepare_git_repository()
-        remote_repo_url = repository.origin_url() if repository else None
+        try:
+            response = self._request_crew_creation(confirm)
+        except BaseException as exc:
+            # Report and re-raise unchanged: the CLI and the run TUI already
+            # decide how each failure is shown, this only explains the gap
+            # between attempts and successes.
+            self._telemetry.crew_deployment_failed_span(
+                _creation_failure_reason(exc), source=source
+            )
+            raise
 
-        if remote_repo_url:
-            self._confirm_input(env_vars, remote_repo_url, confirm)
-            payload = self._create_payload(env_vars, remote_repo_url)
-            response = self.plus_api_client.create_crew(payload)
-        else:
-            _display_git_remote_help()
-            response = self._create_crew_from_zip(env_vars, repository, confirm)
-
+        failure_reason = _response_failure_reason(response)
+        if failure_reason is not None:
+            self._telemetry.crew_deployment_failed_span(
+                failure_reason, source=source, status_code=response.status_code
+            )
         self._validate_response(response)
         json_response = response.json()
         # After _validate_response, not before: it raises SystemExit on a failed
@@ -465,6 +503,20 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid=str(created_uuid) if created_uuid else None, source=source
         )
         self._display_creation_success(json_response)
+
+    def _request_crew_creation(self, confirm: bool) -> httpx.Response:
+        """Ask the Enterprise API to create the deployment, from git or from a ZIP."""
+        env_vars = fetch_and_json_env_file()
+        repository = self._prepare_git_repository()
+        remote_repo_url = repository.origin_url() if repository else None
+
+        if remote_repo_url:
+            self._confirm_input(env_vars, remote_repo_url, confirm)
+            payload = self._create_payload(env_vars, remote_repo_url)
+            return self.plus_api_client.create_crew(payload)
+
+        _display_git_remote_help()
+        return self._create_crew_from_zip(env_vars, repository, confirm)
 
     def _prepare_git_repository(self) -> git.Repository | None:
         """Prepare Git for deploy while preserving remote deploy when possible."""
@@ -544,7 +596,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         env_vars: dict[str, str],
         repository: git.Repository | None,
         confirm: bool,
-    ) -> Any:
+    ) -> httpx.Response:
         """Create a deployment by uploading a project ZIP archive."""
         if not self.project_name:
             raise ValueError("project_name is required to create a ZIP deployment")
