@@ -97,12 +97,20 @@ _call_stream_override_var: contextvars.ContextVar[dict[int, bool] | None] = (
 
 
 @contextmanager
-def llm_call_context() -> Generator[str, None, None]:
-    """Context manager that establishes an LLM call scope with a unique call_id."""
+def llm_call_context(model: str | None = None) -> Generator[str, None, None]:
+    """Bind an LLM call ID and trace policy denials as expected control flow."""
+    from crewai.hooks.dispatch import HookAborted
+    from crewai.telemetry.otel import operation
+
     call_id = str(uuid.uuid4())
     token = _current_call_id.set(call_id)
     try:
-        yield call_id
+        with operation(
+            "call llm",
+            {"crewai.llm.model": model} if model is not None else None,
+            expected_exceptions=(HookAborted, LLMCallBlockedError),
+        ):
+            yield call_id
     finally:
         _current_call_id.reset(token)
 
@@ -656,12 +664,15 @@ class BaseLLM(BaseModel, ABC):
         error: str,
         from_task: Task | None = None,
         from_agent: BaseAgent | None = None,
+        *,
+        denied: bool = False,
     ) -> None:
-        """Emit LLM call failed event."""
+        """Emit a terminal LLM event, distinguishing policy denial from failure."""
         crewai_event_bus.emit(
             self,
             event=LLMCallFailedEvent(
                 error=error,
+                denied=denied,
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
@@ -688,7 +699,7 @@ class BaseLLM(BaseModel, ABC):
         message = f"LLM call denied by {source or 'hook'}: {reason}"
         logging.warning(message)
         self._emit_call_failed_event(
-            error=message, from_task=from_task, from_agent=from_agent
+            error=message, from_task=from_task, from_agent=from_agent, denied=True
         )
 
     def _emit_stream_chunk_event(

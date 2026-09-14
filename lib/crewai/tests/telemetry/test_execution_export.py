@@ -942,7 +942,8 @@ def test_interleaved_deferred_flows_keep_nested_crews_in_their_own_session(
     from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 
     grants, batches = collectors
-    batch_manager = TraceCollectionListener().batch_manager
+    with crewai_event_bus.scoped_handlers():
+        batch_manager = TraceCollectionListener().batch_manager
     monkeypatch.setattr(batch_manager, "batch_owner_type", "flow")
     monkeypatch.setattr(batch_manager, "defer_session_finalization", True)
     if authenticated:
@@ -1199,8 +1200,10 @@ async def test_deferred_flows_interleaved_in_one_async_task_restore_event_scope(
 
 
 @pytest.mark.parametrize("authenticated", [False, True])
-def test_deferred_pause_resume_exports_successful_resumed_root(
-    in_memory_grant_collectors, monkeypatch, authenticated
+@pytest.mark.parametrize("deferred", [False, True])
+@pytest.mark.parametrize("async_run", [False, True])
+def test_pause_resume_exports_traces_and_preserves_deferred_root(
+    in_memory_grant_collectors, monkeypatch, authenticated, deferred, async_run
 ):
     from crewai.flow.async_feedback.types import (
         HumanFeedbackPending,
@@ -1245,33 +1248,64 @@ def test_deferred_pause_resume_exports_successful_resumed_root(
         return_value=True,
     ) as prompt:
         flow = PausingFlow(
-            persistence=MemoryPersistence(), tracing=True, defer_trace_finalization=True
+            persistence=MemoryPersistence(),
+            tracing=True,
+            defer_trace_finalization=deferred,
         )
-        assert isinstance(flow.kickoff(), HumanFeedbackPending)
+        result = asyncio.run(flow.kickoff_async()) if async_run else flow.kickoff()
+        assert isinstance(result, HumanFeedbackPending)
+        execution_uuid = result.context.execution_uuid
         lifetime = flow._deferred_execution_trace
-        assert lifetime is not None and not lifetime.closed
+        opener = flow._deferred_flow_started_event_id
+        if deferred:
+            assert lifetime is not None and not lifetime.closed
+        else:
+            assert lifetime is None
+            # A successful pause must export normally, including anonymous consent.
+            paused = recorders[execution_uuid].get_finished_spans()
+            assert paused
+            assert all(
+                span.status.status_code != trace.StatusCode.ERROR for span in paused
+            )
+        assert prompt.call_count == (0 if authenticated or deferred else 1)
         assert get_trace_session() is None and get_execution_uuid() is None
-        prompt.assert_not_called()
 
-        assert flow.resume("approved") == "approved"
-        assert flow._deferred_execution_trace is lifetime and not lifetime.closed
+        resumed = (
+            asyncio.run(flow.resume_async("approved"))
+            if async_run
+            else flow.resume("approved")
+        )
+        assert resumed == "approved"
+        assert flow._deferred_flow_started_event_id == opener
+        assert flow._deferred_execution_trace is lifetime
+        if deferred:
+            assert not lifetime.closed
         assert get_trace_session() is None and get_execution_uuid() is None
-        prompt.assert_not_called()
 
         flow.finalize_session_traces()
         flow.finalize_session_traces()
-        assert prompt.call_count == (0 if authenticated else 1)
+        assert prompt.call_count == (0 if authenticated else (1 if deferred else 2))
 
-    assert lifetime.closed and flow._deferred_execution_trace is None
-    assert len(issued) == 1
-    execution_uuid = lifetime.session.context.kickoff_id
+    assert flow._deferred_execution_trace is None
+    assert len(issued) == (1 if deferred else 2)
+    if deferred:
+        assert lifetime.closed
     exported = recorders[execution_uuid].get_finished_spans()
     roots = [span for span in exported if span.name == "execute flow"]
-    # Both the paused segment and the successful resumed segment must arrive.
-    assert len(roots) == 2
+    assert len(roots) == 1
+    if deferred:
+        assert roots[0].attributes["event_id"] == opener
+    assert len({span.context.trace_id for span in exported}) == 1
+    assert all(
+        span.parent == roots[0].context
+        for span in exported
+        if span.name == "call method"
+    )
     assert all(span.status.status_code == trace.StatusCode.OK for span in roots)
     assert all(span.end_time is not None for span in roots)
-    assert [span.name for span in exported].count("call method") == 3
+    assert [span.name for span in exported].count("call method") == (
+        3 if deferred else 2
+    )
     assert {span.attributes["crewai.execution_uuid"] for span in exported} == {
         execution_uuid
     }

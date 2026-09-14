@@ -294,3 +294,10 @@ def test_gen_ai_older_oss_path_omits_new_request_and_response_attrs() -> None:
     # And without an explicit finish_reason or output payload, no inferred
     # finish reason is emitted either.
     assert "gen_ai.response.finish_reasons" not in attrs
+
+
+@pytest.mark.parametrize(
+    "payload, expected", [(None, None), ("hello", 5), ("你好 🌊", 11)]
+)
+def test_payload_size_is_utf8_bytes(payload, expected):
+    assert semantic_conventions._payload_size(payload) == expected

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from opentelemetry.trace import Span, Tracer
+    from opentelemetry.trace import Span, Status, Tracer
 
     from crewai.telemetry.tracing.session import TraceSession
 
@@ -21,6 +21,7 @@ class PendingSpanEnd:
     end_time_ns: int
     duration_attr: str | None = None
     end_event: Any = None
+    status: Status | None = None
 
 
 @dataclass

@@ -291,7 +291,7 @@ def _finish_span(
 ) -> None:
     if end.duration_attr and end.end_event:
         end.attributes[end.duration_attr] = _get_span_duration_ms(span, end.end_event)
-    status = _apply_error(span, end.error, end.attributes)
+    status = end.status or _apply_error(span, end.error, end.attributes)
     _set_span_attributes(span, end.attributes)
     span.set_status(status)
     span_id = span.get_span_context().span_id
@@ -308,6 +308,7 @@ def _end_span(
     attributes: dict[str, Any],
     error: str | BaseException | None = None,
     duration_attr: str | None = None,
+    status: Status | None = None,
 ) -> Span | None:
     if not event_id:
         return None
@@ -318,6 +319,7 @@ def _end_span(
         _datetime_to_nanoseconds(event.timestamp),
         duration_attr,
         event,
+        status,
     )
 
     with ctx._span_lock:
@@ -1331,7 +1333,11 @@ def handle_flow_paused(
     flow_id = event.flow_id
 
     with ctx._span_lock:
-        aggregated_crew_usage_metrics = ctx.flow_crew_usage_metrics.pop(flow_id, None)
+        aggregated_crew_usage_metrics = (
+            ctx.flow_crew_usage_metrics.get(flow_id)
+            if source._should_defer_trace_finalization()
+            else ctx.flow_crew_usage_metrics.pop(flow_id, None)
+        )
 
     aggregated_metrics_str = (
         _serialize(aggregated_crew_usage_metrics)
@@ -1360,6 +1366,10 @@ def handle_flow_paused(
         attributes=attrs,
         ctx=ctx,
     )
+
+    if source._should_defer_trace_finalization():
+        # Pausing a deferred conversation does not close its session root.
+        return
 
     _end_span(
         ctx,
@@ -1671,18 +1681,29 @@ def handle_llm_call_failed(
             operation_name="chat",
             request_model=model,
             provider_name=provider_name,
-            finish_reason="error",
+            finish_reason=None if event.denied else "error",
             conversation_id=_conversation_id(event, ctx),
         ),
         **semantic_conventions.crewai_span(event_name=event.type, subject=model),
         **semantic_conventions.crewai_llm(call_id=event.call_id),
     }
 
-    span = _end_span(ctx, event.started_event_id, event, attrs, error=event.error)
+    if event.denied:
+        attrs.update(
+            semantic_conventions.crewai_policy(decision="deny", reason=event.error)
+        )
+    span = _end_span(
+        ctx,
+        event.started_event_id,
+        event,
+        attrs,
+        error=None if event.denied else event.error,
+        status=Status(StatusCode.UNSET) if event.denied else None,
+    )
 
     providers.emit_log(
-        f"LLM call failed: {model}",
-        level="ERROR",
+        f"LLM call {'denied' if event.denied else 'failed'}: {model}",
+        level="INFO" if event.denied else "ERROR",
         span=span,
         attributes=attrs,
         ctx=ctx,

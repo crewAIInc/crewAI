@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
+from contextlib import nullcontext
 import logging
 from threading import get_ident
 from typing import Any
 from unittest.mock import AsyncMock, Mock
+from uuid import uuid4
 
 import pytest
 from crewai import Agent, Crew, Task
@@ -347,6 +349,60 @@ class TestOperation:
 # ---------------------------------------------------------------------------
 # Hot-path coverage
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("session_enabled", [False, True])
+@pytest.mark.parametrize("async_run", [False, True])
+@pytest.mark.parametrize("error_kind", ["hook", "blocked", "provider"])
+def test_llm_policy_denials_are_not_provider_errors(
+    span_exporter, monkeypatch, session_enabled, async_run, error_kind
+):
+    from crewai import LLM
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallFailedEvent
+    from crewai.hooks.dispatch import HookAborted
+    from crewai.llms.base_llm import LLMCallBlockedError
+    from crewai.telemetry.tracing.session import TraceSession
+
+    error = {
+        "hook": HookAborted("denied"),
+        "blocked": LLMCallBlockedError("denied"),
+        "provider": RuntimeError("failed"),
+    }[error_kind]
+    llm = LLM(model="gpt-4o-mini", api_key="synthetic")
+    monkeypatch.setattr(llm, "_invoke_before_llm_call_hooks", Mock(side_effect=error))
+    session = TraceSession(str(uuid4()), [span_exporter]) if session_enabled else None
+    terminal_events = []
+    try:
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(LLMCallFailedEvent)
+            def failed(source, event):
+                terminal_events.append(event)
+
+            with session.activate() if session else nullcontext():
+                with pytest.raises(type(error)) as raised:
+                    if async_run:
+                        asyncio.run(llm.acall("hello"))
+                    else:
+                        llm.call("hello")
+            crewai_event_bus.flush()
+    finally:
+        if session:
+            session.shutdown()
+
+    assert raised.value is error
+    assert len(terminal_events) == 1
+    denied = error_kind != "provider"
+    assert terminal_events[0].denied is denied
+    finished = span_exporter.get_finished_spans()
+    assert len(finished) == 1
+    span = finished[0]
+    assert span.status.status_code == (StatusCode.UNSET if denied else StatusCode.ERROR)
+    assert any(event.name == "exception" for event in span.events) is not denied
+    if denied:
+        assert "error.type" not in span.attributes
+        assert span.attributes.get("gen_ai.response.finish_reasons") != ("error",)
 
 
 class TestHotPathSpans:

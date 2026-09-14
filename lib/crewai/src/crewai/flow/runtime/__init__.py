@@ -1446,11 +1446,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
     ) -> Any:
-        # Resume traces are causally related to the pause trace but not a
-        # parent-child relationship. Enterprise listeners can attach the
-        # FOLLOWS_FROM link via ``follows_from()`` when they record the
-        # paused span's trace/span IDs at pause time. We always open a
-        # fresh root span here; the link is opt-in.
+        # Reuse a deferred conversation's original scope, just as kickoff does.
+        # Non-deferred resumes open a fresh flow scope for this segment.
+        await self._open_flow_scope(None)
         with operation(
             "resume flow",
             {
@@ -1465,39 +1463,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     async def _resume_async_body_inner(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
     ) -> Any:
-        if get_current_parent_id() is None:
-            reset_emission_counter()
-            reset_last_event_id()
-
-        # Emitted unconditionally, matching both the kickoff path and the
-        # FlowFinishedEvent below. This used to sit behind suppress_flow_events,
-        # which produced an unpaired finish: the finish emit is not gated, so a
-        # resumed flow reported finishing without ever having started, breaking
-        # every started/finished pairing and duration built on it.
-        #
-        # suppress_flow_events is not the right gate for emission in any case. It
-        # asks for console quiet - see _flow_origin in events/event_listener.py,
-        # which says so and notes it "can legitimately be set on a caller's own
-        # flow" - and the listener already honours it where it prints. Suppressing
-        # the event instead removed the resumed leg from telemetry entirely.
-        started_event = FlowStartedEvent(
-            type="flow_started",
-            flow_name=self._definition.name,
-            inputs=None,
-        )
-        future = crewai_event_bus.emit(self, started_event)
-        if self._should_defer_trace_finalization():
-            object.__setattr__(
-                self, "_deferred_flow_started_event_id", started_event.event_id
-            )
-        if future and isinstance(future, Future):
-            try:
-                await asyncio.wrap_future(future)
-            except Exception:
-                logger.warning("FlowStartedEvent handler failed", exc_info=True)
-
-        get_env_context()
-
         context = self._pending_feedback_context
         if context is None:
             raise ValueError(

@@ -118,6 +118,8 @@ class LLMCallFailedEvent(LLMEventBase):
     """Event emitted when a LLM call fails"""
 
     error: str
+    # Denials still close the call lifecycle, but are not provider failures.
+    denied: bool = False
     type: Literal["llm_call_failed"] = "llm_call_failed"
 
 

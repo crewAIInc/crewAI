@@ -125,7 +125,7 @@ def _safe_output(
 
 
 def _payload_size(payload: str | None) -> int | None:
-    """Return ``len(payload)`` for an already-serialized JSON string.
+    """Return the UTF-8 byte size of an already-serialized JSON string.
 
     Used for ``gen_ai.input.messages.size`` / ``gen_ai.output.messages.size``
     so consumers can budget storage / display without re-shaping the parts
@@ -135,7 +135,7 @@ def _payload_size(payload: str | None) -> int | None:
     """
     if payload is None:
         return None
-    return len(payload)
+    return len(payload.encode("utf-8"))
 
 
 def gen_ai(

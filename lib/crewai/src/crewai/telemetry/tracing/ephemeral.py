@@ -38,6 +38,7 @@ def _positive_limit(name: str, default: int) -> int:
         if value > 0:
             return value
     except ValueError:
+        # Malformed values use the same warning and fallback as nonpositive ones.
         pass
     logger.warning("Invalid %s; using default limit %d", name, default)
     return default
