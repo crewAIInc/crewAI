@@ -345,6 +345,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "deepinfra",
 ]
 
 
@@ -450,6 +451,7 @@ class LLM(BaseLLM):
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
                 "snowflake": "snowflake",
+                "deepinfra": "deepinfra",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -579,6 +581,12 @@ class LLM(BaseLLM):
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything
             return True
+
+        if provider == "deepinfra":
+            # DeepInfra ids are exactly org/model, so a full reference is
+            # deepinfra/<org>/<model>: one slash with both parts non-empty.
+            parts = model_lower.split("/")
+            return len(parts) == 2 and all(parts)
 
         if provider == "snowflake":
             return True
@@ -721,6 +729,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "deepinfra",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
