@@ -460,7 +460,7 @@ rag_tool = RagTool(config=config, summarize=True)
 
     **خيارات الإعداد:**
     - `model_name` (str): معرّف نموذج HuggingFace. القيمة الافتراضية: `hkunlp/instructor-base`. الخيارات: `hkunlp/instructor-xl`، `hkunlp/instructor-large`، `hkunlp/instructor-base`
-    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`، `xpu`
     - `instruction` (str): بادئة التعليمات للتضمينات
 
     **متغيرات البيئة:**
@@ -485,7 +485,7 @@ rag_tool = RagTool(config=config, summarize=True)
 
     **خيارات الإعداد:**
     - `model_name` (str): اسم نموذج Sentence Transformers. القيمة الافتراضية: `all-MiniLM-L6-v2`. الخيارات: `all-mpnet-base-v2`، `all-MiniLM-L6-v2`، `paraphrase-multilingual-MiniLM-L12-v2`
-    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`، `xpu`
     - `normalize_embeddings` (bool): ما إذا كان يتم تطبيع التضمينات. القيمة الافتراضية: `False`
 
     **متغيرات البيئة:**
