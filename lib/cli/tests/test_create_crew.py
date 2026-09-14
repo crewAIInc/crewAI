@@ -1005,6 +1005,44 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert '"knowledge_sources": []' in agent_template
 
 
+def test_json_create_saves_platform_token_to_env_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: (
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-5.5",
+                    "tools": ["platform:github"],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        ),
+    )
+    monkeypatch.setattr(json_crew, "_setup_platform_auth", lambda _agents: "token")
+
+    json_crew.create_json_crew("Platform Crew", skip_provider=True)
+
+    env_file = tmp_path / "platform_crew" / ".env"
+    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN=token" in env_file.read_text()
+
+
 def test_json_crew_uses_template_files():
     template_names = {
         "pyproject.toml",

@@ -622,10 +622,6 @@ def _wizard_agents_and_tasks(
         "inputs": {},
     }
 
-    # Platform authentication belongs to the final wizard step, after the
-    # user has finished configuring agents, tasks, and crew settings.
-    _setup_platform_auth(agents)
-
     return agents, tasks, crew_settings
 
 
@@ -1167,11 +1163,9 @@ def create_json_crew(
             default_llm=default_llm,
         )
 
-    platform_token = (
-        os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN")
-        if _platform_apps_from_agents(agents) and not dmn_mode
-        else None
-    )
+    # Authenticate only after the full wizard is complete, but before any
+    # project files are created. The returned token is then persisted below.
+    platform_token = _setup_platform_auth(agents) if not dmn_mode else None
 
     # Create directories only after platform authentication succeeds.
     folder_path.mkdir(parents=True)
@@ -1185,6 +1179,7 @@ def create_json_crew(
         env_vars = load_env_vars(folder_path)
         env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
         write_env_file(folder_path, env_vars)
+        _success("CrewAI Platform integration token saved to .env")
 
     for agent in agents:
         _write_jsonc(
