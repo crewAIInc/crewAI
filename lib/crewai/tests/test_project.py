@@ -195,7 +195,6 @@ def test_after_kickoff_modification():
 def test_before_kickoff_with_none_input():
     crew = InternalCrew()
     crew.crew().kickoff(None)
-    # Test should pass without raising exceptions
 
 
 @pytest.mark.vcr()

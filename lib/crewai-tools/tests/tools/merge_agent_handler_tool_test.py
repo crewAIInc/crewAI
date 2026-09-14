@@ -409,26 +409,20 @@ def test_tool_parameters_are_passed_in_request(mock_post):
         tool_name="linear__update_issue",
     )
 
-    # Execute tool with specific parameters
     tool._run(id="issue-123", title="New Title", priority=1)
 
-    # Verify the request was made
     mock_post.assert_called_once()
 
-    # Get the JSON payload that was sent
     payload = mock_post.call_args.kwargs["json"]
 
-    # Verify MCP structure
     assert payload["jsonrpc"] == "2.0"
     assert payload["method"] == "tools/call"
     assert "id" in payload
 
-    # Verify parameters are in the request
     assert "params" in payload
     assert payload["params"]["name"] == "linear__update_issue"
     assert "arguments" in payload["params"]
 
-    # Verify the actual arguments were passed
     arguments = payload["params"]["arguments"]
     assert arguments["id"] == "issue-123"
     assert arguments["title"] == "New Title"
@@ -438,12 +432,9 @@ def test_tool_parameters_are_passed_in_request(mock_post):
 @patch("requests.post")
 def test_tool_run_method_passes_parameters(mock_post, mock_tool_pack_response):
     """Test that parameters are passed when using the .run() method (how CrewAI calls it)."""
-    # Mock the tools/list response
     mock_response = Mock()
     mock_response.status_code = 200
 
-    # First call: tools/list
-    # Second call: tools/call
     mock_response.json.side_effect = [
         mock_tool_pack_response,  # tools/list response
         {
@@ -454,7 +445,6 @@ def test_tool_run_method_passes_parameters(mock_post, mock_tool_pack_response):
     ]
     mock_post.return_value = mock_response
 
-    # Create tool using from_tool_name (which fetches schema)
     tool = MergeAgentHandlerTool.from_tool_name(
         tool_name="linear__create_issue",
         tool_pack_id="test-pack-id",
@@ -467,21 +457,17 @@ def test_tool_run_method_passes_parameters(mock_post, mock_tool_pack_response):
     # Verify two calls were made: tools/list and tools/call
     assert mock_post.call_count == 2
 
-    # Get the second call (tools/call)
     second_call = mock_post.call_args_list[1]
     payload = second_call.kwargs["json"]
 
-    # Verify it's a tools/call request
     assert payload["method"] == "tools/call"
     assert payload["params"]["name"] == "linear__create_issue"
 
-    # Verify parameters were passed
     arguments = payload["params"]["arguments"]
     assert arguments["title"] == "Test Issue"
     assert arguments["description"] == "Test description"
     assert arguments["priority"] == 2
 
-    # Verify result was returned
     assert result["success"] is True
     assert result["id"] == "issue-123"
 

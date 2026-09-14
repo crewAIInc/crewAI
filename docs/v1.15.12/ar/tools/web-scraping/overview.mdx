@@ -1,0 +1,112 @@
+---
+title: "نظرة عامة"
+description: "استخراج البيانات من المواقع وأتمتة تفاعلات المتصفح باستخدام أدوات استخراج قوية"
+icon: "face-smile"
+mode: "wide"
+---
+
+تتيح هذه الأدوات لوكلائك التفاعل مع الويب واستخراج البيانات من المواقع وأتمتة المهام المعتمدة على المتصفح. من الاستخراج البسيط من الويب إلى أتمتة المتصفح المعقدة، تغطي هذه الأدوات جميع احتياجات التفاعل مع الويب.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة استخراج المواقع" icon="globe" href="/ar/tools/web-scraping/scrapewebsitetool">
+    أداة استخراج بيانات من الويب متعددة الأغراض لاستخراج المحتوى من أي موقع.
+  </Card>
+
+  <Card title="أداة استخراج العناصر" icon="crosshairs" href="/ar/tools/web-scraping/scrapeelementfromwebsitetool">
+    استهداف عناصر محددة في صفحات الويب بقدرات استخراج دقيقة.
+  </Card>
+
+  <Card title="أداة زحف Firecrawl" icon="spider" href="/ar/tools/web-scraping/firecrawlcrawlwebsitetool">
+    زحف مواقع كاملة بشكل منهجي باستخدام محرك Firecrawl القوي.
+  </Card>
+
+  <Card title="أداة استخراج Firecrawl" icon="fire" href="/ar/tools/web-scraping/firecrawlscrapewebsitetool">
+    استخراج بيانات عالي الأداء من الويب مع قدرات Firecrawl المتقدمة.
+  </Card>
+
+  <Card title="أداة بحث Firecrawl" icon="magnifying-glass" href="/ar/tools/web-scraping/firecrawlsearchtool">
+    البحث واستخراج محتوى محدد باستخدام ميزات بحث Firecrawl.
+  </Card>
+
+  <Card title="أداة استخراج Selenium" icon="robot" href="/ar/tools/web-scraping/seleniumscrapingtool">
+    أتمتة المتصفح والاستخراج باستخدام قدرات Selenium WebDriver.
+  </Card>
+
+  <Card title="أداة ScrapFly" icon="plane" href="/ar/tools/web-scraping/scrapflyscrapetool">
+    استخراج احترافي من الويب مع خدمة ScrapFly المتميزة.
+  </Card>
+
+  <Card title="أداة ScrapGraph" icon="network-wired" href="/ar/tools/web-scraping/scrapegraphscrapetool">
+    استخراج بيانات من الويب قائم على الرسوم البيانية لعلاقات البيانات المعقدة.
+  </Card>
+
+  <Card title="أداة Spider" icon="spider" href="/ar/tools/web-scraping/spidertool">
+    قدرات شاملة للزحف واستخراج البيانات من الويب.
+  </Card>
+
+  <Card title="أداة BrowserBase" icon="browser" href="/ar/tools/web-scraping/browserbaseloadtool">
+    أتمتة المتصفح السحابية مع بنية BrowserBase التحتية.
+  </Card>
+
+  <Card title="أداة HyperBrowser" icon="window-maximize" href="/ar/tools/web-scraping/hyperbrowserloadtool">
+    تفاعلات متصفح سريعة مع محرك HyperBrowser المُحسّن.
+  </Card>
+
+  <Card title="أداة Stagehand" icon="hand" href="/ar/tools/web-scraping/stagehandtool">
+    أتمتة متصفح ذكية باستخدام أوامر اللغة الطبيعية.
+  </Card>
+
+  <Card title="أداة Oxylabs للاستخراج" icon="globe" href="/ar/tools/web-scraping/oxylabsscraperstool">
+    الوصول إلى بيانات الويب على نطاق واسع مع Oxylabs.
+  </Card>
+
+  <Card title="أدوات Bright Data" icon="spider" href="/ar/tools/web-scraping/brightdata-tools">
+    تكاملات بحث SERP و Web Unlocker و Dataset API.
+  </Card>
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **استخراج البيانات**: استخراج معلومات المنتجات والأسعار والمراجعات
+- **مراقبة المحتوى**: تتبع التغييرات على المواقع ومصادر الأخبار
+- **توليد العملاء المحتملين**: استخراج معلومات الاتصال وبيانات الأعمال
+- **أبحاث السوق**: جمع المعلومات الاستخباراتية التنافسية وبيانات السوق
+- **الاختبار وضمان الجودة**: أتمتة اختبار المتصفح وسير عمل التحقق
+- **وسائل التواصل الاجتماعي**: استخراج المنشورات والتعليقات وتحليلات وسائل التواصل الاجتماعي
+
+## **مثال سريع للبدء**
+
+```python
+from crewai_tools import ScrapeWebsiteTool, FirecrawlScrapeWebsiteTool, SeleniumScrapingTool
+
+# Create scraping tools
+simple_scraper = ScrapeWebsiteTool()
+advanced_scraper = FirecrawlScrapeWebsiteTool()
+browser_automation = SeleniumScrapingTool()
+
+# Add to your agent
+agent = Agent(
+    role="Web Research Specialist",
+    tools=[simple_scraper, advanced_scraper, browser_automation],
+    goal="Extract and analyze web data efficiently"
+)
+```
+
+## **أفضل ممارسات الاستخراج**
+
+- **احترام robots.txt**: تحقق دائماً واتبع سياسات استخراج المواقع
+- **تحديد المعدل**: نفّذ تأخيرات بين الطلبات لتجنب إرهاق الخوادم
+- **وكيل المستخدم**: استخدم سلاسل وكيل مستخدم مناسبة لتعريف الروبوت الخاص بك
+- **الامتثال القانوني**: تأكد من أن أنشطة الاستخراج تتوافق مع شروط الخدمة
+- **معالجة الأخطاء**: نفّذ معالجة أخطاء قوية لمشاكل الشبكة والطلبات المحظورة
+- **جودة البيانات**: تحقق من صحة البيانات المستخرجة ونظّفها قبل المعالجة
+
+## **دليل اختيار الأداة**
+
+- **المهام البسيطة**: استخدم `ScrapeWebsiteTool` لاستخراج المحتوى الأساسي
+- **المواقع كثيفة JavaScript**: استخدم `SeleniumScrapingTool` للمحتوى الديناميكي
+- **التوسع والأداء**: استخدم `FirecrawlScrapeWebsiteTool` للاستخراج بكميات كبيرة
+- **البنية التحتية السحابية**: استخدم `BrowserBaseLoadTool` لأتمتة المتصفح القابلة للتوسع
+- **سير العمل المعقدة**: استخدم `StagehandTool` لتفاعلات المتصفح الذكية

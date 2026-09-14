@@ -11,7 +11,6 @@ from patronus_local_evaluator_tool import (  # type: ignore[import-not-found]
 )
 
 
-# Test the PatronusLocalEvaluatorTool where agent uses the local evaluator
 client = Client()
 
 
@@ -41,7 +40,6 @@ patronus_eval_tool = PatronusLocalEvaluatorTool(
     evaluated_model_gold_answer="example label",
 )
 
-# Create a new agent
 coding_agent = Agent(
     role="Coding Agent",
     goal="Generate high quality code and verify that the output is code by using Patronus AI's evaluation tool.",
@@ -50,7 +48,6 @@ coding_agent = Agent(
     verbose=True,
 )
 
-# Define tasks
 generate_code = Task(
     description="Create a simple program to generate the first N numbers in the Fibonacci sequence. Select the most appropriate evaluator and criteria for evaluating your output.",
     expected_output="Program that generates the first N numbers in the Fibonacci sequence.",

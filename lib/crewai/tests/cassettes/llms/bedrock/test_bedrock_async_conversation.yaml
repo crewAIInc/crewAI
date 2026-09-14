@@ -21,21 +21,23 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":622},"output":{"message":{"content":[{"text":"Your
-        name is Alice."}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":31,"outputTokens":8,"serverToolUsage":{},"totalTokens":39}}'
+      string: '{"metrics":{"latencyMs":1900},"output":{"message":{"content":[{"text":"Your
+        name is Alice! You told me that at the start of our conversation."}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":31,"outputTokens":19,"serverToolUsage":{},"totalTokens":50}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '330'
+      - '383'
       Content-Type:
       - application/json
       Date:
-      - Mon, 01 Dec 2025 08:51:04 GMT
+      - Tue, 26 May 2026 17:05:10 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:

@@ -13,6 +13,7 @@ import zipfile
 from rich.console import Console
 from rich.table import Table
 
+from crewai_cli import git
 from crewai_cli.command import BaseCommand, PlusAPIMixin
 from crewai_cli.config import Settings
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
@@ -23,9 +24,10 @@ console = Console()
 _SKILL_MD_TEMPLATE = """\
 ---
 name: {name}
-version: 0.1.0
 description: |
   A short description of what this skill does.
+metadata:
+  version: 0.1.0
 ---
 
 ## Instructions
@@ -40,10 +42,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
     def __init__(self) -> None:
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
-
-    # ------------------------------------------------------------------
-    # create
-    # ------------------------------------------------------------------
 
     def create(self, name: str, in_project: bool = True) -> None:
         """Scaffold a new skill directory.
@@ -66,16 +64,12 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         (skill_dir / "assets").mkdir()
 
         skill_md = skill_dir / "SKILL.md"
-        skill_md.write_text(_SKILL_MD_TEMPLATE.format(name=name))
+        skill_md.write_text(_SKILL_MD_TEMPLATE.format(name=name), encoding="utf-8")
 
         console.print(
             f"[green]Created skill [bold]{name}[/bold] at [bold]{skill_dir}[/bold].[/green]"
         )
         console.print(f"Edit [bold]{skill_md}[/bold] to define the skill instructions.")
-
-    # ------------------------------------------------------------------
-    # install
-    # ------------------------------------------------------------------
 
     def install(self, ref: str) -> None:
         """Download and install a registry skill.
@@ -177,17 +171,19 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                     "version": version,
                     "installed_at": datetime.now(tz=timezone.utc).isoformat(),
                 }
-                (cache_dir / ".crewai_meta.json").write_text(json.dumps(meta, indent=2))
+                (cache_dir / ".crewai_meta.json").write_text(
+                    json.dumps(meta, indent=2), encoding="utf-8"
+                )
             console.print(
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to global cache.[/green]"
             )
 
-    # ------------------------------------------------------------------
-    # publish
-    # ------------------------------------------------------------------
+    def publish(self, org: str | None = None, force: bool = False) -> None:
+        """Publish the skill in the current directory to the registry.
 
-    def publish(self, is_public: bool, org: str | None, force: bool = False) -> None:
-        """Publish the skill in the current directory to the registry."""
+        Skills are always scoped to the publishing organization; there is no
+        public visibility option.
+        """
         skill_md = Path("SKILL.md")
         if not skill_md.exists():
             console.print(
@@ -196,15 +192,53 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             )
             raise SystemExit(1)
 
-        # Parse frontmatter to extract name + version
+        if not force:
+            try:
+                repository = git.Repository(fetch=False)
+            except ValueError as exc:
+                if "not a Git repository" not in str(exc):
+                    console.print(
+                        f"[red]Unable to validate git state: {exc}\n"
+                        "Fix the issue or pass --force to skip this check.[/red]"
+                    )
+                    raise SystemExit(1) from exc
+                # Standalone skill directories may live outside any git repo;
+                # there is no git state to validate in that case.
+                repository = None
+            if repository is not None:
+                try:
+                    # Refresh remote-tracking refs so is_synced() compares
+                    # against the actual remote, not stale local state.
+                    repository.fetch()
+                except ValueError as exc:
+                    console.print(
+                        f"[red]Unable to validate git state: {exc}\n"
+                        "Fix the issue or pass --force to skip this check.[/red]"
+                    )
+                    raise SystemExit(1) from exc
+            if repository is not None and not repository.is_synced():
+                console.print(
+                    "[bold red]Failed to publish skill.[/bold red]\n"
+                    "Local changes need to be resolved before publishing. Please do the following:\n"
+                    "* [bold]Commit[/bold] your changes.\n"
+                    "* [bold]Push[/bold] to sync with the remote.\n"
+                    "* [bold]Pull[/bold] the latest changes from the remote.\n"
+                    "\nOnce your repository is up-to-date, retry publishing the skill "
+                    "(or pass --force to skip this check)."
+                )
+                raise SystemExit(1)
+
         try:
-            frontmatter = self._parse_frontmatter(skill_md.read_text())
+            frontmatter = self._parse_frontmatter(skill_md.read_text(encoding="utf-8"))
         except ValueError as exc:
             console.print(f"[red]Failed to parse SKILL.md frontmatter: {exc}[/red]")
             raise SystemExit(1) from exc
 
         name = frontmatter.get("name")
-        version = frontmatter.get("version")
+        raw_metadata = frontmatter.get("metadata")
+        version = (
+            raw_metadata.get("version") if isinstance(raw_metadata, dict) else None
+        )
         description = frontmatter.get("description")
 
         if not name:
@@ -242,7 +276,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             org=effective_org,
             name=name,
             version=version,
-            is_public=is_public,
+            is_public=False,
             description=description,
             encoded_file=encoded_file,
         )
@@ -257,10 +291,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             f"Monitor status at: {base_url}/crewai_plus/skills/{effective_org}/{name}[/green]"
         )
 
-    # ------------------------------------------------------------------
-    # list_cached
-    # ------------------------------------------------------------------
-
     def list_cached(self) -> None:
         """Show locally installed skills."""
         table = Table(title="Installed Skills", show_lines=True)
@@ -269,7 +299,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         table.add_column("Version")
         table.add_column("Path")
 
-        # Project-local ./skills/
         local_skills_dir = Path("skills")
         if local_skills_dir.is_dir():
             for skill_dir in sorted(local_skills_dir.iterdir()):
@@ -282,7 +311,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                         str(skill_dir),
                     )
 
-        # Global cache
         cache_root = Path.home() / ".crewai" / "skills"
         if cache_root.exists():
             for org_dir in sorted(cache_root.iterdir()):
@@ -292,7 +320,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                     meta_file = skill_dir / ".crewai_meta.json"
                     if meta_file.exists():
                         try:
-                            meta = json.loads(meta_file.read_text())
+                            meta = json.loads(meta_file.read_text(encoding="utf-8"))
                             table.add_row(
                                 "cache",
                                 f"@{meta['org']}/{meta['name']}",
@@ -305,10 +333,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                             )
 
         console.print(table)
-
-    # ------------------------------------------------------------------
-    # internal helpers
-    # ------------------------------------------------------------------
 
     def _print_current_organization(self) -> None:
         settings = Settings()
@@ -326,7 +350,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
     def _unpack_archive(self, archive_bytes: bytes, dest: Path) -> None:
         """Unpack a .tar.gz or .zip archive into dest."""
-        # Try tar first, then zip
         try:
             with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
                 try:
@@ -337,7 +360,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         except tarfile.TarError:
             pass
 
-        # Fallback: zip
         with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
             _safe_extract_zip(zf, dest)
 
@@ -387,21 +409,52 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             return result
 
     def _read_version(self, skill_md: Path) -> str | None:
-        """Read the version field from a SKILL.md file, or None."""
+        """Read the version from a SKILL.md file's metadata, or None."""
         try:
-            fm = self._parse_frontmatter(skill_md.read_text())
-            return fm.get("version")
+            fm = self._parse_frontmatter(skill_md.read_text(encoding="utf-8"))
+            raw_metadata = fm.get("metadata")
+            if isinstance(raw_metadata, dict):
+                return raw_metadata.get("version")
+            return None
         except Exception:
             return None
 
 
 def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
-    """Path-traversal-safe extraction for Python < 3.12."""
+    """Path-traversal-safe extraction for Python versions without tar filters.
+
+    Validates both the member's own path and, for symlink/hardlink members,
+    the link target. Without the link-target check a malicious archive can
+    plant a symlink that escapes ``dest`` (e.g. ``link -> /home/user/.ssh``)
+    followed by a regular member written *through* that link
+    (``link/authorized_keys``), escaping ``dest`` even though every member
+    name resolves inside it. This mirrors the protection that
+    ``tarfile.extractall(..., filter="data")`` provides when available.
+    """
     dest_resolved = dest.resolve()
     for member in tf.getmembers():
         member_path = (dest / member.name).resolve()
         if not member_path.is_relative_to(dest_resolved):
             raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
+        if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
+            raise ValueError(f"Blocked unsupported tar member: {member.name!r}")
+        if member.issym() or member.islnk():
+            link_target = member.linkname
+            # Absolute link targets always escape the destination.
+            if os.path.isabs(link_target):
+                raise ValueError(
+                    f"Blocked link target escaping destination: "
+                    f"{member.name!r} -> {link_target!r}"
+                )
+            # Hardlink names are relative to the archive root; symlink
+            # targets are relative to the member's own directory.
+            anchor = dest if member.islnk() else (dest / member.name).parent
+            resolved_target = (anchor / link_target).resolve()
+            if not resolved_target.is_relative_to(dest_resolved):
+                raise ValueError(
+                    f"Blocked link target escaping destination: "
+                    f"{member.name!r} -> {link_target!r}"
+                )
     tf.extractall(dest)  # noqa: S202
 
 

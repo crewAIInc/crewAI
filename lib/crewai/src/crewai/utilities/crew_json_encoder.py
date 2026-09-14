@@ -40,14 +40,9 @@ class CrewJSONEncoder(json.JSONEncoder):
     def _handle_pydantic_model(obj: BaseModel) -> str | Any:
         try:
             data = obj.model_dump()
-            # Remove circular references
             for key, value in data.items():
                 if isinstance(value, BaseModel):
-                    data[key] = str(
-                        value
-                    )  # Convert nested models to string representation
+                    data[key] = str(value)
             return data
         except RecursionError:
-            return str(
-                obj
-            )  # Fall back to string representation if circular reference is detected
+            return str(obj)

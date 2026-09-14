@@ -64,7 +64,6 @@ class SerplyScholarSearchTool(BaseTool):
         elif "search_query" in kwargs:
             query_payload["q"] = kwargs["search_query"]
 
-        # build the url
         url = f"{self.search_url}{urlencode(query_payload)}"
 
         response = requests.request(

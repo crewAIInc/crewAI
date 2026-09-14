@@ -137,7 +137,6 @@ def test_context_manager_with_filtered_tools(echo_server_script):
         assert len(tools) == 1
         assert tools[0].name == "echo_tool"
         assert tools[0].run(text="hello") == "Echo: hello"
-        # Check that calc_tool is not present
         with pytest.raises(IndexError):
             _ = tools[1]
         with pytest.raises(KeyError):
@@ -152,7 +151,6 @@ def test_context_manager_sse_with_filtered_tools(echo_sse_server):
         assert len(tools) == 1
         assert tools[0].name == "calc_tool"
         assert tools[0].run(a=10, b=5) == "15"
-        # Check that echo_tool is not present
         with pytest.raises(IndexError):
             _ = tools[1]
         with pytest.raises(KeyError):

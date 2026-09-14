@@ -93,14 +93,11 @@ class TestFileResolver:
         resolver = FileResolver(upload_cache=cache)
         file = ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test.png"))
 
-        # First resolution
         resolved1 = resolver.resolve(file, "openai")
-        # Second resolution (should use same base64 encoding)
         resolved2 = resolver.resolve(file, "openai")
 
         assert isinstance(resolved1, InlineBase64)
         assert isinstance(resolved2, InlineBase64)
-        # Data should be identical
         assert resolved1.data == resolved2.data
 
     def test_clear_cache(self):
@@ -108,7 +105,6 @@ class TestFileResolver:
         cache = UploadCache()
         file = ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test.png"))
 
-        # Add something to cache manually
         cache.set(file=file, provider="gemini", file_id="test")
 
         resolver = FileResolver(upload_cache=cache)

@@ -1,0 +1,15 @@
+schema: crewai.flow/v1
+name: {{flow_name}}
+description: A declarative CrewAI Flow.
+
+state:
+  type: dict
+  default:
+    topic: AI agents
+
+methods:
+  start:
+    start: true
+    do:
+      call: expression
+      expr: state.topic

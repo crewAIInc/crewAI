@@ -12,7 +12,6 @@ from crewai_tools.aws.bedrock.exceptions import (
 )
 
 
-# Load environment variables from .env file
 load_dotenv()
 
 
@@ -69,7 +68,6 @@ class BedrockKBRetrieverTool(BaseTool):
         else:
             self.retrieval_configuration = retrieval_configuration
 
-        # Validate parameters
         self._validate_parameters()
 
         # Update the description to include the knowledge base details
@@ -83,7 +81,6 @@ class BedrockKBRetrieverTool(BaseTool):
         """
         vector_search_config = {}
 
-        # Add number of results if provided
         if self.number_of_results is not None:
             vector_search_config["numberOfResults"] = self.number_of_results
 
@@ -92,7 +89,6 @@ class BedrockKBRetrieverTool(BaseTool):
     def _validate_parameters(self) -> None:
         """Validate the parameters according to AWS API requirements."""
         try:
-            # Validate knowledge_base_id
             if not self.knowledge_base_id:
                 raise BedrockValidationError("knowledge_base_id cannot be empty")
             if not isinstance(self.knowledge_base_id, str):
@@ -106,7 +102,6 @@ class BedrockKBRetrieverTool(BaseTool):
                     "knowledge_base_id must contain only alphanumeric characters"
                 )
 
-            # Validate next_token if provided
             if self.next_token:
                 if not isinstance(self.next_token, str):
                     raise BedrockValidationError("next_token must be a string")
@@ -117,7 +112,6 @@ class BedrockKBRetrieverTool(BaseTool):
                 if " " in self.next_token:
                     raise BedrockValidationError("next_token cannot contain spaces")
 
-            # Validate number_of_results if provided
             if self.number_of_results is not None:
                 if not isinstance(self.number_of_results, int):
                     raise BedrockValidationError("number_of_results must be an integer")
@@ -138,12 +132,10 @@ class BedrockKBRetrieverTool(BaseTool):
         Returns:
             Dict[str, Any]: Processed result with standardized format
         """
-        # Extract content
         content_obj = result.get("content", {})
         content = content_obj.get("text", "")
         content_type = content_obj.get("type", "text")
 
-        # Extract location information
         location = result.get("location", {})
         location_type = location.get("type", "unknown")
         source_uri = None
@@ -160,7 +152,6 @@ class BedrockKBRetrieverTool(BaseTool):
             "sqlLocation": {"field": "query", "type": "SQL"},
         }
 
-        # Extract the URI based on location type
         for loc_key, config in location_mapping.items():
             if loc_key in location:
                 source_uri = location[loc_key].get(config["field"])
@@ -168,7 +159,6 @@ class BedrockKBRetrieverTool(BaseTool):
                     location_type = config["type"]
                 break
 
-        # Create result object
         result_object = {
             "content": content,
             "content_type": content_type,
@@ -176,18 +166,15 @@ class BedrockKBRetrieverTool(BaseTool):
             "source_uri": source_uri,
         }
 
-        # Add optional fields if available
         if "score" in result:
             result_object["score"] = result["score"]
 
         if "metadata" in result:
             result_object["metadata"] = result["metadata"]
 
-        # Handle byte content if present
         if "byteContent" in content_obj:
             result_object["byte_content"] = content_obj["byteContent"]
 
-        # Handle row content if present
         if "row" in content_obj:
             result_object["row_content"] = content_obj["row"]
 
@@ -212,13 +199,11 @@ class BedrockKBRetrieverTool(BaseTool):
                 # AWS SDK will automatically use AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from environment
             )
 
-            # Prepare the request parameters
             retrieve_params = {
                 "knowledgeBaseId": self.knowledge_base_id,
                 "retrievalQuery": {"text": query},
             }
 
-            # Add optional parameters if provided
             if self.retrieval_configuration:
                 retrieve_params["retrievalConfiguration"] = self.retrieval_configuration
 
@@ -228,16 +213,13 @@ class BedrockKBRetrieverTool(BaseTool):
             if self.next_token:
                 retrieve_params["nextToken"] = self.next_token
 
-            # Make the retrieve API call
             response = bedrock_agent_runtime.retrieve(**retrieve_params)
 
-            # Process the response
             results = []
             for result in response.get("retrievalResults", []):
                 processed_result = self._process_retrieval_result(result)
                 results.append(processed_result)
 
-            # Build the response object
             response_object = {}
             if results:
                 response_object["results"] = results
@@ -250,7 +232,6 @@ class BedrockKBRetrieverTool(BaseTool):
             if "guardrailAction" in response:
                 response_object["guardrailAction"] = response["guardrailAction"]
 
-            # Return the results as a JSON string
             return json.dumps(response_object, indent=2)
 
         except ClientError as e:

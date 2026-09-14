@@ -67,7 +67,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
 
     crew_api_url: str
     crew_bearer_token: str
-    max_polling_time: int = 10 * 60  # 10 minutes
+    max_polling_time: int = 10 * 60
 
     def __init__(
         self,
@@ -88,12 +88,9 @@ class InvokeCrewAIAutomationTool(BaseTool):
             max_polling_time: Maximum time in seconds to wait for task completion (default: 600 seconds = 10 minutes)
             crew_inputs: Optional dictionary defining custom input schema fields
         """
-        # Create dynamic args_schema if custom inputs provided
         if crew_inputs:
-            # Start with the base prompt field
             fields = {}
 
-            # Add custom fields
             for field_name, field_def in crew_inputs.items():
                 if isinstance(field_def, tuple):
                     fields[field_name] = field_def
@@ -101,12 +98,10 @@ class InvokeCrewAIAutomationTool(BaseTool):
                     # Assume it's a Field object, extract type from annotation if available
                     fields[field_name] = (str, field_def)
 
-            # Create dynamic model
             args_schema = create_model("DynamicInvokeCrewAIAutomationInput", **fields)  # type: ignore[call-overload]
         else:
             args_schema = InvokeCrewAIAutomationInput
 
-        # Initialize the parent class with proper field values
         super().__init__(
             name=crew_name,
             description=crew_description,
@@ -162,7 +157,6 @@ class InvokeCrewAIAutomationTool(BaseTool):
         if kwargs is None:
             kwargs = {}
 
-        # Start the crew
         response = self._kickoff_crew(inputs=kwargs)
         kickoff_id: str | None = response.get("kickoff_id")
 
@@ -178,7 +172,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
                 if status_response.get("state", "").lower() == "failed":
                     return f"Error: Crew task failed. Response: {status_response}"
             except Exception as e:
-                if i == self.max_polling_time - 1:  # Last attempt
+                if i == self.max_polling_time - 1:
                     return f"Error: Failed to get crew status after {self.max_polling_time} attempts. Last error: {e}"
 
             time.sleep(1)

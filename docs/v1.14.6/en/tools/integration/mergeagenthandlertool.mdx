@@ -1,0 +1,367 @@
+---
+title: Merge Agent Handler Tool
+description: Enables CrewAI agents to securely access third-party integrations like Linear, GitHub, Slack, and more through Merge's Agent Handler platform
+icon: diagram-project
+mode: "wide"
+---
+
+# `MergeAgentHandlerTool`
+
+The `MergeAgentHandlerTool` enables CrewAI agents to securely access third-party integrations through [Merge's Agent Handler](https://www.merge.dev/products/merge-agent-handler) platform. Agent Handler provides pre-built, secure connectors to popular tools like Linear, GitHub, Slack, Notion, and hundreds more—all with built-in authentication, permissions, and monitoring.
+
+## Installation
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## Requirements
+
+- Merge Agent Handler account with a configured Tool Pack
+- Agent Handler API key
+- At least one registered user linked to your Tool Pack
+- Third-party integrations configured in your Tool Pack
+
+## Getting Started with Agent Handler
+
+1. **Sign up** for a Merge Agent Handler account at [ah.merge.dev/signup](https://ah.merge.dev/signup)
+2. **Create a Tool Pack** and configure the integrations you need
+3. **Register users** who will authenticate with the third-party services
+4. **Get your API key** from the Agent Handler dashboard
+5. **Set environment variable**: `export AGENT_HANDLER_API_KEY='your-key-here'`
+6. **Start building** with the MergeAgentHandlerTool in CrewAI
+
+## Notes
+
+- Tool Pack IDs and Registered User IDs can be found in your Agent Handler dashboard or created via API
+- The tool uses the Model Context Protocol (MCP) for communication with Agent Handler
+- Session IDs are automatically generated but can be customized for context persistence
+- All tool calls are logged and auditable through the Agent Handler platform
+- Tool parameters are dynamically discovered from the Agent Handler API and validated automatically
+
+## Usage
+
+### Single Tool Usage
+
+Here's how to use a specific tool from your Tool Pack:
+
+```python {2, 4-9}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Create a tool for Linear issue creation
+linear_create_tool = MergeAgentHandlerTool.from_tool_name(
+    tool_name="linear__create_issue",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+)
+
+# Create a CrewAI agent that uses the tool
+project_manager = Agent(
+    role='Project Manager',
+    goal='Manage project tasks and issues efficiently',
+    backstory='I am an expert at tracking project work and creating actionable tasks.',
+    tools=[linear_create_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+create_issue_task = Task(
+    description="Create a new high-priority issue in Linear titled 'Implement user authentication' with a detailed description of the requirements.",
+    agent=project_manager,
+    expected_output="Confirmation that the issue was created with its ID"
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[project_manager],
+    tasks=[create_issue_task],
+    verbose=True
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+### Loading Multiple Tools from a Tool Pack
+
+You can load all available tools from your Tool Pack at once:
+
+```python {2, 4-8}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Load all tools from the Tool Pack
+tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+)
+
+# Create an agent with access to all tools
+automation_expert = Agent(
+    role='Automation Expert',
+    goal='Automate workflows across multiple platforms',
+    backstory='I can work with any tool in the toolbox to get things done.',
+    tools=tools,
+    verbose=True
+)
+
+automation_task = Task(
+    description="Check for any high-priority issues in Linear and post a summary to Slack.",
+    agent=automation_expert
+)
+
+crew = Crew(
+    agents=[automation_expert],
+    tasks=[automation_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+### Loading Specific Tools Only
+
+Load only the tools you need:
+
+```python {2, 4-10}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Load specific tools from the Tool Pack
+selected_tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    tool_names=["linear__create_issue", "linear__get_issues", "slack__post_message"]
+)
+
+developer_assistant = Agent(
+    role='Developer Assistant',
+    goal='Help developers track and communicate about their work',
+    backstory='I help developers stay organized and keep the team informed.',
+    tools=selected_tools,
+    verbose=True
+)
+
+daily_update_task = Task(
+    description="Get all issues assigned to the current user in Linear and post a summary to the #dev-updates Slack channel.",
+    agent=developer_assistant
+)
+
+crew = Crew(
+    agents=[developer_assistant],
+    tasks=[daily_update_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+## Tool Arguments
+
+### `from_tool_name()` Method
+
+| Argument | Type | Required | Default | Description |
+|:---------|:-----|:---------|:--------|:------------|
+| **tool_name** | `str` | Yes | None | Name of the specific tool to use (e.g., "linear__create_issue") |
+| **tool_pack_id** | `str` | Yes | None | UUID of your Agent Handler Tool Pack |
+| **registered_user_id** | `str` | Yes | None | UUID or origin_id of the registered user |
+| **base_url** | `str` | No | "https://ah-api.merge.dev" | Base URL for Agent Handler API |
+| **session_id** | `str` | No | Auto-generated | MCP session ID for maintaining context |
+
+### `from_tool_pack()` Method
+
+| Argument | Type | Required | Default | Description |
+|:---------|:-----|:---------|:--------|:------------|
+| **tool_pack_id** | `str` | Yes | None | UUID of your Agent Handler Tool Pack |
+| **registered_user_id** | `str` | Yes | None | UUID or origin_id of the registered user |
+| **tool_names** | `list[str]` | No | None | Specific tool names to load. If None, loads all available tools |
+| **base_url** | `str` | No | "https://ah-api.merge.dev" | Base URL for Agent Handler API |
+
+## Environment Variables
+
+```bash
+AGENT_HANDLER_API_KEY=your_api_key_here  # Required for authentication
+```
+
+## Advanced Usage
+
+### Multi-Agent Workflow with Different Tool Access
+
+```python {2, 4-20}
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MergeAgentHandlerTool
+
+# Create specialized tools for different agents
+github_tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    tool_names=["github__create_pull_request", "github__get_pull_requests"]
+)
+
+linear_tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    tool_names=["linear__create_issue", "linear__update_issue"]
+)
+
+slack_tool = MergeAgentHandlerTool.from_tool_name(
+    tool_name="slack__post_message",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+)
+
+# Create specialized agents
+code_reviewer = Agent(
+    role='Code Reviewer',
+    goal='Review pull requests and ensure code quality',
+    backstory='I am an expert at reviewing code changes and providing constructive feedback.',
+    tools=github_tools
+)
+
+task_manager = Agent(
+    role='Task Manager',
+    goal='Track and update project tasks based on code changes',
+    backstory='I keep the project board up to date with the latest development progress.',
+    tools=linear_tools
+)
+
+communicator = Agent(
+    role='Team Communicator',
+    goal='Keep the team informed about important updates',
+    backstory='I make sure everyone knows what is happening in the project.',
+    tools=[slack_tool]
+)
+
+# Create sequential tasks
+review_task = Task(
+    description="Review all open pull requests in the 'api-service' repository and identify any that need attention.",
+    agent=code_reviewer,
+    expected_output="List of pull requests that need review or have issues"
+)
+
+update_task = Task(
+    description="Update Linear issues based on the pull request review findings. Mark completed PRs as done.",
+    agent=task_manager,
+    expected_output="Summary of updated Linear issues"
+)
+
+notify_task = Task(
+    description="Post a summary of today's code review and task updates to the #engineering Slack channel.",
+    agent=communicator,
+    expected_output="Confirmation that the message was posted"
+)
+
+# Create a crew with sequential processing
+crew = Crew(
+    agents=[code_reviewer, task_manager, communicator],
+    tasks=[review_task, update_task, notify_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+### Custom Session Management
+
+Maintain context across multiple tool calls using session IDs:
+
+```python {2, 4-17}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Create tools with the same session ID to maintain context
+session_id = "project-sprint-planning-2024"
+
+create_tool = MergeAgentHandlerTool(
+    name="linear_create_issue",
+    description="Creates a new issue in Linear",
+    tool_name="linear__create_issue",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    session_id=session_id
+)
+
+update_tool = MergeAgentHandlerTool(
+    name="linear_update_issue",
+    description="Updates an existing issue in Linear",
+    tool_name="linear__update_issue",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    session_id=session_id
+)
+
+sprint_planner = Agent(
+    role='Sprint Planner',
+    goal='Plan and organize sprint tasks',
+    backstory='I help teams plan effective sprints with well-defined tasks.',
+    tools=[create_tool, update_tool],
+    verbose=True
+)
+
+planning_task = Task(
+    description="Create 5 sprint tasks for the authentication feature and set their priorities based on dependencies.",
+    agent=sprint_planner
+)
+
+crew = Crew(
+    agents=[sprint_planner],
+    tasks=[planning_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+## Use Cases
+
+### Unified Integration Access
+- Access hundreds of third-party tools through a single unified API without managing multiple SDKs
+- Enable agents to work with Linear, GitHub, Slack, Notion, Jira, Asana, and more from one integration point
+- Reduce integration complexity by letting Agent Handler manage authentication and API versioning
+
+### Secure Enterprise Workflows
+- Leverage built-in authentication and permission management for all third-party integrations
+- Maintain enterprise security standards with centralized access control and audit logging
+- Enable agents to access company tools without exposing API keys or credentials in code
+
+### Cross-Platform Automation
+- Build workflows that span multiple platforms (e.g., create GitHub issues from Linear tasks, sync Notion pages to Slack)
+- Enable seamless data flow between different tools in your tech stack
+- Create intelligent automation that understands context across different platforms
+
+### Dynamic Tool Discovery
+- Load all available tools at runtime without hardcoding integration logic
+- Enable agents to discover and use new tools as they're added to your Tool Pack
+- Build flexible agents that can adapt to changing tool availability
+
+### User-Specific Tool Access
+- Different users can have different tool permissions and access levels
+- Enable multi-tenant workflows where agents act on behalf of specific users
+- Maintain proper attribution and permissions for all tool actions
+
+## Available Integrations
+
+Merge Agent Handler supports hundreds of integrations across multiple categories:
+
+- **Project Management**: Linear, Jira, Asana, Monday.com, ClickUp
+- **Code Management**: GitHub, GitLab, Bitbucket
+- **Communication**: Slack, Microsoft Teams, Discord
+- **Documentation**: Notion, Confluence, Google Docs
+- **CRM**: Salesforce, HubSpot, Pipedrive
+- **And many more...**
+
+Visit the [Merge Agent Handler documentation](https://docs.ah.merge.dev/) for a complete list of available integrations.
+
+## Error Handling
+
+The tool provides comprehensive error handling:
+
+- **Authentication Errors**: Invalid or missing API keys
+- **Permission Errors**: User lacks permission for the requested action
+- **API Errors**: Issues communicating with Agent Handler or third-party services
+- **Validation Errors**: Invalid parameters passed to tool methods
+
+All errors are wrapped in `MergeAgentHandlerToolError` for consistent error handling.

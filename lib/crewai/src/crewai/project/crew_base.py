@@ -46,7 +46,6 @@ class AgentConfig(TypedDict, total=False):
     Fields can be either string references (from YAML) or actual instances (after processing).
     """
 
-    # Core agent attributes (from BaseAgent)
     role: str
     goal: str
     backstory: str
@@ -58,35 +57,28 @@ class AgentConfig(TypedDict, total=False):
     max_tokens: int
     callbacks: list[str]
 
-    # LLM configuration
     llm: str
     function_calling_llm: str
     use_system_prompt: bool
 
-    # Template configuration
     system_template: str
     prompt_template: str
     response_template: str
 
-    # Tools and handlers (can be string references or instances)
     tools: list[str] | list[BaseTool]
     step_callback: str
     cache_handler: str | CacheHandler
 
-    # Code execution
     allow_code_execution: bool
     code_execution_mode: Literal["safe", "unsafe"]
 
-    # Context and performance
     respect_context_window: bool
     max_retry_limit: int
 
-    # Multimodal and reasoning
     multimodal: bool
     reasoning: bool
     max_reasoning_attempts: int
 
-    # Knowledge configuration
     knowledge_sources: list[str] | list[Any]
     knowledge_storage: str | Any
     knowledge_config: dict[str, Any]
@@ -95,7 +87,6 @@ class AgentConfig(TypedDict, total=False):
     crew_knowledge_context: str
     knowledge_search_query: str
 
-    # Misc configuration
     inject_date: bool
     date_format: str
     from_repository: str
@@ -110,36 +101,29 @@ class TaskConfig(TypedDict, total=False):
     Fields can be either string references (from YAML) or actual instances (after processing).
     """
 
-    # Core task attributes
     name: str
     description: str
     expected_output: str
 
-    # Agent and context
     agent: str
     context: list[str]
 
-    # Tools and callbacks (can be string references or instances)
     tools: list[str] | list[BaseTool]
     callback: str
     callbacks: list[str]
 
-    # Output configuration
     output_json: str
     output_pydantic: str
     output_file: str
     create_directory: bool
 
-    # Execution configuration
     async_execution: bool
     human_input: bool
     markdown: bool
 
-    # Guardrail configuration
     guardrail: Callable[[TaskOutput], tuple[bool, Any]] | str
     guardrail_max_retries: int
 
-    # Misc configuration
     allow_crewai_trigger_context: bool
 
 
@@ -468,7 +452,15 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
         )
     }
 
-    if not hook_methods:
+    # Methods decorated with @on(InterceptionPoint.X) carry ``_interception_point``
+    # instead of the legacy markers above.
+    on_methods = {
+        name: method
+        for name, method in cls.__dict__.items()
+        if hasattr(method, "_interception_point")
+    }
+
+    if not hook_methods and not on_methods:
         return
 
     from crewai.hooks import (
@@ -603,6 +595,25 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
             instance._registered_hook_functions.append(
                 ("after_tool_call", after_tool_hook)
             )
+
+    if on_methods:
+        from crewai.hooks.dispatch import (
+            _wrap_with_filters,
+            register as register_interception_hook,
+        )
+
+        for on_method in on_methods.values():
+            point = on_method._interception_point
+            bound_hook = on_method.__get__(instance, cls)
+            tools_filter = getattr(on_method, "_filter_tools", None)
+            agents_filter = getattr(on_method, "_filter_agents", None)
+            hook = (
+                _wrap_with_filters(bound_hook, agents_filter, tools_filter)
+                if (tools_filter or agents_filter)
+                else bound_hook
+            )
+            register_interception_hook(point, hook)
+            instance._registered_hook_functions.append((point.value, hook))
 
     instance._hooks_being_registered = False
 
@@ -811,7 +822,6 @@ class CrewBase(metaclass=_CrewBaseType):
         Reference: https://stackoverflow.com/questions/11091609/setting-a-class-metaclass-using-a-decorator
     """
 
-    # e
     if TYPE_CHECKING:
 
         def __init__(self, *args: Any, **kwargs: Any) -> None:

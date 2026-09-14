@@ -19,14 +19,11 @@ def _validate_metadata(v: Any) -> dict[str, Any]:
     if not isinstance(v, dict):
         raise ValueError("Metadata must be a dictionary")
 
-    # Validate that all keys are strings
     for key, value in v.items():
         if not isinstance(key, str):
             raise ValueError(f"Metadata keys must be strings, got {type(key)}")
 
-        # Validate nested dictionaries (prevent deeply nested structures)
         if isinstance(value, dict):
-            # Check for nested dictionaries (limit depth to 1)
             for nested_key, nested_value in value.items():
                 if not isinstance(nested_key, str):
                     raise ValueError(
@@ -35,7 +32,6 @@ def _validate_metadata(v: Any) -> dict[str, Any]:
                 if isinstance(nested_value, dict):
                     raise ValueError("Metadata can only be nested one level deep")
 
-    # Check for maximum metadata size (prevent DoS)
     if len(str(v)) > 10_000:  # Limit metadata size to 10KB
         raise ValueError("Metadata size exceeds maximum allowed (10KB)")
 
@@ -107,7 +103,6 @@ class Fingerprint(BaseModel):
         """
         fingerprint = cls(metadata=metadata or {})
         if seed:
-            # For seed-based generation, we need to manually set the _uuid_str after creation
             fingerprint.__dict__["_uuid_str"] = cls._generate_uuid(seed)
         return fingerprint
 
@@ -152,7 +147,6 @@ class Fingerprint(BaseModel):
 
         fingerprint = cls(metadata=data.get("metadata", {}))
 
-        # For consistency with existing stored fingerprints, we need to manually set these
         if "uuid_str" in data:
             fingerprint.__dict__["_uuid_str"] = data["uuid_str"]
         if "created_at" in data and isinstance(data["created_at"], str):

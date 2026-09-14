@@ -68,12 +68,12 @@ def select_provider(provider_models: dict[str, list[str]]) -> str | None | bool:
     provider = select_choice(
         "Select a provider to set up:", [*predefined_providers, "other"]
     )
-    if provider is None:  # User typed 'q'
+    if provider is None:
         return None
 
     if provider == "other":
         provider = select_choice("Select a provider from the full list:", all_providers)
-        if provider is None:  # User typed 'q'
+        if provider is None:
             return None
 
     return provider.lower() if provider else False

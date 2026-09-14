@@ -60,7 +60,6 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
     if not isinstance(tool, dict):
         raise ValueError("Tool must be a dictionary")
 
-    # Handle nested function schema format (OpenAI/standard)
     if "function" in tool:
         function_info = tool["function"]
         if not isinstance(function_info, dict):
@@ -70,12 +69,11 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         description = function_info.get("description", "")
         parameters = function_info.get("parameters", {})
     else:
-        # Direct format
         name = tool.get("name", "")
         description = tool.get("description", "")
         parameters = tool.get("parameters", {})
 
-        # Also check for args_schema (Pydantic format)
+        # Fall back to args_schema for Pydantic-defined tools
         if not parameters and "args_schema" in tool:
             if hasattr(tool["args_schema"], "model_json_schema"):
                 schema_output = generate_model_description(tool["args_schema"])

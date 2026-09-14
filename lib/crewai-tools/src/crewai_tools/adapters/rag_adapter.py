@@ -16,7 +16,6 @@ class RAGAdapter(Adapter):
     ):
         super().__init__()
 
-        # Prepare embedding configuration
         embedding_config = {"api_key": embedding_api_key, **embedding_kwargs}
 
         self._adapter = RAG(

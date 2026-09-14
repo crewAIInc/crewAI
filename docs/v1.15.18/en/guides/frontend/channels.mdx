@@ -1,0 +1,125 @@
+---
+title: Channels
+description: Run the same CrewAI agent as a chat bot on Slack and Discord with the CopilotKit Channels SDK.
+icon: slack
+mode: "wide"
+---
+
+## Meet your users where they already are
+
+The CrewAI agent you built in the [Overview](/edge/en/guides/frontend/overview) does not have to live behind a web app. The same Crew or Flow can run as a bot inside a messaging platform. No rebuild, no second copy of your agent logic: the agent stays exposed over the [AG-UI protocol](https://docs.ag-ui.com), and a bot process drives it.
+
+CopilotKit's [Channels SDK](https://docs.copilotkit.ai/reference/channels) provides that bot process. It ships a platform-agnostic engine plus per-platform adapters.
+
+## How it fits together
+
+Nothing about your agent server changes. It keeps serving your Crew or Flow over AG-UI exactly as in the Overview. What you add is a separate **bot process**: it connects to a platform adapter, listens for messages, and runs your agent when it is messaged. The reply streams back into the channel.
+
+```
+Slack / Discord  ──►  Channels bot process  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+Your agent server can keep serving the web frontend from the Overview at the same time. The web app and the bot are just two clients of one AG-UI endpoint.
+
+## Slack
+
+<Steps>
+
+<Step title="Install the Channels packages">
+
+```bash
+npm install @copilotkit/channels @copilotkit/channels-slack @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="Create a Slack app and get tokens">
+
+Create an app in the Slack API dashboard for your workspace, enable Socket Mode, and grant it the message and event scopes it needs to read and post in channels. Then expose its tokens to the bot process:
+
+```bash
+export SLACK_BOT_TOKEN=xoxb-...   # bot user token
+export SLACK_APP_TOKEN=xapp-...   # app-level token (Socket Mode)
+```
+
+</Step>
+
+<Step title="Point the bot at your CrewAI agent">
+
+`createBot` wires a Slack adapter to your agent. The `agent` factory returns a `CrewAIAgent` pointed at the AG-UI path your server exposes (the same URL you registered in the runtime in the Overview).
+
+```ts
+// bot.ts
+import { createBot } from "@copilotkit/channels";
+import { slack, defaultSlackTools, defaultSlackContext } from "@copilotkit/channels-slack";
+import { CrewAIAgent } from "@ag-ui/crewai";
+
+const bot = createBot({
+  adapters: [
+    slack({
+      botToken: process.env.SLACK_BOT_TOKEN!, // xoxb-…
+      appToken: process.env.SLACK_APP_TOKEN!, // xapp-… (Socket Mode)
+    }),
+  ],
+  agent: (threadId) => new CrewAIAgent({ url: "http://localhost:8000/recipe" }),
+  tools: [...defaultSlackTools],
+  context: [...defaultSlackContext],
+});
+
+bot.start();
+```
+
+</Step>
+
+<Step title="Run the bot">
+
+Start the bot process alongside your agent server:
+
+```bash
+uvicorn server:app --port 8000   # terminal 1 — CrewAI agent server
+node bot.ts                       # terminal 2 — Slack bot
+```
+
+Message the bot in Slack and it runs your Crew or Flow, streaming the reply back into the thread.
+
+</Step>
+
+</Steps>
+
+<Note>
+Slack app scopes, Socket Mode setup, and the full adapter options are maintained by CopilotKit. Follow the [Slack channel reference](https://docs.copilotkit.ai/reference/channels/slack) together with Slack's own app setup guide for the authoritative steps.
+</Note>
+
+## Discord
+
+Discord uses the same `createBot` engine with the Discord adapter from `@copilotkit/channels-discord`:
+
+```ts
+import { createBot } from "@copilotkit/channels";
+import { discord } from "@copilotkit/channels-discord";
+import { CrewAIAgent } from "@ag-ui/crewai";
+
+const bot = createBot({
+  adapters: [discord({ token: process.env.DISCORD_BOT_TOKEN! })],
+  agent: (threadId) => new CrewAIAgent({ url: "http://localhost:8000/recipe" }),
+});
+
+bot.start();
+```
+
+See the [Discord channel reference](https://docs.copilotkit.ai/reference/channels/discord) for the exact adapter options and bot setup.
+
+## Platform support
+
+Slack and Discord have official Channels adapters (`@copilotkit/channels-slack`, `@copilotkit/channels-discord`). Microsoft Teams is available through CopilotKit's managed offering (currently waitlisted). Check the [Channels reference](https://docs.copilotkit.ai/reference/channels) for the current list before promising a platform.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Frontend Overview" icon="browser" href="/edge/en/guides/frontend/overview">
+    Serve your Crew or Flow over AG-UI — the foundation every channel builds on.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    Pause the agent to collect user approval or input mid-run.
+  </Card>
+</CardGroup>

@@ -1,0 +1,52 @@
+---
+title: "إنشاء الصور باستخدام DALL-E"
+description: "تعلم كيفية استخدام DALL-E لإنشاء صور مدعومة بالذكاء الاصطناعي في مشاريع CrewAI"
+icon: "image"
+mode: "wide"
+---
+
+يدعم CrewAI التكامل مع DALL-E من OpenAI، مما يتيح لـ Agents الذكاء الاصطناعي إنشاء صور كجزء من مهامهم. سيرشدك هذا الدليل عبر كيفية إعداد واستخدام أداة DALL-E في مشاريع CrewAI.
+
+## المتطلبات المسبقة
+
+- crewAI مثبّت (أحدث إصدار)
+- مفتاح OpenAI API مع وصول إلى DALL-E
+
+## إعداد أداة DALL-E
+
+<Steps>
+    <Step title="استيراد أداة DALL-E">
+        ```python
+        from crewai_tools import DallETool
+        ```
+    </Step>
+
+    <Step title="إضافة أداة DALL-E إلى تهيئة Agent">
+        ```python
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'],
+                tools=[SerperDevTool(), DallETool()],
+                allow_delegation=False,
+                verbose=True
+            )
+        ```
+    </Step>
+</Steps>
+
+## استخدام أداة DALL-E
+
+بمجرد إضافة أداة DALL-E إلى Agent، يمكنه إنشاء صور بناءً على مطالبات نصية. ستعيد الأداة رابط URL للصورة المُنشأة.
+
+## أفضل الممارسات
+
+1. **كن محددًا في مطالبات إنشاء الصور** للحصول على أفضل النتائج.
+2. **ضع في اعتبارك وقت الإنشاء** - قد يستغرق إنشاء الصور بعض الوقت.
+3. **اتبع سياسات الاستخدام** - التزم دائمًا بسياسات استخدام OpenAI عند إنشاء الصور.
+
+## استكشاف الأخطاء
+
+1. **تحقق من وصول API** - تأكد من أن مفتاح OpenAI API لديه وصول إلى DALL-E.
+2. **توافق الإصدارات** - تأكد من استخدام أحدث إصدار من crewAI وcrewai-tools.
+3. **تهيئة الأداة** - تحقق من إضافة أداة DALL-E بشكل صحيح لقائمة أدوات الـ Agent.

@@ -141,7 +141,6 @@ class MemoryConfig(BaseModel):
     compute_composite_score.
     """
 
-    # -- Composite score weights --
     # The recall composite score is:
     #   semantic_weight * similarity + recency_weight * decay + importance_weight * importance
     # These should sum to ~1.0 for intuitive 0-1 scoring.
@@ -183,8 +182,6 @@ class MemoryConfig(BaseModel):
         ),
     )
 
-    # -- Consolidation (on save) --
-
     consolidation_threshold: float = Field(
         default=0.85,
         ge=0.0,
@@ -215,8 +212,6 @@ class MemoryConfig(BaseModel):
         ),
     )
 
-    # -- Save defaults --
-
     default_importance: float = Field(
         default=0.5,
         ge=0.0,
@@ -228,7 +223,6 @@ class MemoryConfig(BaseModel):
         ),
     )
 
-    # -- Recall depth control --
     # The RecallFlow router uses these thresholds to decide between returning
     # results immediately ("synthesize") and doing an extra LLM-driven
     # exploration round ("explore_deeper").
@@ -330,7 +324,6 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     """
     if not texts:
         return []
-    # Filter out empty texts, remembering their positions
     valid: list[tuple[int, str]] = [
         (i, t) for i, t in enumerate(texts) if t and t.strip()
     ]

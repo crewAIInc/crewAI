@@ -111,3 +111,11 @@ def test_exasearchtool_alias_is_deprecated():
         with pytest.warns(DeprecationWarning, match="ExaSearchTool"):
             tool = EXASearchTool(api_key="test_api_key")
         assert isinstance(tool, ExaSearchTool)
+
+
+def test_deprecated_alias_excluded_from_tool_specs():
+    from crewai_tools.generate_tool_specs import ToolSpecExtractor
+
+    names = {tool["name"] for tool in ToolSpecExtractor().extract_all_tools()}
+    assert "ExaSearchTool" in names
+    assert "EXASearchTool" not in names

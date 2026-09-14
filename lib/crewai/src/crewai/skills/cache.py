@@ -9,10 +9,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 import logging
+import os
 from pathlib import Path
 import tarfile
 from typing import TypedDict
 import zipfile
+
+from crewai.skills.validation import versions_match
 
 
 _logger = logging.getLogger(__name__)
@@ -38,13 +41,45 @@ class SkillCacheManager:
     def _skill_dir(self, org: str, name: str) -> Path:
         return self._root / org / name
 
-    def get_cached_path(self, org: str, name: str) -> Path | None:
-        """Return the cached skill directory path if it exists, else None."""
+    def get_cached_path(
+        self, org: str, name: str, version: str | None = None
+    ) -> Path | None:
+        """Return the cached skill directory path if usable, else None.
+
+        Args:
+            org: Organisation slug.
+            name: Skill name.
+            version: When given, the cached entry must record this version.
+                The cache holds one version per skill, so a pinned lookup for a
+                different version reports a miss and the caller re-downloads
+                rather than loading the wrong version.
+
+        Returns:
+            The cached skill directory, or None on a miss.
+        """
         skill_dir = self._skill_dir(org, name)
         meta_file = skill_dir / _META_FILENAME
-        if skill_dir.is_dir() and meta_file.exists():
-            return skill_dir
-        return None
+        if not (skill_dir.is_dir() and meta_file.exists()):
+            return None
+        if version is not None and not self._records_version(meta_file, version):
+            return None
+        return skill_dir
+
+    def _records_version(self, meta_file: Path, version: str) -> bool:
+        """Return True when the cache metadata records *version*."""
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            # ValueError covers both JSONDecodeError and the UnicodeDecodeError
+            # a non-UTF-8 file raises, so a corrupted entry reads as a miss.
+            _logger.debug("Unreadable cache entry: %s", meta_file, exc_info=True)
+            return False
+        if not isinstance(meta, dict):
+            _logger.debug("Malformed cache entry: %s", meta_file)
+            return False
+        # versions_match() treats a non-string version as no match, so a
+        # corrupted entry reads as a miss rather than raising.
+        return versions_match(version, meta.get("version"))
 
     def store(
         self, org: str, name: str, version: str | None, archive_bytes: bytes
@@ -63,7 +98,6 @@ class SkillCacheManager:
             Path to the stored skill directory.
         """
         skill_dir = self._skill_dir(org, name)
-        # Wipe any previous version
         if skill_dir.exists():
             import shutil
 
@@ -72,7 +106,6 @@ class SkillCacheManager:
 
         import io
 
-        # Try tar.gz first, fall back to zip
         try:
             with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
                 try:
@@ -89,7 +122,9 @@ class SkillCacheManager:
             "version": version,
             "installed_at": datetime.now(tz=timezone.utc).isoformat(),
         }
-        (skill_dir / _META_FILENAME).write_text(json.dumps(meta, indent=2))
+        (skill_dir / _META_FILENAME).write_text(
+            json.dumps(meta, indent=2), encoding="utf-8"
+        )
         return skill_dir
 
     def list_cached(self) -> list[SkillMetadata]:
@@ -104,7 +139,9 @@ class SkillCacheManager:
                 meta_file = skill_dir / _META_FILENAME
                 if meta_file.exists():
                     try:
-                        results.append(json.loads(meta_file.read_text()))
+                        results.append(
+                            json.loads(meta_file.read_text(encoding="utf-8"))
+                        )
                     except (json.JSONDecodeError, KeyError):
                         _logger.debug(
                             "Skipping malformed cache entry: %s",
@@ -129,12 +166,36 @@ class SkillCacheManager:
 
 
 def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
-    """Path-traversal-safe extraction for Python < 3.12."""
+    """Path-traversal-safe extraction for Python versions without tar filters.
+
+    Validates both the member's own path and, for symlink/hardlink members,
+    the link target. Without the link-target check a malicious archive can
+    plant a symlink that escapes ``dest`` followed by a regular member written
+    through that link, escaping ``dest`` even though every member name resolves
+    inside it. This mirrors the protection that
+    ``tarfile.extractall(..., filter="data")`` provides when available.
+    """
     dest_resolved = dest.resolve()
     for member in tf.getmembers():
         member_path = (dest / member.name).resolve()
         if not member_path.is_relative_to(dest_resolved):
             raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
+        if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
+            raise ValueError(f"Blocked unsupported tar member: {member.name!r}")
+        if member.issym() or member.islnk():
+            link_target = member.linkname
+            if os.path.isabs(link_target):
+                raise ValueError(
+                    f"Blocked link target escaping destination: "
+                    f"{member.name!r} -> {link_target!r}"
+                )
+            anchor = dest if member.islnk() else (dest / member.name).parent
+            resolved_target = (anchor / link_target).resolve()
+            if not resolved_target.is_relative_to(dest_resolved):
+                raise ValueError(
+                    f"Blocked link target escaping destination: "
+                    f"{member.name!r} -> {link_target!r}"
+                )
     tf.extractall(dest)  # noqa: S202
 
 

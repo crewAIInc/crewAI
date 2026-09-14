@@ -1,0 +1,217 @@
+---
+title: التثبيت
+description: ابدأ مع CrewAI - التثبيت والتهيئة وبناء أول فريق AI
+icon: wrench
+mode: "wide"
+---
+
+### شاهد: بناء Agents و Flows في CrewAI باستخدام Coding Agent Skills
+
+قم بتثبيت مهارات وكيل البرمجة الخاصة بنا (Claude Code، Codex، ...) لتشغيل وكلاء البرمجة بسرعة مع CrewAI.
+
+يمكنك تثبيتها باستخدام `npx skills add crewaiinc/skills`
+
+<iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
+
+## فيديو تعليمي
+
+شاهد هذا الفيديو التعليمي لعرض تفصيلي لعملية التثبيت:
+
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.youtube.com/embed/-kSOTtYzgEw"
+  title="CrewAI Installation Guide"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+## دليل نصي
+
+<Note>
+  **متطلبات إصدار Python**
+
+يتطلب CrewAI إصدار `Python >=3.10 and <3.14`. إليك كيفية التحقق من إصدارك:
+
+```bash
+python3 --version
+```
+
+إذا كنت بحاجة لتحديث Python، قم بزيارة [python.org/downloads](https://python.org/downloads)
+
+</Note>
+
+<Note>
+  **متطلبات OpenAI SDK**
+
+يتطلب CrewAI 0.175.0 إصدار `openai >= 1.13.3`. إذا كنت تدير التبعيات بنفسك، تأكد من أن بيئتك تستوفي هذا الشرط لتجنب مشاكل الاستيراد/التشغيل.
+
+</Note>
+
+يستخدم CrewAI أداة `uv` لإدارة التبعيات والحزم. وهي تبسّط إعداد المشروع وتنفيذه وتوفر تجربة سلسة.
+
+إذا لم تكن قد ثبّتت `uv` بعد، اتبع **الخطوة 1** لإعدادها بسرعة على نظامك، وإلا يمكنك الانتقال إلى **الخطوة 2**.
+
+<Steps>
+    <Step title="تثبيت uv">
+      - **على macOS/Linux:**
+
+        استخدم `curl` لتحميل السكريبت وتنفيذه عبر `sh`:
+
+        ```shell
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
+        إذا لم يكن `curl` متاحًا على نظامك، يمكنك استخدام `wget`:
+
+        ```shell
+        wget -qO- https://astral.sh/uv/install.sh | sh
+        ```
+
+      - **على Windows:**
+
+        استخدم `irm` لتحميل السكريبت و`iex` لتنفيذه:
+
+        ```shell
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+        ```
+        إذا واجهت أي مشاكل، راجع [دليل تثبيت UV](https://docs.astral.sh/uv/getting-started/installation/) لمزيد من المعلومات.
+    </Step>
+
+    <Step title="تثبيت CrewAI">
+      - شغّل الأمر التالي لتثبيت واجهة سطر أوامر `crewai`:
+        ```shell
+        uv tool install crewai
+        ```
+          <Warning>
+            إذا ظهر تحذير بشأن `PATH`، شغّل هذا الأمر لتحديث الصدفة:
+            ```shell
+            uv tool update-shell
+            ```
+          </Warning>
+
+          <Warning>
+            إذا واجهت خطأ بناء `chroma-hnswlib==0.7.6` (`fatal error C1083: Cannot open include file: 'float.h'`) على Windows، ثبّت [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) مع خيار *Desktop development with C++*.
+          </Warning>
+
+      - للتحقق من تثبيت `crewai`، شغّل:
+        ```shell
+        uv tool list
+        ```
+      - يجب أن ترى شيئًا مثل:
+        ```shell
+        crewai v0.102.0
+        - crewai
+        ```
+      - إذا كنت بحاجة لتحديث `crewai`، شغّل:
+        ```shell
+        uv tool install crewai --upgrade
+        ```
+      <Check>تم التثبيت بنجاح! أنت جاهز لإنشاء أول Crew!</Check>
+    </Step>
+
+</Steps>
+
+# إنشاء مشروع CrewAI
+
+نوصي باستخدام قالب `YAML` لنهج منظم في تعريف الـ Agents والمهام. إليك كيفية البدء:
+
+<Steps>
+  <Step title="إنشاء هيكل المشروع">
+    - شغّل أمر `crewai` عبر CLI:
+      ```shell
+      crewai create crew <your_project_name>
+      ```
+
+    - سينشئ هذا مشروعًا جديدًا بالهيكل التالي:
+      ```
+      my_project/
+      ├── .gitignore
+      ├── knowledge/
+      ├── pyproject.toml
+      ├── README.md
+      ├── .env
+      └── src/
+          └── my_project/
+              ├── __init__.py
+              ├── main.py
+              ├── crew.py
+              ├── tools/
+              │   ├── custom_tool.py
+              │   └── __init__.py
+              └── config/
+                  ├── agents.yaml
+                  └── tasks.yaml
+      ```
+
+  </Step>
+
+  <Step title="تخصيص مشروعك">
+    - سيحتوي مشروعك على هذه الملفات الأساسية:
+      | الملف | الغرض |
+      | --- | --- |
+      | `agents.yaml` | تعريف الـ Agents وأدوارهم |
+      | `tasks.yaml` | إعداد مهام الـ Agents وسير العمل |
+      | `.env` | تخزين مفاتيح API ومتغيرات البيئة |
+      | `main.py` | نقطة دخول المشروع وتدفق التنفيذ |
+      | `crew.py` | تنسيق وإدارة الـ Crew |
+      | `tools/` | مجلد الأدوات المخصصة |
+      | `knowledge/` | مجلد قاعدة المعرفة |
+
+    - ابدأ بتحرير `agents.yaml` و`tasks.yaml` لتعريف سلوك الـ Crew.
+    - احتفظ بالمعلومات الحساسة مثل مفاتيح API في `.env`.
+
+  </Step>
+
+  <Step title="تشغيل الـ Crew">
+    - قبل تشغيل الـ Crew، تأكد من تنفيذ:
+      ```bash
+      crewai install
+      ```
+    - إذا كنت بحاجة لتثبيت حزم إضافية، استخدم:
+      ```shell
+      uv add <package-name>
+      ```
+    - لتشغيل الـ Crew، نفّذ الأمر التالي في جذر مشروعك:
+      ```bash
+      crewai run
+      ```
+  </Step>
+</Steps>
+
+## خيارات التثبيت للمؤسسات
+
+<Note type="info">
+للفرق والمؤسسات، يوفر CrewAI خيارات نشر مؤسسية تزيل تعقيد الإعداد:
+
+### CrewAI AMP (SaaS)
+
+- لا يتطلب أي تثبيت - فقط سجّل مجانًا على [app.crewai.com](https://app.crewai.com)
+- تحديثات وصيانة تلقائية
+- بنية تحتية مُدارة وقابلة للتوسع
+- بناء Crews بدون كتابة كود
+
+### CrewAI Factory (استضافة ذاتية)
+
+- نشر بالحاويات على بنيتك التحتية
+- يدعم أي مزود سحابي بما في ذلك النشر المحلي
+- تكامل مع أنظمة الأمان الحالية
+
+<Card title="استكشف خيارات المؤسسات" icon="building" href="https://share.hsforms.com/1Ooo2UViKQ22UOzdr7i77iwr87kg">
+  تعرّف على عروض CrewAI للمؤسسات وجدول عرضًا توضيحيًا
+</Card>
+</Note>
+
+## الخطوات التالية
+
+<CardGroup cols={2}>
+  <Card title="بدء سريع: Flow + وكيل" icon="code" href="/ar/quickstart">
+    اتبع البداية السريعة لإنشاء Flow وتشغيل طاقم بوكيل واحد وإنتاج تقرير.
+  </Card>
+  <Card
+    title="انضم إلى المجتمع"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    تواصل مع مطورين آخرين واحصل على المساعدة وشارك تجاربك مع CrewAI.
+  </Card>
+</CardGroup>

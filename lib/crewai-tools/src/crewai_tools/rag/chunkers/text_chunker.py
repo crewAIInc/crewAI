@@ -12,15 +12,15 @@ class TextChunker(BaseChunker):
         if separators is None:
             separators = [
                 "\n\n\n",  # Multiple line breaks (sections)
-                "\n\n",  # Paragraph breaks
-                "\n",  # Line breaks
-                ". ",  # Sentence endings
-                "! ",  # Exclamation endings
-                "? ",  # Question endings
-                "; ",  # Semicolon breaks
-                ", ",  # Comma breaks
-                " ",  # Word breaks
-                "",  # Character level
+                "\n\n",
+                "\n",
+                ". ",
+                "! ",
+                "? ",
+                "; ",
+                ", ",
+                " ",
+                "",
             ]
         super().__init__(chunk_size, chunk_overlap, separators, keep_separator)
 
@@ -36,15 +36,15 @@ class DocxChunker(BaseChunker):
         if separators is None:
             separators = [
                 "\n\n\n",  # Multiple line breaks (major sections)
-                "\n\n",  # Paragraph breaks
-                "\n",  # Line breaks
-                ". ",  # Sentence endings
-                "! ",  # Exclamation endings
-                "? ",  # Question endings
-                "; ",  # Semicolon breaks
-                ", ",  # Comma breaks
-                " ",  # Word breaks
-                "",  # Character level
+                "\n\n",
+                "\n",
+                ". ",
+                "! ",
+                "? ",
+                "; ",
+                ", ",
+                " ",
+                "",
             ]
         super().__init__(chunk_size, chunk_overlap, separators, keep_separator)
 
@@ -62,15 +62,15 @@ class MdxChunker(BaseChunker):
                 "\n## ",  # H2 headers (major sections)
                 "\n### ",  # H3 headers (subsections)
                 "\n#### ",  # H4 headers (sub-subsections)
-                "\n\n",  # Paragraph breaks
-                "\n```",  # Code block boundaries
-                "\n",  # Line breaks
-                ". ",  # Sentence endings
-                "! ",  # Exclamation endings
-                "? ",  # Question endings
-                "; ",  # Semicolon breaks
-                ", ",  # Comma breaks
-                " ",  # Word breaks
-                "",  # Character level
+                "\n\n",
+                "\n```",
+                "\n",
+                ". ",
+                "! ",
+                "? ",
+                "; ",
+                ", ",
+                " ",
+                "",
             ]
         super().__init__(chunk_size, chunk_overlap, separators, keep_separator)

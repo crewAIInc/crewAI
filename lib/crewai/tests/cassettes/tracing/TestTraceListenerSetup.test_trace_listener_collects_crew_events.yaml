@@ -18,251 +18,6 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
-      personal goal is: Test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to
-      the world\n\nThis is the expected criteria for your final answer: hello world\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '825'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=ePO5hy0kEoADCuKcboFy1iS1qckCE5KCpifQaXnlomM-1754508545-1.0.1.1-ieWfjcdIxQIXGfaMizvmgTvZPRFehqDXliegaOT7EO.kt7KSSFGmNDcC35_D9hOhE.fJ5K302uX0snQF3nLaapds2dqgGbNcsyFPOKNvAdI;
-        _cfuvid=NaXWifUGChHp6Ap1mvfMrNzmO4HdzddrqXkSR9T.hYo-1754508545647-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.93.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.93.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '600.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-C1e6uBsZ3iMw51p03hHTkBgHjA5ym\",\n  \"object\"\
-        : \"chat.completion\",\n  \"created\": 1754508548,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
-        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
-        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
-        \ answer  \\nFinal Answer: hello world\",\n        \"refusal\": null,\n  \
-        \      \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
-        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
-        : 157,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 170,\n    \"\
-        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
-        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
-        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
-        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
-        : \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
-    headers:
-      CF-RAY:
-      - 96b0f0fb5c067ad9-SJC
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 06 Aug 2025 19:29:09 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '628'
-      openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '657'
-      x-ratelimit-limit-project-tokens:
-      - '150000000'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-project-tokens:
-      - '149999827'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149999827'
-      x-ratelimit-reset-project-tokens:
-      - 0s
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_a0daca00035c423daf0e9df208720180
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
-      personal goal is: Test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to
-      the world\n\nThis is the expected criteria for your final answer: hello world\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '797'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=f59gEPi_nA3TTxtjbKaSQpvkTwezaAqOvqfxiGzRnVQ-1754508546-1.0.1.1-JrSaytxVIQSVE00I.vyGj7d4HJbbMV6R9fWPJbkDKu0Y8ueMRzTwTUnfz0YzP5nsZX5oxoE6WlmFxOuz0rRuq9YhZZsO_TbaFBOFk1jGK9U;
-        _cfuvid=3D66v3.J_RcVoYy9dlF.jHwq1zTIm842xynZxzSy1Wc-1754508546352-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.93.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.93.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '200.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-C1e6vUMjwrC8Zt9Htraa70hbbt5d7\",\n  \"object\"\
-        : \"chat.completion\",\n  \"created\": 1754508549,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
-        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
-        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
-        \ answer  \\nFinal Answer: hello world\",\n        \"refusal\": null,\n  \
-        \      \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
-        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
-        : 157,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 170,\n    \"\
-        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
-        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
-        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
-        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
-        : \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
-    headers:
-      CF-RAY:
-      - 96b0f101793aeb2c-SJC
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 06 Aug 2025 19:29:09 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '541'
-      openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '557'
-      x-ratelimit-limit-project-tokens:
-      - '150000000'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-project-tokens:
-      - '149999827'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149999827'
-      x-ratelimit-reset-project-tokens:
-      - 0s
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_df70f95325b14817a692f23cf9cca880
-    status:
-      code: 200
-      message: OK
-- request:
     body: '{"trace_id": "2487456d-e03a-4eae-92a1-e9779e8f06a1", "execution_type":
       "crew", "execution_context": {"crew_fingerprint": null, "crew_name": "Unknown
       Crew", "flow_name": "Unknown Flow", "crewai_version": "0.152.0", "privacy_level":
@@ -330,6 +85,117 @@ interactions:
     status:
       code: 404
       message: Not Found
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal"},{"role":"user","content":"\nCurrent Task: Say
+      hello to the world\n\nThis is the expected criteria for your final answer: hello
+      world\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '386'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.32.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DmQBou4covfqbekZpX1DEVm8haN4N\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1780432788,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"hello world\",\n \
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"\
+        logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+        : {\n    \"prompt_tokens\": 71,\n    \"completion_tokens\": 2,\n    \"total_tokens\"\
+        : 73,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n   \
+        \   \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n  \
+        \    \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_df8c8d3b43\"\n}\n"
+    headers:
+      Access-Control-Expose-Headers:
+      - ACCESS-CONTROL-XXX
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - a05944f98aa2456e-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 02 Jun 2026 20:39:48 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '394'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"version": "0.152.0", "batch_id": "2487456d-e03a-4eae-92a1-e9779e8f06a1",
       "user_context": {"user_id": "anonymous", "organization_id": "", "session_id":
@@ -471,4 +337,3 @@ interactions:
     status:
       code: 404
       message: Not Found
-version: 1

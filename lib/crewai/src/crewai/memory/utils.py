@@ -30,11 +30,8 @@ def sanitize_scope_name(name: str) -> str:
     if not name:
         return "unknown"
     name = name.lower().strip()
-    # Replace any character that's not alphanumeric, underscore, or hyphen with hyphen
     name = re.sub(r"[^a-z0-9_-]", "-", name)
-    # Collapse multiple hyphens into one
     name = re.sub(r"-+", "-", name)
-    # Strip leading/trailing hyphens
     name = name.strip("-")
     return name or "unknown"
 
@@ -59,12 +56,9 @@ def normalize_scope_path(path: str) -> str:
     """
     if not path or path == "/":
         return "/"
-    # Collapse multiple slashes
     path = re.sub(r"/+", "/", path)
-    # Ensure leading slash
     if not path.startswith("/"):
         path = "/" + path
-    # Remove trailing slash (unless it's just '/')
     if len(path) > 1:
         path = path.rstrip("/")
     return path
@@ -94,7 +88,6 @@ def join_scope_paths(root: str | None, inner: str | None) -> str:
         >>> join_scope_paths(None, None)
         '/'
     """
-    # Normalize both parts
     root = root.rstrip("/") if root else ""
     inner = inner.strip("/") if inner else ""
 

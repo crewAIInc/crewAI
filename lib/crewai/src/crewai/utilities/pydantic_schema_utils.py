@@ -30,6 +30,8 @@ from typing import (
     TypedDict,
     Union,
     cast,
+    get_args,
+    get_origin,
 )
 import uuid
 
@@ -549,7 +551,13 @@ _CLAUDE_STRICT_UNSUPPORTED: Final[tuple[str, ...]] = (
 def _strip_keys_recursive(
     d: Any, keys: tuple[str, ...], _seen: set[int] | None = None
 ) -> Any:
-    """Recursively delete a fixed set of keys from a schema."""
+    """Recursively delete schema metadata keys without deleting property names.
+
+    JSON Schema stores fields under a ``properties`` map. A user/tool argument can
+    legitimately be named ``title``, ``default``, or another metadata key. Those
+    entries must stay in the map; only metadata inside the schema nodes should be
+    stripped.
+    """
     if _seen is None:
         _seen = set()
     if isinstance(d, dict):
@@ -558,8 +566,12 @@ def _strip_keys_recursive(
         _seen.add(id(d))
         for key in keys:
             d.pop(key, None)
-        for v in d.values():
-            _strip_keys_recursive(v, keys, _seen)
+        for key, value in d.items():
+            if key == "properties" and isinstance(value, dict):
+                for property_schema in value.values():
+                    _strip_keys_recursive(property_schema, keys, _seen)
+            else:
+                _strip_keys_recursive(value, keys, _seen)
     elif isinstance(d, list):
         if id(d) in _seen:
             return d
@@ -782,6 +794,20 @@ def _inline_top_level_ref(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def serialize_model_class(value: Any) -> Any:
+    """Serialize a ``type[BaseModel]`` field value as its JSON schema.
+
+    Args:
+        value: A ``type[BaseModel]`` subclass, ``None``, or another union member.
+
+    Returns:
+        ``value.model_json_schema()`` for model classes, ``value`` otherwise.
+    """
+    if isinstance(value, type) and issubclass(value, BaseModel):
+        return value.model_json_schema()
+    return value
+
+
 def create_model_from_schema(  # type: ignore[no-any-unimported]
     json_schema: dict[str, Any],
     *,
@@ -985,7 +1011,11 @@ def _json_schema_to_pydantic_field(
     if examples:
         schema_extra["examples"] = examples
 
-    default = ... if is_required else None
+    default = (
+        json_schema["default"]
+        if "default" in json_schema
+        else (... if is_required else None)
+    )
 
     if isinstance(type_, type) and issubclass(type_, (int, float)):
         if "minimum" in json_schema:
@@ -1014,7 +1044,20 @@ def _json_schema_to_pydantic_field(
                 elif len(allowed_schemes) == 1 and allowed_schemes[0] == "file":
                     pydantic_type = FileUrl
 
-        type_ = pydantic_type
+        # `type_` can be a Union built from a list-form `type` (or anyOf/oneOf)
+        # rather than a plain `str`, e.g. `{"type": ["string", "null"],
+        # "format": "date-time"}`. Replacing the whole thing with
+        # `pydantic_type` would silently drop the other members (null,
+        # non-string alternatives) instead of just narrowing the string one.
+        if type_ is str:
+            type_ = pydantic_type
+        elif get_origin(type_) is Union:
+            type_ = Union[  # noqa: UP007
+                tuple(
+                    pydantic_type if member is str else member
+                    for member in get_args(type_)
+                )
+            ]
 
     if isinstance(type_, type) and issubclass(type_, str):
         if "minLength" in json_schema:
@@ -1186,6 +1229,28 @@ def _json_schema_to_pydantic_type(
         )
 
     type_ = json_schema.get("type")
+
+    if isinstance(type_, list):
+        # JSON Schema also allows "type" to be an array, e.g.
+        # {"type": ["string", "null"]} -- the .NET/System.Text.Json-style
+        # way of expressing a nullable field. Pydantic's own schema
+        # generation instead uses anyOf/oneOf for this (handled above), so
+        # external tool schemas (e.g. from a non-Python MCP server) are the
+        # main source of this form. Treat each entry the same way anyOf's
+        # members are handled just above: build a Union of the
+        # corresponding Python types. A single-element list collapses to
+        # that one type, matching typing.Union's own behavior.
+        member_types = [
+            _json_schema_to_pydantic_type(
+                {**json_schema, "type": member},
+                root_schema,
+                name_=f"{name_ or 'Union'}Option{i}",
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+            )
+            for i, member in enumerate(type_)
+        ]
+        return Union[tuple(member_types)]  # noqa: UP007
 
     if type_ == "string":
         return str

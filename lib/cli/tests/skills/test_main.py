@@ -41,14 +41,9 @@ def skill_command():
             yield cmd
 
 
-# ---------------------------------------------------------------------------
-# create
-# ---------------------------------------------------------------------------
-
 class TestSkillCreate:
     def test_create_in_project(self, skill_command, tmp_path):
         with in_temp_dir():
-            # Simulate being inside a project
             Path("pyproject.toml").write_text("[tool.poetry]\nname = 'test'\n")
             skill_command.create("my-skill")
             assert Path("skills/my-skill/SKILL.md").exists()
@@ -74,10 +69,6 @@ class TestSkillCreate:
             with pytest.raises(SystemExit):
                 skill_command.create("existing-skill", in_project=False)
 
-
-# ---------------------------------------------------------------------------
-# install
-# ---------------------------------------------------------------------------
 
 class TestSkillInstall:
     def _zip_skill(self, name: str) -> bytes:
@@ -118,15 +109,11 @@ class TestSkillInstall:
             assert Path("skills/my-skill/SKILL.md").exists()
 
 
-# ---------------------------------------------------------------------------
-# publish
-# ---------------------------------------------------------------------------
-
 class TestSkillPublish:
     def test_publish_no_skill_md(self, skill_command):
         with in_temp_dir():
             with pytest.raises(SystemExit):
-                skill_command.publish(is_public=True, org="acme")
+                skill_command.publish(org="acme")
 
     def test_publish_missing_version(self, skill_command):
         with in_temp_dir():
@@ -134,7 +121,7 @@ class TestSkillPublish:
                 "---\nname: my-skill\ndescription: Test.\n---\nInstructions."
             )
             with pytest.raises(SystemExit):
-                skill_command.publish(is_public=True, org="acme")
+                skill_command.publish(org="acme")
 
     def test_publish_missing_name(self, skill_command):
         with in_temp_dir():
@@ -142,7 +129,7 @@ class TestSkillPublish:
                 "---\ndescription: Test.\nversion: 1.0.0\n---\nInstructions."
             )
             with pytest.raises(SystemExit):
-                skill_command.publish(is_public=True, org="acme")
+                skill_command.publish(org="acme")
 
     def test_publish_no_org(self, skill_command):
         with in_temp_dir():
@@ -155,17 +142,16 @@ class TestSkillPublish:
                 mock_resp.status_code = 200
                 mock_resp.json.return_value = {}
                 mock_client.publish_skill.return_value = mock_resp
-                # No org set → should SystemExit (no org_name in settings)
                 with patch("crewai_cli.skills.main.Settings") as mock_settings_cls:
                     mock_settings_cls.return_value.org_name = None
                     mock_settings_cls.return_value.enterprise_base_url = None
                     with pytest.raises(SystemExit):
-                        skill_command.publish(is_public=True, org=None)
+                        skill_command.publish(org=None)
 
     def test_publish_calls_api(self, skill_command):
         with in_temp_dir():
             Path("SKILL.md").write_text(
-                "---\nname: my-skill\nversion: 1.0.0\ndescription: A test skill.\n---\nInstructions."
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
             )
             mock_resp = MagicMock()
             mock_resp.is_success = True
@@ -176,23 +162,104 @@ class TestSkillPublish:
                 mock_settings_cls.return_value.org_name = "acme"
                 mock_settings_cls.return_value.enterprise_base_url = None
 
-                skill_command.publish(is_public=False, org="acme")
+                skill_command.publish(org="acme")
 
             skill_command.plus_api_client.publish_skill.assert_called_once()
             call_kwargs = skill_command.plus_api_client.publish_skill.call_args
             assert call_kwargs.kwargs["name"] == "my-skill"
             assert call_kwargs.kwargs["version"] == "1.0.0"
+            # Skills are always org-scoped; there is no public visibility.
+            assert call_kwargs.kwargs["is_public"] is False
 
+    def test_publish_blocked_when_git_not_synced(self, skill_command):
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            skill_command.plus_api_client.publish_skill = MagicMock()
+            with patch("crewai_cli.skills.main.git.Repository") as mock_repo_cls:
+                mock_repo_cls.return_value.is_synced.return_value = False
+                with pytest.raises(SystemExit):
+                    skill_command.publish(org="acme")
+            skill_command.plus_api_client.publish_skill.assert_not_called()
 
-# ---------------------------------------------------------------------------
-# list_cached
-# ---------------------------------------------------------------------------
+    def test_publish_force_skips_git_check(self, skill_command):
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            mock_resp = MagicMock()
+            mock_resp.is_success = True
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {}
+            skill_command.plus_api_client.publish_skill = MagicMock(return_value=mock_resp)
+            with (
+                patch("crewai_cli.skills.main.git.Repository") as mock_repo_cls,
+                patch("crewai_cli.skills.main.Settings") as mock_settings_cls,
+            ):
+                mock_settings_cls.return_value.org_name = "acme"
+                mock_settings_cls.return_value.enterprise_base_url = None
+                skill_command.publish(org="acme", force=True)
+            mock_repo_cls.assert_not_called()
+            skill_command.plus_api_client.publish_skill.assert_called_once()
+
+    def test_publish_blocked_when_fetch_fails(self, skill_command):
+        """A failing remote fetch must fail closed, not silently skip syncing."""
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            skill_command.plus_api_client.publish_skill = MagicMock()
+            with patch("crewai_cli.skills.main.git.Repository") as mock_repo_cls:
+                mock_repo_cls.return_value.fetch.side_effect = ValueError(
+                    "Git fetch failed with exit code 128"
+                )
+                with pytest.raises(SystemExit):
+                    skill_command.publish(org="acme")
+            skill_command.plus_api_client.publish_skill.assert_not_called()
+
+    def test_publish_blocked_when_git_state_cannot_be_validated(self, skill_command):
+        """Git errors other than 'not a repo' must fail closed, not skip the check."""
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            skill_command.plus_api_client.publish_skill = MagicMock()
+            with patch(
+                "crewai_cli.skills.main.git.Repository",
+                side_effect=ValueError("Git fetch failed with exit code 128"),
+            ):
+                with pytest.raises(SystemExit):
+                    skill_command.publish(org="acme")
+            skill_command.plus_api_client.publish_skill.assert_not_called()
+
+    def test_publish_proceeds_outside_git_repo(self, skill_command):
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            mock_resp = MagicMock()
+            mock_resp.is_success = True
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {}
+            skill_command.plus_api_client.publish_skill = MagicMock(return_value=mock_resp)
+            with (
+                patch(
+                    "crewai_cli.skills.main.git.Repository",
+                    side_effect=ValueError("not a Git repository"),
+                ),
+                patch("crewai_cli.skills.main.Settings") as mock_settings_cls,
+            ):
+                mock_settings_cls.return_value.org_name = "acme"
+                mock_settings_cls.return_value.enterprise_base_url = None
+                skill_command.publish(org="acme")
+            skill_command.plus_api_client.publish_skill.assert_called_once()
+
 
 class TestSkillListCached:
     def test_list_cached_empty(self, skill_command, capsys):
         with in_temp_dir():
             skill_command.list_cached()
-            # Should not raise
 
     def test_list_cached_shows_project_skills(self, skill_command, capsys):
         with in_temp_dir():
@@ -202,4 +269,3 @@ class TestSkillListCached:
                 "---\nname: my-skill\nversion: 0.5.0\ndescription: A skill.\n---\nBody."
             )
             skill_command.list_cached()
-            # Should complete without error

@@ -42,6 +42,7 @@ __all__ = [
     "is_first_execution",
     "is_tracing_enabled",
     "is_tracing_enabled_in_context",
+    "is_tui_mode",
     "mark_first_execution_completed",
     "mark_first_execution_done",
     "on_first_execution_tracing_confirmation",
@@ -50,6 +51,7 @@ __all__ = [
     "safe_serialize_to_dict",
     "set_suppress_tracing_messages",
     "set_tracing_enabled",
+    "set_tui_mode",
     "should_auto_collect_first_time_traces",
     "should_enable_tracing",
     "should_suppress_tracing_messages",
@@ -70,6 +72,16 @@ _first_time_trace_hook: ContextVar[Callable[[], bool] | None] = ContextVar(
 _suppress_tracing_messages: ContextVar[bool] = ContextVar(
     "_suppress_tracing_messages", default=False
 )
+
+_tui_mode: ContextVar[bool] = ContextVar("_tui_mode", default=False)
+
+
+def set_tui_mode(enabled: bool) -> object:
+    return _tui_mode.set(enabled)
+
+
+def is_tui_mode() -> bool:
+    return _tui_mode.get()
 
 
 def set_suppress_tracing_messages(suppress: bool) -> object:
@@ -526,7 +538,6 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
                 response = input().strip().lower()
                 result[0] = response in ["y", "yes"]
             except (EOFError, KeyboardInterrupt, OSError, LookupError):
-                # Handle all input-related errors silently
                 result[0] = False
 
         ctx = contextvars.copy_context()
@@ -540,7 +551,6 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return result[0]
 
     except Exception:
-        # Suppress any warnings or errors and assume "no"
         return False
 
 

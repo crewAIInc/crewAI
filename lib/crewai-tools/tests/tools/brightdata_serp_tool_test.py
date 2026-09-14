@@ -20,7 +20,6 @@ class TestBrightDataSearchTool(unittest.TestCase):
         mock_response.text = "mock response text"
         mock_post.return_value = mock_response
 
-        # Define search input
         input_data = {
             "query": "latest AI news",
             "search_engine": "google",
@@ -46,7 +45,6 @@ class TestBrightDataSearchTool(unittest.TestCase):
         self.assertIn("Error", result)
 
     def tearDown(self):
-        # Clean up env vars
         pass
 
 

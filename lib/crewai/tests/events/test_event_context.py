@@ -11,6 +11,7 @@ from crewai.events.event_context import (
     MismatchBehavior,
     StackDepthExceededError,
     _event_context_config,
+    _event_id_stack,
     EventContextConfig,
     get_current_parent_id,
     get_enclosing_parent_id,
@@ -21,6 +22,7 @@ from crewai.events.event_context import (
     pop_event_scope,
     push_event_scope,
     reset_last_event_id,
+    resume_task_scope,
     set_last_event_id,
     set_triggering_event_id,
     triggered_by_scope,
@@ -178,6 +180,91 @@ class TestTriggeredByScope:
         except ValueError:
             pass
         assert get_triggering_event_id() is None
+
+
+class TestResumeTaskScope:
+    """Tests for the checkpoint-resume scope helper."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_stack(self) -> None:
+        _event_id_stack.set(())
+
+    def _bind_runtime_state(self, *event_dicts: dict[str, object]):
+        from crewai.events import crewai_event_bus
+        from crewai.events.types.task_events import TaskStartedEvent
+        from crewai.state.event_record import EventRecord
+        from crewai.state.runtime import RuntimeState
+
+        record = EventRecord()
+        for spec in event_dicts:
+            ev = TaskStartedEvent(context=None, task=None)
+            ev.task_id = spec["task_id"]  # type: ignore[assignment]
+            ev.event_id = spec["event_id"]  # type: ignore[assignment]
+            ev.emission_sequence = spec["emission_sequence"]  # type: ignore[assignment]
+            record.add(ev)
+        state = RuntimeState(root=[])
+        state._event_record = record
+
+        previous = crewai_event_bus._runtime_state
+        crewai_event_bus._runtime_state = state
+        return crewai_event_bus, previous
+
+    def test_returns_false_when_no_runtime_state(self) -> None:
+        from crewai.events import crewai_event_bus
+
+        previous = crewai_event_bus._runtime_state
+        crewai_event_bus._runtime_state = None
+        try:
+            assert resume_task_scope("any-task") is False
+            assert _event_id_stack.get() == ()
+        finally:
+            crewai_event_bus._runtime_state = previous
+
+    def test_returns_false_when_no_matching_event(self) -> None:
+        bus, previous = self._bind_runtime_state(
+            {"task_id": "other", "event_id": "e1", "emission_sequence": 1},
+        )
+        try:
+            assert resume_task_scope("missing") is False
+            assert _event_id_stack.get() == ()
+        finally:
+            bus._runtime_state = previous
+
+    def test_pushes_latest_event_for_task(self) -> None:
+        bus, previous = self._bind_runtime_state(
+            {"task_id": "t1", "event_id": "e1", "emission_sequence": 1},
+            {"task_id": "t1", "event_id": "e2", "emission_sequence": 5},
+            {"task_id": "t1", "event_id": "e3", "emission_sequence": 3},
+            {"task_id": "t2", "event_id": "x1", "emission_sequence": 9},
+        )
+        try:
+            assert resume_task_scope("t1") is True
+            assert _event_id_stack.get() == (("e2", "task_started"),)
+        finally:
+            bus._runtime_state = previous
+
+    def test_pairs_cleanly_with_task_completed(self) -> None:
+        """The pushed scope must be popped by a matching task_completed."""
+        from crewai.events import crewai_event_bus
+        from crewai.events.types.task_events import TaskCompletedEvent
+        from crewai.tasks.task_output import TaskOutput
+
+        push_event_scope("kickoff-1", "crew_kickoff_started")
+        bus, previous = self._bind_runtime_state(
+            {"task_id": "t1", "event_id": "started-1", "emission_sequence": 1},
+        )
+        try:
+            assert resume_task_scope("t1") is True
+            output = TaskOutput(description="d", raw="r", agent="a")
+            completed = TaskCompletedEvent(output=output, task=None)
+            completed.task_id = "t1"
+            crewai_event_bus.emit(None, completed)
+            crewai_event_bus.flush()
+            assert _event_id_stack.get() == (("kickoff-1", "crew_kickoff_started"),)
+            assert completed.started_event_id == "started-1"
+        finally:
+            bus._runtime_state = previous
+            _event_id_stack.set(())
 
 
 def test_agent_scope_preserved_after_tool_error_event() -> None:

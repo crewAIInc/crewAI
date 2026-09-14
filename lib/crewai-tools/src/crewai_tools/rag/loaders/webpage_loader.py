@@ -2,10 +2,10 @@ import re
 from typing import Any, Final
 
 from bs4 import BeautifulSoup
-import requests
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
+from crewai_tools.security.safe_requests import safe_get
 
 
 _SPACES_PATTERN: Final[re.Pattern[str]] = re.compile(r"[ \t]+")
@@ -25,7 +25,7 @@ class WebPageLoader(BaseLoader):
         )
 
         try:
-            response = requests.get(url, timeout=15, headers=headers)
+            response = safe_get(url, timeout=15, headers=headers)
             response.encoding = response.apparent_encoding
 
             soup = BeautifulSoup(response.text, "html.parser")

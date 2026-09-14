@@ -66,7 +66,7 @@ class TestInternalCrewPlanner:
                 ),
             )
             result = crew_planner._handle_crew_planning()
-            assert crew_planner.planning_agent_llm == "gpt-4o-mini"
+            assert crew_planner.planning_agent_llm == "gpt-5.4-mini"
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(crew_planner.tasks)
             execute.assert_called_once()
@@ -108,7 +108,6 @@ class TestInternalCrewPlanner:
     ):
         """Test task summary generation with both knowledge and tools present."""
 
-        # Create mock tools with proper string descriptions and structured tool support
         class MockTool(BaseTool):
             name: str
             description: str
@@ -136,7 +135,6 @@ class TestInternalCrewPlanner:
         tool1 = MockTool("tool1", "Tool 1 description")
         tool2 = MockTool("tool2", "Tool 2 description")
 
-        # Create a task with knowledge and tools
         task = Task(
             description="Task with knowledge and tools",
             expected_output="Expected output",
@@ -151,11 +149,9 @@ class TestInternalCrewPlanner:
             ),
         )
 
-        # Create planner with the new task
         planner = CrewPlanner([task], None)
         tasks_summary = planner._create_tasks_summary()
 
-        # Verify task summary content
         assert isinstance(tasks_summary, str)
         assert task.description in tasks_summary
         assert task.expected_output in tasks_summary
@@ -358,6 +354,5 @@ class TestCrewPlanningIntegration:
         ):
             crew._handle_crew_planning()
 
-        # Should use the first plan, not the second
         assert "[FIRST PLAN]" in task.description
         assert "[SECOND PLAN]" not in task.description

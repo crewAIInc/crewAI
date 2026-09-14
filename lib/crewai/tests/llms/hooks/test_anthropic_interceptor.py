@@ -70,24 +70,20 @@ class TestAnthropicInterceptorIntegration:
         interceptor = AnthropicTestInterceptor()
         llm = LLM(model="anthropic/claude-3-5-haiku-20241022", interceptor=interceptor)
 
-        # Make a simple completion call
         result = llm.call(
             messages=[{"role": "user", "content": "Say 'Hello World' and nothing else"}]
         )
 
-        # Verify custom headers were added
         for request in interceptor.outbound_calls:
             assert "X-Anthropic-Interceptor" in request.headers
             assert request.headers["X-Anthropic-Interceptor"] == "anthropic-test-value"
             assert "X-Request-ID" in request.headers
             assert request.headers["X-Request-ID"] == "test-request-456"
 
-        # Verify response was tracked
         for response in interceptor.inbound_calls:
             assert "X-Response-Tracked" in response.headers
             assert response.headers["X-Response-Tracked"] == "true"
 
-        # Verify result is valid
         assert result is not None
         assert isinstance(result, str)
         assert len(result) > 0
@@ -170,23 +166,19 @@ class TestAnthropicLoggingInterceptor:
         interceptor = AnthropicLoggingInterceptor()
         llm = LLM(model="anthropic/claude-3-5-haiku-20241022", interceptor=interceptor)
 
-        # Make a completion call
         result = llm.call(messages=[{"role": "user", "content": "Count from 1 to 3"}])
 
         # Verify URL points to Anthropic API
         for url in interceptor.request_urls:
             assert "anthropic" in url.lower() or "api" in url.lower()
 
-        # Verify methods are POST (messages endpoint uses POST)
         for method in interceptor.request_methods:
             assert method == "POST"
 
-        # Verify successful status codes
         for status_code in interceptor.response_status_codes:
             assert 200 <= status_code < 300
 
 
-        # Verify result is valid
         assert result is not None
 
 
@@ -263,16 +255,13 @@ class TestAnthropicHeaderInterceptor:
         interceptor = AnthropicHeaderInterceptor(workspace_id="ws-999", user_id="u-888")
         llm = LLM(model="anthropic/claude-3-5-haiku-20241022", interceptor=interceptor)
 
-        # Make a simple call
         result = llm.call(
             messages=[{"role": "user", "content": "Reply with just the word: SUCCESS"}]
         )
 
-        # Verify the call succeeded
         assert result is not None
         assert len(result) > 0
 
-        # Verify the interceptor was configured
         assert llm.interceptor is interceptor
 
 

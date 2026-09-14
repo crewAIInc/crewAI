@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from io import BytesIO
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field, PrivateAttr
@@ -64,6 +65,9 @@ class ReadFileTool(BaseTool):
         content_type = file_input.content_type
         filename = file_input.filename or file_name
 
+        if content_type == "application/pdf":
+            return self._read_pdf_text(content, filename)
+
         text_types = (
             "text/",
             "application/json",
@@ -76,3 +80,22 @@ class ReadFileTool(BaseTool):
 
         encoded = base64.b64encode(content).decode("ascii")
         return f"[Binary file: {filename} ({content_type})]\nBase64: {encoded}"
+
+    def _read_pdf_text(self, content: bytes, filename: str) -> str:
+        """Extract text from a PDF instead of returning base64."""
+        try:
+            from pypdf import PdfReader
+        except ImportError:
+            encoded = base64.b64encode(content).decode("ascii")
+            return f"[Binary file: {filename} (application/pdf)]\nBase64: {encoded}"
+
+        try:
+            reader = PdfReader(BytesIO(content))
+            page_text = [text for page in reader.pages if (text := page.extract_text())]
+        except Exception as exc:
+            return f"Unable to extract text from PDF '{filename}': {exc}"
+
+        if not page_text:
+            return f"[PDF file with no extractable text: {filename}]"
+
+        return "\n\n".join(page_text)

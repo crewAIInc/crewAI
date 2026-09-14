@@ -394,7 +394,6 @@ class TestInvokeStepCallback:
         executor.step_callback = None
         answer = AgentFinish(thought="thinking", output="test", text="final")
 
-        # Should not raise
         executor._invoke_step_callback(answer)
 
 

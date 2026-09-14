@@ -18,7 +18,6 @@ class TestFlowHumanInputIntegration:
         assert callable(formatter.pause_live_updates)
         assert callable(formatter.resume_live_updates)
 
-        # Should not raise
         formatter.pause_live_updates()
         formatter.resume_live_updates()
 
@@ -84,7 +83,6 @@ class TestFlowHumanInputIntegration:
         try:
             formatter._streaming_live = None
 
-            # Should not raise when no session exists
             formatter.pause_live_updates()
             formatter.resume_live_updates()
 
@@ -133,9 +131,7 @@ class TestFlowHumanInputIntegration:
             mock_resume.assert_called_once()
             assert result == "training feedback"
 
-            # Verify the training panel was printed via formatter's console
             mock_console_print.assert_called()
-            # Check that a Panel with training title was printed
             call_args = mock_console_print.call_args_list
             training_panel_found = any(
                 hasattr(call[0][0], "title") and "Training" in str(call[0][0].title)
@@ -143,3 +139,26 @@ class TestFlowHumanInputIntegration:
                 if call[0]
             )
             assert training_panel_found
+
+    @patch("builtins.input", return_value="please make it warmer")
+    def test_non_empty_input_prints_processing_feedback(self, mock_input):
+        """Non-empty input should be displayed as feedback to process."""
+        provider = SyncHumanInputProvider()
+        crew = MagicMock()
+        crew._train = False
+
+        formatter = event_listener.formatter
+
+        with (
+            patch.object(formatter, "pause_live_updates"),
+            patch.object(formatter, "resume_live_updates"),
+            patch.object(formatter.console, "print") as mock_console_print,
+        ):
+            result = provider._prompt_input(crew)
+
+        assert result == "please make it warmer"
+        mock_input.assert_called_once()
+        printed_text = "\n".join(
+            str(call.args[0]) for call in mock_console_print.call_args_list
+        )
+        assert "Processing your feedback" in printed_text

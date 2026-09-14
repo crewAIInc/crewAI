@@ -1,0 +1,120 @@
+---
+title: Criar Ferramentas Personalizadas
+description: Guia abrangente sobre como criar, utilizar e gerenciar ferramentas personalizadas dentro do framework CrewAI, incluindo novas funcionalidades e tratamento de erros.
+icon: hammer
+mode: "wide"
+---
+
+## Criando e Utilizando Ferramentas no CrewAI
+
+Este guia traz instruções detalhadas sobre como criar ferramentas personalizadas para o framework CrewAI e como gerenciar e utilizar essas ferramentas de forma eficiente,
+incorporando funcionalidades recentes, como delegação de ferramentas, tratamento de erros e chamada dinâmica de ferramentas. Destaca também a importância de ferramentas de colaboração,
+permitindo que agentes executem uma ampla gama de ações.
+
+### Subclassificando `BaseTool`
+
+Para criar uma ferramenta personalizada, herde de `BaseTool` e defina os atributos necessários, incluindo o `args_schema` para validação de entrada e o método `_run`.
+
+```python Code
+from typing import Type
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
+
+class MyCustomTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
+
+    def _run(self, argument: str) -> str:
+        # Your tool's logic here
+        return "Tool's result"
+```
+
+### Usando o Decorador `tool`
+
+Como alternativa, você pode utilizar o decorador de ferramenta `@tool`. Esta abordagem permite definir os atributos e as funcionalidades da ferramenta diretamente em uma função,
+oferecendo uma maneira concisa e eficiente de criar ferramentas especializadas de acordo com suas necessidades.
+
+```python Code
+from crewai.tools import tool
+
+@tool("Tool Name")
+def my_simple_tool(question: str) -> str:
+    """Tool description for clarity."""
+    # Tool logic here
+    return "Tool output"
+```
+
+### Definindo uma Função de Cache para a Ferramenta
+
+Para otimizar o desempenho da ferramenta com cache, defina estratégias de cache personalizadas utilizando o atributo `cache_function`.
+
+```python Code
+@tool("Tool with Caching")
+def cached_tool(argument: str) -> str:
+    """Tool functionality description."""
+    return "Cacheable result"
+
+def my_cache_strategy(arguments: dict, result: str) -> bool:
+    # Define custom caching logic
+    return True if some_condition else False
+
+cached_tool.cache_function = my_cache_strategy
+```
+
+### Criando Ferramentas Assíncronas
+
+O CrewAI suporta ferramentas assíncronas para operações de I/O não bloqueantes. Isso é útil quando sua ferramenta precisa fazer requisições HTTP, consultas a banco de dados ou outras operações de I/O.
+
+#### Usando o Decorador `@tool` com Funções Assíncronas
+
+A maneira mais simples de criar uma ferramenta assíncrona é usando o decorador `@tool` com uma função async:
+
+```python Code
+import aiohttp
+from crewai.tools import tool
+
+@tool("Async Web Fetcher")
+async def fetch_webpage(url: str) -> str:
+    """Fetch content from a webpage asynchronously."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.text()
+```
+
+#### Subclassificando `BaseTool` com Suporte Assíncrono
+
+Para maior controle, herde de `BaseTool` e implemente os métodos `_run` (síncrono) e `_arun` (assíncrono):
+
+```python Code
+import requests
+import aiohttp
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class WebFetcherInput(BaseModel):
+    """Input schema for WebFetcher."""
+    url: str = Field(..., description="The URL to fetch")
+
+class WebFetcherTool(BaseTool):
+    name: str = "Web Fetcher"
+    description: str = "Fetches content from a URL"
+    args_schema: type[BaseModel] = WebFetcherInput
+
+    def _run(self, url: str) -> str:
+        """Synchronous implementation."""
+        return requests.get(url).text
+
+    async def _arun(self, url: str) -> str:
+        """Asynchronous implementation for non-blocking I/O."""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.text()
+```
+
+Seguindo essas orientações e incorporando novas funcionalidades e ferramentas de colaboração nos seus processos de criação e gerenciamento de ferramentas,
+você pode aproveitar ao máximo as capacidades do framework CrewAI, aprimorando tanto a experiência de desenvolvimento quanto a eficiência dos seus agentes de IA.

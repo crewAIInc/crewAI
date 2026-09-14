@@ -52,7 +52,6 @@ def _rec(
     )
 
 
-# --- Basic CRUD ---
 
 
 def test_save_search(storage: QdrantEdgeStorage) -> None:
@@ -89,7 +88,6 @@ def test_get_record_not_found(storage: QdrantEdgeStorage) -> None:
     assert storage.get_record("nonexistent-id") is None
 
 
-# --- Scope operations ---
 
 
 def test_list_scopes_get_scope_info(storage: QdrantEdgeStorage) -> None:
@@ -117,7 +115,6 @@ def test_scope_prefix_filter(storage: QdrantEdgeStorage) -> None:
     assert "/crew/eng" in scopes
 
 
-# --- Filtering ---
 
 
 def test_category_filter(storage: QdrantEdgeStorage) -> None:
@@ -144,7 +141,6 @@ def test_metadata_filter(storage: QdrantEdgeStorage) -> None:
     assert results[0][0].metadata["env"] == "prod"
 
 
-# --- List & pagination ---
 
 
 def test_list_records_pagination(storage: QdrantEdgeStorage) -> None:
@@ -175,7 +171,6 @@ def test_list_categories(storage: QdrantEdgeStorage) -> None:
     assert cats.get("c", 0) >= 1
 
 
-# --- Touch & reset ---
 
 
 def test_touch_records(storage: QdrantEdgeStorage) -> None:
@@ -203,7 +198,6 @@ def test_reset_scoped(storage: QdrantEdgeStorage) -> None:
     assert storage.count() == 1
 
 
-# --- Dual-shard & sync ---
 
 
 def test_flush_to_central(tmp_path: Path) -> None:
@@ -219,13 +213,10 @@ def test_flush_to_central(tmp_path: Path) -> None:
 
 def test_dual_shard_search(tmp_path: Path) -> None:
     s = _make_storage(str(tmp_path / "edge"))
-    # Save and flush to central.
     s.save([_rec(content="central record", scope="/a")])
     s.flush_to_central()
-    # Save to local only.
-    s._closed = False  # Reset for continued use.
+    s._closed = False
     s.save([_rec(content="local record", scope="/b")])
-    # Search should find both.
     results = s.search([0.1, 0.2, 0.3, 0.4], limit=10)
     assert len(results) == 2
     contents = {r.content for r, _ in results}
@@ -247,7 +238,6 @@ def test_close_lifecycle(tmp_path: Path) -> None:
 
 def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     base = tmp_path / "edge"
-    # Create a fake orphaned shard using a PID that doesn't exist.
     fake_pid = 99999999
     s1 = _make_storage(str(base))
     # Manually create a shard at the orphaned path.
@@ -291,17 +281,14 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     orphan.close()
     s1.close()
 
-    # Creating a new storage should detect and recover the orphaned shard.
     s2 = _make_storage(str(base))
     assert not orphan_path.exists()
-    # The orphaned record should now be in central.
     results = s2.search([0.5, 0.5, 0.5, 0.5], limit=5)
     assert len(results) >= 1
     assert any(r.content == "orphaned" for r, _ in results)
     s2.close()
 
 
-# --- Integration with Memory class ---
 
 
 def test_memory_with_qdrant_edge(tmp_path: Path) -> None:

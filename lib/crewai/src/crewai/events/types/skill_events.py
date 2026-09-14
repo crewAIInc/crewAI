@@ -62,18 +62,13 @@ class SkillLoadFailedEvent(SkillEvent):
     error: str
 
 
-class SkillDownloadStartedEvent(SkillEvent):
-    """Event emitted when a registry skill download begins."""
+class SkillUsedEvent(SkillEvent):
+    """Event emitted when an agent uses a skill during task execution.
 
-    type: Literal["skill_download_started"] = "skill_download_started"
-    registry_ref: str
-    version: str | None = None
+    Discovery/load/activation events describe setup. This one is the runtime
+    signal: it fires when a metadata skill is selected or an always-on skill's
+    context is injected, so traces can attribute usage to an agent and task.
+    """
 
-
-class SkillDownloadCompletedEvent(SkillEvent):
-    """Event emitted when a registry skill download completes."""
-
-    type: Literal["skill_download_completed"] = "skill_download_completed"
-    registry_ref: str
-    version: str | None = None
-    cache_path: Path | None = None
+    type: Literal["skill_used"] = "skill_used"
+    disclosure_level: int = 1

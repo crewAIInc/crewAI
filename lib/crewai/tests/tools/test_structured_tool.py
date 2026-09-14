@@ -1,10 +1,10 @@
-import pytest
-from pydantic import BaseModel, Field
+import json
 
 from crewai.tools.structured_tool import CrewStructuredTool
+from pydantic import BaseModel, Field, RootModel
+import pytest
 
 
-# Test fixtures
 @pytest.fixture
 def basic_function():
     def test_func(param1: str, param2: int = 0) -> str:
@@ -88,6 +88,118 @@ def test_from_function(basic_function):
     assert isinstance(tool.args_schema, type(BaseModel))
 
 
+class StructuredOutput(BaseModel):
+    value: str
+    count: int
+
+
+class StructuredOutputList(RootModel[list[StructuredOutput]]):
+    pass
+
+
+def _build_explicit_structured_value(value: str) -> dict[str, object]:
+    """Build a value."""
+    return {"value": value, "count": 1}
+
+
+def _build_inferred_structured_value(value: str) -> StructuredOutput:
+    """Build a value."""
+    return StructuredOutput(value=value, count=1)
+
+
+def _build_structured_values(value: str) -> StructuredOutputList:
+    """Build values."""
+    return StructuredOutputList([StructuredOutput(value=value, count=1)])
+
+
+def _build_plain_structured_value(value: str) -> dict[str, object]:
+    """Build a value."""
+    return {"value": value, "count": 1}
+
+
+@pytest.mark.parametrize(
+    ("func", "result_schema", "expected_raw", "expected_agent_payload"),
+    [
+        pytest.param(
+            _build_explicit_structured_value,
+            StructuredOutput,
+            {"value": "crew", "count": 1},
+            {"value": "crew", "count": 1},
+            id="explicit-schema",
+        ),
+        pytest.param(
+            _build_inferred_structured_value,
+            None,
+            StructuredOutput(value="crew", count=1),
+            {"value": "crew", "count": 1},
+            id="inferred-base-model",
+        ),
+        pytest.param(
+            _build_structured_values,
+            None,
+            StructuredOutputList([StructuredOutput(value="crew", count=1)]),
+            [{"value": "crew", "count": 1}],
+            id="inferred-root-model",
+        ),
+    ],
+)
+def test_from_function_returns_raw_result_and_json_agent_text(
+    func,
+    result_schema,
+    expected_raw,
+    expected_agent_payload,
+):
+    kwargs = {"result_schema": result_schema} if result_schema is not None else {}
+    tool = CrewStructuredTool.from_function(
+        func=func,
+        name="build_value",
+        **kwargs,
+    )
+
+    raw_result = tool.invoke({"value": "crew"})
+
+    assert raw_result == expected_raw
+    assert json.loads(tool.format_output_for_agent(raw_result)) == (
+        expected_agent_payload
+    )
+
+
+def test_from_function_does_not_infer_non_pydantic_result_schema():
+    tool = CrewStructuredTool.from_function(
+        func=_build_plain_structured_value,
+        name="build_value",
+    )
+
+    raw_result = tool.invoke({"value": "crew"})
+
+    assert raw_result == {"value": "crew", "count": 1}
+    assert tool.format_output_for_agent(raw_result) == str(raw_result)
+
+
+def test_invalid_typed_output_warns_and_uses_string_agent_text():
+    def build_value(value: str) -> dict[str, object]:
+        """Build a value."""
+        return {"value": value, "count": "wrong"}
+
+    tool = CrewStructuredTool.from_function(
+        func=build_value,
+        name="build_value",
+        result_schema=StructuredOutput,
+    )
+    raw_result = tool.invoke({"value": "crew"})
+
+    with pytest.warns(
+        RuntimeWarning, match="Failed to validate or serialize"
+    ) as warnings:
+        agent_text = tool.format_output_for_agent(raw_result)
+
+    assert raw_result == {"value": "crew", "count": "wrong"}
+    assert agent_text == str(raw_result)
+    warning_message = str(warnings[0].message)
+    assert "ValidationError" in warning_message
+    assert "wrong" not in warning_message
+
+
 def test_validate_function_signature(basic_function, schema_class):
     """Test function signature validation"""
     tool = CrewStructuredTool(
@@ -97,7 +209,6 @@ def test_validate_function_signature(basic_function, schema_class):
         args_schema=schema_class,
     )
 
-    # Should not raise any exceptions
     tool._validate_function_signature()
 
 
@@ -178,11 +289,9 @@ def test_default_values_in_schema():
         func=default_func, name="test_tool", description="Test defaults"
     )
 
-    # Test with minimal parameters
     result = tool.invoke({"required_param": "test"})
     assert result == "test default None"
 
-    # Test with all parameters
     result = tool.invoke(
         {"required_param": "test", "optional_param": "custom", "nullable_param": 42}
     )
@@ -297,14 +406,12 @@ def test_structured_tool_invoke_calls_func_only_once():
         call_history.append(f"Call #{call_count} with param: {param}")
         return f"Result from call #{call_count}: {param}"
 
-    # Create CrewStructuredTool directly
     tool = CrewStructuredTool.from_function(
         func=counting_function,
         name="direct_test_tool",
         description="Tool to test direct invoke() method",
     )
 
-    # Call invoke() directly - this is where the bug was
     result = tool.invoke({"param": "test_value"})
 
     # Critical assertions that would catch the duplicate execution bug

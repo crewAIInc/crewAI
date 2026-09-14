@@ -10,7 +10,6 @@ def test_creating_a_tool_using_annotation():
         """Clear description for what this tool is useful for, you agent will need this information to use it."""
         return question
 
-    # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
     assert (
         my_tool.description
@@ -48,7 +47,6 @@ def test_creating_a_tool_using_baseclass():
             return question
 
     my_tool = MyCustomTool()
-    # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
     assert (
         my_tool.description
@@ -87,7 +85,6 @@ def test_setting_cache_function():
             return question
 
     my_tool = MyCustomTool()
-    # Assert all the right attributes were defined
     assert not my_tool.cache_function()
 
 
@@ -100,5 +97,4 @@ def test_default_cache_function_is_true():
             return question
 
     my_tool = MyCustomTool()
-    # Assert all the right attributes were defined
     assert my_tool.cache_function()

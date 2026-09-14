@@ -1,0 +1,80 @@
+---
+title: File Read
+description: The `FileReadTool` is designed to read files from the local file system.
+icon: folders
+mode: "wide"
+---
+
+## Overview
+
+<Note>
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+</Note>
+
+The `FileReadTool` reads the contents of a file from the local file system and returns it as text.
+It is useful for batch text file processing, reading runtime configuration files, and importing data for analytics.
+It supports any text-based file format, such as `.txt`, `.csv`, `.json`, and `.md`.
+Content is always returned as plain text — parsing it (for example, `json.loads` on a `.json` file) is up to the agent or your own code.
+
+For large files, `start_line` and `line_count` read just a window of lines instead of loading the whole file.
+
+## Installation
+
+To utilize the functionalities previously attributed to the FileReadTool, install the crewai_tools package:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+To get started with the FileReadTool:
+
+```python Code
+from crewai_tools import FileReadTool
+
+# Initialize the tool to read any file the agent knows or learns the path for
+file_read_tool = FileReadTool()
+
+# OR
+
+# Initialize with a specific file path, so the agent reads that file by default
+file_read_tool = FileReadTool(file_path='path/to/your/file.txt')
+
+# Read a window of lines (lines 100-149) instead of the whole file
+partial_content = file_read_tool.run(
+    file_path='path/to/your/file.txt',
+    start_line=100,
+    line_count=50,
+)
+```
+
+## Arguments
+
+The agent supplies these at runtime:
+
+- `file_path`: (Optional) The path to the file you want to read. Accepts absolute and relative paths. Ensure the file exists and you have the necessary permissions to access it. Omit it to read the default file configured at construction; if there is no default, the tool reports that no path was provided.
+- `start_line`: (Optional) The line number to start reading from (1-indexed). Defaults to `1`.
+- `line_count`: (Optional) The number of lines to read. If omitted, reads from `start_line` to the end of the file.
+
+You set these when constructing the tool:
+
+- `file_path`: (Optional) A default file to read when the agent calls the tool with no arguments.
+- `base_dir`: (Optional) The directory that runtime paths must stay inside. Defaults to the current working directory.
+- `encoding`: (Optional) Text encoding used to decode the file. Defaults to `utf-8`.
+
+## Allowed paths
+
+Because the file path is usually chosen by an LLM at runtime, reads are confined to a sandbox:
+
+- Paths supplied at runtime must resolve inside `base_dir`, which defaults to the current working directory. `..` segments and symlinks are resolved before the check, so they cannot be used to escape.
+- A `file_path` passed to the constructor is developer-declared intent, so it is always allowed past the containment check — even outside `base_dir`. The read itself can still fail if the file is missing, is a directory, or is not permitted. It is pinned when the tool is built, so a later change of working directory cannot repoint it, and the agent can address it either by omitting `file_path` or by using the name shown in the tool's description. Declaring one file does not expose its siblings.
+
+To let an agent read a directory tree outside the working directory, point `base_dir` at it:
+
+```python Code
+# The agent may read anything under /data, and nothing outside it
+file_read_tool = FileReadTool(base_dir='/data')
+```
+
+As a last resort, setting `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` disables path validation. This applies process-wide to every crewai-tools tool, including the SSRF protections on URL-fetching tools, so prefer `base_dir`.

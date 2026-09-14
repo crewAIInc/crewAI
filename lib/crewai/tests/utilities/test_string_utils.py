@@ -172,7 +172,7 @@ class TestInterpolateOnly:
 
         assert "AnalyticsAgent is working on task T-12345" in result
         assert '"taskId": "T-12345"' in result
-        assert '"processed_by": "agent_name"' in result  # This shouldn't be replaced
+        assert '"processed_by": "agent_name"' in result
         assert '"values": [1, 2, 3]' in result
 
     def test_empty_inputs_dictionary(self):

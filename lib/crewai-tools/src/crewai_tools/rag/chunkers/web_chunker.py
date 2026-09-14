@@ -11,15 +11,15 @@ class WebsiteChunker(BaseChunker):
     ):
         if separators is None:
             separators = [
-                "\n\n\n",  # Major section breaks
-                "\n\n",  # Paragraph breaks
-                "\n",  # Line breaks
-                ". ",  # Sentence endings
-                "! ",  # Exclamation endings
-                "? ",  # Question endings
-                "; ",  # Semicolon breaks
-                ", ",  # Comma breaks
-                " ",  # Word breaks
-                "",  # Character level
+                "\n\n\n",
+                "\n\n",
+                "\n",
+                ". ",
+                "! ",
+                "? ",
+                "; ",
+                ", ",
+                " ",
+                "",
             ]
         super().__init__(chunk_size, chunk_overlap, separators, keep_separator)

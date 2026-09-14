@@ -233,7 +233,6 @@ class TestQdrantClient:
         client.embedding_function.assert_called_once_with("Test document")
         mock_qdrant_client.upsert.assert_called_once()
 
-        # Check upsert was called with correct parameters
         call_args = mock_qdrant_client.upsert.call_args
         assert call_args.kwargs["collection_name"] == "test_collection"
         assert len(call_args.kwargs["points"]) == 1
@@ -326,7 +325,6 @@ class TestQdrantClient:
         async_client.embedding_function.assert_called_once_with("Test document")
         mock_async_qdrant_client.upsert.assert_called_once()
 
-        # Check upsert was called with correct parameters
         call_args = mock_async_qdrant_client.upsert.call_args
         assert call_args.kwargs["collection_name"] == "test_collection"
         assert len(call_args.kwargs["points"]) == 1

@@ -1,0 +1,42 @@
+---
+title: بحث Firecrawl
+description: أداة `FirecrawlSearchTool` مصممة للبحث في المواقع وتحويلها إلى markdown نظيف أو بيانات منظمة.
+icon: fire-flame
+mode: "wide"
+---
+
+# `FirecrawlSearchTool`
+
+## الوصف
+
+[Firecrawl](https://firecrawl.dev) هي منصة لزحف وتحويل أي موقع إلى markdown نظيف أو بيانات منظمة.
+
+## التثبيت
+
+- احصل على مفتاح API من [firecrawl.dev](https://firecrawl.dev) وعيّنه في متغيرات البيئة (`FIRECRAWL_API_KEY`).
+- ثبّت [Firecrawl SDK](https://github.com/mendableai/firecrawl) مع حزمة `crewai[tools]`:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## مثال
+
+استخدم FirecrawlSearchTool كما يلي للسماح لوكيلك بتحميل المواقع:
+
+```python Code
+from crewai_tools import FirecrawlSearchTool
+
+tool = FirecrawlSearchTool(query='what is firecrawl?')
+```
+
+## المعاملات
+
+- `api_key`: اختياري. يحدد مفتاح Firecrawl API. الافتراضي هو متغير البيئة `FIRECRAWL_API_KEY`.
+- `query`: سلسلة استعلام البحث المستخدمة للبحث.
+- `page_options`: اختياري. خيارات لتنسيق النتائج.
+  - `onlyMainContent`: اختياري. إرجاع المحتوى الرئيسي فقط للصفحة باستثناء الرؤوس وأشرطة التنقل والتذييلات وغيرها.
+  - `includeHtml`: اختياري. تضمين محتوى HTML الخام للصفحة. سيُخرج مفتاح html في الاستجابة.
+  - `fetchPageContent`: اختياري. جلب المحتوى الكامل للصفحة.
+- `search_options`: اختياري. خيارات للتحكم في سلوك الزحف.
+  - `limit`: اختياري. الحد الأقصى لعدد الصفحات للزحف.

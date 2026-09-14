@@ -35,7 +35,6 @@ class TestSettingsCommand(unittest.TestCase):
 
         self.settings_command.list()
 
-        # Tests that the table is created skipping hidden settings
         mock_table_instance.add_row.assert_has_calls(
             [
                 call(
@@ -48,7 +47,6 @@ class TestSettingsCommand(unittest.TestCase):
             ]
         )
 
-        # Tests that the table is printed
         mock_console.print.assert_called_once_with(mock_table_instance)
 
     def test_set_valid_keys(self):

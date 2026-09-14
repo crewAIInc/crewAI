@@ -1,11 +1,14 @@
 from pathlib import Path
 from types import ModuleType
+from typing import Literal
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
 class PDFKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries PDF file content using embeddings."""
+
+    source_type: Literal["pdf"] = "pdf"
 
     def load_content(self) -> dict[Path, str]:
         """Load and preprocess PDF file content."""

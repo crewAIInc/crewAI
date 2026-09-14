@@ -1,0 +1,50 @@
+---
+title: Skills
+description: skills.sh의 공식 레지스트리에서 crewaiinc/skills를 설치하세요. Claude Code, Cursor, Codex 등을 위한 Flow, Crew, 문서 연동 스킬.
+icon: wand-magic-sparkles
+mode: "wide"
+---
+
+# Skills
+
+**한 번의 명령으로 코딩 에이전트에 CrewAI 컨텍스트를 제공하세요.**
+
+CrewAI **Skills**는 **[skills.sh/crewaiinc/skills](https://skills.sh/crewaiinc/skills)**에 게시됩니다. `crewaiinc/skills`의 공식 레지스트리로, 개별 스킬(예: **design-agent**, **getting-started**, **design-task**, **ask-docs**), 설치 수, 감사 정보를 확인할 수 있습니다. Claude Code, Cursor, Codex 같은 코딩 에이전트에게 Flow 구성, Crew 설정, 도구 사용, CrewAI 패턴을 가르칩니다. 아래를 실행하거나 에이전트에 붙여 넣으세요.
+
+```shell Terminal
+npx skills add crewaiinc/skills
+```
+
+에이전트 워크플로에 스킬 팩이 추가되어 세션마다 프레임워크를 다시 설명하지 않아도 CrewAI 관례를 적용할 수 있습니다. 소스와 이슈는 [GitHub](https://github.com/crewAIInc/skills)에서 관리합니다.
+
+## 에이전트가 얻는 것
+
+- **Flows** — CrewAI 방식의 상태ful 앱, 단계, crew kickoff
+- **Crew & 에이전트** — YAML 우선 패턴, 역할, 작업, 위임
+- **도구 & 통합** — 검색, API, 일반적인 CrewAI 도구 연결
+- **프로젝트 구조** — CLI 스캐폴드 및 저장소 관례와 정렬
+- **최신 패턴** — 스킬이 현재 CrewAI 문서 및 권장 사항을 반영
+
+## 이 사이트에서 더 알아보기
+
+<CardGroup cols={2}>
+  <Card title="코딩 도구 & AGENTS.md" icon="terminal" href="/ko/guides/coding-tools/agents-md">
+    CrewAI와 `AGENTS.md`, 코딩 에이전트 워크플로 사용법.
+  </Card>
+  <Card title="빠른 시작" icon="rocket" href="/ko/quickstart">
+    첫 Flow와 crew를 처음부터 끝까지 구축합니다.
+  </Card>
+  <Card title="설치" icon="download" href="/ko/installation">
+    CrewAI CLI와 Python 패키지를 설치합니다.
+  </Card>
+  <Card title="Skills 레지스트리 (skills.sh)" icon="globe" href="https://skills.sh/crewaiinc/skills">
+    `crewaiinc/skills` 공식 목록—스킬, 설치 수, 감사.
+  </Card>
+  <Card title="GitHub 소스" icon="code-branch" href="https://github.com/crewAIInc/skills">
+    스킬 팩 소스, 업데이트, 이슈.
+  </Card>
+</CardGroup>
+
+### 영상: 코딩 에이전트 스킬과 CrewAI
+
+<iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{ width: "100%", height: "400px" }} />

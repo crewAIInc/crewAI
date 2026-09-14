@@ -100,7 +100,6 @@ class TestDataTypeStringValues:
     ) -> None:
         """Test data_type='pdf_file' with existing PDF file."""
         with TemporaryDirectory() as tmpdir:
-            # Create a minimal valid PDF file
             test_file = Path(tmpdir) / "test.pdf"
             test_file.write_bytes(
                 b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\ntrailer\n"
@@ -184,7 +183,6 @@ class TestDataTypeStringValues:
     ) -> None:
         """Test data_type='directory' with existing directory."""
         with TemporaryDirectory() as tmpdir:
-            # Create some files in the directory
             (Path(tmpdir) / "file1.txt").write_text("Content 1")
             (Path(tmpdir) / "file2.txt").write_text("Content 2")
 

@@ -26,6 +26,7 @@ from crewai_cli.checkpoint_cli import (
     _is_sqlite,
     _list_json,
     _list_sqlite,
+    _record_checkpoint_usage,
 )
 
 
@@ -320,8 +321,6 @@ class CheckpointTUI(App[_TuiResult]):
         self._refresh_tree()
         self.query_one("#tree-panel", Tree).root.expand()
 
-    # ── Tree building ──────────────────────────────────────────────
-
     @staticmethod
     def _top_level_entity(entry: dict[str, Any]) -> tuple[str, str]:
         etype, ename = "unknown", ""
@@ -472,8 +471,6 @@ class CheckpointTUI(App[_TuiResult]):
         storage = "SQLite" if _is_sqlite(self._location) else "JSON"
         self.sub_title = self._location
         self.query_one("#status", Static).update(f" {count} checkpoint(s) | {storage}")
-
-    # ── Detail panel ───────────────────────────────────────────────
 
     async def _clear_scroll(self, tab_id: str) -> VerticalScroll:
         tab = self.query_one(f"#{tab_id}", TabPane)
@@ -661,8 +658,6 @@ class CheckpointTUI(App[_TuiResult]):
             )
             await scroll.mount(row)
 
-    # ── Data collection ────────────────────────────────────────────
-
     def _collect_inputs(self) -> dict[str, Any] | None:
         if not self._input_keys:
             return None
@@ -699,15 +694,13 @@ class CheckpointTUI(App[_TuiResult]):
             return f"{self._location}#{entry['name']}"
         return str(entry.get("name", ""))
 
-    # ── Events ─────────────────────────────────────────────────────
-
     async def on_tree_node_highlighted(
         self, event: Tree.NodeHighlighted[dict[str, Any]]
     ) -> None:
         if event.node.data is not None:
             await self._show_detail(event.node.data)
 
-    def _exit_with_action(self, action: str) -> None:
+    def _exit_with_action(self, action: Literal["resume", "fork"]) -> None:
         if self._selected_entry is None:
             self.notify("No checkpoint selected", severity="warning")
             return
@@ -717,6 +710,7 @@ class CheckpointTUI(App[_TuiResult]):
         etype = self._detect_entity_type(self._selected_entry)
         name = self._selected_entry.get("name", "")[:30]
         self.notify(f"{action.title()}: {name}")
+        _record_checkpoint_usage("tui_resume" if action == "resume" else "tui_fork")
         self.exit((loc, action, inputs, overrides, etype))
 
     def action_resume(self) -> None:

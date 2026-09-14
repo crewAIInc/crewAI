@@ -28,10 +28,8 @@ class SettingsCommand(BaseCommand):
         table.add_column("Value", style="green")
         table.add_column("Description", style="yellow")
 
-        # Add all settings to the table
         for field_name, field_info in Settings.model_fields.items():
             if field_name in HIDDEN_SETTINGS_KEYS:
-                # Do not display hidden settings
                 continue
 
             current_value = getattr(self.settings, field_name)
@@ -42,10 +40,8 @@ class SettingsCommand(BaseCommand):
 
             table.add_row(field_name, display_value, description)
 
-        # Add trace-related settings from user data
         user_data = _load_user_data()
 
-        # CREWAI_TRACING_ENABLED environment variable
         env_tracing = os.getenv("CREWAI_TRACING_ENABLED", "")
         env_tracing_display = env_tracing if env_tracing else "Not set"
         table.add_row(
@@ -54,7 +50,6 @@ class SettingsCommand(BaseCommand):
             "Environment variable to enable/disable tracing",
         )
 
-        # Trace consent status
         trace_consent = user_data.get("trace_consent")
         if trace_consent is True:
             consent_display = "✅ Enabled"
@@ -66,7 +61,6 @@ class SettingsCommand(BaseCommand):
             "trace_consent", consent_display, "Whether trace collection is enabled"
         )
 
-        # First execution timestamp
         if user_data.get("first_execution_at"):
             timestamp = datetime.fromtimestamp(user_data["first_execution_at"])
             first_exec_display = timestamp.strftime("%Y-%m-%d %H:%M:%S")

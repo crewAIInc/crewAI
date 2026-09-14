@@ -93,11 +93,9 @@ class FileCompressorTool(BaseTool):
     def _generate_output_path(input_path: str, format: str) -> str:
         """Generates output path based on input path and format."""
         if os.path.isfile(input_path):
-            base_name = os.path.splitext(os.path.basename(input_path))[
-                0
-            ]  # Remove extension
+            base_name = os.path.splitext(os.path.basename(input_path))[0]
         else:
-            base_name = os.path.basename(os.path.normpath(input_path))  # Directory name
+            base_name = os.path.basename(os.path.normpath(input_path))
         return os.path.join(os.getcwd(), f"{base_name}.{format}")
 
     @staticmethod

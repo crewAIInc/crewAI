@@ -1,0 +1,101 @@
+---
+title: استخراج المواقع عبر Serper
+description: أداة `SerperScrapeWebsiteTool` مصممة لاستخراج المواقع واستخلاص محتوى نظيف وقابل للقراءة باستخدام Serper scraping API.
+icon: globe
+mode: "wide"
+---
+
+# `SerperScrapeWebsiteTool`
+
+## الوصف
+
+هذه الأداة مصممة لاستخراج محتوى المواقع واستخلاص نص نظيف وقابل للقراءة من أي عنوان URL. تستخدم [serper.dev](https://serper.dev) scraping API لجلب ومعالجة صفحات الويب، مع تضمين اختياري لتنسيق markdown لبنية وقابلية قراءة أفضل.
+
+## التثبيت
+
+لاستخدام `SerperScrapeWebsiteTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت الحزمة**: تأكد من تثبيت حزمة `crewai[tools]` في بيئة Python الخاصة بك.
+2. **الحصول على مفتاح API**: احصل على مفتاح `serper.dev` API بالتسجيل للحصول على حساب في `serper.dev`.
+3. **تكوين البيئة**: خزّن مفتاح API الذي حصلت عليه في متغير بيئة باسم `SERPER_API_KEY` لتسهيل استخدامه بواسطة الأداة.
+
+لدمج هذه الأداة في مشروعك، اتبع تعليمات التثبيت أدناه:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة واستخراج بيانات من موقع:
+
+```python Code
+from crewai_tools import SerperScrapeWebsiteTool
+
+# Initialize the tool for website scraping capabilities
+tool = SerperScrapeWebsiteTool()
+
+# Scrape a website with markdown formatting
+result = tool.run(url="https://example.com", include_markdown=True)
+```
+
+## المعاملات
+
+تقبل أداة `SerperScrapeWebsiteTool` المعاملات التالية:
+
+- **url**: مطلوب. عنوان URL للموقع المراد استخراجه.
+- **include_markdown**: اختياري. ما إذا كان يجب تضمين تنسيق markdown في المحتوى المستخرج. الافتراضي هو `True`.
+
+## مثال مع المعاملات
+
+إليك مثالاً يوضح كيفية استخدام الأداة مع معاملات مختلفة:
+
+```python Code
+from crewai_tools import SerperScrapeWebsiteTool
+
+tool = SerperScrapeWebsiteTool()
+
+# Scrape with markdown formatting (default)
+markdown_result = tool.run(
+    url="https://docs.crewai.com",
+    include_markdown=True
+)
+
+# Scrape without markdown formatting for plain text
+plain_result = tool.run(
+    url="https://docs.crewai.com",
+    include_markdown=False
+)
+
+print("Markdown formatted content:")
+print(markdown_result)
+
+print("\nPlain text content:")
+print(plain_result)
+```
+
+## حالات الاستخدام
+
+أداة `SerperScrapeWebsiteTool` مفيدة بشكل خاص لـ:
+
+- **تحليل المحتوى**: استخراج وتحليل محتوى المواقع لأغراض البحث
+- **جمع البيانات**: جمع معلومات منظمة من صفحات الويب
+- **معالجة التوثيق**: تحويل التوثيق المبني على الويب إلى تنسيقات قابلة للقراءة
+- **التحليل التنافسي**: استخراج بيانات مواقع المنافسين لأبحاث السوق
+- **ترحيل المحتوى**: استخراج المحتوى من المواقع الحالية لأغراض الترحيل
+
+## معالجة الأخطاء
+
+تتضمن الأداة معالجة شاملة للأخطاء لـ:
+
+- **مشاكل الشبكة**: التعامل بسلاسة مع مهلات الاتصال وأخطاء الشبكة
+- **أخطاء API**: توفير رسائل خطأ مفصلة للمشاكل المتعلقة بـ API
+- **عناوين URL غير صالحة**: التحقق من المشاكل المتعلقة بعناوين URL المشوّهة والإبلاغ عنها
+- **المصادقة**: رسائل خطأ واضحة لمفاتيح API المفقودة أو غير الصالحة
+
+## اعتبارات الأمان
+
+- خزّن دائماً `SERPER_API_KEY` في متغيرات البيئة، ولا تضعه مباشرة في كودك المصدري
+- انتبه لحدود المعدل المفروضة من Serper API
+- احترم robots.txt وشروط خدمة المواقع عند استخراج المحتوى
+- فكر في تنفيذ تأخيرات بين الطلبات لعمليات الاستخراج واسعة النطاق

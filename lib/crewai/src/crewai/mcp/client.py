@@ -8,6 +8,7 @@ import logging
 import sys
 import time
 from typing import Any, NamedTuple, TypeVar
+from urllib.parse import urlparse
 
 from typing_extensions import Self
 
@@ -26,6 +27,14 @@ from crewai.events.types.mcp_events import (
     MCPToolExecutionFailedEvent,
     MCPToolExecutionStartedEvent,
 )
+from crewai.mcp.exceptions import (
+    MCPConnectionError,
+    error_for_status,
+    error_type_for_status,
+    find_http_status,
+    find_transport_failure,
+    tool_execution_error_type,
+)
 from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
@@ -40,7 +49,6 @@ class _MCPToolResult(NamedTuple):
     is_error: bool
 
 
-# MCP Connection timeout constants (in seconds)
 MCP_CONNECTION_TIMEOUT = 30  # Increased for slow servers
 MCP_TOOL_EXECUTION_TIMEOUT = 30
 MCP_DISCOVERY_TIMEOUT = 30  # Increased for slow servers
@@ -48,9 +56,12 @@ MCP_MAX_RETRIES = 3
 
 _T = TypeVar("_T")
 
-# Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
 _mcp_schema_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
 _cache_ttl = 300  # 5 minutes
+
+
+def _server_name_from_url(url: str) -> str:
+    return urlparse(url).hostname or url
 
 
 class MCPClient:
@@ -96,7 +107,6 @@ class MCPClient:
         self.discovery_timeout = discovery_timeout
         self.max_retries = max_retries
         self.cache_tools_list = cache_tools_list
-        # self._logger = logger or logging.getLogger(__name__)
         self._session: Any = None
         self._initialized = False
         self._exit_stack = AsyncExitStack()
@@ -125,12 +135,12 @@ class MCPClient:
             server_url = None
             transport_type = self.transport.transport_type.value
         elif isinstance(self.transport, HTTPTransport):
-            server_name = self.transport.url
             server_url = self.transport.url
+            server_name = _server_name_from_url(server_url)
             transport_type = self.transport.transport_type.value
         elif isinstance(self.transport, SSETransport):
-            server_name = self.transport.url
             server_url = self.transport.url
+            server_name = _server_name_from_url(server_url)
             transport_type = self.transport.transport_type.value
         else:
             server_name = "Unknown MCP Server"
@@ -146,17 +156,20 @@ class MCPClient:
             Self for method chaining.
 
         Raises:
-            ConnectionError: If connection fails.
+            MCPAuthenticationError: If the server refused the connection with
+                an authentication status.
+            MCPHTTPError: If the server refused the connection with any other
+                HTTP status.
+            MCPConnectionError: If the connection failed for any other reason.
             ImportError: If MCP SDK not available.
         """
         if self.connected:
             return self
 
-        # Get server info for events
-        server_name, server_url, transport_type = self._get_server_info()
+        server_info = self._get_server_info()
+        server_name, server_url, transport_type = server_info
         is_reconnect = self._was_connected
 
-        # Emit connection started event
         started_at = datetime.now()
         crewai_event_bus.emit(
             self,
@@ -177,49 +190,20 @@ class MCPClient:
             # Always enter transport context via exit stack (it handles already-connected state)
             await self._exit_stack.enter_async_context(self.transport)
 
-            # Create ClientSession with transport streams
             self._session = ClientSession(
                 self.transport.read_stream,
                 self.transport.write_stream,
             )
 
-            # Enter the session's async context manager via exit stack
             await self._exit_stack.enter_async_context(self._session)
 
-            # Initialize the session (required by MCP protocol)
-            try:
-                await asyncio.wait_for(
-                    self._session.initialize(),
-                    timeout=self.connect_timeout,
-                )
-            except asyncio.CancelledError:
-                # If initialization was cancelled (e.g., event loop closing),
-                # cleanup and re-raise - don't suppress cancellation
-                await self._cleanup_on_error()
-                raise
-            except BaseExceptionGroup as eg:
-                # Handle exception groups from anyio task groups
-                # Extract the actual meaningful error (not GeneratorExit)
-                actual_error = None
-                for exc in eg.exceptions:
-                    if isinstance(exc, Exception) and not isinstance(
-                        exc, GeneratorExit
-                    ):
-                        # Check if it's an HTTP error (like 401)
-                        error_msg = str(exc).lower()
-                        if "401" in error_msg or "unauthorized" in error_msg:
-                            actual_error = exc
-                            break
-                        if "cancel scope" not in error_msg and "task" not in error_msg:
-                            actual_error = exc
-                            break
-
-                await self._cleanup_on_error()
-                if actual_error:
-                    raise ConnectionError(
-                        f"Failed to connect to MCP server: {actual_error}"
-                    ) from actual_error
-                raise ConnectionError(f"Failed to connect to MCP server: {eg}") from eg
+            # MCP protocol requires session.initialize() before any other request.
+            # Failures propagate to the handlers below, which unwind the transport
+            # once and inspect what that unwinding reveals about the cause.
+            await asyncio.wait_for(
+                self._session.initialize(),
+                timeout=self.connect_timeout,
+            )
 
             self._initialized = True
             self._was_connected = True
@@ -255,7 +239,12 @@ class MCPClient:
             )
             raise ImportError(error_msg) from e
         except asyncio.TimeoutError as e:
-            await self._cleanup_on_error()
+            cleanup_error = await self._cleanup_on_error()
+            status_code = find_http_status(e, cleanup_error)
+            if status_code is not None:
+                raise self._report_connection_failure(
+                    server_info, started_at, status_code=status_code
+                ) from e
             error_msg = f"MCP connection timed out after {self.connect_timeout} seconds. The server may be slow or unreachable."
             self._emit_connection_failed(
                 server_name,
@@ -265,10 +254,21 @@ class MCPClient:
                 "timeout",
                 started_at,
             )
-            raise ConnectionError(error_msg) from e
-        except asyncio.CancelledError:
-            # Re-raise cancellation - don't suppress it
-            await self._cleanup_on_error()
+            raise MCPConnectionError(error_msg) from e
+        except asyncio.CancelledError as e:
+            # A failing transport cancels this coroutine, so cancellation alone
+            # says nothing. Unwinding the transport is what reveals the cause.
+            cleanup_error = await self._cleanup_on_error()
+            status_code = find_http_status(e, cleanup_error)
+            if status_code is not None:
+                raise self._report_connection_failure(
+                    server_info, started_at, status_code=status_code
+                ) from e
+            if (failure := find_transport_failure(cleanup_error)) is not None:
+                raise self._report_connection_failure(
+                    server_info, started_at, error=failure
+                ) from failure
+            # Nothing failed, so this is a real cancellation: never swallow it.
             self._emit_connection_failed(
                 server_name,
                 server_url,
@@ -278,54 +278,59 @@ class MCPClient:
                 started_at,
             )
             raise
-        except BaseExceptionGroup as eg:
-            # Handle exception groups from anyio task groups at outer level
-            actual_error = None
-            for exc in eg.exceptions:
-                if isinstance(exc, Exception) and not isinstance(exc, GeneratorExit):
-                    error_msg = str(exc).lower()
-                    if "401" in error_msg or "unauthorized" in error_msg:
-                        actual_error = exc
-                        break
-                    if "cancel scope" not in error_msg and "task" not in error_msg:
-                        actual_error = exc
-                        break
+        except (BaseExceptionGroup, Exception) as e:
+            cleanup_error = await self._cleanup_on_error()
+            status_code = find_http_status(e, cleanup_error)
+            if status_code is not None:
+                raise self._report_connection_failure(
+                    server_info, started_at, status_code=status_code
+                ) from e
+            failure = find_transport_failure(e, cleanup_error) or e
+            raise self._report_connection_failure(
+                server_info, started_at, error=failure
+            ) from e
 
-            await self._cleanup_on_error()
+    def _report_connection_failure(
+        self,
+        server_info: tuple[str, str | None, str | None],
+        started_at: datetime,
+        *,
+        error: BaseException | None = None,
+        status_code: int | None = None,
+    ) -> MCPConnectionError:
+        """Build a connection failure, emit the event, and return it to raise."""
+        if status_code is not None:
+            failure = error_for_status(status_code)
+            error_msg = str(failure)
+            error_type = error_type_for_status(status_code) or "network"
+        elif error is not None and isinstance(error, MCPConnectionError):
+            failure = error
+            error_msg = str(error)
             error_type = (
-                "authentication"
-                if actual_error
-                and (
-                    "401" in str(actual_error).lower()
-                    or "unauthorized" in str(actual_error).lower()
-                )
+                error_type_for_status(error.status_code) or "network"
+                if error.status_code is not None
                 else "network"
             )
-            error_msg = str(actual_error) if actual_error else str(eg)
-            self._emit_connection_failed(
-                server_name,
-                server_url,
-                transport_type,
-                error_msg,
-                error_type,
-                started_at,
-            )
-            if actual_error:
-                raise ConnectionError(
-                    f"Failed to connect to MCP server: {actual_error}"
-                ) from actual_error
-            raise ConnectionError(f"Failed to connect to MCP server: {eg}") from eg
-        except Exception as e:
-            await self._cleanup_on_error()
-            error_type = (
-                "authentication"
-                if "401" in str(e).lower() or "unauthorized" in str(e).lower()
-                else "network"
-            )
-            self._emit_connection_failed(
-                server_name, server_url, transport_type, str(e), error_type, started_at
-            )
-            raise ConnectionError(f"Failed to connect to MCP server: {e}") from e
+            status_code = error.status_code
+        elif error is not None:
+            error_msg = f"Failed to connect to MCP server: {error}"
+            error_type = "network"
+            status_code = find_http_status(error)
+            failure = MCPConnectionError(error_msg, status_code=status_code)
+        else:
+            raise ValueError("Either error or status_code must be provided")
+
+        server_name, server_url, transport_type = server_info
+        self._emit_connection_failed(
+            server_name,
+            server_url,
+            transport_type,
+            error_msg,
+            error_type,
+            started_at,
+            status_code=status_code,
+        )
+        return failure
 
     def _emit_connection_failed(
         self,
@@ -335,6 +340,7 @@ class MCPClient:
         error: str,
         error_type: str,
         started_at: datetime,
+        status_code: int | None = None,
     ) -> None:
         """Emit connection failed event."""
         failed_at = datetime.now()
@@ -346,19 +352,31 @@ class MCPClient:
                 transport_type=transport_type,
                 error=error,
                 error_type=error_type,
+                status_code=status_code,
                 started_at=started_at,
                 failed_at=failed_at,
             ),
         )
 
-    async def _cleanup_on_error(self) -> None:
-        """Cleanup resources when an error occurs during connection."""
+    async def _cleanup_on_error(self) -> BaseException | None:
+        """Cleanup resources when an error occurs during connection.
+
+        Returns:
+            The exception raised while unwinding the transport, if any. The
+            transport reports the server's refusal here rather than to the
+            coroutine that was waiting, so the caller inspects this for an
+            HTTP status instead of treating it as a cleanup problem.
+        """
         try:
             await self._exit_stack.aclose()
-
-        except Exception as e:
-            # Best effort cleanup - ignore all other errors
-            raise RuntimeError(f"Error during MCP client cleanup: {e}") from e
+        except asyncio.CancelledError as e:
+            return e
+        except (Exception, BaseExceptionGroup) as e:
+            # Groups are caught explicitly because one holding only BaseExceptions
+            # is not an Exception, yet can still carry the server's refusal.
+            return e
+        else:
+            return None
         finally:
             self._session = None
             self._initialized = False
@@ -371,7 +389,11 @@ class MCPClient:
 
         try:
             await self._exit_stack.aclose()
-        except Exception as e:
+        except asyncio.CancelledError:
+            raise
+        except MCPConnectionError:
+            raise
+        except (Exception, BaseExceptionGroup) as e:
             raise RuntimeError(f"Error during MCP client disconnect: {e}") from e
         finally:
             self._session = None
@@ -391,23 +413,19 @@ class MCPClient:
         if not self.connected:
             await self.connect()
 
-        # Check cache if enabled
         use_cache = use_cache if use_cache is not None else self.cache_tools_list
         if use_cache:
             cache_key = self._get_cache_key("tools")
             if cache_key in _mcp_schema_cache:
                 cached_data, cache_time = _mcp_schema_cache[cache_key]
                 if time.time() - cache_time < _cache_ttl:
-                    # Logger removed - return cached data
                     return cached_data
 
-        # List tools with timeout and retries
         tools = await self._retry_operation(
             self._list_tools_impl,
             timeout=self.discovery_timeout,
         )
 
-        # Cache results if enabled
         if use_cache:
             cache_key = self._get_cache_key("tools")
             _mcp_schema_cache[cache_key] = (tools, time.time())
@@ -441,7 +459,27 @@ class MCPClient:
             arguments: Tool arguments.
 
         Returns:
-            Tool execution result.
+            Tool execution result content. The ``isError`` flag is dropped;
+            use :meth:`call_tool_result` when the caller needs it.
+        """
+        return (await self.call_tool_result(tool_name, arguments)).content
+
+    async def call_tool_result(
+        self, tool_name: str, arguments: dict[str, Any] | None = None
+    ) -> _MCPToolResult:
+        """Call a tool and return its content together with the ``isError`` flag.
+
+        MCP servers report a failed tool as a *successful* JSON-RPC response
+        carrying ``isError: true``. Callers that only take the content cannot
+        tell that apart from a normal result, which is how a failed step ends
+        up looking like a successful one.
+
+        Args:
+            tool_name: Name of the tool to call.
+            arguments: Tool arguments.
+
+        Returns:
+            The content string plus whether the server flagged it as an error.
         """
         if not self.connected:
             await self.connect()
@@ -449,10 +487,8 @@ class MCPClient:
         arguments = arguments or {}
         cleaned_arguments = self._clean_tool_arguments(arguments)
 
-        # Get server info for events
         server_name, server_url, transport_type = self._get_server_info()
 
-        # Emit tool execution started event
         started_at = datetime.now()
         crewai_event_bus.emit(
             self,
@@ -505,15 +541,9 @@ class MCPClient:
                     ),
                 )
 
-            return tool_result.content
+            return tool_result
         except Exception as e:
             failed_at = datetime.now()
-            error_type = (
-                "timeout"
-                if isinstance(e, (asyncio.TimeoutError, ConnectionError))
-                and "timeout" in str(e).lower()
-                else "server_error"
-            )
             crewai_event_bus.emit(
                 self,
                 MCPToolExecutionFailedEvent(
@@ -523,7 +553,7 @@ class MCPClient:
                     tool_name=tool_name,
                     tool_args=cleaned_arguments,
                     error=str(e),
-                    error_type=error_type,
+                    error_type=tool_execution_error_type(e),
                     started_at=started_at,
                     failed_at=failed_at,
                 ),
@@ -542,34 +572,28 @@ class MCPClient:
         cleaned: dict[str, Any] = {}
 
         for key, value in arguments.items():
-            # Skip None values
             if value is None:
                 continue
 
-            # Fix sources array format: convert ["web"] to [{"type": "web"}]
+            # Normalize sources from ["web"] to [{"type": "web"}]
             if key == "sources" and isinstance(value, list):
                 fixed_sources = []
                 for item in value:
                     if isinstance(item, str):
-                        # Convert string to object format
                         fixed_sources.append({"type": item})
                     elif isinstance(item, dict):
-                        # Already in correct format
                         fixed_sources.append(item)
                     else:
-                        # Keep as is if unknown format
                         fixed_sources.append(item)
                 if fixed_sources:
                     cleaned[key] = fixed_sources
                 continue
 
-            # Recursively clean nested dictionaries
             if isinstance(value, dict):
                 nested_cleaned = self._clean_tool_arguments(value)
                 if nested_cleaned:  # Only add if not empty
                     cleaned[key] = nested_cleaned
             elif isinstance(value, list):
-                # Clean list items
                 cleaned_list = []
                 for item in value:
                     if isinstance(item, dict):
@@ -581,7 +605,6 @@ class MCPClient:
                 if cleaned_list:
                     cleaned[key] = cleaned_list
             else:
-                # Keep primitive values
                 cleaned[key] = value
 
         return cleaned
@@ -597,7 +620,6 @@ class MCPClient:
 
         is_error = getattr(result, "isError", False) or False
 
-        # Extract result content
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:
                 content_item = result.content[0]
@@ -713,9 +735,17 @@ class MCPClient:
                     raise ConnectionError(last_error) from e
 
             except Exception as e:
+                if isinstance(e, MCPConnectionError):
+                    raise
+
+                status_code = find_http_status(e)
+                if status_code is not None and (
+                    error_type_for_status(status_code) == "authentication"
+                ):
+                    raise error_for_status(status_code, detail=str(e)) from e
+
                 error_str = str(e).lower()
 
-                # Classify errors as retryable or non-retryable
                 if "authentication" in error_str or "unauthorized" in error_str:
                     raise ConnectionError(f"Authentication failed: {e}") from e
 

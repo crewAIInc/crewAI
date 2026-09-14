@@ -123,7 +123,6 @@ class SingleStoreSearchTool(BaseTool):
     def __init__(
         self,
         tables: list[str] | None = None,
-        # Basic connection parameters
         host: str | None = None,
         user: str | None = None,
         password: str | None = None,
@@ -147,7 +146,6 @@ class SingleStoreSearchTool(BaseTool):
         conv: dict[int, Callable[..., Any]] | None = None,
         credential_type: str | None = None,
         autocommit: bool | None = None,
-        # Result formatting options
         results_type: str | None = None,
         buffered: bool | None = None,
         results_format: str | None = None,
@@ -210,13 +208,10 @@ class SingleStoreSearchTool(BaseTool):
                     "`singlestore` package not found, please run `uv add crewai-tools[singlestore]`"
                 )
 
-        # Set the data type for the parent class
         kwargs["data_type"] = "singlestore"
         super().__init__(**kwargs)
 
-        # Build connection arguments dictionary with sensible defaults
         self.connection_args = {
-            # Basic connection parameters
             "host": host,
             "user": user,
             "password": password,
@@ -240,7 +235,6 @@ class SingleStoreSearchTool(BaseTool):
             "conv": conv or {},
             "credential_type": credential_type,
             "autocommit": autocommit,
-            # Result formatting
             "results_type": results_type,
             "buffered": buffered,
             "results_format": results_format,
@@ -266,13 +260,11 @@ class SingleStoreSearchTool(BaseTool):
         ):
             self.connection_args["conn_attrs"] = dict()
 
-        # Add tool identification to connection attributes
         self.connection_args["conn_attrs"]["_connector_name"] = (
             "crewAI SingleStore Tool"
         )
         self.connection_args["conn_attrs"]["_connector_version"] = "1.0"
 
-        # Initialize connection pool for efficient connection management
         self.connection_pool = QueuePool(
             creator=self._create_connection,
             pool_size=pool_size or 5,
@@ -280,7 +272,6 @@ class SingleStoreSearchTool(BaseTool):
             timeout=timeout or 30.0,
         )
 
-        # Validate database schema and initialize table information
         self._initialize_tables(tables)
 
     def _initialize_tables(self, tables: list[str]) -> None:
@@ -295,22 +286,18 @@ class SingleStoreSearchTool(BaseTool):
         conn = self._get_connection()
         try:
             with conn.cursor() as cursor:
-                # Get all existing tables in the database
                 cursor.execute("SHOW TABLES")
                 existing_tables = {table[0] for table in cursor.fetchall()}
 
-                # Validate that the database has tables
                 if not existing_tables or len(existing_tables) == 0:
                     raise ValueError(
                         "No tables found in the database. "
                         "Please ensure the database is initialized with the required tables."
                     )
 
-                # Use all tables if none specified
                 if not tables or len(tables) == 0:
                     tables = list(existing_tables)
 
-                # Build table definitions for description
                 table_definitions = []
                 for table in tables:
                     if table not in existing_tables:
@@ -319,7 +306,6 @@ class SingleStoreSearchTool(BaseTool):
                             f"Please ensure the table is created."
                         )
 
-                    # Get column information for each table
                     cursor.execute(f"SHOW COLUMNS FROM {table}")
                     columns = cursor.fetchall()
                     column_info = ", ".join(f"{row[0]} {row[1]}" for row in columns)
@@ -328,7 +314,6 @@ class SingleStoreSearchTool(BaseTool):
             # Ensure the connection is returned to the pool
             conn.close()
 
-        # Update the tool description with actual table information
         self.description = (
             f"A tool that can be used to semantic search a query from a SingleStore "
             f"database's {', '.join(table_definitions)} table(s) content."
@@ -379,11 +364,9 @@ class SingleStoreSearchTool(BaseTool):
         Returns:
             tuple: (is_valid: bool, message: str)
         """
-        # Check if the input is a string
         if not isinstance(search_query, str):
             return False, "Search query must be a string."
 
-        # Remove leading/trailing whitespace and convert to lowercase for checking
         query_lower = search_query.strip().lower()
 
         # Allow only SELECT and SHOW statements
@@ -405,25 +388,20 @@ class SingleStoreSearchTool(BaseTool):
         Returns:
             str: Formatted search results or error message
         """
-        # Validate the query before execution
         valid, message = self._validate_query(search_query)
         if not valid:
             return f"Invalid search query: {message}"
 
-        # Execute the query using a connection from the pool
         conn = self._get_connection()
         try:
             with conn.cursor() as cursor:
                 try:
-                    # Execute the validated search query
                     cursor.execute(search_query)
                     results = cursor.fetchall()
 
-                    # Handle empty results
                     if not results:
                         return "No results found."
 
-                    # Format the results for readable output
                     formatted_results = "\n".join(
                         [", ".join([str(item) for item in row]) for row in results]
                     )

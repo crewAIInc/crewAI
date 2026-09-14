@@ -36,7 +36,7 @@ def create_mock_llm() -> Mock:
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Hello! This is a test response."
     mock_llm.stop = []
-    mock_llm.model = "gpt-4o-mini"  # Required by telemetry
+    mock_llm.model = "gpt-4o-mini"
     mock_llm.supports_stop_words.return_value = True
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
         total_tokens=100,

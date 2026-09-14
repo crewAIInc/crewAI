@@ -38,9 +38,16 @@ import subprocess
 import sys
 from typing import Any
 
+from crewai_core.project import (
+    ProjectDefinitionError,
+    configured_project_definition,
+    get_crewai_project_config,
+    get_crewai_project_type,
+    read_toml,
+)
 from rich.console import Console
 
-from crewai_cli.utils import parse_toml
+from crewai_cli.utils import normalize_package_name
 
 
 console = Console()
@@ -74,7 +81,6 @@ class ValidationResult:
     hint: str = ""
 
 
-# Maps known provider env var names → label used in hint messages.
 _KNOWN_API_KEY_HINTS: dict[str, str] = {
     "OPENAI_API_KEY": "OpenAI",
     "ANTHROPIC_API_KEY": "Anthropic",
@@ -99,15 +105,143 @@ _KNOWN_API_KEY_HINTS: dict[str, str] = {
 }
 
 
-def normalize_package_name(project_name: str) -> str:
-    """Normalize a pyproject project.name into a Python package directory name.
+_JSON_VALIDATION_MARKER = "CREWAI_JSON_VALIDATION_RESULT="
+_JSON_VALIDATOR_SCRIPT = f"""
+import json
+import sys
 
-    Mirrors the rules in ``crewai.cli.create_crew.create_crew`` so the
-    validator agrees with the scaffolder about where ``src/<pkg>/`` should
-    live.
-    """
-    folder = project_name.replace(" ", "_").replace("-", "_").lower()
-    return re.sub(r"[^a-zA-Z0-9_]", "", folder)
+try:
+    from crewai.project.json_loader import validate_crew_project
+    project = validate_crew_project(sys.argv[1], agents_dir=sys.argv[2])
+    payload = {{"ok": True, "agent_names": project.agent_names}}
+except BaseException as exc:
+    errors = getattr(exc, "errors", None)
+    payload = {{
+        "ok": False,
+        "error_type": type(exc).__name__,
+        "error": str(exc),
+        "errors": errors if isinstance(errors, list) else None,
+    }}
+
+print({_JSON_VALIDATION_MARKER!r} + json.dumps(payload))
+""".strip()
+
+
+class _JSONProjectValidationError(ValueError):
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__("\n".join(errors))
+
+
+class _JSONProjectEnvironmentError(RuntimeError):
+    """JSON validation could not run in the project's environment."""
+
+    hint = (
+        "Install `uv` if needed, run `uv sync` in the project directory, "
+        "then retry with `uv run crewai deploy validate`."
+    )
+
+
+def _find_json_project_file(directory: Path, stem: str) -> Path | None:
+    for extension in (".jsonc", ".json"):
+        candidate = directory / f"{stem}{extension}"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _validate_json_project_in_project_env(
+    crew_path: Path, agents_dir: Path, project_root: Path
+) -> list[str]:
+    """Validate a JSON crew with the full CrewAI package from its project env."""
+    uv_path = shutil.which("uv")
+    if uv_path is None:
+        raise _JSONProjectEnvironmentError(
+            "The `uv` executable is required to validate JSON crews from a "
+            "standalone CLI installation."
+        )
+
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed command plus trusted paths
+            [
+                uv_path,
+                "run",
+                "python",
+                "-c",
+                _JSON_VALIDATOR_SCRIPT,
+                str(crew_path),
+                str(agents_dir),
+            ],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise _JSONProjectEnvironmentError(
+            "JSON crew validation timed out after 120s."
+        ) from exc
+    except OSError as exc:
+        raise _JSONProjectEnvironmentError(
+            f"Could not start JSON crew validation: {exc}"
+        ) from exc
+
+    payload: dict[str, Any] | None = None
+    for line in reversed(proc.stdout.splitlines()):
+        if not line.startswith(_JSON_VALIDATION_MARKER):
+            continue
+        try:
+            payload = json.loads(line.removeprefix(_JSON_VALIDATION_MARKER))
+        except json.JSONDecodeError:
+            pass
+        break
+
+    if payload is None:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        raise _JSONProjectEnvironmentError(
+            detail or "JSON crew validation produced no result."
+        )
+
+    if not payload.get("ok"):
+        errors = payload.get("errors")
+        if isinstance(errors, list) and all(isinstance(error, str) for error in errors):
+            raise _JSONProjectValidationError(errors)
+        error_type = payload.get("error_type", "Error")
+        error = payload.get("error", "JSON crew validation failed")
+        raise _JSONProjectEnvironmentError(f"{error_type}: {error}")
+
+    agent_names = payload.get("agent_names")
+    if not isinstance(agent_names, list) or not all(
+        isinstance(name, str) for name in agent_names
+    ):
+        raise _JSONProjectEnvironmentError(
+            "JSON crew validation returned invalid agent names."
+        )
+    return agent_names
+
+
+def _validate_json_project(
+    crew_path: Path, agents_dir: Path, project_root: Path
+) -> list[str]:
+    """Validate locally when possible, otherwise use the project's environment."""
+    try:
+        from crewai.project.json_loader import (
+            JSONProjectValidationError,
+            validate_crew_project,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name and (exc.name == "crewai" or exc.name.startswith("crewai.")):
+            return _validate_json_project_in_project_env(
+                crew_path, agents_dir, project_root
+            )
+        raise
+
+    try:
+        project = validate_crew_project(crew_path, agents_dir)
+    except JSONProjectValidationError as exc:
+        raise _JSONProjectValidationError(exc.errors) from exc
+    return project.agent_names
 
 
 class DeployValidator:
@@ -152,9 +286,25 @@ class DeployValidator:
     def ok(self) -> bool:
         return not self.errors
 
+    @property
+    def _is_json_crew(self) -> bool:
+        """True for JSON crew projects with configured crew definitions."""
+        pyproject_path = self.project_root / "pyproject.toml"
+        if not pyproject_path.exists():
+            return False
+        try:
+            data = read_toml(pyproject_path)
+        except Exception:
+            return False
+        crewai_config = get_crewai_project_config(data)
+        return crewai_config.get("type") == "crew" and "definition" in crewai_config
+
     def run(self) -> list[ValidationResult]:
         """Run all checks. Later checks are skipped when earlier ones make
         them impossible (e.g. no pyproject.toml → no lockfile check)."""
+        if self._is_json_crew:
+            return self._run_json_checks()
+
         if not self._check_pyproject():
             return self.results
 
@@ -177,6 +327,159 @@ class DeployValidator:
 
         return self.results
 
+    def _run_json_checks(self) -> list[ValidationResult]:
+        """Validation suite for JSON-defined crew projects."""
+        self._check_pyproject()
+        self._check_lockfile()
+
+        try:
+            crew_path = configured_project_definition(
+                "crew",
+                pyproject_data=self._pyproject,
+                project_root=self.project_root,
+            )
+        except ProjectDefinitionError as exc:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_definition",
+                "[tool.crewai] definition is invalid",
+                detail=str(exc),
+                hint=(
+                    "Set `[tool.crewai] definition` to a project-local JSON "
+                    "or JSONC crew file."
+                ),
+            )
+            return self.results
+
+        if crew_path is None:
+            return self.results
+
+        agents_dir = crew_path.parent / "agents"
+        agents_dir_ok = self._check_json_agents_dir(agents_dir)
+
+        agent_names: list[str] | None = None
+        try:
+            if agents_dir_ok:
+                agent_names = _validate_json_project(
+                    crew_path, agents_dir, self.project_root
+                )
+        except _JSONProjectValidationError as e:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_json",
+                f"{crew_path.name} has invalid JSON crew configuration",
+                detail="\n".join(e.errors),
+                hint="Fix the JSON crew, agent, and task references before deploying.",
+            )
+            return self.results
+        except _JSONProjectEnvironmentError as e:
+            self._add(
+                Severity.ERROR,
+                "json_validation_environment_failed",
+                "Could not validate the JSON crew in the project environment",
+                detail=str(e),
+                hint=e.hint,
+            )
+            return self.results
+        except Exception as e:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_json",
+                f"Cannot parse {crew_path.name}",
+                detail=str(e),
+            )
+            return self.results
+
+        if agent_names is not None:
+            self._check_env_vars_json(crew_path, agents_dir, agent_names)
+        self._check_version_vs_lockfile()
+
+        return self.results
+
+    def _check_json_agents_dir(self, agents_dir: Path) -> bool:
+        if agents_dir.is_dir():
+            return True
+        self._add(
+            Severity.ERROR,
+            "missing_agents_dir",
+            "Cannot find agents/ directory",
+            detail=(
+                "JSON crew projects load agent definitions from "
+                f"{agents_dir.relative_to(self.project_root)}/*.jsonc or *.json."
+            ),
+            hint="Create agents/ and add one JSON or JSONC file per agent.",
+        )
+        return False
+
+    def _check_env_vars_json(
+        self, crew_path: Path, agents_dir: Path, agent_names: list[str]
+    ) -> None:
+        """Check for env var references in JSON crew files."""
+        referenced: set[str] = set()
+        pattern = re.compile(r"\$\{?([A-Z][A-Z0-9_]+)\}?")
+
+        try:
+            referenced.update(pattern.findall(crew_path.read_text(errors="ignore")))
+        except OSError as exc:
+            logger.debug("Skipping unreadable crew file %s: %s", crew_path, exc)
+
+        for name in agent_names:
+            agent_path = _find_json_project_file(agents_dir, name)
+            if agent_path is None:
+                continue
+            try:
+                referenced.update(
+                    pattern.findall(agent_path.read_text(errors="ignore"))
+                )
+            except OSError as exc:
+                logger.debug("Skipping unreadable agent file %s: %s", agent_path, exc)
+
+        for py_path in self.project_root.rglob("*.py"):
+            if ".venv" in py_path.parts:
+                continue
+            try:
+                text = py_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            env_pattern = re.compile(
+                r"""(?x)
+                (?:os\.environ\s*(?:\[\s*|\.get\s*\(\s*)
+                  |os\.getenv\s*\(\s*
+                  |getenv\s*\(\s*)
+                ['"]([A-Z][A-Z0-9_]*)['"]
+                """
+            )
+            referenced.update(env_pattern.findall(text))
+
+        env_file = self.project_root / ".env"
+        env_keys: set[str] = set()
+        if env_file.exists():
+            for line in env_file.read_text(errors="ignore").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                env_keys.add(line.split("=", 1)[0].strip())
+
+        missing_known = sorted(
+            var
+            for var in referenced
+            if var in _KNOWN_API_KEY_HINTS
+            and var not in env_keys
+            and var not in os.environ
+        )
+        if missing_known:
+            self._add(
+                Severity.WARNING,
+                "env_vars_not_in_dotenv",
+                f"{len(missing_known)} referenced API key(s) not in .env",
+                detail=(
+                    "These env vars are referenced in your project but not set "
+                    f"locally: {', '.join(missing_known)}. Deploys will fail "
+                    "unless they are added to the deployment's Environment "
+                    "Variables in the CrewAI dashboard."
+                ),
+            )
+
     def _check_pyproject(self) -> bool:
         pyproject_path = self.project_root / "pyproject.toml"
         if not pyproject_path.exists():
@@ -193,7 +496,7 @@ class DeployValidator:
             return False
 
         try:
-            self._pyproject = parse_toml(pyproject_path.read_text())
+            self._pyproject = read_toml(pyproject_path)
         except Exception as e:
             self._add(
                 Severity.ERROR,
@@ -221,9 +524,7 @@ class DeployValidator:
 
         self._project_name = name
         self._package_name = normalize_package_name(name)
-        self._is_flow = (self._pyproject.get("tool") or {}).get("crewai", {}).get(
-            "type"
-        ) == "flow"
+        self._is_flow = get_crewai_project_type(self._pyproject) == "flow"
         return True
 
     def _check_lockfile(self) -> None:

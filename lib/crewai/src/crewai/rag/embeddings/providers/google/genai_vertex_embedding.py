@@ -52,7 +52,6 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
         )
     """
 
-    # Models that use the legacy vertexai.language_models SDK
     LEGACY_MODELS: ClassVar[set[str]] = {
         "textembedding-gecko",
         "textembedding-gecko@001",
@@ -64,7 +63,6 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
         "textembedding-gecko-multilingual@latest",
     }
 
-    # Models that use the new google-genai SDK
     GENAI_MODELS: ClassVar[set[str]] = {
         "gemini-embedding-001",
         "text-embedding-005",
@@ -84,7 +82,6 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
                 - task_type: Task type for embeddings (default: "RETRIEVAL_DOCUMENT", new SDK only)
                 - output_dimensionality: Optional output embedding dimension (new SDK only)
         """
-        # Handle deprecated 'region' parameter (only if it has a value)
         region_value = kwargs.pop("region", None)  # type: ignore[typeddict-item,unused-ignore]
         if region_value is not None:
             warnings.warn(
@@ -161,7 +158,6 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
         self._task_type = kwargs.get("task_type", "RETRIEVAL_DOCUMENT")
         self._output_dimensionality = kwargs.get("output_dimensionality")
 
-        # Initialize client based on authentication mode
         api_key = kwargs.get("api_key")
         project_id = kwargs.get("project_id")
         location: str = str(kwargs.get("location", "us-central1"))
@@ -216,7 +212,6 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
 
     def _call_genai(self, input: list[str]) -> Embeddings:
         """Generate embeddings using the new google-genai SDK."""
-        # Build config for embed_content
         config_kwargs: dict[str, Any] = {
             "task_type": self._task_type,
         }
@@ -225,14 +220,12 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
 
         config = self._EmbedContentConfig(**config_kwargs)
 
-        # Call the embedding API
         response = self._client.models.embed_content(
             model=self._model_name,
             contents=input,  # type: ignore[arg-type]
             config=config,
         )
 
-        # Extract embeddings from response
         if response.embeddings is None:
             raise ValueError("No embeddings returned from the API")
         embeddings = [emb.values for emb in response.embeddings]
