@@ -386,6 +386,30 @@ def test_unrecognized_provider_prefix_is_not_stripped() -> None:
     )
 
 
+def test_gemini_flash_thinking_context_window() -> None:
+    """Gemini 2.0 Flash Thinking Exp 01-21 uses 1M context window, while 1219 keeps 32k."""
+    llm_0121 = LLM(model="gemini-2.0-flash-thinking-exp-01-21", is_litellm=True)
+    assert llm_0121.get_context_window_size() == int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    llm_alias = LLM(model="gemini-2.0-flash-thinking-exp", is_litellm=True)
+    assert llm_alias.get_context_window_size() == int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    llm_1219 = LLM(model="gemini-2.0-flash-thinking-exp-1219", is_litellm=True)
+    assert llm_1219.get_context_window_size() == int(32768 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_claude_v2_context_window() -> None:
+    """Claude v2.1 uses 200k context window while v2.0 uses 100k."""
+    llm_v21_colon = LLM(model="anthropic.claude-v2:1", is_litellm=True)
+    assert llm_v21_colon.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    llm_v21_dot = LLM(model="anthropic.claude-v2.1", is_litellm=True)
+    assert llm_v21_dot.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    llm_v20 = LLM(model="anthropic.claude-v2", is_litellm=True)
+    assert llm_v20.get_context_window_size() == int(100000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 @pytest.fixture
 def get_weather_tool_schema():
     return {
