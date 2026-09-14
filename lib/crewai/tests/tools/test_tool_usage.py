@@ -907,9 +907,11 @@ def test_tool_error_does_not_emit_finished_event():
 
 
 def test_tool_usage_does_not_double_invoke_on_failure():
+    """Test that ToolUsage.use invokes a failing tool only once per attempt."""
     calls = []
 
     def failing_tool(arg: str) -> str:
+        """Sample tool function that always raises an error."""
         calls.append(arg)
         raise RuntimeError("boom")
 
@@ -941,9 +943,11 @@ def test_tool_usage_does_not_double_invoke_on_failure():
 
 @pytest.mark.asyncio
 async def test_async_tool_usage_does_not_double_invoke_on_failure():
+    """Test that ToolUsage.ause invokes a failing async tool only once per attempt."""
     calls = []
 
     async def async_failing_tool(arg: str) -> str:
+        """Sample async tool function that always raises an error."""
         calls.append(arg)
         raise RuntimeError("boom")
 
