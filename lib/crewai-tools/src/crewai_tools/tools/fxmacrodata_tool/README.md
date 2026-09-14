@@ -64,6 +64,14 @@ discovery step that makes the rest of the surface usable.
 
 - The API key is sent as an `X-API-Key` header rather than a query parameter, so it does not
   end up in proxy or server access logs.
+- The key is only ever sent over HTTPS. `base_url` is configurable, but when a key is set the
+  tool refuses a plain `http://` base URL instead of sending the key in cleartext; anonymous
+  USD reads still work over HTTP.
+- Requests go through the same SSRF-safe fetcher as the other crewai-tools network tools: a
+  `base_url` that resolves to a private or reserved address is refused, and if the API
+  redirects to a different origin the key header is dropped before the redirect is followed.
+- `currency`, `base` and `quote` must be three-letter codes and `indicator` must be a slug
+  from the catalogue; anything else is rejected before a request is built.
 - A `401` or `403` returns a message explaining that a key is required, rather than surfacing
   as an outage, so the agent can fall back to USD rather than retrying blindly.
 - `limit` is capped at 100 by the API.

@@ -10499,6 +10499,7 @@
           "base": {
             "anyOf": [
               {
+                "pattern": "^[A-Za-z]{3}$",
                 "type": "string"
               },
               {
@@ -10512,6 +10513,7 @@
           "currency": {
             "default": "USD",
             "description": "Three-letter currency code, for example 'USD', 'EUR' or 'JPY'.",
+            "pattern": "^[A-Za-z]{3}$",
             "title": "Currency",
             "type": "string"
           },
@@ -10549,6 +10551,7 @@
           "indicator": {
             "anyOf": [
               {
+                "pattern": "^[A-Za-z0-9_-]+$",
                 "type": "string"
               },
               {
@@ -10570,6 +10573,7 @@
           "quote": {
             "anyOf": [
               {
+                "pattern": "^[A-Za-z]{3}$",
                 "type": "string"
               },
               {

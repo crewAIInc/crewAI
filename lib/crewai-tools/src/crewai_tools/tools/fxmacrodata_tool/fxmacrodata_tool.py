@@ -2,15 +2,17 @@ import json
 import logging
 from os import getenv
 from typing import Any, ClassVar, Literal
-import urllib.error
-import urllib.parse
-import urllib.request
+from urllib.parse import quote, urlencode, urlparse
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
+import requests
+
+from crewai_tools.security.safe_path import format_error_for_display
+from crewai_tools.security.safe_requests import safe_get
 
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 Dataset = Literal[
     "catalogue",
@@ -25,6 +27,12 @@ Dataset = Literal[
     "market_sessions",
     "risk_sentiment",
 ]
+
+# Every value that lands in the request path is constrained here, before it is
+# encoded, so a currency or slug cannot carry path separators, dot segments or
+# query and fragment delimiters into the URL.
+CURRENCY_PATTERN = r"^[A-Za-z]{3}$"
+INDICATOR_PATTERN = r"^[A-Za-z0-9_-]+$"
 
 
 class FXMacroDataToolInput(BaseModel):
@@ -42,20 +50,26 @@ class FXMacroDataToolInput(BaseModel):
     )
     currency: str = Field(
         "USD",
+        pattern=CURRENCY_PATTERN,
         description="Three-letter currency code, for example 'USD', 'EUR' or 'JPY'.",
     )
     indicator: str | None = Field(
         None,
+        pattern=INDICATOR_PATTERN,
         description=(
             "Indicator slug, required for dataset='history'. Get valid slugs from "
             "dataset='catalogue', for example 'inflation', 'non_farm_payrolls', 'policy_rate'."
         ),
     )
     base: str | None = Field(
-        None, description="Base currency for dataset='fx_rate' or 'rate_differential'."
+        None,
+        pattern=CURRENCY_PATTERN,
+        description="Base currency for dataset='fx_rate' or 'rate_differential'.",
     )
     quote: str | None = Field(
-        None, description="Quote currency for dataset='fx_rate' or 'rate_differential'."
+        None,
+        pattern=CURRENCY_PATTERN,
+        description="Quote currency for dataset='fx_rate' or 'rate_differential'.",
     )
     start_date: str | None = Field(
         None,
@@ -147,9 +161,14 @@ class FXMacroDataTool(BaseTool):
 
         return self._request(endpoint, params)
 
+    @staticmethod
+    def _segment(value: str) -> str:
+        """Encode one URL path segment so it cannot alter the request path."""
+        return quote(value, safe="")
+
     def _resolve(self, args: FXMacroDataToolInput) -> tuple[str, dict[str, Any]]:
         """Map the requested dataset onto an endpoint path and query parameters."""
-        currency = args.currency.lower()
+        currency = self._segment(args.currency.lower())
         paged = {"limit": args.limit}
 
         if args.dataset == "catalogue":
@@ -167,7 +186,7 @@ class FXMacroDataTool(BaseTool):
                 params["start_date"] = args.start_date
             if args.end_date:
                 params["end_date"] = args.end_date
-            return f"announcements/{currency}/{args.indicator}", params
+            return f"announcements/{currency}/{self._segment(args.indicator)}", params
         if args.dataset == "calendar":
             return f"calendar/{currency}", paged
         if args.dataset == "press_releases":
@@ -178,7 +197,9 @@ class FXMacroDataTool(BaseTool):
                     f"dataset='{args.dataset}' needs both base and quote currencies."
                 )
             path = "forex" if args.dataset == "fx_rate" else "rate_differentials"
-            return f"{path}/{args.base.lower()}/{args.quote.lower()}", paged
+            base = self._segment(args.base.lower())
+            quote_ = self._segment(args.quote.lower())
+            return f"{path}/{base}/{quote_}", paged
         if args.dataset == "cot":
             return f"cot/{currency}", paged
         if args.dataset == "commodities":
@@ -190,45 +211,52 @@ class FXMacroDataTool(BaseTool):
     def _request(self, endpoint: str, params: dict[str, Any]) -> str:
         url = f"{self.base_url.rstrip('/')}/{endpoint}"
         if params:
-            url = f"{url}?{urllib.parse.urlencode(params)}"
+            url = f"{url}?{urlencode(params)}"
 
         headers = {"Accept": "application/json"}
         api_key = self.api_key or getenv("FXMACRODATA_API_KEY")
         if api_key:
-            # Sent as a header rather than a query parameter so the key does not
-            # end up in proxy or server access logs.
+            # The key only ever travels as a header over TLS. base_url is
+            # settable, so refuse to attach it to a plain-http URL rather than
+            # send it in cleartext; anonymous USD reads keep working over http.
+            if urlparse(url).scheme != "https":
+                return (
+                    "Refusing to send the FXMacroData API key over a non-HTTPS base_url. "
+                    "Use an https:// base_url, or unset the key for anonymous USD access."
+                )
             headers["X-API-Key"] = api_key
 
-        # base_url is settable, so pin the scheme before opening: urlopen would
-        # otherwise honour file:// and read from the local filesystem.
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in ("http", "https"):
-            return f"Refusing to call FXMacroData over an unsupported scheme: {parsed.scheme or 'none'}"
-
-        request = urllib.request.Request(url, headers=headers)  # noqa: S310
+        # safe_get validates the URL and every redirect hop against private and
+        # reserved address ranges, pins the connection to the checked address,
+        # and drops the API key header before following a redirect to another
+        # origin, so a redirect cannot carry the key to a third party.
         try:
-            with urllib.request.urlopen(  # noqa: S310
-                request, timeout=self.REQUEST_TIMEOUT
-            ) as response:
-                payload = response.read().decode("utf-8")
-        except urllib.error.HTTPError as exc:
-            if exc.code in (401, 403):
-                logger.info(
-                    "FXMacroData denied %s (HTTP %s): API key required",
-                    endpoint,
-                    exc.code,
-                )
-                return (
-                    f"FXMacroData denied the request to {endpoint} (HTTP {exc.code}). This data "
-                    "requires an API key; USD macro data is available without one."
-                )
-            logger.error(
-                "FXMacroData request to %s failed: HTTP %s", endpoint, exc.code
-            )
-            return f"FXMacroData request to {endpoint} failed with HTTP {exc.code}."
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            response = safe_get(url, headers=headers, timeout=self.REQUEST_TIMEOUT)
+        except ValueError as exc:
+            logger.error("FXMacroData request to %s was refused: %s", endpoint, exc)
+            return f"FXMacroData request to {endpoint} was refused: {exc}"
+        except requests.RequestException as exc:
             logger.error("FXMacroData request to %s failed: %s", endpoint, exc)
-            return f"FXMacroData request to {endpoint} failed: {exc}"
+            return (
+                f"FXMacroData request to {endpoint} failed: "
+                f"{format_error_for_display(exc)}"
+            )
+
+        with response:
+            status = response.status_code
+            payload = response.text
+
+        if status in (401, 403):
+            logger.info(
+                "FXMacroData denied %s (HTTP %s): API key required", endpoint, status
+            )
+            return (
+                f"FXMacroData denied the request to {endpoint} (HTTP {status}). This data "
+                "requires an API key; USD macro data is available without one."
+            )
+        if status >= 400:
+            logger.error("FXMacroData request to %s failed: HTTP %s", endpoint, status)
+            return f"FXMacroData request to {endpoint} failed with HTTP {status}."
 
         try:
             json.loads(payload)
