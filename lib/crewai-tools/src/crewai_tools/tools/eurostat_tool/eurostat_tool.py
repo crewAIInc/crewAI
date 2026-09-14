@@ -100,9 +100,9 @@ class EurostatTool(BaseTool):
         since: str | None = None,
         filters: dict[str, str] | None = None,
     ) -> str:
-        if not indicator and not dataset_code:
+        if bool(indicator) == bool(dataset_code):
             known = ", ".join(KNOWN_INDICATORS.keys())
-            return f"Error: provide either 'indicator' (one of: {known}) or 'dataset_code'."
+            return f"Error: provide exactly one of 'indicator' (one of: {known}) or 'dataset_code'."
 
         merged_filters: dict[str, str] = dict(filters or {})
         if indicator:
@@ -120,9 +120,16 @@ class EurostatTool(BaseTool):
 
         try:
             data = self._fetch(dataset_code, geo, since, merged_filters)
+            warning = data.get("warning")
+            if isinstance(warning, dict) and warning.get("status") == 413:
+                return (
+                    "Error: Eurostat is preparing a large extraction. Try again later."
+                )
             parsed = self._parse_jsonstat(data)
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else None
+            if status == 413:
+                return "Error: the Eurostat extraction is too large. Add filters and try again."
             if status == 404:
                 return "Error: dataset code not found, or no data matches the given filters."
             if status == 400:

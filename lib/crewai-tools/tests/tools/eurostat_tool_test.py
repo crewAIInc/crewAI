@@ -47,6 +47,12 @@ def test_run_requires_indicator_or_dataset_code(tool):
     assert "indicator" in result
 
 
+def test_run_rejects_both_indicator_and_dataset_code(tool):
+    result = tool._run(indicator="unemployment_rate", dataset_code="une_rt_m")
+    assert "Error" in result
+    assert "exactly one" in result
+
+
 @patch("crewai_tools.tools.eurostat_tool.eurostat_tool.requests.get")
 def test_run_with_known_indicator(mock_get, tool):
     mock_get.return_value = _mock_response(_jsonstat_payload())
@@ -97,6 +103,29 @@ def test_run_empty_result(mock_get, tool):
 
     result = tool._run(dataset_code="some_empty_dataset")
     assert "No data found" in result
+
+
+@patch("crewai_tools.tools.eurostat_tool.eurostat_tool.requests.get")
+def test_run_async_extraction_warning(mock_get, tool):
+    """A successful response with warning.status == 413 means 'still preparing', not 'no data'."""
+    payload = {**_jsonstat_payload(), "warning": {"status": 413, "label": "too big"}}
+    mock_get.return_value = _mock_response(payload)
+
+    result = tool._run(dataset_code="une_rt_m")
+    assert "preparing a large extraction" in result
+
+
+@patch("crewai_tools.tools.eurostat_tool.eurostat_tool.requests.get")
+def test_run_http_413_error(mock_get, tool):
+    """An actual HTTP 413 means the extraction itself is too large, not a transient retry."""
+    response = MagicMock()
+    response.status_code = 413
+    http_error = requests.exceptions.HTTPError(response=response)
+    mock_get.return_value.raise_for_status.side_effect = http_error
+
+    result = tool._run(dataset_code="une_rt_m")
+    assert "too large" in result
+    assert "Add filters" in result
 
 
 @patch("crewai_tools.tools.eurostat_tool.eurostat_tool.requests.get")
