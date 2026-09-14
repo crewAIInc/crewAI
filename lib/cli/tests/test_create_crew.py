@@ -768,7 +768,7 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
             checked_apps.append(self.app)
             return [object()]
 
-    monkeypatch.setattr(json_crew.asyncio, "get_running_loop", lambda: object())
+    monkeypatch.setattr(json_crew.asyncio, "get_running_loop", object)
 
     failed_apps, token_invalid = json_crew._validate_platform_apps(
         ["github", "gmail"],
