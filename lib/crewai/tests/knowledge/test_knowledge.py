@@ -1,7 +1,7 @@
 """Test Knowledge creation and querying functionality."""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
@@ -477,6 +477,45 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
 
     assert any("los angeles" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
+
+
+def test_csv_knowledge_source_chunks_hold_content_not_dict_repr(tmpdir):
+    """CSV chunks must hold the file *content*, not ``str({Path: content})``.
+
+    Regression for embedding the dict repr — which leaks ``PosixPath('...')``
+    and the absolute file path into the knowledge — instead of the data, the
+    way ``TextFileKnowledgeSource``/``ExcelKnowledgeSource`` already do.
+    """
+    csv_path = Path(tmpdir.join("data.csv"))
+    with open(csv_path, "w", encoding="utf-8") as f:
+        f.write("Name,City\nBrandon,New York\n")
+
+    source = CSVKnowledgeSource(file_paths=[csv_path])
+    source.storage = MagicMock()
+    source.add()
+
+    joined = "\n".join(source.chunks)
+    assert "Brandon" in joined and "New York" in joined
+    assert "PosixPath" not in joined
+    assert "{" not in joined
+
+
+def test_json_knowledge_source_chunks_hold_content_not_dict_repr(tmpdir):
+    """JSON chunks must hold the formatted file content, not ``str({Path: content})``."""
+    import json as json_module
+
+    json_path = Path(tmpdir.join("data.json"))
+    with open(json_path, "w", encoding="utf-8") as f:
+        json_module.dump({"name": "Brandon", "city": "New York"}, f)
+
+    source = JSONKnowledgeSource(file_paths=[json_path])
+    source.storage = MagicMock()
+    source.add()
+
+    joined = "\n".join(source.chunks)
+    assert "Brandon" in joined and "New York" in joined
+    assert "PosixPath" not in joined
+    assert "{" not in joined
 
 
 def test_excel_knowledge_source(mock_vector_db, tmpdir):
