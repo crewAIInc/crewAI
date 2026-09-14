@@ -929,7 +929,6 @@ class LiteAgent(FlowTrackable, BaseModel):
             try:
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
                     formatted_answer = handle_max_iterations_exceeded(
-                        formatted_answer,
                         printer=PRINTER,
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
