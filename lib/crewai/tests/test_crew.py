@@ -3677,7 +3677,7 @@ def test_replay_setup_context():
         agent=agent,
     )
     context_output = TaskOutput(
-        description="Context Task Output",
+        description=task1.description,
         agent="test_agent",
         raw="context raw output",
         pydantic=None,
@@ -3701,12 +3701,13 @@ def test_replay_setup_context():
                     "output_format": context_output.output_format,
                     "agent": context_output.agent,
                 },
+                "expected_output": task1.expected_output,
                 "inputs": {"name": "John"},
             },
             {
                 "task_id": str(task2.id),
                 "output": {
-                    "description": "Test Task Output",
+                    "description": task2.description,
                     "summary": None,
                     "raw": "test raw output",
                     "pydantic": None,
@@ -3714,6 +3715,7 @@ def test_replay_setup_context():
                     "output_format": "json",
                     "agent": "test_agent",
                 },
+                "expected_output": task2.expected_output,
                 "inputs": {"name": "John"},
             },
         ],
@@ -3722,7 +3724,7 @@ def test_replay_setup_context():
 
         assert crew.tasks[0].output is not None
         assert isinstance(crew.tasks[0].output, TaskOutput)
-        assert crew.tasks[0].output.description == "Context Task Output"
+        assert crew.tasks[0].output.description == task1.description
         assert crew.tasks[0].output.agent == "test_agent"
         assert crew.tasks[0].output.raw == "context raw output"
         assert crew.tasks[0].output.output_format == OutputFormat.RAW
