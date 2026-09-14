@@ -70,7 +70,13 @@ _PROVIDER_KEY_ENV: dict[str, tuple[str, ...]] = {
     "groq": ("GROQ_API_KEY",),
     "cerebras": ("CEREBRAS_API_KEY",),
     "ollama": (),
+    "deepinfra": (),
 }
+
+#: DeepInfra's public model catalog, ranked server-side for CrewAI. No key needed.
+_DEEPINFRA_MODELS_URL = (
+    "https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai"
+)
 
 
 def _provider_api_key(provider_key: str) -> str | None:
@@ -220,6 +226,36 @@ def _fetch_cerebras(api_key: str | None) -> list[dict[str, Any]]:
     return _fetch_openai_compatible("https://api.cerebras.ai/v1", api_key)
 
 
+def _fetch_deepinfra(_api_key: str | None) -> list[dict[str, Any]]:
+    """List DeepInfra chat models in the order DeepInfra curates for CrewAI.
+
+    The catalog is public, so no key is sent. ``sort_by=crewai`` is a
+    server-side ranking for agent frameworks and every entry reports
+    ``created: 0``, so the position in the response stands in for the
+    timestamp to keep that order. Entries carry ``metadata.tags``; anything
+    not tagged ``chat`` (embeddings, image, speech, video models) is dropped,
+    which is more reliable than guessing from the id. Entries without tags
+    fall back to the id heuristic.
+    """
+    data = _http_get_json(_DEEPINFRA_MODELS_URL)
+    items = data.get("data", [])
+    entries: list[dict[str, Any]] = []
+    for rank, item in enumerate(items):
+        model_id = item.get("id")
+        if not model_id:
+            continue
+        tags = (item.get("metadata") or {}).get("tags")
+        if tags is not None:
+            if "chat" not in tags:
+                continue
+        elif not _is_chat_model(model_id):
+            continue
+        entries.append(
+            _entry(model_id, _humanize(model_id), created=float(len(items) - rank))
+        )
+    return entries
+
+
 def _fetch_openai_compatible(
     base_url: str, api_key: str | None
 ) -> list[dict[str, Any]]:
@@ -332,6 +368,7 @@ _VENDOR_FETCHERS: dict[str, Callable[[str | None], list[dict[str, Any]]]] = {
     "groq": _fetch_groq,
     "cerebras": _fetch_cerebras,
     "ollama": _fetch_ollama,
+    "deepinfra": _fetch_deepinfra,
 }
 
 

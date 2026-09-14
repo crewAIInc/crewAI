@@ -124,6 +124,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    "deepinfra": [
+        {
+            "prompt": "Enter your DEEPINFRA API key (press Enter to skip)",
+            "key_name": "DEEPINFRA_API_KEY",
+        }
+    ],
     # OpenAI-compatible providers crewAI runs natively; not offered by the
     # classic `crewai create` picker (PROVIDERS), but their keys are asked for
     # and checked like any other when a project's model uses them.
@@ -145,12 +151,6 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "DASHSCOPE_API_KEY",
         }
     ],
-    "deepinfra": [
-        {
-            "prompt": "Enter your DEEPINFRA API key (press Enter to skip)",
-            "key_name": "DEEPINFRA_API_KEY",
-        }
-    ],
 }
 
 
@@ -167,11 +167,12 @@ PROVIDERS: list[str] = [
     "azure",
     "cerebras",
     "sambanova",
+    "deepinfra",
 ]
 
 # The crewai extra that holds a provider's SDK. `crewai create` adds it to the new
 # project's crewai dependency; a provider not listed here (openai, ollama,
-# cerebras) runs on what `crewai[tools]` installs.
+# cerebras, deepinfra) runs on what `crewai[tools]` installs.
 PROVIDER_EXTRAS: dict[str, str] = {
     "anthropic": "anthropic",
     "gemini": "google-genai",
@@ -344,6 +345,12 @@ MODELS: dict[str, list[str]] = {
         "sambanova/gpt-oss-120b",
         "sambanova/DeepSeek-V3.1",
         "sambanova/gemma-4-31B-it",
+    ],
+    "deepinfra": [
+        "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash",
+        "deepinfra/zai-org/GLM-5.3-Flash",
+        "deepinfra/deepseek-ai/DeepSeek-V4-Pro-0813",
+        "deepinfra/zai-org/GLM-5.3",
     ],
 }
 

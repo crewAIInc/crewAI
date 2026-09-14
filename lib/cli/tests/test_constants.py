@@ -32,6 +32,19 @@ def test_huggingface_models():
     assert len(MODELS["huggingface"]) > 0
 
 
+def test_deepinfra_is_offered_by_both_pickers() -> None:
+    """DeepInfra ids are org/model, so a listed model has three segments;
+    `--provider deepinfra` takes the first one."""
+    from crewai_cli.create_json_crew import _PROVIDERS, _default_model_for_provider
+
+    assert "deepinfra" in PROVIDERS
+    assert ("deepinfra", "DeepInfra") in _PROVIDERS
+    for model in MODELS["deepinfra"]:
+        assert model.startswith("deepinfra/")
+        assert model.count("/") == 2
+    assert _default_model_for_provider("deepinfra") == MODELS["deepinfra"][0]
+
+
 def test_openai_offers_only_the_gpt_6_family() -> None:
     """No GPT-4, GPT-5.x or o-series model: all superseded by GPT-6, and the
     GPT-4.1 snapshots shut down on 2027-01-14."""
@@ -192,12 +205,17 @@ def test_every_provider_extra_is_a_crewai_extra() -> None:
 
 def test_every_provider_create_offers_is_mapped_or_needs_no_extra() -> None:
     """A provider added to either picker has to be checked against crewai's
-    routing: openai, ollama and cerebras run on `crewai[tools]` alone."""
+    routing: openai, ollama, cerebras and deepinfra run on `crewai[tools]` alone."""
     from crewai_cli.create_json_crew import _PROVIDERS
 
     offered = set(PROVIDERS) | {key for key, _ in _PROVIDERS}
 
-    assert offered - set(PROVIDER_EXTRAS) == {"openai", "ollama", "cerebras"}
+    assert offered - set(PROVIDER_EXTRAS) == {
+        "openai",
+        "ollama",
+        "cerebras",
+        "deepinfra",
+    }
     assert set(PROVIDER_EXTRAS) <= offered
 
 
