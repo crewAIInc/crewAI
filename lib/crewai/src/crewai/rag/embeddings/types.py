@@ -6,6 +6,7 @@ from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
 from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
 from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+from crewai.rag.embeddings.providers.deepinfra.types import DeepInfraProviderSpec
 from crewai.rag.embeddings.providers.google.types import (
     GenerativeAiProviderSpec,
     VertexAIProviderSpec,
@@ -36,6 +37,7 @@ ProviderSpec: TypeAlias = (
     | BedrockProviderSpec
     | CohereProviderSpec
     | CustomProviderSpec
+    | DeepInfraProviderSpec
     | GenerativeAiProviderSpec
     | HuggingFaceProviderSpec
     | InstructorProviderSpec
@@ -59,6 +61,7 @@ AllowedEmbeddingProviders = Literal[
     "amazon-bedrock",
     "cohere",
     "custom",
+    "deepinfra",
     "google-generativeai",
     "google-vertex",
     "huggingface",
