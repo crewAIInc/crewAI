@@ -22,7 +22,7 @@ from typing import Any
 
 import httpx
 import pytest
-from openai import BadRequestError, UnprocessableEntityError
+from openai import APIConnectionError, BadRequestError, UnprocessableEntityError
 
 from crewai.llm import LLM
 from crewai.llms.providers.openai import completion as completion_module
@@ -376,6 +376,78 @@ class TestRetryBehaviour:
             False,
         ]
 
+    def test_a_rejection_is_remembered_only_once_the_retry_succeeds(
+        self, monkeypatch
+    ):
+        """A retry that dies for another reason has not established the fallback.
+
+        Remembering before the retry would silently stop sending a configured
+        effort for the rest of the process on the strength of one transient
+        failure; the setting must survive until a call without it succeeds.
+        """
+        llm = build("gpt-6-future", reasoning_effort="high")
+        seen: list[dict] = []
+        retry_outcome: list[Exception | None] = [
+            APIConnectionError(request=httpx.Request("POST", GATEWAY))
+        ]
+
+        def fake_handle(params, **kwargs):
+            seen.append(params)
+            if "reasoning_effort" in params:
+                raise unsupported_parameter_error()
+            if retry_outcome and (failure := retry_outcome.pop()):
+                raise failure
+            return "ok"
+
+        monkeypatch.setattr(llm, "_handle_completion", fake_handle)
+
+        with pytest.raises(APIConnectionError):
+            llm._call_completions(MESSAGES)
+        assert not completion_module._LEARNED_NO_REASONING_EFFORT_MODELS
+
+        assert llm._call_completions(MESSAGES) == "ok"
+        assert llm._reasoning_effort_key() in (
+            completion_module._LEARNED_NO_REASONING_EFFORT_MODELS
+        )
+        assert ["reasoning_effort" in params for params in seen] == [
+            True,
+            False,
+            True,
+            False,
+        ], "the effort is sent again after a failed retry, then dropped for good"
+
+    @pytest.mark.asyncio
+    async def test_a_rejection_is_remembered_only_once_the_async_retry_succeeds(
+        self, monkeypatch
+    ):
+        llm = build("gpt-6-future", reasoning_effort="high")
+        seen: list[dict] = []
+        retry_outcome: list[Exception | None] = [
+            APIConnectionError(request=httpx.Request("POST", GATEWAY))
+        ]
+
+        async def fake_handle(params, **kwargs):
+            seen.append(params)
+            if "reasoning_effort" in params:
+                raise unsupported_parameter_error()
+            if retry_outcome and (failure := retry_outcome.pop()):
+                raise failure
+            return "ok"
+
+        monkeypatch.setattr(llm, "_ahandle_completion", fake_handle)
+
+        with pytest.raises(APIConnectionError):
+            await llm._acall_completions(MESSAGES)
+        assert not completion_module._LEARNED_NO_REASONING_EFFORT_MODELS
+
+        assert await llm._acall_completions(MESSAGES) == "ok"
+        assert ["reasoning_effort" in params for params in seen] == [
+            True,
+            False,
+            True,
+            False,
+        ]
+
 
 class TestCompatibleServers:
     """The model name is the server's namespace, so it says nothing about support."""
@@ -402,6 +474,17 @@ class TestCompatibleServers:
         llm = build("gpt-4o", client_params={"base_url": GATEWAY}, reasoning_effort="low")
 
         assert llm._prepare_completion_params(MESSAGES)["reasoning_effort"] == "low"
+
+    def test_an_httpx_url_override_is_the_endpoint_the_client_calls(self):
+        """The SDK takes `str | httpx.URL`; detection and memory must see both alike."""
+        llm = build(
+            "gpt-4o",
+            client_params={"base_url": httpx.URL(GATEWAY)},
+            reasoning_effort="low",
+        )
+
+        assert llm._prepare_completion_params(MESSAGES)["reasoning_effort"] == "low"
+        assert llm._reasoning_effort_key() == (GATEWAY, "gpt-4o")
 
     def test_an_env_base_url_marks_a_server_compatible(self, monkeypatch):
         monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
@@ -566,10 +649,20 @@ class TestCompatibleServers:
         assert len(calls) == 1
         assert not completion_module._LEARNED_NO_REASONING_EFFORT_MODELS
 
+    @pytest.mark.parametrize(
+        "gateway_config",
+        [
+            pytest.param({"base_url": GATEWAY}, id="base_url"),
+            pytest.param(
+                {"client_params": {"base_url": httpx.URL(GATEWAY)}}, id="httpx.URL"
+            ),
+        ],
+    )
     def test_a_gateway_rejection_does_not_silence_the_model_on_openai(
-        self, monkeypatch
+        self, monkeypatch, gateway_config
     ):
-        llm = gateway("gpt-5", reasoning_effort="high")
+        """However the gateway is configured, its rejection is keyed to it, not to OpenAI."""
+        llm = build("gpt-5", reasoning_effort="high", **gateway_config)
 
         def reject(params, **kwargs):
             if "reasoning_effort" in params:

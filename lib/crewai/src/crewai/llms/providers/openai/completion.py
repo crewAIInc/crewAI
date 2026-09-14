@@ -702,8 +702,9 @@ class OpenAICompletion(BaseLLM):
             if self._rejects_reasoning_effort_as_unsupported(cause):
                 retry_params = self._without_reasoning_effort(completion_params)
                 if retry_params is not None:
+                    result = dispatch(retry_params)
                     self._remember_no_reasoning_effort_model()
-                    return dispatch(retry_params)
+                    return result
 
             if self.custom_openai or not self._is_responses_only_error(cause):
                 raise
@@ -839,8 +840,9 @@ class OpenAICompletion(BaseLLM):
             if self._rejects_reasoning_effort_as_unsupported(cause):
                 retry_params = self._without_reasoning_effort(completion_params)
                 if retry_params is not None:
+                    result = await dispatch(retry_params)
                     self._remember_no_reasoning_effort_model()
-                    return await dispatch(retry_params)
+                    return result
 
             if self.custom_openai or not self._is_responses_only_error(cause):
                 raise
@@ -1940,11 +1942,13 @@ class OpenAICompletion(BaseLLM):
     def _effective_base_url(self) -> str | None:
         """The base URL the client is built with; None means OpenAI's own API.
 
-        Same precedence as `_get_client_params`, where `client_params` win.
+        Same precedence as `_get_client_params`, where `client_params` win. The
+        SDK accepts ``str | httpx.URL`` there and `_get_client_params` forwards
+        either, so both are normalised to the string the client will call.
         """
         override = (self.client_params or {}).get("base_url")
-        if isinstance(override, str) and override:
-            return override
+        if isinstance(override, (str, httpx.URL)) and str(override):
+            return str(override)
         return (
             self.base_url
             or self.api_base
@@ -1971,10 +1975,15 @@ class OpenAICompletion(BaseLLM):
         return (self._effective_base_url() or _OPENAI_API_HOST, self.model)
 
     def _remember_no_reasoning_effort_model(self) -> None:
-        """Record that this model rejected `reasoning_effort`, ahead of the retry."""
+        """Record that this model rejected `reasoning_effort`.
+
+        Called once the retry without the parameter has succeeded, so a retry
+        that fails for an unrelated reason leaves the setting in place for the
+        next call instead of silently dropping it for the rest of the process.
+        """
         logging.warning(
-            "%r rejected reasoning_effort=%r; retrying without it, and not "
-            "sending it to this model again in this process.",
+            "%r rejected reasoning_effort=%r; the call succeeded without it, and "
+            "it will not be sent to this model again in this process.",
             self.model,
             self.reasoning_effort,
         )
