@@ -17,7 +17,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer = "2026-09-07T12:06:57.894658Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -1500,6 +1500,10 @@ litellm = [
 mem0 = [
     { name = "mem0ai" },
 ]
+mongodb = [
+    { name = "dnspython" },
+    { name = "pymongo" },
+]
 openpyxl = [
     { name = "openpyxl" },
 ]
@@ -1543,6 +1547,7 @@ requires-dist = [
     { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
+    { name = "dnspython", marker = "extra == 'mongodb'", specifier = ">=2.8,<3" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.97.0" },
     { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling'", specifier = ">=2.74.1" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = "~=1.65.0" },
@@ -1570,6 +1575,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.9,<2.13" },
     { name = "pydantic-settings", specifier = ">=2.14.2,<3" },
     { name = "pyjwt", specifier = ">=2.13.0,<3" },
+    { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.17,<5" },
     { name = "python-dotenv", specifier = ">=1.2.2,<2" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "qdrant-client", extras = ["fastembed"], marker = "extra == 'qdrant'", specifier = "~=1.14.3" },
@@ -1581,7 +1587,7 @@ requires-dist = [
     { name = "tomli-w", specifier = "~=1.1.0" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "mongodb", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-cli"
