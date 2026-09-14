@@ -1,6 +1,7 @@
 """MCP Tool Wrapper for on-demand MCP server connections."""
 
 import asyncio
+import contextvars
 from collections.abc import Callable, Coroutine
 from typing import Any
 
@@ -76,7 +77,18 @@ class MCPToolWrapper(BaseTool):
             Result from the MCP tool execution
         """
         try:
-            return asyncio.run(self._run_async(**kwargs))
+            try:
+                asyncio.get_running_loop()
+
+                import concurrent.futures
+
+                ctx = contextvars.copy_context()
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    coro = self._run_async(**kwargs)
+                    future = executor.submit(ctx.run, asyncio.run, coro)
+                    return future.result()
+            except RuntimeError:
+                return asyncio.run(self._run_async(**kwargs))
         except asyncio.TimeoutError:
             return f"MCP tool '{self.original_tool_name}' timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds"
         except Exception as e:
