@@ -583,10 +583,10 @@ class LLM(BaseLLM):
             return True
 
         if provider == "deepinfra":
-            # DeepInfra ids are org/model (meta-llama/Llama-4-Scout-17B-16E-Instruct),
-            # so a full reference is deepinfra/<org>/<model>. Both halves must be present.
-            org, _, name = model_lower.partition("/")
-            return bool(org and name)
+            # DeepInfra ids are exactly org/model, so a full reference is
+            # deepinfra/<org>/<model>: one slash with both parts non-empty.
+            parts = model_lower.split("/")
+            return len(parts) == 2 and all(parts)
 
         if provider == "snowflake":
             return True

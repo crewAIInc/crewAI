@@ -371,10 +371,12 @@ class TestLLMIntegration:
             ("qwen", False),
             ("Qwen/", False),
             ("/Qwen3.5-27B", False),
+            ("deepseek-ai/DeepSeek-V4-Flash-0731/extra", False),
+            ("deepseek-ai/DeepSeek-V4-Flash-0731/", False),
         ],
     )
     def test_deepinfra_requires_an_org_and_a_model(self, model, expected):
-        """DeepInfra references carry an org segment, so both halves are required."""
+        """DeepInfra references are exactly org/model: one slash, both parts present."""
         assert LLM._matches_provider_pattern(model, "deepinfra") is expected
 
     def test_llm_with_explicit_provider(self):
