@@ -143,6 +143,46 @@ def test_vendor_openai_filters_non_chat_models(monkeypatch):
     assert ids == ["gpt-5.5", "gpt-4.1"]  # embeddings/whisper dropped, newest first
 
 
+def test_vendor_deepinfra_keeps_curated_order_and_filters_by_tag(monkeypatch):
+    payload = {
+        "data": [
+            {"id": "black-forest-labs/FLUX-2-pro", "created": 0, "metadata": {"tags": ["image-gen"]}},
+            {"id": "google/gemma-3-27b-it", "created": 0, "metadata": {"tags": ["chat", "vision"]}},
+            {"id": "intfloat/multilingual-e5-large", "created": 0, "metadata": {"tags": ["embed"]}},
+            {"id": "Qwen/Qwen3.5-27B", "created": 0, "metadata": {"tags": ["chat", "reasoning"]}},
+            {"id": "meta-llama/Llama-4-Scout-17B-16E-Instruct", "created": 0},
+            {"id": "openai/whisper-large-v3", "created": 0},
+        ]
+    }
+    seen: dict[str, str] = {}
+
+    def fetch(url, **_kwargs):
+        seen["url"] = url
+        return payload
+
+    monkeypatch.setattr(mc, "_http_get_json", fetch)
+
+    # No API key set: the catalog is public and must still be fetched.
+    models = mc.get_provider_models("deepinfra", [])
+
+    assert "sort_by=crewai" in seen["url"]
+    # Server order is preserved; non-chat tags are dropped; untagged ids use the heuristic.
+    assert [model_id for model_id, _ in models] == [
+        "google/gemma-3-27b-it",
+        "Qwen/Qwen3.5-27B",
+        "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    ]
+
+
+def test_vendor_deepinfra_curated_labels_win(monkeypatch):
+    payload = {"data": [{"id": "Qwen/Qwen3.5-27B", "created": 0, "metadata": {"tags": ["chat"]}}]}
+    monkeypatch.setattr(mc, "_http_get_json", lambda *a, **k: payload)
+
+    models = mc.get_provider_models("deepinfra", [("Qwen/Qwen3.5-27B", "Qwen3.5 27B")])
+
+    assert models == [("Qwen/Qwen3.5-27B", "Qwen3.5 27B")]
+
+
 def test_vendor_gemini_requires_generate_content(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "key")
     payload = {

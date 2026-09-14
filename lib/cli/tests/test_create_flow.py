@@ -503,7 +503,7 @@ def test_create_flow_rejects_a_provider_with_no_listed_model(
         match=(
             f"^'{provider}' has no default model. Pass one of openai, anthropic, "
             "gemini, groq, ollama, bedrock, azure, nvidia_nim, huggingface, "
-            "cerebras, sambanova, watson, or a provider/model string.$"
+            "cerebras, deepinfra, sambanova, watson, or a provider/model string.$"
         ),
     ):
         create_flow("Research Flow", provider=provider)
