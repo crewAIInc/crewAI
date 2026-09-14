@@ -354,22 +354,22 @@ class ToolUsage:
 
                     if calling.arguments:
                         try:
-                            acceptable_args = tool.args_schema.model_json_schema()[
-                                "properties"
-                            ].keys()
-                            arguments = {
-                                k: v
-                                for k, v in calling.arguments.items()
-                                if k in acceptable_args
-                            }
-                            result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                            if tool.args_schema:
+                                acceptable_args = tool.args_schema.model_json_schema()[
+                                    "properties"
+                                ].keys()
+                                arguments = {
+                                    k: v
+                                    for k, v in calling.arguments.items()
+                                    if k in acceptable_args
+                                }
+                            else:
+                                arguments = calling.arguments
                         except Exception:
                             arguments = calling.arguments
-                            result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                        result = await tool.ainvoke(
+                            input=arguments, config=fingerprint_config
+                        )
                     else:
                         result = await tool.ainvoke(input={}, config=fingerprint_config)
 
@@ -611,22 +611,22 @@ class ToolUsage:
 
                     if calling.arguments:
                         try:
-                            acceptable_args = tool.args_schema.model_json_schema()[
-                                "properties"
-                            ].keys()
-                            arguments = {
-                                k: v
-                                for k, v in calling.arguments.items()
-                                if k in acceptable_args
-                            }
-                            result = tool.invoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                            if tool.args_schema:
+                                acceptable_args = tool.args_schema.model_json_schema()[
+                                    "properties"
+                                ].keys()
+                                arguments = {
+                                    k: v
+                                    for k, v in calling.arguments.items()
+                                    if k in acceptable_args
+                                }
+                            else:
+                                arguments = calling.arguments
                         except Exception:
                             arguments = calling.arguments
-                            result = tool.invoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                        result = tool.invoke(
+                            input=arguments, config=fingerprint_config
+                        )
                     else:
                         result = tool.invoke(input={}, config=fingerprint_config)
 
