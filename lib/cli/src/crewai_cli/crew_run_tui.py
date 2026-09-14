@@ -257,16 +257,12 @@ class TraceConsentScreen(ModalScreen[bool]):
         Binding("escape", "consent_no", "Cancel", show=False),
     ]
 
-    def __init__(self, *, sharing: bool = True) -> None:
-        super().__init__()
-        self._sharing = sharing
-
     def compose(self) -> ComposeResult:
         with Vertical(id="consent-dialog"):
             yield Static(self._build_content(), id="consent-text")
             with Horizontal(id="consent-buttons"):
                 yield Button(
-                    "Share Trace" if self._sharing else "View Traces",
+                    "Share Trace",
                     id="btn-consent-yes",
                     classes="consent-btn",
                 )
@@ -274,25 +270,14 @@ class TraceConsentScreen(ModalScreen[bool]):
 
     def _build_content(self) -> Text:
         t = Text()
-        if self._sharing:
-            t.append(
-                "  Share this execution trace with CrewAI?\n\n", style=f"bold {_C_TEXT}"
-            )
-            t.append("  The trace is stored locally and may include\n", style=_C_DIM)
-            t.append("  prompts, inputs, outputs, and tool calls.\n\n", style=_C_DIM)
-            t.append(
-                "  Sharing uploads it. Cancel or wait 20 seconds\n", style=_C_MUTED
-            )
-            t.append("  to discard it without uploading.\n", style=_C_MUTED)
-            return t
-        t.append("  View execution traces on CrewAI AMP\n\n", style=f"bold {_C_TEXT}")
-        t.append("  Sends agent decisions, tool calls, and\n", style=_C_DIM)
-        t.append("  timing data. Link expires in 24h.\n\n", style=_C_DIM)
-        t.append("  Traces will be enabled for future runs.\n", style=_C_MUTED)
+        t.append(
+            "  Share this execution trace with CrewAI?\n\n", style=f"bold {_C_TEXT}"
+        )
+        t.append("  The trace is stored locally and may include\n", style=_C_DIM)
+        t.append("  prompts, inputs, outputs, and tool calls.\n\n", style=_C_DIM)
+        t.append("  Sharing uploads it. Cancel or wait 20 seconds\n", style=_C_MUTED)
+        t.append("  to discard it without uploading.\n", style=_C_MUTED)
         return t
-
-    def _start_sending(self) -> None:
-        self.dismiss(True)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "btn-consent-yes")
@@ -445,15 +430,6 @@ FooterKey .footer-key--key {
     background: #444444;
 }
 
-#btn-traces-done {
-    background: #1a3a3a;
-    color: #1F7982;
-    border: none;
-}
-#btn-traces-done:hover {
-    background: #1F7982;
-    color: #e0e0e0;
-}
 """
 
     BINDINGS: ClassVar[list[BindingType]] = [
@@ -553,7 +529,6 @@ FooterKey .footer-key--key {
         self._current_method: str | None = None
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
-        self._trace_url: str | None = None
         self._consent_screen: TraceConsentScreen | None = None
         self._trace_consent_pending: threading.Event | None = None
         self._discard_trace_on_exit = False
@@ -681,9 +656,11 @@ FooterKey .footer-key--key {
             output = result.raw if result and hasattr(result, "raw") else None
             with self._lock:
                 self._crew_result = result
-            self.call_from_thread(self._on_crew_done, output)
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_done, output)
         except Exception as e:
-            self.call_from_thread(self._on_crew_failed, str(e))
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_failed, str(e))
 
     @work(thread=True, exclusive=True, group="flow")
     def _run_flow_worker(self) -> None:
@@ -704,9 +681,11 @@ FooterKey .footer-key--key {
             output = self._stringify_output(result)
             with self._lock:
                 self._crew_result = result
-            self.call_from_thread(self._on_crew_done, output)
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_done, output)
         except Exception as e:
-            self.call_from_thread(self._on_crew_failed, str(e))
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_failed, str(e))
 
     def _set_flow_step_status(self, name: str, status: str) -> None:
         """Update a flow method step's status. Caller must hold ``self._lock``."""
@@ -759,10 +738,6 @@ FooterKey .footer-key--key {
                     entry["duration"] = now - entry["start_time"]
         try:
             self.query_one("#sidebar-actions").display = True
-            if self._trace_url:
-                btn = self.query_one("#btn-traces", Button)
-                btn.label = "✔ Open Traces"
-                btn.id = "btn-traces-done"
         except Exception:  # noqa: S110
             pass
         self._tick()
@@ -1004,12 +979,19 @@ FooterKey .footer-key--key {
             self._refresh_log_panel()
 
     async def action_quit(self) -> None:
+        if (
+            not self._is_conversational
+            or self._conversation_turn_in_progress
+            or self._trace_consent_pending is not None
+        ):
+            self._discard_trace_on_exit = True
         if self._trace_consent_pending is not None:
             self._trace_consent_pending.set()
-        if self._conversation_turn_in_progress:
-            self._discard_trace_on_exit = True
-        else:
-            await asyncio.to_thread(self._finalize_conversational_session)
+        if not self._conversation_turn_in_progress:
+            await asyncio.to_thread(
+                self._finalize_conversational_session,
+                discard=self._discard_trace_on_exit,
+            )
         self._unsubscribe()
         self.exit(self._crew_result)
 
@@ -1026,15 +1008,24 @@ FooterKey .footer-key--key {
             done.set()
 
         def show() -> None:
-            self._consent_screen = TraceConsentScreen(sharing=True)
+            if self._discard_trace_on_exit:
+                done.set()
+                return
+            self._consent_screen = TraceConsentScreen()
             self.push_screen(self._consent_screen, accepted)
 
         try:
             self.call_from_thread(show)
-            return done.wait(timeout=20) and bool(decision) and decision[0]
+            return (
+                done.wait(timeout=20)
+                and not self._discard_trace_on_exit
+                and bool(decision)
+                and decision[0]
+            )
         finally:
             self._trace_consent_pending = None
-            self.call_from_thread(self._dismiss_consent_modal)
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._dismiss_consent_modal)
 
     def action_view_traces(self) -> None:
         if self._status != "completed":
@@ -1042,14 +1033,6 @@ FooterKey .footer-key--key {
         # Recorded here rather than in on_button_pressed so the `t` key binding
         # is counted too, and only once the action can actually do something.
         self._record_tui_button_click("view_traces")
-        if self._trace_url:
-            import webbrowser
-
-            try:
-                webbrowser.open(self._trace_url)
-            except Exception:  # noqa: S110
-                pass
-            return
         self.notify(
             "Trace sharing is requested when the execution finishes. "
             "A trace link is not available for this run.",
@@ -1084,7 +1067,7 @@ FooterKey .footer-key--key {
             pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id in ("btn-traces", "btn-traces-done"):
+        if event.button.id == "btn-traces":
             self.action_view_traces()
         elif event.button.id == "btn-deploy":
             self.action_deploy_crew()

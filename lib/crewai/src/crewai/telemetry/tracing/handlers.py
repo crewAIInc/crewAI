@@ -823,12 +823,11 @@ def _record_agent_llm_call(
     ready.set()
 
 
-def _conversation_id(event: Any, ctx: TelemetryExecutionContext) -> str | None:
+def _conversation_id(event: Any, ctx: TelemetryExecutionContext) -> str:
     """Resolve gen_ai.conversation.id with a strict fallback chain.
 
     task_id (most specific) -> agent_id (lite-agent) -> kickoff_id (session-wide).
-    Returns None when there is no active session at all (direct LLM.call outside
-    any crew/flow context); the attribute is then omitted per spec.
+    The required session context always provides the final fallback.
 
     `agent_info["id"]` on the OSS side is a UUID object (LiteAgent.id is UUID4),
     and OTel attribute values must be primitive types — coerce to str at the
@@ -841,7 +840,7 @@ def _conversation_id(event: Any, ctx: TelemetryExecutionContext) -> str | None:
         if isinstance(info, dict):
             agent_id = info.get("id")
     resolved = task_id or agent_id or ctx.kickoff_id
-    return str(resolved) if resolved is not None else None
+    return str(resolved)
 
 
 def handle_crew_kickoff_started(
@@ -1606,13 +1605,6 @@ def handle_flow_finished(
     with ctx._span_lock:
         aggregated_crew_usage_metrics = ctx.flow_crew_usage_metrics.pop(flow_id, None)
 
-    if aggregated_crew_usage_metrics:
-        # OSS Flow types this private attr as ``UsageMetrics``; we intentionally
-        # stash the raw aggregation dict (it carries an enterprise-only
-        # ``crew_count``). No one reads it back as a model, so the looser dict
-        # is fine here.
-        source._aggregated_usage_metrics = aggregated_crew_usage_metrics  # type: ignore[assignment]
-
     aggregated_metrics_str = (
         _serialize(aggregated_crew_usage_metrics)
         if aggregated_crew_usage_metrics
@@ -1662,9 +1654,6 @@ def handle_flow_failed(
 
     with ctx._span_lock:
         aggregated_crew_usage_metrics = ctx.flow_crew_usage_metrics.pop(flow_id, None)
-
-    if aggregated_crew_usage_metrics:
-        source._aggregated_usage_metrics = aggregated_crew_usage_metrics  # type: ignore[assignment]
 
     aggregated_metrics_str = (
         _serialize(aggregated_crew_usage_metrics)
@@ -1783,13 +1772,6 @@ def handle_method_execution_failed(
     event: MethodExecutionFailedEvent,
 ) -> None:
     flow_name = source.name or event.flow_name
-    flow_id = str(source.flow_id)
-
-    with ctx._span_lock:
-        aggregated_crew_usage_metrics = ctx.flow_crew_usage_metrics.pop(flow_id, None)
-
-    if aggregated_crew_usage_metrics:
-        source._aggregated_usage_metrics = aggregated_crew_usage_metrics
 
     attrs: dict[str, Any] = {
         **semantic_conventions.crewai_span(
@@ -1937,11 +1919,7 @@ def handle_human_feedback_requested(
         ),
     }
 
-    span = _start_span(providers, ctx, "request human feedback", event, attrs)
-    if span:
-        end_time_ns = _datetime_to_nanoseconds(event.timestamp)
-        span.set_status(Status(StatusCode.OK))
-        span.end(end_time=end_time_ns)
+    span = _instant_span(providers, ctx, "request human feedback", event, attrs)
 
     providers.emit_log(
         f"Human feedback requested: {event.method_name}",
@@ -1972,11 +1950,7 @@ def handle_human_feedback_received(
         ),
     }
 
-    span = _start_span(providers, ctx, "receive human feedback", event, attrs)
-    if span:
-        end_time_ns = _datetime_to_nanoseconds(event.timestamp)
-        span.set_status(Status(StatusCode.OK))
-        span.end(end_time=end_time_ns)
+    span = _instant_span(providers, ctx, "receive human feedback", event, attrs)
 
     providers.emit_log(
         f"Human feedback received: {event.method_name}",
@@ -2193,19 +2167,6 @@ def handle_llm_call_failed(
 # ---------------------------------------------------------------------------
 
 
-def _lite_agent_output_type(event: Any) -> str:
-    """Lite-agent events don't carry a JSON-output marker today — default
-    to "text". Read prospective fields with `getattr` so a future OSS addition
-    (e.g. `output_pydantic`) flips this to "json" without an enterprise change.
-    """
-    if getattr(event, "output_pydantic", None) is not None:
-        return "json"
-    response_format = getattr(event, "response_format", None)
-    if response_format is None:
-        return "text"
-    return _response_format_output_type(response_format)
-
-
 def handle_lite_agent_execution_started(
     providers: TelemetryProviders,
     ctx: TelemetryExecutionContext,
@@ -2225,7 +2186,7 @@ def handle_lite_agent_execution_started(
             agent_id=str(agent_id) if agent_id else None,
             tool_definitions=list(event.tools) if event.tools else None,
             input_messages=event.messages,
-            output_type=_lite_agent_output_type(event),
+            output_type="text",
             conversation_id=_conversation_id(event, ctx),
         ),
     }

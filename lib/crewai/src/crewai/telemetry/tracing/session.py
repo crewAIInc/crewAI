@@ -15,7 +15,6 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
-    SpanExportResult,
     SpanExporter,
 )
 
@@ -74,32 +73,6 @@ class ExecutionAttributes(SpanProcessor):
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         return True
-
-
-class _ResourceSpan:
-    def __init__(self, span: ReadableSpan, resource: Resource):
-        self._span, self.resource = span, resource
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._span, name)
-
-
-class ResourceSpanExporter(SpanExporter):
-    """Apply a collector-specific resource while keeping the original spans."""
-
-    def __init__(self, delegate: SpanExporter, resource: Resource):
-        self._delegate, self._resource = delegate, resource
-
-    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        return self._delegate.export(
-            [cast(ReadableSpan, _ResourceSpan(span, self._resource)) for span in spans]
-        )
-
-    def shutdown(self) -> None:
-        self._delegate.shutdown()
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        return self._delegate.force_flush(timeout_millis)
 
 
 def otlp_exporter(

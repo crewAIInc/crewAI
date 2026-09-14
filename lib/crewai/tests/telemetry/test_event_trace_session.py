@@ -4,10 +4,18 @@ import gc
 from threading import Barrier
 import weakref
 
-from crewai.events import LLMCallCompletedEvent, LLMCallStartedEvent, crewai_event_bus
+from crewai.events import (
+    HumanFeedbackReceivedEvent,
+    HumanFeedbackRequestedEvent,
+    LLMCallCompletedEvent,
+    LLMCallStartedEvent,
+    crewai_event_bus,
+)
 from crewai.events.types.llm_events import LLMCallType
+from crewai.flow.flow import Flow, start
 from crewai.telemetry.tracing.context import get_telemetry_context, get_trace_session
 from crewai.telemetry.tracing.session import TraceSession, telemetry_session
+from crewai.types.usage_metrics import UsageMetrics
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 import pytest
@@ -116,6 +124,43 @@ def test_completed_spans_release_payloads_without_losing_parent_identity():
     session.shutdown()
 
 
+def test_human_feedback_spans_are_instant_children_of_the_flow():
+    events = [
+        HumanFeedbackRequestedEvent(
+            flow_name="ReviewFlow",
+            method_name="review",
+            output="draft",
+            message="Review",
+        ),
+        HumanFeedbackReceivedEvent(
+            flow_name="ReviewFlow", method_name="review", feedback="approved"
+        ),
+    ]
+
+    class ReviewFlow(Flow):
+        @start()
+        def review(self):
+            for event in events:
+                crewai_event_bus.emit(self, event)
+
+    exporter = InMemorySpanExporter()
+    with telemetry_session("execution", "test", [exporter]):
+        ReviewFlow(tracing=False).kickoff()
+
+    spans = {span.name: span for span in exporter.get_finished_spans()}
+    for name, event in zip(
+        ("request human feedback", "receive human feedback"), events, strict=True
+    ):
+        span = spans[name]
+        assert span.parent == spans["call method"].context
+        assert span.context.trace_id == spans["execute flow"].context.trace_id
+        assert (
+            span.start_time == span.end_time == int(event.timestamp.timestamp() * 1e9)
+        )
+        assert span.status.status_code == trace.StatusCode.OK
+        assert span.attributes["crewai.event_name"] == event.type
+
+
 def test_session_owns_root_even_under_application_span():
     exporter = InMemorySpanExporter()
     application = trace.NonRecordingSpan(
@@ -138,6 +183,45 @@ def test_session_owns_root_even_under_application_span():
     assert span.parent is None
     assert span.context.trace_id != application.get_span_context().trace_id
     assert get_trace_session() is None and get_telemetry_context() is None
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_tracing_preserves_flow_usage_metrics(fail):
+    class UsageFlow(Flow):
+        @start()
+        def run(self):
+            crewai_event_bus.emit(
+                None, LLMCallStartedEvent(call_id="call", messages="hello")
+            )
+            completed = complete_call("call")
+            completed.usage = {"prompt_tokens": 7, "completion_tokens": 3}
+            crewai_event_bus.emit(None, completed)
+            assert crewai_event_bus.flush()
+            if fail:
+                raise ValueError("flow failed after recording usage")
+            return "done"
+
+    exporter = InMemorySpanExporter()
+    flow = UsageFlow(tracing=False)
+    with telemetry_session("execution", "test", [exporter]):
+        if fail:
+            with pytest.raises(ValueError, match="flow failed"):
+                flow.kickoff()
+        else:
+            assert flow.kickoff() == "done"
+
+    assert flow.usage_metrics == UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=7,
+        completion_tokens=3,
+        successful_requests=1,
+    )
+    flow_span = next(
+        span for span in exporter.get_finished_spans() if span.name == "execute flow"
+    )
+    assert flow_span.status.status_code == (
+        trace.StatusCode.ERROR if fail else trace.StatusCode.OK
+    )
 
 
 def test_shutdown_cleans_subscriptions_and_provider_after_event_drain_timeout(

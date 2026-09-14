@@ -7,13 +7,15 @@ from unittest.mock import Mock
 
 from crewai_cli.crew_run_tui import CrewRunApp, TraceConsentScreen
 import pytest
+from textual.events import Mount
 from textual.widgets import Button
 
 
 class ConsentApp(CrewRunApp):
-    def on_mount(self, event):
+    def on_mount(self, event: Mount | None = None) -> None:
         """Show the real UI without starting a crew or a refresh worker."""
-        event.prevent_default()
+        if event is not None:
+            event.prevent_default()
 
 
 async def wait_for_consent(app, pilot):
@@ -190,3 +192,43 @@ async def test_quit_during_turn_discards_trace_after_worker_finishes(
     assert app._flow.trace is None
     assert app._flow.defer_trace_finalization is False
     prompt.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["crew", "flow"])
+async def test_quit_during_execution_rejects_late_consent(monkeypatch, kind):
+    entered, release = threading.Event(), threading.Event()
+    app = ConsentApp()
+    decisions = []
+
+    class RunningExecution:
+        def kickoff(self, inputs=None):
+            entered.set()
+            release.wait(timeout=5)
+            decisions.append(app._request_trace_consent())
+            return "done"
+
+    setattr(app, f"_{kind}", RunningExecution())
+    app._status = "working"
+    prompt = Mock(side_effect=AssertionError("Cancelled execution asked for consent"))
+    completed = Mock()
+    failed = Mock()
+    monkeypatch.setattr(app, "push_screen", prompt)
+    monkeypatch.setattr(app, "_on_crew_done", completed)
+    monkeypatch.setattr(app, "_on_crew_failed", failed)
+    async with app.run_test(size=(100, 40)):
+        # Own the worker thread so the test awaits its body even after Textual
+        # cancels its worker wrappers on exit (running threads are not stopped).
+        run_worker = getattr(app, f"_run_{kind}_worker").__wrapped__
+        worker = asyncio.create_task(asyncio.to_thread(run_worker, app))
+        assert await asyncio.to_thread(entered.wait, 5)
+        try:
+            await app.action_quit()
+        finally:
+            release.set()
+        await asyncio.wait_for(worker, timeout=5)
+    assert decisions == [False]
+    assert app._trace_consent_pending is None
+    prompt.assert_not_called()
+    completed.assert_not_called()
+    failed.assert_not_called()

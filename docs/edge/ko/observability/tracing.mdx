@@ -150,8 +150,8 @@ result = flow.kickoff()
 
 ### 5단계: CrewAI AMP 대시보드에서 추적 보기
 
-crew 또는 flow를 실행한 후 CrewAI AMP 대시보드에서 CrewAI 애플리케이션이 생성한 추적을 볼 수 있습니다. agent 상호 작용, 도구 사용 및 LLM 호출의 세부 단계를 볼 수 있습니다.
-아래 링크를 클릭하여 추적을 보거나 대시보드의 추적 탭으로 이동하세요 [여기](https://app.crewai.com/crewai_plus/trace_batches)
+추적은 인증된 내보내기 또는 명시적으로 동의한 익명 업로드가 성공한 경우에만 업로드됩니다. 로컬 버퍼가 삭제된 실행에는 업로드된 추적이 없습니다.
+계정에 연결된 추적은 [CrewAI AMP 대시보드의 Traces 탭](https://app.crewai.com/crewai_plus/trace_batches)에서 agent 상호 작용, 도구 사용 및 LLM 호출을 확인하세요.
 ![CrewAI Tracing Interface](/images/view-traces.png)
 
 ### 대안: 환경 변수 구성
@@ -254,5 +254,5 @@ CrewAI 추적은 다음에 대한 포괄적인 가시성을 제공합니다:
 
 1. Crew/Flow에서 `tracing=True`가 설정되어 있는지 확인하세요
 2. 환경 변수를 사용하는 경우 `CREWAI_TRACING_ENABLED=true`인지 확인하세요
-3. `crewai login`으로 인증되었는지 확인하세요
-4. crew/flow가 실제로 실행되고 있는지 확인하세요
+3. 인증된 내보내기의 경우 CLI 로그인, `CREWAI_USER_PAT` 또는 플랫폼 통합 자격 증명을 확인하세요. 익명으로 공유하려면 동의 프롬프트에서 명시적으로 동의하세요. 로그인은 필요하지 않습니다
+4. crew/flow가 실행되었고 추적 내보내기가 성공했는지 확인하세요. 동의를 거절하거나 시간이 초과되거나 대화형 동의 프롬프트 없이 실행하면 로컬 버퍼가 업로드되지 않고 삭제됩니다

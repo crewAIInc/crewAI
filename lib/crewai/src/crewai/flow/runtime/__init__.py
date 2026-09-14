@@ -1668,20 +1668,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 except Exception:
                     logger.warning("FlowFinishedEvent handler failed", exc_info=True)
 
-            trace_listener = TraceCollectionListener()
-            if (
-                get_execution_uuid() is None
-                and trace_listener.batch_manager.batch_owner_type == "flow"
-                and current_flow_id.get() == self.flow_id
-                and not trace_listener.batch_manager.defer_session_finalization
-                and not current_flow_defer_trace_finalization.get()
-            ):
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
-
         return final_result
 
     def _create_initial_state(self) -> T:
@@ -2535,20 +2521,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             "FlowFinishedEvent handler failed", exc_info=True
                         )
 
-                trace_listener = TraceCollectionListener()
-                if (
-                    get_execution_uuid() is None
-                    and trace_listener.batch_manager.batch_owner_type == "flow"
-                    and current_flow_id.get() == self.flow_id
-                    and not trace_listener.batch_manager.defer_session_finalization
-                    and not current_flow_defer_trace_finalization.get()
-                ):
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
-
             return final_output
         except Exception as e:
             # Pairing invariant: only fire the failure EXECUTION_END when this
@@ -2660,11 +2632,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         should_emit_flow_started = not (
             defer_trace_finalization and deferred_started_event_id
         )
-        if get_execution_uuid() is None and current_flow_id.get() == self.flow_id:
-            TraceCollectionListener().batch_manager.defer_session_finalization = (
-                defer_trace_finalization
-            )
-
         flow_scope_open = False
         if (
             defer_trace_finalization
@@ -2745,19 +2712,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 except Exception:
                     logger.warning("FlowFailedEvent handler failed", exc_info=True)
 
-            trace_listener = TraceCollectionListener()
-            if (
-                get_execution_uuid() is None
-                and trace_listener.batch_manager.batch_owner_type == "flow"
-                and current_flow_id.get() == self.flow_id
-                and not trace_listener.batch_manager.defer_session_finalization
-                and not current_flow_defer_trace_finalization.get()
-            ):
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
         except Exception:
             logger.warning("Failed to signal flow failure", exc_info=True)
 

@@ -263,11 +263,7 @@ def to_tool_call_arguments(arguments: Any) -> Any:
 
 
 def to_tool_call_result(result: Any) -> Any:
-    if result is None:
-        return None
-    if isinstance(result, str):
-        return _parse_json(result)
-    return to_serializable(result, max_depth=_MAX_DEPTH)
+    return to_tool_call_arguments(result)
 
 
 def finish_reasons_from_messages(
@@ -398,7 +394,7 @@ def _is_message_array(parsed: Any) -> bool:
 
 def _truncate_messages(
     messages: list[dict[str, Any]], original_size: int, cap: int
-) -> str:
+) -> str | None:
     if len(messages) <= 2:
         return _shrink_text_until_fits(
             [_clone_message(m) for m in messages], original_size, cap
@@ -434,7 +430,7 @@ def _clone_message(msg: dict[str, Any]) -> dict[str, Any]:
 
 def _shrink_text_until_fits(
     messages: list[dict[str, Any]], original_size: int, cap: int
-) -> str:
+) -> str | None:
     """Iteratively halve the largest ``parts[*].content`` text until fits.
 
     Bounded by ``_TRUNCATION_LOOP_LIMIT`` so a pathological input can't
@@ -478,8 +474,6 @@ def _largest_text_part(
 
 def _trunc_text(content: str, target_bytes: int) -> str:
     encoded = content.encode("utf-8")
-    if len(encoded) <= target_bytes:
-        return content
     head_bytes = max(target_bytes // 2, 256)
     tail_bytes = max(target_bytes // 4, 128)
     head = encoded[:head_bytes].decode("utf-8", errors="ignore")
@@ -488,20 +482,27 @@ def _trunc_text(content: str, target_bytes: int) -> str:
     return f"{head}...[truncated {omitted_kb}KB]...{tail}"
 
 
-def _envelope(payload: str, original_size: int, cap: int) -> str:
+def _envelope(payload: str, original_size: int, cap: int) -> str | None:
     """Replace any payload with a parseable JSON object containing a head
     preview and the truncation metadata.
 
     Used when the structural strategy doesn't apply (non-message JSON,
     malformed JSON) or didn't fit (rare — message envelopes dominate).
     """
-    preview_bytes = max(min(cap // 4, 4 * 1024), 512)
+    preview_bytes = min(cap // 4, 4 * 1024)
     encoded = payload.encode("utf-8")
     preview = encoded[:preview_bytes].decode("utf-8", errors="ignore")
-    return json.dumps(
-        {
-            "_truncated": True,
-            "_original_size_bytes": original_size,
-            "_preview": preview,
-        }
-    )
+    while True:
+        envelope = json.dumps(
+            {
+                "_truncated": True,
+                "_original_size_bytes": original_size,
+                "_preview": preview,
+            }
+        )
+        if _byte_len(envelope) <= cap:
+            return envelope
+        if not preview:
+            return None
+        # JSON escaping can expand the preview, so measure the encoded result.
+        preview = preview[: len(preview) // 2]
