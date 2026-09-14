@@ -673,6 +673,25 @@ def test_azure_gpt54_mini_keeps_its_window() -> None:
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+@pytest.mark.parametrize(
+    "model,expected_size",
+    [
+        ("azure/o1", 200_000),
+        ("azure/o1-2024-12-17", 200_000),
+        ("azure/o1-pro", 200_000),
+        ("azure/o3", 200_000),
+        ("azure/o3-mini", 200_000),
+        ("azure/o1-preview", 128_000),
+        ("azure/o1-mini", 128_000),
+    ],
+)
+def test_azure_o_series_reasoning_models_context_window(
+    model: str, expected_size: int
+) -> None:
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(expected_size * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_azure_message_formatting():
     """
     Test that messages are properly formatted for Azure API
