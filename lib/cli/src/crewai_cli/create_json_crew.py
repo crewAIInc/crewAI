@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -918,48 +919,106 @@ def _prompt_platform_token() -> str:
     ).strip()
 
 
+def _check_platform_app(
+    app: str, application_selector: Any, client_for_selector: Any
+) -> tuple[Any | None, Exception | None]:
+    """Check one AMP application with the synchronous platform client."""
+    try:
+        selector = application_selector.from_string(app)
+        return client_for_selector(selector).get_actions([selector]), None
+    except Exception as error:
+        return None, error
+
+
+async def _check_platform_apps_concurrently(
+    apps: list[str], application_selector: Any, client_for_selector: Any
+) -> list[tuple[Any | None, Exception | None]]:
+    """Run independent AMP application checks concurrently."""
+    return await asyncio.gather(
+        *(
+            asyncio.to_thread(
+                _check_platform_app, app, application_selector, client_for_selector
+            )
+            for app in apps
+        )
+    )
+
+
+def _report_platform_app_validation(
+    app: str,
+    actions: Any | None,
+    error: Exception | None,
+    failed: list[str],
+) -> bool:
+    """Print one AMP application validation result and return token validity."""
+    app_name = _platform_app_name(app)
+    if error is not None:
+        status_code = getattr(getattr(error, "response", None), "status_code", None)
+        if status_code in {401, 403}:
+            click.secho(
+                "  ✘ CrewAI Platform Integration Token is invalid or expired",
+                fg="red",
+            )
+            return True
+        click.secho(
+            f"  ✘ {app_name} integration could not be validated: {error}",
+            fg="red",
+        )
+        failed.append(app)
+        return False
+
+    if not actions:
+        click.secho(
+            f"  ✘ {app_name} integration is not connected on CrewAI Platform",
+            fg="red",
+        )
+        failed.append(app)
+    else:
+        click.secho(
+            f"  ✔ {app_name} integration is connected on CrewAI Platform",
+            fg="green",
+        )
+    return False
+
+
 def _validate_platform_apps(
     apps: list[str], application_selector: Any, client_for_selector: Any
 ) -> tuple[list[str], bool]:
-    """Check selected AMP applications and return failures and token validity."""
+    """Check selected AMP applications concurrently when no event loop is running."""
     failed: list[str] = []
-    for app in apps:
-        app_name = _platform_app_name(app)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        app_names = [_platform_app_name(app) for app in apps]
         click.echo()
         click.secho(
-            "  Checking CrewAI Platform Integration Token and "
-            f"{app_name} integration on AMP...",
+            "  Checking "
+            f"{', '.join(app_names)} integration{'s' if len(app_names) != 1 else ''} "
+            "together on AMP...",
             fg="cyan",
         )
-        try:
-            selector = application_selector.from_string(app)
-            actions = client_for_selector(selector).get_actions([selector])
-        except Exception as error:
-            status_code = getattr(getattr(error, "response", None), "status_code", None)
-            if status_code in {401, 403}:
-                click.secho(
-                    "  ✘ CrewAI Platform Integration Token is invalid or expired",
-                    fg="red",
-                )
+        results = asyncio.run(
+            _check_platform_apps_concurrently(
+                apps, application_selector, client_for_selector
+            )
+        )
+        for app, (actions, error) in zip(apps, results, strict=True):
+            if _report_platform_app_validation(app, actions, error, failed):
                 return failed, True
+    else:
+        for app in apps:
+            app_name = _platform_app_name(app)
+            click.echo()
             click.secho(
-                f"  ✘ {app_name} integration could not be validated: {error}",
-                fg="red",
+                "  Checking CrewAI Platform Integration Token and "
+                f"{app_name} integration on AMP...",
+                fg="cyan",
             )
-            failed.append(app)
-            continue
-
-        if not actions:
-            click.secho(
-                f"  ✘ {app_name} integration is not connected on CrewAI Platform",
-                fg="red",
+            actions, error = _check_platform_app(
+                app, application_selector, client_for_selector
             )
-            failed.append(app)
-        else:
-            click.secho(
-                f"  ✔ {app_name} integration is connected on CrewAI Platform",
-                fg="green",
-            )
+            if _report_platform_app_validation(app, actions, error, failed):
+                return failed, True
     return failed, False
 
 
