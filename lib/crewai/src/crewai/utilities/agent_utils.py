@@ -374,7 +374,6 @@ def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
 
 
 def handle_max_iterations_exceeded(
-    formatted_answer: AgentAction | AgentFinish | None,
     printer: Printer,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
@@ -384,9 +383,9 @@ def handle_max_iterations_exceeded(
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
     Args:
-        formatted_answer: The last formatted answer from the agent.
         printer: Printer instance for output.
-        messages: List of messages to send to the LLM.
+        messages: Conversation so far; the forced-answer instruction is appended
+            to it as a user turn.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
         verbose: Whether to print output.
@@ -400,14 +399,11 @@ def handle_max_iterations_exceeded(
             color="yellow",
         )
 
-    if formatted_answer and hasattr(formatted_answer, "text"):
-        assistant_message = (
-            formatted_answer.text + f"\n{I18N_DEFAULT.errors('force_final_answer')}"
-        )
-    else:
-        assistant_message = I18N_DEFAULT.errors("force_final_answer")
-
-    messages.append(format_message_for_llm(assistant_message, role="assistant"))
+    # A trailing assistant turn is a prefill request, which current Claude
+    # models reject with a 400; every provider accepts a trailing user turn.
+    messages.append(
+        format_message_for_llm(I18N_DEFAULT.errors("force_final_answer"), role="user")
+    )
 
     answer = llm.call(
         messages,
