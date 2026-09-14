@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_deepinfra_config(self):
+        """Test DeepInfra provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["deepinfra"]
+        assert config.base_url == "https://api.deepinfra.com/v1/openai"
+        assert config.api_key_env == "DEEPINFRA_API_KEY"
+        assert config.base_url_env == "DEEPINFRA_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -161,6 +169,15 @@ class TestOpenAICompatibleCompletion:
         finally:
             if original is not None:
                 os.environ[env_key] = original
+
+    def test_deepinfra_missing_api_key_names_env_var(self):
+        """DeepInfra requires a key; the error tells the user which env var to set."""
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="DEEPINFRA_API_KEY"
+        ):
+            OpenAICompatibleCompletion(
+                model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra"
+            )
 
     def test_api_key_from_env(self):
         """Test API key is read from environment variable."""
@@ -311,6 +328,54 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
             assert llm.base_url == "https://my-dashscope.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_deepinfra(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for DeepInfra."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}):
+            llm = LLM(model="deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "deepinfra"
+            # DeepInfra ids are org/model, so the part after the provider
+            # prefix is itself two segments and must reach the API intact.
+            assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
+            assert llm.base_url == "https://api.deepinfra.com/v1/openai"
+
+    def test_deepinfra_base_url_env_override(self):
+        """DEEPINFRA_BASE_URL redirects DeepInfra to a proxy or private endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "DEEPINFRA_API_KEY": "test-key",
+                "DEEPINFRA_BASE_URL": "https://proxy.example.com/v1/openai",
+            },
+        ):
+            llm = LLM(model="deepinfra/meta-llama/Llama-4-Scout-17B-16E-Instruct")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://proxy.example.com/v1/openai"
+
+    def test_llm_creates_openai_compatible_for_deepinfra_explicit_provider(self):
+        """Explicit provider="deepinfra" routes natively without the model prefix."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}):
+            llm = LLM(model="deepseek-ai/DeepSeek-V4-Flash-0731", provider="deepinfra")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "deepinfra"
+            assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            ("deepseek-ai/DeepSeek-V4-Flash-0731", True),
+            ("Qwen/Qwen3.5-27B", True),
+            ("meta-llama/Llama-4-Scout-17B-16E-Instruct", True),
+            ("", False),
+            ("qwen", False),
+            ("Qwen/", False),
+            ("/Qwen3.5-27B", False),
+        ],
+    )
+    def test_deepinfra_requires_an_org_and_a_model(self, model, expected):
+        """DeepInfra references carry an org segment, so both halves are required."""
+        assert LLM._matches_provider_pattern(model, "deepinfra") is expected
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
