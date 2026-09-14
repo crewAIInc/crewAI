@@ -41,6 +41,42 @@ def _mock_response(json_data, status_code=200):
     return response
 
 
+def _jsonstat_payload_two_by_two():
+    """A JSON-stat payload where every dimension has size > 1.
+
+    Unlike `_jsonstat_payload` (geo size 1), this actually exercises the
+    row-major, last-dimension-fastest decoding in `_parse_jsonstat`: a bug
+    that swapped axis order or fastest/slowest dimension would misassign
+    labels here, whereas it couldn't show up with a size-1 axis.
+    """
+    return {
+        "label": "Unemployment rate",
+        "id": ["geo", "time"],
+        "size": [2, 2],
+        "dimension": {
+            "geo": {"category": {"index": {"DE": 0, "FR": 1}, "label": {"DE": "Germany", "FR": "France"}}},
+            "time": {
+                "category": {
+                    "index": {"2026-01": 0, "2026-02": 1},
+                    "label": {"2026-01": "2026-01", "2026-02": "2026-02"},
+                }
+            },
+        },
+        # Row-major, time (last dim) fastest-varying: flat index = geo_pos * 2 + time_pos.
+        "value": {"0": 10.0, "1": 20.0, "2": 30.0, "3": 40.0},
+    }
+
+
+def test_parse_jsonstat_orders_axes_correctly_with_nontrivial_dimensions(tool):
+    parsed = tool._parse_jsonstat(_jsonstat_payload_two_by_two())
+    by_key = {(r["geo"], r["time"]): r["value"] for r in parsed["records"]}
+
+    assert by_key[("Germany", "2026-01")] == 10.0
+    assert by_key[("Germany", "2026-02")] == 20.0
+    assert by_key[("France", "2026-01")] == 30.0
+    assert by_key[("France", "2026-02")] == 40.0
+
+
 def test_run_requires_indicator_or_dataset_code(tool):
     result = tool._run()
     assert "Error" in result
