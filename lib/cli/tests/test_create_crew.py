@@ -1,6 +1,8 @@
+import builtins
 import keyword
 import shutil
 import tempfile
+import warnings
 from pathlib import Path
 from unittest import mock
 
@@ -664,6 +666,41 @@ def test_json_wizard_platform_catalog_contains_every_supported_app():
 
     assert [name for name, _description in platform_category] == [
         f"platform:{app}" for app in PLATFORM_APPS
+    ]
+
+
+def test_platform_auth_suppresses_warnings_only_while_importing_tools(
+    monkeypatch,
+):
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    fake_client = mock.Mock()
+    fake_client.get_actions.return_value = [object()]
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=lambda _selector: fake_client,
+    )
+    original_import = builtins.__import__
+
+    def import_with_warning(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            warnings.warn("optional dependency import warning", UserWarning)
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", import_with_warning)
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        json_crew._setup_platform_auth([{"tools": ["platform:github"]}])
+        warnings.warn("warning after import", UserWarning)
+
+    assert [str(warning.message) for warning in caught_warnings] == [
+        "warning after import"
     ]
 
 

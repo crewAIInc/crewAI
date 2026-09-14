@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
+import warnings
 
 import click
 from crewai_core.telemetry import Telemetry
@@ -1009,10 +1010,14 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
 
     click.echo()
     try:
-        from crewai_tools.tools.crewai_platform_tools.integrations_client import (
-            ApplicationSelector,
-            client_for_selector,
-        )
+        # Importing crewai_tools currently initializes optional tool SDKs. Keep
+        # their import-time warnings out of the interactive token setup flow.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+                ApplicationSelector,
+                client_for_selector,
+            )
     except ImportError as error:
         raise click.ClickException(
             "Platform tools require the 'crewai-tools' package. "
