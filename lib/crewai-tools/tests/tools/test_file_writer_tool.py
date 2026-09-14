@@ -215,8 +215,10 @@ def test_blocks_symlink_escape(tool, temp_env):
     link = os.path.join(temp_env["temp_dir"], "escape")
     from tests.helpers import create_symlink_or_skip
 
-    create_symlink_or_skip(outside_dir, link)
     try:
+        # The helper may skip on hosts without symlink privileges; keep it inside
+        # the try block so outside_dir is still cleaned up when the test skips.
+        create_symlink_or_skip(outside_dir, link)
         result = tool._run(
             filename="escape/target.txt",
             directory=temp_env["temp_dir"],
