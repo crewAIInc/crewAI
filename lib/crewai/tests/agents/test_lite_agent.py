@@ -1330,8 +1330,7 @@ def test_lite_agent_forces_final_answer_with_user_turn():
 
     result = agent.kickoff("Collect all the data.")
 
-    # The first request is the forced answer; LiteAgent's loop then issues a
-    # regular call on the same history before it checks for AgentFinish.
+    assert mock_llm.call.call_count == 1
     assert requests[0][-1] == {
         "role": "user",
         "content": I18N_DEFAULT.errors("force_final_answer"),
