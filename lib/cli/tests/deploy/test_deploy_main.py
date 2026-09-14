@@ -9,6 +9,7 @@ import pytest
 import json
 
 import crewai_cli.deploy.main as deploy_main
+from crewai_cli.deploy.archive import ArchiveError
 import httpx
 from crewai_cli.deploy.validate import Severity, ValidationResult
 from crewai_cli.utils import parse_toml
@@ -942,19 +943,86 @@ class TestDeployCommand(unittest.TestCase):
         initialized_repository = MagicMock()
         initialized_repository.origin_url.return_value = None
         mock_repository.initialize.return_value = initialized_repository
-        mock_create_project_zip.side_effect = ValueError(
+        mock_create_project_zip.side_effect = ArchiveError(
             "No deployable project files were found."
         )
 
         with patch.object(self.deploy_command, "_telemetry") as telemetry:
             with patch("sys.stdout", new=StringIO()):
-                with pytest.raises(ValueError, match="No deployable project files"):
+                with pytest.raises(ArchiveError, match="No deployable project files"):
                     self.deploy_command.create_crew(skip_validate=True, confirm=True)
 
         telemetry.crew_deployment_failed_span.assert_called_once_with(
             "zip_error", source="cli"
         )
         self.mock_client.create_crew_from_zip.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_git_helper_error_is_not_a_zip_error(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """The git helpers raise plain ValueError; only ArchiveError is a ZIP problem."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        mock_repository.return_value.origin_url.side_effect = ValueError(
+            "Git remote lookup failed"
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with pytest.raises(ValueError, match="Git remote lookup failed"):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "unexpected", source="cli"
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_non_json_error_page_keeps_its_api_class(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """A gateway's HTML 502 is an api_5xx, not an invalid response."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            502, ValueError("not json")
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "api_5xx", source="cli", status_code=502
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_success_body_that_is_not_a_creation_reports_invalid_response(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """A 2xx without a deployment uuid is not a success and must not crash."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        for body in ([{"uuid": "in-a-list"}], {"status": "created"}, {}):
+            with self.subTest(body=body):
+                self.mock_client.create_crew.return_value = self._api_response(
+                    200, body
+                )
+                with patch.object(self.deploy_command, "_telemetry") as telemetry:
+                    with patch("sys.stdout", new=StringIO()) as fake_out:
+                        with self.assertRaises(SystemExit) as exit_info:
+                            self.deploy_command.create_crew(skip_validate=True)
+
+                assert exit_info.exception.code == 1
+                assert "no deployment uuid was returned" in fake_out.getvalue()
+                telemetry.crew_deployment_failed_span.assert_called_once_with(
+                    "invalid_response", source="cli", status_code=200
+                )
+                telemetry.crew_deployment_created_span.assert_not_called()
 
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")

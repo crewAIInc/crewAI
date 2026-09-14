@@ -4,7 +4,6 @@ import subprocess
 from typing import Any
 from urllib.parse import quote
 import webbrowser
-import zipfile
 
 from crewai_core.plus_api import CreateCrewPayload
 from crewai_core.telemetry import DeployFailureReason, DeploySource
@@ -14,7 +13,7 @@ from rich.console import Console
 from crewai_cli import git
 from crewai_cli.command import BaseCommand, PlusAPIMixin
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai_cli.deploy.archive import create_project_zip
+from crewai_cli.deploy.archive import ArchiveError, create_project_zip
 from crewai_cli.deploy.validate import DeployValidator, Severity, render_report
 from crewai_cli.utils import fetch_and_json_env_file, get_project_name
 
@@ -132,31 +131,40 @@ def _deployment_page_url(base_url: str, json_response: dict[str, Any]) -> str | 
 def _creation_failure_reason(exc: BaseException) -> DeployFailureReason:
     """Classify an exception raised while requesting a deployment, for telemetry.
 
-    Only the archive step raises ``ValueError`` / ``OSError`` inside that request
-    (the project name is validated at construction), so those read as zip errors.
+    Archive failures are recognised by type (``ArchiveError``), not by base
+    class: the git helpers raise plain ``ValueError`` too, and those are not
+    ZIP problems.
     """
     if isinstance(exc, (KeyboardInterrupt, EOFError)):
         return "user_declined"
     if isinstance(exc, httpx.HTTPError):
         return "network_error"
-    if isinstance(exc, (ValueError, OSError, zipfile.BadZipFile)):
+    if isinstance(exc, ArchiveError):
         return "zip_error"
     return "unexpected"
 
 
 def _response_failure_reason(response: httpx.Response) -> DeployFailureReason | None:
-    """Classify a create response that ``_validate_response`` will reject.
+    """Classify a create response that cannot become a created deployment.
 
-    Mirrors its checks in the same order; ``None`` means the response will pass.
+    Status first, so a gateway's HTML error page counts as the API class it is;
+    then the body, which must be a JSON object carrying ``uuid`` and ``status``
+    for the success path to use. ``None`` means the response is a creation.
     """
-    try:
-        response.json()
-    except (json.JSONDecodeError, ValueError):
-        return "invalid_response"
     if response.status_code >= 500:
         return "api_5xx"
     if not response.is_success:
         return "api_4xx"
+    try:
+        payload = response.json()
+    except (json.JSONDecodeError, ValueError):
+        return "invalid_response"
+    if (
+        not isinstance(payload, dict)
+        or not payload.get("uuid")
+        or "status" not in payload
+    ):
+        return "invalid_response"
     return None
 
 
@@ -492,15 +500,22 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             self._telemetry.crew_deployment_failed_span(
                 failure_reason, source=source, status_code=response.status_code
             )
-        self._validate_response(response)
+            # Prints the API's own details and exits for every non-2xx and for
+            # a body that is not JSON. Only a 2xx that parsed but is not a
+            # creation payload gets past it.
+            self._validate_response(response)
+            console.print(
+                "Unexpected response from the Enterprise API: no deployment uuid was returned.",
+                style="bold red",
+            )
+            raise SystemExit(1)
+
         json_response = response.json()
-        # After _validate_response, not before: it raises SystemExit on a failed
-        # create, so the span cannot fire for a deployment that was not made. This
-        # is the first point at which the uuid exists -- the pre-flight span at the
-        # top of this method counts the attempt and cannot carry it.
-        created_uuid = json_response.get("uuid")
+        # Only here, after the response has been classified as a creation: this
+        # is the first point at which the uuid exists -- the pre-flight span at
+        # the top of this method counts the attempt and cannot carry it.
         self._telemetry.crew_deployment_created_span(
-            uuid=str(created_uuid) if created_uuid else None, source=source
+            uuid=str(json_response["uuid"]), source=source
         )
         self._display_creation_success(json_response)
 
