@@ -86,13 +86,19 @@ def _try_parse_structured(text: str) -> Any | None:
     """Try JSON first, then Python repr (single-quoted dicts/lists)."""
     try:
         return _json.loads(text)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         pass
     try:
         import ast
 
         obj = ast.literal_eval(text)
+        # literal_eval accepts values json.dumps cannot encode (e.g. [Ellipsis]
+        # from "[...]"), which would crash the renderer later; reject those.
+        # Validate with the exact kwargs the render path uses so a structure
+        # the C decoder accepts but the indent encoder cannot walk is also
+        # rejected here instead of raising inside _tick.
         if isinstance(obj, (dict, list)):
+            _json.dumps(obj, indent=2, ensure_ascii=False)
             return obj
     except Exception:  # noqa: S110
         pass
