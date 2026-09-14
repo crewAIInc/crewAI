@@ -80,6 +80,7 @@ from crewai_tools.tools.e2b_sandbox_tool import (
     E2BFileTool,
     E2BPythonTool,
 )
+from crewai_tools.tools.eurostat_tool.eurostat_tool import EurostatTool
 from crewai_tools.tools.exa_tools.exa_search_tool import EXASearchTool, ExaSearchTool
 from crewai_tools.tools.file_read_tool.file_read_tool import FileReadTool
 from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
@@ -266,6 +267,7 @@ __all__ = [
     "E2BPythonTool",
     "EXASearchTool",
     "EnterpriseActionTool",
+    "EurostatTool",
     "ExaSearchTool",
     "FileCompressorTool",
     "FileReadTool",
