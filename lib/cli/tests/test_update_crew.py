@@ -21,6 +21,7 @@ crewai = "^1.0.0"
 
 
 def _write_project(tmp_path: Path) -> None:
+    """Create a minimal Poetry-style project with a lock file in ``tmp_path``."""
     (tmp_path / "pyproject.toml").write_text(_POETRY_PYPROJECT, encoding="utf-8")
     (tmp_path / "poetry.lock").write_text("current lock\n", encoding="utf-8")
 
@@ -28,6 +29,7 @@ def _write_project(tmp_path: Path) -> None:
 def test_migrate_pyproject_backs_up_lock_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """The migration renames ``poetry.lock`` to ``poetry-old.lock`` and backs up pyproject."""
     monkeypatch.chdir(tmp_path)
     _write_project(tmp_path)
 
