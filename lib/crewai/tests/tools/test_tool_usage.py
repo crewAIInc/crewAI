@@ -24,6 +24,7 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.tools import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -903,3 +904,71 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_tool_usage_does_not_double_invoke_on_failure():
+    calls = []
+
+    def failing_tool(arg: str) -> str:
+        calls.append(arg)
+        raise RuntimeError("boom")
+
+    tool = CrewStructuredTool.from_function(
+        func=failing_tool,
+        name="failing_tool",
+        description="A tool that always fails",
+    )
+
+    class MockAction:
+        tool = "failing_tool"
+        tool_input = {"arg": "val"}
+
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=MockAction(),
+    )
+    tool_usage._max_parsing_attempts = 2
+
+    calling = ToolCalling(tool_name="failing_tool", arguments={"arg": "val"})
+    tool_usage.use(calling=calling, tool_string="Action: failing_tool")
+
+    assert len(calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_async_tool_usage_does_not_double_invoke_on_failure():
+    calls = []
+
+    async def async_failing_tool(arg: str) -> str:
+        calls.append(arg)
+        raise RuntimeError("boom")
+
+    tool = CrewStructuredTool.from_function(
+        func=async_failing_tool,
+        name="async_failing_tool",
+        description="An async tool that always fails",
+    )
+
+    class MockAction:
+        tool = "async_failing_tool"
+        tool_input = {"arg": "val"}
+
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=MockAction(),
+    )
+    tool_usage._max_parsing_attempts = 2
+
+    calling = ToolCalling(tool_name="async_failing_tool", arguments={"arg": "val"})
+    await tool_usage.ause(calling=calling, tool_string="Action: async_failing_tool")
+
+    assert len(calls) == 2
+
