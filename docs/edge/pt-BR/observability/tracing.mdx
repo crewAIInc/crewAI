@@ -175,12 +175,46 @@ Quando esta variável de ambiente estiver definida, todos os Crews e Flows terã
 Na primeira vez que você executa um Crew ou Flow, um terminal interativo pode perguntar:
 
 ```text
-Would you like to view your execution traces? [y/N]
+Share this execution trace with CrewAI? [y/N]
 ```
 
-Escolha **yes** para abrir um link de visualização. Você pode alterar isso depois com
+Escolha **yes** para enviar o rastreamento armazenado no buffer ao CrewAI.
+Os rastreamentos podem conter prompts, entradas e saídas. Recusar, deixar o
+prazo expirar ou executar sem uma solicitação interativa de consentimento
+descarta o buffer. Você pode alterar o rastreamento depois com
 `crewai traces enable` ou `crewai traces disable`, ou definindo `tracing`
 no Crew ou Flow.
+
+### Buffer local e exportação autenticada
+
+A coleta de rastreamentos da primeira execução permanece na memória do processo
+até você concordar em compartilhar, mesmo com credenciais de login salvas.
+O rastreamento sem autenticação usa o mesmo fluxo de consentimento. Antes do
+consentimento, o CrewAI não solicita autorização de upload nem envia spans de execução.
+
+O buffer retém até **1.000 spans** e **8 MiB de dados OTLP codificados**.
+Defina `CREWAI_EPHEMERAL_TRACE_MAX_SPANS` e
+`CREWAI_EPHEMERAL_TRACE_MAX_BYTES` como inteiros positivos para ajustar esses limites.
+Ao exceder o limite, os spans mais antigos são descartados; um span maior que o
+limite de bytes é descartado. O buffer é esvaziado após o compartilhamento ou descarte.
+
+Quando o rastreamento está habilitado e há credenciais disponíveis, o CrewAI troca
+seu login da CLI, `CREWAI_USER_PAT` ou credencial de integração da plataforma
+com o AMP por uma autorização específica para a execução. Em seguida, exporta
+spans OpenTelemetry diretamente para o Wharf usando essa autorização.
+Credenciais inválidas não resultam em upload anônimo como alternativa.
+
+### Sessões de execução hospedadas
+
+Os hosts podem envolver a execução com `telemetry_session` de
+`crewai.telemetry.tracing`. A sessão usa eventos do ciclo de vida do CrewAI
+para criar e finalizar spans, preservando timestamps, relações de parentesco e
+links de pausa/retomada de HITL. Passe um provedor existente com `providers=`
+para manter o tracer e a integração de logs do host. Passe processadores de
+remoção de dados sensíveis dos spans com `processors=` e disponibilize um
+redator aos hooks de logs do host com `pii_redactor=`. Cada sessão gerencia
+seu próprio ciclo de vida de rastreamento e mantém o provedor OpenTelemetry
+global da aplicação inalterado.
 
 ## Visualizando seus Rastreamentos
 

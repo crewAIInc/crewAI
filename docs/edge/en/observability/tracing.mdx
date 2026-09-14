@@ -175,12 +175,43 @@ When this environment variable is set, all Crews and Flows will automatically ha
 The first time you run a Crew or Flow, an interactive terminal may ask:
 
 ```text
-Would you like to view your execution traces? [y/N]
+Share this execution trace with CrewAI? [y/N]
 ```
 
-Choose **yes** to open a view link. You can change this later with
-`crewai traces enable` or `crewai traces disable`, or by setting `tracing`
+Choose **yes** to upload the buffered trace to CrewAI. Traces may contain
+prompts, inputs, and outputs. Declining, timing out, or running without an
+interactive consent prompt discards the buffer. You can change tracing later
+with `crewai traces enable` or `crewai traces disable`, or by setting `tracing`
 on the Crew or Flow.
+
+### Local buffering and authenticated export
+
+First-run trace collection stays in process memory until you agree to share,
+even if you have saved login credentials. Unauthenticated tracing uses the same
+consent flow. Before consent, CrewAI requests no upload grant and sends no
+execution spans.
+
+The buffer retains up to **1,000 spans** and **8 MiB of encoded OTLP data**.
+Set `CREWAI_EPHEMERAL_TRACE_MAX_SPANS` and
+`CREWAI_EPHEMERAL_TRACE_MAX_BYTES` to positive integers to adjust these limits.
+Overflow drops the oldest spans; a span larger than the byte limit is dropped.
+The buffer is cleared after sharing or discarding it.
+
+When tracing is enabled and credentials are available, CrewAI exchanges your
+CLI login, `CREWAI_USER_PAT`, or platform integration credential with AMP for
+an execution-specific grant. It then exports OpenTelemetry spans directly to
+Wharf using that grant. Invalid credentials do not fall back to anonymous upload.
+
+### Hosted execution sessions
+
+Hosts can wrap execution with `telemetry_session` from
+`crewai.telemetry.tracing`. The session uses CrewAI lifecycle events to create
+and finish spans, preserving their timestamps, parent relationships, and HITL
+pause/resume links. Pass an existing provider with `providers=` to retain the
+host's tracer and logging integration. Pass span redaction processors with
+`processors=` and expose a redactor to host log hooks with `pii_redactor=`.
+Each session owns its tracing lifecycle and leaves the application's global
+OpenTelemetry provider unchanged.
 
 ## Viewing Your Traces
 
