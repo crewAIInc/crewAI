@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from a2a.types import TaskStatusUpdateEvent
+from a2a.types import TaskArtifactUpdateEvent, TaskStatusUpdateEvent
 
 
 def process_status_update(
@@ -26,3 +26,32 @@ def process_status_update(
             if part.root.kind == "text" and part.root.text
         )
     return is_final
+
+
+def process_artifact_update(
+    update: TaskArtifactUpdateEvent,
+    result_parts: list[str],
+    artifact_positions: dict[str, int],
+) -> None:
+    """Add the text parts of an artifact update to the accumulated result.
+
+    A chunk sent with ``append=True`` continues the text of the same artifact,
+    so it is joined onto that artifact's last part with no separator. Other
+    parts are added as separate entries.
+
+    Args:
+        update: The artifact update event.
+        result_parts: List of text parts to update (modified in place).
+        artifact_positions: Index in ``result_parts`` of each artifact's last
+            text part, keyed by artifact ID (modified in place).
+    """
+    artifact = update.artifact
+    for part in artifact.parts:
+        if part.root.kind != "text":
+            continue
+        position = artifact_positions.get(artifact.artifact_id)
+        if update.append and position is not None:
+            result_parts[position] += part.root.text
+        else:
+            result_parts.append(part.root.text)
+            artifact_positions[artifact.artifact_id] = len(result_parts) - 1
