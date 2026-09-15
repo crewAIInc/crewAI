@@ -18,6 +18,7 @@ Import surface:
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
+from concurrent.futures import Future
 from contextlib import contextmanager
 from enum import Enum
 import json
@@ -641,8 +642,25 @@ class _ConversationalMixin:
         previous_defer = getattr(self, "defer_trace_finalization", False)
         if defer_trace_finalization:
             self.defer_trace_finalization = True
+        uses_human_feedback = any(
+            method.human_feedback is not None
+            for method in self._definition.methods.values()
+        )
 
         try:
+            if not uses_human_feedback:
+                self._chat_with_message_queue(
+                    session_id=session_id,
+                    prompt=prompt,
+                    assistant_prefix=assistant_prefix,
+                    exit_set=exit_set,
+                    input_fn=input_fn,
+                    output_fn=output_fn,
+                    skip_empty=skip_empty,
+                    handle_turn_kwargs=handle_turn_kwargs,
+                )
+                return
+
             while True:
                 try:
                     message = input_fn(prompt).strip()
@@ -665,6 +683,53 @@ class _ConversationalMixin:
             self.finalize_session_traces()
             if defer_trace_finalization:
                 self.defer_trace_finalization = previous_defer
+
+    def _chat_with_message_queue(
+        self,
+        *,
+        session_id: str | None,
+        prompt: str,
+        assistant_prefix: str,
+        exit_set: set[str],
+        input_fn: Callable[[str], str],
+        output_fn: Callable[[str], None],
+        skip_empty: bool,
+        handle_turn_kwargs: dict[str, Any],
+    ) -> None:
+        """Run the terminal REPL with queued turn execution."""
+        from crewai.flow._conversation_queue import ConversationTurnQueue
+
+        failures: list[BaseException] = []
+
+        def render(future: Future[Any]) -> None:
+            try:
+                result = future.result()
+            except BaseException as exc:
+                failures.append(exc)
+                return
+            output_fn(f"{assistant_prefix}{self._stringify_result(result)}")
+
+        with ConversationTurnQueue(
+            cast(Any, self),
+            session_id=session_id,
+            handle_turn_kwargs=handle_turn_kwargs,
+        ) as turns:
+            while True:
+                try:
+                    message = input_fn(prompt).strip()
+                except (EOFError, KeyboardInterrupt):
+                    output_fn("")
+                    break
+
+                if message.lower() in exit_set:
+                    break
+                if skip_empty and not message:
+                    continue
+
+                turns.submit(message).add_done_callback(render)
+
+        if failures:
+            raise failures[0]
 
     def build_router_context(self) -> dict[str, Any]:
         """Build context used by the routing policy for the current turn."""
