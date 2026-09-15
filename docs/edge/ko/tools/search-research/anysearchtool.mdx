@@ -1,0 +1,74 @@
+---
+title: AnySearch
+description: AnySearchTool은 AnySearch API를 통해 웹을 검색하며 API 키 없이도 동작합니다.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `AnySearchTool`
+
+## 설명
+
+이 도구는 주어진 쿼리에 대해 [AnySearch](https://anysearch.com) API를 사용하여 웹 검색을 수행하고 가장 관련성 높은 결과를 JSON 문자열로 반환합니다.
+
+`AnySearchTool`은 구성 없이 실행됩니다. AnySearch는 익명 요청을 허용하므로 도구를 가져오는 즉시 사용할 수 있습니다. API 키를 제공하면 인증된 요청으로 전환되며, 적용되는 할당량과 권한은 AnySearch 서비스가 결정합니다.
+
+## 설치
+
+`AnySearchTool`을 효과적으로 사용하려면 다음 단계를 따르십시오:
+
+1. **패키지 설치**: Python 환경에 `crewai[tools]` 패키지가 설치되어 있는지 확인하세요.
+2. **API 키 획득 (선택 사항)**: https://anysearch.com에서 AnySearch API 키를 획득하세요. 익명 요청을 보내려면 이 단계를 건너뛸 수 있습니다.
+3. **환경 변수 설정**: 키가 있으면 `ANYSEARCH_API_KEY`라는 환경 변수에 저장하세요.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예제
+
+다음 예제는 도구를 초기화하고 주어진 쿼리로 검색을 실행하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import AnySearchTool
+
+# No API key required
+tool = AnySearchTool()
+```
+
+에이전트에 연결하기:
+
+```python Code
+from crewai import Agent
+from crewai_tools import AnySearchTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information on the web",
+    backstory="An analyst who always checks primary sources.",
+    tools=[AnySearchTool()],
+)
+```
+
+## 매개변수
+
+`AnySearchTool`은 다음과 같은 여러 매개변수를 제공합니다:
+
+- **search_url**: 검색 API의 URL 엔드포인트. (기본값은 `https://api.anysearch.com/v1/search`)
+- **api_key**: 선택 사항. AnySearch API 키. 기본값은 `ANYSEARCH_API_KEY` 환경 변수입니다. 설정하지 않으면 요청이 익명으로 전송됩니다.
+- **max_results**: 반환할 검색 결과 수. `1`~`10` 사이. 기본값은 `10`입니다.
+- **result_format**: API에 요청하는 콘텐츠 형식. `json` 또는 `markdown`. 기본값은 `json`입니다.
+- **timeout**: 요청 제한 시간(초). 기본값은 `30`입니다.
+- **max_content_length_per_result**: 에이전트의 컨텍스트 창을 보호하기 위해 각 결과의 `content` 필드에 적용되는 잘림 한도. 기본값은 `1000`입니다.
+
+## 매개변수를 활용한 예시
+
+```python Code
+from crewai_tools import AnySearchTool
+
+tool = AnySearchTool(
+    max_results=5,
+    result_format="markdown",
+    timeout=15,
+)
+```

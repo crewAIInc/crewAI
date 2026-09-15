@@ -1,0 +1,84 @@
+---
+title: AnySearch
+description: The `AnySearchTool` searches the web through the AnySearch API and works without an API key.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `AnySearchTool`
+
+## Description
+
+This tool performs a web search for a given query using the
+[AnySearch](https://anysearch.com) API and returns the most relevant results as
+a JSON string.
+
+`AnySearchTool` runs with no configuration: AnySearch accepts anonymous
+requests, so the tool is usable the moment it is imported. Providing an API
+key switches to authenticated requests; the applicable quota and permissions
+are determined by the AnySearch service.
+
+## Installation
+
+To effectively use the `AnySearchTool`, follow these steps:
+
+1. **Package Installation**: Confirm that the `crewai[tools]` package is installed in your Python environment.
+2. **API Key Acquisition (optional)**: Acquire an AnySearch API key at https://anysearch.com. This step can be skipped to send anonymous requests.
+3. **Environment Configuration**: If you have a key, store it in an environment variable named `ANYSEARCH_API_KEY`.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Example
+
+The following example demonstrates how to initialize the tool and execute a
+search with a given query:
+
+```python Code
+from crewai_tools import AnySearchTool
+
+# No API key required
+tool = AnySearchTool()
+
+# Execute a search; returns the results as a JSON string
+result = tool.run(query="latest developments in on-device LLMs")
+print(result)
+```
+
+Attaching it to an agent:
+
+```python Code
+from crewai import Agent
+from crewai_tools import AnySearchTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information on the web",
+    backstory="An analyst who always checks primary sources.",
+    tools=[AnySearchTool()],
+)
+```
+
+## Parameters
+
+The `AnySearchTool` comes with several parameters:
+
+- **search_url**: The URL endpoint for the search API. (Default is `https://api.anysearch.com/v1/search`)
+- **api_key**: Optional. The AnySearch API key. Defaults to the `ANYSEARCH_API_KEY` environment variable. When unset, requests are sent anonymously.
+- **max_results**: Number of search results to return, between `1` and `10`. Default is `10`.
+- **result_format**: The content format requested from the API, either `json` or `markdown`. Default is `json`.
+- **timeout**: Request timeout in seconds. Default is `30`.
+- **max_content_length_per_result**: Truncation limit for the `content` field of each result, to protect the agent's context window. Default is `1000`.
+
+## Example with Parameters
+
+```python Code
+from crewai_tools import AnySearchTool
+
+tool = AnySearchTool(
+    max_results=5,
+    result_format="markdown",
+    timeout=15,
+)
+```
