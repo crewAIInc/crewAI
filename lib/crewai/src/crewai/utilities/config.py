@@ -14,7 +14,19 @@ def process_config(
 
     Returns:
         The updated values dictionary.
+
+    Raises:
+        ValueError: If values is not a dictionary, indicating an invalid type
+            was passed where a model instance or config dict was expected.
     """
+    if not isinstance(values, dict):
+        raise ValueError(
+            f"Expected a dictionary or {model_class.__name__} instance, "
+            f"got {type(values).__name__}. "
+            f"Please provide a valid {model_class.__name__} object or a "
+            f"configuration dictionary."
+        )
+
     config = values.get("config", {})
     if not config:
         return values
