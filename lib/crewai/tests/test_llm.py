@@ -343,6 +343,25 @@ def test_context_window_validation():
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
 
+def test_bedrock_claude_v2_1_uses_its_own_window() -> None:
+    """anthropic.claude-v2:1 must not be shadowed by the shorter anthropic.claude-v2 key."""
+    llm = LLM(model="anthropic.claude-v2:1", is_litellm=True)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_context_window_lookup_prefers_longest_prefix() -> None:
+    """The most specific prefix wins regardless of dict insertion order."""
+    with patch.dict(
+        "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
+        {"acme-model-large": 128000, "acme-model": 8192},
+        clear=True,
+    ):
+        llm = LLM(model="acme-model-large", is_litellm=True)
+        assert llm.get_context_window_size() == int(
+            128000 * CONTEXT_WINDOW_USAGE_RATIO
+        )
+
+
 @pytest.mark.parametrize(
     "model",
     ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],

@@ -2526,9 +2526,17 @@ class LLM(BaseLLM):
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
         model_name = self._context_window_model_name()
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if model_name.startswith(key) or self.model.startswith(key):
-                self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
+        matches = [
+            (key, value)
+            for key, value in LLM_CONTEXT_WINDOW_SIZES.items()
+            if model_name.startswith(key) or self.model.startswith(key)
+        ]
+        if matches:
+            # Most specific prefix wins: a shorter key appearing later in the
+            # dict must not shadow a longer one (e.g. "anthropic.claude-v2"
+            # shadowing "anthropic.claude-v2:1").
+            _, window = max(matches, key=lambda match: len(match[0]))
+            self.context_window_size = int(window * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
     @staticmethod
