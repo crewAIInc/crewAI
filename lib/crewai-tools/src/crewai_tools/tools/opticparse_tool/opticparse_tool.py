@@ -67,7 +67,10 @@ class OpticParseTool(BaseTool):
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("OPTICPARSE_API_KEY", "")
         if portal_url:
-            self.portal_url = portal_url.rstrip("/")
+            cleaned_url = portal_url.rstrip("/")
+            if self.api_key and cleaned_url.startswith("http://"):
+                raise ValueError("Insecure HTTP portal_url is prohibited when an API key is configured. Please use HTTPS.")
+            self.portal_url = cleaned_url
         self.timeout = timeout
 
     def _validate_url(self, url: str) -> bool:
@@ -116,9 +119,19 @@ class OpticParseTool(BaseTool):
 
         try:
             endpoint = f"{self.portal_url}/tools/scrape"
-            response = requests.post(endpoint, json=payload, headers=headers, timeout=self.timeout)
+            response = requests.post(
+                endpoint,
+                json=payload,
+                headers=headers,
+                timeout=self.timeout,
+                allow_redirects=False,
+            )
 
-            # Fallback to MCP JSON-RPC standard call if REST route redirects
+            # Reject redirects to protect credentials
+            if 300 <= response.status_code < 400:
+                return f"Error: Unexpected gateway redirect (HTTP {response.status_code}). Redirects are disabled for security."
+
+            # Fallback to MCP JSON-RPC standard call if REST route returns 404/405
             if response.status_code in (404, 405):
                 rpc_payload = {
                     "jsonrpc": "2.0",
@@ -133,7 +146,15 @@ class OpticParseTool(BaseTool):
                         },
                     },
                 }
-                response = requests.post(f"{self.portal_url}/mcp", json=rpc_payload, headers=headers, timeout=self.timeout)
+                response = requests.post(
+                    f"{self.portal_url}/mcp",
+                    json=rpc_payload,
+                    headers=headers,
+                    timeout=self.timeout,
+                    allow_redirects=False,
+                )
+                if 300 <= response.status_code < 400:
+                    return f"Error: Unexpected gateway redirect (HTTP {response.status_code}). Redirects are disabled for security."
 
             response.raise_for_status()
             data = response.json()
