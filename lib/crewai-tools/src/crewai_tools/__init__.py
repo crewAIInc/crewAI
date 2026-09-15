@@ -220,9 +220,8 @@ from crewai_tools.tools.youtube_channel_search_tool.youtube_channel_search_tool 
 )
 from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool import (
     YoutubeVideoSearchTool,
-    OpticParseTool,
-    PhishVisionTool,
 )
+from crewai_tools.tools.opticparse_tool import OpticParseTool, PhishVisionTool
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
 
 
@@ -340,6 +339,8 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
+    "OpticParseTool",
+    "PhishVisionTool",
 ]
 
 __version__ = "1.15.21"
