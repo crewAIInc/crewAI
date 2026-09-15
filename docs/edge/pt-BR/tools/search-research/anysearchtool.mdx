@@ -1,0 +1,74 @@
+---
+title: AnySearch
+description: O `AnySearchTool` pesquisa na web através da API AnySearch e funciona sem chave de API.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `AnySearchTool`
+
+## Descrição
+
+Esta ferramenta realiza uma pesquisa na web para uma consulta fornecida usando a [AnySearch](https://anysearch.com) API e retorna os resultados mais relevantes como uma string JSON.
+
+O `AnySearchTool` funciona sem configuração: a AnySearch aceita solicitações anônimas, então a ferramenta fica utilizável no momento em que é importada. Fornecer uma chave de API muda para solicitações autenticadas; a cota e as permissões aplicáveis são determinadas pelo serviço AnySearch.
+
+## Instalação
+
+Para usar efetivamente o `AnySearchTool`, siga estas etapas:
+
+1. **Instalação do pacote**: Confirme que o pacote `crewai[tools]` está instalado no seu ambiente Python.
+2. **Obtenção da chave de API (opcional)**: Adquira uma chave de API AnySearch em https://anysearch.com. Esta etapa pode ser ignorada para enviar solicitações anônimas.
+3. **Configuração do ambiente**: Se você tiver uma chave, armazene-a em uma variável de ambiente chamada `ANYSEARCH_API_KEY`.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma pesquisa com uma consulta fornecida:
+
+```python Code
+from crewai_tools import AnySearchTool
+
+# No API key required
+tool = AnySearchTool()
+```
+
+Anexando a um agente:
+
+```python Code
+from crewai import Agent
+from crewai_tools import AnySearchTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information on the web",
+    backstory="An analyst who always checks primary sources.",
+    tools=[AnySearchTool()],
+)
+```
+
+## Parâmetros
+
+O `AnySearchTool` vem com vários parâmetros:
+
+- **search_url**: O endpoint de URL para a API de pesquisa. (O padrão é `https://api.anysearch.com/v1/search`)
+- **api_key**: Opcional. A chave da API AnySearch. O padrão é a variável de ambiente `ANYSEARCH_API_KEY`. Quando não definida, as solicitações são enviadas anonimamente.
+- **max_results**: Número de resultados de pesquisa a retornar, entre `1` e `10`. O padrão é `10`.
+- **result_format**: O formato de conteúdo solicitado da API, `json` ou `markdown`. O padrão é `json`.
+- **timeout**: Tempo limite da solicitação em segundos. O padrão é `30`.
+- **max_content_length_per_result**: Limite de truncamento para o campo `content` de cada resultado, para proteger a janela de contexto do agente. O padrão é `1000`.
+
+## Exemplo com Parâmetros
+
+```python Code
+from crewai_tools import AnySearchTool
+
+tool = AnySearchTool(
+    max_results=5,
+    result_format="markdown",
+    timeout=15,
+)
+```
