@@ -1,0 +1,60 @@
+name: Profile Test Durations
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    name: Profile all tests (Python 3.11)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # Test profiling does not need history; avoiding a full fetch makes the
+          # measured runs cheaper without affecting pytest's timings.
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.11.3"
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Profile CrewAI tests
+        run: |
+          mkdir -p test-duration-profile
+          cd lib/crewai
+          uv run pytest \
+            --store-durations \
+            --clean-durations \
+            --durations-path=../../test-duration-profile/crewai-durations.json \
+            --durations=0
+
+      - name: Profile CrewAI Tools tests
+        run: |
+          cd lib/crewai-tools
+          uv run pytest \
+            --store-durations \
+            --clean-durations \
+            --durations-path=../../test-duration-profile/crewai-tools-durations.json \
+            --durations=0
+
+      - name: Upload duration profile
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-duration-profile-${{ github.run_id }}
+          path: test-duration-profile/
+          if-no-files-found: error
