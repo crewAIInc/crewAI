@@ -921,11 +921,19 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             A task instance.
         """
+        task_agent_role = task_config.get("agent")
         task_agent = next(
-            agt for agt in self.agents if agt.role == task_config["agent"]
+            (agt for agt in self.agents if agt.role == task_agent_role), None
         )
-        del task_config["agent"]
-        return Task(**task_config, agent=task_agent)
+        if task_agent is None:
+            available_roles = [agt.role for agt in self.agents]
+            raise ValueError(
+                f"Task references agent role '{task_agent_role}' which doesn't "
+                f"match any agent. Available roles: {available_roles}"
+            )
+        task_kwargs = dict(task_config)
+        del task_kwargs["agent"]
+        return Task(**task_kwargs, agent=task_agent)
 
     def _setup_for_training(self, filename: str) -> None:
         """Sets up the crew for training."""
@@ -1061,7 +1069,9 @@ class Crew(FlowTrackable, BaseModel):
                 )
 
             for after_callback in self.after_kickoff_callbacks:
-                result = after_callback(result)
+                callback_result = after_callback(result)
+                if callback_result is not None:
+                    result = callback_result
 
             result = self._post_kickoff(result)
 
@@ -1278,7 +1288,9 @@ class Crew(FlowTrackable, BaseModel):
                 )
 
             for after_callback in self.after_kickoff_callbacks:
-                result = after_callback(result)
+                callback_result = after_callback(result)
+                if callback_result is not None:
+                    result = callback_result
 
             result = self._post_kickoff(result)
 

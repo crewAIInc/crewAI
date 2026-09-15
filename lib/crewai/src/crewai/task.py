@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 from copy import copy as shallow_copy
 import datetime
@@ -115,6 +115,41 @@ def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
 
         return create_model_from_schema(v)
     return None
+
+
+def _run_awaitable_from_sync(value: Any) -> None:
+    """Run an awaitable callback result from synchronous code.
+
+    Mirrors the await-response pattern in utilities/agent_utils.py: when a
+    loop is already running, asyncio.run() cannot be used, so the awaitable
+    is executed in a worker thread with its own loop, carrying a copy of the
+    caller's context. Coroutines are wrapped in a helper coroutine first;
+    Tasks/Futures already bound to a running loop are rejected with a
+    TypeError because they cannot be awaited from another loop.
+    """
+    if not inspect.isawaitable(value):
+        return
+
+    if isinstance(value, asyncio.Future):
+        raise TypeError(
+            "Task callbacks must return a coroutine, not a Task or Future "
+            "already bound to a running loop."
+        )
+
+    async def await_callback() -> Any:
+        return await value
+
+    try:
+        running_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        running_loop = None
+
+    if running_loop is not None:
+        ctx = contextvars.copy_context()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pool.submit(ctx.run, asyncio.run, await_callback()).result()
+    else:
+        asyncio.run(await_callback())
 
 
 class Task(BaseModel):
@@ -924,8 +959,7 @@ class Task(BaseModel):
 
             if self.callback:
                 cb_result = self.callback(self.output)
-                if inspect.iscoroutine(cb_result):
-                    asyncio.run(cb_result)
+                _run_awaitable_from_sync(cb_result)
 
             crew = self.agent.crew  # type: ignore[union-attr]
             if (
@@ -935,8 +969,7 @@ class Task(BaseModel):
                 and crew.task_callback != self.callback
             ):
                 cb_result = crew.task_callback(self.output)
-                if inspect.iscoroutine(cb_result):
-                    asyncio.run(cb_result)
+                _run_awaitable_from_sync(cb_result)
 
             if self.output_file:
                 content = (
