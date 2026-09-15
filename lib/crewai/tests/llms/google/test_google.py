@@ -500,6 +500,54 @@ def test_gemini_message_formatting():
     assert formatted_contents[1].role == "model"
 
 
+def test_gemini_message_formatting_keeps_file_data_parts():
+    """
+    Test that fileData parts (URLs and uploaded files) are kept, in order
+    """
+    llm = LLM(model="google/gemini-2.0-flash-001")
+    uri = "https://storage.googleapis.com/generativeai-downloads/images/scones.jpg"
+
+    test_messages = [
+        {
+            "role": "user",
+            "content": [
+                {"text": "Describe this image."},
+                {"fileData": {"fileUri": uri, "mimeType": "image/jpeg"}},
+                {"text": "Keep it short."},
+            ],
+        }
+    ]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    parts = formatted_contents[0].parts
+    assert len(parts) == 3
+    assert parts[0].text == "Describe this image."
+    assert parts[1].file_data.file_uri == uri
+    assert parts[1].file_data.mime_type == "image/jpeg"
+    assert parts[2].text == "Keep it short."
+
+
+def test_gemini_message_formatting_keeps_file_only_message():
+    """
+    Test that a message with only a file reference does not become empty
+    """
+    llm = LLM(model="google/gemini-2.0-flash-001")
+    uri = "gs://generativeai-downloads/images/scones.jpg"
+
+    test_messages = [
+        {
+            "role": "user",
+            "content": [{"fileData": {"fileUri": uri, "mimeType": "image/jpeg"}}],
+        }
+    ]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert len(formatted_contents[0].parts) == 1
+    assert formatted_contents[0].parts[0].file_data.file_uri == uri
+
+
 def test_gemini_message_formatting_appends_user_turn_after_trailing_model_turn():
     """
     Gemini's generateContent API rejects a request whose history ends on a
