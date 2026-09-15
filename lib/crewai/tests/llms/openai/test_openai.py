@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import types
@@ -6,7 +7,7 @@ from unittest.mock import patch, MagicMock
 import openai
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
 from crewai.crew import Crew
 from crewai.agent import Agent
@@ -474,6 +475,23 @@ def test_openai_raises_error_when_model_not_supported():
         with pytest.raises(ValueError, match="Model.*not found"):
             llm.call("Hello")
 
+
+def _raw_create_double(content: str = "test response") -> MagicMock:
+    """Double for `chat.completions.with_raw_response.create`.
+
+    `text` has to be real JSON carrying `choices` so the gateway error-envelope
+    guard sees a well-formed completion and defers to `parse()`.
+    """
+    parsed = MagicMock(
+        choices=[MagicMock(message=MagicMock(content=content, tool_calls=None))],
+        usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30),
+    )
+    return MagicMock(
+        text=json.dumps({"choices": [{"index": 0}]}),
+        **{"parse.return_value": parsed},
+    )
+
+
 def test_openai_client_setup_with_extra_arguments():
     """
     Test that OpenAICompletion is initialized with correct parameters
@@ -494,11 +512,10 @@ def test_openai_client_setup_with_extra_arguments():
     assert llm._client.max_retries == 3
     assert llm._client.timeout == 30
 
-    with patch.object(llm._client.chat.completions, 'create') as mock_create:
-        mock_create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
-            usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
-        )
+    with patch.object(
+        llm._client.chat.completions.with_raw_response, 'create'
+    ) as mock_create:
+        mock_create.return_value = _raw_create_double()
 
         llm.call("Hello")
 
@@ -514,11 +531,10 @@ def test_extra_arguments_are_passed_to_openai_completion():
     """
     llm = LLM(model="gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
 
-    with patch.object(llm._client.chat.completions, 'create') as mock_create:
-        mock_create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
-            usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
-        )
+    with patch.object(
+        llm._client.chat.completions.with_raw_response, 'create'
+    ) as mock_create:
+        mock_create.return_value = _raw_create_double()
 
         llm.call("Hello, how are you?")
 
@@ -1839,6 +1855,30 @@ def test_openai_gpt5_still_applies_stop_words_client_side():
     assert "Observation:" not in result
     assert "Found results" not in result
     assert "I need to search" in result
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+)
+def test_openai_gpt56_family_uses_official_context_window(model: str) -> None:
+    """Native OpenAI must not inherit the shorter gpt-5 window for GPT-5.6."""
+    llm = OpenAICompletion(model=model)
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_openai_prefixed_gpt56_luna_uses_official_context_window() -> None:
+    llm = LLM(model="openai/gpt-5.6-luna")
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.model == "gpt-5.6-luna"
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_openai_gpt5_and_gpt54_mini_keep_their_windows() -> None:
+    gpt5 = OpenAICompletion(model="gpt-5")
+    gpt54_mini = OpenAICompletion(model="gpt-5.4-mini")
+    assert gpt5.get_context_window_size() == int(1_047_576 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt54_mini.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_openai_stop_words_still_applied_to_regular_responses():

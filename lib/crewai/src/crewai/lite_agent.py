@@ -598,6 +598,8 @@ class LiteAgent(FlowTrackable, BaseModel):
 
     def _inject_memory_context(self) -> None:
         """Recall relevant memories and append to the system message. No-op if _memory is None."""
+        from crewai.hooks.dispatch import HookAborted
+
         if self._memory is None:
             return
         query = self._get_last_user_content()
@@ -641,9 +643,14 @@ class LiteAgent(FlowTrackable, BaseModel):
                     error=str(e),
                 ),
             )
+            # a deny aborts the run; any other failure degrades to no memory
+            if isinstance(e, HookAborted):
+                raise
 
     def _save_to_memory(self, output_text: str) -> None:
         """Extract discrete memories from the run and remember each. No-op if _memory is None or read-only."""
+        from crewai.hooks.dispatch import HookAborted
+
         if self._memory is None or self._memory.read_only:
             return
         input_str = self._get_last_user_content() or "User request"
@@ -652,6 +659,8 @@ class LiteAgent(FlowTrackable, BaseModel):
             extracted = self._memory.extract_memories(raw)
             if extracted:
                 self._memory.remember_many(extracted, agent_role=self.role)
+        except HookAborted:
+            raise
         except Exception as e:
             if self.verbose:
                 PRINTER.print(
@@ -920,13 +929,13 @@ class LiteAgent(FlowTrackable, BaseModel):
             try:
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
                     formatted_answer = handle_max_iterations_exceeded(
-                        formatted_answer,
                         printer=PRINTER,
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
                         verbose=self.verbose,
                     )
+                    break
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 

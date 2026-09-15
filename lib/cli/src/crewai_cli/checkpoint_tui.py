@@ -26,6 +26,7 @@ from crewai_cli.checkpoint_cli import (
     _is_sqlite,
     _list_json,
     _list_sqlite,
+    _record_checkpoint_usage,
 )
 
 
@@ -699,7 +700,7 @@ class CheckpointTUI(App[_TuiResult]):
         if event.node.data is not None:
             await self._show_detail(event.node.data)
 
-    def _exit_with_action(self, action: str) -> None:
+    def _exit_with_action(self, action: Literal["resume", "fork"]) -> None:
         if self._selected_entry is None:
             self.notify("No checkpoint selected", severity="warning")
             return
@@ -709,6 +710,7 @@ class CheckpointTUI(App[_TuiResult]):
         etype = self._detect_entity_type(self._selected_entry)
         name = self._selected_entry.get("name", "")[:30]
         self.notify(f"{action.title()}: {name}")
+        _record_checkpoint_usage("tui_resume" if action == "resume" else "tui_fork")
         self.exit((loc, action, inputs, overrides, etype))
 
     def action_resume(self) -> None:

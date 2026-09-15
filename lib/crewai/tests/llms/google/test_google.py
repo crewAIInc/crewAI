@@ -500,6 +500,131 @@ def test_gemini_message_formatting():
     assert formatted_contents[1].role == "model"
 
 
+@pytest.mark.parametrize(
+    "file_uri",
+    [
+        "https://storage.googleapis.com/example/image.jpg",
+        "gs://example-bucket/image.jpg",
+    ],
+)
+def test_gemini_message_formatting_preserves_file_data(file_uri):
+    """Test that Gemini file references are preserved in their original order."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {"text": "Before"},
+                    {
+                        "fileData": {
+                            "fileUri": file_uri,
+                            "mimeType": "image/jpeg",
+                        }
+                    },
+                    {"text": "After"},
+                ],
+            }
+        ]
+    )
+
+    parts = formatted_contents[0].parts
+    assert parts[0].text == "Before"
+    assert parts[1].file_data is not None
+    assert parts[1].file_data.file_uri == file_uri
+    assert parts[1].file_data.mime_type == "image/jpeg"
+    assert parts[2].text == "After"
+
+
+def test_gemini_message_formatting_preserves_file_data_without_text():
+    """Test that a message containing only a file reference is preserved."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+    file_uri = "gs://example-bucket/image.jpg"
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "fileData": {
+                            "fileUri": file_uri,
+                            "mimeType": "image/jpeg",
+                        }
+                    }
+                ],
+            }
+        ]
+    )
+
+    parts = formatted_contents[0].parts
+    assert len(parts) == 1
+    assert parts[0].file_data is not None
+    assert parts[0].file_data.file_uri == file_uri
+    assert parts[0].file_data.mime_type == "image/jpeg"
+
+
+def test_gemini_message_formatting_appends_user_turn_after_trailing_model_turn():
+    """
+    Gemini's generateContent API rejects a request whose history ends on a
+    model turn ("Requests ending with a model turn are not supported"). Agent
+    loops can produce this (e.g. after max-iteration handling or a guardrail
+    retry), so formatting must append a synthetic user turn to recover.
+    """
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert [content.role for content in formatted_contents] == [
+        "user",
+        "model",
+        "user",
+    ]
+    assert formatted_contents[0].parts[0].text == "Hello"
+    assert formatted_contents[1].parts[0].text == "Hi there!"
+    assert formatted_contents[2].parts[0].text == "Please continue."
+    assert test_messages == [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+
+def test_gemini_message_formatting_leaves_user_terminated_history_unchanged():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [{"role": "user", "content": "Hello"}]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert len(formatted_contents) == 1
+    assert formatted_contents[0].role == "user"
+    assert formatted_contents[0].parts[0].text == "Hello"
+
+
+def test_gemini_message_formatting_raises_on_unresolved_function_call():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [
+        {"role": "user", "content": "What's the weather?"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"function": {"name": "get_weather", "arguments": "{}"}}
+            ],
+        },
+    ]
+
+    with pytest.raises(ValueError, match="unresolved function call"):
+        llm._format_messages_for_gemini(test_messages)
+
+
 def test_gemini_streaming_parameter():
     """
     Test that streaming parameter is properly handled
