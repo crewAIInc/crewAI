@@ -49,7 +49,9 @@ def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
     """Create default ChromaDB embedding function.
 
     Returns:
-        Default embedding function using all-MiniLM-L6-v2 via ONNX.
+        Default embedding function using OpenAI ``text-embedding-3-small``.
+        Requires ``OPENAI_API_KEY``. For local setups, pass an explicit
+        embedder (for example ``provider="onnx"`` or ``provider="ollama"``).
     """
     from chromadb.utils.embedding_functions.openai_embedding_function import (
         OpenAIEmbeddingFunction,
