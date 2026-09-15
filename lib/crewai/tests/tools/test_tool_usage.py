@@ -931,3 +931,28 @@ def test_original_tool_calling_raises_tool_usage_error_not_runtime_error():
 
     with pytest.raises(ToolUsageError):
         tool_usage._original_tool_calling("Action: random_number_generator", raise_error=True)
+
+
+def test_original_tool_calling_returns_tool_usage_error_not_runtime_error():
+    """A non-dict tool input with ``raise_error=False`` must return a
+    ``ToolUsageError`` (same constructed error as the raise path).
+    """
+    tool = RandomNumberTool()
+    action = MagicMock()
+    action.tool = "random_number_generator"
+    # A JSON array validates to a list, not a dict.
+    action.tool_input = "[1, 2, 3]"
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[tool],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=action,
+    )
+
+    result = tool_usage._original_tool_calling(
+        "Action: random_number_generator", raise_error=False
+    )
+    assert isinstance(result, ToolUsageError)
