@@ -12,6 +12,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 from crewai.task import Task
+from crewai.utilities.errors import DatabaseOperationError
 
 
 def _make_task() -> Task:
@@ -69,3 +70,49 @@ def test_database_file_is_not_locked_after_use(tmp_path: Path) -> None:
 
     os.remove(db_path)
     assert not db_path.exists()
+
+
+class _FailingCursor(sqlite3.Cursor):
+    """Cursor that fails on INSERT, after the storage has already issued BEGIN."""
+
+    def execute(self, sql: str, *args: object) -> sqlite3.Cursor:  # type: ignore[override]
+        if sql.lstrip().upper().startswith("INSERT"):
+            raise sqlite3.OperationalError("simulated failure after BEGIN")
+        return super().execute(sql, *args)  # type: ignore[arg-type]
+
+
+class _FailingConnection(sqlite3.Connection):
+    """Connection whose ``cursor()`` hands out ``_FailingCursor`` instances."""
+
+    def cursor(self, factory: type[sqlite3.Cursor] = _FailingCursor) -> sqlite3.Cursor:  # type: ignore[override]
+        return super().cursor(factory)
+
+
+def test_failed_write_rolls_back_and_closes_connection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failure between BEGIN and COMMIT rolls back and still closes the connection.
+
+    ``with closing(...) as conn, conn:`` must roll back on the inner context
+    manager and close on the outer one even when the operation raises.
+    """
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+
+    opened: list[sqlite3.Connection] = []
+    real_connect = sqlite3.connect
+
+    def failing_connect(*args: object, **kwargs: object) -> sqlite3.Connection:
+        kwargs["factory"] = _FailingConnection
+        conn = real_connect(*args, **kwargs)  # type: ignore[arg-type]
+        opened.append(conn)
+        return conn
+
+    monkeypatch.setattr(storage_module.sqlite3, "connect", failing_connect)
+    with pytest.raises(DatabaseOperationError):
+        storage.add(_make_task(), {"raw": "done"}, task_index=0)
+    monkeypatch.undo()
+
+    assert len(opened) == 1
+    with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
+        opened[0].execute("SELECT 1")
+    assert storage.load() == []
