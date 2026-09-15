@@ -30,7 +30,11 @@ class YoutubeChannelLoader(BaseLoader):
                 "YouTube channel support requires pytube. Install with: uv add pytube"
             ) from e
 
-        channel_url = source.source
+        channel_url = source.source.strip()
+
+        # Normalize bare handles (e.g. "@krishnaik06") to full URLs
+        if channel_url.startswith("@"):
+            channel_url = f"https://www.youtube.com/{channel_url}"
 
         if not any(
             pattern in channel_url
