@@ -25,3 +25,13 @@ def test_openai_models_include_gpt56_family() -> None:
     openai_models = MODELS["openai"]
     for model in ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6"):
         assert model in openai_models
+
+
+def test_atlascloud_provider_configuration():
+    """Test that Atlas Cloud is available with credentials and model presets."""
+    assert "atlascloud" in PROVIDERS
+    assert any(
+        detail.get("key_name") == "ATLASCLOUD_API_KEY"
+        for detail in ENV_VARS["atlascloud"]
+    )
+    assert MODELS["atlascloud"][0] == ("atlascloud/deepseek-ai/deepseek-v4-pro")
