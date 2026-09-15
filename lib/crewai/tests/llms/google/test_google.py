@@ -20,27 +20,44 @@ def mock_google_api_key():
         yield
 
 
-def test_gemini_completion_is_used_when_google_provider():
+@pytest.mark.parametrize(
+    "model, expected_model",
+    [
+        ("google/gemini-2.0-flash-001", "gemini-2.0-flash-001"),
+        ("google/gemini-3.8-flash", "gemini-3.8-flash"),
+    ],
+)
+def test_gemini_completion_is_used_when_google_provider(model, expected_model):
     """
-    Test that GeminiCompletion from completion.py is used when LLM uses provider 'google'
+    Test that GeminiCompletion is used when LLM uses provider 'google'
     """
-    llm = LLM(model="google/gemini-2.0-flash-001")
+    llm = LLM(model=model)
 
     assert llm.__class__.__name__ == "GeminiCompletion"
     assert llm.provider == "gemini"
-    assert llm.model == "gemini-2.0-flash-001"
+    assert llm.model == expected_model
 
 
-def test_gemini_completion_is_used_when_gemini_provider():
+
+@pytest.mark.parametrize(
+    "model, expected_model",
+    [
+        ("gemini/gemini-2.0-flash-001", "gemini-2.0-flash-001"),
+        ("gemini/gemini-3.8-flash", "gemini-3.8-flash"),
+    ],
+)
+def test_gemini_completion_is_used_when_gemini_provider(model, expected_model):
     """
     Test that GeminiCompletion is used when provider is 'gemini'
     """
-    llm = LLM(model="gemini/gemini-2.0-flash-001")
-
     from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = LLM(model=model)
+
     assert isinstance(llm, GeminiCompletion)
     assert llm.provider == "gemini"
-    assert llm.model == "gemini-2.0-flash-001"
+    assert llm.model == expected_model
+
 
 def test_gemini_completion_module_is_imported():
     """
@@ -350,10 +367,8 @@ def test_gemini_raises_error_when_model_not_supported():
 
         mock_client.models.generate_content.side_effect = ClientError(404, mock_response)
 
-        llm = LLM(model="google/model-doesnt-exist")
-
-        with pytest.raises(Exception):  # Should raise some error for unsupported model
-            llm.call("Hello")
+        with pytest.raises(ImportError, match="Unable to initialize LLM"):
+            LLM(model="google/model-doesnt-exist")
 
 
 def test_gemini_vertex_ai_setup():
@@ -440,6 +455,8 @@ def test_gemini_model_detection():
     """
     # Test Gemini model naming patterns that actually work with provider detection
     gemini_test_cases = [
+        "gemini/gemini-3.8-flash",
+        "google/gemini-3.8-flash",
         "google/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-001",
         "google/gemini-1.5-pro",
@@ -468,6 +485,11 @@ def test_gemini_context_window_size():
     llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
     context_size_2_0 = llm_2_0.get_context_window_size()
     assert context_size_2_0 > 500000
+
+    # Test Gemini 3.8 Flash
+    llm_3_8 = LLM(model="google/gemini-3.8-flash")
+    context_size_3_8 = llm_3_8.get_context_window_size()
+    assert context_size_3_8 == 891289
 
     # Test Gemini 1.5 Pro
     llm_1_5 = LLM(model="google/gemini-1.5-pro")
