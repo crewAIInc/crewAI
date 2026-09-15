@@ -599,6 +599,14 @@ class GeminiCompletion(BaseLLM):
                                     mime_type=inline["mimeType"],
                                 )
                             )
+                        elif "fileData" in item:
+                            file_data = item["fileData"]
+                            parts.append(
+                                types.Part.from_uri(
+                                    file_uri=file_data["fileUri"],
+                                    mime_type=file_data["mimeType"],
+                                )
+                            )
                     else:
                         parts.append(types.Part.from_text(text=str(item)))
             else:
