@@ -193,6 +193,13 @@ class TestValidateUrl:
         result = validate_url("file:///etc/passwd")
         assert result == "file:///etc/passwd"
 
+    def test_force_safe_paths_overrides_escape_hatch(self, monkeypatch):
+        """Managed workers can ignore a tenant-supplied escape hatch."""
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+        monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("http://127.0.0.1/admin")
+
 
 class TestFormatSandboxError:
     def test_replaces_bypass_advice_with_remedy(self, tmp_path):

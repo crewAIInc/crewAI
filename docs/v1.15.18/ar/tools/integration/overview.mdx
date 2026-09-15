@@ -1,0 +1,76 @@
+---
+title: "نظرة عامة"
+description: "ربط وكلاء CrewAI مع الأتمتة الخارجية وخدمات الذكاء الاصطناعي المُدارة"
+icon: "face-smile"
+mode: "wide"
+---
+
+تتيح أدوات التكامل لوكلائك تسليم العمل إلى منصات أتمتة أخرى وخدمات ذكاء اصطناعي مُدارة. استخدمها عندما يحتاج سير العمل إلى استدعاء نشر CrewAI موجود أو تفويض مهام متخصصة لمزودين مثل Amazon Bedrock.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة معالج وكيل Merge" icon="diagram-project" href="/ar/tools/integration/mergeagenthandlertool">
+    الوصول بأمان إلى مئات أدوات الأطراف الثالثة مثل Linear و GitHub و Slack والمزيد من خلال واجهة API الموحدة من Merge.
+  </Card>
+
+  <Card title="أداة تشغيل أتمتة CrewAI" icon="robot" href="/ar/tools/integration/crewaiautomationtool">
+    استدعاء أتمتة منصة CrewAI المباشرة، تمرير مدخلات مخصصة، واستقصاء النتائج مباشرة من وكيلك.
+  </Card>
+
+  <Card title="أداة استدعاء وكيل Bedrock" icon="aws" href="/ar/tools/integration/bedrockinvokeagenttool">
+    استدعاء وكلاء Amazon Bedrock من أطقمك، إعادة استخدام حواجز حماية AWS، وبث الاستجابات مرة أخرى إلى سير العمل.
+  </Card>
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **تسلسل الأتمتة**: بدء نشر CrewAI موجود من داخل طاقم أو تدفق آخر
+- **تسليم المؤسسة**: توجيه المهام إلى وكلاء Bedrock التي تغلف بالفعل منطق الشركة وحواجز الحماية
+- **سير العمل الهجين**: الجمع بين تفكير CrewAI والأنظمة اللاحقة التي تكشف واجهات برمجة تطبيقات الوكلاء الخاصة بها
+- **المهام طويلة التشغيل**: استقصاء الأتمتة الخارجية ودمج النتائج النهائية مرة أخرى في التشغيل الحالي
+
+## **مثال للبدء السريع**
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import InvokeCrewAIAutomationTool
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# External automation
+analysis_automation = InvokeCrewAIAutomationTool(
+    crew_api_url="https://analysis-crew.acme.crewai.com",
+    crew_bearer_token="YOUR_BEARER_TOKEN",
+    crew_name="Analysis Automation",
+    crew_description="Runs the production-grade analysis pipeline",
+)
+
+# Managed agent on Bedrock
+knowledge_router = BedrockInvokeAgentTool(
+    agent_id="bedrock-agent-id",
+    agent_alias_id="prod",
+)
+
+automation_strategist = Agent(
+    role="Automation Strategist",
+    goal="Orchestrate external automations and summarise their output",
+    backstory="You coordinate enterprise workflows and know when to delegate tasks to specialised services.",
+    tools=[analysis_automation, knowledge_router],
+    verbose=True,
+)
+
+execute_playbook = Task(
+    description="Run the analysis automation and ask the Bedrock agent for executive talking points.",
+    agent=automation_strategist,
+)
+
+Crew(agents=[automation_strategist], tasks=[execute_playbook]).kickoff()
+```
+
+## **أفضل الممارسات**
+
+- **تأمين بيانات الاعتماد**: قم بتخزين مفاتيح API ورموز الحامل في متغيرات البيئة أو مدير الأسرار
+- **التخطيط لزمن الاستجابة**: قد تستغرق الأتمتة الخارجية وقتاً أطول - عيّن فترات استقصاء ومهلات مناسبة
+- **إعادة استخدام الجلسات**: تدعم وكلاء Bedrock معرّفات الجلسة حتى تتمكن من الحفاظ على السياق عبر استدعاءات أدوات متعددة
+- **التحقق من الاستجابات**: قم بتوحيد المخرجات عن بُعد (JSON، نص، رموز الحالة) قبل إعادة توجيهها إلى المهام اللاحقة
+- **مراقبة الاستخدام**: تتبع سجلات المراجعة في منصة CrewAI أو AWS CloudWatch للبقاء على اطلاع بحدود الحصص والأعطال

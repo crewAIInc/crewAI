@@ -1,4 +1,8 @@
-"""HTTP helpers that preserve crewai-tools URL safety checks."""
+"""SSRF-safe HTTP fetching for crewai-tools.
+
+``safe_get`` validates each URL and redirect hop, then fetches through a
+session that pins TCP to the checked IP and ignores environment proxies.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,12 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-from crewai_tools.security.safe_path import validate_url
+from crewai_tools.security.safe_path import (
+    _BYPASS_HINT,
+    _is_escape_hatch_enabled,
+    validate_url,
+)
+from crewai_tools.security.ssrf_adapter import SSRFProtectedAdapter
 
 
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
@@ -49,6 +58,70 @@ def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str,
     return sanitized
 
 
+class _SafeSession(requests.Session):
+    """Session that does not follow redirects unless the caller opts in."""
+
+    def get(self, url: str | bytes, **kwargs: Any) -> requests.Response:
+        kwargs.setdefault("allow_redirects", False)
+        return super().get(url, **kwargs)
+
+    def options(self, url: str | bytes, **kwargs: Any) -> requests.Response:
+        kwargs.setdefault("allow_redirects", False)
+        return super().options(url, **kwargs)
+
+    def request(
+        self, method: str | bytes, url: str | bytes, *args: Any, **kwargs: Any
+    ) -> requests.Response:
+        kwargs.setdefault("allow_redirects", False)
+        return super().request(method, url, *args, **kwargs)
+
+
+def create_safe_session() -> requests.Session:
+    """Return a session that pins TCP to a validated peer and does not follow redirects."""
+    session = _SafeSession()
+    session.trust_env = False
+    session.proxies = {}
+    adapter = SSRFProtectedAdapter()
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+
+def _reject_proxies(kwargs: dict[str, Any]) -> None:
+    proxies = kwargs.pop("proxies", None)
+    if proxies and not _is_escape_hatch_enabled():
+        raise ValueError(f"Proxies are not allowed for safe_get. {_BYPASS_HINT}")
+    kwargs["proxies"] = {}
+
+
+def _attach_session(response: requests.Response, session: requests.Session) -> None:
+    """Keep *session* alive until *response* is closed (needed for ``stream=True``)."""
+    original_close = response.close
+
+    def close_with_session() -> None:
+        try:
+            original_close()
+        finally:
+            session.close()
+
+    response.close = close_with_session  # type: ignore[method-assign]
+
+
+def _raw_get(url: str, **kwargs: Any) -> requests.Response:
+    """GET through an SSRF-protected session."""
+    session = create_safe_session()
+    owns_session = True
+    try:
+        response = session.get(url, **kwargs)
+        if kwargs.get("stream"):
+            _attach_session(response, session)
+            owns_session = False
+        return response
+    finally:
+        if owns_session:
+            session.close()
+
+
 def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:
     """GET a URL while validating each redirect target before following it.
 
@@ -58,6 +131,7 @@ def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Re
     until its body is read or closed.
     """
     current_url = validate_url(url)
+    _reject_proxies(kwargs)
     request_kwargs = {**kwargs, "allow_redirects": False}
     timeout = request_kwargs.pop("timeout", 30)
     history: list[requests.Response] = []
@@ -65,7 +139,7 @@ def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Re
 
     try:
         while True:
-            response = requests.get(current_url, timeout=timeout, **request_kwargs)
+            response = _raw_get(current_url, timeout=timeout, **request_kwargs)
             if (
                 response.status_code not in _REDIRECT_STATUS_CODES
                 or "Location" not in response.headers

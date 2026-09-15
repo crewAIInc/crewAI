@@ -5,7 +5,9 @@ file access and server-side request forgery (SSRF) when tools accept
 user-controlled or LLM-controlled inputs at runtime.
 
 Set CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true to bypass validation (not
-recommended for production).
+recommended for production). Managed workers should set
+CREWAI_TOOLS_FORCE_SAFE_PATHS=true so a tenant cannot disable these
+checks by exporting the escape hatch on their own deployment.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
+_FORCE_SAFE_PATHS_ENV = "CREWAI_TOOLS_FORCE_SAFE_PATHS"
 _BYPASS_HINT = f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
 
 
@@ -69,9 +72,21 @@ def format_sandbox_error(error: Exception, remedy: str) -> str:
     return f"{text} {remedy}".strip()
 
 
+def _env_flag_enabled(name: str) -> bool:
+    return os.environ.get(name, "").lower() in ("true", "1", "yes")
+
+
 def _is_escape_hatch_enabled() -> bool:
-    """Check if the unsafe paths escape hatch is enabled."""
-    return os.environ.get(_UNSAFE_PATHS_ENV, "").lower() in ("true", "1", "yes")
+    """True when ``ALLOW_UNSAFE_PATHS`` is set and ``FORCE_SAFE_PATHS`` is not."""
+    if _env_flag_enabled(_FORCE_SAFE_PATHS_ENV):
+        if _env_flag_enabled(_UNSAFE_PATHS_ENV):
+            logger.warning(
+                "%s is set; ignoring %s",
+                _FORCE_SAFE_PATHS_ENV,
+                _UNSAFE_PATHS_ENV,
+            )
+        return False
+    return _env_flag_enabled(_UNSAFE_PATHS_ENV)
 
 
 def validate_file_path(path: str, base_dir: str | None = None) -> str:
@@ -161,8 +176,8 @@ _BLOCKED_IPV6_NETWORKS = [
 ]
 
 
-def _is_private_or_reserved(ip_str: str) -> bool:
-    """Check if an IP address is private, reserved, or otherwise unsafe."""
+def is_blocked_ip(ip_str: str) -> bool:
+    """Return True if *ip_str* is private, reserved, or otherwise unsafe to fetch."""
     try:
         addr = ipaddress.ip_address(ip_str)
         # Unwrap IPv4-mapped IPv6 addresses (e.g., ::ffff:127.0.0.1) to IPv4
@@ -186,6 +201,9 @@ def validate_url(url: str) -> str:
     Blocks ``file://`` scheme entirely. For ``http``/``https``, resolves
     DNS and checks that the target IP is not private or reserved (prevents
     SSRF to internal services and cloud metadata endpoints).
+
+    This checks the URL string only. Fetch with ``safe_get`` so the
+    connection is pinned to an authorised IP.
 
     Args:
         url: The URL to validate.
@@ -232,7 +250,7 @@ def validate_url(url: str) -> str:
 
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
-        if _is_private_or_reserved(ip_str):
+        if is_blocked_ip(ip_str):
             raise ValueError(
                 f"URL '{url}' resolves to private/reserved IP {ip_str}. "
                 f"Access to internal networks is not allowed. "
