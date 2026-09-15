@@ -1439,7 +1439,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return "agent_finished"
 
         formatted_answer = handle_max_iterations_exceeded(
-            formatted_answer=None,
             printer=PRINTER,
             messages=list(self.state.messages),
             llm=self.llm,

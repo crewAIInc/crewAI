@@ -8,6 +8,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import sys
 import threading
 import time
 from typing import Any
@@ -77,14 +78,15 @@ class LanceDBStorage:
         self._table_name = table_name
         self._db = lancedb.connect(str(self._path))
 
-        try:
-            import resource
+        if sys.platform != "win32":
+            try:
+                import resource
 
-            soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-            if soft < 4096:
-                resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, 4096), hard))
-        except Exception:  # noqa: S110
-            pass  # Windows or already at the max hard limit — safe to ignore
+                soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+                if soft < 4096:
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, 4096), hard))
+            except Exception:  # noqa: S110
+                pass  # Already at the max hard limit — safe to ignore
 
         self._compact_every = compact_every
         self._save_count = 0
