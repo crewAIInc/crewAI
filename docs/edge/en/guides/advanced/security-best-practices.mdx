@@ -1,0 +1,181 @@
+---
+title: Security Best Practices for CrewAI Agents
+description: Practical guidance for configuring CrewAI agents and crews safely in production.
+icon: shield
+---
+
+## Overview
+
+This guide focuses on **CrewAI-native controls** you can use to reduce security risk in production systems.
+
+The goal is simple: keep agent behavior bounded, least-privileged, and reviewable.
+
+## 1) Bound execution to prevent runaway behavior
+
+Use execution limits on agents and crews so failures degrade predictably instead of spiraling.
+
+### Recommended controls
+
+- `max_rpm`: cap request rate to providers
+- `max_iter`: cap iterative reasoning/tool cycles
+- `max_execution_time`: hard timeout for long-running work
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Security Analyst",
+    goal="Investigate and summarize incidents",
+    backstory="Careful and methodical",
+    max_rpm=30,
+    max_iter=12,
+    max_execution_time=180,
+)
+```
+
+## 2) Apply least privilege to tools
+
+Avoid giving every tool to every agent. Give each agent only the tools required for its task.
+
+### Why this matters
+
+- Reduces blast radius for prompt injection or logic errors
+- Prevents accidental access to unrelated systems
+- Improves traceability of who can do what
+
+```python
+from crewai import Agent
+from crewai.tools import FileReadTool, SerperDevTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Collect external facts",
+    backstory="Finds reliable sources",
+    tools=[SerperDevTool()],
+)
+
+auditor = Agent(
+    role="Document Auditor",
+    goal="Review internal policy documents",
+    backstory="Checks compliance language",
+    tools=[FileReadTool()],
+)
+```
+
+## 3) Treat delegation as a trust boundary
+
+When `allow_delegation=True`, an agent can route work to other agents. That can be useful, but it is also a security boundary.
+
+### Safe delegation patterns
+
+- Keep delegation disabled by default
+- Enable it only for roles that truly need orchestration
+- Pair delegation with clear task constraints and bounded execution
+
+```python
+from crewai import Agent
+
+coordinator = Agent(
+    role="Coordinator",
+    goal="Route specialized tasks",
+    backstory="Delegates carefully",
+    allow_delegation=True,
+    max_iter=8,
+)
+```
+
+## 4) Constrain outputs with schemas and expectations
+
+Use structured outputs whenever possible to reduce ambiguous or unsafe free-form responses.
+
+### Recommended controls
+
+- `output_pydantic` for schema-validated task output
+- `expected_output` to describe strict acceptance criteria
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class RiskSummary(BaseModel):
+    severity: str
+    findings: list[str]
+    recommendation: str
+
+security_task = Task(
+    description="Review tool configuration for least privilege",
+    expected_output="A structured risk summary with severity, findings, and recommendation.",
+    output_pydantic=RiskSummary,
+)
+```
+
+## 5) Add human oversight for high-stakes actions
+
+For sensitive operations (for example financial actions, production mutations, or customer-impacting changes), add human review at the right point in the execution path.
+
+### What `human_input=True` does
+
+Task `human_input=True` pauses **after** the agent has run its tools and produced a result. It prompts for human feedback on the final answer **before that output is accepted and finalized**. It does **not** gate tool execution — an agent on a task with `human_input=True` can still call destructive or side-effect tools before any human sees the run.
+
+Use `human_input=True` when you want a human to review, refine, or approve the task output before it becomes the official result (for example training workflows or quality review).
+
+```python
+from crewai import Task
+
+review_task = Task(
+    description="Draft the incident summary from collected logs",
+    expected_output="A concise incident summary",
+    human_input=True,
+)
+```
+
+### When you need approval before tools run
+
+For checkpoints such as:
+
+- Before running irreversible tools
+- Before external side effects (emails, tickets, writes)
+- Before policy or security exceptions
+
+Use pre-execution gates instead:
+
+- **[Tool hooks](/en/learn/tool-hooks)** with `@on(InterceptionPoint.PRE_TOOL_CALL)` and `request_human_input()` — blocks the tool call until approved
+- **[Execution hooks](/en/learn/execution-hooks)** on Crew and Flow runs
+- **[@human_feedback](/en/learn/human-feedback-in-flows)** on Flow steps for workflow-level approval
+
+```python
+from crewai.hooks import HookAborted, InterceptionPoint, on
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "delete_file"])
+def require_approval(ctx):
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name}?",
+        default_message=f"Args: {ctx.tool_input}\nType 'yes' to approve:",
+    )
+    if response.strip().lower() != "yes":
+        raise HookAborted(reason="denied by operator", source="approval-gate")
+```
+
+For reviewability after the fact, consider enabling `verbose=True` on agents involved in sensitive flows so execution details are easier to inspect during debugging and incident review.
+
+## Operational checklist
+
+Use this quick checklist before production rollout:
+
+- [ ] Every agent has bounded execution (`max_rpm`, `max_iter`, `max_execution_time`)
+- [ ] Tool access is scoped per role (no broad shared tool list)
+- [ ] Delegation is disabled unless explicitly required
+- [ ] High-impact tasks use `output_pydantic` and precise `expected_output`
+- [ ] Pre-execution approval gates exist for irreversible or side-effect tools (tool hooks, Flow hooks, or `@human_feedback`)
+- [ ] `human_input=True` is used only where post-run output review is sufficient
+- [ ] Agent runs are logged or traced for post-incident review
+
+## Related resources
+
+- [Agents](/en/concepts/agents)
+- [Tasks](/en/concepts/tasks)
+- [Flows](/en/concepts/flows)
+- [Human input on execution](/en/learn/human-input-on-execution)
+- [Human-in-the-loop](/en/learn/human-in-the-loop)
+- [Tool Hooks](/en/learn/tool-hooks)
+- [Tracing and observability](/en/observability/overview)

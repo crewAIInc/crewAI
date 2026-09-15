@@ -1,0 +1,181 @@
+---
+title: Melhores Práticas de Segurança para Agentes CrewAI
+description: Orientação prática para configurar agentes e crews CrewAI com segurança em produção.
+icon: shield
+---
+
+## Visão geral
+
+Este guia foca em **controles nativos do CrewAI** que você pode usar para reduzir riscos de segurança em sistemas de produção.
+
+O objetivo é simples: manter o comportamento do agente limitado, com privilégio mínimo e auditável.
+
+## 1) Limitar a execução para evitar comportamento descontrolado
+
+Use limites de execução em agentes e crews para que falhas degradem de forma previsível em vez de escalar.
+
+### Controles recomendados
+
+- `max_rpm`: limitar taxa de requisições aos provedores
+- `max_iter`: limitar ciclos iterativos de raciocínio/ferramentas
+- `max_execution_time`: timeout rígido para trabalhos longos
+
+```python
+from crewai import Agent
+
+analyst = Agent(
+    role="Security Analyst",
+    goal="Investigate and summarize incidents",
+    backstory="Careful and methodical",
+    max_rpm=30,
+    max_iter=12,
+    max_execution_time=180,
+)
+```
+
+## 2) Aplicar privilégio mínimo às ferramentas
+
+Evite dar todas as ferramentas a todos os agentes. Dê a cada agente apenas as ferramentas necessárias para sua tarefa.
+
+### Por que isso importa
+
+- Reduz o raio de impacto de prompt injection ou erros de lógica
+- Evita acesso acidental a sistemas não relacionados
+- Melhora a rastreabilidade de quem pode fazer o quê
+
+```python
+from crewai import Agent
+from crewai.tools import FileReadTool, SerperDevTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Collect external facts",
+    backstory="Finds reliable sources",
+    tools=[SerperDevTool()],
+)
+
+auditor = Agent(
+    role="Document Auditor",
+    goal="Review internal policy documents",
+    backstory="Checks compliance language",
+    tools=[FileReadTool()],
+)
+```
+
+## 3) Tratar delegação como um limite de confiança
+
+Quando `allow_delegation=True`, um agente pode encaminhar trabalho a outros agentes. Isso pode ser útil, mas também é um limite de segurança.
+
+### Padrões seguros de delegação
+
+- Mantenha a delegação desativada por padrão
+- Ative apenas para papéis que realmente precisam de orquestração
+- Combine delegação com restrições claras de tarefa e execução limitada
+
+```python
+from crewai import Agent
+
+coordinator = Agent(
+    role="Coordinator",
+    goal="Route specialized tasks",
+    backstory="Delegates carefully",
+    allow_delegation=True,
+    max_iter=8,
+)
+```
+
+## 4) Restringir saídas com schemas e expectativas
+
+Use saídas estruturadas sempre que possível para reduzir respostas ambíguas ou inseguras em texto livre.
+
+### Controles recomendados
+
+- `output_pydantic` para saída de Task validada por schema
+- `expected_output` para descrever critérios rígidos de aceitação
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class RiskSummary(BaseModel):
+    severity: str
+    findings: list[str]
+    recommendation: str
+
+security_task = Task(
+    description="Review tool configuration for least privilege",
+    expected_output="A structured risk summary with severity, findings, and recommendation.",
+    output_pydantic=RiskSummary,
+)
+```
+
+## 5) Adicionar supervisão humana para ações de alto impacto
+
+Para operações sensíveis (por exemplo ações financeiras, mutações em produção ou mudanças que afetam clientes), adicione revisão humana no ponto certo do caminho de execução.
+
+### O que `human_input=True` faz
+
+`human_input=True` em uma Task pausa **depois** que o agente executou suas ferramentas e produziu um resultado. Ele solicita feedback humano sobre a resposta final **antes que essa saída seja aceita e finalizada**. **Não** bloqueia a execução de ferramentas — um agente em uma Task com `human_input=True` ainda pode chamar ferramentas destrutivas ou com efeitos colaterais antes que qualquer humano veja a execução.
+
+Use `human_input=True` quando quiser que um humano revise, refine ou aprove a saída da Task antes que ela se torne o resultado oficial (por exemplo fluxos de treinamento ou revisão de qualidade).
+
+```python
+from crewai import Task
+
+review_task = Task(
+    description="Draft the incident summary from collected logs",
+    expected_output="A concise incident summary",
+    human_input=True,
+)
+```
+
+### Quando você precisa de aprovação antes das ferramentas executarem
+
+Para checkpoints como:
+
+- Antes de executar ferramentas irreversíveis
+- Antes de efeitos colaterais externos (e-mails, tickets, gravações)
+- Antes de exceções de política ou segurança
+
+Use gates de pré-execução:
+
+- **[Tool hooks](/pt-BR/learn/tool-hooks)** com `@on(InterceptionPoint.PRE_TOOL_CALL)` e `request_human_input()` — bloqueia a chamada da ferramenta até aprovação
+- **[Execution hooks](/pt-BR/learn/execution-hooks)** em execuções de Crew e Flow
+- **[@human_feedback](/pt-BR/learn/human-feedback-in-flows)** em passos de Flow para aprovação no nível do workflow
+
+```python
+from crewai.hooks import HookAborted, InterceptionPoint, on
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "delete_file"])
+def require_approval(ctx):
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name}?",
+        default_message=f"Args: {ctx.tool_input}\nType 'yes' to approve:",
+    )
+    if response.strip().lower() != "yes":
+        raise HookAborted(reason="denied by operator", source="approval-gate")
+```
+
+Para auditabilidade posterior, considere habilitar `verbose=True` em agentes envolvidos em fluxos sensíveis para facilitar a inspeção durante depuração e revisão de incidentes.
+
+## Checklist operacional
+
+Use este checklist rápido antes do rollout em produção:
+
+- [ ] Cada agente tem execução limitada (`max_rpm`, `max_iter`, `max_execution_time`)
+- [ ] O acesso a ferramentas é escopado por papel (sem lista ampla compartilhada)
+- [ ] A delegação está desativada, salvo quando explicitamente necessária
+- [ ] Tasks de alto impacto usam `output_pydantic` e `expected_output` preciso
+- [ ] Gates de aprovação pré-execução existem para ferramentas irreversíveis ou com efeito colateral (tool hooks, Flow hooks ou `@human_feedback`)
+- [ ] `human_input=True` é usado apenas onde revisão pós-execução da saída é suficiente
+- [ ] Execuções de agentes são registradas ou rastreadas para revisão pós-incidente
+
+## Recursos relacionados
+
+- [Agents](/pt-BR/concepts/agents)
+- [Tasks](/pt-BR/concepts/tasks)
+- [Flows](/pt-BR/concepts/flows)
+- [Human input on execution](/pt-BR/learn/human-input-on-execution)
+- [Human-in-the-loop](/pt-BR/learn/human-in-the-loop)
+- [Tool Hooks](/pt-BR/learn/tool-hooks)
+- [Tracing and observability](/pt-BR/observability/overview)
