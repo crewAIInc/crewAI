@@ -2,7 +2,7 @@ import os
 from unittest.mock import patch, MagicMock
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -509,6 +509,16 @@ def test_bedrock_context_window_size():
     llm_titan = LLM(model="bedrock/amazon.titan-text-express-v1")
     context_size_titan = llm_titan.get_context_window_size()
     assert context_size_titan > 5000
+
+
+def test_bedrock_claude_v2_1_context_window_size():
+    """
+    Claude 2.1 (anthropic.claude-v2:1) has a 200k window, not Claude 2.0's 100k.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-v2:1")
+    assert llm.get_context_window_size() == int(
+        200000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 def test_bedrock_message_formatting():
