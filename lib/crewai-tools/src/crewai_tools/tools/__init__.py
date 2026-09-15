@@ -321,4 +321,6 @@ __all__ = [
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
     "ZapierActionTools",
+    "OpticParseTool",
+    "PhishVisionTool",
 ]
