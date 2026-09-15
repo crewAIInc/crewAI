@@ -998,19 +998,25 @@ class AzureCompletion(BaseLLM):
 
             if choice.delta and choice.delta.tool_calls:
                 for idx, tool_call in enumerate(choice.delta.tool_calls):
-                    if idx not in tool_calls:
-                        tool_calls[idx] = {
+                    tool_index = tool_call.get("index")
+                    if tool_index is None:
+                        tool_index = idx
+
+                    if tool_index not in tool_calls:
+                        tool_calls[tool_index] = {
                             "id": tool_call.id,
                             "name": "",
                             "arguments": "",
                         }
-                    elif tool_call.id and not tool_calls[idx]["id"]:
-                        tool_calls[idx]["id"] = tool_call.id
+                    elif tool_call.id and not tool_calls[tool_index]["id"]:
+                        tool_calls[tool_index]["id"] = tool_call.id
 
                     if tool_call.function and tool_call.function.name:
-                        tool_calls[idx]["name"] = tool_call.function.name
+                        tool_calls[tool_index]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
-                        tool_calls[idx]["arguments"] += tool_call.function.arguments
+                        tool_calls[tool_index]["arguments"] += (
+                            tool_call.function.arguments
+                        )
 
                     self._emit_stream_chunk_event(
                         chunk=tool_call.function.arguments
@@ -1019,13 +1025,13 @@ class AzureCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         tool_call={
-                            "id": tool_calls[idx]["id"],
+                            "id": tool_calls[tool_index]["id"],
                             "function": {
-                                "name": tool_calls[idx]["name"],
-                                "arguments": tool_calls[idx]["arguments"],
+                                "name": tool_calls[tool_index]["name"],
+                                "arguments": tool_calls[tool_index]["arguments"],
                             },
                             "type": "function",
-                            "index": idx,
+                            "index": tool_index,
                         },
                         call_type=LLMCallType.TOOL_CALL,
                         response_id=response_id,
@@ -1320,7 +1326,7 @@ class AzureCompletion(BaseLLM):
             "gpt-3.5-turbo": 16385,
             "gpt-5.4-mini": 200000,
             "gpt-35-turbo": 16385,
-            "gpt-4o-mini": 200000,
+            "gpt-4o-mini": 128000,
             "gpt-4-turbo": 128000,
             "gpt-5.6": 1050000,
             "gpt-4o": 128000,

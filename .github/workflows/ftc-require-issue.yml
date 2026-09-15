@@ -6,7 +6,7 @@ on:
 
 permissions:
   pull-requests: write
-  issues: read
+  issues: write
 
 concurrency:
   group: ftc-require-issue-${{ github.event.pull_request.number }}
@@ -111,6 +111,19 @@ jobs:
                   repo,
                   "--body",
                   comment,
+              ],
+              check=True,
+          )
+          subprocess.run(
+              [
+                  "gh",
+                  "pr",
+                  "edit",
+                  pr_number,
+                  "--repo",
+                  repo,
+                  "--add-label",
+                  "needs-issue",
               ],
               check=True,
           )
