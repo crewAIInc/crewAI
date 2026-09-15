@@ -306,7 +306,8 @@
                           "edge/en/tools/ai-ml/ragtool",
                           "edge/en/tools/ai-ml/codeinterpretertool",
                           "edge/en/tools/ai-ml/daytona",
-                          "edge/en/tools/ai-ml/e2bsandboxtools"
+                          "edge/en/tools/ai-ml/e2bsandboxtools",
+                          "edge/en/tools/ai-ml/spritestool"
                         ]
                       },
                       {
@@ -15168,7 +15169,8 @@
                           "edge/pt-BR/tools/ai-ml/langchaintool",
                           "edge/pt-BR/tools/ai-ml/ragtool",
                           "edge/pt-BR/tools/ai-ml/codeinterpretertool",
-                          "edge/pt-BR/tools/ai-ml/daytona"
+                          "edge/pt-BR/tools/ai-ml/daytona",
+                          "edge/pt-BR/tools/ai-ml/spritestool"
                         ]
                       },
                       {
@@ -28989,7 +28991,8 @@
                           "edge/ko/tools/ai-ml/llamaindextool",
                           "edge/ko/tools/ai-ml/langchaintool",
                           "edge/ko/tools/ai-ml/ragtool",
-                          "edge/ko/tools/ai-ml/codeinterpretertool"
+                          "edge/ko/tools/ai-ml/codeinterpretertool",
+                          "edge/ko/tools/ai-ml/spritestool"
                         ]
                       },
                       {
@@ -43267,7 +43270,8 @@
                           "edge/ar/tools/ai-ml/llamaindextool",
                           "edge/ar/tools/ai-ml/langchaintool",
                           "edge/ar/tools/ai-ml/ragtool",
-                          "edge/ar/tools/ai-ml/codeinterpretertool"
+                          "edge/ar/tools/ai-ml/codeinterpretertool",
+                          "edge/ar/tools/ai-ml/spritestool"
                         ]
                       },
                       {
