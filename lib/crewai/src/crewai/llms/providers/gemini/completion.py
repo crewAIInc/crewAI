@@ -599,6 +599,25 @@ class GeminiCompletion(BaseLLM):
                                     mime_type=inline["mimeType"],
                                 )
                             )
+                        elif "fileData" in item or "file_data" in item:
+                            file_data = (
+                                item.get("fileData") or item.get("file_data") or {}
+                            )
+                            file_uri = file_data.get("fileUri") or file_data.get(
+                                "file_uri"
+                            )
+                            if file_uri:
+                                mime_type = (
+                                    file_data.get("mimeType")
+                                    or file_data.get("mime_type")
+                                    or "application/octet-stream"
+                                )
+                                parts.append(
+                                    types.Part.from_uri(
+                                        file_uri=file_uri,
+                                        mime_type=mime_type,
+                                    )
+                                )
                     else:
                         parts.append(types.Part.from_text(text=str(item)))
             else:
