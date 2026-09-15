@@ -64,7 +64,6 @@ def test_host_provider_preserves_event_spans_and_logging_context(flow_source):
     providers = HostProviders()
     global_provider = trace.get_tracer_provider()
     principal = {"type": "user", "id": "operator-1"}
-    redactor = object()
     started_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
     finished_at = started_at + timedelta(seconds=2)
     started = FlowStartedEvent(
@@ -87,7 +86,6 @@ def test_host_provider_preserves_event_spans_and_logging_context(flow_source):
             execution_id="execution-row-1",
             principal=principal,
             origin="schedule",
-            pii_redactor=redactor,
         ) as context:
             assert get_telemetry_context() is context
             assert get_execution_principal() == principal
@@ -112,11 +110,38 @@ def test_host_provider_preserves_event_spans_and_logging_context(flow_source):
     }
     for _, record in providers.logs:
         assert record["ctx"].execution_id == "execution-row-1"
-        assert record["ctx"].pii_redactor is redactor
         assert record["ctx"].principal == principal
     assert trace.get_tracer_provider() is global_provider
     assert get_telemetry_context() is None
     assert get_trace_session() is None
+
+
+def test_host_can_supply_processors_and_a_logging_callback(flow_source):
+    exporter = InMemorySpanExporter()
+    logs = []
+
+    def emit_log(body, **record):
+        logs.append((f"host: {body}", record["ctx"].kickoff_id))
+
+    with telemetry_session(
+        kickoff_id="host-execution",
+        automation_name=flow_source.name,
+        processors=[SimpleSpanProcessor(exporter)],
+        log_emitter=emit_log,
+    ):
+        crewai_event_bus.emit(flow_source, FlowStartedEvent(flow_name=flow_source.name))
+        crewai_event_bus.emit(
+            flow_source,
+            FlowFinishedEvent(flow_name=flow_source.name, result="done", state={}),
+        )
+
+    (span,) = exporter.get_finished_spans()
+    assert span.name == "execute flow"
+    assert span.attributes["crewai.execution_uuid"] == "host-execution"
+    assert set(logs) == {
+        ("host: Flow started: HostedFlow", "host-execution"),
+        ("host: Flow ended: HostedFlow", "host-execution"),
+    }
 
 
 def test_failed_session_keeps_existing_listeners_and_closes_orphans(flow_source):

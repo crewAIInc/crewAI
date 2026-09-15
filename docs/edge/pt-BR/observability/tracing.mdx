@@ -211,8 +211,8 @@ Os hosts podem envolver a execução com `telemetry_session` de
 para criar e finalizar spans, preservando timestamps, relações de parentesco e
 links de pausa/retomada de HITL. Passe um provedor existente com `providers=`
 para manter o tracer e a integração de logs do host. Passe processadores de
-remoção de dados sensíveis dos spans com `processors=` e disponibilize um
-redator aos hooks de logs do host com `pii_redactor=`. Cada sessão gerencia
+spans com `processors=` e um callback de logs do host com `log_emitter=`.
+O host é responsável por qualquer remoção de dados sensíveis nessas integrações. Cada sessão gerencia
 seu próprio ciclo de vida de rastreamento e mantém o provedor OpenTelemetry
 global da aplicação inalterado.
 

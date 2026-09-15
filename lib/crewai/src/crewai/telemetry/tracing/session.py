@@ -279,13 +279,11 @@ def telemetry_session(
     attributes: dict[str, Any] | None = None,
     processors: Sequence[SpanProcessor] = (),
     log_emitter: Callable[..., None] | None = None,
-    pii_redactor: Any = None,
 ) -> Iterator[TelemetryExecutionContext]:
     """Capture a crew or flow using the enterprise event/session lifecycle.
 
-    Hosts supply verified identity, collectors, resources, and optional redaction
-    processors. ``pii_redactor`` is exposed to host log hooks via the context;
-    redacting span attributes is the supplied processors' responsibility.
+    Hosts supply verified identity, collectors, resources, span processors,
+    and logging hooks. Host-specific processing stays in those integrations.
     """
     attrs = dict(attributes or {})
     if principal:
@@ -320,7 +318,6 @@ def telemetry_session(
     ctx.parent_otel_context = parent_otel_context
     ctx.otel_resume_context = parent_otel_context
     ctx.resume_feedback = resume_feedback
-    ctx.pii_redactor = pii_redactor
     try:
         with session.activate():
             yield ctx

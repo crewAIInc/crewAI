@@ -208,8 +208,9 @@ Hosts can wrap execution with `telemetry_session` from
 `crewai.telemetry.tracing`. The session uses CrewAI lifecycle events to create
 and finish spans, preserving their timestamps, parent relationships, and HITL
 pause/resume links. Pass an existing provider with `providers=` to retain the
-host's tracer and logging integration. Pass span redaction processors with
-`processors=` and expose a redactor to host log hooks with `pii_redactor=`.
+host's tracer and logging integration. Pass span processors with `processors=`
+and a host logging callback with `log_emitter=`. The host owns any redaction
+in these integrations.
 Each session owns its tracing lifecycle and leaves the application's global
 OpenTelemetry provider unchanged.
 

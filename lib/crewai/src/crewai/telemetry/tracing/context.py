@@ -58,7 +58,6 @@ class TelemetryExecutionContext:
     otel_resume_context: tuple[int, int] | None = None
     parent_otel_context: tuple[int, int] | None = None
     resume_feedback: str | None = None
-    pii_redactor: Any = None
 
     def _get_or_create_event(self, event_id: str) -> threading.Event:
         """Get or create a threading.Event for the given event_id (must hold _span_lock)."""
