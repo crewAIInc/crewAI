@@ -537,6 +537,34 @@ def test_gemini_message_formatting_preserves_file_data(file_uri):
     assert parts[2].text == "After"
 
 
+def test_gemini_message_formatting_preserves_file_data_without_text():
+    """Test that a message containing only a file reference is preserved."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+    file_uri = "gs://example-bucket/image.jpg"
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "fileData": {
+                            "fileUri": file_uri,
+                            "mimeType": "image/jpeg",
+                        }
+                    }
+                ],
+            }
+        ]
+    )
+
+    parts = formatted_contents[0].parts
+    assert len(parts) == 1
+    assert parts[0].file_data is not None
+    assert parts[0].file_data.file_uri == file_uri
+    assert parts[0].file_data.mime_type == "image/jpeg"
+
+
 def test_gemini_message_formatting_appends_user_turn_after_trailing_model_turn():
     """
     Gemini's generateContent API rejects a request whose history ends on a
