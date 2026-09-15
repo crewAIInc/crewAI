@@ -3560,6 +3560,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -3600,6 +3664,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -4619,6 +4686,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -4659,6 +4790,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -6589,6 +6723,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -6629,6 +6827,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -7116,16 +7317,9 @@
         "description": "Input for DOCXSearchTool.",
         "properties": {
           "docx": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "description": "File path or URL of a DOCX file to be searched",
-            "title": "Docx"
+            "title": "Docx",
+            "type": "string"
           },
           "search_query": {
             "description": "Mandatory search query you want to use to search the DOCX's content",
@@ -7134,8 +7328,8 @@
           }
         },
         "required": [
-          "docx",
-          "search_query"
+          "search_query",
+          "docx"
         ],
         "title": "DOCXSearchToolSchema",
         "type": "object"
@@ -8941,6 +9135,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -8981,6 +9239,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -11721,6 +11982,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -11761,6 +12086,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -13027,6 +13355,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -13067,6 +13459,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -14339,6 +14734,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -14379,6 +14838,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -15834,6 +16296,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -15874,6 +16400,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -17466,6 +17995,19 @@
                 "description": "Number of results to retrieve in each page.",
                 "title": "Limit"
               },
+              "locale": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "`Accept-Language` header value which changes your Google search page web interface language.",
+                "title": "Locale"
+              },
               "pages": {
                 "anyOf": [
                   {
@@ -18309,6 +18851,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -18349,6 +18955,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -20065,6 +20674,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -20105,6 +20778,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -22250,6 +22926,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -22290,6 +23030,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -23755,6 +24498,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -23795,6 +24602,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -25647,6 +26457,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -25687,6 +26561,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -26886,7 +27763,7 @@
       }
     },
     {
-      "description": "A tool that reads the content at a URL and returns it as text. To use this tool, provide a 'url' parameter with an http:// or https:// address. PDF, DOCX, HTML, JSON, XML, CSV and plain-text responses are converted to text; other binary types are rejected. URLs that resolve to private or internal network addresses are refused, as are responses over the tool's size limit. Optionally provide 'start_line' and 'line_count' to read only part of the content.",
+      "description": "A tool that reads the content at a URL and returns it as text. To use this tool, provide a 'url' parameter with an http:// or https:// address. PDF, DOCX, XLSX, HTML, JSON, XML, CSV and plain-text responses are converted to text; other binary types are rejected. Well suited to presigned and share links from S3, Cloudflare R2, Google Drive, OneDrive and SharePoint, which serve real documents with a generic content type and no file extension; the type is detected from the response bytes. The link must already grant access, as a presigned or shared link does. URLs that resolve to private or internal network addresses are refused, as are responses over the tool's size limit. Optionally provide 'start_line' and 'line_count' to read only part of the content.",
       "env_vars": [],
       "humanized_name": "Read content from a URL",
       "init_params_schema": {
@@ -26937,7 +27814,7 @@
             "type": "string"
           }
         },
-        "description": "Read the content at an arbitrary URL and return it as text.\n\nUnlike :class:`~crewai_tools.tools.file_read_tool.file_read_tool.FileReadTool`,\nwhich is confined to the local filesystem, this tool performs network\nrequests to addresses the caller -- often an LLM -- chooses at runtime. It\nis a separate tool for exactly that reason: granting it is granting network\negress, and that should be a deliberate choice rather than a flag on a\nfilesystem tool.\n\nResponses are decoded to text according to their content type. PDF and DOCX\nbodies have their text extracted, HTML is stripped to visible text, and\ntext-shaped types (plain text, Markdown, JSON, XML, YAML, CSV) are decoded\nas-is. Any other type is refused rather than returned as base64, keeping\nthis tool's output text-only.\n\nSecurity:\n    Requests go through :func:`~crewai_tools.security.safe_requests.safe_get_bounded`,\n    which resolves each hostname and rejects it when any resolved address is\n    private, loopback, link-local, or otherwise reserved -- covering cloud\n    metadata endpoints and internal services. Redirects are never followed\n    automatically: every hop is revalidated, and credentials are dropped on\n    cross-origin hops. Bodies over ``max_bytes`` are abandoned mid-stream.\n\n    The fetch pins TCP to the IP that passed validation unless\n    ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` is set without\n    ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. The returned text is still\n    untrusted remote content flowing into an agent's context -- a\n    fetched page can attempt to instruct the agent. Network egress\n    policy and prompt-level handling cover that.\n\nArgs:\n    max_bytes (int): Largest response body to accept, in decoded bytes.\n        Defaults to 5 MiB.\n    timeout (float): Per-request timeout in seconds. Defaults to 30.\n    headers (Optional[dict[str, str]]): Extra request headers. Developer\n        supplied, not chosen by the model.\n    encoding (Optional[str]): Force a text encoding instead of honoring the\n        charset the server declares.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = URLReadTool()\n    >>> content = tool.run(url=\"https://example.com/report.pdf\")\n    >>> head = tool.run(url=\"https://example.com/data.csv\", line_count=20)",
+        "description": "Read the content at an arbitrary URL and return it as text.\n\nUnlike :class:`~crewai_tools.tools.file_read_tool.file_read_tool.FileReadTool`,\nwhich is confined to the local filesystem, this tool performs network\nrequests to addresses the caller -- often an LLM -- chooses at runtime. It\nis a separate tool for exactly that reason: granting it is granting network\negress, and that should be a deliberate choice rather than a flag on a\nfilesystem tool.\n\nResponses are decoded to text according to their content type. PDF, DOCX\nand XLSX bodies have their text extracted, HTML is stripped to visible\ntext, and text-shaped types (plain text, Markdown, JSON, XML, YAML, CSV)\nare decoded as-is. When a server names no usable type -- ``octet-stream``\nfrom a presigned link, say -- the URL extension and then the body's own\nleading bytes are consulted before giving up. Any content that none of\nthose identify is refused rather than returned as base64, keeping this\ntool's output text-only.\n\nThat last step is what makes this a good fit for cloud storage. Presigned\nS3 and Cloudflare R2 URLs, and Google Drive, OneDrive and SharePoint\ndownload links, routinely serve a real document as\n``application/octet-stream`` from a path that is a content hash with no\nextension, so neither the header nor the URL says what the file is. The\ntool reads a URL and does not authenticate, so the link has to already\ngrant access -- which is exactly what a presigned or shared link is.\n\nSecurity:\n    Requests go through :func:`~crewai_tools.security.safe_requests.safe_get_bounded`,\n    which resolves each hostname and rejects it when any resolved address is\n    private, loopback, link-local, or otherwise reserved -- covering cloud\n    metadata endpoints and internal services. Redirects are never followed\n    automatically: every hop is revalidated, and credentials are dropped on\n    cross-origin hops. Bodies over ``max_bytes`` are abandoned mid-stream.\n\n    The fetch pins TCP to the IP that passed validation unless\n    ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` is set without\n    ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. The returned text is still\n    untrusted remote content flowing into an agent's context -- a\n    fetched page can attempt to instruct the agent. Network egress\n    policy and prompt-level handling cover that.\n\nArgs:\n    max_bytes (int): Largest response body to accept, in decoded bytes.\n        Defaults to 5 MiB.\n    timeout (float): Per-request timeout in seconds. Defaults to 30.\n    headers (Optional[dict[str, str]]): Extra request headers. Developer\n        supplied, not chosen by the model.\n    encoding (Optional[str]): Force a text encoding instead of honoring the\n        charset the server declares.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = URLReadTool()\n    >>> content = tool.run(url=\"https://example.com/report.pdf\")\n    >>> head = tool.run(url=\"https://example.com/data.csv\", line_count=20)\n    >>> # A presigned link: no extension, served as octet-stream, read anyway.\n    >>> sheet = tool.run(\n    ...     url=\"https://bucket.r2.cloudflarestorage.com/a1b2c3?X-Amz-Signature=...\"\n    ... )",
         "properties": {
           "encoding": {
             "anyOf": [
@@ -27097,9 +27974,26 @@
       "run_params_schema": {
         "description": "Input for Vision Tool.",
         "properties": {
+          "complexity_level": {
+            "default": "medium",
+            "description": "The complexity of the request, which selects the model: 'easy', 'medium', 'hard'.",
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ],
+            "title": "Complexity Level",
+            "type": "string"
+          },
           "image_path_url": {
             "default": "The image path or URL.",
             "title": "Image Path Url",
+            "type": "string"
+          },
+          "query": {
+            "default": "What's in this image?",
+            "description": "The question or instruction to ask the model about the image.",
+            "title": "Query",
             "type": "string"
           }
         },
@@ -27874,6 +28768,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -27914,6 +28872,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -28933,6 +29894,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -28973,6 +29998,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -29992,6 +31020,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -30032,6 +31124,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -31051,6 +32146,70 @@
             "title": "OpenCLIPProviderSpec",
             "type": "object"
           },
+          "OpenRouterProviderConfig": {
+            "description": "Configuration for OpenRouter provider.",
+            "properties": {
+              "api_base": {
+                "title": "Api Base",
+                "type": "string"
+              },
+              "api_key": {
+                "title": "Api Key",
+                "type": "string"
+              },
+              "default_headers": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Default Headers"
+              },
+              "dimensions": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Dimensions"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "model_name": {
+                "title": "Model Name",
+                "type": "string"
+              }
+            },
+            "title": "OpenRouterProviderConfig",
+            "type": "object"
+          },
+          "OpenRouterProviderSpec": {
+            "description": "OpenRouter provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OpenRouterProviderConfig"
+              },
+              "provider": {
+                "const": "openrouter",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OpenRouterProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -31091,6 +32250,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenCLIPProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OpenRouterProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"

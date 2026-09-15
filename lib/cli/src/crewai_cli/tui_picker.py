@@ -388,8 +388,9 @@ def pick_many(
         Sorted list of selected indices, or ``(indices, action_index)`` when
         ``action_indices`` is provided.
     """
-    click.echo()
-    click.secho(f"  {title}", fg="cyan")
+    if title:
+        click.echo()
+        click.secho(f"  {title}", fg="cyan")
 
     if _is_interactive():
         try:

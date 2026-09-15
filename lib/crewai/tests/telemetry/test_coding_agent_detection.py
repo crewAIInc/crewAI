@@ -547,15 +547,27 @@ def test_common_attributes_include_project_id_when_declared(clean_env, monkeypat
     assert attributes["project_id"] == "proj-123"
 
 
-def test_project_id_is_omitted_when_absent(clean_env, monkeypatch):
-    """Projects without an id must not report a placeholder."""
+def test_project_id_is_empty_rather_than_absent_when_undeclared(clean_env, monkeypatch):
+    """An undeclared project reports an EMPTY id, not a missing key.
+
+    This used to assert the key was omitted. It is now always present, because
+    absent and empty answer different questions and only the caller can tell them
+    apart: a missing key means the client is too old to report a project id at all,
+    an empty one means the client asked and the project declares none. With both
+    collapsed into "absent", the share of clients that COULD have reported an id is
+    unknowable -- and that share is the denominator any attribution rate needs.
+    """
     attributes = _common_attributes(monkeypatch, project_id=None)
 
-    assert "project_id" not in attributes
+    assert attributes["project_id"] == ""
+    assert "project_id" in attributes, (
+        "the key must be present even when empty, or absent and undeclared "
+        "become indistinguishable"
+    )
 
 
 def test_project_id_lookup_never_breaks_telemetry(clean_env, monkeypatch):
-    """A failed lookup degrades to omitting the attribute."""
+    """A failed lookup degrades to an empty id, and never to a raised exception."""
     from crewai_core.telemetry import common_span_attributes
 
     def boom(*args, **kwargs):
@@ -566,8 +578,24 @@ def test_project_id_lookup_never_breaks_telemetry(clean_env, monkeypatch):
 
     attributes = common_span_attributes()
 
-    assert "project_id" not in attributes
+    assert attributes["project_id"] == ""
     assert "coding_agent" in attributes
+
+
+def test_a_declared_id_is_distinguishable_from_an_undeclared_one(
+    clean_env, monkeypatch
+):
+    """The whole point of the change: the two cases produce different values.
+
+    Both are present, so a reader can always tell "no project" from "old client",
+    which is what makes an attribution denominator computable.
+    """
+    declared = _common_attributes(monkeypatch, project_id="proj-123")
+    undeclared = _common_attributes(monkeypatch, project_id=None)
+
+    assert declared["project_id"] == "proj-123"
+    assert undeclared["project_id"] == ""
+    assert declared["project_id"] != undeclared["project_id"]
 
 
 def test_common_attributes_are_computed_once(clean_env, monkeypatch):

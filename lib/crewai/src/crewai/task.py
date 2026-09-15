@@ -797,7 +797,10 @@ class Task(BaseModel):
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
+            crewai_event_bus.emit(
+                self,
+                TaskFailedEvent(error=str(e), error_type=type(e), task=self),
+            )
             raise e
         finally:
             clear_task_files(self.id)
@@ -953,7 +956,10 @@ class Task(BaseModel):
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
+            crewai_event_bus.emit(
+                self,
+                TaskFailedEvent(error=str(e), error_type=type(e), task=self),
+            )
             raise e
         finally:
             clear_task_files(self.id)

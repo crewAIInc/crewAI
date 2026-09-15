@@ -8,9 +8,25 @@ import json
 import os
 import re
 import sqlite3
-from typing import Any
+from typing import Any, Literal
 
 import click
+
+
+def _record_checkpoint_usage(
+    action: Literal[
+        "list", "info", "resume", "diff", "prune", "tui", "tui_resume", "tui_fork"
+    ],
+) -> None:
+    """Count a CLI action without recording checkpoint data or blocking execution."""
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span(f"cli_usage:checkpoint_{action}")
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
 
 
 _PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
@@ -696,6 +712,7 @@ def prune_checkpoints(
         return
 
     duration: timedelta | None = _parse_duration(older_than) if older_than else None
+    _record_checkpoint_usage("prune")
 
     deleted: int
     if _is_sqlite(location):

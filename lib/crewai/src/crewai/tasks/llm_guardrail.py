@@ -105,7 +105,11 @@ class LLMGuardrail:
             Tuple[bool, Any]: A tuple containing:
                 - bool: True if validation passed, False otherwise
                 - Any: The validation result or error message
+
+        Raises:
+            HookAborted: A `pre_model_call` hook denied the validation call.
         """
+        from crewai.hooks.dispatch import HookAborted
 
         try:
             result = self._validate_output(task_output)
@@ -115,5 +119,7 @@ class LLMGuardrail:
             if result.pydantic.valid:
                 return True, task_output.raw
             return False, result.pydantic.feedback
+        except HookAborted:
+            raise
         except Exception as e:
             return False, f"Error while validating the task output: {e!s}"
