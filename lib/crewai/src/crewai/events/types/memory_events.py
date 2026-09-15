@@ -1,5 +1,7 @@
 from typing import Any, Literal
 
+from pydantic import Field
+
 from crewai.events.base_events import BaseEvent
 
 
@@ -38,6 +40,17 @@ class MemoryQueryCompletedEvent(MemoryBaseEvent):
     limit: int
     score_threshold: float | None = None
     query_time_ms: float
+    result_items: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Per-item provenance for each returned memory match. "
+            "Each dict contains: record_id, content (without embedding), "
+            "scope, categories, metadata, source, private, importance, "
+            "created_at, last_accessed, score, match_reasons, and evidence_gaps. "
+            "Enables item-level audit trail for memory benchmarks without "
+            "leaking embedding vectors."
+        ),
+    )
 
 
 class MemoryQueryFailedEvent(MemoryBaseEvent):
