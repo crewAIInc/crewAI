@@ -519,3 +519,42 @@ def test_structured_tool_invoke_exception_handling():
         tool.invoke({"should_fail": True})
 
     assert call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_awaits_coroutine_from_sync_wrapper():
+    """ainvoke must await a coroutine handed back by a sync wrapper function."""
+    calls: list[str] = []
+
+    async def async_body(q: str) -> str:
+        calls.append(q)
+        return f"data:{q}"
+
+    def sync_wrapper(q: str) -> object:
+        """Sync wrapper that returns the coroutine from async_body."""
+        return async_body(q)
+
+    tool = CrewStructuredTool.from_function(func=sync_wrapper, name="wrapped_async_tool")
+
+    result = await tool.ainvoke(input={"q": "hello"})
+
+    assert result == "data:hello"
+    assert calls == ["hello"]
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_through_to_structured_tool_resolves_async_tool_result():
+    """An @tool-decorated async function wraps the sync Tool._run wrapper as func; ainvoke
+    must resolve the coroutine it returns instead of handing the caller a bare coroutine."""
+    from crewai.tools import tool
+
+    @tool
+    async def fetch_data(q: str) -> str:
+        """Fetch data for q."""
+        return f"data:{q}"
+
+    structured = fetch_data.to_structured_tool()
+
+    result = await structured.ainvoke(input={"q": "hello"})
+
+    assert result == "data:hello"
