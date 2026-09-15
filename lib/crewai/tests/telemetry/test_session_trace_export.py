@@ -328,13 +328,14 @@ def test_execution_failure_clears_buffer_without_consent_or_requests(
     buffer = EphemeralSpanBuffer()
     monkeypatch.setattr(ephemeral, "EphemeralSpanBuffer", lambda: buffer)
     consent = Mock(return_value=True)
-    with (
-        trace_consent(consent),
-        pytest.raises(failure),
-        ephemeral_tracing(str(uuid4())) as session,
-    ):
-        record(session)
-        raise failure("execution failed")
+
+    def fail_execution():
+        with trace_consent(consent), ephemeral_tracing(str(uuid4())) as session:
+            record(session)
+            raise failure("execution failed")
+
+    with pytest.raises(failure, match="execution failed"):
+        fail_execution()
     consent.assert_not_called()
     assert buffer._closed and not buffer._spans
     assert not collector.grants and not collector.batches

@@ -167,7 +167,7 @@ def test_failed_session_keeps_existing_listeners_and_closes_orphans(flow_source)
         crewai_event_bus.emit(flow_source, before)
         assert crewai_event_bus.flush()
 
-        with pytest.raises(RuntimeError, match="host execution failed"):
+        def fail_session():
             with telemetry_session(
                 kickoff_id="failed-kickoff",
                 automation_name=flow_source.name,
@@ -176,6 +176,9 @@ def test_failed_session_keeps_existing_listeners_and_closes_orphans(flow_source)
             ):
                 crewai_event_bus.emit(flow_source, during)
                 raise RuntimeError("host execution failed")
+
+        with pytest.raises(RuntimeError, match="host execution failed"):
+            fail_session()
 
         crewai_event_bus.emit(flow_source, after)
         assert crewai_event_bus.flush()
