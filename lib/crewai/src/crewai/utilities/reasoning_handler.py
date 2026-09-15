@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -102,6 +103,13 @@ FUNCTION_SCHEMA: Final[dict[str, Any]] = {
         },
     },
 }
+
+
+def _is_ready(response: str) -> bool:
+    """Check if the response indicates the agent is ready."""
+    if re.search(r"(?i)\bnot\s+ready\b", response):
+        return False
+    return bool(re.search(r"(?i)\bready\b", response))
 
 
 class AgentReasoning:
@@ -411,7 +419,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                _is_ready(response_str),
             )
 
         except HookAborted:
@@ -437,7 +445,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    _is_ready(fallback_str),
                 )
             except HookAborted:
                 raise
@@ -599,7 +607,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = "READY: I am ready to execute the task." in response
+        ready = _is_ready(response)
 
         return plan, ready
 
