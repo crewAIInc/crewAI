@@ -151,6 +151,11 @@ _EXECUTOR_CLASS_MAP: dict[str, type] = {
 }
 
 
+_dedicated_executor: contextvars.ContextVar[Any | None] = contextvars.ContextVar(
+    "crewai_dedicated_agent_executor", default=None
+)
+
+
 def _is_resuming_agent_executor(
     executor: CrewAgentExecutor | AgentExecutor | None,
 ) -> TypeIs[AgentExecutor]:
@@ -965,6 +970,15 @@ class Agent(BaseAgent):
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
 
+    def _active_executor(self) -> CrewAgentExecutor | AgentExecutor | None:
+        """Return the executor for the current execution.
+
+        Async tasks bind their own executor to the running thread so siblings
+        sharing this agent do not reuse one instance concurrently; every other
+        path uses the agent's own executor.
+        """
+        return _dedicated_executor.get() or self.agent_executor
+
     def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
 
@@ -975,14 +989,15 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
-        if not self.agent_executor:
+        executor = self._active_executor()
+        if not executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        invoke_result = self.agent_executor.invoke(
+        invoke_result = executor.invoke(
             {
                 "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
+                "tool_names": executor.tools_names,
+                "tools": executor.tools_description,
                 "ask_for_human_input": task.human_input,
             }
         )
@@ -1098,14 +1113,15 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
-        if not self.agent_executor:
+        executor = self._active_executor()
+        if not executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        result = await self.agent_executor.ainvoke(
+        result = await executor.ainvoke(
             {
                 "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
+                "tool_names": executor.tools_names,
+                "tools": executor.tools_description,
                 "ask_for_human_input": task.human_input,
             }
         )
@@ -1168,6 +1184,20 @@ class Agent(BaseAgent):
 
         prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
 
+        # An async task runs concurrently with its siblings, and every agent
+        # holds a single executor whose state is reset on each invoke. Sharing
+        # one across concurrent tasks corrupts that state, so give each async
+        # task its own executor, bound to the thread running it.
+        if task is not None and task.async_execution:
+            _dedicated_executor.set(
+                self._build_executor(
+                    task, parsed_tools, raw_tools, prompt, stop_words, rpm_limit_fn
+                )
+            )
+            return
+
+        _dedicated_executor.set(None)
+
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
@@ -1178,34 +1208,46 @@ class Agent(BaseAgent):
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
-            if not isinstance(self.llm, BaseLLM):
-                raise RuntimeError(
-                    "LLM must be resolved before creating agent executor."
-                )
-            self.agent_executor = self.executor_class(
-                llm=self.llm,
-                task=task,
-                agent=self,
-                crew=self.crew,
-                tools=parsed_tools,
-                prompt=prompt,
-                original_tools=raw_tools,
-                stop_words=stop_words,
-                max_iter=self.max_iter,
-                tools_handler=self.tools_handler,
-                tools_names=get_tool_names(parsed_tools),
-                tools_description=render_text_description_and_args(parsed_tools),
-                step_callback=self.step_callback,
-                function_calling_llm=self.function_calling_llm,
-                respect_context_window=self.respect_context_window,
-                request_within_rpm_limit=rpm_limit_fn,
-                callbacks=[TokenCalcHandler(self._token_process)],
-                response_model=(
-                    task.response_model or task.output_pydantic or task.output_json
-                )
-                if task
-                else None,
+            self.agent_executor = self._build_executor(
+                task, parsed_tools, raw_tools, prompt, stop_words, rpm_limit_fn
             )
+
+    def _build_executor(
+        self,
+        task: Task | None,
+        parsed_tools: list[CrewStructuredTool],
+        raw_tools: list[BaseTool],
+        prompt: SystemPromptResult | StandardPromptResult,
+        stop_words: list[str],
+        rpm_limit_fn: Any,
+    ) -> CrewAgentExecutor | AgentExecutor:
+        """Construct a new executor for this agent without storing it."""
+        if not isinstance(self.llm, BaseLLM):
+            raise RuntimeError("LLM must be resolved before creating agent executor.")
+        return self.executor_class(
+            llm=self.llm,
+            task=task,
+            agent=self,
+            crew=self.crew,
+            tools=parsed_tools,
+            prompt=prompt,
+            original_tools=raw_tools,
+            stop_words=stop_words,
+            max_iter=self.max_iter,
+            tools_handler=self.tools_handler,
+            tools_names=get_tool_names(parsed_tools),
+            tools_description=render_text_description_and_args(parsed_tools),
+            step_callback=self.step_callback,
+            function_calling_llm=self.function_calling_llm,
+            respect_context_window=self.respect_context_window,
+            request_within_rpm_limit=rpm_limit_fn,
+            callbacks=[TokenCalcHandler(self._token_process)],
+            response_model=(
+                task.response_model or task.output_pydantic or task.output_json
+            )
+            if task
+            else None,
+        )
 
     def _update_executor_parameters(
         self,
