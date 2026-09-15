@@ -1,4 +1,3 @@
-import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
@@ -25,6 +24,8 @@ def test_run_without_running_loop():
 async def test_run_from_running_loop():
     wrapper = _wrapper()
     wrapper._run_async = AsyncMock(return_value="ok")
-    result = await asyncio.to_thread(wrapper._run, text="hi")
+    # Call on this thread so get_running_loop() sees the pytest loop and
+    # takes the worker-thread path instead of asyncio.run() in-process.
+    result = wrapper._run(text="hi")
     assert result == "ok"
     assert "cannot be called from a running event loop" not in result
