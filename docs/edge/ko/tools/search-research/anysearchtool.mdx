@@ -32,8 +32,12 @@ pip install 'crewai[tools]'
 ```python Code
 from crewai_tools import AnySearchTool
 
-# No API key required
+# API 키 필요 없음
 tool = AnySearchTool()
+
+# 검색을 실행하고 결과를 JSON 문자열로 반환합니다
+result = tool.run(query="온디바이스 LLM의 최신 개발 동향")
+print(result)
 ```
 
 에이전트에 연결하기:

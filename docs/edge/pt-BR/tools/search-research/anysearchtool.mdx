@@ -32,9 +32,15 @@ O exemplo a seguir demonstra como inicializar a ferramenta e executar uma pesqui
 ```python Code
 from crewai_tools import AnySearchTool
 
-# No API key required
+# Nenhuma chave de API necessária
 tool = AnySearchTool()
+
+# Executa uma busca; retorna os resultados como uma string JSON
+result = tool.run(query="últimos desenvolvimentos em LLMs no dispositivo")
+print(result)
 ```
+
+
 
 Anexando a um agente:
 

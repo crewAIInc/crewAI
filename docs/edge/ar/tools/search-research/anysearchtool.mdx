@@ -32,8 +32,12 @@ pip install 'crewai[tools]'
 ```python Code
 from crewai_tools import AnySearchTool
 
-# No API key required
+# لا حاجة إلى مفتاح API
 tool = AnySearchTool()
+
+# تنفيذ بحث؛ وإرجاع النتائج كسلسلة JSON
+result = tool.run(query="أحدث التطورات في نماذج LLM على الأجهزة")
+print(result)
 ```
 
 إرفاقها بوكيل:
