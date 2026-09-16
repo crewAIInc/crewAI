@@ -375,3 +375,16 @@ def test_result_item_without_url_raises(mock_post, item):
 
     with pytest.raises(RuntimeError, match="missing a valid 'url'"):
         AnySearchTool().run(query="crewai")
+
+@pytest.mark.parametrize("timeout", [0, -1, -30])
+def test_non_positive_timeout_is_rejected_by_schema(timeout):
+    """Verifies a non-positive timeout is rejected by schema validation."""
+    with pytest.raises(ValueError):
+        AnySearchTool(timeout=timeout)
+
+
+@pytest.mark.parametrize("limit", [0, -1, -1000])
+def test_non_positive_content_limit_is_rejected_by_schema(limit):
+    """Verifies a non-positive content limit is rejected by schema validation."""
+    with pytest.raises(ValueError):
+        AnySearchTool(max_content_length_per_result=limit)

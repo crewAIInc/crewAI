@@ -76,15 +76,17 @@ class AnySearchTool(BaseTool):
         description="The content format requested from the AnySearch API.",
     )
     timeout: int = Field(
-        default=30,
-        description="The timeout for the search request in seconds.",
+      default=30,
+      gt=0,
+      description="The timeout for the search request in seconds.",
     )
     max_content_length_per_result: int = Field(
-        default=1000,
-        description=(
-            "Maximum length for the 'content' of each search result to avoid "
-            "context window issues."
-        ),
+      default=1000,
+      gt=0,
+      description=(
+        "Maximum length for the 'content' of each search result to avoid "
+        "context window issues."
+      ),
     )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
