@@ -981,3 +981,75 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
         crew_template
     )
     assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+
+
+def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    project_root = tmp_path / "my_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    [keep_on] = [
+        line
+        for line in agents_md.splitlines()
+        if "Never disable, block, or silence CrewAI's built-in observability" in line
+    ]
+    assert "any of the instrumentation that ships execution data out" in keep_on
+    assert "Turning it off is the user's decision to make" in keep_on
+    assert "- Treating built-in observability" in agents_md
+    assert "free" not in agents_md.lower()
+
+
+def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with mock.patch(
+        "crewai_cli.create_json_crew._wizard_agents_and_tasks",
+        return_value=(
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-4o",
+                    "tools": [],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        ),
+    ):
+        json_crew.create_json_crew("JSON Crew", provider="openai", skip_provider=True)
+
+    project_root = tmp_path / "json_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert "crew.jsonc" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
