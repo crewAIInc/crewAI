@@ -891,6 +891,11 @@ class AnthropicCompletion(BaseLLM):
                             }
                             assistant_content.append(tool_use)
                     if assistant_content:
+                        if self.thinking and self._previous_thinking_blocks:
+                            assistant_content = [
+                                *self._previous_thinking_blocks,
+                                *assistant_content,
+                            ]
                         formatted_messages.append(
                             {"role": "assistant", "content": assistant_content}
                         )
@@ -1093,6 +1098,17 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
+        thinking_blocks: list[ThinkingBlock] = []
+
+        if response.content:
+            for content_block in response.content:
+                thinking_block = self._extract_thinking_block(content_block)
+                if thinking_block:
+                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        if thinking_blocks:
+            self._previous_thinking_blocks = thinking_blocks
+
         # Check if Claude wants to use tools
         if response.content:
             tool_uses = _tool_use_blocks(list(response.content))
@@ -1120,19 +1136,10 @@ class AnthropicCompletion(BaseLLM):
                     return result
 
         content = ""
-        thinking_blocks: list[ThinkingBlock] = []
-
         if response.content:
             for content_block in response.content:
                 if hasattr(content_block, "text"):
                     content += content_block.text
-                else:
-                    thinking_block = self._extract_thinking_block(content_block)
-                    if thinking_block:
-                        thinking_blocks.append(cast(ThinkingBlock, thinking_block))
-
-        if thinking_blocks:
-            self._previous_thinking_blocks = thinking_blocks
 
         content = self._apply_stop_words(content)
         self._emit_call_completed_event(
