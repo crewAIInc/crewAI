@@ -116,7 +116,7 @@ class SpraayBatchPaymentTool(BaseTool):
 
         token_address = kwargs.get("token_address", "")
         chain_id = kwargs.get("chain_id", 8453)
-        sender_address = kwargs.get("sender_address")
+        sender_address: str = kwargs.get("sender_address") or ""
 
         try:
             recipients = [
@@ -193,10 +193,14 @@ class SpraayBatchPaymentTool(BaseTool):
 
         The gateway expects ?recipients=<count>&chain=<slug> query params.
         """
+        params: dict[str, int | str] = {
+            "recipients": recipient_count,
+            "chain": chain,
+        }
         try:
             response = requests.get(
                 f"{self.gateway_url}/free/estimate-batch",
-                params={"recipients": recipient_count, "chain": chain},
+                params=params,
                 timeout=30,
             )
             response.raise_for_status()

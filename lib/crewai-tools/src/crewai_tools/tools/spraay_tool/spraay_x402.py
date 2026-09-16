@@ -59,11 +59,17 @@ def post_with_x402(
         }
 
     try:
-        from eth_account import Account
-        from x402 import x402ClientSync
-        from x402.http.clients import x402_requests
-        from x402.mechanisms.evm import EthAccountSigner
-        from x402.mechanisms.evm.exact.register import register_exact_evm_client
+        from eth_account import Account  # type: ignore[import-not-found]
+        from x402 import x402ClientSync  # type: ignore[import-not-found]
+        from x402.http.clients import (  # type: ignore[import-not-found]
+            x402_requests,
+        )
+        from x402.mechanisms.evm import (  # type: ignore[import-not-found]
+            EthAccountSigner,
+        )
+        from x402.mechanisms.evm.exact.register import (  # type: ignore[import-not-found]
+            register_exact_evm_client,
+        )
     except ImportError:
         return False, {
             "status": "payment_required",
