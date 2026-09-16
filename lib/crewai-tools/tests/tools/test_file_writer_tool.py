@@ -213,8 +213,8 @@ def test_blocks_symlink_escape(tool, temp_env, symlink_or_skip):
     outside_dir = tempfile.mkdtemp()
     outside_file = os.path.join(outside_dir, "target.txt")
     link = os.path.join(temp_env["temp_dir"], "escape")
-    symlink_or_skip(outside_dir, link, target_is_directory=True)
     try:
+        symlink_or_skip(outside_dir, link, target_is_directory=True)
         result = tool._run(
             filename="escape/target.txt",
             directory=temp_env["temp_dir"],

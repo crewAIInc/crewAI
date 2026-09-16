@@ -13,9 +13,10 @@ def symlink_or_skip() -> Callable[..., None]:
     """Return a helper that creates symlinks, skipping when the OS forbids it.
 
     On Windows, creating symlinks requires elevated privileges or Developer
-    Mode; without them ``os.symlink`` raises ``OSError`` (WinError 1314).
-    Security tests that exercise symlink handling should skip on such
-    machines instead of failing.
+    Mode; without them ``os.symlink`` raises ``OSError`` with
+    ``winerror == 1314``. Only that specific condition is skipped so unrelated
+    setup failures (invalid paths, existing links, path-length limits, ...)
+    stay visible.
     """
 
     def _symlink_or_skip(
@@ -26,7 +27,11 @@ def symlink_or_skip() -> Callable[..., None]:
     ) -> None:
         try:
             os.symlink(target, link, target_is_directory=target_is_directory)
-        except (OSError, NotImplementedError) as exc:
-            pytest.skip(f"symlink creation is not permitted on this platform: {exc}")
+        except OSError as exc:
+            if getattr(exc, "winerror", None) != 1314:
+                raise
+            pytest.skip(
+                "symlink creation requires elevated privileges or Developer Mode on Windows"
+            )
 
     return _symlink_or_skip
