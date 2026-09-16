@@ -219,8 +219,14 @@ class AnySearchTool(BaseTool):
                     f"result #{index} is missing a valid 'url'"
                 )
             content = str(item.get("content") or "")
-            if len(content) > self.max_content_length_per_result:
-                content = content[: self.max_content_length_per_result] + "..."
+            limit = self.max_content_length_per_result
+            if len(content) > limit:
+              if limit >= 3:
+                # Reserve space for the ellipsis so the final length <= limit.
+                content = content[: limit - 3] + "..."
+              else:
+                # Too small to append "...": truncate without an ellipsis.
+                content = content[:limit]
             results.append(
                 {
                     "title": str(item.get("title") or ""),

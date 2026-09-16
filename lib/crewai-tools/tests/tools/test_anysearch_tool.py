@@ -170,11 +170,42 @@ def test_content_is_truncated(mock_post):
     body["data"]["results"][0]["content"] = "x" * 5000
     mock_post.return_value = _mock_response(body)
 
-    output = AnySearchTool(max_content_length_per_result=100).run(query="crewai")
+    limit = 100
+    output = AnySearchTool(max_content_length_per_result=limit).run(query="crewai")
 
     content = json.loads(output)["results"][0]["content"]
     assert content.endswith("...")
-    assert len(content) == 103
+    # The final length must never exceed the configured limit.
+    assert len(content) == limit
+
+
+@pytest.mark.parametrize("limit", [1, 2])
+@patch("requests.post")
+def test_content_truncation_with_tiny_limit_omits_ellipsis(mock_post, limit):
+    """Verifies limits smaller than the ellipsis truncate without appending '...'."""
+    body = json.loads(json.dumps(SUCCESS_BODY))
+    body["data"]["results"][0]["content"] = "x" * 100
+    mock_post.return_value = _mock_response(body)
+
+    output = AnySearchTool(max_content_length_per_result=limit).run(query="crewai")
+
+    content = json.loads(output)["results"][0]["content"]
+    assert len(content) == limit
+    assert not content.endswith("...")
+
+
+@patch("requests.post")
+def test_content_truncation_at_ellipsis_boundary(mock_post):
+    """Verifies a limit of exactly 3 yields '...' with length 3."""
+    body = json.loads(json.dumps(SUCCESS_BODY))
+    body["data"]["results"][0]["content"] = "x" * 100
+    mock_post.return_value = _mock_response(body)
+
+    output = AnySearchTool(max_content_length_per_result=3).run(query="crewai")
+
+    content = json.loads(output)["results"][0]["content"]
+    assert content == "..."
+    assert len(content) == 3
 
 
 @patch("requests.post")
