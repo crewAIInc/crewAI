@@ -234,6 +234,7 @@ class TestResponsesStreamingToolCalls:
 
     @pytest.fixture
     def mock_responses_stream(self):
+        """Create mock response payloads and sync/async streaming event generators."""
         fc_item = SimpleNamespace(
             type="function_call",
             id="fc_1",
@@ -271,6 +272,7 @@ class TestResponsesStreamingToolCalls:
     def test_sync_streaming_returns_tool_calls_when_available_functions_none(
         self, mock_responses_stream
     ):
+        """Verify sync Responses streaming returns tool calls list when available_functions is None."""
         _, sync_events, _ = mock_responses_stream
 
         class FakeResponses:
@@ -298,6 +300,7 @@ class TestResponsesStreamingToolCalls:
     def test_sync_streaming_executes_function_when_available_functions_provided(
         self, mock_responses_stream
     ):
+        """Verify sync Responses streaming executes the tool when available_functions is provided."""
         _, sync_events, _ = mock_responses_stream
 
         class FakeResponses:
@@ -328,6 +331,7 @@ class TestResponsesStreamingToolCalls:
     def test_async_streaming_returns_tool_calls_when_available_functions_none(
         self, mock_responses_stream
     ):
+        """Verify async Responses streaming returns tool calls list when available_functions is None."""
         _, _, async_events = mock_responses_stream
 
         class FakeAsyncResponses:
@@ -358,6 +362,7 @@ class TestResponsesStreamingToolCalls:
     def test_async_streaming_executes_function_when_available_functions_provided(
         self, mock_responses_stream
     ):
+        """Verify async Responses streaming executes the tool when available_functions is provided."""
         _, _, async_events = mock_responses_stream
 
         class FakeAsyncResponses:
