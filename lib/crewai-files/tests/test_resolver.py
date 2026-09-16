@@ -1,7 +1,5 @@
 """Tests for FileResolver."""
 
-import pytest
-
 from crewai_files import FileBytes, ImageFile
 from crewai_files.cache.upload_cache import UploadCache
 from crewai_files.core.resolved import InlineBase64, InlineBytes
@@ -11,6 +9,7 @@ from crewai_files.resolution.resolver import (
     FileResolverConfig,
     create_resolver,
 )
+import pytest
 
 
 # Minimal valid PNG
@@ -196,12 +195,16 @@ class _OneBadFileResolver(FileResolver):
 class TestBatchUploaderErrors:
     """A provider setup failure must surface, an unrelated per-file error must not."""
 
-    def test_get_uploader_wraps_lookup_failure_as_configuration_error(self, monkeypatch):
+    def test_get_uploader_wraps_lookup_failure_as_configuration_error(
+        self, monkeypatch
+    ):
         """Bedrock with no bucket configured raises UploaderConfigurationError, not a raw ValueError."""
         monkeypatch.delenv("CREWAI_BEDROCK_S3_BUCKET", raising=False)
         resolver = FileResolver()
 
-        with pytest.raises(UploaderConfigurationError, match="CREWAI_BEDROCK_S3_BUCKET"):
+        with pytest.raises(
+            UploaderConfigurationError, match="CREWAI_BEDROCK_S3_BUCKET"
+        ):
             resolver._get_uploader("bedrock")
 
     @pytest.mark.asyncio
@@ -209,7 +212,9 @@ class TestBatchUploaderErrors:
         """A provider whose uploader cannot be built aborts the whole batch, since it affects every file."""
         resolver = _NoUploaderResolver(config=FileResolverConfig(prefer_upload=True))
         files = {
-            "image1": ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test1.png"))
+            "image1": ImageFile(
+                source=FileBytes(data=MINIMAL_PNG, filename="test1.png")
+            )
         }
 
         with pytest.raises(UploaderConfigurationError):
