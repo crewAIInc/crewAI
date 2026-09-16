@@ -78,6 +78,7 @@ from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
+from crewai.llm_overlay import overlay_model_for
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -399,7 +400,7 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
         """Initialize LLM, executor, code tools, and skills after model creation."""
-        self.llm = create_llm(self.llm)
+        self.llm = create_llm(overlay_model_for(self.role) or self.llm)
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
