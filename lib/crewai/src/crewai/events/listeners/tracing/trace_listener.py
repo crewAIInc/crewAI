@@ -1013,12 +1013,14 @@ class TraceCollectionListener(BaseEventListener):
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
+                "task_prompt": event.task_prompt,
             }
         if event_type == "agent_execution_completed":
             return {
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
+                "output": event.output,
             }
         if event_type == "llm_call_started":
             event_data = safe_serialize_to_dict(event)
