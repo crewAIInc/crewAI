@@ -22,18 +22,14 @@ from typing import TYPE_CHECKING, Any
 
 from crewai_core.telemetry import (
     CommonAttributesSpanProcessor,
+    SafeOTLPSpanExporter,
     Telemetry as CoreTelemetry,
     common_span_attributes,
-)
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,
+    flush_and_shutdown,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    BatchSpanProcessor,
-    SpanExportResult,
-)
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Span
 from typing_extensions import Self
 
@@ -68,29 +64,6 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task
-
-
-class SafeOTLPSpanExporter(OTLPSpanExporter):
-    """Safe wrapper for OTLP span exporter that handles exceptions gracefully.
-
-    This exporter prevents telemetry failures from breaking the application
-    by catching and logging exceptions during span export.
-    """
-
-    def export(self, spans: Any) -> SpanExportResult:
-        """Export spans to the telemetry backend safely.
-
-        Args:
-            spans: Collection of spans to export.
-
-        Returns:
-            Export result status, FAILURE if an exception occurs.
-        """
-        try:
-            return super().export(spans)
-        except Exception as e:
-            logger.error(e)
-            return SpanExportResult.FAILURE
 
 
 class Telemetry:
@@ -141,14 +114,11 @@ class Telemetry:
                 CommonAttributesSpanProcessor(common_span_attributes())
             )
 
-            processor = BatchSpanProcessor(
-                SafeOTLPSpanExporter(
-                    endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
-                    timeout=30,
-                )
+            self._exporter = SafeOTLPSpanExporter(
+                endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
+                timeout=30,
             )
-
-            self.provider.add_span_processor(processor)
+            self.provider.add_span_processor(BatchSpanProcessor(self._exporter))
             self._register_shutdown_handlers()
             self.ready = True
         except Exception as e:
@@ -250,14 +220,14 @@ class Telemetry:
     def _shutdown(self) -> None:
         """Flush and shutdown the telemetry provider on process exit.
 
-        Uses a short timeout to avoid blocking process shutdown.
+        Waits at most ``FINAL_FLUSH_SECONDS`` so an unreachable collector
+        cannot hold the process.
         """
         if not self.ready:
             return
 
         try:
-            self.provider.force_flush(timeout_millis=5000)
-            self.provider.shutdown()
+            flush_and_shutdown(self.provider, self._exporter)
             self.ready = False
         except Exception as e:
             logger.debug(f"Telemetry shutdown failed: {e}")
