@@ -245,6 +245,8 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
+    # The construction-time ``llm_overlay`` read happened; see post_init_setup.
+    _overlay_read: bool = PrivateAttr(default=False)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
@@ -401,7 +403,17 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
         """Initialize LLM, executor, code tools, and skills after model creation."""
-        self.llm = create_llm(overlay_model_for(self.role) or self.llm)
+        if self._overlay_read:
+            # A re-validation of an existing instance — the event bus registers
+            # an agent in its RuntimeState the first time it emits, which runs
+            # this validator again on the same object. The overlay was read when
+            # the agent was built (and again by interpolate_inputs if its role
+            # changed); reading it once more here would replace an llm the agent
+            # already runs on, and drop state set on it such as ``stream``.
+            self.llm = create_llm(self.llm)
+        else:
+            self.llm = create_llm(overlay_model_for(self.role) or self.llm)
+            self._overlay_read = True
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
@@ -462,9 +474,10 @@ class Agent(BaseAgent):
 
         The new instance inherits the streaming flag of the one it replaces:
         ``Crew.kickoff(stream=True)`` sets ``agent.llm.stream`` before it
-        interpolates. Other things resolved from ``llm`` before kickoff do NOT
-        follow the swap — a task's string guardrail LLM, an auto-created
-        ``Memory`` LLM, the crew_creation telemetry span.
+        interpolates. Two things resolved from ``llm`` before kickoff do NOT
+        follow the swap — a task's string guardrail LLM (built with the Task)
+        and the crew_creation telemetry span; a crew ``Memory`` built at kickoff
+        does.
 
         The executor sees the new ``llm`` because it binds ``self.llm`` when a
         task runs, after kickoff has interpolated: ``execute_task`` ->

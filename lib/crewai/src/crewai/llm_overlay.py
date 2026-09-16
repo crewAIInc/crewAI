@@ -24,7 +24,15 @@ The overlay is a :class:`contextvars.ContextVar`, so it follows the calling
 context, not the process. A plain ``threading.Thread`` started inside the
 block does not see it: callers that run agents in their own threads must
 propagate the context themselves, e.g.
-``contextvars.copy_context().run(build_and_run_agents)``.
+``contextvars.copy_context().run(build_and_run_agents)``. With
+``Crew(stream=True)``, ``kickoff`` returns a stream and runs the crew — and the
+kickoff-time read — when that stream is first iterated, in a copy of the
+context taken then: iterate it inside the block.
+
+Each ``Agent`` reads the overlay once when built and once more only if a
+kickoff rewrites its role; a re-validation of an existing agent (the event bus
+registers an agent when it first emits) does not read it again, so an agent
+built outside a block keeps its model through a kickoff inside one.
 
 Example:
     >>> with llm_overlay({"Researcher": "openai/gpt-4o"}):

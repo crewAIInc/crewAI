@@ -224,3 +224,41 @@ def test_crew_input_interpolation_routes_the_templated_role() -> None:
 
     assert agent.role == "Researcher for crewAIInc/x"
     assert agent.llm.model == "gpt-4o"
+
+
+def test_re_validation_of_an_existing_agent_does_not_read_the_overlay_again() -> None:
+    """The event bus registers an agent in its RuntimeState the first time it
+    emits, which re-runs `post_init_setup` on the same object. Inside a block
+    that maps the agent's role that used to replace an llm the agent already
+    ran on — an agent built OUTSIDE the block picked the mapped model up on its
+    first standalone kickoff inside one, and lost `stream=True` with it."""
+    from crewai import RuntimeState
+
+    outside = _agent("Researcher")
+    outside.llm.stream = True
+    outside_llm = outside.llm
+    with llm_overlay(OVERLAY):
+        inside = _agent("Researcher")
+        inside_llm = inside.llm
+        state = RuntimeState(root=[outside, inside])
+
+    assert state.root[0] is outside and state.root[1] is inside
+    assert (
+        outside.llm is outside_llm
+        and outside.llm.model == "gpt-4o-mini"
+        and outside.llm.stream is True
+    )
+    assert inside.llm is inside_llm and inside.llm.model == "gpt-4o"
+
+
+def test_re_validation_keeps_the_llm_a_kickoff_time_swap_set() -> None:
+    from crewai import RuntimeState
+
+    with llm_overlay(TEMPLATE_OVERLAY):
+        agent = _agent("Researcher for {repo}")
+        agent.interpolate_inputs({"repo": "crewAIInc/x"})
+        swapped = agent.llm
+        assert swapped.model == "gpt-4o"
+        RuntimeState(root=[agent])
+
+    assert agent.llm is swapped
