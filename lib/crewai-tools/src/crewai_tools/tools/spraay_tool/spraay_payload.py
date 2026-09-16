@@ -15,7 +15,7 @@ directory (Base) -> the token contract's decimals() via public RPC. If all
 of these fail, a ValueError is raised instead of falling back to a default.
 """
 
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, Overflow
 import re
 
 import requests
@@ -181,7 +181,7 @@ def token_decimals(token: str, chain_id: int) -> int:
             are never defaulted for unknown tokens — a wrong value would
             silently mis-scale every amount by a power of ten.
     """
-    if token == NATIVE_ADDRESS or token.upper() == "ETH":
+    if token == NATIVE_ADDRESS:
         return NATIVE_DECIMALS
 
     if not _ADDRESS_RE.fullmatch(token):
@@ -235,7 +235,7 @@ def to_base_units(amount: str, decimals: int) -> str:
         raise ValueError(f"Invalid amount {amount!r}: must be a finite number.")
     try:
         scaled = value.scaleb(decimals)
-    except InvalidOperation as e:
+    except (InvalidOperation, Overflow) as e:
         raise ValueError(f"Invalid amount {amount!r}: out of range.") from e
     if scaled < 0:
         raise ValueError(f"Invalid amount {amount!r}: must not be negative.")
