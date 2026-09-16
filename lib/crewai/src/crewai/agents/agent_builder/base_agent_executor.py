@@ -30,6 +30,8 @@ class BaseAgentExecutor(BaseModel):
 
     def _save_to_memory(self, output: AgentFinish) -> None:
         """Save task result to unified memory (memory or crew._memory)."""
+        from crewai.hooks.dispatch import HookAborted
+
         if self.agent is None:
             return
         memory = getattr(self.agent, "memory", None) or (
@@ -61,5 +63,7 @@ class BaseAgentExecutor(BaseModel):
                     )
                 else:
                     memory.remember_many(extracted, agent_role=self.agent.role)
+        except HookAborted:
+            raise
         except Exception as e:
             self.agent._logger.log("error", f"Failed to save to memory: {e}")

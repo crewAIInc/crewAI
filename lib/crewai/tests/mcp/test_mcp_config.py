@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from crewai.agent.core import Agent
+from crewai.mcp.client import _MCPToolResult
 from crewai.mcp.config import MCPServerHTTP, MCPServerSSE, MCPServerStdio
 from crewai.tools.base_tool import BaseTool
 
@@ -39,6 +40,9 @@ def _make_mock_client(tool_definitions):
     client.connect = AsyncMock()
     client.disconnect = AsyncMock()
     client.call_tool = AsyncMock(return_value="test result")
+    client.call_tool_result = AsyncMock(
+        return_value=_MCPToolResult("test result", False)
+    )
     return client
 
 
@@ -227,9 +231,9 @@ def test_parallel_mcp_tool_execution_same_tool(mock_tool_definitions):
         async def _call_tool(name, args):
             call_log.append(name)
             await asyncio.sleep(0.05)
-            return f"result-{name}"
+            return _MCPToolResult(f"result-{name}", False)
 
-        client.call_tool = AsyncMock(side_effect=_call_tool)
+        client.call_tool_result = AsyncMock(side_effect=_call_tool)
         return client
 
     with patch("crewai.mcp.tool_resolver.MCPClient", side_effect=_make_client):
@@ -273,9 +277,9 @@ def test_parallel_mcp_tool_execution_different_tools(mock_tool_definitions):
         async def _call_tool(name, args):
             call_log.append(name)
             await asyncio.sleep(0.05)
-            return f"result-{name}"
+            return _MCPToolResult(f"result-{name}", False)
 
-        client.call_tool = AsyncMock(side_effect=_call_tool)
+        client.call_tool_result = AsyncMock(side_effect=_call_tool)
         return client
 
     with patch("crewai.mcp.tool_resolver.MCPClient", side_effect=_make_client):

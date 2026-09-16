@@ -1,10 +1,14 @@
 from pathlib import Path
-import shutil
 
 import click
 from crewai_core.telemetry import Telemetry
 
 from crewai_cli.git import initialize_if_git_available
+from crewai_cli.utils import (
+    copy_assistant_imports,
+    copy_assistant_instructions,
+    get_or_create_project_id,
+)
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -31,6 +35,10 @@ def create_flow(name: str, *, declarative: bool = False) -> None:
     else:
         _create_python_flow(name, class_name, folder_name, project_root)
 
+    # Minted at creation so the project has a stable identity from run one.
+    project_id = get_or_create_project_id(project_root / "pyproject.toml")
+    # After the mint, unlike flow_creation_span above, which fires before the id exists.
+    telemetry.project_created_span("flow", project_id)
     initialize_if_git_available(project_root)
 
     click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
@@ -50,9 +58,7 @@ def _create_python_flow(
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "flow"
 
-    agents_md_src = package_dir / "templates" / "AGENTS.md"
-    if agents_md_src.exists():
-        shutil.copy2(agents_md_src, project_root / "AGENTS.md")
+    copy_assistant_instructions(project_root)
 
     root_template_files = [".gitignore", "pyproject.toml", "README.md"]
     src_template_files = ["__init__.py", "main.py"]
@@ -148,6 +154,7 @@ def _create_declarative_flow(
         )
         dst_file.write_text(content, encoding="utf-8")
 
+    copy_assistant_imports(project_root)
     (project_root / ".env").write_text("OPENAI_API_KEY=YOUR_API_KEY", encoding="utf-8")
     (package_root / "__init__.py").write_text("", encoding="utf-8")
     for folder in DECLARATIVE_FLOW_FOLDERS:

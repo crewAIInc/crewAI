@@ -2,7 +2,6 @@ import base64
 from json import JSONDecodeError
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 from typing import Any
@@ -16,7 +15,9 @@ from crewai_cli.config import Settings
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_cli.utils import (
     build_env_with_tool_repository_credentials,
+    copy_assistant_instructions,
     get_project_description,
+    get_project_id,
     get_project_name,
     get_project_version,
     read_toml,
@@ -86,9 +87,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             project_root, "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
         )
 
-        agents_md_src = Path(__file__).parent.parent / "templates" / "AGENTS.md"
-        if agents_md_src.exists():
-            shutil.copy2(agents_md_src, project_root / "AGENTS.md")
+        copy_assistant_instructions(project_root)
 
         old_directory = os.getcwd()
         os.chdir(project_root)
@@ -228,8 +227,12 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
     def login(self) -> None:
         get_user_id = _require_get_user_id()
+        # Read-only: login is not one of the sanctioned minting commands, and
+        # `crewai tools create` calls it from inside a freshly scaffolded
+        # directory before the tool project is persisted.
         login_response = self.plus_api_client.login_to_tool_repository(
-            user_identifier=get_user_id()
+            user_identifier=get_user_id(),
+            project_id=get_project_id(),
         )
 
         if login_response.status_code != 200:

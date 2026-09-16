@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta, timezone
 import os
 from threading import Thread
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
+from uuid import uuid4
 
-import pytest
 from crewai import Agent, Crew, Task
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
@@ -16,11 +18,94 @@ from crewai.events.listeners.tracing.trace_listener import (
 )
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.flow.flow import Flow, start
-from tests.utils import wait_for_event_handlers
+from crewai.llms.base_llm import BaseLLM
+from crewai.telemetry.telemetry import Telemetry
+from crewai.telemetry.tracing.ephemeral import trace_consent
+from crewai.telemetry.tracing.grants import (
+    GrantSpanExporter,
+    TraceGrant,
+    TraceGrantClient,
+)
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+import pytest
+
+
+class _TraceTestLLM(BaseLLM):
+    def __init__(self):
+        super().__init__(model="local-test")
+
+    def call(self, messages, **kwargs):
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.llm_events import (
+            LLMCallCompletedEvent,
+            LLMCallStartedEvent,
+            LLMCallType,
+        )
+
+        call_id = str(uuid4())
+        crewai_event_bus.emit(
+            self, LLMCallStartedEvent(messages=messages, call_id=call_id)
+        )
+        response = "Final Answer: hello world"
+        crewai_event_bus.emit(
+            self,
+            LLMCallCompletedEvent(
+                response=response,
+                call_id=call_id,
+                call_type=LLMCallType.LLM_CALL,
+            ),
+        )
+        return response
+
+    def supports_function_calling(self):
+        return False
+
+    def supports_stop_words(self):
+        return False
+
+
+def _traced_crew():
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=_TraceTestLLM(),
+    )
+    task = Task(
+        description="Say hello to the world", expected_output="hello world", agent=agent
+    )
+    return Crew(agents=[agent], tasks=[task])
 
 
 class TestTraceListenerSetup:
     """Test TraceListener is properly setup and collecting events"""
+
+    @pytest.fixture
+    def trace_transport(self, monkeypatch):
+        """Use synthetic grants and an in-memory collector for kickoff tests."""
+        transport = SimpleNamespace(grants=[], exporter=InMemorySpanExporter())
+        monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
+        monkeypatch.setattr(
+            "crewai.telemetry.tracing.grants.tracing_credential",
+            lambda: "synthetic-login",
+        )
+
+        def grant(client, execution_uuid):
+            transport.grants.append((client._tier, execution_uuid))
+            return TraceGrant(
+                token="synthetic-grant",
+                collector_url="https://collector.invalid/v1/traces",
+                execution_uuid=execution_uuid,
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+            )
+
+        monkeypatch.setattr(TraceGrantClient, "create", grant)
+        monkeypatch.setattr(
+            GrantSpanExporter,
+            "_exporter",
+            staticmethod(lambda grant: transport.exporter),
+        )
+        return transport
 
     @pytest.fixture(autouse=True)
     def mock_user_data_file_io(self):
@@ -144,42 +229,21 @@ class TestTraceListenerSetup:
                 "mark_trace_batch_as_failed": mock_mark_failed,
             }
 
-    @pytest.mark.vcr()
-    def test_trace_listener_collects_crew_events(self):
-        """Test that trace listener properly collects events from crew execution"""
-
-        with patch.dict(
-            os.environ,
-            {
-                "CREWAI_TRACING_ENABLED": "true",
-                "CREWAI_DISABLE_TELEMETRY": "false",
-                "CREWAI_DISABLE_TRACKING": "false",
-                "OTEL_SDK_DISABLED": "false",
-            },
-        ):
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello to the world",
-                expected_output="hello world",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=True)
-
-            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
-            trace_listener = TraceCollectionListener()
-
-            crew.kickoff()
-
-            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
-
-            assert initialized, "Batch should have been initialized"
-            assert trace_listener.batch_manager.is_batch_initialized()
-            assert trace_listener.batch_manager.current_batch is not None
+    def test_trace_listener_collects_crew_events(self, trace_transport):
+        """Crew kickoff exports its event hierarchy through the session transport."""
+        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+            crew = _traced_crew()
+            listener = TraceCollectionListener()
+            result = crew.kickoff()
+        assert "hello world" in result.raw
+        spans = trace_transport.exporter.get_finished_spans()
+        crew_span = next(span for span in spans if span.name == "execute crew")
+        task_span = next(span for span in spans if span.name == "execute task")
+        assert task_span.parent == crew_span.context
+        assert {span.attributes["crewai.execution_uuid"] for span in spans} == {
+            trace_transport.grants[0][1]
+        }
+        assert listener.batch_manager.current_batch is None
 
     @pytest.mark.vcr()
     def test_batch_manager_finalizes_batch_clears_buffer(self):
@@ -247,63 +311,37 @@ class TestTraceListenerSetup:
 
                 assert finalize_mock.call_count >= 1
 
-    @pytest.mark.vcr()
     def test_events_collection_batch_manager(self, mock_plus_api_calls):
-        """Test that trace listener properly collects events from crew execution"""
+        """Legacy listeners still serialize directly emitted lifecycle events."""
+        from crewai.events import CrewKickoffCompletedEvent, CrewKickoffStartedEvent
+        from crewai.events.event_bus import crewai_event_bus
 
-        with patch.dict(
-            os.environ,
-            {
-                "CREWAI_TRACING_ENABLED": "true",
-                "CREWAI_DISABLE_TELEMETRY": "false",
-                "CREWAI_DISABLE_TRACKING": "false",
-                "OTEL_SDK_DISABLED": "false",
-            },
-        ):
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello to the world",
-                expected_output="hello world",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=True)
-
-            from crewai.events.event_bus import crewai_event_bus
-
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
-
+        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+            crew = _traced_crew()
+            listener = TraceCollectionListener()
+            listener.setup_listeners(crewai_event_bus)
             with patch.object(
-                trace_listener.batch_manager,
+                listener.batch_manager,
                 "add_event",
-                wraps=trace_listener.batch_manager.add_event,
-            ) as add_event_mock:
-                crew.kickoff()
-                wait_for_event_handlers()
-
-                assert add_event_mock.call_count >= 2
-
-                completion_events = [
-                    call.args[0]
-                    for call in add_event_mock.call_args_list
-                    if call.args[0].type == "crew_kickoff_completed"
-                ]
-                assert len(completion_events) >= 1
-
-                completion_event = completion_events[0]
-                assert "crew_name" in completion_event.event_data
-                assert completion_event.event_data["crew_name"] == "crew"
-
-                for call in add_event_mock.call_args_list:
-                    event = call.args[0]
-                    assert isinstance(event, TraceEvent)
-                    assert hasattr(event, "event_data")
-                    assert hasattr(event, "type")
+                wraps=listener.batch_manager.add_event,
+            ) as add_event:
+                crewai_event_bus.emit(
+                    crew, CrewKickoffStartedEvent(crew_name="crew", inputs={})
+                )
+                assert crewai_event_bus.flush()
+                crewai_event_bus.emit(
+                    crew,
+                    CrewKickoffCompletedEvent(crew_name="crew", output="hello world"),
+                )
+                assert crewai_event_bus.flush()
+            events = [call.args[0] for call in add_event.call_args_list]
+            completed = [
+                event for event in events if event.type == "crew_kickoff_completed"
+            ]
+            assert len(events) >= 2
+            assert len(completed) == 1
+            assert completed[0].event_data["crew_name"] == "crew"
+            assert all(isinstance(event, TraceEvent) for event in events)
 
     @pytest.mark.vcr()
     def test_trace_listener_disabled_when_env_false(self):
@@ -400,85 +438,34 @@ class TestTraceListenerSetup:
                 FlowExample()
                 assert mock_listener_setup.call_count >= 1
 
-    @pytest.mark.vcr()
-    def test_trace_listener_ephemeral_batch(self):
-        """Test that trace listener properly handles ephemeral batches"""
-        with (
-            patch.dict(
-                os.environ,
-                {
-                    "CREWAI_TRACING_ENABLED": "true",
-                    "CREWAI_DISABLE_TELEMETRY": "false",
-                    "CREWAI_DISABLE_TRACKING": "false",
-                    "OTEL_SDK_DISABLED": "false",
-                },
-            ),
-            patch(
-                "crewai.events.listeners.tracing.trace_listener.TraceCollectionListener._check_authenticated",
-                return_value=False,
-            ),
-        ):
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello to the world",
-                expected_output="hello world",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], tracing=True)
+    def test_trace_listener_ephemeral_batch(self, trace_transport, monkeypatch):
+        """Unauthenticated kickoff uploads buffered spans only after consent."""
+        monkeypatch.setattr(
+            "crewai.telemetry.tracing.grants.tracing_credential", lambda: None
+        )
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
 
-            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
-            trace_listener = TraceCollectionListener()
+        def consent():
+            assert trace_transport.grants == []
+            assert trace_transport.exporter.get_finished_spans() == ()
+            return True
 
-            crew.kickoff()
+        with trace_consent(consent):
+            _traced_crew().kickoff()
+        assert [tier for tier, _ in trace_transport.grants] == ["ephemeral"]
+        assert trace_transport.exporter.get_finished_spans()
 
-            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
-            assert initialized, (
-                "Batch should have been initialized for unauthenticated user"
-            )
-
-            wait_for_event_handlers()
-
-    @pytest.mark.vcr()
-    def test_trace_listener_with_authenticated_user(self):
-        """Test that trace listener properly handles authenticated batches"""
-        with patch.dict(
-            os.environ,
-            {
-                "CREWAI_TRACING_ENABLED": "true",
-                "CREWAI_DISABLE_TELEMETRY": "false",
-                "CREWAI_DISABLE_TRACKING": "false",
-                "OTEL_SDK_DISABLED": "false",
-            },
-        ):
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello to the world",
-                expected_output="hello world",
-                agent=agent,
-            )
-
-            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
-            trace_listener = TraceCollectionListener()
-
-            crew = Crew(agents=[agent], tasks=[task], tracing=True)
-            crew.kickoff()
-
-            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
-            assert initialized, (
-                "Batch should have been initialized for authenticated user"
-            )
-
-            wait_for_event_handlers()
+    def test_trace_listener_with_authenticated_user(self, trace_transport, monkeypatch):
+        """Authenticated kickoff uses a grant without requesting upload consent."""
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+        consent = Mock(
+            side_effect=AssertionError("Authenticated tracing prompted for consent")
+        )
+        with trace_consent(consent):
+            _traced_crew().kickoff()
+        assert [tier for tier, _ in trace_transport.grants] == ["authenticated"]
+        assert trace_transport.exporter.get_finished_spans()
+        consent.assert_not_called()
 
     # Helper method to ensure cleanup
     def teardown_method(self):
@@ -510,270 +497,78 @@ class TestTraceListenerSetup:
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
-    @pytest.mark.vcr()
-    def test_first_time_user_trace_collection_with_timeout(self, mock_plus_api_calls):
-        """Test first-time user trace collection logic with timeout behavior"""
+    def test_first_time_user_trace_collection_with_timeout(
+        self, trace_transport, monkeypatch
+    ):
+        """No first-run consent means no grant or exported execution spans."""
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+        monkeypatch.setattr(
+            "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+            lambda: True,
+        )
+        persisted = Mock()
+        monkeypatch.setattr(
+            "crewai.telemetry.tracing.ephemeral.update_user_data", persisted
+        )
+        consent = Mock(return_value=False)
+        with trace_consent(consent):
+            assert _traced_crew().kickoff() is not None
+        consent.assert_called_once()
+        assert trace_transport.grants == []
+        assert trace_transport.exporter.get_finished_spans() == ()
+        persisted.assert_called_once_with(
+            {"first_execution_done": True, "trace_consent": False}
+        )
 
-        with (
-            patch.dict(
-                os.environ,
-                {
-                    "CREWAI_TRACING_ENABLED": "false",
-                    "CREWAI_DISABLE_TELEMETRY": "false",
-                    "CREWAI_DISABLE_TRACKING": "false",
-                    "OTEL_SDK_DISABLED": "false",
-                },
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils._is_test_environment",
-                return_value=False,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
-                return_value=True,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils.is_first_execution",
-                return_value=True,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.first_time_trace_handler.prompt_user_for_trace_viewing",
-                return_value=False,
-            ) as mock_prompt,
-            patch(
-                "crewai.events.listeners.tracing.first_time_trace_handler.mark_first_execution_completed"
-            ) as mock_mark_completed,
-        ):
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello to the world",
-                expected_output="hello world",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=True)
+    def test_first_time_user_trace_collection_user_accepts(
+        self, trace_transport, monkeypatch
+    ):
+        """First-run approval exports the collected trace and remembers consent."""
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+        monkeypatch.setattr(
+            "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+            lambda: True,
+        )
+        persisted = Mock()
+        monkeypatch.setattr(
+            "crewai.telemetry.tracing.ephemeral.update_user_data", persisted
+        )
+        consent = Mock(return_value=True)
+        with trace_consent(consent):
+            _traced_crew().kickoff()
+        consent.assert_called_once()
+        assert [tier for tier, _ in trace_transport.grants] == ["ephemeral"]
+        assert trace_transport.exporter.get_finished_spans()
+        persisted.assert_called_once_with(
+            {"first_execution_done": True, "trace_consent": True}
+        )
 
-            from crewai.events.event_bus import crewai_event_bus
+    def test_first_time_user_trace_consolidation_logic(
+        self, trace_transport, monkeypatch
+    ):
+        """First-run collection uses one local session even with saved credentials."""
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+        monkeypatch.setattr(
+            "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+            lambda: True,
+        )
+        monkeypatch.setattr(
+            "crewai.telemetry.tracing.ephemeral.update_user_data", Mock()
+        )
+        listener = TraceCollectionListener()
 
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
+        def consent():
+            assert trace_transport.grants == []
+            assert listener.batch_manager.current_batch is None
+            return True
 
-            trace_listener.first_time_handler = FirstTimeTraceHandler()
-            if trace_listener.first_time_handler.initialize_for_first_time_user():
-                trace_listener.first_time_handler.set_batch_manager(trace_listener.batch_manager)
-
-            assert trace_listener.first_time_handler.is_first_time is True
-            assert trace_listener.first_time_handler.collected_events is False
-
-            trace_listener.batch_manager.batch_owner_type = "crew"
-
-            result = crew.kickoff()
-            wait_for_event_handlers()
-            assert result is not None
-
-            assert trace_listener.first_time_handler.collected_events is True, (
-                "Events should have been collected"
-            )
-
-            mock_prompt.assert_called_once()
-
-            mock_mark_completed.assert_called_once()
-
-    @pytest.mark.vcr()
-    def test_first_time_user_trace_collection_user_accepts(self, mock_plus_api_calls):
-        """Test first-time user trace collection when user accepts viewing traces"""
-
-        with (
-            patch.dict(
-                os.environ,
-                {
-                    "CREWAI_TRACING_ENABLED": "false",
-                    "CREWAI_DISABLE_TELEMETRY": "false",
-                    "CREWAI_DISABLE_TRACKING": "false",
-                    "OTEL_SDK_DISABLED": "false",
-                },
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils._is_test_environment",
-                return_value=False,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
-                return_value=True,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils.is_first_execution",
-                return_value=True,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.first_time_trace_handler.prompt_user_for_trace_viewing",
-                return_value=True,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.first_time_trace_handler.mark_first_execution_completed"
-            ) as mock_mark_completed,
-        ):
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello to the world",
-                expected_output="hello world",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=True)
-
-            from crewai.events.event_bus import crewai_event_bus
-
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
-
-            # Re-initialize first-time handler after patches are applied to ensure clean state
-            trace_listener.first_time_handler = FirstTimeTraceHandler()
-            if trace_listener.first_time_handler.initialize_for_first_time_user():
-                trace_listener.first_time_handler.set_batch_manager(trace_listener.batch_manager)
-
-            trace_listener.batch_manager.ephemeral_trace_url = (
-                "https://crewai.com/trace/mock-id"
-            )
-
-            assert trace_listener.first_time_handler.is_first_time is True
-
-            trace_listener.first_time_handler.collected_events = True
-
-            mock_batch_response = MagicMock()
-            mock_batch_response.status_code = 201
-            mock_batch_response.json.return_value = {
-                "trace_id": "mock-trace-id",
-                "ephemeral_trace_id": "mock-ephemeral-trace-id",
-                "access_code": "TRACE-mock",
-            }
-            mock_events_response = MagicMock()
-            mock_events_response.status_code = 200
-
-            with (
-                patch.object(
-                    trace_listener.first_time_handler,
-                    "_initialize_backend_and_send_events",
-                    wraps=trace_listener.first_time_handler._initialize_backend_and_send_events,
-                ) as mock_init_backend,
-                patch.object(
-                    trace_listener.first_time_handler, "_display_ephemeral_trace_link"
-                ) as mock_display_link,
-                patch.object(
-                    trace_listener.batch_manager.plus_api,
-                    "initialize_trace_batch",
-                    return_value=mock_batch_response,
-                ),
-                patch.object(
-                    trace_listener.batch_manager.plus_api,
-                    "initialize_ephemeral_trace_batch",
-                    return_value=mock_batch_response,
-                ),
-                patch.object(
-                    trace_listener.batch_manager.plus_api,
-                    "send_trace_events",
-                    return_value=mock_events_response,
-                ),
-                patch.object(
-                    trace_listener.batch_manager.plus_api,
-                    "send_ephemeral_trace_events",
-                    return_value=mock_events_response,
-                ),
-                patch.object(
-                    trace_listener.batch_manager.plus_api,
-                    "finalize_trace_batch",
-                    return_value=mock_events_response,
-                ),
-                patch.object(
-                    trace_listener.batch_manager.plus_api,
-                    "finalize_ephemeral_trace_batch",
-                    return_value=mock_events_response,
-                ),
-                patch.object(
-                    trace_listener.batch_manager,
-                    "_cleanup_batch_data",
-                ),
-            ):
-                crew.kickoff()
-                wait_for_event_handlers()
-
-                mock_init_backend.assert_called_once()
-
-                mock_display_link.assert_called_once()
-
-            mock_mark_completed.assert_called_once()
-
-    @pytest.mark.vcr()
-    def test_first_time_user_trace_consolidation_logic(self, mock_plus_api_calls):
-        """Test the consolidation logic for first-time users vs regular tracing"""
-        with (
-            patch.dict(
-                os.environ,
-                {
-                    "CREWAI_TRACING_ENABLED": "",
-                    "CREWAI_DISABLE_TELEMETRY": "false",
-                    "CREWAI_DISABLE_TRACKING": "false",
-                    "OTEL_SDK_DISABLED": "false",
-                },
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils._is_test_environment",
-                return_value=False,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
-                return_value=True,
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils.is_first_execution",
-                return_value=True,
-            ),
-        ):
-            from crewai.events.event_bus import crewai_event_bus
-
-            with crewai_event_bus._rwlock.w_locked():
-                crewai_event_bus._sync_handlers = {}
-                crewai_event_bus._async_handlers = {}
-
-            trace_listener = TraceCollectionListener()
-
-            # Re-initialize first-time handler after patches are applied to ensure clean state
-            # This is necessary because the singleton may have been created before patches were active
-            trace_listener.first_time_handler = FirstTimeTraceHandler()
-            if trace_listener.first_time_handler.initialize_for_first_time_user():
-                trace_listener.first_time_handler.set_batch_manager(trace_listener.batch_manager)
-
-            trace_listener.setup_listeners(crewai_event_bus)
-
-            assert trace_listener.first_time_handler.is_first_time is True
-
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Test task", expected_output="test output", agent=agent
-            )
-            crew = Crew(agents=[agent], tasks=[task])
-
-            result = crew.kickoff()
-
-            wait_for_event_handlers()
-
-            assert trace_listener.batch_manager.is_batch_initialized(), (
-                "Batch should have been initialized for first-time user"
-            )
-            assert result is not None
+        with trace_consent(consent):
+            _traced_crew().kickoff()
+        assert [tier for tier, _ in trace_transport.grants] == ["ephemeral"]
+        spans = trace_transport.exporter.get_finished_spans()
+        assert [span.name for span in spans].count("execute crew") == 1
+        assert len({span.context.trace_id for span in spans}) == 1
+        assert listener.batch_manager.current_batch is None
 
     def test_first_time_handler_timeout_behavior(self):
         """Test the timeout behavior of the first-time trace prompt"""
@@ -1781,3 +1576,175 @@ class TestTraceBatchManagerDuplicateInitMerge:
         assert meta.get("execution_type") == "flow"
         assert meta.get("flow_name") == "ResearchFlow"
         assert meta.get("crew_name") == "Unknown Crew"
+
+
+class TestTraceBatchSentTelemetry:
+    """A finalized trace batch reports that it reached AMP.
+
+    The signal is what links an OSS project to its AMP traces, so it must fire
+    on exactly the runs that landed and on no others.
+    """
+
+    def _make_manager(self, *, ephemeral: bool) -> TraceBatchManager:
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.trace_batch_id = "batch-id"
+        bm.is_current_batch_ephemeral = ephemeral
+        bm._telemetry = MagicMock()
+        return bm
+
+    def _finalize(self, bm: TraceBatchManager, *, status_code: int = 200) -> bool:
+        endpoint = (
+            "finalize_ephemeral_trace_batch"
+            if bm.is_current_batch_ephemeral
+            else "finalize_trace_batch"
+        )
+        with (
+            patch.object(
+                bm.plus_api,
+                endpoint,
+                return_value=MagicMock(
+                    status_code=status_code,
+                    json=MagicMock(return_value={"access_code": "TRACE-test"}),
+                    text="error body",
+                ),
+            ),
+            patch.object(bm, "_mark_batch_as_failed"),
+            patch("crewai.events.listeners.tracing.trace_batch_manager.Console.print"),
+        ):
+            return bm._finalize_backend_batch()
+
+    def _features(self, bm: TraceBatchManager) -> list[str]:
+        return [c.args[0] for c in bm._telemetry.feature_usage_span.call_args_list]
+
+    def test_ephemeral_batch_reports_ephemeral_sent(self) -> None:
+        bm = self._make_manager(ephemeral=True)
+        assert self._finalize(bm) is True
+        assert self._features(bm) == ["tracing:ephemeral_sent"]
+
+    def test_authenticated_batch_reports_authenticated_sent(self) -> None:
+        bm = self._make_manager(ephemeral=False)
+        assert self._finalize(bm) is True
+        assert self._features(bm) == ["tracing:authenticated_sent"]
+
+    def test_rejected_batch_reports_nothing(self) -> None:
+        """A 500 means the batch never landed, so it must not be counted."""
+        bm = self._make_manager(ephemeral=True)
+        assert self._finalize(bm, status_code=500) is False
+        assert self._features(bm) == []
+
+    def test_batch_without_id_reports_nothing(self) -> None:
+        bm = self._make_manager(ephemeral=True)
+        bm.trace_batch_id = None
+        assert self._finalize(bm) is True
+        assert self._features(bm) == []
+
+    def test_already_finalized_batch_reports_nothing(self) -> None:
+        """Finalization is idempotent; the signal must not double-count."""
+        bm = self._make_manager(ephemeral=True)
+        bm._batch_finalized = True
+        assert self._finalize(bm) is True
+        assert self._features(bm) == []
+
+    def test_finalization_raising_reports_nothing(self) -> None:
+        bm = self._make_manager(ephemeral=True)
+        with (
+            patch.object(
+                bm.plus_api,
+                "finalize_ephemeral_trace_batch",
+                side_effect=RuntimeError("network down"),
+            ),
+            patch.object(bm, "_mark_batch_as_failed"),
+        ):
+            assert bm._finalize_backend_batch() is False
+        assert self._features(bm) == []
+
+    def test_batch_that_fell_back_to_ephemeral_reports_ephemeral(self) -> None:
+        """A 401 at init flips the batch to ephemeral; finalize must agree."""
+        bm = self._make_manager(ephemeral=False)
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew"},
+        )
+        with (
+            patch.object(
+                bm.plus_api,
+                "initialize_trace_batch",
+                return_value=MagicMock(status_code=401),
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=MagicMock(
+                    status_code=200,
+                    json=MagicMock(return_value={"ephemeral_trace_id": "eph-id"}),
+                ),
+            ),
+        ):
+            bm._initialize_backend_batch({}, {}, skip_context_check=True)
+
+        assert bm.is_current_batch_ephemeral is True
+        assert self._finalize(bm) is True
+        assert self._features(bm) == ["tracing:ephemeral_sent"]
+
+    def test_first_time_handler_path_reports_ephemeral_sent(self) -> None:
+        """The first-time flow finalizes through its own caller, not finalize_batch."""
+        bm = self._make_manager(ephemeral=True)
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.backend_initialized = True
+
+        handler = FirstTimeTraceHandler()
+        handler.is_first_time = True
+        handler.collected_events = True
+        handler.batch_manager = bm
+
+        with (
+            patch.object(bm, "_send_events_to_backend", return_value=200),
+            patch.object(
+                bm.plus_api,
+                "finalize_ephemeral_trace_batch",
+                return_value=MagicMock(
+                    status_code=200,
+                    json=MagicMock(return_value={"access_code": "TRACE-test"}),
+                ),
+            ),
+            patch("crewai.events.listeners.tracing.trace_batch_manager.Console.print"),
+            patch.object(handler, "_show_local_trace_message"),
+        ):
+            handler._initialize_backend_and_send_events()
+
+        assert self._features(bm) == ["tracing:ephemeral_sent"]
+
+    def test_broken_telemetry_does_not_break_finalization(self) -> None:
+        """Telemetry is best-effort: a failing exporter must not fail the batch."""
+        bm = self._make_manager(ephemeral=True)
+        bm._telemetry = Telemetry()
+        broken_provider = MagicMock()
+        broken_provider.get_tracer.side_effect = RuntimeError("exporter down")
+
+        with (
+            # `provider` exists only when telemetry initialized, so create it here
+            # to reach the failure this test is about.
+            patch.object(bm._telemetry, "provider", broken_provider, create=True),
+            patch.object(bm._telemetry, "_should_execute_telemetry", return_value=True),
+        ):
+            assert self._finalize(bm) is True
+
+        # Proves the assertion above is not vacuous: the span was really attempted.
+        broken_provider.get_tracer.assert_called_once()
+
+    def test_disabled_telemetry_does_not_break_finalization(self) -> None:
+        """Opted-out users have no provider at all; finalize must still succeed."""
+        bm = self._make_manager(ephemeral=True)
+        bm._telemetry = Telemetry()
+
+        with patch.object(
+            bm._telemetry, "_should_execute_telemetry", return_value=False
+        ):
+            assert self._finalize(bm) is True

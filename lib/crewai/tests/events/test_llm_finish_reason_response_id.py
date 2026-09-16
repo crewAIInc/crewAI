@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallStartedEvent,
@@ -31,7 +31,7 @@ class _StubLLM(BaseLLM):
 
 @pytest.fixture
 def mock_emit():
-    with patch.object(CrewAIEventsBus, "emit") as mock:
+    with patch.object(crewai_event_bus, "emit") as mock:
         yield mock
 
 

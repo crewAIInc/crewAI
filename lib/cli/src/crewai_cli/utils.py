@@ -5,11 +5,13 @@ import os
 from pathlib import Path
 import re
 import shutil
-from typing import Any
+from typing import Any, Literal
 
 import click
 from crewai_core.project import (
+    get_or_create_project_id as get_or_create_project_id,
     get_project_description as get_project_description,
+    get_project_id as get_project_id,
     get_project_name as get_project_name,
     get_project_version as get_project_version,
     parse_toml as parse_toml,
@@ -27,25 +29,51 @@ from crewai_cli.version import get_crewai_tools_dependency
 __all__ = [
     "build_env_with_all_tool_credentials",
     "build_env_with_tool_repository_credentials",
+    "copy_assistant_imports",
+    "copy_assistant_instructions",
     "copy_template",
     "enable_prompt_line_editing",
     "fetch_and_json_env_file",
+    "get_or_create_project_id",
     "get_project_description",
+    "get_project_id",
     "get_project_name",
     "get_project_version",
     "is_dmn_mode_enabled",
     "load_env_vars",
+    "normalize_package_name",
     "parse_toml",
     "read_toml",
     "render_template",
     "tree_copy",
     "tree_find_and_replace",
+    "warn_deprecated",
     "write_env_file",
 ]
 
 
+def warn_deprecated(
+    *,
+    kind: Literal["command", "flag"],
+    old: str,
+    new: str,
+) -> None:
+    """Print a yellow deprecation warning for a legacy CLI command or flag."""
+    label = "command" if kind == "command" else "flag"
+    click.secho(
+        f"Warning: The {label} '{old}' is deprecated. Use '{new}' instead.",
+        fg="yellow",
+    )
+
+
 console = Console()
 _TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
+
+
+def normalize_package_name(project_name: str) -> str:
+    """Normalize a project name into its scaffolded Python package name."""
+    folder = project_name.replace(" ", "_").replace("-", "_").lower()
+    return re.sub(r"[^a-zA-Z0-9_]", "", folder)
 
 
 def is_dmn_mode_enabled() -> bool:
@@ -67,6 +95,21 @@ def enable_prompt_line_editing() -> None:
         readline.parse_and_bind("set editing-mode emacs")
     except Exception:  # pragma: no cover - readline backends vary by platform
         return
+
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+
+def copy_assistant_imports(destination: Path) -> None:
+    """Copy the ``CLAUDE.md`` and ``GEMINI.md`` that import ``AGENTS.md``."""
+    for name in ("CLAUDE.md", "GEMINI.md"):
+        shutil.copy2(_TEMPLATES_DIR / name, destination / name)
+
+
+def copy_assistant_instructions(destination: Path) -> None:
+    """Copy ``AGENTS.md`` and the files that import it into a project."""
+    shutil.copy2(_TEMPLATES_DIR / "AGENTS.md", destination / "AGENTS.md")
+    copy_assistant_imports(destination)
 
 
 def copy_template(

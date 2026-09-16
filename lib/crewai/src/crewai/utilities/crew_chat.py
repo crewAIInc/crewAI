@@ -3,7 +3,6 @@
 import contextvars
 import json
 from pathlib import Path
-import platform
 import re
 import sys
 import threading
@@ -175,11 +174,11 @@ def create_tool_function(crew: Crew, messages: list[LLMMessage]) -> Any:
 
 def flush_input() -> None:
     """Flush any pending input from the user."""
-    if platform.system() == "Windows":
+    if sys.platform == "win32":
         import msvcrt
 
-        while msvcrt.kbhit():  # type: ignore[attr-defined]
-            msvcrt.getch()  # type: ignore[attr-defined]
+        while msvcrt.kbhit():
+            msvcrt.getch()
     else:
         import termios
 
@@ -417,6 +416,8 @@ def generate_input_description_with_ai(
     Returns:
         A concise description of the input.
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -460,6 +461,8 @@ def generate_input_description_with_ai(
     )
     try:
         response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except HookAborted:
+        raise
     except Exception as exc:
         click.secho(
             f"Warning: failed to generate input description for '{input_name}' "
@@ -480,6 +483,8 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     Returns:
         A concise description of the crew's purpose (15 words or less).
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -514,6 +519,8 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     )
     try:
         response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except HookAborted:
+        raise
     except Exception as exc:
         click.secho(
             f"Warning: failed to generate crew description ({exc}); using default.",

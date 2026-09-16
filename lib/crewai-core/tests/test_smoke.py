@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from unittest.mock import Mock
@@ -15,7 +16,6 @@ from crewai_core import (
     user_data,
     version,
 )
-from opentelemetry.sdk.trace import TracerProvider
 import pytest
 
 
@@ -176,36 +176,70 @@ def test_configured_project_definition_rejects_empty_definition(
         )
 
 
-def test_core_telemetry_skips_duplicate_tracer_provider(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("value", ["true", "TRUE", "1", "yes", "on", "  yes  "])
+def test_core_telemetry_disabled_by_conventional_yes_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
 ) -> None:
     from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is True
+
+
+@pytest.mark.parametrize("value", ["false", "0", "no", "off", ""])
+def test_core_telemetry_stays_enabled_for_conventional_no_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is False
+
+
+def test_core_telemetry_unrecognized_disable_value_warns_once(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "maybe")
+    Telemetry._warned_env_flags.clear()
+
+    with caplog.at_level(logging.WARNING, logger="crewai_core.telemetry"):
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "CREWAI_DISABLE_TELEMETRY" in warnings[0].getMessage()
+    assert "maybe" in warnings[0].getMessage()
+
+
+def test_core_telemetry_never_installs_a_global_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Telemetry must leave the process-wide TracerProvider untouched.
+
+    Installing it globally routed every OTel-instrumented library in the host
+    process - HTTP servers, Redis clients, ORMs - to CrewAI's collector.
+    """
+    from crewai_core.telemetry import Telemetry
+    import opentelemetry.trace as ot
 
     Telemetry._instance = None
     monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
     monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
     monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
 
-    monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer_provider",
-        lambda: TracerProvider(),
-    )
-
-    called = False
-
-    def fail_if_called(provider: object) -> None:
-        nonlocal called
-        called = True
-
-    monkeypatch.setattr(
-        "crewai_core.telemetry.trace.set_tracer_provider",
-        fail_if_called,
-    )
-
+    before = ot.get_tracer_provider()
     telemetry = Telemetry()
     telemetry.set_tracer()
+    after = ot.get_tracer_provider()
 
-    assert called is False
+    assert after is before
     assert telemetry.trace_set is True
 
 
@@ -223,8 +257,8 @@ def test_core_telemetry_records_feature_usage(
     span = Mock()
     tracer.start_span.return_value = span
     monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer",
-        lambda _name: tracer,
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
     )
 
     telemetry = Telemetry()
@@ -250,8 +284,8 @@ def test_core_telemetry_records_flow_creation_version(
     span = Mock()
     tracer.start_span.return_value = span
     monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer",
-        lambda _name: tracer,
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
     )
 
     telemetry = Telemetry()

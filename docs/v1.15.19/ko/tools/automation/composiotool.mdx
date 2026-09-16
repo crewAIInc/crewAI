@@ -1,0 +1,88 @@
+---
+title: Composio 도구
+description: Composio는 유연한 인증 관리가 가능한 AI 에이전트를 위한 250개 이상의 프로덕션 준비 도구를 제공합니다.
+icon: gear-code
+mode: "wide"
+---
+
+# `ComposioToolSet`
+
+## 설명
+Composio는 AI 에이전트를 250개 이상의 도구와 연결할 수 있는 통합 플랫폼입니다. 주요 기능은 다음과 같습니다:
+
+- **엔터프라이즈급 인증**: OAuth, API 키, JWT를 기본적으로 지원하며 자동 토큰 갱신 기능 제공
+- **완벽한 가시성**: 도구 사용 로그, 실행 타임스탬프 등 상세 정보 제공
+
+## 설치
+
+Composio 도구를 프로젝트에 통합하려면 아래 지침을 따르세요:
+
+```shell
+pip install composio composio-crewai
+pip install crewai
+```
+
+설치가 완료되면 Composio API 키를 `COMPOSIO_API_KEY`로 설정하세요. Composio API 키는 [여기](https://platform.composio.dev)에서 받을 수 있습니다.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 GitHub 액션을 실행하는 방법을 보여줍니다:
+
+1. CrewAI Provider와 함께 Composio 초기화
+
+```python Code
+from composio_crewai import ComposioProvider
+from composio import Composio
+from crewai import Agent, Task, Crew
+
+composio = Composio(provider=ComposioProvider())
+```
+
+2. 새 Composio 세션을 만들고 도구 가져오기
+<CodeGroup>
+```python
+session = composio.create(
+    user_id="your-user-id",
+    toolkits=["gmail", "github"] # optional, default is all toolkits
+)
+tools = session.tools()
+```
+세션 및 사용자 관리에 대한 자세한 내용은 [여기](https://docs.composio.dev/docs/configuring-sessions)를 참고하세요.
+</CodeGroup>
+
+3. 사용자 수동 인증하기
+
+Composio는 에이전트 채팅 세션 중에 사용자를 자동으로 인증합니다. 하지만 `authorize` 메서드를 호출해 사용자를 수동으로 인증할 수도 있습니다.
+```python Code
+connection_request = session.authorize("github")
+print(f"Open this URL to authenticate: {connection_request.redirect_url}")
+```
+
+4. 에이전트 정의
+
+```python Code
+crewai_agent = Agent(
+    role="GitHub Agent",
+    goal="You take action on GitHub using GitHub APIs",
+    backstory="You are AI agent that is responsible for taking actions on GitHub on behalf of users using GitHub APIs",
+    verbose=True,
+    tools=tools,
+    llm= # pass an llm
+)
+```
+
+5. 작업 실행
+
+```python Code
+task = Task(
+    description="Star a repo composiohq/composio on GitHub",
+    agent=crewai_agent,
+    expected_output="Status of the operation",
+)
+
+crew = Crew(agents=[crewai_agent], tasks=[task])
+
+crew.kickoff()
+```
+
+* 더욱 자세한 도구 목록은 [여기](https://docs.composio.dev/toolkits)에서 확인할 수 있습니다.

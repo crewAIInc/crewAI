@@ -60,3 +60,15 @@ class SkillLoadFailedEvent(SkillEvent):
 
     type: Literal["skill_load_failed"] = "skill_load_failed"
     error: str
+
+
+class SkillUsedEvent(SkillEvent):
+    """Event emitted when an agent uses a skill during task execution.
+
+    Discovery/load/activation events describe setup. This one is the runtime
+    signal: it fires when a metadata skill is selected or an always-on skill's
+    context is injected, so traces can attribute usage to an agent and task.
+    """
+
+    type: Literal["skill_used"] = "skill_used"
+    disclosure_level: int = 1

@@ -11,7 +11,7 @@ mode: "wide"
 
 ## Create a Project with the CLI
 
-Use the CrewAI CLI to scaffold a project, then `AGENTS.md` will be automatically added at the root.
+Use the CrewAI CLI to scaffold a project. `AGENTS.md` is added at the root, together with a `CLAUDE.md` and a `GEMINI.md` that import it, so Claude Code and Gemini CLI read the same guidance as every other assistant.
 
 ```bash
 # Crew
@@ -21,8 +21,12 @@ crewai create crew my_crew
 crewai create flow my_flow
 
 # Tool repository
-crewai tool create my_tool
+crewai create tool my_tool
 ```
+
+<Note>
+  `crewai tool create` is deprecated and still works with a warning. Use `crewai create tool` instead.
+</Note>
 
 ## Tool Setup: Point Assistants to AGENTS.md
 
@@ -32,23 +36,27 @@ Codex can be guided by `AGENTS.md` files placed in your repository. Use them to 
 
 ### Claude Code
 
-Claude Code stores project memory in `CLAUDE.md`. You can bootstrap it with `/init` and edit it using `/memory`. Claude Code also supports imports inside `CLAUDE.md`, so you can add a single line like `@AGENTS.md` to pull in the shared instructions without duplicating them.
+Claude Code reads `CLAUDE.md` and ignores `AGENTS.md`. Scaffolded projects ship a `CLAUDE.md` whose only instruction is the import line `@AGENTS.md`, so the shared guidance is loaded without duplicating it. Add Claude-specific notes under that line and keep shared conventions in `AGENTS.md`.
 
-You can simply use:
+For a project created before `CLAUDE.md` was scaffolded, add the import yourself:
 
 ```bash
-mv AGENTS.md CLAUDE.md
+printf '@AGENTS.md\n' > CLAUDE.md
 ```
+
+Do not rename `AGENTS.md` to `CLAUDE.md`: Codex and Cursor read `AGENTS.md`, and the rename hides it from them.
 
 ### Gemini CLI and Google Antigravity
 
-Gemini CLI and Antigravity load a project context file (default: `GEMINI.md`) from the repo root and parent directories. You can configure it to read `AGENTS.md` instead (or in addition) by setting `context.fileName` in your Gemini CLI settings. For example, set it to `AGENTS.md` only, or include both `AGENTS.md` and `GEMINI.md` if you want to keep each tool’s format.
+Gemini CLI and Antigravity load a project context file (default: `GEMINI.md`) from the repo root and parent directories. Scaffolded projects ship a `GEMINI.md` whose only instruction is the import line `@./AGENTS.md`, so the shared guidance is loaded without duplicating it. Add Gemini-specific notes under that line and keep shared conventions in `AGENTS.md`.
 
-You can simply use:
+For a project created before `GEMINI.md` was scaffolded, add the import yourself:
 
 ```bash
-mv AGENTS.md GEMINI.md
+printf '@./AGENTS.md\n' > GEMINI.md
 ```
+
+Alternatively, set `context.fileName` in your Gemini CLI settings to include `AGENTS.md` and Gemini reads it directly. Do not rename `AGENTS.md` to `GEMINI.md`: Codex and Cursor read `AGENTS.md`, and the rename hides it from them.
 
 ### Cursor
 

@@ -29,12 +29,18 @@ def test_create_flow_declarative_project_can_run(
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     assert "CrewAI Flow declaration" in agents_md
     assert "schema: crewai.flow/v1" in agents_md
-    assert 'text(root, "path", "default")' in agents_md
+    assert "do not assemble the string with CEL `+`" in agents_md
+    assert "Agent prompt template. Insert Flow values with `${...}`" in agents_md
+    assert "Runtime inputs passed to the Crew" in agents_md
     assert "call: expression" in agents_md
     assert "call: tool" not in agents_md
     assert "call: script" not in agents_md
     assert "call: each" not in agents_md
     assert "human_feedback" not in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
 
     monkeypatch.chdir(project_root)
     result = CliRunner().invoke(crewai, ["run"], env={"UV_RUN_RECURSION_DEPTH": "1"})
@@ -42,3 +48,19 @@ def test_create_flow_declarative_project_can_run(
     assert result.exit_code == 0
     assert "Running the Flow" not in result.output
     assert "AI agents" in result.output
+
+
+def test_create_flow_scaffolds_assistant_instructions(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+
+    project_root = tmp_path / "research_flow"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()

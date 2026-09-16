@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from crewai_core.project import ProjectDefinitionError, configured_project_definition
@@ -16,6 +17,13 @@ from crewai_cli.input_prompt import (
     prompt_for_inputs,
 )
 from crewai_cli.utils import build_env_with_all_tool_credentials
+
+
+if TYPE_CHECKING:
+    from crewai.flow.flow import Flow
+
+
+logger = logging.getLogger(__name__)
 
 
 def run_declarative_flow_in_project_env(
@@ -51,6 +59,10 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     JSON is layered on top as an override, missing required fields are prompted
     for interactively, and everything is validated against the schema before
     kickoff — so a bare ``crewai run`` on a configured flow just works.
+
+    A conversational declaration takes none of that: each turn's input is the
+    message typed into the chat, so ``--inputs`` is rejected and no
+    state-schema resolution runs.
     """
     # Load the project's .env before kickoff, mirroring the JSON-crew path
     # (run_crew._run_json_crew) so flow projects pick up API keys/config the
@@ -64,17 +76,257 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     provided = parse_inputs_json(inputs) or {}
 
     flow = load_declarative_flow(definition)
+
+    if _flow_is_conversational(flow):
+        _run_conversational_declarative_flow(flow, inputs is not None)
+        return
+
     resolved_inputs = _resolve_flow_inputs(flow, provided)
+
+    # The TUI is the interactive default. Headless contexts run directly on the
+    # terminal: deploy/CREWAI_DMN, piped output, CI — anything without an
+    # interactive TTY. is_interactive() already folds in the CREWAI_DMN check.
+    # Human-feedback flows also run on the terminal: their methods collect input
+    # via the flow runtime's blocking input()/Rich prompts (and async feedback
+    # returns a pending marker rather than completing), neither of which the
+    # Textual TUI can handle correctly.
+    if is_interactive() and not _flow_uses_human_feedback(flow):
+        _run_declarative_flow_tui(flow, resolved_inputs or None)
+        return
 
     try:
         result = flow.kickoff(inputs=resolved_inputs or None)
     except Exception as exc:
         click.echo(
-            f"An error occurred while running the declarative flow: {exc}", err=True
+            f"An error occurred while running the declarative flow: {exc}",
+            err=True,
         )
         raise SystemExit(1) from exc
-
     click.echo(_format_result(result))
+
+
+def _run_conversational_declarative_flow(
+    flow: Flow[Any], inputs_supplied: bool
+) -> None:
+    """Run a declarative chat flow on the conversational TUI.
+
+    The same TUI a Python conversational Flow gets from ``crewai run``; it
+    drives ``handle_turn`` per message. A chat loop needs a terminal, so a
+    headless run says what it would have needed rather than kicking off one
+    turn and exiting as if that were the whole conversation.
+
+    Two flows do not reach that TUI: one passed ``--inputs``, which it has
+    nowhere to put, and one using ``@human_feedback``, which needs the
+    terminal ``flow.chat()`` REPL because the runtime collects feedback with a
+    blocking prompt Textual cannot service.
+    """
+    if inputs_supplied:
+        # Whether ``--inputs`` was passed at all, not whether it parsed to
+        # anything: ``--inputs '{}'`` is a request for something unsupported and
+        # has to be answered, not silently accepted as no inputs.
+        # The TUI calls ``handle_turn(message)``, which owns the kickoff inputs
+        # (it passes ``{"id": session_id}`` itself). There is nowhere to put
+        # these without fighting it, so say so rather than accepting them and
+        # running a conversation that quietly ignored them.
+        click.secho(
+            "  `--inputs` is not supported for a conversational flow: each turn's "
+            "input is the message you type.\n"
+            "  Resuming a session by id is not wired up yet — use "
+            "`flow.handle_turn(message, session_id=...)` from Python for that.",
+            fg="red",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    if not is_interactive():
+        click.secho(
+            "  This flow is conversational, which needs an interactive terminal.\n"
+            "  Drive it from Python instead: `flow.handle_turn(message, "
+            "session_id=...)` per message, or `flow.stream_turn(...)` to stream.",
+            fg="yellow",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    if _flow_uses_human_feedback(flow):
+        # Same reason the STEPS TUI declines these: the runtime collects feedback
+        # with a blocking ``input()`` (flow/runtime/__init__.py), which Textual
+        # cannot service -- the prompt would never be shown and the run would
+        # hang. A terminal REPL can, so fall back to one.
+        flow.chat()
+        return
+
+    from crewai_cli.kickoff_flow import _run_conversational_flow_tui
+
+    _run_conversational_flow_tui(flow)
+
+
+def _run_declarative_flow_tui(
+    flow: Flow[Any], resolved_inputs: dict[str, Any] | None
+) -> Any:
+    """Run a declarative flow on the CrewAI TUI (the interactive default).
+
+    Mirrors the declarative-crew TUI contract (``run_crew._run_json_crew``):
+    a failed flow exits non-zero, a user quit ends the process so in-flight LLM
+    work stops, and choosing Deploy chains into the deploy command.
+    """
+    import os
+    import sys
+
+    from crewai.events.event_listener import EventListener
+
+    from crewai_cli.crew_run_tui import CrewRunApp
+
+    # The flow runtime (unlike a Crew constructor) doesn't create the event
+    # listener, and the TUI's trace/telemetry features depend on it.
+    EventListener()
+
+    # The STEPS panel and header are driven by flow method events. A flow may
+    # declare ``config.suppress_flow_events`` (a headless/production
+    # optimization) which would leave STEPS stuck on "waiting…" here — so force
+    # emission on for the interactive TUI run. The headless path never reaches
+    # this and keeps the flow's declared setting.
+    try:
+        flow.suppress_flow_events = False
+    except Exception:
+        logger.debug(
+            "Could not disable suppress_flow_events for the flow TUI", exc_info=True
+        )
+
+    app = CrewRunApp(crew_name=flow.name or type(flow).__name__)
+    app._flow = flow
+    app._flow_inputs = resolved_inputs
+    app._flow_method_types = _flow_method_types(flow)
+
+    app.run()
+
+    _print_flow_post_tui_summary(app)
+
+    if app._status == "failed":
+        raise SystemExit(1)
+
+    if app._status not in ("completed", "failed"):
+        # User quit mid-run. kickoff runs in a thread worker that cannot be
+        # force-cancelled, so end the process to stop in-flight LLM and tool
+        # work instead of letting it burn tokens in the background.
+        click.secho("\n  Run cancelled.", fg="yellow")
+        sys.stdout.flush()
+        os._exit(130)
+
+    if getattr(app, "_want_deploy", False):
+        from crewai_cli.run_crew import _chain_deploy
+
+        _chain_deploy()
+
+    return app._crew_result
+
+
+def _flow_is_conversational(flow: Flow[Any]) -> bool:
+    """True if the declaration turns on conversational mode.
+
+    Fails closed: a flow we cannot inspect runs the normal single-kickoff path
+    rather than being blocked from running at all.
+    """
+    try:
+        conversational = flow._definition.conversational
+    except AttributeError:
+        logger.debug("Could not inspect flow for conversational mode", exc_info=True)
+        return False
+    return conversational is not None and conversational.enabled
+
+
+def _flow_uses_human_feedback(flow: Flow[Any]) -> bool:
+    """True if any declarative method declares ``@human_feedback``.
+
+    Such flows need the flow runtime's interactive stdin / Rich prompts, which
+    don't compose with Textual — so they run on the terminal, not the TUI.
+    """
+    try:
+        return any(
+            method.human_feedback is not None
+            for method in flow._definition.methods.values()
+        )
+    except Exception:
+        logger.debug("Could not inspect flow for human feedback", exc_info=True)
+        return False
+
+
+def _flow_method_types(flow: Flow[Any]) -> dict[str, str]:
+    """Map each declarative method name to its ``call`` type (crew/agent/…).
+
+    Best-effort: the STEPS panel shows this as a dim label. Method events don't
+    carry the call type, so it's read from the flow definition up front.
+    """
+    method_types: dict[str, str] = {}
+    try:
+        for name, method_definition in flow._definition.methods.items():
+            method_types[name] = method_definition.do.call
+    except Exception:
+        logger.debug("Could not derive flow method types", exc_info=True)
+    return method_types
+
+
+def _print_flow_post_tui_summary(app: Any) -> None:
+    """Print a compact result panel after the flow TUI exits."""
+    import time
+
+    from rich.console import Console
+    from rich.markdown import Markdown
+    from rich.padding import Padding
+    from rich.panel import Panel
+    from rich.text import Text
+
+    console = Console()
+    elapsed = (app._elapsed_frozen or (time.time() - app._start_time)) or 0.0
+
+    out_tokens = app._output_tokens + app._live_out_tokens
+    token_parts = []
+    if app._input_tokens:
+        token_parts.append(f"↑{app._input_tokens:,}")
+    if out_tokens:
+        token_parts.append(f"↓{out_tokens:,}")
+    token_str = "  ".join(token_parts)
+    if token_str:
+        token_str += " tokens"
+
+    crewai_red = "#FF5A50"
+    crewai_teal = "#1F7982"
+
+    if app._status == "completed":
+        summary = Text()
+        summary.append("  ✔ Flow complete", style=f"bold {crewai_teal}")
+        summary.append(f" in {elapsed:.1f}s", style="dim")
+        if token_str:
+            summary.append(f"  {token_str}", style="dim")
+        console.print(
+            Panel(
+                summary,
+                title=f" {app._crew_name} ",
+                title_align="left",
+                border_style=crewai_teal,
+                padding=(0, 1),
+            )
+        )
+        if app._final_output:
+            console.print()
+            console.print(Text("  Final Result", style=f"bold {crewai_teal}"))
+            console.print()
+            console.print(Padding(Markdown(app._final_output), (0, 2)))
+    elif app._status == "failed":
+        content = Text()
+        content.append("  ✘ Failed", style=f"bold {crewai_red}")
+        content.append(f" after {elapsed:.1f}s\n", style="dim")
+        if app._error:
+            content.append(f"\n  {app._error}\n", style=crewai_red)
+        console.print(
+            Panel(
+                content,
+                title=f" {app._crew_name} ",
+                title_align="left",
+                border_style=crewai_red,
+                padding=(0, 1),
+            )
+        )
 
 
 def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:

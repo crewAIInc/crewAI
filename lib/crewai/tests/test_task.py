@@ -162,6 +162,7 @@ def test_task_callback_returns_task_output():
             "expected_output": "Bullet point list of 5 interesting ideas.",
             "output_format": OutputFormat.RAW,
             "messages": [],
+            "tool_failures": [],
         }
         assert output_dict == expected_output
 

@@ -859,6 +859,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
     crew = Crew(
         agents=[ceo, researcher],
         tasks=tasks,
+        cache=True,
     )
 
     with patch.object(CacheHandler, "read") as read:
@@ -2246,7 +2247,9 @@ def test_tools_with_custom_caching():
         agent=writer2,
     )
 
-    crew = Crew(agents=[writer1, writer2], tasks=[task1, task2, task3, task4])
+    crew = Crew(
+        agents=[writer1, writer2], tasks=[task1, task2, task3, task4], cache=True
+    )
 
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
@@ -3042,21 +3045,191 @@ def test_replay_feature(researcher, writer):
     )
 
     with patch.object(Task, "execute_sync") as mock_execute_task:
-        mock_execute_task.return_value = TaskOutput(
-            description="Mock description",
-            raw="Mocked output for list of ideas",
-            agent="Researcher",
-            json_dict=None,
-            output_format=OutputFormat.RAW,
-            pydantic=None,
-            summary="Mocked output for list of ideas",
-            messages=[],
-        )
+        mock_execute_task.side_effect = [
+            TaskOutput(
+                description=list_ideas.description,
+                raw="Mocked output for list of ideas",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output for list of ideas",
+                messages=[],
+            ),
+            TaskOutput(
+                description=write.description,
+                raw="Mocked output for list of ideas",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output for list of ideas",
+                messages=[],
+            ),
+            TaskOutput(
+                description=write.description,
+                raw="Mocked output for list of ideas",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output for list of ideas",
+                messages=[],
+            ),
+        ]
 
         crew.kickoff()
         crew.replay(str(write.id))
         # Ensure context was passed correctly
         assert mock_execute_task.call_count == 3
+
+
+def test_replay_rejects_changed_task_order(researcher):
+    """Replay must not restore a saved output onto a different current task."""
+    research = Task(
+        description="Research the topic",
+        expected_output="Research notes",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write the article",
+        expected_output="An article",
+        agent=researcher,
+    )
+    plan = Task(
+        description="Plan the article",
+        expected_output="An outline",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[plan, research, write])
+
+    stored_outputs = [
+        {
+            "task_id": str(research.id),
+            "expected_output": research.expected_output,
+            "output": {"description": research.description},
+            "inputs": {},
+        },
+        {
+            "task_id": str(write.id),
+            "expected_output": write.expected_output,
+            "output": {"description": write.description},
+            "inputs": {},
+        },
+    ]
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=stored_outputs,
+    ):
+        with pytest.raises(ValueError, match="current crew does not match"):
+            crew.replay(str(write.id))
+
+
+def test_replay_rejects_reordered_tasks_with_matching_expected_output(researcher):
+    """Task descriptions keep replay from confusing tasks with the same expected output."""
+    research = Task(
+        description="Research the topic",
+        expected_output="A report",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write the article",
+        expected_output="A report",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[write, research])
+
+    stored_outputs = [
+        {
+            "task_id": str(research.id),
+            "expected_output": research.expected_output,
+            "output": {"description": research.description},
+            "inputs": {},
+        },
+        {
+            "task_id": str(write.id),
+            "expected_output": write.expected_output,
+            "output": {"description": write.description},
+            "inputs": {},
+        },
+    ]
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=stored_outputs,
+    ):
+        with pytest.raises(ValueError, match="current crew does not match"):
+            crew.replay(str(write.id))
+
+
+def test_replay_rejects_ambiguous_task_identities(researcher):
+    """Replay must fail loud when persisted task details cannot identify a task."""
+    first_task = Task(
+        description="Write a report",
+        expected_output="A report",
+        agent=researcher,
+    )
+    second_task = Task(
+        description="Write a report",
+        expected_output="A report",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[second_task, first_task])
+
+    stored_outputs = [
+        {
+            "task_id": str(first_task.id),
+            "expected_output": first_task.expected_output,
+            "output": {"description": first_task.description},
+            "inputs": {},
+        },
+        {
+            "task_id": str(second_task.id),
+            "expected_output": second_task.expected_output,
+            "output": {"description": second_task.description},
+            "inputs": {},
+        },
+    ]
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=stored_outputs,
+    ):
+        with pytest.raises(ValueError, match="task identities are ambiguous"):
+            crew.replay(str(second_task.id))
+
+
+def test_replay_uses_task_key_before_interpolating_new_inputs(researcher):
+    """A replayed template remains identifiable when the new inputs differ."""
+    task = Task(
+        description="Say hello to {name}",
+        expected_output="A greeting for {name}",
+        agent=researcher,
+    )
+    task.interpolate_inputs_and_add_conversation_history({"name": "John"})
+    stored_output = {
+        "task_id": str(task.id),
+        "task_key": task.key,
+        "expected_output": task.expected_output,
+        "output": {"description": task.description},
+        "inputs": {"name": "John"},
+    }
+    replay_task = Task(
+        description="Say hello to {name}",
+        expected_output="A greeting for {name}",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[replay_task])
+
+    with (
+        patch(
+            "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+            return_value=[stored_output],
+        ),
+        patch.object(crew, "_execute_tasks"),
+    ):
+        crew.replay(str(task.id), inputs={"name": "Maria"})
+
+    assert replay_task.description == "Say hello to Maria"
+    assert replay_task.expected_output == "A greeting for Maria"
 
 
 @pytest.mark.vcr()
@@ -3289,7 +3462,7 @@ def test_replay_with_context():
     )
 
     context_output = TaskOutput(
-        description="Context Task Output",
+        description=task1.description,
         agent="test_agent",
         raw="context raw output",
         pydantic=None,
@@ -3306,6 +3479,7 @@ def test_replay_with_context():
         return_value=[
             {
                 "task_id": str(task1.id),
+                "expected_output": task1.expected_output,
                 "output": {
                     "description": context_output.description,
                     "summary": context_output.summary,
@@ -3319,8 +3493,9 @@ def test_replay_with_context():
             },
             {
                 "task_id": str(task2.id),
+                "expected_output": task2.expected_output,
                 "output": {
-                    "description": "Test Task Output",
+                    "description": task2.description,
                     "summary": None,
                     "raw": "test raw output",
                     "pydantic": None,
@@ -3391,6 +3566,7 @@ def test_replay_with_invalid_task_id():
         return_value=[
             {
                 "task_id": str(task1.id),
+                "task_key": task1.key,
                 "output": {
                     "description": context_output.description,
                     "summary": context_output.summary,
@@ -3404,6 +3580,7 @@ def test_replay_with_invalid_task_id():
             },
             {
                 "task_id": str(task2.id),
+                "task_key": task2.key,
                 "output": {
                     "description": "Test Task Output",
                     "summary": None,
@@ -3457,6 +3634,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
         return_value=[
             {
                 "task_id": str(task1.id),
+                "task_key": task1.key,
                 "output": {
                     "description": context_output.description,
                     "summary": context_output.summary,
@@ -3470,6 +3648,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
             },
             {
                 "task_id": str(task2.id),
+                "task_key": task2.key,
                 "output": {
                     "description": "Test Task Output",
                     "summary": None,
@@ -3498,7 +3677,7 @@ def test_replay_setup_context():
         agent=agent,
     )
     context_output = TaskOutput(
-        description="Context Task Output",
+        description=task1.description,
         agent="test_agent",
         raw="context raw output",
         pydantic=None,
@@ -3522,12 +3701,13 @@ def test_replay_setup_context():
                     "output_format": context_output.output_format,
                     "agent": context_output.agent,
                 },
+                "expected_output": task1.expected_output,
                 "inputs": {"name": "John"},
             },
             {
                 "task_id": str(task2.id),
                 "output": {
-                    "description": "Test Task Output",
+                    "description": task2.description,
                     "summary": None,
                     "raw": "test raw output",
                     "pydantic": None,
@@ -3535,6 +3715,7 @@ def test_replay_setup_context():
                     "output_format": "json",
                     "agent": "test_agent",
                 },
+                "expected_output": task2.expected_output,
                 "inputs": {"name": "John"},
             },
         ],
@@ -3543,7 +3724,7 @@ def test_replay_setup_context():
 
         assert crew.tasks[0].output is not None
         assert isinstance(crew.tasks[0].output, TaskOutput)
-        assert crew.tasks[0].output.description == "Context Task Output"
+        assert crew.tasks[0].output.description == task1.description
         assert crew.tasks[0].output.agent == "test_agent"
         assert crew.tasks[0].output.raw == "context raw output"
         assert crew.tasks[0].output.output_format == OutputFormat.RAW

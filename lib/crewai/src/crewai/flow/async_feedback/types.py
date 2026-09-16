@@ -37,6 +37,12 @@ class PendingFeedbackContext:
         metadata: Optional metadata for external system integration
         llm: LLM model string for outcome collapsing
         requested_at: When the feedback was requested
+        execution_uuid: Outermost kickoff uuid to restore on resume so traces
+            stay on the same run after HITL pause. ``None`` only for pending
+            rows persisted before this field existed; resume then creates a
+            new uuid. New pauses always store a value.
+        trace_context: Previous trace and root span IDs, used to link the resumed
+            execution segment. Absent when execution tracing was disabled.
 
     Example:
         ```python
@@ -62,6 +68,8 @@ class PendingFeedbackContext:
     metadata: dict[str, Any] = field(default_factory=dict)
     llm: dict[str, Any] | str | None = None
     requested_at: datetime = field(default_factory=datetime.now)
+    execution_uuid: str | None = None
+    trace_context: tuple[int, int] | None = None
 
     @staticmethod
     def _make_json_safe(value: Any) -> Any:
@@ -106,6 +114,8 @@ class PendingFeedbackContext:
             "metadata": self._make_json_safe(self.metadata),
             "llm": self.llm,
             "requested_at": self.requested_at.isoformat(),
+            "execution_uuid": self.execution_uuid,
+            "trace_context": list(self.trace_context) if self.trace_context else None,
         }
 
     @classmethod
@@ -124,6 +134,14 @@ class PendingFeedbackContext:
         elif requested_at is None:
             requested_at = datetime.now()
 
+        trace_context = data.get("trace_context")
+        if not (
+            isinstance(trace_context, (list, tuple))
+            and len(trace_context) == 2
+            and all(isinstance(value, int) for value in trace_context)
+        ):
+            trace_context = None
+
         return cls(
             flow_id=data["flow_id"],
             flow_class=data["flow_class"],
@@ -135,6 +153,10 @@ class PendingFeedbackContext:
             metadata=data.get("metadata", {}),
             llm=data.get("llm"),
             requested_at=requested_at,
+            execution_uuid=data.get("execution_uuid"),
+            trace_context=(trace_context[0], trace_context[1])
+            if trace_context
+            else None,
         )
 
 
