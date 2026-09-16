@@ -1,0 +1,72 @@
+---
+title: "개요"
+description: "CrewAI 에이전트를 외부 자동화 및 관리형 AI 서비스와 연결"
+icon: "plug"
+mode: "wide"
+---
+
+통합 도구를 사용하면 에이전트가 다른 자동화 플랫폼이나 관리형 AI 서비스에 작업을 위임할 수 있습니다. 이미 운영 중인 CrewAI Platform 자동화를 호출하거나 Amazon Bedrock과 같은 전문 제공업체에 태스크를 넘겨야 할 때 활용하세요.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="CrewAI 자동화 실행 도구" icon="robot" href="/ko/tools/integration/crewaiautomationtool">
+    실행 중인 CrewAI Platform 자동화를 호출하고 사용자 입력을 전달하며, 결과를 에이전트로 다시 수집합니다.
+  </Card>
+
+  <Card title="Bedrock Invoke Agent 도구" icon="aws" href="/ko/tools/integration/bedrockinvokeagenttool">
+    크루에서 Amazon Bedrock Agent를 호출하고 기존 AWS 가드레일을 재사용하며 응답을 현재 워크플로우로 되돌립니다.
+  </Card>
+</CardGroup>
+
+## **주요 사용 사례**
+
+- **자동화 연결**: 한 크루 또는 플로우에서 다른 CrewAI 자동화를 연속 실행
+- **엔터프라이즈 핸드오프**: 사내 정책과 가드레일을 담고 있는 Bedrock Agent에 태스크 위임
+- **하이브리드 워크플로우**: CrewAI의 추론 능력과 외부의 에이전트 API를 결합
+- **장기 실행 작업**: 외부 자동화를 폴링하고 최종 결과를 현재 실행에 병합
+
+## **빠른 시작 예시**
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import InvokeCrewAIAutomationTool
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# 외부 자동화
+analysis_automation = InvokeCrewAIAutomationTool(
+    crew_api_url="https://analysis-crew.acme.crewai.com",
+    crew_bearer_token="YOUR_BEARER_TOKEN",
+    crew_name="Analysis Automation",
+    crew_description="프로덕션 분석 파이프라인을 실행",
+)
+
+# Bedrock 관리형 에이전트
+knowledge_router = BedrockInvokeAgentTool(
+    agent_id="bedrock-agent-id",
+    agent_alias_id="prod",
+)
+
+automation_strategist = Agent(
+    role="자동화 전략가",
+    goal="외부 자동화를 조율하고 결과를 요약",
+    backstory="엔터프라이즈 워크플로우를 조정하고 전문 서비스에 태스크를 위임할 시점을 알고 있습니다.",
+    tools=[analysis_automation, knowledge_router],
+    verbose=True,
+)
+
+execute_playbook = Task(
+    description="분석 자동화를 실행하고 Bedrock 에이전트에게 경영진 브리핑용 핵심 포인트를 요청하세요.",
+    agent=automation_strategist,
+)
+
+Crew(agents=[automation_strategist], tasks=[execute_playbook]).kickoff()
+```
+
+## **모범 사례**
+
+- **자격 증명 보호**: API 키와 토큰은 환경 변수 또는 비밀 관리 솔루션에 저장하세요
+- **지연 시간 고려**: 외부 자동화는 시간이 더 걸릴 수 있으므로 폴링 주기와 타임아웃을 적절히 설정하세요
+- **세션 재사용**: Bedrock Agent는 세션 ID를 지원하므로 여러 호출 간에 컨텍스트를 유지할 수 있습니다
+- **응답 검증**: 후속 단계로 전달하기 전에 외부 출력(JSON, 텍스트, 상태 코드 등)을 정규화하세요
+- **사용량 모니터링**: CrewAI Platform 로그나 AWS CloudWatch를 통해 할당량 초과와 실패를 조기에 감지하세요
