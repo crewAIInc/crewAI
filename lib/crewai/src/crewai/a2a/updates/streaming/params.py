@@ -33,25 +33,30 @@ def process_artifact_update(
     result_parts: list[str],
     artifact_positions: dict[str, int],
 ) -> None:
-    """Add the text parts of an artifact update to the accumulated result.
+    """Add the text of an artifact update to the accumulated result.
 
-    A chunk sent with ``append=True`` continues the text of the same artifact,
-    so it is joined onto that artifact's last part with no separator. Other
-    parts are added as separate entries.
+    Each artifact keeps one entry in ``result_parts``. A chunk sent with
+    ``append=True`` continues that entry with no separator, matching how the
+    server built the text. An update sent without ``append`` replaces the
+    artifact's text, the way ``a2a.utils.append_artifact_to_task`` replaces an
+    artifact of the same ID.
 
     Args:
         update: The artifact update event.
         result_parts: List of text parts to update (modified in place).
-        artifact_positions: Index in ``result_parts`` of each artifact's last
-            text part, keyed by artifact ID (modified in place).
+        artifact_positions: Index in ``result_parts`` of each artifact's text,
+            keyed by artifact ID (modified in place).
     """
     artifact = update.artifact
-    for part in artifact.parts:
-        if part.root.kind != "text":
-            continue
-        position = artifact_positions.get(artifact.artifact_id)
-        if update.append and position is not None:
-            result_parts[position] += part.root.text
-        else:
-            result_parts.append(part.root.text)
-            artifact_positions[artifact.artifact_id] = len(result_parts) - 1
+    texts = [part.root.text for part in artifact.parts if part.root.kind == "text"]
+    if not texts:
+        return
+
+    position = artifact_positions.get(artifact.artifact_id)
+    if position is None:
+        result_parts.append(" ".join(texts))
+        artifact_positions[artifact.artifact_id] = len(result_parts) - 1
+    elif update.append:
+        result_parts[position] += "".join(texts)
+    else:
+        result_parts[position] = " ".join(texts)

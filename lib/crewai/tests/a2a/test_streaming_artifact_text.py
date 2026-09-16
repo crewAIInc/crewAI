@@ -162,6 +162,19 @@ async def test_interleaved_artifacts_append_to_their_own_text() -> None:
 
 
 @pytest.mark.asyncio
+async def test_an_update_without_append_replaces_the_artifact_text() -> None:
+    """A server that resends an artifact replaces it, it does not add to it."""
+    events = [
+        _chunk("reply", "Hel", append=False),
+        _chunk("reply", "lo", append=True),
+        _chunk("reply", "Fresh answer", append=False),
+        _completed(),
+    ]
+
+    assert await _run(_FakeClient(events)) == "Fresh answer"
+
+
+@pytest.mark.asyncio
 async def test_chunks_after_a_reconnect_continue_the_same_text() -> None:
     """After the stream drops and resubscribes, appended chunks keep joining."""
     client = _FakeClient(
