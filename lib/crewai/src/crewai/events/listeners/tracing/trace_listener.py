@@ -284,27 +284,35 @@ class TraceCollectionListener(BaseEventListener):
         def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
             self._handle_trace_event("method_execution_failed", source, event)
 
-        @event_bus.on(MethodExecutionPausedEvent)
+        # Registered through `_on`, like every other handler here: while a kickoff
+        # owns an execution uuid the OTEL session records these events (see
+        # `telemetry/tracing/handlers.py`) and this legacy collector stays idle.
+
+        @self._on(event_bus, MethodExecutionPausedEvent)
         def on_method_paused(source: Any, event: MethodExecutionPausedEvent) -> None:
+            """Collect a method pausing for human feedback, whole."""
             self._handle_action_event("method_execution_paused", source, event)
 
-        @event_bus.on(HumanFeedbackRequestedEvent)
+        @self._on(event_bus, HumanFeedbackRequestedEvent)
         def on_human_feedback_requested(
             source: Any, event: HumanFeedbackRequestedEvent
         ) -> None:
+            """Collect what the reviewer was shown when a gate asked for feedback."""
             self._handle_action_event("human_feedback_requested", source, event)
 
-        @event_bus.on(HumanFeedbackReceivedEvent)
+        @self._on(event_bus, HumanFeedbackReceivedEvent)
         def on_human_feedback_received(
             source: Any, event: HumanFeedbackReceivedEvent
         ) -> None:
+            """Collect the reviewer's answer and where the flow routed on it."""
             self._handle_action_event("human_feedback_received", source, event)
 
-        @event_bus.on(FlowPausedEvent)
+        @self._on(event_bus, FlowPausedEvent)
         def on_flow_paused(source: Any, event: FlowPausedEvent) -> None:
+            """Collect a flow pausing (a gate or an explicit pause), whole."""
             self._handle_action_event("flow_paused", source, event)
 
-        @event_bus.on(ConversationMessageAddedEvent)
+        @self._on(event_bus, ConversationMessageAddedEvent)
         def on_conversation_message_added(
             source: Any, event: ConversationMessageAddedEvent
         ) -> None:

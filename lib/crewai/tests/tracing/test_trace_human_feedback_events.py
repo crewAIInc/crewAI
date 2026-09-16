@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+from crewai.execution import clear_execution_uuid, set_execution_uuid
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.types.flow_events import (
     FlowPausedEvent,
@@ -146,3 +147,73 @@ def test_flow_paused_is_collected_whole(listener) -> None:
     assert data["state"] == {"draft": "v1"}
     assert data["message"] == "Approve this draft?"
     assert data["emit"] == ["approved", "rejected"]
+
+
+def test_the_new_handlers_stay_idle_while_a_kickoff_owns_an_execution_uuid(listener) -> None:
+    """The legacy collector must not run beside the OTEL session.
+
+    Every handler in the listener registers through `_on`, which skips the
+    event when an execution uuid is bound (the kickoff owns the new session and
+    `telemetry/tracing/handlers.py` records these events there). The four gate
+    and pause handlers, and the conversation handler, keep that gate: a run
+    under an execution uuid collects none of them into a legacy batch.
+    """
+    token = set_execution_uuid("exec-owned-by-the-otel-session")
+    try:
+        crewai_event_bus.emit(
+            object(),
+            HumanFeedbackRequestedEvent(
+                flow_name="review_flow",
+                method_name="draft",
+                output="the draft shown to the reviewer",
+                message="Approve this draft?",
+                emit=["approved", "rejected"],
+                request_id="req-2",
+            ),
+        )
+        crewai_event_bus.emit(
+            object(),
+            HumanFeedbackReceivedEvent(
+                flow_name="review_flow",
+                method_name="draft",
+                feedback="Looks good, ship it.",
+                outcome="approved",
+                request_id="req-2",
+            ),
+        )
+        crewai_event_bus.emit(
+            object(),
+            MethodExecutionPausedEvent(
+                flow_name="review_flow",
+                method_name="draft",
+                state={"draft": "v1"},
+                flow_id="flow-2",
+                message="Approve this draft?",
+                emit=["approved", "rejected"],
+            ),
+        )
+        crewai_event_bus.emit(
+            object(),
+            FlowPausedEvent(
+                flow_name="review_flow",
+                flow_id="flow-2",
+                method_name="draft",
+                state={"draft": "v1"},
+                message="Approve this draft?",
+                emit=["approved", "rejected"],
+            ),
+        )
+        crewai_event_bus.flush()
+    finally:
+        clear_execution_uuid(token)
+
+    collected = [e.type for e in listener.batch_manager.event_buffer]
+    assert not any(
+        t in collected
+        for t in (
+            "human_feedback_requested",
+            "human_feedback_received",
+            "method_execution_paused",
+            "flow_paused",
+        )
+    ), collected
