@@ -6,6 +6,20 @@ an ``Agent`` or ``LiteAgent`` whose ``role`` is a key of the mapping is built
 with the mapped model instead of its declared ``llm``. Roles that are not
 keys, and every agent built outside the block, keep their own model.
 
+Roles are matched exactly, by the text they have when the overlay is read.
+An ``Agent`` is read when it is built, with its declared role, and read
+again when ``crew.kickoff(inputs=...)`` interpolates the inputs into that
+role and the text changes. The second read is what lets a role declared as
+a template (``"Researcher for {repo}"``, the YAML form of a ``CrewBase``
+crew) match a key written for the interpolated text, which is the role
+every trace records; the template itself is not a key at construction. A
+role the interpolation leaves unchanged is not read again. Either read only
+ever sets a model: a role that is not a key leaves ``llm`` as it is, so a
+later kickoff that interpolates to a role outside the mapping keeps the
+model the agent already has rather than reverting to the declared one — a
+``Crew`` object reused across kickoffs with different inputs inside one
+block keeps the last mapped model.
+
 The overlay is a :class:`contextvars.ContextVar`, so it follows the calling
 context, not the process. A plain ``threading.Thread`` started inside the
 block does not see it: callers that run agents in their own threads must
@@ -16,6 +30,10 @@ Example:
     >>> with llm_overlay({"Researcher": "openai/gpt-4o"}):
     ...     crew = build_crew()  # the Researcher agent is built on gpt-4o
     ...     crew.kickoff()
+
+    >>> with llm_overlay({"Researcher for crewAIInc/x": "openai/gpt-4o"}):
+    ...     crew = build_crew()  # role "Researcher for {repo}": declared llm
+    ...     crew.kickoff(inputs={"repo": "crewAIInc/x"})  # now runs on gpt-4o
 """
 
 from __future__ import annotations

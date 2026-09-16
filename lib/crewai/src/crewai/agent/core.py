@@ -447,6 +447,43 @@ class Agent(BaseAgent):
         """Check if planning is enabled for this agent."""
         return self.planning_config is not None or self.planning
 
+    def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
+        """Interpolate inputs, then re-resolve the ``llm_overlay`` if the role changed.
+
+        A role declared as a template (``"Researcher for {repo}"``) is not a
+        key of an overlay written for the text a trace records until a kickoff
+        fills the placeholders in, and that happens after ``post_init_setup``
+        resolved ``llm``. So when interpolation rewrites the role, the overlay
+        is looked up again with the new text: a key sets ``llm`` to the mapped
+        model; a miss, or no active overlay, leaves ``llm`` as it is. A role the
+        rewrite did not change is not looked up again — construction's
+        resolution stands, and its ``llm`` instance is kept. Nothing ever
+        reverts to the declared model.
+
+        The new instance inherits the streaming flag of the one it replaces:
+        ``Crew.kickoff(stream=True)`` sets ``agent.llm.stream`` before it
+        interpolates. Other things resolved from ``llm`` before kickoff do NOT
+        follow the swap — a task's string guardrail LLM, an auto-created
+        ``Memory`` LLM, the crew_creation telemetry span.
+
+        The executor sees the new ``llm`` because it binds ``self.llm`` when a
+        task runs, after kickoff has interpolated: ``execute_task`` ->
+        ``_finalize_task_prompt`` -> ``prepare_tools`` ->
+        ``create_agent_executor``, which assigns ``self.llm`` to the executor
+        on every task (``_update_executor_parameters`` once it exists).
+        """
+        role_before = self.role
+        super().interpolate_inputs(inputs)
+        if self.role == role_before:
+            return
+        overlay_model = overlay_model_for(self.role)
+        if overlay_model is None:
+            return
+        previous = self.llm
+        self.llm = create_llm(overlay_model)
+        if isinstance(previous, BaseLLM) and isinstance(self.llm, BaseLLM):
+            self.llm.stream = previous.stream
+
     def _setup_agent_executor(self) -> None:
         """Initialize the agent's tools handler and optional tool cache.
 
