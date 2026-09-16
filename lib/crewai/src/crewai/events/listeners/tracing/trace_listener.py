@@ -68,10 +68,14 @@ from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFailedEvent,
     FlowFinishedEvent,
+    FlowPausedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
+    HumanFeedbackReceivedEvent,
+    HumanFeedbackRequestedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.knowledge_events import (
@@ -260,6 +264,26 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(MethodExecutionFailedEvent)
         def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
             self._handle_trace_event("method_execution_failed", source, event)
+
+        @event_bus.on(MethodExecutionPausedEvent)
+        def on_method_paused(source: Any, event: MethodExecutionPausedEvent) -> None:
+            self._handle_action_event("method_execution_paused", source, event)
+
+        @event_bus.on(HumanFeedbackRequestedEvent)
+        def on_human_feedback_requested(
+            source: Any, event: HumanFeedbackRequestedEvent
+        ) -> None:
+            self._handle_action_event("human_feedback_requested", source, event)
+
+        @event_bus.on(HumanFeedbackReceivedEvent)
+        def on_human_feedback_received(
+            source: Any, event: HumanFeedbackReceivedEvent
+        ) -> None:
+            self._handle_action_event("human_feedback_received", source, event)
+
+        @event_bus.on(FlowPausedEvent)
+        def on_flow_paused(source: Any, event: FlowPausedEvent) -> None:
+            self._handle_action_event("flow_paused", source, event)
 
         @event_bus.on(ConversationMessageAddedEvent)
         def on_conversation_message_added(
