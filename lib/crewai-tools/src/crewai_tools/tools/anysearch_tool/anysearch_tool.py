@@ -182,8 +182,11 @@ class AnySearchTool(BaseTool):
         # Business-level errors are reported in the response body with a non-zero code.
         if code != 0:
             message = body.get("message", "unknown error")
+            # request_id is the key correlation ID for support / log lookup.
+            request_id = body.get("request_id") or "unknown"
             raise RuntimeError(
-                f"AnySearch API returned an error (code={code}): {message}"
+                f"AnySearch API returned an error "
+                f"(code={code}, request_id={request_id}): {message}"
             )
 
         data = body.get("data")

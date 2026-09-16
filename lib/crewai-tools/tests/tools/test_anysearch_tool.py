@@ -204,8 +204,13 @@ def test_business_error_code_raises(mock_post):
         {"code": 402, "message": "quota_exhausted", "data": None}
     )
 
-    with pytest.raises(RuntimeError, match="quota_exhausted"):
+    with pytest.raises(RuntimeError, match="quota_exhausted") as exc_info:
         AnySearchTool().run(query="crewai")
+
+    err = str(exc_info.value)
+    assert "code=402" in err
+    # No request_id in this fixture: fall back to the "unknown" placeholder.
+    assert "request_id=unknown" in err
 
 
 @patch("requests.post")
@@ -215,8 +220,12 @@ def test_auth_error_code_raises(mock_post):
         {"code": -1, "message": "Invalid API key.", "request_id": "req-401"}
     )
 
-    with pytest.raises(RuntimeError, match="Invalid API key"):
+    with pytest.raises(RuntimeError, match="Invalid API key") as exc_info:
         AnySearchTool(api_key="wrong-key").run(query="crewai")
+
+    err = str(exc_info.value)
+    assert "code=-1" in err
+    assert "request_id=req-401" in err
 
 
 @pytest.mark.parametrize("status_code", [401, 403, 429, 500])
