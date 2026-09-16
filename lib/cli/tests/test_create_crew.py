@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 import tomli
 from click.testing import CliRunner
+from crewai_core.platform_apps import PLATFORM_APPS
 from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
@@ -620,6 +621,52 @@ def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypat
     }.isdisjoint(tool_names)
 
 
+def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
+    picker_calls = 0
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        nonlocal picker_calls
+        picker_calls += 1
+        if picker_calls == 1:
+            platform_row = next(
+                idx for idx, label in enumerate(labels) if "CrewAI Platform" in label
+            )
+            return [], platform_row
+
+        github = next(
+            idx
+            for idx, label in enumerate(labels)
+            if label.startswith("GitHub Integration")
+            and label.endswith("Platform: GitHubIntegration")
+        )
+        return [github], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+    monkeypatch.setattr(
+        json_crew, "_prompt_text", lambda label, **kwargs: label.lower()
+    )
+    monkeypatch.setattr(json_crew, "_select_model", lambda: "openai/gpt-5.5")
+    monkeypatch.setattr(json_crew, "_confirm", lambda *_args, **_kwargs: False)
+
+    agent = json_crew._wizard_agent(agent_num=1, existing_names=[])
+
+    assert agent is not None
+    assert agent["tools"] == ["platform:github"]
+    assert '"tools": ["platform:github"]' in json_crew._agent_to_jsonc(agent)
+
+
+def test_json_wizard_platform_catalog_contains_every_supported_app():
+    platform_category = next(
+        tools
+        for category, tools in json_crew._TOOL_CATEGORIES
+        if category == "CrewAI Platform"
+    )
+
+    assert [name for name, _description in platform_category] == [
+        f"platform:{app}" for app in PLATFORM_APPS
+    ]
+
+
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
     cursors: list[int] = []
 
@@ -934,3 +981,75 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
         crew_template
     )
     assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+
+
+def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    project_root = tmp_path / "my_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    [keep_on] = [
+        line
+        for line in agents_md.splitlines()
+        if "Never disable, block, or silence CrewAI's built-in observability" in line
+    ]
+    assert "any of the instrumentation that ships execution data out" in keep_on
+    assert "Turning it off is the user's decision to make" in keep_on
+    assert "- Treating built-in observability" in agents_md
+    assert "free" not in agents_md.lower()
+
+
+def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with mock.patch(
+        "crewai_cli.create_json_crew._wizard_agents_and_tasks",
+        return_value=(
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-4o",
+                    "tools": [],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        ),
+    ):
+        json_crew.create_json_crew("JSON Crew", provider="openai", skip_provider=True)
+
+    project_root = tmp_path / "json_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert "crew.jsonc" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
