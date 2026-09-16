@@ -4,7 +4,7 @@ import types
 from unittest.mock import patch, MagicMock
 import pytest
 
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm import LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -469,10 +469,10 @@ def test_gemini_context_window_size():
     context_size_2_0 = llm_2_0.get_context_window_size()
     assert context_size_2_0 > 500000
 
-    # Test Gemini 2.5 Pro (the retired 1.5 Pro id was dropped from the maps)
-    llm_2_5 = LLM(model="google/gemini-2.5-pro")
-    context_size_2_5 = llm_2_5.get_context_window_size()
-    assert context_size_2_5 == int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)
+    # Test Gemini 1.5 Pro
+    llm_1_5 = LLM(model="google/gemini-1.5-pro")
+    context_size_1_5 = llm_1_5.get_context_window_size()
+    assert context_size_1_5 > 1000000
 
 
 def test_gemini_message_formatting():

@@ -161,7 +161,7 @@ def test_all_raw_window_sizes_are_in_bounds(windows):
     [
         ("gpt-5", 1047576),
         ("claude-sonnet-4-6", 1000000),
-        ("gemini-2.5-flash", 1048576),
+        ("gemini-2.0-flash", 1048576),
     ],
 )
 def test_context_window_parity_native_vs_litellm(model, expected_raw):
@@ -208,16 +208,17 @@ def test_azure_gpt_35_turbo_litellm_is_16385():
 
 # issue #7303: o1/o1-pro/o3 must resolve to the official 200k window.
 def test_o_series_reasoning_models():
-    """o1/o1-pro/o3 use the official 200k window (native + LiteLLM).
-
-    ``o1-preview`` / ``o1-mini`` are retired, so their 128k entries were dropped
-    from the maps and are no longer asserted here. They still match the shorter
-    ``o1`` prefix, so they resolve to 200k instead of falling back to the
-    default -- harmless for a retired id, but a prefix collision worth noting.
-    """
+    """o1/o1-pro/o3 use 200k (native + LiteLLM); o1-preview/o1-mini keep 128k."""
     for model in ("o1", "o1-pro", "o3"):
         native = LLM(model=model)
         via_litellm = LLM(model=model, is_litellm=True)
         expected = int(200000 * RATIO)
+        assert native.get_context_window_size() == expected
+        assert via_litellm.get_context_window_size() == expected
+
+    for model in ("o1-preview", "o1-mini"):
+        native = LLM(model=model)
+        via_litellm = LLM(model=model, is_litellm=True)
+        expected = int(128000 * RATIO)
         assert native.get_context_window_size() == expected
         assert via_litellm.get_context_window_size() == expected

@@ -1,3 +1,40 @@
+"""Single source of truth for LLM context-window sizes.
+
+Every mapping below stores the **raw** provider limit; ``resolve_context_window_size``
+applies ``CONTEXT_WINDOW_USAGE_RATIO`` before returning a value. Lookups use
+longest-prefix matching, so a more specific id always wins over a shorter prefix
+regardless of insertion order (``gemini-2.0-flash-thinking`` over
+``gemini-2.0-flash``, ``o1-preview`` over ``o1``).
+
+Sources of truth -- re-check these when refreshing the maps:
+
+- OpenAI   : https://developers.openai.com/api/docs/models
+             (per-model pages, e.g. https://developers.openai.com/api/docs/models/gpt-5)
+             retirement history: https://developers.openai.com/api/docs/deprecations
+- Azure    : https://learn.microsoft.com/en-us/azure/ai-foundry/azure-openai-in-ai-foundry
+- Anthropic: https://platform.claude.com/docs/en/models/overview  (Models API ``max_input_tokens``)
+- Gemini   : https://ai.google.dev/api/models  and  https://ai.google.dev/gemini-api/docs/models
+- Bedrock  : https://docs.aws.amazon.com/bedrock/latest/userguide/model-cards.html
+- LiteLLM  : https://docs.litellm.ai/docs/providers  -- ids routed to third-party hosts;
+             verify against the upstream provider, e.g. Groq
+             https://console.groq.com/docs/deprecations
+
+Prefer the provider APIs over the static pages where they exist: limits vary by
+snapshot, region, deployment tier, and rollout.
+
+Refresh procedure and decision rule
+-----------------------------------
+1. Take the ids crewAI advertises from ``constants.py`` (``OPENAI_MODELS``,
+   ``ANTHROPIC_MODELS``, ``GEMINI_MODELS``, ``AZURE_MODELS``, ``BEDROCK_MODELS``).
+2. Every one of them must resolve to a real window. Drop an entry only when BOTH
+   hold: the owning provider has *fully retired* the model, AND the id is removed
+   from the matching ``*_MODELS`` catalog in the same change. Removing the map
+   entry while the id stays catalogued is a bug -- the lookup silently falls back
+   to the default (8192 raw on the LiteLLM path) instead of erroring.
+3. Never drop an entry that is merely *deprecated but still served*, or that is
+   retired at one provider while still live at another.
+"""
+
 from collections.abc import Mapping
 from typing import Final
 
@@ -10,6 +47,8 @@ MIN_CONTEXT_WINDOW_SIZE: Final[int] = 1024
 
 MAX_CONTEXT_WINDOW_SIZE: Final[int] = 2097152
 
+# Third-party ids routed through LiteLLM. Verify against the upstream host;
+# see the module docstring for the source list.
 LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gemini/gemma-3-1b-it": 32000,
     "gemini/gemma-3-4b-it": 128000,
@@ -40,7 +79,8 @@ LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "mistral/mistral-large-latest": 32768,
 }
 
-# GPT / o-series (OpenAI + Azure)
+# GPT / o-series (OpenAI + Azure).
+# Source: https://developers.openai.com/api/docs/models
 OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-4.1-mini-2025-04-14": 1047576,
     "gpt-4.1-nano-2025-04-14": 1047576,
@@ -50,6 +90,8 @@ OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-5-mini": 1047576,
     "gpt-5-nano": 1047576,
     "gpt-5.6": 1050000,
+    "o1-preview": 128000,
+    "o1-mini": 128000,
     "o1": 200000,
     "o1-pro": 200000,
     "o3": 200000,
@@ -64,6 +106,7 @@ OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 # Azure deployments reuse the GPT map plus azure-only extras
 # (gpt-3.5-turbo, text-embedding). Keep it a single source: adding a GPT
 # model happens once in OPENAI_CONTEXT_WINDOWS above.
+# Source: https://learn.microsoft.com/en-us/azure/ai-foundry/azure-openai-in-ai-foundry
 AZURE_CONTEXT_WINDOWS = {
     **OPENAI_CONTEXT_WINDOWS,
     "text-embedding": 8191,
@@ -71,7 +114,8 @@ AZURE_CONTEXT_WINDOWS = {
     "gpt-35-turbo": 16385,
 }
 
-# bare claude-* prefixes
+# bare claude-* prefixes.
+# Source: https://platform.claude.com/docs/en/models/overview
 ANTHROPIC_CONTEXT_WINDOWS = {
     "claude-fable-5": 1000000,
     "claude-mythos-5": 1000000,
@@ -86,10 +130,17 @@ ANTHROPIC_CONTEXT_WINDOWS = {
     "claude-haiku-4-5": 200000,
 }
 
+# Gemini / Gemma.
+# Source: https://ai.google.dev/api/models
 GEMINI_CONTEXT_WINDOWS = {
     "gemini-2.0-flash-thinking": 32768,
     "gemini-2.5-flash": 1048576,
     "gemini-2.5-pro": 1048576,
+    "gemini-3-pro-preview": 1048576,
+    "gemini-2.0-flash": 1048576,
+    "gemini-1.5-pro": 2097152,
+    "gemini-1.5-flash": 1048576,
+    "gemini-1.5-flash-8b": 1048576,
     "gemma-3-1b": 32000,
     "gemma-3-4b": 128000,
     "gemma-3-12b": 128000,
@@ -111,8 +162,11 @@ BEDROCK_ANTHROPIC_CONTEXT_WINDOWS = {
 }
 
 # Titan, Nova, Llama, etc.
+# Source: https://docs.aws.amazon.com/bedrock/latest/userguide/model-cards.html
 BEDROCK_CONTEXT_WINDOWS = {
     **BEDROCK_ANTHROPIC_CONTEXT_WINDOWS,
+    # Pinned ids from BEDROCK_MODELS that the generated prefixes don't cover.
+    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
     "anthropic.claude-sonnet-4": 200000,
     "anthropic.claude-opus-4": 200000,  # TODO(verify)
     "anthropic.claude-haiku-4": 200000,  # TODO(verify)
