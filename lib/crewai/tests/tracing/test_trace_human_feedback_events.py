@@ -11,12 +11,20 @@ every other non-complex type.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 import os
+from typing import Any
 from unittest.mock import patch
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 from crewai.execution import clear_execution_uuid, set_execution_uuid
+from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.human_feedback import human_feedback
+from crewai.flow.persistence.base import FlowPersistence
+from crewai.telemetry.tracing.grants import GrantSpanExporter, TraceGrant, TraceGrantClient
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.types.flow_events import (
     FlowPausedEvent,
@@ -217,3 +225,141 @@ def test_the_new_handlers_stay_idle_while_a_kickoff_owns_an_execution_uuid(liste
             "flow_paused",
         )
     ), collected
+
+
+# ---------------------------------------------------------------------------
+# Under a tracing kickoff the OTEL session records the four events and the
+# legacy collector stays idle — the two halves of the gate, on real flows.
+# ---------------------------------------------------------------------------
+
+LEGACY_TYPES = (
+    "human_feedback_requested",
+    "human_feedback_received",
+    "method_execution_paused",
+    "flow_paused",
+)
+
+
+@pytest.fixture
+def session_recorders(monkeypatch) -> dict[str, InMemorySpanExporter]:
+    """A tracing session that exports to memory, as in tests/telemetry/test_trace_lifecycle.py.
+
+    No socket is opened: the grant is synthetic and the exporter records
+    spans per execution uuid; anonymous consent is granted without a prompt.
+    """
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
+    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
+    monkeypatch.setattr("crewai.telemetry.tracing.grants.get_auth_token", lambda: None)
+    recorders: dict[str, InMemorySpanExporter] = {}
+
+    def create(client: Any, execution_uuid: str) -> TraceGrant:
+        return TraceGrant(
+            token="synthetic-grant",
+            collector_url="https://collector.invalid/v1/traces",
+            execution_uuid=execution_uuid,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+        )
+
+    def exporter(grant: TraceGrant) -> InMemorySpanExporter:
+        recorder = InMemorySpanExporter()
+        recorders[grant.execution_uuid] = recorder
+        return recorder
+
+    monkeypatch.setattr(TraceGrantClient, "create", create)
+    monkeypatch.setattr(GrantSpanExporter, "_exporter", staticmethod(exporter))
+    return recorders
+
+
+def _session_event_names(recorders: dict[str, InMemorySpanExporter]) -> set[str]:
+    """Every `crewai.event_name` the session recorded, across executions."""
+    return {
+        str(span.attributes.get("crewai.event_name"))
+        for recorder in recorders.values()
+        for span in recorder.get_finished_spans()
+        if span.attributes and span.attributes.get("crewai.event_name")
+    }
+
+
+def _legacy_types(listener: TraceCollectionListener) -> list[str]:
+    crewai_event_bus.flush()
+    return [e.type for e in listener.batch_manager.event_buffer if e.type in LEGACY_TYPES]
+
+
+def test_a_gate_answered_in_place_is_recorded_by_the_session_not_the_legacy_batch(
+    listener, session_recorders
+) -> None:
+    """A `@human_feedback` gate answered at the console, under a tracing kickoff.
+
+    The kickoff owns an execution uuid, so the OTEL session records
+    `human_feedback_requested` and `human_feedback_received` as spans and the
+    legacy collector — gated by `_on` — collects neither.
+    """
+
+    class ReviewFlow(Flow):
+        @start()
+        @human_feedback(message="Approve this draft?")
+        def draft(self) -> str:
+            return "the draft"
+
+        @listen(draft)
+        def finish(self, result) -> str:
+            return f"done: {result.feedback}"
+
+    with (
+        patch("builtins.input", return_value="looks good"),
+        patch(
+            "crewai.telemetry.tracing.ephemeral.prompt_user_for_trace_viewing",
+            return_value=True,
+        ),
+    ):
+        result = ReviewFlow(tracing=True).kickoff()
+
+    assert result == "done: looks good"
+    recorded = _session_event_names(session_recorders)
+    assert {"human_feedback_requested", "human_feedback_received"} <= recorded, recorded
+    assert _legacy_types(listener) == []
+
+
+def test_a_gate_that_pauses_the_flow_is_recorded_by_the_session_not_the_legacy_batch(
+    listener, session_recorders
+) -> None:
+    """An async provider parks the flow: the session records the two pause
+    events; the legacy collector, gated by `_on`, collects neither."""
+
+    class MemoryPersistence(FlowPersistence):
+        def init_db(self) -> None:
+            pass
+
+        def save_state(self, flow_uuid, method_name, state_data) -> None:
+            pass
+
+        def load_state(self, flow_uuid):
+            return None
+
+    class AsyncProvider:
+        def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class PausingFlow(Flow):
+        @start()
+        @human_feedback(message="Approve this draft?", provider=AsyncProvider())
+        def draft(self) -> str:
+            return "the draft"
+
+        @listen(draft)
+        def finish(self, result) -> str:
+            return f"done: {result.feedback}"
+
+    with patch(
+        "crewai.telemetry.tracing.ephemeral.prompt_user_for_trace_viewing",
+        return_value=True,
+    ):
+        result = PausingFlow(persistence=MemoryPersistence(), tracing=True).kickoff()
+
+    assert isinstance(result, HumanFeedbackPending)
+    recorded = _session_event_names(session_recorders)
+    assert {"method_execution_paused", "flow_paused"} <= recorded, recorded
+    assert _legacy_types(listener) == []
