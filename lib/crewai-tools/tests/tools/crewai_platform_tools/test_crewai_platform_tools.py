@@ -273,6 +273,31 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     @patch(
         "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
+    def test_private_connection_selects_clipper_api(self, mock_get):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": []}
+        mock_get.return_value = response
+
+        tools = CrewaiPlatformTools(apps=["github@private"])
+
+        assert tools == []
+        assert mock_get.call_args.args[0].endswith(
+            "/clipper/v1/applications/github/tools"
+        )
+        assert mock_get.call_args.kwargs["params"] == {"connection_id": "private"}
+
+    @patch.dict(
+        "os.environ",
+        {
+            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_PLUS_URL": "https://platform.example.test/",
+        },
+        clear=True,
+    )
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+    )
     def test_mixed_selectors_use_both_apis(self, mock_get):
         legacy_response = Mock()
         legacy_response.raise_for_status.return_value = None
