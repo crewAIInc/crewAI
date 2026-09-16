@@ -53,7 +53,8 @@ DeploySource = Literal["cli", "tui"]
 DeployFailureReason = Literal[
     "api_4xx",
     "api_5xx",
-    "invalid_response",
+    "invalid_json",
+    "invalid_creation_response",
     "network_error",
     "zip_error",
     "user_declined",
@@ -63,10 +64,13 @@ DeployFailureReason = Literal[
 
 A closed vocabulary, so the warehouse can group on it. ``api_4xx`` / ``api_5xx``
 classify the Enterprise API's response (the exact code rides separately as
-``status_code``); ``invalid_response`` is a 2xx whose body is not JSON;
-``network_error`` a transport failure before any response; ``zip_error`` a
-failure building the project archive; ``user_declined`` an abort at a
-confirmation prompt; ``unexpected`` anything else. Never the error message.
+``status_code``); ``invalid_json`` is a 2xx whose body is not JSON, such as a
+proxy's HTML page; ``invalid_creation_response`` a 2xx JSON body that is not a
+creation payload (no ``uuid``), which is a broken API contract rather than a
+broken network; ``network_error`` a transport failure before any response;
+``zip_error`` a failure building the project archive; ``user_declined`` an
+abort at a confirmation prompt; ``unexpected`` anything else. Never the error
+message.
 """
 
 

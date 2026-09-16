@@ -894,10 +894,12 @@ class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("builtins.input")
-    def test_a_non_json_success_body_reports_invalid_response(
+    def test_a_non_json_success_body_reports_invalid_json(
         self, mock_input, mock_repository, mock_fetch_env
     ):
-        """_validate_response rejects it, so it is a failure with a 2xx attached."""
+        """A proxy's 200 HTML page: _validate_response rejects it, so it is a
+        failure with a 2xx attached, and it is not the same failure as a JSON
+        body that is missing the creation fields."""
         self._git_path(mock_input, mock_repository, mock_fetch_env)
         self.mock_client.create_crew.return_value = self._api_response(
             200, ValueError("not json")
@@ -909,7 +911,7 @@ class TestDeployCommand(unittest.TestCase):
                     self.deploy_command.create_crew(skip_validate=True)
 
         telemetry.crew_deployment_failed_span.assert_called_once_with(
-            "invalid_response", source="cli", status_code=200
+            "invalid_json", source="cli", status_code=200
         )
 
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
@@ -1002,10 +1004,11 @@ class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("builtins.input")
-    def test_a_success_body_that_is_not_a_creation_reports_invalid_response(
+    def test_a_success_body_that_is_not_a_creation_reports_invalid_creation_response(
         self, mock_input, mock_repository, mock_fetch_env
     ):
-        """A 2xx without a deployment uuid is not a success and must not crash."""
+        """A 2xx JSON body without a deployment uuid is a broken creation
+        contract, not a success, and must not crash."""
         self._git_path(mock_input, mock_repository, mock_fetch_env)
         for body in ([{"uuid": "in-a-list"}], {"status": "created"}, {}):
             with self.subTest(body=body):
@@ -1020,7 +1023,7 @@ class TestDeployCommand(unittest.TestCase):
                 assert exit_info.exception.code == 1
                 assert "no deployment uuid was returned" in fake_out.getvalue()
                 telemetry.crew_deployment_failed_span.assert_called_once_with(
-                    "invalid_response", source="cli", status_code=200
+                    "invalid_creation_response", source="cli", status_code=200
                 )
                 telemetry.crew_deployment_created_span.assert_not_called()
 

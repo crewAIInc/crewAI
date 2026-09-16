@@ -149,7 +149,9 @@ def _response_failure_reason(response: httpx.Response) -> DeployFailureReason | 
 
     Status first, so a gateway's HTML error page counts as the API class it is;
     then the body, which must be a JSON object carrying ``uuid`` and ``status``
-    for the success path to use. ``None`` means the response is a creation.
+    for the success path to use. A 2xx that is not JSON (a proxy page) and a
+    2xx JSON body that is not a creation (a contract change) are kept apart.
+    ``None`` means the response is a creation.
     """
     if response.status_code >= 500:
         return "api_5xx"
@@ -158,13 +160,13 @@ def _response_failure_reason(response: httpx.Response) -> DeployFailureReason | 
     try:
         payload = response.json()
     except (json.JSONDecodeError, ValueError):
-        return "invalid_response"
+        return "invalid_json"
     if (
         not isinstance(payload, dict)
         or not payload.get("uuid")
         or "status" not in payload
     ):
-        return "invalid_response"
+        return "invalid_creation_response"
     return None
 
 
