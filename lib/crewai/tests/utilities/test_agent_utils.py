@@ -16,6 +16,7 @@ from crewai.hooks.tool_hooks import (
     clear_before_tool_call_hooks,
     register_after_tool_call_hook,
 )
+from crewai.agents.parser import AgentFinish
 from crewai.tools.base_tool import BaseTool
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
@@ -30,6 +31,7 @@ from crewai.utilities.agent_utils import (
     _split_text_by_token_limit,
     format_message_for_llm,
     convert_tools_to_openai_schema,
+    handle_max_iterations_exceeded,
     execute_single_native_tool_call,
     extract_tool_call_info,
     is_tool_call_list,
@@ -1652,3 +1654,107 @@ class TestResolvePlusResponse:
                 resolve_plus_response(future)
 
         asyncio.run(main())
+
+
+_FORCE_FINAL_ANSWER = I18N_DEFAULT.errors("force_final_answer")
+
+
+def _native_tool_history() -> list[dict[str, Any]]:
+    """History as the native tool-calling loop leaves it: ends on a user prompt."""
+    return [
+        {"role": "system", "content": "You are an agent."},
+        {"role": "user", "content": "Collect all the data."},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {"name": "get_data", "arguments": "{}"},
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_1", "name": "get_data", "content": "partial"},
+        {"role": "user", "content": I18N_DEFAULT.slice("post_tool_reasoning")},
+    ]
+
+
+def _react_history() -> list[dict[str, Any]]:
+    """History as the ReAct loop leaves it: ends on the assistant turn with the observation."""
+    return [
+        {"role": "system", "content": "You are an agent."},
+        {"role": "user", "content": "Collect all the data."},
+        {
+            "role": "assistant",
+            "content": "Thought: I need data\nAction: get_data\nAction Input: {}\nObservation: partial",
+        },
+    ]
+
+
+class TestHandleMaxIterationsExceeded:
+    """The forced final answer is requested with a user turn, never assistant prefill.
+
+    Current Claude models reject a request whose last message is an assistant
+    turn ("This model does not support assistant message prefill"), so the
+    nudge must go out as the user's instruction on every loop shape.
+    """
+
+    @pytest.mark.parametrize(
+        "make_history", [_native_tool_history, _react_history], ids=["native-tools", "react"]
+    )
+    def test_appends_the_instruction_as_a_user_turn(self, make_history) -> None:
+        history = make_history()
+        before = [dict(message) for message in history]
+        llm = MagicMock()
+        llm.call.return_value = "Final Answer: 42"
+
+        result = handle_max_iterations_exceeded(
+            printer=MagicMock(), messages=history, llm=llm, callbacks=[], verbose=False
+        )
+
+        assert history[:-1] == before
+        assert history[-1] == {"role": "user", "content": _FORCE_FINAL_ANSWER}
+        llm.call.assert_called_once_with(history, callbacks=[])
+        assert isinstance(result, AgentFinish)
+        assert result.output == "42"
+
+    def test_action_shaped_reply_still_becomes_a_final_answer(self) -> None:
+        reply = "Thought: one more\nAction: get_data\nAction Input: {}"
+        llm = MagicMock()
+        llm.call.return_value = reply
+
+        result = handle_max_iterations_exceeded(
+            printer=MagicMock(), messages=_react_history(), llm=llm, callbacks=[], verbose=False
+        )
+
+        assert isinstance(result, AgentFinish)
+        assert result.text == reply
+        assert result.output == reply
+
+    @pytest.mark.parametrize("reply", [None, ""], ids=["none", "empty"])
+    def test_empty_reply_raises(self, reply: str | None) -> None:
+        llm = MagicMock()
+        llm.call.return_value = reply
+
+        with pytest.raises(ValueError, match="Invalid response from LLM call - None or empty."):
+            handle_max_iterations_exceeded(
+                printer=MagicMock(), messages=_native_tool_history(), llm=llm, callbacks=[], verbose=False
+            )
+
+    @pytest.mark.parametrize("verbose", [True, False])
+    def test_notice_is_printed_only_when_verbose(self, verbose: bool) -> None:
+        printer = MagicMock()
+        llm = MagicMock()
+        llm.call.return_value = "Final Answer: 42"
+
+        handle_max_iterations_exceeded(
+            printer=printer, messages=_native_tool_history(), llm=llm, callbacks=[], verbose=verbose
+        )
+
+        if verbose:
+            printer.print.assert_called_once_with(
+                content="Maximum iterations reached. Requesting final answer.", color="yellow"
+            )
+        else:
+            printer.print.assert_not_called()

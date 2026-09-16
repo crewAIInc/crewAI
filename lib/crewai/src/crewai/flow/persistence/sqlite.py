@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -19,6 +19,20 @@ from crewai.flow.persistence.base import FlowPersistence
 
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+
+def _json_default(obj: Any) -> Any:
+    """Fallback serializer for non-primitive types in JSON dumps."""
+    if isinstance(obj, BaseModel):
+        try:
+            return obj.model_dump(mode="json")
+        except Exception:
+            return obj.model_dump(mode="python")
+    if isinstance(obj, (set, tuple)):
+        return list(obj)
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -139,7 +153,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 flow_uuid,
                 method_name,
                 datetime.now(timezone.utc).isoformat(),
-                json.dumps(state_dict),
+                json.dumps(state_dict, default=_json_default),
             ),
         )
 
@@ -147,7 +161,10 @@ class SQLiteFlowPersistence(FlowPersistence):
     def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to a plain dict."""
         if isinstance(state_data, BaseModel):
-            return state_data.model_dump()
+            try:
+                return state_data.model_dump(mode="json")
+            except Exception:
+                return state_data.model_dump(mode="python")
         if isinstance(state_data, dict):
             return state_data
         raise ValueError(
@@ -237,8 +254,8 @@ class SQLiteFlowPersistence(FlowPersistence):
             """,
                 (
                     flow_uuid,
-                    json.dumps(context.to_dict()),
-                    json.dumps(state_dict),
+                    json.dumps(context.to_dict(), default=_json_default),
+                    json.dumps(state_dict, default=_json_default),
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
