@@ -50,6 +50,7 @@ agent = Agent(
 ## Parameters
 
 - `search_url` (str): AnySearch search endpoint. Default `https://api.anysearch.com/v1/search`.
+  Must use `https://` whenever an API key is configured.
 - `api_key` (str | None): AnySearch API key. Defaults to `ANYSEARCH_API_KEY`.
 - `max_results` (int): number of results to return, between 1 and 10. Default `10`.
 - `result_format` (`"json"` | `"markdown"`): content format. Default `"json"`.

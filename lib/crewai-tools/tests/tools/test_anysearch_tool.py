@@ -419,3 +419,28 @@ def test_non_positive_content_limit_is_rejected_by_schema(limit):
     """Verifies a non-positive content limit is rejected by schema validation."""
     with pytest.raises(ValueError):
         AnySearchTool(max_content_length_per_result=limit)
+
+@patch("requests.post")
+def test_api_key_requires_https_endpoint(mock_post):
+    """Verifies an API key is never sent to a non-HTTPS endpoint."""
+    tool = AnySearchTool(
+        api_key="secret-key",
+        search_url="http://insecure.example.com/v1/search",
+    )
+
+    with pytest.raises(ValueError, match="non-HTTPS"):
+        tool.run(query="crewai")
+
+    # The request must not be issued at all: otherwise the key leaks.
+    mock_post.assert_not_called()
+
+
+@patch("requests.post")
+def test_anonymous_request_allows_http_endpoint(mock_post):
+    """Verifies anonymous requests may target a plain-HTTP endpoint (e.g. local)."""
+    mock_post.return_value = _mock_response(SUCCESS_BODY)
+
+    AnySearchTool(search_url="http://localhost:8080/v1/search").run(query="crewai")
+
+    mock_post.assert_called_once()
+    assert mock_post.call_args.args[0] == "http://localhost:8080/v1/search"

@@ -141,15 +141,28 @@ class AnySearchTool(BaseTool):
             A JSON string containing the search results.
 
         Raises:
+            ValueError: If an API key is configured while ``search_url`` is not
+                HTTPS, since sending a credential over plain HTTP would leak it.
             RuntimeError: If the AnySearch API reports a non-zero status code or
                 returns a body that does not match the documented envelope.
         """
+        # Clamp max_results to the API-supported range (1-10) at runtime.
+
         # Clamp max_results to the API-supported range (1-10) at runtime.
         payload: dict[str, Any] = {
             "query": query,
             "max_results": max(MIN_RESULTS, min(self.max_results, MAX_RESULTS)),
             "format": self.result_format,
         }
+
+        # Never leak a Bearer token over plain HTTP. Anonymous requests may
+        # still target http:// endpoints (e.g. a local mock service).
+        api_key = self.api_key.get_secret_value().strip() if self.api_key else ""
+        if api_key and not self.search_url.lower().startswith("https://"):
+            raise ValueError(
+                "Refusing to send an API key to a non-HTTPS endpoint: "
+                f"{self.search_url!r}. Use https:// or remove the API key."
+            )
 
         # Transport-level failures (HTTP errors, timeouts) raise here.
         response = requests.post(
