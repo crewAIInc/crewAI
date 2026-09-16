@@ -50,6 +50,29 @@ TRACER_NAME: Final[str] = "crewai.telemetry"
 DeploySource = Literal["cli", "tui"]
 """Where a deployment was initiated from: a direct CLI command, or the run TUI."""
 
+DeployFailureReason = Literal[
+    "api_4xx",
+    "api_5xx",
+    "invalid_json",
+    "invalid_creation_response",
+    "network_error",
+    "zip_error",
+    "user_declined",
+    "unexpected",
+]
+"""Why ``crewai deploy create`` failed after the attempt was counted.
+
+A closed vocabulary, so the warehouse can group on it. ``api_4xx`` / ``api_5xx``
+classify the Enterprise API's response (the exact code rides separately as
+``status_code``); ``invalid_json`` is a 2xx whose body is not JSON, such as a
+proxy's HTML page; ``invalid_creation_response`` a 2xx JSON body that is not a
+creation payload (no ``uuid``), which is a broken API contract rather than a
+broken network; ``network_error`` a transport failure before any response;
+``zip_error`` a failure building the project archive; ``user_declined`` an
+abort at a confirmation prompt; ``unexpected`` anything else. Never the error
+message.
+"""
+
 
 def close_span(span: Span) -> None:
     """Set span status to OK and end it."""
@@ -476,6 +499,41 @@ class Telemetry:
             self._add_attribute(span, "crewai_version", get_crewai_version())
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
+            self._add_attribute(span, "source", source)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
+    def crew_deployment_failed_span(
+        self,
+        reason: DeployFailureReason,
+        source: DeploySource = "cli",
+        status_code: int | None = None,
+    ) -> None:
+        """Records that ``crewai deploy create`` failed after the attempt was counted.
+
+        :meth:`create_crew_deployment_span` counts attempts and
+        :meth:`crew_deployment_created_span` counts successes; the gap between
+        them was measurable but had no cause attached. This span carries the
+        cause from a closed vocabulary, plus the HTTP status when the API
+        answered. Emits no feature count, for the same reason as
+        :meth:`crew_deployment_created_span`.
+
+        Args:
+            reason: Why the create failed.
+            source: Where the deployment was initiated from.
+            status_code: HTTP status of the API response, when there was one.
+        """
+
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Crew Deployment Failed")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "reason", reason)
+            if status_code is not None:
+                self._add_attribute(span, "status_code", status_code)
             self._add_attribute(span, "source", source)
             close_span(span)
 
