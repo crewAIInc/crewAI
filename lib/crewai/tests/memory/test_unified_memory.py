@@ -195,12 +195,13 @@ def test_lancedb_list_records_order_and_pagination(lancedb_path: Path) -> None:
         )
         for i in range(10)
     ]
+    # Make /other records strictly newer than /test records to discriminate scope filtering vs global listing
     other_records = [
         MemoryRecord(
             id=f"other_{i}",
             content=f"other content {i}",
             scope="/other",
-            created_at=base_time + timedelta(minutes=i),
+            created_at=base_time + timedelta(minutes=10 + i),
             embedding=[0.0] * 4,
         )
         for i in range(5)
@@ -230,13 +231,39 @@ def test_lancedb_list_records_order_and_pagination(lancedb_path: Path) -> None:
 
     # 6. Global listing without scope_prefix returns newest across all scopes
     all_newest = storage.list_records(limit=4, offset=0)
-    assert len(all_newest) == 4
-    assert (
-        all_newest[0].created_at
-        >= all_newest[1].created_at
-        >= all_newest[2].created_at
-        >= all_newest[3].created_at
-    )
+    assert [r.id for r in all_newest] == [
+        "other_4",
+        "other_3",
+        "other_2",
+        "other_1",
+    ]
+
+
+def test_lancedb_list_records_exceeding_scan_cap(tmp_path: Path) -> None:
+    """Test that LanceDBStorage.list_records returns true newest records even when table exceeds 50k rows."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(tmp_path / "mem_large"), vector_dim=2)
+    base_time = datetime(2025, 1, 1, 12, 0, 0)
+    total_records = 52_000
+    recs = [
+        MemoryRecord(
+            id=f"r_{i}",
+            content=f"c_{i}",
+            scope="/test",
+            created_at=base_time + timedelta(seconds=i),
+            embedding=[0.0, 0.0],
+        )
+        for i in range(total_records)
+    ]
+    storage.save(recs)
+
+    results = storage.list_records(scope_prefix="/test", limit=3, offset=0)
+    assert [r.id for r in results] == [
+        f"r_{total_records - 1}",
+        f"r_{total_records - 2}",
+        f"r_{total_records - 3}",
+    ]
 
 
 
