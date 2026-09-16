@@ -208,12 +208,12 @@ def test_blocks_absolute_path_in_filename(tool, temp_env):
         shutil.rmtree(outside_dir, ignore_errors=True)
 
 
-def test_blocks_symlink_escape(tool, temp_env):
+def test_blocks_symlink_escape(tool, temp_env, symlink_or_skip):
     # Symlink inside temp_dir pointing to a separate temp "outside" directory.
     outside_dir = tempfile.mkdtemp()
     outside_file = os.path.join(outside_dir, "target.txt")
     link = os.path.join(temp_env["temp_dir"], "escape")
-    os.symlink(outside_dir, link)
+    symlink_or_skip(outside_dir, link, target_is_directory=True)
     try:
         result = tool._run(
             filename="escape/target.txt",
