@@ -86,15 +86,82 @@ def suppress_warnings() -> Any:
         yield
 
 
+class _ExportState(threading.local):
+    """Per-thread marker: True while CrewAI's own exporter runs on this thread."""
+
+    active: bool = False
+
+
+_export_state = _ExportState()
+
+
+class _OwnExportLogFilter(logging.Filter):
+    """Drop OTLP export logs emitted while CrewAI's own exporter is running.
+
+    ``OTLPSpanExporter`` retries an unreachable collector and logs a warning per
+    attempt plus a final error, all on the batch worker thread. That output
+    lands on the user's console although the failure is harmless. Scoping the
+    filter to that thread keeps the logs of any OTLP exporter the user runs in
+    the same process.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not _export_state.active
+
+
+_OWN_EXPORT_LOG_FILTER = _OwnExportLogFilter()
+
+
 class SafeOTLPSpanExporter(OTLPSpanExporter):
-    """OTLP exporter that swallows export failures so telemetry never crashes the app."""
+    """OTLP exporter that neither raises nor logs when the collector is unreachable."""
+
+    def __init__(self, endpoint: str, timeout: int) -> None:
+        super().__init__(endpoint=endpoint, timeout=timeout)
+        # Idempotent: a logger holds at most one reference to a given filter.
+        logging.getLogger(OTLPSpanExporter.__module__).addFilter(_OWN_EXPORT_LOG_FILTER)
 
     def export(self, spans: Any) -> SpanExportResult:
+        _export_state.active = True
         try:
             return super().export(spans)
         except Exception as e:
             logger.debug("Telemetry export failed: %s", e)
             return SpanExportResult.FAILURE
+        finally:
+            _export_state.active = False
+
+    def shutdown(self) -> None:
+        # flush_and_shutdown stops the exporter before the processor does, and
+        # the base class logs a warning for the repeat call.
+        _export_state.active = True
+        try:
+            super().shutdown()  # type: ignore[no-untyped-call]  # unannotated upstream
+        finally:
+            _export_state.active = False
+
+
+FINAL_FLUSH_SECONDS: Final[int] = 10
+
+
+def flush_and_shutdown(
+    provider: TracerProvider, exporter: SafeOTLPSpanExporter
+) -> None:
+    """Export what is still buffered, waiting at most ``FINAL_FLUSH_SECONDS``.
+
+    ``BatchSpanProcessor.force_flush`` ignores its timeout and runs the export,
+    retry loop included, on the calling thread
+    (open-telemetry/opentelemetry-python#4568). With the collector unreachable
+    that held process exit for the exporter's whole retry budget. Flushing on a
+    helper thread and then stopping the exporter ends the loop at the deadline;
+    when the export succeeds sooner, the join returns as soon as it is done.
+    """
+    flush = threading.Thread(
+        target=provider.force_flush, name="crewai-telemetry-flush", daemon=True
+    )
+    flush.start()
+    flush.join(FINAL_FLUSH_SECONDS)
+    exporter.shutdown()
+    provider.shutdown()
 
 
 class CommonAttributesSpanProcessor(SpanProcessor):
@@ -237,14 +304,11 @@ class Telemetry:
                 CommonAttributesSpanProcessor(common_span_attributes())
             )
 
-            processor = BatchSpanProcessor(
-                SafeOTLPSpanExporter(
-                    endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
-                    timeout=30,
-                )
+            self._exporter = SafeOTLPSpanExporter(
+                endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
+                timeout=30,
             )
-
-            self.provider.add_span_processor(processor)
+            self.provider.add_span_processor(BatchSpanProcessor(self._exporter))
             self._register_shutdown_handlers()
             self.ready = True
         except Exception as e:
@@ -301,8 +365,7 @@ class Telemetry:
         if not self.ready:
             return
         try:
-            self.provider.force_flush(timeout_millis=5000)
-            self.provider.shutdown()
+            flush_and_shutdown(self.provider, self._exporter)
             self.ready = False
         except Exception as e:
             logger.debug("Telemetry shutdown failed: %s", e)

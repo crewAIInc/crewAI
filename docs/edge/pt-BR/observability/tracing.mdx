@@ -150,8 +150,8 @@ result = flow.kickoff()
 
 ### Passo 5: Visualize os Rastreamentos no Painel CrewAI AMP
 
-Após executar o crew ou flow, você pode visualizar os rastreamentos gerados pela sua aplicação CrewAI no painel CrewAI AMP. Você verá etapas detalhadas das interações dos agentes, usos de ferramentas e chamadas de LLM.
-Basta clicar no link abaixo para visualizar os rastreamentos ou ir para a aba de rastreamentos no painel [aqui](https://app.crewai.com/crewai_plus/trace_batches)
+Os rastreamentos são enviados somente após uma exportação autenticada bem-sucedida ou um upload anônimo explicitamente aprovado e concluído com sucesso. Uma execução cujo buffer local foi descartado não tem rastreamento enviado.
+Para rastreamentos associados à sua conta, abra a [aba Traces no painel CrewAI AMP](https://app.crewai.com/crewai_plus/trace_batches) para visualizar interações dos agentes, uso de ferramentas e chamadas de LLM.
 ![CrewAI Tracing Interface](/images/view-traces.png)
 
 ### Alternativa: Configuração de Variável de Ambiente
@@ -175,12 +175,46 @@ Quando esta variável de ambiente estiver definida, todos os Crews e Flows terã
 Na primeira vez que você executa um Crew ou Flow, um terminal interativo pode perguntar:
 
 ```text
-Would you like to view your execution traces? [y/N]
+Share this execution trace with CrewAI? [y/N]
 ```
 
-Escolha **yes** para abrir um link de visualização. Você pode alterar isso depois com
+Escolha **yes** para enviar o rastreamento armazenado no buffer ao CrewAI.
+Os rastreamentos podem conter prompts, entradas e saídas. Recusar, deixar o
+prazo expirar ou executar sem uma solicitação interativa de consentimento
+descarta o buffer. Você pode alterar o rastreamento depois com
 `crewai traces enable` ou `crewai traces disable`, ou definindo `tracing`
 no Crew ou Flow.
+
+### Buffer local e exportação autenticada
+
+A coleta de rastreamentos da primeira execução permanece na memória do processo
+até você concordar em compartilhar, mesmo com credenciais de login salvas.
+O rastreamento sem autenticação usa o mesmo fluxo de consentimento. Antes do
+consentimento, o CrewAI não solicita autorização de upload nem envia spans de execução.
+
+O buffer retém até **1.000 spans** e **8 MiB de dados OTLP codificados**.
+Defina `CREWAI_EPHEMERAL_TRACE_MAX_SPANS` e
+`CREWAI_EPHEMERAL_TRACE_MAX_BYTES` como inteiros positivos para ajustar esses limites.
+Ao exceder o limite, os spans mais antigos são descartados; um span maior que o
+limite de bytes é descartado. O buffer é esvaziado após o compartilhamento ou descarte.
+
+Quando o rastreamento está habilitado e há credenciais disponíveis, o CrewAI troca
+seu login da CLI, `CREWAI_USER_PAT` ou credencial de integração da plataforma
+com o AMP por uma autorização específica para a execução. Em seguida, exporta
+spans OpenTelemetry diretamente para o Wharf usando essa autorização.
+Credenciais inválidas não resultam em upload anônimo como alternativa.
+
+### Sessões de execução hospedadas
+
+Os hosts podem envolver a execução com `telemetry_session` de
+`crewai.telemetry.tracing`. A sessão usa eventos do ciclo de vida do CrewAI
+para criar e finalizar spans, preservando timestamps, relações de parentesco e
+links de pausa/retomada de HITL. Passe um provedor existente com `providers=`
+para manter o tracer e a integração de logs do host. Passe processadores de
+spans com `processors=` e um callback de logs do host com `log_emitter=`.
+O host é responsável por qualquer remoção de dados sensíveis nessas integrações. Cada sessão gerencia
+seu próprio ciclo de vida de rastreamento e mantém o provedor OpenTelemetry
+global da aplicação inalterado.
 
 ## Visualizando seus Rastreamentos
 
@@ -222,5 +256,5 @@ Se os rastreamentos não estiverem aparecendo no painel:
 
 1. Confirme que `tracing=True` está definido em seu Crew/Flow
 2. Verifique se `CREWAI_TRACING_ENABLED=true` se estiver usando variáveis de ambiente
-3. Certifique-se de estar autenticado com `crewai login`
-4. Verifique se seu crew/flow está realmente executando
+3. Para exportação autenticada, verifique seu login da CLI, `CREWAI_USER_PAT` ou credencial de integração da plataforma. Para compartilhamento anônimo, aprove explicitamente a solicitação de consentimento; não é necessário fazer login
+4. Verifique se seu crew/flow foi executado e se a exportação do rastreamento foi bem-sucedida. Recusar o consentimento, deixar o prazo expirar ou executar sem uma solicitação interativa de consentimento descarta o buffer local sem enviá-lo
