@@ -103,6 +103,15 @@ class PermanentUploadError(UploadError, PermanentFileError):
     """Upload failed permanently (auth failure, invalid file, unsupported type)."""
 
 
+class UploaderConfigurationError(Exception):
+    """Raised when no uploader can be built for a provider.
+
+    Unlike a per-file failure, this applies to every file for that provider
+    (unknown provider, missing configuration, or a missing provider SDK), so
+    batch resolution surfaces it instead of logging and skipping the file.
+    """
+
+
 def classify_upload_error(e: Exception, filename: str | None = None) -> Exception:
     """Classify an exception as transient or permanent upload error.
 

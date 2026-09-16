@@ -477,13 +477,15 @@ class FileResolver:
         tasks = [resolve_single(n, f) for n, f in files.items()]
         gather_results = await asyncio.gather(*tasks, return_exceptions=True)
 
+        from crewai_files.processing.exceptions import UploaderConfigurationError
+
         output: dict[str, ResolvedFile] = {}
         for item in gather_results:
-            # A lookup failure (unknown provider, unconfigured Bedrock, or a
-            # missing provider SDK) applies to every file in the batch, since
-            # they share one provider. Surface it instead of silently dropping
-            # files, matching the sync resolve_files path.
-            if isinstance(item, (ValueError, ImportError)):
+            # An uploader configuration failure (unknown provider, unconfigured
+            # Bedrock, or a missing provider SDK) applies to every file in the
+            # batch, since they share one provider, so surface it. Ordinary
+            # per-file failures stay best-effort: log and skip that one file.
+            if isinstance(item, UploaderConfigurationError):
                 raise item
             if isinstance(item, BaseException):
                 logger.error(f"Resolution failed: {item}")
@@ -620,11 +622,17 @@ class FileResolver:
             FileUploader instance for the provider.
 
         Raises:
-            ValueError: If the provider is unknown or not configured.
-            ImportError: If the provider's SDK is not installed.
+            UploaderConfigurationError: If no uploader can be built for the
+                provider (unknown provider, missing configuration, or missing
+                provider SDK).
         """
+        from crewai_files.processing.exceptions import UploaderConfigurationError
+
         if provider not in self._uploaders:
-            self._uploaders[provider] = get_uploader(provider)
+            try:
+                self._uploaders[provider] = get_uploader(provider)
+            except (ValueError, ImportError) as e:
+                raise UploaderConfigurationError(str(e)) from e
 
         return self._uploaders[provider]
 
