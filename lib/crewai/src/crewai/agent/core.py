@@ -73,11 +73,13 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
 )
 from crewai.events.types.skill_events import SkillUsedEvent
+from crewai.execution import begin_execution, end_execution
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
+from crewai.llm_overlay import overlay_model_for
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -399,7 +401,7 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
         """Initialize LLM, executor, code tools, and skills after model creation."""
-        self.llm = create_llm(self.llm)
+        self.llm = create_llm(overlay_model_for(self.role) or self.llm)
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
@@ -1723,39 +1725,43 @@ class Agent(BaseAgent):
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
-        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, input_files
-        )
-
+        execution_token = begin_execution()
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
+            executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+                messages, response_format, input_files
+            )
+
+            try:
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
+
+                usage_baseline = self._current_usage_summary()
+                output = self._execute_and_build_output(
+                    executor, inputs, response_format, usage_baseline
                 )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+                return self._finalize_kickoff(
+                    output,
+                    executor,
+                    inputs,
+                    response_format,
+                    messages,
+                    agent_info,
+                    usage_baseline,
+                )
 
-            usage_baseline = self._current_usage_summary()
-            output = self._execute_and_build_output(
-                executor, inputs, response_format, usage_baseline
-            )
-            return self._finalize_kickoff(
-                output,
-                executor,
-                inputs,
-                response_format,
-                messages,
-                agent_info,
-                usage_baseline,
-            )
-
-        except Exception as e:
-            self._emit_kickoff_error(agent_info, e)
+            except Exception as e:
+                self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     def _finalize_kickoff(
         self,
@@ -2097,39 +2103,43 @@ class Agent(BaseAgent):
                 input_files=input_files,
             )
 
-        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, input_files
-        )
-
+        execution_token = begin_execution()
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
+            executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+                messages, response_format, input_files
+            )
+
+            try:
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
+
+                usage_baseline = self._current_usage_summary()
+                output = await self._execute_and_build_output_async(
+                    executor, inputs, response_format, usage_baseline
                 )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+                return self._finalize_kickoff(
+                    output,
+                    executor,
+                    inputs,
+                    response_format,
+                    messages,
+                    agent_info,
+                    usage_baseline,
+                )
 
-            usage_baseline = self._current_usage_summary()
-            output = await self._execute_and_build_output_async(
-                executor, inputs, response_format, usage_baseline
-            )
-            return self._finalize_kickoff(
-                output,
-                executor,
-                inputs,
-                response_format,
-                messages,
-                agent_info,
-                usage_baseline,
-            )
-
-        except Exception as e:
-            self._emit_kickoff_error(agent_info, e)
+            except Exception as e:
+                self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     async def akickoff(
         self,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
@@ -76,7 +77,7 @@ class SqliteProvider(BaseProvider):
         """
         checkpoint_id, ts = _make_id()
         Path(location).parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(location) as conn:
+        with closing(sqlite3.connect(location)) as conn, conn:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(_CREATE_TABLE)
             conn.execute(_INSERT, (checkpoint_id, ts, parent_id, branch, data))
@@ -113,7 +114,7 @@ class SqliteProvider(BaseProvider):
 
     def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
         """Remove oldest checkpoint rows beyond *max_keep* on a branch."""
-        with sqlite3.connect(location) as conn:
+        with closing(sqlite3.connect(location)) as conn, conn:
             cursor = conn.execute(_PRUNE, (branch, branch, max_keep))
             removed: int = cursor.rowcount
             conn.commit()
@@ -136,7 +137,7 @@ class SqliteProvider(BaseProvider):
             ValueError: If the checkpoint ID is not found.
         """
         db_path, checkpoint_id = location.rsplit("#", 1)
-        with sqlite3.connect(db_path) as conn:
+        with closing(sqlite3.connect(db_path)) as conn, conn:
             row = conn.execute(_SELECT, (checkpoint_id,)).fetchone()
             if row is None:
                 raise ValueError(f"Checkpoint not found: {checkpoint_id}")
