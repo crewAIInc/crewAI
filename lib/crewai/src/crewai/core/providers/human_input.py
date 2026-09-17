@@ -343,7 +343,7 @@ class SyncHumanInputProvider(HumanInputProvider):
                 title = "🎓 Training Feedback Required"
             else:
                 prompt_text = (
-                    "Provide feedback on the Final Result above.\n\n"
+                    "The agent has completed its task.\n\n"
                     "• If you are happy with the result, simply hit Enter without typing anything.\n"
                     "• Otherwise, provide specific improvement requests.\n"
                     "• You can provide multiple rounds of feedback until satisfied."
@@ -396,7 +396,7 @@ class SyncHumanInputProvider(HumanInputProvider):
                 title = "🎓 Training Feedback Required"
             else:
                 prompt_text = (
-                    "Provide feedback on the Final Result above.\n\n"
+                    "The agent has completed its task.\n\n"
                     "• If you are happy with the result, simply hit Enter without typing anything.\n"
                     "• Otherwise, provide specific improvement requests.\n"
                     "• You can provide multiple rounds of feedback until satisfied."
