@@ -338,7 +338,9 @@ def test_context_window_validation():
             {"test-model": 500},
             clear=True,
         ):
-            llm = LLM(model="test-model")
+            # The aggregate map is owned by the LiteLLM fallback path: native
+            # providers resolve against their own per-family maps.
+            llm = LLM(model="test-model", is_litellm=True)
             llm.get_context_window_size()
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
