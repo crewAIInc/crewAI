@@ -386,7 +386,9 @@ class LLM(BaseLLM):
     api_base: str | None = None
     api_version: str | None = None
     callbacks: list[Any] | None = None
-    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    reasoning_effort: (
+        Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None
+    ) = None
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
@@ -1261,6 +1263,7 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1268,7 +1271,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
@@ -1418,6 +1422,7 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1425,7 +1430,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
