@@ -238,3 +238,27 @@ def test_zip_input_and_output_same_file_is_rejected(tmp_path, monkeypatch, tool)
 
     assert "Successful" not in result
     assert payload.read_text(encoding="utf-8") == "hello"
+
+
+def test_zip_output_symlinked_from_input_is_rejected(tmp_path, monkeypatch, tool):
+    """A symlink resolving to the output must not be exempted as "the output itself".
+
+    ``realpath`` equates the symlink with its target, but they are not the same source: opening the
+    output truncates the target, which is an input file. Only the output's own path is exempt.
+    """
+    monkeypatch.chdir(tmp_path)
+    data = tmp_path / "data.zip"
+    with ZipFile(data, "w") as seed:
+        seed.writestr("inner.txt", "inner")
+    try:
+        (tmp_path / "alias.zip").symlink_to(data)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks are not available on this host")
+
+    result = tool._run(input_path=".", output_path="alias.zip", overwrite=True)
+
+    assert "Successful" not in result
+    assert "same file" in result
+    # The symlink's target is an input file, so it has to survive the attempt.
+    with ZipFile(data) as archive:
+        assert archive.namelist() == ["inner.txt"]

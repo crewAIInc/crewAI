@@ -125,7 +125,10 @@ class FileCompressorTool(BaseTool):
         """
         if not os.path.exists(output_path):
             return
-        output_real_path = os.path.realpath(output_path)
+        # Exempt the output's own path only — lexically, not by ``realpath``. A symlink in the tree
+        # that resolves to the output has a different path but the same target, so exempting
+        # everything that resolves there would let opening the output truncate it.
+        output_abs_path = os.path.abspath(output_path)
 
         def _aliases(candidate: str) -> bool:
             try:
@@ -144,7 +147,7 @@ class FileCompressorTool(BaseTool):
         for root, _, files in os.walk(input_path):
             for name in files:
                 candidate = os.path.join(root, name)
-                if os.path.realpath(candidate) == output_real_path:
+                if os.path.abspath(candidate) == output_abs_path:
                     # Overwriting the archive that is already there is an ordinary overwrite.
                     continue
                 if _aliases(candidate):
