@@ -1155,6 +1155,44 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="AI/ML API">
+    Set the following environment variables in your `.env` file:
+    ```bash Code
+    AIML_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="aiml/openai/gpt-5-5",
+        temperature=0.7,
+        extra_headers={"X-AIMLAPI-Source": "agent/crewai"}
+    )
+    ```
+
+    `extra_headers` is optional — it tags requests as coming from CrewAI for
+    AI/ML API's own analytics and doesn't change behavior.
+
+    <Info>
+      AI/ML API models:
+      - aiml/openai/gpt-5-5
+      - aiml/anthropic/claude-opus-5
+      - aiml/google/gemini-3-7-flash
+      - aiml/deepseek/deepseek-v4-pro-0813
+
+      One API key for 300+ chat, image, video, audio, and embedding models
+      from many providers. See the [model catalog](https://docs.aimlapi.com)
+      for the full, current list of ids.
+    </Info>
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
