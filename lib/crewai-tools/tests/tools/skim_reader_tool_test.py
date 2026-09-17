@@ -4,6 +4,9 @@ These tests inject a fake payment-aware session (via the cached ``_session``
 attribute), so they never touch the network or sign a real payment.
 """
 
+import sys
+from unittest import mock
+
 import pytest
 
 from crewai_tools import SkimReaderTool
@@ -130,3 +133,68 @@ def test_tool_metadata_is_set():
     assert tool.name == "Skim web reader"
     assert "x402" in tool.description
     assert tool.args_schema is not None
+
+
+def test_get_session_builds_and_caches_payment_session():
+    """_get_session() should select the wallet signer, cap the price in atomic
+    USDC units, register the x402 client, and cache the resulting session."""
+    fake_account = mock.MagicMock(name="account")
+    fake_account_cls = mock.MagicMock()
+    fake_account_cls.from_key.return_value = fake_account
+
+    fake_client = mock.MagicMock(name="client")
+    fake_client_cls = mock.MagicMock(return_value=fake_client)
+
+    fake_signer = mock.MagicMock(name="signer")
+    fake_signer_cls = mock.MagicMock(return_value=fake_signer)
+
+    fake_policy = mock.MagicMock(name="policy")
+    fake_max_amount = mock.MagicMock(return_value=fake_policy)
+
+    fake_register = mock.MagicMock(name="register_exact_evm_client")
+
+    fake_wrapped_session = mock.MagicMock(name="wrapped_session")
+    fake_wrap = mock.MagicMock(return_value=fake_wrapped_session)
+
+    fake_requests_session = mock.MagicMock(name="requests.Session()")
+    fake_requests = mock.MagicMock()
+    fake_requests.Session.return_value = fake_requests_session
+
+    fake_modules = {
+        "requests": fake_requests,
+        "eth_account": mock.MagicMock(Account=fake_account_cls),
+        "x402": mock.MagicMock(x402ClientSync=fake_client_cls),
+        "x402.client": mock.MagicMock(max_amount=fake_max_amount),
+        "x402.http": mock.MagicMock(),
+        "x402.http.clients": mock.MagicMock(),
+        "x402.http.clients.requests": mock.MagicMock(
+            wrapRequestsWithPayment=fake_wrap
+        ),
+        "x402.mechanisms": mock.MagicMock(),
+        "x402.mechanisms.evm": mock.MagicMock(),
+        "x402.mechanisms.evm.exact": mock.MagicMock(),
+        "x402.mechanisms.evm.exact.register": mock.MagicMock(
+            register_exact_evm_client=fake_register
+        ),
+        "x402.mechanisms.evm.signers": mock.MagicMock(EthAccountSigner=fake_signer_cls),
+    }
+
+    tool = SkimReaderTool(private_key=VALID_KEY, max_price_usd=0.05)
+
+    with mock.patch.dict(sys.modules, fake_modules):
+        session = tool._get_session()
+
+    fake_account_cls.from_key.assert_called_once_with(VALID_KEY)
+    fake_signer_cls.assert_called_once_with(fake_account)
+    fake_max_amount.assert_called_once_with(50000)  # 0.05 USD -> 6-decimal USDC
+    fake_register.assert_called_once_with(
+        fake_client, fake_signer, policies=[fake_policy]
+    )
+    fake_wrap.assert_called_once_with(fake_requests_session, fake_client)
+    assert session is fake_wrapped_session
+    assert tool._session is fake_wrapped_session
+
+    # Second call must reuse the cached session, not rebuild it.
+    with mock.patch.dict(sys.modules, fake_modules):
+        assert tool._get_session() is fake_wrapped_session
+    assert fake_wrap.call_count == 1
