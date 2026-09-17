@@ -28,7 +28,7 @@ _logger = logging.getLogger(__name__)
 
 
 SKILL_FILENAME: Final[str] = "SKILL.md"
-_CLOSING_DELIMITER: Final[re.Pattern[str]] = re.compile(r"\n---[ \t]*(?:\n|$)")
+_CLOSING_DELIMITER: Final[re.Pattern[str]] = re.compile(r"\r?\n---[ \t]*(?:\r?\n|$)")
 _MAX_BODY_CHARS: Final[int] = 50_000
 
 
