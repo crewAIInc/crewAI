@@ -246,6 +246,23 @@ class LanceDBStorage:
         self._table = self._create_table(dim)
         return self._table
 
+    @staticmethod
+    def _scope_filter_sql(scope_prefix: str | None) -> str | None:
+        """Build a WHERE predicate matching a scope and its descendants.
+
+        A scope filter for ``/app`` must match ``/app`` itself and
+        ``/app/...`` but not a sibling like ``/apple``, which a plain
+        ``LIKE 'prefix%'`` cannot express.  Returns ``None`` when the
+        prefix denotes the root (i.e. no filtering).
+        """
+        if scope_prefix is None or not scope_prefix.strip("/"):
+            return None
+        prefix = scope_prefix.rstrip("/")
+        if not prefix.startswith("/"):
+            prefix = "/" + prefix
+        prefix = prefix.replace("'", "''")
+        return f"(scope = '{prefix}' OR starts_with(scope, '{prefix}/'))"
+
     def _record_to_row(self, record: MemoryRecord) -> dict[str, Any]:
         return {
             "id": record.id,
@@ -386,10 +403,8 @@ class LanceDBStorage:
                 self._vector_dim, len(query_embedding)
             )
         query = self._table.search(query_embedding)
-        if scope_prefix is not None and scope_prefix.strip("/"):
-            prefix = scope_prefix.rstrip("/")
-            like_val = prefix + "%"
-            query = query.where(f"scope LIKE '{like_val}'")
+        if (scope_filter := self._scope_filter_sql(scope_prefix)) is not None:
+            query = query.where(scope_filter)
         results = query.limit(
             limit * 3 if (categories or metadata_filter) else limit
         ).to_list()
@@ -486,8 +501,8 @@ class LanceDBStorage:
         if self._table is None:
             return []
         q = self._table.search()
-        if scope_prefix is not None and scope_prefix.strip("/"):
-            q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+        if (scope_filter := self._scope_filter_sql(scope_prefix)) is not None:
+            q = q.where(scope_filter)
         if columns is not None:
             q = q.select(columns)
         result: list[dict[str, Any]] = q.limit(limit).to_list()
