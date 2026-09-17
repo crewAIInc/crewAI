@@ -238,6 +238,21 @@ def test_lancedb_list_records_order_and_pagination(lancedb_path: Path) -> None:
         "other_1",
     ]
 
+    # 7. Negative offset returns empty list
+    assert storage.list_records(scope_prefix="/test", limit=3, offset=-1) == []
+
+    # 8. Root records (scope='/') are excluded from scoped listing
+    root_record = MemoryRecord(
+        id="root_rec",
+        content="root content",
+        scope="/",
+        created_at=base_time + timedelta(hours=1),
+        embedding=[0.0] * 4,
+    )
+    storage.save([root_record])
+    scoped = storage.list_records(scope_prefix="/test", limit=5, offset=0)
+    assert "root_rec" not in [r.id for r in scoped]
+
 
 def test_lancedb_list_records_exceeding_scan_cap(tmp_path: Path) -> None:
     """Test that LanceDBStorage.list_records returns true newest records even when table exceeds 50k rows."""
