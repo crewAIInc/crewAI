@@ -250,6 +250,9 @@ class Agent(BaseAgent):
     # The llm the agent was declared with, resolved before any overlay read: what
     # an overlay swap is configured like, and what a role outside it runs on.
     _declared_llm: BaseLLM | None = PrivateAttr(default=None)
+    # The instance the overlay built and put on ``llm``; any other ``llm`` found
+    # there later was assigned by the caller and is the declared one from then on.
+    _overlay_built: BaseLLM | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
@@ -418,9 +421,12 @@ class Agent(BaseAgent):
             declared = create_llm(self.llm)
             self._declared_llm = declared
             overlay_model = overlay_model_for(self.role)
-            self.llm = (
-                create_llm_like(overlay_model, declared) if overlay_model else declared
-            )
+            if overlay_model:
+                self.llm = self._overlay_built = create_llm_like(
+                    overlay_model, declared
+                )
+            else:
+                self.llm = declared
             self._overlay_read = True
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
@@ -478,8 +484,10 @@ class Agent(BaseAgent):
         inside the block. Outside any block a copy keeps the llm this agent runs
         on.
         """
-        if overlay_active.get() is not None and self._declared_llm is not None:
-            return self._declared_llm
+        if overlay_active.get() is not None:
+            declared = self._declared_now()
+            if declared is not None:
+                return declared
         return self.llm
 
     def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
@@ -515,15 +523,25 @@ class Agent(BaseAgent):
         if self.role == role_before or overlay_active.get() is None:
             return
         previous = self.llm
-        declared = self._declared_llm
-        if declared is None and isinstance(previous, BaseLLM):
-            declared = previous
+        declared = self._declared_now()
         overlay_model = overlay_model_for(self.role)
-        self.llm = (
-            create_llm_like(overlay_model, declared) if overlay_model else declared
-        )
+        if overlay_model:
+            self.llm = self._overlay_built = create_llm_like(overlay_model, declared)
+        else:
+            self.llm = declared
         if isinstance(previous, BaseLLM) and isinstance(self.llm, BaseLLM):
             self.llm.stream = previous.stream
+
+    def _declared_now(self) -> BaseLLM | None:
+        """The llm this agent is declared with, as of now.
+
+        Construction's ``create_llm(self.llm)`` unless the caller assigned
+        another ``llm`` since: whatever is on ``llm`` that the overlay did not
+        put there is the caller's, and a miss reverts to it.
+        """
+        if isinstance(self.llm, BaseLLM) and self.llm is not self._overlay_built:
+            self._declared_llm = self.llm
+        return self._declared_llm
 
     def _setup_agent_executor(self) -> None:
         """Initialize the agent's tools handler and optional tool cache.

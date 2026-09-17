@@ -175,6 +175,9 @@ _CAP_NAMES: Final[tuple[str, ...]] = (
 # must get its own deployment, so only the resource root is carried.
 _AZURE_DEPLOYMENT_PATH: Final[str] = "/openai/deployments/"
 
+# The declared endpoint, under the names the classes give it.
+_ENDPOINT_NAMES: Final[tuple[str, ...]] = ("base_url", "api_base")
+
 
 def create_llm_like(model: str, base: BaseLLM | None) -> BaseLLM:
     """Build ``model`` configured like ``base``.
@@ -190,7 +193,8 @@ def create_llm_like(model: str, base: BaseLLM | None) -> BaseLLM:
     Anthropic. A value ``base``'s provider derived from its model rather than
     took from the caller is not carried either (see :data:`_MODEL_DERIVED`), nor
     are ``additional_params`` across classes (they are the class's own extra
-    kwargs). An output-token cap keeps its meaning under the name the target has,
+    kwargs). A declared llm that runs through LiteLLM swaps to LiteLLM, whatever
+    the new model's native class would be. An output-token cap keeps its meaning under the name the target has,
     and a target on Anthropic gets ``temperature`` or ``top_p``, not both, which
     current Claude models reject. A setting the target's field type refuses is
     left off with a warning rather than raised: a swap happens inside a kickoff.
@@ -207,15 +211,26 @@ def create_llm_like(model: str, base: BaseLLM | None) -> BaseLLM:
     if not isinstance(base, BaseLLM):
         return LLM(model=model)
 
-    route = LLM._resolve_route(model, {})
+    # The declared endpoint decides where an unknown ``openai/`` model routes (a
+    # custom OpenAI-compatible endpoint), so the same-provider question is asked
+    # with it: a self-hosted model mapped to another model on the same endpoint
+    # must keep that endpoint.
+    route = LLM._resolve_route(model, _configured_settings(base, _ENDPOINT_NAMES))
     carried = _configured_settings(base, GENERATION_SETTINGS)
     if _same_provider(base, route):
         carried.update(_configured_settings(base, PROVIDER_SETTINGS))
-    # A carried endpoint can change where the model routes (an unknown
-    # ``openai/`` model with a ``base_url`` is a custom OpenAI endpoint), so
-    # the class whose fields decide what is accepted is resolved with it.
     target = LLM._resolve_route(model, carried).native_class or LLM
-    accepted = {k: v for k, v in carried.items() if k in target.model_fields}
+    if type(base) is LLM and base.is_litellm:
+        # The declared llm runs through LiteLLM — by the caller's choice or
+        # because no native class knew its model; either way that is the
+        # environment its callbacks and extra kwargs were written for.
+        target = LLM
+        carried["is_litellm"] = True
+    accepted = {
+        k: v
+        for k, v in carried.items()
+        if k in target.model_fields or k == "is_litellm"
+    }
     if type(base) is not target:
         accepted.pop("additional_params", None)
     _carry_cap_under_the_targets_name(carried, accepted, target)
@@ -236,12 +251,25 @@ def _same_provider(base: BaseLLM, route: Any) -> bool:
     """
     if route.native_class is not None:
         if type(base) is route.native_class:
-            return True
+            # One class serves every OpenAI-compatible provider (OpenRouter,
+            # DeepSeek, Ollama, vLLM, …); each is its own vendor with its own
+            # endpoint and key, so there the provider string decides.
+            return not _serves_several_providers(route.native_class) or (
+                route.provider == base.provider
+            )
         return (
             type(base) is LLM
             and LLM._get_native_provider(base.provider or "") is route.native_class
         )
     return type(base) is LLM and route.provider == base.provider
+
+
+def _serves_several_providers(native_class: type[BaseLLM]) -> bool:
+    from crewai.llms.providers.openai_compatible.completion import (
+        OpenAICompatibleCompletion,
+    )
+
+    return native_class is OpenAICompatibleCompletion
 
 
 def _carry_cap_under_the_targets_name(
@@ -313,7 +341,9 @@ def _derived_from_model(base: BaseLLM, name: str) -> bool:
     is the caller's, whatever the class's ``to_config_dict`` chooses to emit).
     For such a class, ``to_config_dict`` is its own account of what was
     configured: Anthropic leaves ``max_tokens`` out of it when the value is the
-    cap it derived for the model at construction.
+    cap it derived for the model at construction — so a caller's value that
+    happens to equal that cap counts as derived, and the new model derives its
+    own; the conservative side.
     """
     field = type(base).model_fields.get(name)
     if field is None or field.default is None:

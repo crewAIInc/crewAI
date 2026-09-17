@@ -377,6 +377,21 @@ def test_the_construction_time_overlay_keeps_the_declared_configuration_too() ->
         assert _configuration_of(built) == CONFIGURATION
 
 
+def test_an_llm_the_caller_assigns_later_is_the_declared_one_from_then_on() -> None:
+    """`Agent.llm` is a plain field; a caller may set it after construction.
+    A miss reverts to what the caller last put there, not to construction's."""
+    with llm_overlay(TEMPLATE_OVERLAY):
+        agent = _agent("Researcher for {repo}")
+        replacement = LLM(model="openai/gpt-4.1")
+        agent.llm = replacement
+
+        agent.interpolate_inputs({"repo": "crewAIInc/x"})
+        assert agent.llm.model == "gpt-4o"
+
+        agent.interpolate_inputs({"repo": "crewAIInc/y"})
+        assert agent.llm is replacement
+
+
 def test_a_crew_copy_made_inside_the_block_is_built_from_the_declared_llm() -> None:
     """`Crew.copy()` — the `kickoff_for_each` path — copies every agent before its
     input is interpolated. A template that is itself a key maps at construction;
