@@ -537,10 +537,12 @@ class Agent(BaseAgent):
 
         Construction's ``create_llm(self.llm)`` unless the caller assigned
         another ``llm`` since: whatever is on ``llm`` that the overlay did not
-        put there is the caller's, and a miss reverts to it.
+        put there is the caller's, and a miss reverts to it. ``llm`` is a plain
+        field, so what the caller assigned may be a model string or ``None``;
+        it is resolved the way construction resolves it.
         """
-        if isinstance(self.llm, BaseLLM) and self.llm is not self._overlay_built:
-            self._declared_llm = self.llm
+        if self.llm is None or self.llm is not self._overlay_built:
+            self._declared_llm = create_llm(self.llm)
         return self._declared_llm
 
     def _setup_agent_executor(self) -> None:

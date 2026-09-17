@@ -20,11 +20,14 @@ outside the mapping puts the declared ``llm`` instance back, so a ``Crew``
 reused across kickoffs with different inputs never bills a previous role's
 provider. Outside any block an interpolation changes nothing.
 
-A mapped model is built with the declared ``llm``'s configuration
-(``crewai.utilities.llm_utils.create_llm_like``): temperature, timeouts,
-token limits, stop sequences and the like always; credentials, endpoints and
-provider-specific settings only when the mapped model is on the same
-provider — another provider gets its own defaults and environment.
+A mapped model is built with the settings a caller configured on the
+declared ``llm`` (``crewai.utilities.llm_utils.create_llm_like``): generation
+and runtime settings — temperature, timeouts, token limits, stop sequences —
+when the new model's class has the field and accepts the value; credentials,
+endpoints and provider-specific settings only when the mapped model is on the
+same provider — another provider gets its own defaults and environment. What a
+provider derived from the model rather than took from the caller is derived
+again for the new model.
 
 The overlay is a :class:`contextvars.ContextVar`, so it follows the calling
 context, not the process. A plain ``threading.Thread`` started inside the

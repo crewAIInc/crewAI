@@ -169,6 +169,22 @@ def test_openai_compatible_providers_are_not_one_provider(monkeypatch: Any) -> N
     same_vendor = create_llm_like("openrouter/meta-llama/llama-3-70b", base)
     assert same_vendor.api_key == "or-explicit-key"
 
+    # The same through LiteLLM: a base the caller routed there carries its
+    # OpenRouter endpoint and key to another OpenRouter model, not to DeepSeek.
+    litellm_base = LLM(
+        model="openrouter/meta-llama/llama-3-8b",
+        is_litellm=True,
+        api_key="or-explicit-key",
+        base_url="https://openrouter.ai/api/v1",
+    )
+    assert type(litellm_base) is LLM and litellm_base.provider == "openrouter"
+    to_deepseek = create_llm_like("deepseek/deepseek-chat", litellm_base)
+    assert type(to_deepseek) is LLM and to_deepseek.provider == "deepseek"
+    assert to_deepseek.api_key != "or-explicit-key" and to_deepseek.base_url is None
+    to_openrouter = create_llm_like("openrouter/meta-llama/llama-3-70b", litellm_base)
+    assert to_openrouter.api_key == "or-explicit-key"
+    assert to_openrouter.base_url == "https://openrouter.ai/api/v1"
+
 
 def test_a_caller_who_chose_litellm_keeps_litellm() -> None:
     base = LLM(model="gpt-4o", is_litellm=True, api_key="k", temperature=0.2)

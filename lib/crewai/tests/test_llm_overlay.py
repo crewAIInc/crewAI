@@ -20,6 +20,7 @@ from crewai import Agent, Crew, Task
 from crewai.lite_agent import LiteAgent
 from crewai.llm import LLM
 from crewai.llm_overlay import active, llm_overlay, overlay_model_for
+from crewai.llms.base_llm import BaseLLM
 import pytest
 
 
@@ -390,6 +391,29 @@ def test_an_llm_the_caller_assigns_later_is_the_declared_one_from_then_on() -> N
 
         agent.interpolate_inputs({"repo": "crewAIInc/y"})
         assert agent.llm is replacement
+
+
+def test_a_model_string_or_none_the_caller_assigns_is_resolved_like_construction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`Agent.llm` takes a string or `None` as well as an instance, and nothing
+    validates an assignment. Both are resolved the way construction resolves
+    them before they become the declared llm."""
+    with llm_overlay(TEMPLATE_OVERLAY):
+        agent = _agent("Researcher for {repo}")
+        agent.llm = "openai/gpt-4.1"
+
+        agent.interpolate_inputs({"repo": "crewAIInc/x"})
+        assert agent.llm.model == "gpt-4o"
+        agent.interpolate_inputs({"repo": "crewAIInc/y"})
+        assert isinstance(agent.llm, BaseLLM) and agent.llm.model == "gpt-4.1"
+
+        monkeypatch.setenv("OPENAI_MODEL_NAME", "gpt-4.1-mini")
+        agent.llm = None
+        agent.interpolate_inputs({"repo": "crewAIInc/x"})
+        assert agent.llm.model == "gpt-4o"
+        agent.interpolate_inputs({"repo": "crewAIInc/z"})
+        assert isinstance(agent.llm, BaseLLM) and agent.llm.model == "gpt-4.1-mini"
 
 
 def test_a_crew_copy_made_inside_the_block_is_built_from_the_declared_llm() -> None:

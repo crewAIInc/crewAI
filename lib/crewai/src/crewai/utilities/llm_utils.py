@@ -260,6 +260,10 @@ def _same_provider(base: BaseLLM, route: Any) -> bool:
         return (
             type(base) is LLM
             and LLM._get_native_provider(base.provider or "") is route.native_class
+            and (
+                not _serves_several_providers(route.native_class)
+                or route.provider == base.provider
+            )
         )
     return type(base) is LLM and route.provider == base.provider
 
