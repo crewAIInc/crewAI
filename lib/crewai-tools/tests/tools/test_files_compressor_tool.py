@@ -1,3 +1,4 @@
+import os
 from unittest.mock import patch
 from zipfile import ZipFile
 
@@ -187,3 +188,53 @@ def test_zip_keeps_sibling_archives_in_input(tmp_path, monkeypatch, tool):
         names = archive.namelist()
 
     assert sorted(names) == ["existing.zip", "payload.txt"]
+
+
+def test_zip_overwrites_an_archive_that_already_sits_in_input(
+    tmp_path, monkeypatch, tool
+):
+    """Replacing the archive in place is an ordinary overwrite, not a self-alias to reject."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "payload.txt").write_text("hello", encoding="utf-8")
+
+    with ZipFile(tmp_path / "bundle.zip", "w") as stale:
+        stale.writestr("stale.txt", "old")
+
+    result = tool._run(input_path=".", output_path="bundle.zip", overwrite=True)
+
+    assert "Successfully compressed" in result
+    with ZipFile(tmp_path / "bundle.zip") as archive:
+        assert archive.namelist() == ["payload.txt"]
+
+
+def test_zip_output_hard_linked_to_an_input_file_is_rejected(
+    tmp_path, monkeypatch, tool
+):
+    """A hard link shares the output's inode, so opening it would truncate the source file.
+
+    Path comparison cannot see this — ``payload.txt`` and ``bundle.zip`` are different paths — so
+    the output has to be rejected by filesystem identity *before* ``ZipFile`` opens it.
+    """
+    monkeypatch.chdir(tmp_path)
+    payload = tmp_path / "payload.txt"
+    payload.write_text("hello", encoding="utf-8")
+    os.link(payload, tmp_path / "bundle.zip")
+
+    result = tool._run(input_path=".", output_path="bundle.zip", overwrite=True)
+
+    assert "Successful" not in result
+    assert "same file" in result
+    # The source file must still be intact: this is the damage the guard prevents.
+    assert payload.read_text(encoding="utf-8") == "hello"
+
+
+def test_zip_input_and_output_same_file_is_rejected(tmp_path, monkeypatch, tool):
+    """Compressing a file onto itself truncates it before it can be read."""
+    monkeypatch.chdir(tmp_path)
+    payload = tmp_path / "payload.zip"
+    payload.write_text("hello", encoding="utf-8")
+
+    result = tool._run(input_path="payload.zip", output_path="payload.zip", overwrite=True)
+
+    assert "Successful" not in result
+    assert payload.read_text(encoding="utf-8") == "hello"

@@ -86,6 +86,9 @@ class FileCompressorTool(BaseTool):
             return f"Error: File not found at path: {input_path}"
         except PermissionError:
             return f"Error: Permission denied when accessing '{input_path}' or writing '{output_path}'"
+        except ValueError as e:
+            # A rejected input/output overlap is a usage error, not an unexpected failure.
+            return f"Error: {e!s}"
         except Exception as e:
             return f"An unexpected error occurred during compression: {e!s}"
 
@@ -109,8 +112,53 @@ class FileCompressorTool(BaseTool):
         return True
 
     @staticmethod
+    def _reject_output_aliasing_input(input_path: str, output_path: str) -> None:
+        """Raise when ``output_path`` IS a file being compressed.
+
+        ``ZipFile(output_path, "w")`` truncates its target before anything is read, so an output
+        that aliases an input file destroys it before the walk could skip it. Comparing paths is not
+        enough: a hard link has its own path but shares the inode, so this compares filesystem
+        identity over the input tree — before the archive is opened.
+
+        Only an alias of an *existing* input file is rejected. A new output inside the tree is the
+        normal case and is excluded from the archive instead (see ``_compress_zip``).
+        """
+        if not os.path.exists(output_path):
+            return
+        output_real_path = os.path.realpath(output_path)
+
+        def _aliases(candidate: str) -> bool:
+            try:
+                return os.path.samefile(candidate, output_path)
+            except OSError:
+                return False
+
+        if os.path.isfile(input_path):
+            if _aliases(input_path):
+                raise ValueError(
+                    f"Input and output are the same file: '{input_path}'. Compressing it would "
+                    f"truncate the source."
+                )
+            return
+
+        for root, _, files in os.walk(input_path):
+            for name in files:
+                candidate = os.path.join(root, name)
+                if os.path.realpath(candidate) == output_real_path:
+                    # Overwriting the archive that is already there is an ordinary overwrite.
+                    continue
+                if _aliases(candidate):
+                    raise ValueError(
+                        f"Output '{output_path}' is the same file as '{candidate}' inside the "
+                        f"input. Compressing it would truncate that file; use a different output."
+                    )
+
+    @staticmethod
     def _compress_zip(input_path: str, output_path: str) -> None:
         """Compresses input into a zip archive."""
+        # Both the self-inclusion guard and the truncation guard have to settle before the archive
+        # is opened: opening it creates (or truncates) the output.
+        FileCompressorTool._reject_output_aliasing_input(input_path, output_path)
         # Opening the archive creates it, so when it lands inside ``input_path`` the walk below
         # would otherwise add the archive to itself: an empty, self-referential member that was
         # never in the source directory. ``tarfile`` guards against this internally; ``zipfile``
