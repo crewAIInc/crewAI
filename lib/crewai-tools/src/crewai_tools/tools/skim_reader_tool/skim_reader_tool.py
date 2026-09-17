@@ -9,6 +9,7 @@ USDC authorization locally.
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any, Optional
 
@@ -21,21 +22,12 @@ DEFAULT_BASE_URL = "https://skim402.com"
 def _yaml_scalar(value: Any) -> str:
     """Render a metadata value as a safe single-line YAML scalar.
 
-    Collapses internal whitespace/newlines and double-quotes the value when it
-    contains characters that could otherwise produce invalid or ambiguous YAML.
+    Collapses internal whitespace/newlines and serializes the value as a
+    JSON-compatible quoted string, which is always valid YAML and avoids
+    ambiguity (e.g. "Title # 2" becoming a comment, or "true" becoming a bool).
     """
     text = " ".join(str(value).split())
-    needs_quoting = (
-        text == ""
-        or text[0] in "!&*?|>%@`\"'#,[]{}:-"
-        or ": " in text
-        or text.endswith(":")
-        or text[0] in " "
-    )
-    if needs_quoting:
-        escaped = text.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-    return text
+    return json.dumps(text, ensure_ascii=False)
 
 
 _TOOL_DESCRIPTION = (
