@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,9 @@ from crewai_cli.task_outputs import load_task_outputs
 
 def _create_task_outputs_db(db_path: Path) -> None:
     """Build the table ``KickoffTaskOutputsSQLiteStorage`` writes."""
-    with sqlite3.connect(db_path) as conn:
+    # Close the setup handle too: a leaked one holds the database lock on Windows, which would
+    # make the file-release assertions below fail for the fixture's reason, not the reader's.
+    with closing(sqlite3.connect(db_path)) as conn, conn:
         conn.execute(
             """CREATE TABLE latest_kickoff_task_outputs (
                 task_id TEXT PRIMARY KEY,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import os
 import sqlite3
@@ -110,7 +111,9 @@ def _create_sqlite_checkpoint(
         data = _make_checkpoint_data(
             tasks_completed=tasks_completed, branch=branch, inputs=inputs
         )
-    with sqlite3.connect(db_path) as conn:
+    # Close the setup handle too: a leaked one holds the database lock on Windows, which would
+    # make the file-release assertions fail for the fixture's reason, not the command's.
+    with closing(sqlite3.connect(db_path)) as conn, conn:
         conn.execute(
             """CREATE TABLE IF NOT EXISTS checkpoints (
                 id TEXT PRIMARY KEY,
@@ -370,7 +373,7 @@ class TestPruneSqlite:
                 )
             deleted = _prune_sqlite(db_path, keep=2, older_than=None)
             assert deleted == 3
-            with sqlite3.connect(db_path) as conn:
+            with closing(sqlite3.connect(db_path)) as conn, conn:
                 count = conn.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0]
             assert count == 2
 
@@ -381,7 +384,7 @@ class TestPruneSqlite:
             _create_sqlite_checkpoint(db_path, "20990101T000000_new01111")
             deleted = _prune_sqlite(db_path, keep=None, older_than=timedelta(days=1))
             assert deleted >= 1
-            with sqlite3.connect(db_path) as conn:
+            with closing(sqlite3.connect(db_path)) as conn, conn:
                 count = conn.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0]
             assert count >= 1
 
