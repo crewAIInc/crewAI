@@ -146,6 +146,8 @@ def test_lancedb_row_to_record_normalizes_legacy_timestamps(
 
     assert record.created_at == datetime(2026, 1, 1, 12, tzinfo=timezone.utc)
     assert record.last_accessed == datetime(2026, 1, 1, 12, tzinfo=timezone.utc)
+    assert record.created_at.tzinfo == timezone.utc
+    assert record.last_accessed.tzinfo == timezone.utc
 
 
 def test_lancedb_delete_count(lancedb_path: Path) -> None:
