@@ -347,7 +347,7 @@ def test_gemini_completion_with_tools():
 
 
 def test_gemini_raises_error_when_model_not_supported():
-    """Test that GeminiCompletion raises ValueError when model not supported"""
+    """Test that GeminiCompletion raises an API error for an unsupported model."""
 
     with patch('crewai.llms.providers.gemini.completion.genai') as mock_genai:
         mock_client = MagicMock()
@@ -359,7 +359,7 @@ def test_gemini_raises_error_when_model_not_supported():
         mock_response.body_segments = [{
             'error': {
                 'code': 404,
-                'message': 'models/model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
+                'message': 'models/gemini-model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
                 'status': 'NOT_FOUND'
             }
         }]
@@ -367,8 +367,12 @@ def test_gemini_raises_error_when_model_not_supported():
 
         mock_client.models.generate_content.side_effect = ClientError(404, mock_response)
 
-        with pytest.raises(ImportError, match="Unable to initialize LLM"):
-            LLM(model="google/model-doesnt-exist")
+        llm = LLM(model="google/gemini-model-doesnt-exist")
+
+        with pytest.raises(ClientError, match="404"):
+            llm.call("Hello")
+
+        mock_client.models.generate_content.assert_called_once()
 
 
 def test_gemini_vertex_ai_setup():
