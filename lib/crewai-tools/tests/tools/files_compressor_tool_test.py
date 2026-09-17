@@ -1,6 +1,9 @@
 from unittest.mock import patch
+from zipfile import ZipFile
 
-from crewai_tools.tools.files_compressor_tool import FileCompressorTool
+from crewai_tools.tools.files_compressor_tool.files_compressor_tool import (
+    FileCompressorTool,
+)
 import pytest
 
 
@@ -129,3 +132,58 @@ def test_prepare_output_makes_dir(mock_exists, mock_makedirs):
     result = tool._prepare_output("some/missing/path/file.zip", overwrite=True)
     assert result is True
     mock_makedirs.assert_called_once()
+
+
+# The tests below drive the real ``zipfile`` path on purpose: everything above mocks
+# ``zipfile.ZipFile``, which is why a self-referential archive went unnoticed.
+def test_zip_output_inside_input_is_not_archived(tmp_path, monkeypatch, tool):
+    """The archive must not contain itself when it is written into the source tree.
+
+    ``ZipFile(output_path, "w")`` creates the output before ``os.walk`` enumerates the directory,
+    so without an explicit skip the archive becomes an empty member of itself — a file that was
+    never in the source directory, and one that extracts to an empty archive.
+    """
+    monkeypatch.chdir(tmp_path)  # validate_file_path allows the cwd tree
+    (tmp_path / "payload.txt").write_text("hello", encoding="utf-8")
+
+    result = tool._run(input_path=".", output_path="bundle.zip")
+
+    assert "Successfully compressed" in result
+    with ZipFile(tmp_path / "bundle.zip") as archive:
+        assert archive.namelist() == ["payload.txt"]
+
+
+def test_zip_output_in_nested_input_directory_is_not_archived(
+    tmp_path, monkeypatch, tool
+):
+    """The skip matches the file, not its archive name, so a nested output is skipped too."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "payload.txt").write_text("hello", encoding="utf-8")
+    (tmp_path / "nested").mkdir()
+
+    result = tool._run(input_path=".", output_path="nested/bundle.zip")
+
+    assert "Successfully compressed" in result
+    with ZipFile(tmp_path / "nested" / "bundle.zip") as archive:
+        names = archive.namelist()
+
+    assert "nested/bundle.zip" not in names
+    assert "payload.txt" in names
+
+
+def test_zip_keeps_sibling_archives_in_input(tmp_path, monkeypatch, tool):
+    """Only the archive being written is skipped — an unrelated .zip in the tree is still kept."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "payload.txt").write_text("hello", encoding="utf-8")
+
+    other = tmp_path / "existing.zip"
+    with ZipFile(other, "w") as seed:
+        seed.writestr("inner.txt", "inner")
+
+    result = tool._run(input_path=".", output_path="bundle.zip")
+
+    assert "Successfully compressed" in result
+    with ZipFile(tmp_path / "bundle.zip") as archive:
+        names = archive.namelist()
+
+    assert sorted(names) == ["existing.zip", "payload.txt"]

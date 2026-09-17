@@ -111,6 +111,11 @@ class FileCompressorTool(BaseTool):
     @staticmethod
     def _compress_zip(input_path: str, output_path: str) -> None:
         """Compresses input into a zip archive."""
+        # Opening the archive creates it, so when it lands inside ``input_path`` the walk below
+        # would otherwise add the archive to itself: an empty, self-referential member that was
+        # never in the source directory. ``tarfile`` guards against this internally; ``zipfile``
+        # does not, so resolve the output once and skip that entry.
+        output_real_path = os.path.realpath(output_path)
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
                 zipf.write(input_path, os.path.basename(input_path))
@@ -118,6 +123,8 @@ class FileCompressorTool(BaseTool):
                 for root, _, files in os.walk(input_path):
                     for file in files:
                         full_path = os.path.join(root, file)
+                        if os.path.realpath(full_path) == output_real_path:
+                            continue
                         arcname = os.path.relpath(full_path, start=input_path)
                         zipf.write(full_path, arcname)
 
