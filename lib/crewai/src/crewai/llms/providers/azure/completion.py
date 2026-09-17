@@ -10,7 +10,10 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
+from crewai.llms._finish_reason_utils import (
+    extract_choices_finish_reason_and_id,
+    warn_if_truncated,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -873,6 +876,7 @@ class AzureCompletion(BaseLLM):
         self._track_token_usage_internal(usage)
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
+        warn_if_truncated(finish_reason, self._effective_max_tokens(), self.model)
 
         # Without available_functions, return tool_calls so the caller (executor) handles execution
         if message.tool_calls and not available_functions:
