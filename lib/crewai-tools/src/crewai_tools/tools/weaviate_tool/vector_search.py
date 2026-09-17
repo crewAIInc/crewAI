@@ -1,4 +1,6 @@
+import importlib.metadata
 import json
+import logging
 import os
 import subprocess
 from typing import Any
@@ -20,6 +22,56 @@ except ImportError:
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+
+
+logger = logging.getLogger(__name__)
+
+# Reported to Weaviate as the `X-Weaviate-Client-Integration` header so that server-side
+# telemetry can attribute traffic to CrewAI, the same way `MongoDBVectorSearchTool` tags
+# pymongo with `DriverInfo(name="CrewAI", ...)`. The version comes from `crewai-tools`,
+# the distribution that ships this tool.
+_INTEGRATION_NAME = "crewai-tools"
+
+
+def _integration_version() -> str:
+    """Version reported with `_INTEGRATION_NAME`; "unknown" when it cannot be resolved.
+
+    `crewai_tools.__version__` is unusable here because `crewai_tools/__init__.py` imports
+    this module, so the distribution metadata is read instead.
+    """
+    try:
+        return importlib.metadata.version("crewai-tools").strip() or "unknown"
+    except Exception:  # telemetry must never break the tool
+        return "unknown"
+
+
+def _register_integration(client: Any) -> None:
+    """Best-effort: tag `client` with the `X-Weaviate-Client-Integration` header.
+
+    `client.integrations.configure` applies the header to both the HTTP and the gRPC
+    transport, which a plain `headers=` argument does not -- searches travel over gRPC.
+    `_IntegrationConfig` is private API, so both the import and the subclass live inside the
+    `try`: on a `weaviate-client` that lacks it, registration is skipped rather than breaking
+    the tool. Weaviate parses the value as `{name}/{version}` and ignores it entirely before
+    server version 1.38.0.
+    """
+    try:
+        from pydantic import Field as PydanticField
+        from weaviate.connect.integrations import _IntegrationConfig
+
+        value = f"{_INTEGRATION_NAME}/{_integration_version()}"
+
+        class _CrewAIIntegration(_IntegrationConfig):
+            integration: str = PydanticField(
+                default=value,
+                serialization_alias="X-Weaviate-Client-Integration",
+            )
+
+        client.integrations.configure(_CrewAIIntegration())
+    except Exception:  # telemetry must never break the tool
+        logger.debug(
+            "Could not register the CrewAI Weaviate integration header", exc_info=True
+        )
 
 
 class WeaviateToolSchema(BaseModel):
@@ -117,6 +169,7 @@ class WeaviateVectorSearchTool(BaseTool):
             auth_credentials=Auth.api_key(self.weaviate_api_key),
             headers=self.headers,
         )
+        _register_integration(client)
         internal_docs = client.collections.get(self.collection_name)
 
         if not internal_docs:
