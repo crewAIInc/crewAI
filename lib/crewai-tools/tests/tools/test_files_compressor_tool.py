@@ -262,3 +262,26 @@ def test_zip_output_symlinked_from_input_is_rejected(tmp_path, monkeypatch, tool
     # The symlink's target is an input file, so it has to survive the attempt.
     with ZipFile(data) as archive:
         assert archive.namelist() == ["inner.txt"]
+
+
+def test_tar_output_hard_linked_to_an_input_file_is_rejected(
+    tmp_path, monkeypatch, tool
+):
+    """The overlap guard is format-independent: ``tarfile.open`` truncates at open too.
+
+    ``tarfile`` protects the archive from being added to itself, which is a different problem from
+    an output that *is* an input file — it cannot help here, because the truncation happens before
+    the walk.
+    """
+    monkeypatch.chdir(tmp_path)
+    payload = tmp_path / "payload.txt"
+    payload.write_text("hello", encoding="utf-8")
+    os.link(payload, tmp_path / "bundle.tar.gz")
+
+    result = tool._run(
+        input_path=".", output_path="bundle.tar.gz", format="tar.gz", overwrite=True
+    )
+
+    assert "Successful" not in result
+    assert "same file" in result
+    assert payload.read_text(encoding="utf-8") == "hello"

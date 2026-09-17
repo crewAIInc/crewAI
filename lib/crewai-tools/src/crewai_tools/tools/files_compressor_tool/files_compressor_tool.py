@@ -69,6 +69,9 @@ class FileCompressorTool(BaseTool):
             )
 
         try:
+            # Every format opens the output before reading any input, so an output that IS an input
+            # file has to be rejected for all of them, not just zip.
+            self._reject_output_aliasing_input(input_path, output_path)
             format_compression = {
                 "zip": self._compress_zip,
                 "tar": self._compress_tar,
@@ -159,13 +162,11 @@ class FileCompressorTool(BaseTool):
     @staticmethod
     def _compress_zip(input_path: str, output_path: str) -> None:
         """Compresses input into a zip archive."""
-        # Both the self-inclusion guard and the truncation guard have to settle before the archive
-        # is opened: opening it creates (or truncates) the output.
-        FileCompressorTool._reject_output_aliasing_input(input_path, output_path)
         # Opening the archive creates it, so when it lands inside ``input_path`` the walk below
         # would otherwise add the archive to itself: an empty, self-referential member that was
         # never in the source directory. ``tarfile`` guards against this internally; ``zipfile``
-        # does not, so resolve the output once and skip that entry.
+        # does not, so resolve the output once and skip that entry. (Overlap with an *existing*
+        # input file is rejected earlier, in ``_run``, for every format.)
         output_real_path = os.path.realpath(output_path)
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
