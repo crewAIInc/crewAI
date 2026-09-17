@@ -197,4 +197,13 @@ def test_get_session_builds_and_caches_payment_session():
     # Second call must reuse the cached session, not rebuild it.
     with mock.patch.dict(sys.modules, fake_modules):
         assert tool._get_session() is fake_wrapped_session
+
+    fake_account_cls.from_key.assert_called_once_with(VALID_KEY)
+    fake_client_cls.assert_called_once_with()
+    fake_signer_cls.assert_called_once_with(fake_account)
+    fake_max_amount.assert_called_once_with(50000)
+    fake_register.assert_called_once_with(
+        fake_client, fake_signer, policies=[fake_policy]
+    )
+    fake_requests.Session.assert_called_once_with()
     assert fake_wrap.call_count == 1
