@@ -17279,9 +17279,11 @@
                   {
                     "enum": [
                       "none",
+                      "minimal",
                       "low",
                       "medium",
-                      "high"
+                      "high",
+                      "xhigh"
                     ],
                     "type": "string"
                   },

@@ -22,6 +22,7 @@ from crewai_cli.model_catalog import get_provider_models
 from crewai_cli.platform_tools_catalog import PLATFORM_TOOLS
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
+    copy_assistant_instructions,
     enable_prompt_line_editing,
     get_or_create_project_id,
     is_dmn_mode_enabled,
@@ -76,6 +77,7 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
     ],
     "gemini": [
+        ("gemini-3.8-flash", "Gemini 3.8 Flash"),
         ("gemini-3.5-flash", "Gemini 3.5 Flash"),
         ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
         ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
@@ -1173,6 +1175,7 @@ def create_json_crew(
     (folder_path / "tools").mkdir()
     (folder_path / "skills").mkdir()
     (folder_path / "knowledge").mkdir()
+    copy_assistant_instructions(folder_path)
 
     if platform_token:
         os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token

@@ -1045,10 +1045,11 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
+            execution_token = begin_execution(tracing=self.tracing)
             inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
@@ -1069,6 +1070,10 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
@@ -1262,10 +1267,11 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
+            execution_token = begin_execution(tracing=self.tracing)
             inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
@@ -1286,6 +1292,10 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
