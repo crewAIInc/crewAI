@@ -513,17 +513,22 @@ class LanceDBStorage:
     ) -> list[MemoryRecord]:
         """List records in a scope, newest first.
 
-        Note on LanceDB query constraint:
-            The LanceDB Python SDK query builder (``table.search()``) does not
-            support SQL ``ORDER BY`` or descending ordering. To provide correct
-            newest-first pagination without materializing heavy embedding vectors
-            or truncating large scopes with an arbitrary row cap:
+        Note on LanceDB compatibility constraint:
+            CrewAI is pinned to ``lancedb>=0.29.2,<0.30.1``. In LanceDB <=0.30.x,
+            the query builder (``table.search()``) does not expose native ``order_by``
+            (native ordering was introduced in LanceDB 0.33+ via ``ColumnOrdering``).
+            To provide correct newest-first pagination without materializing heavy
+            embedding vectors or truncating large scopes with an arbitrary row cap:
             1. Pushes the ``scope`` prefix filter down to LanceDB's query engine.
             2. Projects only metadata columns (excluding the heavy ``vector`` column).
             3. Streams Arrow record batches through a bounded min-heap of size
                ``offset + limit``, keeping peak memory usage strictly bounded to
                ``O(offset + limit)`` regardless of table size.
             4. Deserializes only the sliced records into ``MemoryRecord`` instances.
+
+            If CrewAI upgrades to LanceDB >=0.33.0 in the future, this heap scan
+            can be simplified to native database query ordering:
+            ``q.order_by([ColumnOrdering(column_name="created_at", ascending=False)]).offset(offset).limit(limit)``.
 
         Args:
             scope_prefix: Optional scope path prefix to filter by.
@@ -533,7 +538,7 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        if self._table is None or limit <= 0:
+        if self._table is None or limit <= 0 or offset < 0:
             return []
 
         q = self._table.search()
@@ -541,7 +546,7 @@ class LanceDBStorage:
             prefix = scope_prefix.rstrip("/")
             if not prefix.startswith("/"):
                 prefix = "/" + prefix
-            q = q.where(f"scope LIKE '{prefix}%' OR scope = '/'")
+            q = q.where(f"scope LIKE '{prefix}%'")
         q = q.select(_RECORD_METADATA_COLUMNS)
 
         k = offset + limit
