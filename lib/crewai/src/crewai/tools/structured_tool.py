@@ -22,6 +22,7 @@ from pydantic import (
 from typing_extensions import Self
 
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy
+from crewai.utilities.async_utils import run_coroutine_sync
 from crewai.utilities.logger import Logger
 from crewai.utilities.pydantic_schema_utils import (
     create_model_from_schema,
@@ -438,12 +439,12 @@ class CrewStructuredTool(BaseModel):
         self._increment_usage_count()
 
         if inspect.iscoroutinefunction(self.func):
-            return asyncio.run(self.func(**parsed_args, **kwargs))
+            return run_coroutine_sync(self.func(**parsed_args, **kwargs))
 
         result = self.func(**parsed_args, **kwargs)
 
         if asyncio.iscoroutine(result):
-            return asyncio.run(result)
+            return run_coroutine_sync(result)
 
         return result
 
