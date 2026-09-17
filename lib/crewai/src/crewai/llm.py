@@ -181,6 +181,7 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "o1-mini": 128000,
     "o3-mini": 200000,
     "o4-mini": 200000,
+    "gemini-3.8-flash": 1048576,
     "gemini-3-pro-preview": 1048576,
     "gemini-2.0-flash": 1048576,
     "gemini-2.0-flash-thinking-exp-01-21": 32768,
@@ -1263,6 +1264,7 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1270,7 +1272,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
@@ -1420,6 +1423,7 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1427,7 +1431,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
