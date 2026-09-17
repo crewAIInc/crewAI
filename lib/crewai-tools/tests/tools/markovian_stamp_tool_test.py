@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from types import ModuleType
 from unittest.mock import MagicMock, patch
@@ -90,3 +91,11 @@ def test_run_handles_missing_merkle_root():
         result = tool.run(data="hello world")
 
     assert "no merkle_root" in result
+
+
+def test_arun_stamps_off_the_event_loop():
+    tool = MarkovianStampTool()
+    with patch.object(tool, "_stamp", return_value=SAMPLE_RECEIPT):
+        result = asyncio.run(tool._arun(data="hello world"))
+
+    assert SAMPLE_RECEIPT["merkle_root"] in result

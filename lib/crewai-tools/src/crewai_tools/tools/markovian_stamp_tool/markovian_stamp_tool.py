@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from typing import Any
@@ -29,10 +30,13 @@ class MarkovianStampToolInput(BaseModel):
 class MarkovianStampTool(BaseTool):
     """Stamp any data on the Markovian Protocol and return a verifiable receipt.
 
-    Markovian is a content-agnostic provenance primitive. Stamping commits a
-    hash of the data to the chain, anchored to Bitcoin, and returns a Merkle
-    root plus a public verify URL. It proves the data existed at a point in
-    time, not that the data is correct: provenance, not truth.
+    Stamping records a hash of the data in the public witnessed transparency log
+    and returns a Merkle root plus a public verify URL. The item gets an
+    OpenTimestamps timestamp against a Bitcoin calendar, which proves it existed
+    at a point in time. The protocol's own chain root is separately committed to
+    Bitcoin, which secures the log's history but does not by itself prove a given
+    item is inside the anchored root. Either way the receipt proves the data
+    existed, not that the data is correct.
 
     No account, wallet, or API key is required. Provide an api_key only for
     attributed or pro usage.
@@ -41,9 +45,9 @@ class MarkovianStampTool(BaseTool):
     name: str = "Markovian Stamp"
     description: str = (
         "Create a verifiable provenance receipt for any text on the Markovian "
-        "Protocol. Returns a Merkle root and a public verify URL, anchored to "
-        "Bitcoin. Use it to prove an agent output existed at a point in time. "
-        "No account or API key required."
+        "Protocol. Returns a Merkle root and a public verify URL that anyone can "
+        "check without an account. Use it to show an agent output existed at a "
+        "point in time; it does not show the output is correct."
     )
     args_schema: type[BaseModel] = MarkovianStampToolInput
 
@@ -71,6 +75,7 @@ class MarkovianStampTool(BaseTool):
         timeout: int = 30,
         **kwargs: Any,
     ) -> None:
+        """Configure credentials, endpoint, and request timeout for the stamp call."""
         super().__init__(**kwargs)
         self.api_key = api_key or os.environ.get("MARKOVIAN_API_KEY")
         self.wallet = wallet
@@ -105,6 +110,7 @@ class MarkovianStampTool(BaseTool):
             return resp.json()
 
     def _run(self, data: str, label: str | None = None, **_: Any) -> str:
+        """Stamp the data and format the receipt, returning errors as readable text."""
         try:
             receipt = self._stamp(data, label)
         except requests.Timeout:
@@ -134,4 +140,5 @@ class MarkovianStampTool(BaseTool):
         return "\n".join(lines)
 
     async def _arun(self, data: str, label: str | None = None, **kwargs: Any) -> str:
-        return self._run(data, label=label, **kwargs)
+        """Run the blocking stamp call in a worker thread so the event loop is free."""
+        return await asyncio.to_thread(self._run, data, label=label, **kwargs)

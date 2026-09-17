@@ -5,8 +5,12 @@ using the [Markovian Protocol](https://markovianprotocol.com). It is useful when
 an agent needs to prove that an output, decision, or document existed at a point
 in time.
 
-Stamping commits a hash of the data to the chain, anchored to Bitcoin, and
-returns a Merkle root plus a public verify URL. Anyone can confirm the record at
+Stamping records a hash of the data in the public witnessed transparency log and
+returns a Merkle root plus a public verify URL. The item itself gets an
+OpenTimestamps timestamp against a Bitcoin calendar, which proves it existed at a
+point in time. Separately, the protocol's own chain root is committed to Bitcoin;
+that secures the log's history and does not by itself prove your item is inside
+the anchored root. Anyone can confirm the record at
 `https://api.quantsynth.net/verify/<merkle_root>` with no account.
 
 Markovian proves that data existed, not that it is correct. Provenance, not
