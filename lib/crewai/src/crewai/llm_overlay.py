@@ -13,12 +13,18 @@ role and the text changes. The second read is what lets a role declared as
 a template (``"Researcher for {repo}"``, the YAML form of a ``CrewBase``
 crew) match a key written for the interpolated text, which is the role
 every trace records; the template itself is not a key at construction. A
-role the interpolation leaves unchanged is not read again. Either read only
-ever sets a model: a role that is not a key leaves ``llm`` as it is, so a
-later kickoff that interpolates to a role outside the mapping keeps the
-model the agent already has rather than reverting to the declared one — a
-``Crew`` object reused across kickoffs with different inputs inside one
-block keeps the last mapped model.
+role the interpolation leaves unchanged is not read again. Inside a block,
+an agent runs on the model its current role maps to, and on its declared
+``llm`` when that role is not a key: a kickoff that interpolates to a role
+outside the mapping puts the declared ``llm`` instance back, so a ``Crew``
+reused across kickoffs with different inputs never bills a previous role's
+provider. Outside any block an interpolation changes nothing.
+
+A mapped model is built with the declared ``llm``'s configuration
+(``crewai.utilities.llm_utils.create_llm_like``): temperature, timeouts,
+token limits, stop sequences and the like always; credentials, endpoints and
+provider-specific settings only when the mapped model is on the same
+provider — another provider gets its own defaults and environment.
 
 The overlay is a :class:`contextvars.ContextVar`, so it follows the calling
 context, not the process. A plain ``threading.Thread`` started inside the

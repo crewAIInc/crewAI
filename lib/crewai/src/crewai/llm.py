@@ -11,6 +11,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NamedTuple,
     TypedDict,
     cast,
 )
@@ -368,6 +369,15 @@ class AccumulatedToolArgs(BaseModel):
     function: FunctionArgs = Field(default_factory=FunctionArgs)
 
 
+class _Route(NamedTuple):
+    """Where ``LLM(model, **kwargs)`` goes; see :meth:`LLM._resolve_route`."""
+
+    provider: str
+    model: str
+    native_class: type[BaseLLM] | None
+    custom_openai: bool
+
+
 class LLM(BaseLLM):
     llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
@@ -411,84 +421,23 @@ class LLM(BaseLLM):
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
-        custom_openai = bool(kwargs.pop("custom_openai", False))
-        custom_openai_route = custom_openai
-        explicit_provider = kwargs.get("provider")
-
-        if custom_openai:
-            if not cls._has_custom_openai_endpoint(kwargs):
-                raise ValueError(
-                    "custom_openai=True requires base_url, api_base, "
-                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
-                )
-            provider = "openai"
-            use_native = True
-            prefix, separator, model_part = model.partition("/")
-            model_string = (
-                model_part if separator and prefix.lower() == "openai" else model
-            )
-        elif explicit_provider:
-            provider = explicit_provider
-            use_native = True
-            model_string = model
-        elif "/" in model:
-            prefix, _, model_part = model.partition("/")
-
-            provider_mapping = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-                "openrouter": "openrouter",
-                "deepseek": "deepseek",
-                "ollama": "ollama",
-                "ollama_chat": "ollama_chat",
-                "hosted_vllm": "hosted_vllm",
-                "cerebras": "cerebras",
-                "dashscope": "dashscope",
-                "snowflake": "snowflake",
-            }
-
-            canonical_provider = provider_mapping.get(prefix.lower())
-
-            valid_native_model = bool(
-                canonical_provider
-                and cls._validate_model_in_constants(model_part, canonical_provider)
-            )
-            custom_openai_route = bool(
-                canonical_provider == "openai"
-                and not valid_native_model
-                and cls._has_custom_openai_base_url(kwargs)
-            )
-
-            if canonical_provider and (valid_native_model or custom_openai_route):
-                provider = canonical_provider
-                use_native = True
-                model_string = model_part
-            else:
-                provider = prefix
-                use_native = False
-                model_string = model_part
-        else:
-            provider = cls._infer_provider_from_model(model)
-            use_native = True
-            model_string = model
-
-        native_class = cls._get_native_provider(provider) if use_native else None
-        if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
+        route = cls._resolve_route(model, kwargs)
+        if route.native_class is not None and not is_litellm:
             try:
-                # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
-                kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
-                if custom_openai_route:
+                # The route decided 'provider' and 'custom_openai'; the caller's
+                # values must not reach the native class a second time.
+                kwargs_copy = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in ("provider", "custom_openai")
+                }
+                if route.custom_openai:
                     kwargs_copy["custom_openai"] = True
                 return cast(
                     Self,
-                    native_class(model=model_string, provider=provider, **kwargs_copy),
+                    route.native_class(
+                        model=route.model, provider=route.provider, **kwargs_copy
+                    ),
                 )
             except NotImplementedError:
                 raise
@@ -588,6 +537,91 @@ class LLM(BaseLLM):
         return False
 
     @classmethod
+    def _resolve_route(cls, model: str, kwargs: dict[str, Any]) -> _Route:
+        """Decide which class ``LLM(model, **kwargs)`` constructs, without building it.
+
+        The routing ``__new__`` applies, in its priority order: ``custom_openai``
+        forces the native OpenAI provider; an explicit ``provider`` names one;
+        a ``<prefix>/<model>`` string goes native when the prefix is a native
+        provider and the model is one it knows (or, for ``openai/``, when a
+        custom endpoint is configured); a bare model name infers its provider.
+        ``native_class`` is ``None`` when the call falls back to LiteLLM.
+        ``kwargs`` is read, never mutated.
+        """
+        custom_openai = bool(kwargs.get("custom_openai", False))
+        custom_openai_route = custom_openai
+        explicit_provider = kwargs.get("provider")
+
+        if custom_openai:
+            if not cls._has_custom_openai_endpoint(kwargs):
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            provider = "openai"
+            use_native = True
+            prefix, separator, model_part = model.partition("/")
+            model_string = (
+                model_part if separator and prefix.lower() == "openai" else model
+            )
+        elif explicit_provider:
+            provider = explicit_provider
+            use_native = True
+            model_string = model
+        elif "/" in model:
+            prefix, _, model_part = model.partition("/")
+
+            provider_mapping = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "claude": "anthropic",
+                "azure": "azure",
+                "azure_openai": "azure",
+                "google": "gemini",
+                "gemini": "gemini",
+                "bedrock": "bedrock",
+                "aws": "bedrock",
+                "openrouter": "openrouter",
+                "deepseek": "deepseek",
+                "ollama": "ollama",
+                "ollama_chat": "ollama_chat",
+                "hosted_vllm": "hosted_vllm",
+                "cerebras": "cerebras",
+                "dashscope": "dashscope",
+                "snowflake": "snowflake",
+            }
+
+            canonical_provider = provider_mapping.get(prefix.lower())
+
+            valid_native_model = bool(
+                canonical_provider
+                and cls._validate_model_in_constants(model_part, canonical_provider)
+            )
+            custom_openai_route = bool(
+                canonical_provider == "openai"
+                and not valid_native_model
+                and cls._has_custom_openai_base_url(kwargs)
+            )
+
+            if canonical_provider and (valid_native_model or custom_openai_route):
+                provider = canonical_provider
+                use_native = True
+                model_string = model_part
+            else:
+                provider = prefix
+                use_native = False
+                model_string = model_part
+        else:
+            provider = cls._infer_provider_from_model(model)
+            use_native = True
+            model_string = model
+
+        native_class = cls._get_native_provider(provider) if use_native else None
+        if provider not in SUPPORTED_NATIVE_PROVIDERS:
+            native_class = None
+        return _Route(provider, model_string, native_class, custom_openai_route)
+
+    @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
         """Validate if a model name exists in the provider's constants or matches provider patterns.
 
@@ -681,7 +715,7 @@ class LLM(BaseLLM):
         return "openai"
 
     @classmethod
-    def _get_native_provider(cls, provider: str) -> type | None:
+    def _get_native_provider(cls, provider: str) -> type[BaseLLM] | None:
         """Get native provider class if available."""
         if provider == "openai":
             from crewai.llms.providers.openai.completion import OpenAICompletion
