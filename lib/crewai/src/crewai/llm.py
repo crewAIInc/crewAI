@@ -432,6 +432,13 @@ class LLM(BaseLLM):
             provider = explicit_provider
             use_native = True
             model_string = model
+            if provider == "deepinfra" and not cls._matches_provider_pattern(
+                model, provider
+            ):
+                raise ValueError(
+                    "DeepInfra model ids are org/model, for example "
+                    f"'deepseek-ai/DeepSeek-V4-Flash-0731'; got '{model}'"
+                )
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 
