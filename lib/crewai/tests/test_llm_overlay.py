@@ -20,11 +20,12 @@ from crewai import Agent, Crew, Task
 from crewai.lite_agent import LiteAgent
 from crewai.llm import LLM
 from crewai.llm_overlay import active, llm_overlay, overlay_model_for
-from crewai.llms.providers.anthropic.completion import AnthropicCompletion
-from crewai.llms.providers.openai.completion import OpenAICompletion
 import pytest
 
 
+# Provider classes are compared by name: tests/llms/*/test_*.py delete a provider
+# module from sys.modules and re-import it, so a class object imported here can
+# be stale by the time a test in the same worker runs.
 OVERLAY = {"Researcher": "openai/gpt-4o"}
 TEMPLATE_OVERLAY = {"Researcher for crewAIInc/x": "openai/gpt-4o"}
 
@@ -311,7 +312,7 @@ def test_a_same_provider_swap_keeps_the_declared_configuration() -> None:
         agent.interpolate_inputs({"repo": "crewAIInc/x"})
 
     swapped = agent.llm
-    assert swapped is not declared and type(swapped) is OpenAICompletion
+    assert swapped is not declared and type(swapped).__name__ == "OpenAICompletion"
     assert swapped.model == "gpt-4o" and declared.model == "gpt-4o-mini"
     assert _configuration_of(swapped) == CONFIGURATION
     assert str(swapped._client.base_url) == "http://localhost:9999/v1/"
@@ -327,7 +328,7 @@ def test_a_cross_provider_swap_carries_settings_but_not_credentials() -> None:
         agent = Agent(role="Researcher", goal="g", backstory="b", llm=declared)
 
     swapped = agent.llm
-    assert isinstance(swapped, AnthropicCompletion)
+    assert type(swapped).__name__ == "AnthropicCompletion"
     assert swapped.model == "claude-haiku-4-5"
     assert swapped.timeout == 42 and swapped.temperature == 0.1
     assert swapped.max_tokens == 77
@@ -372,7 +373,7 @@ def test_the_construction_time_overlay_keeps_the_declared_configuration_too() ->
         )
 
     for built in (agent.llm, lite.llm):
-        assert type(built) is OpenAICompletion and built.model == "gpt-4o"
+        assert type(built).__name__ == "OpenAICompletion" and built.model == "gpt-4o"
         assert _configuration_of(built) == CONFIGURATION
 
 

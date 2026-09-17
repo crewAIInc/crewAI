@@ -3,6 +3,8 @@
 Zero-cost: instances are built, nothing is called. The provider classes that
 need an SDK this environment may not have (Azure, Gemini) are stood in for by
 minimal `BaseLLM` subclasses that reproduce the one behaviour under test.
+Provider classes are compared by name: the provider test files delete a module
+from sys.modules and re-import it, so a class imported here can be stale.
 """
 
 from __future__ import annotations
@@ -12,7 +14,6 @@ from typing import Any
 
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.utilities.llm_utils import (
     GENERATION_SETTINGS,
@@ -76,7 +77,7 @@ def test_a_value_the_targets_field_type_refuses_is_dropped_with_a_warning(
     assert type(base) is LLM
     with caplog.at_level(logging.WARNING, logger="crewai.utilities.llm_utils"):
         built = create_llm_like("openai/gpt-4o", base)
-    assert type(built) is OpenAICompletion and built.model == "gpt-4o"
+    assert type(built).__name__ == "OpenAICompletion" and built.model == "gpt-4o"
     assert built.logprobs is None and built.temperature == 0.4
     assert any("logprobs" in rec.getMessage() for rec in caplog.records)
 
@@ -95,7 +96,9 @@ def test_extra_kwargs_are_carried_within_a_class_and_not_across() -> None:
 
 def test_credentials_follow_the_class_not_the_provider_string() -> None:
     aliased = LLM(model="claude-haiku-4-5", provider="claude", api_key="k")
-    assert isinstance(aliased, AnthropicCompletion) and aliased.provider == "claude"
+    assert (
+        type(aliased).__name__ == "AnthropicCompletion" and aliased.provider == "claude"
+    )
     assert create_llm_like("anthropic/claude-sonnet-4-5", aliased).api_key == "k"
 
     litellm_openai = LLM(model="openai/not-a-known-model", api_key="k")
@@ -110,7 +113,7 @@ def test_credentials_follow_the_class_not_the_provider_string() -> None:
 def test_an_output_cap_keeps_its_meaning_under_the_targets_name() -> None:
     base = OpenAICompletion(model="gpt-4o-mini", api_key="k", max_completion_tokens=300)
     swapped = create_llm_like("anthropic/claude-haiku-4-5", base)
-    assert isinstance(swapped, AnthropicCompletion) and swapped.max_tokens == 300
+    assert type(swapped).__name__ == "AnthropicCompletion" and swapped.max_tokens == 300
 
 
 def test_anthropic_gets_temperature_or_top_p_not_both() -> None:
@@ -118,7 +121,7 @@ def test_anthropic_gets_temperature_or_top_p_not_both() -> None:
         model="gpt-4o-mini", api_key="k", temperature=0.7, top_p=0.9
     )
     swapped = create_llm_like("anthropic/claude-haiku-4-5", base)
-    assert isinstance(swapped, AnthropicCompletion)
+    assert type(swapped).__name__ == "AnthropicCompletion"
     assert swapped.temperature == 0.7 and swapped.top_p is None
     only_top_p = OpenAICompletion(model="gpt-4o-mini", api_key="k", top_p=0.9)
     assert create_llm_like("anthropic/claude-haiku-4-5", only_top_p).top_p == 0.9
