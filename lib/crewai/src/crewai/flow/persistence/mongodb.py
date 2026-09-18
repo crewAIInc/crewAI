@@ -148,7 +148,10 @@ class MongoDbFlowPersistence(FlowPersistence):
     def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to a plain dict."""
         if isinstance(state_data, BaseModel):
-            return state_data.model_dump(mode="json")
+            try:
+                return state_data.model_dump(mode="json")
+            except Exception:
+                return state_data.model_dump(mode="python")
         if isinstance(state_data, dict):
             return state_data
         raise ValueError(

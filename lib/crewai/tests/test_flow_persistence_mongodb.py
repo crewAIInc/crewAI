@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 import sys
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import pytest
 
 from crewai.flow.async_feedback.types import PendingFeedbackContext
@@ -211,6 +211,27 @@ def test_basemodel_state_serialized_as_json(
     # keep a datetime object and blow up json.dumps.
     assert isinstance(loaded["when"], str)
     assert loaded["when"].startswith("2026-01-02T03:04:05")
+
+
+def test_basemodel_state_falls_back_to_python_serialization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_client(monkeypatch)
+
+    class NonJsonValue:
+        def __str__(self) -> str:
+            return "non-json value"
+
+    class State(BaseModel):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+
+        value: NonJsonValue
+
+    persistence = MongoDbFlowPersistence(CONN)
+
+    persistence.save_state("flow-1", "s", State(value=NonJsonValue()))
+
+    assert persistence.load_state("flow-1") == {"value": "non-json value"}
 
 
 def test_dict_state_serializes_non_json_values(
