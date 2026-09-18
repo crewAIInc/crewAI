@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -346,6 +346,7 @@ def compute_composite_score(
     record: MemoryRecord,
     semantic_score: float,
     config: MemoryConfig,
+    now: datetime | None = None,
 ) -> tuple[float, list[str]]:
     """Compute a weighted composite relevance score from semantic, recency, and importance.
 
@@ -356,13 +357,27 @@ def compute_composite_score(
         record: The memory record (provides created_at and importance).
         semantic_score: Raw semantic similarity from vector search, in [0, 1].
         config: Weights and recency half-life.
+        now: Optional reference timestamp. If None, current UTC time is used.
 
     Returns:
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
-    age_days = max(age_seconds / 86400.0, 0.0)
+    if now is None:
+        now = datetime.now(timezone.utc)
+    elif now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    elif now.tzinfo is not timezone.utc:
+        now = now.astimezone(timezone.utc)
+
+    rec_time = record.created_at
+    if rec_time.tzinfo is None:
+        rec_time = rec_time.replace(tzinfo=timezone.utc)
+    elif rec_time.tzinfo is not timezone.utc:
+        rec_time = rec_time.astimezone(timezone.utc)
+
+    age_seconds = max((now - rec_time).total_seconds(), 0.0)
+    age_days = age_seconds / 86400.0
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 
     composite = (

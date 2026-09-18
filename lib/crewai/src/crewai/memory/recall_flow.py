@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from typing import Any, ClassVar
 from uuid import uuid4
@@ -357,6 +357,7 @@ class RecallFlow(Flow[RecallState]):
             results = finding.get("results", [])
             if not isinstance(results, list):
                 continue
+            now = datetime.now(timezone.utc)
             for item in results:
                 if isinstance(item, (list, tuple)) and len(item) >= 2:
                     record, score = item[0], item[1]
@@ -365,7 +366,7 @@ class RecallFlow(Flow[RecallState]):
                 if isinstance(record, MemoryRecord) and record.id not in seen_ids:
                     seen_ids.add(record.id)
                     composite, reasons = compute_composite_score(
-                        record, float(score), self._config
+                        record, float(score), self._config, now=now
                     )
                     matches.append(
                         MemoryMatch(
