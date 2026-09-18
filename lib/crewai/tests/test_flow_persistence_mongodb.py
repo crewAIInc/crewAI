@@ -7,14 +7,23 @@ patched with a tiny in-memory fake, so they comply with the suite's
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime, timezone
+from decimal import Decimal
+import os
+from pathlib import Path
 import sys
 from typing import Any
+import uuid
+from unittest.mock import patch
 
 from pydantic import BaseModel, ConfigDict
 import pytest
 
+from crewai.flow import Flow, human_feedback, listen, start
 from crewai.flow.async_feedback.types import PendingFeedbackContext
+from crewai.flow.flow import FlowState
+from crewai.flow.persistence import persist
 from crewai.flow.persistence.mongodb import MongoDbFlowPersistence
 
 pytest.importorskip("pymongo")
@@ -28,6 +37,7 @@ class _FakeCollection:
     def __init__(self) -> None:
         self.docs: list[dict[str, Any]] = []
         self.find_one_calls: list[tuple[dict[str, Any], Any]] = []
+        self.fail_on_replace = False
 
     @staticmethod
     def _match(doc: dict[str, Any], flt: dict[str, Any]) -> bool:
@@ -74,6 +84,8 @@ class _FakeCollection:
         upsert: bool = False,
         session: Any = None,
     ) -> None:
+        if self.fail_on_replace:
+            raise RuntimeError("simulated pending-feedback write failure")
         for i, existing in enumerate(self.docs):
             if self._match(existing, flt):
                 self.docs[i] = dict(doc)
@@ -108,7 +120,12 @@ class _FakeSession:
 
     def with_transaction(self, callback: Any) -> None:
         self.client.transactions_started += 1
-        callback(self)
+        collections_before = copy.deepcopy(self.client._db.collections)
+        try:
+            callback(self)
+        except Exception:
+            self.client._db.collections = collections_before
+            raise
 
 
 class _FakeClient:
@@ -314,6 +331,166 @@ def test_pending_feedback_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
     persistence.clear_pending_feedback("flow-1")
     assert persistence.load_pending_feedback("flow-1") is None
     assert created["client"].transactions_started == 1
+
+
+def test_pending_feedback_write_failure_rolls_back_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_client(monkeypatch)
+    persistence = MongoDbFlowPersistence(CONN)
+    context = PendingFeedbackContext(
+        flow_id="flow-1",
+        flow_class="MyFlow",
+        method_name="review",
+        method_output={"draft": "hi"},
+        message="Approve?",
+    )
+    persistence._db_ready()[persistence.pending_collection].fail_on_replace = True
+
+    with pytest.raises(RuntimeError, match="simulated pending-feedback"):
+        persistence.save_pending_feedback("flow-1", context, {"counter": 3})
+
+    assert persistence.load_state("flow-1") is None
+    assert persistence.load_pending_feedback("flow-1") is None
+
+
+def test_persisted_flow_restores_latest_mongodb_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_client(monkeypatch)
+    persistence = MongoDbFlowPersistence(CONN)
+
+    class State(FlowState):
+        counter: int = 0
+
+    class PersistedFlow(Flow[State]):
+        @start()
+        @persist(persistence)
+        def first_step(self) -> None:
+            self.state.counter += 1
+
+        @listen("first_step")
+        @persist(persistence)
+        def second_step(self) -> None:
+            self.state.counter += 1
+
+    first_run = PersistedFlow(persistence=persistence)
+    first_run.kickoff()
+    flow_id = first_run.state.id
+
+    restored_run = PersistedFlow(persistence=persistence)
+    restored_run.kickoff(inputs={"id": flow_id})
+
+    assert first_run.state.counter == 2
+    assert restored_run.state.counter == 4
+    assert persistence.load_state(flow_id) == {"id": flow_id, "counter": 4}
+
+
+def test_mongodb_from_pending_resumes_flow(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_client(monkeypatch)
+    persistence = MongoDbFlowPersistence(CONN)
+
+    class ReviewFlow(Flow[dict[str, Any]]):
+        @start()
+        @human_feedback(message="Review this:")
+        def generate(self) -> str:
+            return "generated content"
+
+        @listen(generate)
+        def process(self, feedback_result: Any) -> str:
+            return f"Processed: {feedback_result.feedback}"
+
+    context = PendingFeedbackContext(
+        flow_id="resume-flow-1",
+        flow_class="test.ReviewFlow",
+        method_name="generate",
+        method_output="generated content",
+        message="Review this:",
+    )
+    persistence.save_pending_feedback(
+        "resume-flow-1", context, {"id": "resume-flow-1"}
+    )
+
+    flow = ReviewFlow.from_pending("resume-flow-1", persistence)
+    with patch("crewai.flow.runtime.crewai_event_bus.emit"):
+        flow.resume("looks good!")
+
+    assert flow.last_human_feedback is not None
+    assert flow.last_human_feedback.feedback == "looks good!"
+    assert persistence.load_pending_feedback("resume-flow-1") is None
+
+
+def test_persisted_flow_serializes_complex_mongodb_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_client(monkeypatch)
+    persistence = MongoDbFlowPersistence(CONN)
+    now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    flow_user_id = uuid.uuid4()
+
+    class ComplexState(FlowState):
+        created_at: datetime = now
+        user_id: uuid.UUID = flow_user_id
+        tags: set[str] = {"alpha", "beta"}
+        price: Decimal = Decimal("19.99")
+        file_path: Path = Path("/tmp/data.txt")
+
+    class ComplexFlow(Flow[ComplexState]):
+        @start()
+        @persist(persistence)
+        def step(self) -> None:
+            pass
+
+    flow = ComplexFlow(persistence=persistence)
+    flow.kickoff()
+
+    saved = persistence.load_state(flow.state.id)
+    assert saved is not None
+    assert datetime.fromisoformat(saved["created_at"].replace("Z", "+00:00")) == now
+    assert saved["user_id"] == str(flow_user_id)
+    assert set(saved["tags"]) == {"alpha", "beta"}
+    assert saved["price"] == "19.99"
+    assert saved["file_path"] == "/tmp/data.txt"
+
+
+@pytest.mark.skipif(
+    not os.getenv("MONGODB_TEST_CONNECTION_STRING"),
+    reason="requires a MongoDB replica-set URI in MONGODB_TEST_CONNECTION_STRING",
+)
+def test_pending_feedback_transaction_rolls_back_in_mongodb() -> None:
+    """Verify a real MongoDB transaction rolls back a failed feedback upsert.
+
+    Run this test against a replica set with network blocking disabled.
+    """
+    from pymongo import MongoClient
+    from pymongo.errors import OperationFailure
+
+    connection_string = os.environ["MONGODB_TEST_CONNECTION_STRING"]
+    database_name = f"crewai_persistence_test_{uuid.uuid4().hex}"
+    client: Any = MongoClient(connection_string, serverSelectionTimeoutMS=5_000)
+    database = client[database_name]
+    database.create_collection(
+        "pending_feedback",
+        validator={"$jsonSchema": {"bsonType": "object", "required": ["blocked"]}},
+    )
+    persistence = MongoDbFlowPersistence(connection_string, database_name=database_name)
+    context = PendingFeedbackContext(
+        flow_id="flow-1",
+        flow_class="MyFlow",
+        method_name="review",
+        method_output={"draft": "hi"},
+        message="Approve?",
+    )
+
+    try:
+        with pytest.raises(OperationFailure):
+            persistence.save_pending_feedback("flow-1", context, {"counter": 3})
+
+        assert persistence.load_state("flow-1") is None
+        assert persistence.load_pending_feedback("flow-1") is None
+    finally:
+        client.drop_database(database_name)
+        client.close()
 
 
 def test_missing_pymongo_raises_helpful_error(
