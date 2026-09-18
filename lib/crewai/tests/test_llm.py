@@ -1102,6 +1102,44 @@ def test_explicit_provider_kwarg_takes_priority():
         assert llm2.provider == "openai"
 
 
+def test_resolve_route_decides_what_new_constructs():
+    """`LLM._resolve_route` is `__new__`'s routing, callable without building anything."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    route = LLM._resolve_route("openai/gpt-4o", {})
+    assert (route.provider, route.model, route.native_class, route.custom_openai) == (
+        "openai",
+        "gpt-4o",
+        OpenAICompletion,
+        False,
+    )
+    assert (
+        LLM._resolve_route("claude/claude-haiku-4-5", {}).native_class
+        is AnthropicCompletion
+    )
+    assert LLM._resolve_route("claude/claude-haiku-4-5", {}).provider == "anthropic"
+
+    # An unknown openai/ model is LiteLLM's — unless a custom endpoint is configured.
+    plain = LLM._resolve_route("openai/not-a-known-model", {})
+    assert (plain.provider, plain.native_class) == ("openai", None)
+    custom = LLM._resolve_route(
+        "openai/not-a-known-model", {"base_url": "http://localhost:1/v1"}
+    )
+    assert (custom.native_class, custom.custom_openai) == (OpenAICompletion, True)
+
+    litellm_route = LLM._resolve_route("groq/llama-3.1-8b-instant", {})
+    assert (
+        litellm_route.provider,
+        litellm_route.model,
+        litellm_route.native_class,
+    ) == ("groq", "llama-3.1-8b-instant", None)
+    assert LLM._resolve_route("gpt-4o", {}).native_class is OpenAICompletion
+    kwargs = {"provider": "anthropic"}
+    assert LLM._resolve_route("some-model", kwargs).native_class is AnthropicCompletion
+    assert kwargs == {"provider": "anthropic"}
+
+
 def test_validate_model_in_constants():
     """Test the _validate_model_in_constants method."""
     # OpenAI models
