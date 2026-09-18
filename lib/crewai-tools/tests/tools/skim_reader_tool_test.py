@@ -58,9 +58,9 @@ def test_run_returns_markdown_with_frontmatter():
     out = tool._run(url="https://example.com/a")
 
     assert out.startswith("---\n")
-    assert "title: Title" in out
-    assert "byline: Jane Doe" in out
-    assert "lang: en" in out
+    assert 'title: "Title"' in out
+    assert 'byline: "Jane Doe"' in out
+    assert 'lang: "en"' in out
     assert "excerpt:" not in out
     assert "siteName:" not in out
     assert out.rstrip().endswith("Body text.")
@@ -122,10 +122,10 @@ def test_non_json_response_raises_runtime_error():
 
 
 def test_yaml_scalar_quotes_ambiguous_values():
-    assert _yaml_scalar("plain title") == "plain title"
+    assert _yaml_scalar("plain title") == '"plain title"'
     assert _yaml_scalar("key: value").startswith('"')
     assert _yaml_scalar("") == '""'
-    assert _yaml_scalar("multi\nline\ntext") == "multi line text"
+    assert _yaml_scalar("multi\nline\ntext") == '"multi line text"'
 
 
 def test_tool_metadata_is_set():
