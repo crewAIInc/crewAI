@@ -367,7 +367,7 @@ def test_clipper_client_requires_platform_integration_token(
         parameters={},
     )
 
-    with pytest.raises(ValueError, match="CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"):
+    with pytest.raises(ValueError, match="CREWAI_PLATFORM_INTEGRATION_TOKEN"):
         ClipperClient().execute_action(tool, {})
 
     mock_post.assert_not_called()

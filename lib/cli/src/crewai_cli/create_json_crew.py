@@ -910,7 +910,7 @@ def _prompt_platform_token() -> str:
     )
     return str(
         click.prompt(
-            click.style("  CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", fg="cyan"),
+            click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
             hide_input=True,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
@@ -1082,9 +1082,7 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             "`pip install 'crewai[tools]'`."
         ) from error
 
-    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN") or os.environ.get(
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN", ""
-    )
+    token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
     while True:
         if not token:
             token = _prompt_platform_token()
@@ -1096,7 +1094,7 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             )
             continue
 
-        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
         failed_apps, token_invalid = _validate_platform_apps(
             apps, ApplicationSelector, client_for_selector
         )
@@ -1112,7 +1110,7 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         replacement_token = _prompt_platform_revalidation_token()
         if replacement_token:
             token = replacement_token
-            os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+            os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
 
 
 # ── Main ────────────────────────────────────────────────────────
@@ -1180,9 +1178,9 @@ def create_json_crew(
     copy_assistant_instructions(folder_path)
 
     if platform_token:
-        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
         env_vars = load_env_vars(folder_path)
-        env_vars["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
         write_env_file(folder_path, env_vars)
         _success("CrewAI Platform Enterprise Action Auth Token saved to .env")
 
