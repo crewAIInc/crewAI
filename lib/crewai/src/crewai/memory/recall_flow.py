@@ -351,13 +351,13 @@ class RecallFlow(Flow[RecallState]):
         """Deduplicate, composite-score, rank, and attach evidence gaps."""
         seen_ids: set[str] = set()
         matches: list[MemoryMatch] = []
+        now = datetime.now(timezone.utc)
         for finding in self.state.chunk_findings:
             if not isinstance(finding, dict):
                 continue
             results = finding.get("results", [])
             if not isinstance(results, list):
                 continue
-            now = datetime.now(timezone.utc)
             for item in results:
                 if isinstance(item, (list, tuple)) and len(item) >= 2:
                     record, score = item[0], item[1]
