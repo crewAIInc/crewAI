@@ -57,3 +57,17 @@ class LLMContextLengthExceededError(Exception):
             f"LLM context length exceeded. Original error: {error_message}\n"
             "Consider using a smaller input or implementing a text splitting strategy."
         )
+
+
+class LLMRateLimitExceededError(Exception):
+    """Exception raised when an LLM provider temporarily throttles a request.
+
+    Provider adapters raise this error after preserving the upstream message.
+    The shared agent execution loop can then retry the same request without
+    treating the failure as a context-window overflow.
+    """
+
+    def __init__(self, error_message: str) -> None:
+        """Initialize the exception with the original provider error message."""
+        self.original_error_message = error_message
+        super().__init__(error_message)

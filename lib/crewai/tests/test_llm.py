@@ -445,6 +445,19 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
 
+def test_rate_limit_error_preserves_provider_message():
+    """Provider adapters can retain useful throttle information for retries."""
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMRateLimitExceededError,
+    )
+
+    message = "API throttled, please retry later: Too many tokens"
+    error = LLMRateLimitExceededError(message)
+
+    assert error.original_error_message == message
+    assert str(error) == message
+
+
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
