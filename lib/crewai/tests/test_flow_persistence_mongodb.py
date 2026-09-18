@@ -176,6 +176,36 @@ def test_basemodel_state_serialized_as_json(
     assert loaded["when"].startswith("2026-01-02T03:04:05")
 
 
+def test_dict_state_serializes_non_json_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_client(monkeypatch)
+
+    class NestedState(BaseModel):
+        when: datetime
+
+    when = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    persistence = MongoDbFlowPersistence(CONN)
+
+    persistence.save_state(
+        "flow-1",
+        "s",
+        {
+            "when": when,
+            "tags": {"a", "b"},
+            "items": (1, 2),
+            "nested": NestedState(when=when),
+        },
+    )
+
+    assert persistence.load_state("flow-1") == {
+        "when": "2026-01-02T03:04:05+00:00",
+        "tags": ["a", "b"],
+        "items": [1, 2],
+        "nested": {"when": "2026-01-02T03:04:05Z"},
+    }
+
+
 def test_missing_connection_string_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

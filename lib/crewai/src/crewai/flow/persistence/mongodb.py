@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, PrivateAttr
 
-from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.persistence.base import FlowPersistence, _json_default
 
 
 if TYPE_CHECKING:
@@ -190,7 +190,7 @@ class MongoDbFlowPersistence(FlowPersistence):
                 "flow_uuid": flow_uuid,
                 "method_name": method_name,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "state_json": json.dumps(state_dict),
+                "state_json": json.dumps(state_dict, default=_json_default),
                 "seq": self._next_sequence(self.states_collection),
             }
         )
@@ -221,8 +221,8 @@ class MongoDbFlowPersistence(FlowPersistence):
             {"flow_uuid": flow_uuid},
             {
                 "flow_uuid": flow_uuid,
-                "context_json": json.dumps(context.to_dict()),
-                "state_json": json.dumps(state_dict),
+                "context_json": json.dumps(context.to_dict(), default=_json_default),
+                "state_json": json.dumps(state_dict, default=_json_default),
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
             upsert=True,
