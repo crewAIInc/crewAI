@@ -1,7 +1,7 @@
 import os
 import sys
 import types
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import patch, MagicMock, Mock
 from urllib.parse import urlparse
 import pytest
 
@@ -789,70 +789,14 @@ def test_azure_http_error_handling():
     Test that Azure HTTP errors are properly handled
     """
     from azure.core.exceptions import HttpResponseError
-    from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMRateLimitExceededError,
-    )
 
     llm = LLM(model="azure/gpt-4")
 
     with patch.object(llm._client, 'complete') as mock_complete:
         mock_complete.side_effect = HttpResponseError(message="Rate limit exceeded", response=MagicMock(status_code=429))
 
-        with pytest.raises(LLMRateLimitExceededError, match="Azure API rate limit"):
+        with pytest.raises(HttpResponseError):
             llm.call("Hello")
-
-
-@pytest.mark.asyncio
-async def test_azure_async_http_error_handling():
-    """Async non-streaming Azure throttles use the shared retry signal."""
-    from azure.core.exceptions import HttpResponseError
-    from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMRateLimitExceededError,
-    )
-
-    llm = LLM(model="azure/gpt-4")
-    async_client = AsyncMock()
-    async_client.complete.side_effect = HttpResponseError(
-        message="Rate limit exceeded", response=MagicMock(status_code=429)
-    )
-    with patch.object(llm, "_get_async_client", return_value=async_client):
-        with pytest.raises(LLMRateLimitExceededError, match="Azure API rate limit"):
-            await llm.acall("Hello")
-
-
-def test_azure_streaming_throttle_is_rate_limited():
-    """Sync streaming Azure throttles use the shared retry signal."""
-    from azure.core.exceptions import HttpResponseError
-    from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMRateLimitExceededError,
-    )
-
-    llm = LLM(model="azure/gpt-4", stream=True)
-    with patch.object(llm._client, "complete") as mock_complete:
-        mock_complete.side_effect = HttpResponseError(
-            message="Rate limit exceeded", response=MagicMock(status_code=429)
-        )
-
-        with pytest.raises(LLMRateLimitExceededError, match="Azure API rate limit"):
-            llm.call("Hello")
-
-
-@pytest.mark.asyncio
-async def test_azure_async_streaming_throttle_is_rate_limited():
-    """Async streaming Azure throttles use the shared retry signal."""
-    from azure.core.exceptions import HttpResponseError
-    from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMRateLimitExceededError,
-    )
-
-    llm = LLM(model="azure/gpt-4", stream=True)
-    async_client = AsyncMock()
-    async_client.complete.side_effect = HttpResponseError(
-        message="Rate limit exceeded", response=MagicMock(status_code=429)
-    )
-    with patch.object(llm, "_get_async_client", return_value=async_client):
-        with pytest.raises(LLMRateLimitExceededError, match="Azure API rate limit"):
-            await llm.acall("Hello")
 
 
 @pytest.mark.vcr()
@@ -1059,9 +1003,6 @@ def test_azure_improved_error_messages():
     """
     from crewai.llms.providers.azure.completion import AzureCompletion
     from azure.core.exceptions import HttpResponseError
-    from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMRateLimitExceededError,
-    )
 
     llm = LLM(model="azure/gpt-4")
 
@@ -1084,7 +1025,7 @@ def test_azure_improved_error_messages():
         error_429.status_code = 429
         mock_complete.side_effect = error_429
 
-        with pytest.raises(LLMRateLimitExceededError, match="Azure API rate limit"):
+        with pytest.raises(HttpResponseError):
             llm.call("test")
 
 

@@ -43,7 +43,7 @@ from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
-    LLMRateLimitExceededError,
+    is_rate_limit_exceeded,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -407,9 +407,11 @@ def handle_max_iterations_exceeded(
         format_message_for_llm(I18N_DEFAULT.errors("force_final_answer"), role="user")
     )
 
-    answer = llm.call(
-        messages,
-        callbacks=callbacks,
+    answer = _call_with_rate_limit_retry(
+        lambda: llm.call(
+            messages,
+            callbacks=callbacks,
+        )
     )
 
     if answer is None or answer == "":
@@ -555,8 +557,8 @@ def _call_with_rate_limit_retry(
     """Retry one LLM request without re-entering an agent execution loop."""
     try:
         return call()
-    except LLMRateLimitExceededError:
-        if retries_remaining == 0:
+    except Exception as error:
+        if retries_remaining == 0 or not is_rate_limit_exceeded(error):
             raise
         return _call_with_rate_limit_retry(call, retries_remaining - 1)
 
@@ -568,8 +570,8 @@ async def _acall_with_rate_limit_retry(
     """Asynchronously retry one LLM request without re-entering an agent loop."""
     try:
         return await call()
-    except LLMRateLimitExceededError:
-        if retries_remaining == 0:
+    except Exception as error:
+        if retries_remaining == 0 or not is_rate_limit_exceeded(error):
             raise
         return await _acall_with_rate_limit_retry(call, retries_remaining - 1)
 

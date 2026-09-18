@@ -42,7 +42,7 @@ from crewai.utilities.agent_utils import (
     summarize_messages,
 )
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMRateLimitExceededError,
+    is_rate_limit_exceeded,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 
@@ -66,12 +66,12 @@ def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
     )
 
 
-def test_get_llm_response_retries_rate_limits_at_the_request_boundary():
+def test_get_llm_response_retries_rate_limits_at_the_request_boundary() -> None:
     """A throttle retries the LLM request without re-entering an agent loop."""
     llm = MagicMock()
     llm.call.side_effect = [
-        LLMRateLimitExceededError("rate limit exceeded"),
-        LLMRateLimitExceededError("rate limit exceeded"),
+        RuntimeError("rate limit exceeded"),
+        RuntimeError("rate limit exceeded"),
         "done",
     ]
 
@@ -88,13 +88,13 @@ def test_get_llm_response_retries_rate_limits_at_the_request_boundary():
 
 
 @pytest.mark.asyncio
-async def test_aget_llm_response_retries_rate_limits_at_the_request_boundary():
+async def test_aget_llm_response_retries_rate_limits_at_the_request_boundary() -> None:
     """Async LLM requests use the same bounded retry wrapper."""
     llm = MagicMock()
     llm.acall = AsyncMock(
         side_effect=[
-            LLMRateLimitExceededError("rate limit exceeded"),
-            LLMRateLimitExceededError("rate limit exceeded"),
+            RuntimeError("rate limit exceeded"),
+            RuntimeError("rate limit exceeded"),
             "done",
         ]
     )
@@ -111,12 +111,13 @@ async def test_aget_llm_response_retries_rate_limits_at_the_request_boundary():
     assert llm.acall.call_count == 3
 
 
-def test_get_llm_response_raises_after_rate_limit_retries_are_exhausted():
+def test_get_llm_response_raises_after_rate_limit_retries_are_exhausted() -> None:
     """Persistent throttling stops after the configured retry limit."""
     llm = MagicMock()
-    llm.call.side_effect = LLMRateLimitExceededError("rate limit exceeded")
+    error = RuntimeError("rate limit exceeded")
+    llm.call.side_effect = error
 
-    with pytest.raises(LLMRateLimitExceededError):
+    with pytest.raises(RuntimeError) as exc_info:
         get_llm_response(
             llm=llm,
             messages=[{"role": "user", "content": "Hello"}],
@@ -126,6 +127,26 @@ def test_get_llm_response_raises_after_rate_limit_retries_are_exhausted():
         )
 
     assert llm.call.call_count == 3
+    assert exc_info.value is error
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        RuntimeError("rate limit exceeded"),
+        RuntimeError("request throttled"),
+        type("Http429Error", (Exception,), {"status_code": 429})("busy"),
+        type("BedrockThrottle", (Exception,), {"code": "ThrottlingException"})(
+            "busy"
+        ),
+    ],
+)
+def test_rate_limit_classifier_recognizes_provider_throttles(error: Exception) -> None:
+    assert is_rate_limit_exceeded(error)
+
+
+def test_rate_limit_classifier_ignores_token_context_errors() -> None:
+    assert not is_rate_limit_exceeded(RuntimeError("too many tokens"))
 
 
 class CalculatorInput(BaseModel):
@@ -1798,6 +1819,25 @@ class TestHandleMaxIterationsExceeded:
         assert isinstance(result, AgentFinish)
         assert result.text == reply
         assert result.output == reply
+
+    def test_retries_rate_limits_without_reentering_an_agent_loop(self) -> None:
+        llm = MagicMock()
+        llm.call.side_effect = [
+            RuntimeError("rate limit exceeded"),
+            RuntimeError("rate limit exceeded"),
+            "Final Answer: 42",
+        ]
+
+        result = handle_max_iterations_exceeded(
+            printer=MagicMock(),
+            messages=_react_history(),
+            llm=llm,
+            callbacks=[],
+            verbose=False,
+        )
+
+        assert result.output == "42"
+        assert llm.call.call_count == 3
 
     @pytest.mark.parametrize("reply", [None, ""], ids=["none", "empty"])
     def test_empty_reply_raises(self, reply: str | None) -> None:

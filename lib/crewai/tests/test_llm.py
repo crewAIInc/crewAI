@@ -445,19 +445,6 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
 
-def test_rate_limit_error_preserves_provider_message():
-    """Provider adapters can retain useful throttle information for retries."""
-    from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMRateLimitExceededError,
-    )
-
-    message = "API throttled, please retry later: Too many tokens"
-    error = LLMRateLimitExceededError(message)
-
-    assert error.original_error_message == message
-    assert str(error) == message
-
-
 def test_throttle_messages_are_not_treated_as_context_window_errors():
     """A provider's token quota message must not trigger context summarization."""
     from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -465,24 +452,6 @@ def test_throttle_messages_are_not_treated_as_context_window_errors():
     assert is_context_length_exceeded(
         RuntimeError("API throttled: too many tokens requested this minute")
     ) is False
-
-
-def test_litellm_rate_limit_is_normalized():
-    """LiteLLM throttles use the shared provider-neutral exception."""
-    from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMRateLimitExceededError,
-    )
-    from litellm.exceptions import RateLimitError
-
-    llm = LLM(model="gpt-4", is_litellm=True)
-    with patch("litellm.completion") as mock_completion:
-        mock_completion.side_effect = RateLimitError(
-            "Too many requests", llm_provider="openai", model="gpt-4"
-        )
-
-        with pytest.raises(LLMRateLimitExceededError, match="LiteLLM rate limit"):
-            llm.call("This is a test message")
-
 
 @pytest.fixture
 def anthropic_llm():

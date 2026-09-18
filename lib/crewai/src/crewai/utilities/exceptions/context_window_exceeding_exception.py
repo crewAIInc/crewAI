@@ -58,26 +58,11 @@ class LLMContextLengthExceededError(Exception):
         )
 
 
-class LLMRateLimitExceededError(Exception):
-    """Exception raised when an LLM provider temporarily throttles a request.
-
-    Provider adapters raise this error after preserving the upstream message.
-    The shared agent execution loop can then retry the same request without
-    treating the failure as a context-window overflow.
-    """
-
-    def __init__(self, error_message: str) -> None:
-        """Initialize the exception with the original provider error message."""
-        self.original_error_message = error_message
-        super().__init__(error_message)
-
-
 def is_rate_limit_exceeded(error: Exception) -> bool:
     """Check whether a provider error represents a transient rate limit.
 
-    Native SDKs expose throttles through different shapes. This keeps the
-    detection rules shared while each provider retains its own useful message
-    when it raises :class:`LLMRateLimitExceededError`.
+    Native SDKs expose throttles through different shapes. This keeps detection
+    rules shared at the request boundary while preserving provider exceptions.
     """
     response: Any = getattr(error, "response", None)
     status_code = getattr(error, "status_code", None)

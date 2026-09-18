@@ -22,8 +22,6 @@ from crewai.types.usage_metrics import _coerce_int
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
-    LLMRateLimitExceededError,
-    is_rate_limit_exceeded,
 )
 from crewai.utilities.pydantic_schema_utils import (
     sanitize_tool_params_for_anthropic_strict,
@@ -448,10 +446,6 @@ class AnthropicCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if is_rate_limit_exceeded(e):
-                    raise LLMRateLimitExceededError(
-                        f"Anthropic API rate limit exceeded: {e}"
-                    ) from e
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
                 self._emit_call_failed_event(
@@ -527,10 +521,6 @@ class AnthropicCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if is_rate_limit_exceeded(e):
-                    raise LLMRateLimitExceededError(
-                        f"Anthropic API rate limit exceeded: {e}"
-                    ) from e
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
                 self._emit_call_failed_event(
@@ -1056,10 +1046,6 @@ class AnthropicCompletion(BaseLLM):
                 response = self._get_sync_client().messages.create(**params)
 
         except Exception as e:
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"Anthropic API rate limit exceeded: {e}"
-                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -1551,10 +1537,6 @@ class AnthropicCompletion(BaseLLM):
             return final_content
 
         except Exception as e:
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"Anthropic API rate limit exceeded: {e}"
-                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded in tool follow-up: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -1612,10 +1594,6 @@ class AnthropicCompletion(BaseLLM):
                 response = await self._get_async_client().messages.create(**params)
 
         except Exception as e:
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"Anthropic API rate limit exceeded: {e}"
-                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -1975,10 +1953,6 @@ class AnthropicCompletion(BaseLLM):
             return final_content
 
         except Exception as e:
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"Anthropic API rate limit exceeded: {e}"
-                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded in tool follow-up: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e

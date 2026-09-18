@@ -17,8 +17,6 @@ from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
-    LLMRateLimitExceededError,
-    is_rate_limit_exceeded,
 )
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
@@ -451,10 +449,6 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if is_rate_limit_exceeded(e):
-                    raise LLMRateLimitExceededError(
-                        f"AWS Bedrock API rate limit exceeded: {e}"
-                    ) from e
                 if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
@@ -588,10 +582,6 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if is_rate_limit_exceeded(e):
-                    raise LLMRateLimitExceededError(
-                        f"AWS Bedrock API rate limit exceeded: {e}"
-                    ) from e
                 if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
@@ -862,7 +852,7 @@ class BedrockCompletion(BaseLLM):
             if error_code == "ResourceNotFoundException":
                 raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
             if error_code == "ThrottlingException":
-                raise LLMRateLimitExceededError(
+                raise RuntimeError(
                     f"API throttled, please retry later: {error_msg}"
                 ) from e
             if error_code == "ModelTimeoutException":
@@ -1169,12 +1159,6 @@ class BedrockCompletion(BaseLLM):
                                 )
 
         except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            error_message = e.response.get("Error", {}).get("Message", str(e))
-            if error_code == "ThrottlingException":
-                raise LLMRateLimitExceededError(
-                    f"API throttled, please retry later: {error_message}"
-                ) from e
             error_msg = self._handle_client_error(e)
             raise RuntimeError(error_msg) from e
         except BotoCoreError as e:
@@ -1477,7 +1461,7 @@ class BedrockCompletion(BaseLLM):
             if error_code == "ResourceNotFoundException":
                 raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
             if error_code == "ThrottlingException":
-                raise LLMRateLimitExceededError(
+                raise RuntimeError(
                     f"API throttled, please retry later: {error_msg}"
                 ) from e
             if error_code == "ModelTimeoutException":
@@ -1791,12 +1775,6 @@ class BedrockCompletion(BaseLLM):
                             )
 
         except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            error_message = e.response.get("Error", {}).get("Message", str(e))
-            if error_code == "ThrottlingException":
-                raise LLMRateLimitExceededError(
-                    f"API throttled, please retry later: {error_message}"
-                ) from e
             error_msg = self._handle_client_error(e)
             raise RuntimeError(error_msg) from e
         except BotoCoreError as e:

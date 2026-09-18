@@ -9,9 +9,6 @@ import pytest
 
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
-from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMRateLimitExceededError,
-)
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -25,32 +22,6 @@ def test_openai_completion_is_used_when_openai_provider():
     assert llm.__class__.__name__ == "OpenAICompletion"
     assert llm.provider == "openai"
     assert llm.model == "gpt-4o"
-
-
-@pytest.mark.parametrize(
-    ("api", "stream", "handler"),
-    [
-        ("completions", False, "_handle_completion"),
-        ("completions", True, "_handle_streaming_completion"),
-        ("responses", False, "_handle_responses"),
-        ("responses", True, "_handle_streaming_responses"),
-    ],
-)
-def test_openai_rate_limits_are_normalized_for_sync_call_modes(
-    monkeypatch, api, stream, handler
-):
-    """Rate limits from every synchronous OpenAI API mode use the shared error."""
-    llm = OpenAICompletion(
-        model="gpt-4o-mini", api_key="test-key", api=api, stream=stream
-    )
-
-    def raise_rate_limit(**kwargs):
-        raise RuntimeError("rate limit exceeded")
-
-    monkeypatch.setattr(llm, handler, raise_rate_limit)
-
-    with pytest.raises(LLMRateLimitExceededError, match="OpenAI API rate limit"):
-        llm.call([{"role": "user", "content": "Hello"}])
 
 
 def test_openai_completion_is_used_when_no_provider_prefix():

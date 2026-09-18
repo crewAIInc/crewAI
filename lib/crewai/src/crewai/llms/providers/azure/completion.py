@@ -15,8 +15,6 @@ from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
-    LLMRateLimitExceededError,
-    is_rate_limit_exceeded,
 )
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
@@ -427,15 +425,6 @@ class AzureCompletion(BaseLLM):
         Raises:
             The original exception after logging and emitting events
         """
-        if isinstance(error, LLMRateLimitExceededError):
-            raise error
-        if is_rate_limit_exceeded(error):
-            error_msg = f"Azure API rate limit exceeded: {error}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise LLMRateLimitExceededError(error_msg) from error
         if isinstance(error, HttpResponseError):
             if error.status_code == 401:
                 error_msg = "Azure authentication failed. Check your API key."

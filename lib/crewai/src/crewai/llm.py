@@ -51,8 +51,6 @@ from crewai.llms.constants import (
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
-    LLMRateLimitExceededError,
-    is_rate_limit_exceeded,
 )
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -1151,10 +1149,6 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"LiteLLM rate limit exceeded: {error_msg}"
-                ) from e
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
 
@@ -1352,10 +1346,6 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"LiteLLM rate limit exceeded: {error_msg}"
-                ) from e
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
@@ -1511,10 +1501,6 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"LiteLLM rate limit exceeded: {error_msg}"
-                ) from e
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
@@ -1787,10 +1773,6 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if is_rate_limit_exceeded(e):
-                raise LLMRateLimitExceededError(
-                    f"LiteLLM rate limit exceeded: {error_msg}"
-                ) from e
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
 
