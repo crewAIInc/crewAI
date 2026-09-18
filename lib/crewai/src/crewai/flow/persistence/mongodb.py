@@ -154,7 +154,7 @@ class MongoDbFlowPersistence(FlowPersistence):
             f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
         )
 
-    def _next_sequence(self, name: str) -> int:
+    def _next_sequence(self, name: str, session: Any) -> int:
         """Return the next value of a server-assigned monotonic counter.
 
         MongoDB has no autoincrement, so this atomically ``$inc`` a per-name
@@ -169,6 +169,7 @@ class MongoDbFlowPersistence(FlowPersistence):
             {"$inc": {"seq": 1}},
             upsert=True,
             return_document=ReturnDocument.AFTER,
+            session=session,
         )
         return int(doc["seq"])
 
@@ -185,15 +186,24 @@ class MongoDbFlowPersistence(FlowPersistence):
         ordering on ``seq`` rather than the client-generated ObjectId ``_id``.
         """
         state_dict = self._to_state_dict(state_data)
-        self._db_ready()[self.states_collection].insert_one(
-            {
-                "flow_uuid": flow_uuid,
-                "method_name": method_name,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "state_json": json.dumps(state_dict, default=_json_default),
-                "seq": self._next_sequence(self.states_collection),
-            }
-        )
+        db = self._db_ready()
+
+        def write_state(session: Any) -> None:
+            db[self.states_collection].insert_one(
+                {
+                    "flow_uuid": flow_uuid,
+                    "method_name": method_name,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "state_json": json.dumps(state_dict, default=_json_default),
+                    "seq": self._next_sequence(self.states_collection, session),
+                },
+                session=session,
+            )
+
+        if self._client is None:
+            raise RuntimeError("MongoDB client was not initialized.")
+        with self._client.start_session() as session:
+            session.with_transaction(write_state)
 
     def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
         """Load the most recent state for a given flow UUID."""
