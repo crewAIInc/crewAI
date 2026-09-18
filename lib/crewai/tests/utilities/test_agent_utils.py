@@ -34,10 +34,15 @@ from crewai.utilities.agent_utils import (
     handle_max_iterations_exceeded,
     execute_single_native_tool_call,
     extract_tool_call_info,
+    aget_llm_response,
+    get_llm_response,
     is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
+)
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMRateLimitExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 
@@ -59,6 +64,68 @@ def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
         _estimate_token_count(str(message.get("content", "")))
         for message in summarization_messages
     )
+
+
+def test_get_llm_response_retries_rate_limits_at_the_request_boundary():
+    """A throttle retries the LLM request without re-entering an agent loop."""
+    llm = MagicMock()
+    llm.call.side_effect = [
+        LLMRateLimitExceededError("rate limit exceeded"),
+        LLMRateLimitExceededError("rate limit exceeded"),
+        "done",
+    ]
+
+    answer = get_llm_response(
+        llm=llm,
+        messages=[{"role": "user", "content": "Hello"}],
+        callbacks=[],
+        printer=MagicMock(),
+        verbose=False,
+    )
+
+    assert answer == "done"
+    assert llm.call.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_aget_llm_response_retries_rate_limits_at_the_request_boundary():
+    """Async LLM requests use the same bounded retry wrapper."""
+    llm = MagicMock()
+    llm.acall = AsyncMock(
+        side_effect=[
+            LLMRateLimitExceededError("rate limit exceeded"),
+            LLMRateLimitExceededError("rate limit exceeded"),
+            "done",
+        ]
+    )
+
+    answer = await aget_llm_response(
+        llm=llm,
+        messages=[{"role": "user", "content": "Hello"}],
+        callbacks=[],
+        printer=MagicMock(),
+        verbose=False,
+    )
+
+    assert answer == "done"
+    assert llm.acall.call_count == 3
+
+
+def test_get_llm_response_raises_after_rate_limit_retries_are_exhausted():
+    """Persistent throttling stops after the configured retry limit."""
+    llm = MagicMock()
+    llm.call.side_effect = LLMRateLimitExceededError("rate limit exceeded")
+
+    with pytest.raises(LLMRateLimitExceededError):
+        get_llm_response(
+            llm=llm,
+            messages=[{"role": "user", "content": "Hello"}],
+            callbacks=[],
+            printer=MagicMock(),
+            verbose=False,
+        )
+
+    assert llm.call.call_count == 3
 
 
 class CalculatorInput(BaseModel):

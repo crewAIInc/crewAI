@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Sequence
 import concurrent.futures
 import contextlib
 import contextvars
@@ -43,6 +43,7 @@ from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
+    LLMRateLimitExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -61,6 +62,7 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 _create_plus_client_hook: Callable[[], Any] | None = None
+DEFAULT_LLM_RATE_LIMIT_RETRIES: Final = 2
 
 
 def resolve_plus_client(default: Callable[[], Any]) -> Any:
@@ -547,6 +549,31 @@ def _validate_and_finalize_llm_response(
     )
 
 
+def _call_with_rate_limit_retry(
+    call: Callable[[], Any], retries_remaining: int = DEFAULT_LLM_RATE_LIMIT_RETRIES
+) -> Any:
+    """Retry one LLM request without re-entering an agent execution loop."""
+    try:
+        return call()
+    except LLMRateLimitExceededError:
+        if retries_remaining == 0:
+            raise
+        return _call_with_rate_limit_retry(call, retries_remaining - 1)
+
+
+async def _acall_with_rate_limit_retry(
+    call: Callable[[], Awaitable[Any]],
+    retries_remaining: int = DEFAULT_LLM_RATE_LIMIT_RETRIES,
+) -> Any:
+    """Asynchronously retry one LLM request without re-entering an agent loop."""
+    try:
+        return await call()
+    except LLMRateLimitExceededError:
+        if retries_remaining == 0:
+            raise
+        return await _acall_with_rate_limit_retry(call, retries_remaining - 1)
+
+
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
@@ -586,14 +613,16 @@ def get_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        answer = llm.call(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
+        answer = _call_with_rate_limit_retry(
+            lambda: llm.call(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
         )
 
     return _validate_and_finalize_llm_response(
@@ -640,14 +669,16 @@ async def aget_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        answer = await llm.acall(
-            prepared_messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
+        answer = await _acall_with_rate_limit_retry(
+            lambda: llm.acall(
+                prepared_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
         )
 
     return _validate_and_finalize_llm_response(
