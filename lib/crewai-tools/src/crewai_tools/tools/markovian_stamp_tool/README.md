@@ -8,7 +8,8 @@ in time.
 The tool computes a SHA-256 hash of the text locally and sends only that hash
 (and the optional label) to the Markovian API. The text itself is never sent.
 The hash is recorded in the public witnessed transparency log, and the tool
-returns the hash, a Merkle root, the log index, and a public verify URL. Anyone
+returns the hash, a Merkle root, the log index when the API reports one, and a
+public verify URL. Anyone
 holding the original text can recompute its SHA-256 and compare it to the
 receipt, and anyone can open the verify URL with no account.
 
@@ -21,7 +22,8 @@ Markovian proves that data existed, not that it is correct.
 This tool:
 
 * Accepts any **text**, hashes it locally, and stamps the hash.
-* Returns the **data hash**, **Merkle root**, **log index**, and a **public verify URL**.
+* Returns the **data hash**, **Merkle root**, and a **public verify URL**, plus the
+  **log index** when the API reports one.
 * Requires **no account, wallet, or API key**.
 * Uses only `requests`, which is already a dependency of `crewai-tools`.
 
