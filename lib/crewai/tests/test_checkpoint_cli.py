@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import os
 import sqlite3
@@ -12,10 +13,14 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from crewai_cli import checkpoint_cli
 from crewai_cli.checkpoint_cli import (
     _info_json_file,
     _info_json_latest,
+    _info_sqlite_id,
+    _info_sqlite_latest,
     _list_json,
+    _list_sqlite,
     _parse_checkpoint_json,
     _parse_duration,
     _prune_json,
@@ -106,7 +111,9 @@ def _create_sqlite_checkpoint(
         data = _make_checkpoint_data(
             tasks_completed=tasks_completed, branch=branch, inputs=inputs
         )
-    with sqlite3.connect(db_path) as conn:
+    # Close the setup handle too: a leaked one holds the database lock on Windows, which would
+    # make the file-release assertions fail for the fixture's reason, not the command's.
+    with closing(sqlite3.connect(db_path)) as conn, conn:
         conn.execute(
             """CREATE TABLE IF NOT EXISTS checkpoints (
                 id TEXT PRIMARY KEY,
@@ -366,7 +373,7 @@ class TestPruneSqlite:
                 )
             deleted = _prune_sqlite(db_path, keep=2, older_than=None)
             assert deleted == 3
-            with sqlite3.connect(db_path) as conn:
+            with closing(sqlite3.connect(db_path)) as conn, conn:
                 count = conn.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0]
             assert count == 2
 
@@ -377,7 +384,7 @@ class TestPruneSqlite:
             _create_sqlite_checkpoint(db_path, "20990101T000000_new01111")
             deleted = _prune_sqlite(db_path, keep=None, older_than=timedelta(days=1))
             assert deleted >= 1
-            with sqlite3.connect(db_path) as conn:
+            with closing(sqlite3.connect(db_path)) as conn, conn:
                 count = conn.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0]
             assert count >= 1
 
@@ -444,3 +451,101 @@ class TestDiscoverabilityMessage:
         logged: str = mock_logger.info.call_args[0][0]
         assert "crewai checkpoint resume" in logged
         assert "20260101T000000_test1234" in logged
+
+
+class TestSqliteConnectionLifecycle:
+    """Every checkpoint SQLite reader/writer closes the connection it opened.
+
+    ``with sqlite3.connect(...) as conn`` only commits or rolls back; it never
+    closes. The connection then survives in a reference cycle (the statement
+    cache) until a cyclic GC pass, so the OS file handle outlives the call and
+    on Windows keeps ``flow_states.db``/the checkpoint database locked.
+    """
+
+    @staticmethod
+    def _track_connections(monkeypatch: pytest.MonkeyPatch) -> list[sqlite3.Connection]:
+        """Record every connection opened through the module under test."""
+        opened: list[sqlite3.Connection] = []
+        real_connect = sqlite3.connect
+
+        def tracking_connect(*args: Any, **kwargs: Any) -> sqlite3.Connection:
+            conn = real_connect(*args, **kwargs)
+            opened.append(conn)
+            return conn
+
+        monkeypatch.setattr(checkpoint_cli.sqlite3, "connect", tracking_connect)
+        return opened
+
+    @staticmethod
+    def _assert_all_closed(opened: list[sqlite3.Connection]) -> None:
+        assert opened, "expected the command to open a connection"
+        for conn in opened:
+            with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
+                conn.execute("SELECT 1")
+
+    def test_list_sqlite_closes_connection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            db_path = os.path.join(d, "test.db")
+            _create_sqlite_checkpoint(db_path, "20260101T000000_aaaa1111")
+
+            opened = self._track_connections(monkeypatch)
+            entries = _list_sqlite(db_path)
+
+            assert len(entries) == 1
+            self._assert_all_closed(opened)
+
+    def test_info_sqlite_closes_connection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            db_path = os.path.join(d, "test.db")
+            _create_sqlite_checkpoint(db_path, "20260101T000000_aaaa1111")
+
+            opened = self._track_connections(monkeypatch)
+            assert _info_sqlite_latest(db_path) is not None
+            assert _info_sqlite_id(db_path, "20260101T000000_aaaa1111") is not None
+
+            self._assert_all_closed(opened)
+
+    def test_prune_sqlite_closes_connection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            db_path = os.path.join(d, "test.db")
+            for i in range(3):
+                _create_sqlite_checkpoint(db_path, f"2026010{i + 1}T000000_aaa{i}1111")
+
+            opened = self._track_connections(monkeypatch)
+            assert _prune_sqlite(db_path, keep=1, older_than=None) == 2
+
+            self._assert_all_closed(opened)
+
+    def test_prune_dry_run_closes_connection(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            db_path = os.path.join(d, "test.db")
+            _create_sqlite_checkpoint(db_path, "20260101T000000_aaaa1111")
+
+            opened = self._track_connections(monkeypatch)
+            prune_checkpoints(db_path, keep=1, older_than=None, dry_run=True)
+
+            assert "Would prune" in capsys.readouterr().out
+            self._assert_all_closed(opened)
+
+    def test_database_file_is_releasable_after_use(self) -> None:
+        """The database can be removed straight away, without a GC pass.
+
+        This is the user-visible symptom on Windows, where a lingering handle
+        blocks ``os.remove``/``os.replace`` with ``PermissionError``.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            db_path = os.path.join(d, "test.db")
+            _create_sqlite_checkpoint(db_path, "20260101T000000_aaaa1111")
+
+            _list_sqlite(db_path)
+
+            os.remove(db_path)
+            assert not os.path.exists(db_path)
