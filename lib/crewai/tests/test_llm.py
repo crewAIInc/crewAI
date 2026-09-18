@@ -458,6 +458,15 @@ def test_rate_limit_error_preserves_provider_message():
     assert str(error) == message
 
 
+def test_throttle_messages_are_not_treated_as_context_window_errors():
+    """A provider's token quota message must not trigger context summarization."""
+    from crewai.utilities.agent_utils import is_context_length_exceeded
+
+    assert is_context_length_exceeded(
+        RuntimeError("API throttled: too many tokens requested this minute")
+    ) is False
+
+
 def test_litellm_rate_limit_is_normalized():
     """LiteLLM throttles use the shared provider-neutral exception."""
     from crewai.utilities.exceptions.context_window_exceeding_exception import (

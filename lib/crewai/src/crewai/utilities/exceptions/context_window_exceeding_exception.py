@@ -7,7 +7,6 @@ CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
     "context length exceeded",
     "context_length_exceeded",
     "context window full",
-    "too many tokens",
     "input is too long",
     "exceeds token limit",
 ]
