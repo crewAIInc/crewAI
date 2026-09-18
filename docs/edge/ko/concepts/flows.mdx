@@ -399,6 +399,48 @@ CrewAI Flows는 비구조적 및 구조적 상태 관리 옵션을 모두 제공
 
 @persist 데코레이터는 CrewAI 플로우에서 자동 상태 지속성을 활성화하여, 플로우 상태를 재시작이나 다른 워크플로우 실행 간에도 유지할 수 있도록 합니다. 이 데코레이터는 클래스 수준이나 메서드 수준 모두에 적용할 수 있어, 상태 지속성을 관리하는 데 유연성을 제공합니다.
 
+### 지속성 백엔드 선택
+
+SQLite가 기본 백엔드입니다. 로컬 파일 기반 지속성으로 충분한 경우 인자 없이 `@persist`를 사용하세요.
+
+```python
+@persist
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+데이터베이스 파일 위치를 제어하는 것처럼 SQLite를 명시적으로 선택하려면 `SQLiteFlowPersistence` 인스턴스를 `@persist`에 전달하세요.
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+persistence = SQLiteFlowPersistence("flows.db")
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+MongoDB를 사용하려면 선택 의존성을 설치하고 연결 문자열을 설정한 뒤 `MongoDbFlowPersistence`를 명시적으로 전달하세요.
+
+```bash
+uv add 'crewai[mongodb]'
+# Or: pip install 'crewai[mongodb]'
+export MONGODB_CONNECTION_STRING='mongodb+srv://<user>:<password>@<cluster>/'
+```
+
+```python
+from crewai.flow.persistence import MongoDbFlowPersistence, persist
+
+persistence = MongoDbFlowPersistence()
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+`MongoDbFlowPersistence`는 기본적으로 `flow_persistence` 데이터베이스를 사용합니다. 다른 데이터베이스를 선택하려면 `MONGODB_DATABASE`를 설정하거나 `database_name`을 전달하세요. MongoDB 지속성은 트랜잭션을 사용하므로 MongoDB Atlas, 레플리카 세트 또는 샤딩 클러스터가 필요합니다. 독립 실행형 MongoDB 서버는 지원되지 않습니다.
+
 ### 클래스 레벨 영속성
 
 클래스 레벨에서 @persist 데코레이터를 적용하면 모든 flow 메서드 상태가 자동으로 영속됩니다:
