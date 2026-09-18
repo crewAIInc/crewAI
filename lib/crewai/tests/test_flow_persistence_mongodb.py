@@ -68,7 +68,11 @@ class _FakeCollection:
         return dict(row)
 
     def replace_one(
-        self, flt: dict[str, Any], doc: dict[str, Any], upsert: bool = False
+        self,
+        flt: dict[str, Any],
+        doc: dict[str, Any],
+        upsert: bool = False,
+        session: Any = None,
     ) -> None:
         for i, existing in enumerate(self.docs):
             if self._match(existing, flt):
@@ -267,7 +271,7 @@ def test_env_resolved_at_call_time(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pending_feedback_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_client(monkeypatch)
+    created = _patch_client(monkeypatch)
     persistence = MongoDbFlowPersistence(CONN)
     context = PendingFeedbackContext(
         flow_id="flow-1",
@@ -288,6 +292,7 @@ def test_pending_feedback_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
 
     persistence.clear_pending_feedback("flow-1")
     assert persistence.load_pending_feedback("flow-1") is None
+    assert created["client"].transactions_started == 1
 
 
 def test_missing_pymongo_raises_helpful_error(

@@ -24,6 +24,7 @@ cases.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 import json
 import os
@@ -173,6 +174,33 @@ class MongoDbFlowPersistence(FlowPersistence):
         )
         return int(doc["seq"])
 
+    def _insert_state(
+        self,
+        flow_uuid: str,
+        method_name: str,
+        state_dict: dict[str, Any],
+        session: Any,
+    ) -> None:
+        """Insert a state snapshot using the transaction's sequence."""
+        self._db_ready()[self.states_collection].insert_one(
+            {
+                "flow_uuid": flow_uuid,
+                "method_name": method_name,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "state_json": json.dumps(state_dict, default=_json_default),
+                "seq": self._next_sequence(self.states_collection, session),
+            },
+            session=session,
+        )
+
+    def _run_transaction(self, operation: Callable[[Any], None]) -> None:
+        """Run a persistence write operation in a retrying Mongo transaction."""
+        self._db_ready()
+        if self._client is None:
+            raise RuntimeError("MongoDB client was not initialized.")
+        with self._client.start_session() as session:
+            session.with_transaction(operation)
+
     def save_state(
         self,
         flow_uuid: str,
@@ -186,24 +214,11 @@ class MongoDbFlowPersistence(FlowPersistence):
         ordering on ``seq`` rather than the client-generated ObjectId ``_id``.
         """
         state_dict = self._to_state_dict(state_data)
-        db = self._db_ready()
 
         def write_state(session: Any) -> None:
-            db[self.states_collection].insert_one(
-                {
-                    "flow_uuid": flow_uuid,
-                    "method_name": method_name,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "state_json": json.dumps(state_dict, default=_json_default),
-                    "seq": self._next_sequence(self.states_collection, session),
-                },
-                session=session,
-            )
+            self._insert_state(flow_uuid, method_name, state_dict, session)
 
-        if self._client is None:
-            raise RuntimeError("MongoDB client was not initialized.")
-        with self._client.start_session() as session:
-            session.with_transaction(write_state)
+        self._run_transaction(write_state)
 
     def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
         """Load the most recent state for a given flow UUID."""
@@ -223,20 +238,23 @@ class MongoDbFlowPersistence(FlowPersistence):
     ) -> None:
         """Save state with a pending feedback marker (upsert per flow)."""
         state_dict = self._to_state_dict(state_data)
+        context_json = json.dumps(context.to_dict(), default=_json_default)
 
-        # Mirror SQLite: record the state snapshot, then upsert the pending row.
-        self.save_state(flow_uuid, context.method_name, state_data)
+        def write_pending_feedback(session: Any) -> None:
+            self._insert_state(flow_uuid, context.method_name, state_dict, session)
+            self._db_ready()[self.pending_collection].replace_one(
+                {"flow_uuid": flow_uuid},
+                {
+                    "flow_uuid": flow_uuid,
+                    "context_json": context_json,
+                    "state_json": json.dumps(state_dict, default=_json_default),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                },
+                upsert=True,
+                session=session,
+            )
 
-        self._db_ready()[self.pending_collection].replace_one(
-            {"flow_uuid": flow_uuid},
-            {
-                "flow_uuid": flow_uuid,
-                "context_json": json.dumps(context.to_dict(), default=_json_default),
-                "state_json": json.dumps(state_dict, default=_json_default),
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            },
-            upsert=True,
-        )
+        self._run_transaction(write_pending_feedback)
 
     def load_pending_feedback(
         self,
