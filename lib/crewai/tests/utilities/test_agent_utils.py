@@ -1353,6 +1353,46 @@ class TestParseToolCallArgs:
             "tool_failure",
         }
 
+    def test_json_object_accepted(self) -> None:
+        args_dict, error = parse_tool_call_args('{"city":"Madurai"}', "tool", "call_x")
+        assert error is None
+        assert args_dict == {"city": "Madurai"}
+
+    def test_json_array_rejected(self) -> None:
+        args_dict, error = parse_tool_call_args('["oops"]', "tool", "call_x")
+        assert args_dict is None
+        assert error is not None
+        assert error["tool_failure"].code == "invalid_input_type"
+        assert "got list" in error["result"]
+
+    def test_json_string_rejected(self) -> None:
+        args_dict, error = parse_tool_call_args('"hello"', "tool", "call_x")
+        assert args_dict is None
+        assert error is not None
+        assert error["tool_failure"].code == "invalid_input_type"
+        assert "got str" in error["result"]
+
+    def test_json_integer_rejected(self) -> None:
+        args_dict, error = parse_tool_call_args('123', "tool", "call_x")
+        assert args_dict is None
+        assert error is not None
+        assert error["tool_failure"].code == "invalid_input_type"
+        assert "got int" in error["result"]
+
+    def test_json_boolean_rejected(self) -> None:
+        args_dict, error = parse_tool_call_args('true', "tool", "call_x")
+        assert args_dict is None
+        assert error is not None
+        assert error["tool_failure"].code == "invalid_input_type"
+        assert "got bool" in error["result"]
+
+    def test_json_null_rejected(self) -> None:
+        args_dict, error = parse_tool_call_args('null', "tool", "call_x")
+        assert args_dict is None
+        assert error is not None
+        assert error["tool_failure"].code == "invalid_input_type"
+        assert "got NoneType" in error["result"]
+
 
 class TestExecuteSingleNativeToolCall:
     """Tests for execute_single_native_tool_call."""

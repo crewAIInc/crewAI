@@ -1925,9 +1925,10 @@ def parse_tool_call_args(
         with the same shape as ``_execute_single_native_tool_call`` return
         values, carrying an ``INVALID_INPUT`` failure for the caller to report.
     """
+    parsed_args = func_args
     if isinstance(func_args, str):
         try:
-            return json.loads(func_args), None
+            parsed_args = json.loads(func_args)
         except json.JSONDecodeError as e:
             message = (
                 f"Error: Failed to parse tool arguments as JSON: {e}. "
@@ -1945,7 +1946,27 @@ def parse_tool_call_args(
                     code="json_decode_error",
                 ),
             }
-    return func_args, None
+
+    if not isinstance(parsed_args, dict):
+        message = (
+            f"Error: Tool arguments must be a JSON object (dictionary), "
+            f"but got {type(parsed_args).__name__}. "
+            f"Please provide valid JSON arguments for the '{func_name}' tool."
+        )
+        return None, {
+            "call_id": call_id,
+            "func_name": func_name,
+            "result": message,
+            "from_cache": False,
+            "original_tool": original_tool,
+            "tool_failure": ToolFailure(
+                message=message,
+                reason=ToolFailureReason.INVALID_INPUT,
+                code="invalid_input_type",
+            ),
+        }
+
+    return parsed_args, None
 
 
 def _setup_before_llm_call_hooks(
