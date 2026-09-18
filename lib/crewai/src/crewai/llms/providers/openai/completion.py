@@ -60,6 +60,8 @@ from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
+    LLMRateLimitExceededError,
+    is_rate_limit_exceeded,
 )
 from crewai.utilities.pydantic_schema_utils import (
     generate_model_description,
@@ -640,6 +642,12 @@ class OpenAICompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
+                if isinstance(e, LLMRateLimitExceededError):
+                    raise
+                if is_rate_limit_exceeded(e):
+                    raise LLMRateLimitExceededError(
+                        f"OpenAI API rate limit exceeded: {e!s}"
+                    ) from e
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
                 self._emit_call_failed_event(
@@ -785,6 +793,12 @@ class OpenAICompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
+                if isinstance(e, LLMRateLimitExceededError):
+                    raise
+                if is_rate_limit_exceeded(e):
+                    raise LLMRateLimitExceededError(
+                        f"OpenAI API rate limit exceeded: {e!s}"
+                    ) from e
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
                 self._emit_call_failed_event(
@@ -1261,6 +1275,10 @@ class OpenAICompletion(BaseLLM):
             )
             raise ConnectionError(error_msg) from e
         except Exception as e:
+            if is_rate_limit_exceeded(e):
+                raise LLMRateLimitExceededError(
+                    f"OpenAI API rate limit exceeded: {e}"
+                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -1404,6 +1422,10 @@ class OpenAICompletion(BaseLLM):
             )
             raise ConnectionError(error_msg) from e
         except Exception as e:
+            if is_rate_limit_exceeded(e):
+                raise LLMRateLimitExceededError(
+                    f"OpenAI API rate limit exceeded: {e}"
+                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -2329,6 +2351,10 @@ class OpenAICompletion(BaseLLM):
             )
             raise ConnectionError(error_msg) from e
         except Exception as e:
+            if is_rate_limit_exceeded(e):
+                raise LLMRateLimitExceededError(
+                    f"OpenAI API rate limit exceeded: {e}"
+                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -2769,6 +2795,10 @@ class OpenAICompletion(BaseLLM):
             )
             raise ConnectionError(error_msg) from e
         except Exception as e:
+            if is_rate_limit_exceeded(e):
+                raise LLMRateLimitExceededError(
+                    f"OpenAI API rate limit exceeded: {e}"
+                ) from e
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e

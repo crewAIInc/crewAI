@@ -25,6 +25,9 @@ from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.llms.providers.openai_compatible.completion import (
     OpenAICompatibleCompletion,
 )
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMRateLimitExceededError,
+)
 
 
 BASE_URL = "https://openrouter.ai/api/v1"
@@ -198,11 +201,11 @@ def test_error_message_never_mentions_nonetype() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_upstream_429_raises_rate_limit_error() -> None:
-    """A masked rate limit stays catchable as openai.RateLimitError."""
+def test_upstream_429_raises_shared_rate_limit_error() -> None:
+    """A masked rate limit uses CrewAI's provider-neutral error."""
     llm = _make_llm(_json_responder(_error_envelope("Slow down", 429)))
 
-    with pytest.raises(openai.RateLimitError, match="Slow down"):
+    with pytest.raises(LLMRateLimitExceededError, match="Slow down"):
         llm.call("hi")
 
 
@@ -235,7 +238,7 @@ def test_string_status_code_is_understood() -> None:
     """Some gateways stringify the upstream status."""
     llm = _make_llm(_json_responder(_error_envelope("Slow down", "429")))
 
-    with pytest.raises(openai.RateLimitError, match=r"upstream code 429"):
+    with pytest.raises(LLMRateLimitExceededError, match=r"upstream code 429"):
         llm.call("hi")
 
 
@@ -365,13 +368,13 @@ def test_tool_execution_follow_up_turn_unchanged() -> None:
     assert result == "sunny in Lisbon"
 
 
-def test_real_http_error_status_still_raises_its_own_type() -> None:
-    """A genuine 429 was already handled; it must not route through the new guard."""
+def test_real_http_rate_limit_raises_shared_error() -> None:
+    """A genuine 429 uses the same provider-neutral error as a masked one."""
     llm = _make_llm(
         _json_responder({"error": {"message": "rate limited"}}, status=429)
     )
 
-    with pytest.raises(openai.RateLimitError):
+    with pytest.raises(LLMRateLimitExceededError):
         llm.call("hi")
 
 
@@ -491,16 +494,16 @@ def test_openai_compatible_subclass_inherits_the_guard() -> None:
         (404, openai.NotFoundError),
         (409, openai.ConflictError),
         (422, openai.UnprocessableEntityError),
-        (429, openai.RateLimitError),
+        (429, LLMRateLimitExceededError),
         (500, openai.InternalServerError),
         (503, openai.InternalServerError),
         (504, openai.InternalServerError),
     ],
 )
-def test_every_upstream_code_maps_to_its_sdk_exception(
+def test_every_upstream_code_maps_to_its_external_exception(
     upstream_code: int, expected: type[Exception]
 ) -> None:
-    """A masked failure must be catchable exactly like the honest one."""
+    """A masked failure must use the same public exception as an honest one."""
     llm = _make_llm(_json_responder(_error_envelope("upstream said no", upstream_code)))
 
     # 404 is rewritten to ValueError by the provider's own model-not-found handler,

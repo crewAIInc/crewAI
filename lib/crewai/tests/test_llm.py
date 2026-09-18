@@ -458,6 +458,23 @@ def test_rate_limit_error_preserves_provider_message():
     assert str(error) == message
 
 
+def test_litellm_rate_limit_is_normalized():
+    """LiteLLM throttles use the shared provider-neutral exception."""
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMRateLimitExceededError,
+    )
+    from litellm.exceptions import RateLimitError
+
+    llm = LLM(model="gpt-4", is_litellm=True)
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = RateLimitError(
+            "Too many requests", llm_provider="openai", model="gpt-4"
+        )
+
+        with pytest.raises(LLMRateLimitExceededError, match="LiteLLM rate limit"):
+            llm.call("This is a test message")
+
+
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""

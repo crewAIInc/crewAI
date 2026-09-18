@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Any, Final
 
 
 CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
@@ -71,3 +71,49 @@ class LLMRateLimitExceededError(Exception):
         """Initialize the exception with the original provider error message."""
         self.original_error_message = error_message
         super().__init__(error_message)
+
+
+def is_rate_limit_exceeded(error: Exception) -> bool:
+    """Check whether a provider error represents a transient rate limit.
+
+    Native SDKs expose throttles through different shapes. This keeps the
+    detection rules shared while each provider retains its own useful message
+    when it raises :class:`LLMRateLimitExceededError`.
+    """
+    response: Any = getattr(error, "response", None)
+    status_code = getattr(error, "status_code", None)
+    if status_code is None:
+        status_code = getattr(response, "status_code", None)
+    if status_code == 429:
+        return True
+
+    error_code = getattr(error, "code", None)
+    if isinstance(response, dict):
+        response_error = response.get("Error") or response.get("error") or {}
+        if isinstance(response_error, dict):
+            error_code = response_error.get("Code") or response_error.get("code")
+
+    normalized_code = (
+        str(error_code or error.__class__.__name__).replace("_", "").lower()
+    )
+    if normalized_code in {
+        "429",
+        "ratelimiterror",
+        "ratelimitexceeded",
+        "throttlingexception",
+        "resourceexhausted",
+        "toomanyrequests",
+    }:
+        return True
+
+    message = str(error).lower()
+    return any(
+        phrase in message
+        for phrase in (
+            "rate limit",
+            "rate-limit",
+            "too many requests",
+            "throttl",
+            "resource exhausted",
+        )
+    )

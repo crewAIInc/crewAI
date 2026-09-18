@@ -3,6 +3,7 @@ from crewai_core.printer import Printer
 from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
+    LLMRateLimitExceededError,
 )
 from crewai.utilities.file_handler import FileHandler
 from crewai.utilities.i18n import I18N
@@ -19,6 +20,7 @@ __all__ = [
     "FileHandler",
     "InternalInstructor",
     "LLMContextLengthExceededError",
+    "LLMRateLimitExceededError",
     "Logger",
     "Printer",
     "Prompts",

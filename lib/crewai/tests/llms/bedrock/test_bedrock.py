@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from crewai.llm import LLM
@@ -734,6 +734,9 @@ def test_bedrock_client_error_handling():
     Test that Bedrock properly handles various AWS client errors
     """
     from botocore.exceptions import ClientError
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMRateLimitExceededError,
+    )
 
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
@@ -759,9 +762,57 @@ def test_bedrock_client_error_handling():
         }
         mock_converse.side_effect = ClientError(error_response, 'converse')
 
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(LLMRateLimitExceededError) as exc_info:
             llm.call("Hello")
         assert "throttled" in str(exc_info.value).lower()
+
+
+def test_bedrock_streaming_throttle_is_rate_limited():
+    """Streaming Bedrock throttles preserve the shared retry signal."""
+    from botocore.exceptions import ClientError
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMRateLimitExceededError,
+    )
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    error_response = {
+        "Error": {
+            "Code": "ThrottlingException",
+            "Message": "Too many tokens, please wait before trying again",
+        }
+    }
+    with patch.object(llm._client, "converse_stream") as mock_converse_stream:
+        mock_converse_stream.side_effect = ClientError(error_response, "converse_stream")
+
+        with pytest.raises(LLMRateLimitExceededError, match="API throttled"):
+            llm._handle_streaming_converse([], {})
+
+
+@pytest.mark.asyncio
+async def test_bedrock_async_streaming_throttle_is_rate_limited():
+    """Async streaming Bedrock throttles preserve the shared retry signal."""
+    from botocore.exceptions import ClientError
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMRateLimitExceededError,
+    )
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    error_response = {
+        "Error": {
+            "Code": "ThrottlingException",
+            "Message": "Too many tokens, please wait before trying again",
+        }
+    }
+    async_client = AsyncMock()
+    async_client.converse_stream.side_effect = ClientError(
+        error_response, "converse_stream"
+    )
+
+    with patch.object(
+        llm, "_ensure_async_client", new=AsyncMock(return_value=async_client)
+    ):
+        with pytest.raises(LLMRateLimitExceededError, match="API throttled"):
+            await llm._ahandle_streaming_converse([], {})
 
 
 def test_bedrock_stop_sequences_sync():

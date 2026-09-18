@@ -4,6 +4,37 @@ import pytest
 
 from crewai import Agent, Task, Crew
 from crewai.llm import LLM
+from crewai.llms.providers.openai.completion import OpenAICompletion
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMRateLimitExceededError,
+)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("api", "stream", "handler"),
+    [
+        ("completions", False, "_ahandle_completion"),
+        ("completions", True, "_ahandle_streaming_completion"),
+        ("responses", False, "_ahandle_responses"),
+        ("responses", True, "_ahandle_streaming_responses"),
+    ],
+)
+async def test_openai_rate_limits_are_normalized_for_async_call_modes(
+    monkeypatch, api, stream, handler
+):
+    """Rate limits from every asynchronous OpenAI API mode use the shared error."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini", api_key="test-key", api=api, stream=stream
+    )
+
+    async def raise_rate_limit(**kwargs):
+        raise RuntimeError("rate limit exceeded")
+
+    monkeypatch.setattr(llm, handler, raise_rate_limit)
+
+    with pytest.raises(LLMRateLimitExceededError, match="OpenAI API rate limit"):
+        await llm.acall([{"role": "user", "content": "Hello"}])
 
 
 @pytest.mark.vcr()
