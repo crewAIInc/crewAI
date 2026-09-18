@@ -185,7 +185,7 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gemini-3.8-flash": 1048576,
     "gemini-3-pro-preview": 1048576,
     "gemini-2.0-flash": 1048576,
-    "gemini-2.0-flash-thinking-exp-01-21": 32768,
+    "gemini-2.0-flash-thinking-exp-01-21": 1048576,
     "gemini-2.0-flash-lite-001": 1048576,
     "gemini-2.0-flash-001": 1048576,
     "gemini-2.5-flash-preview-04-17": 1048576,

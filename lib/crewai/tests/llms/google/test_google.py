@@ -501,6 +501,15 @@ def test_gemini_context_window_size():
     assert context_size_1_5 > 1000000
 
 
+def test_gemini_flash_thinking_uses_1m_window():
+    """
+    gemini-2.0-flash-thinking-exp-01-21 is a 1M-token model; the stale 32k
+    figure belonged to the earlier exp-1219 snapshot.
+    """
+    llm = LLM(model="google/gemini-2.0-flash-thinking-exp-01-21")
+    assert llm.get_context_window_size() > 500000
+
+
 def test_gemini_message_formatting():
     """
     Test that messages are properly formatted for Gemini API

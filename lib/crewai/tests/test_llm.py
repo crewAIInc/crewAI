@@ -344,6 +344,17 @@ def test_context_window_validation():
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
 
+def test_gemini_flash_thinking_exp_uses_1m_window():
+    """
+    gemini-2.0-flash-thinking-exp-01-21 is a 1M-token model; the stale 32k
+    figure belonged to the earlier exp-1219 snapshot.
+    """
+    llm = LLM(model="gemini-2.0-flash-thinking-exp-01-21", is_litellm=True)
+    assert llm.get_context_window_size() == int(
+        1048576 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
 @pytest.mark.parametrize(
     "model",
     ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
