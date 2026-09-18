@@ -153,3 +153,28 @@ def test_deployable_files_uses_git_excludes(fp, repository):
     )
 
     assert repository.deployable_files() == ["pyproject.toml", "src/main.py"]
+
+
+def test_ensure_initial_commit_excludes_preserves_utf8_content(fp, tmp_path):
+    """Existing UTF-8 exclude patterns are kept byte-for-byte on every platform.
+
+    Git stores ignore patterns as UTF-8 bytes. Reading them with the locale
+    encoding raised ``UnicodeDecodeError`` on Windows (cp1252) for characters
+    such as curly quotes, and rewriting them could convert line endings.
+    """
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    exclude_file = tmp_path / ".git" / "info" / "exclude"
+    exclude_file.parent.mkdir(parents=True)
+    original = "notes \u201cdraft\u201d.md\nb\u0142\u0119dy/\n".encode("utf-8")
+    exclude_file.write_bytes(original)
+
+    Repository(path=str(tmp_path), fetch=False)._ensure_initial_commit_excludes()
+
+    written = exclude_file.read_bytes()
+    assert written.startswith(original)
+    assert b"\r\n" not in written
+    text = written.decode("utf-8")
+    assert "# CrewAI deploy auto-commit excludes" in text
+    assert ".env" in text.splitlines()
+    assert "__pycache__/" in text.splitlines()

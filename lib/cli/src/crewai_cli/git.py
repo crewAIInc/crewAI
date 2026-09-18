@@ -163,7 +163,9 @@ class Repository:
         """Add local-only ignore patterns before auto-staging an initial commit."""
         exclude_file = Path(self.path) / ".git" / "info" / "exclude"
         exclude_file.parent.mkdir(parents=True, exist_ok=True)
-        existing = exclude_file.read_text() if exclude_file.exists() else ""
+        existing = (
+            exclude_file.read_text(encoding="utf-8") if exclude_file.exists() else ""
+        )
         existing_lines = set(existing.splitlines())
         missing_patterns = [
             pattern
@@ -176,7 +178,9 @@ class Repository:
         prefix = "" if existing.endswith("\n") or not existing else "\n"
         patterns = "\n".join(missing_patterns)
         exclude_file.write_text(
-            f"{existing}{prefix}# CrewAI deploy auto-commit excludes\n{patterns}\n"
+            f"{existing}{prefix}# CrewAI deploy auto-commit excludes\n{patterns}\n",
+            encoding="utf-8",
+            newline="\n",
         )
 
     def deployable_files(self) -> list[str]:
