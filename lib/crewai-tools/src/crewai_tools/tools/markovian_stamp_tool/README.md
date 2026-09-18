@@ -5,16 +5,14 @@ using the [Markovian Protocol](https://markovianprotocol.com). It is useful when
 an agent needs to prove that an output, decision, or document existed at a point
 in time.
 
-Stamping records a hash of the data in the public witnessed transparency log and
-returns a Merkle root plus a public verify URL. The item itself gets an
-OpenTimestamps timestamp against a Bitcoin calendar, which proves it existed at a
-point in time. Separately, the protocol's own chain root is committed to Bitcoin;
-that secures the log's history and does not by itself prove your item is inside
-the anchored root. Anyone can confirm the record at
-`https://api.quantsynth.net/verify/<merkle_root>` with no account.
+The tool computes a SHA-256 hash of the text locally and sends only that hash
+(and the optional label) to the Markovian API. The text itself is never sent.
+The hash is recorded in the public witnessed transparency log, and the tool
+returns the hash, a Merkle root, the log index, and a public verify URL. Anyone
+holding the original text can recompute its SHA-256 and compare it to the
+receipt, and anyone can open the verify URL with no account.
 
-Markovian proves that data existed, not that it is correct. Provenance, not
-truth.
+Markovian proves that data existed, not that it is correct.
 
 ---
 
@@ -22,24 +20,10 @@ truth.
 
 This tool:
 
-* Accepts any **text** and stamps it on the Markovian Protocol.
-* Returns a **Merkle root**, **block height**, and a **public verify URL**.
-* Requires **no account, wallet, or API key** for the free tier.
-* Accepts an optional **API key** for attributed or pro usage.
-
-It prefers the [`markovian`](https://pypi.org/project/markovian/) SDK and falls
-back to a plain HTTP POST when the SDK is not installed.
-
----
-
-## Installation
-
-```bash
-pip install markovian
-```
-
-`requests` is already a dependency of `crewai-tools`, so the tool also works
-without the SDK installed.
+* Accepts any **text**, hashes it locally, and stamps the hash.
+* Returns the **data hash**, **Merkle root**, **log index**, and a **public verify URL**.
+* Requires **no account, wallet, or API key**.
+* Uses only `requests`, which is already a dependency of `crewai-tools`.
 
 ---
 
@@ -48,10 +32,9 @@ without the SDK installed.
 | Argument | Type  | Required | Description                                                      |
 | -------- | ----- | -------- | ---------------------------------------------------------------- |
 | `data`   | `str` | Yes      | The content to stamp (an agent output, decision, or document).   |
-| `label`  | `str` | No       | Optional human-readable label attached to the stamp.             |
+| `label`  | `str` | No       | Optional human-readable label, sent in plain text with the hash. |
 
-Constructor options: `api_key` (optional), `wallet` (optional), `base_url`,
-`timeout`. `MARKOVIAN_API_KEY` is read from the environment when set.
+Constructor options: `base_url`, `timeout`.
 
 ---
 
@@ -68,10 +51,11 @@ print(receipt)
 Example output:
 
 ```text
-Markovian provenance receipt (markovian-provenance/v1):
-  merkle_root: 65ddefa2b8d3fb994f2a4037f9dd8278688138bf1c5eaa9cdb64c73c02663466
-  block_height: 135213
-  verify_url: https://api.quantsynth.net/verify/65ddefa2b8d3fb994f2a4037f9dd8278688138bf1c5eaa9cdb64c73c02663466
+Markovian provenance receipt:
+  data_hash: 3a28e136d037a943936213fa790b8eb50f112940be8717eefeeea56e5b8316fa (sha256 of the stamped text)
+  merkle_root: 11234ad23f343bd99b8ee173016e72a77eda97d432bc336f8187529d8c757b1e
+  log_index: 8330
+  verify_url: https://api.markovianprotocol.com/verify/11234ad23f343bd99b8ee173016e72a77eda97d432bc336f8187529d8c757b1e
 ```
 
 Give an agent a one-line way to stamp its final answer:
