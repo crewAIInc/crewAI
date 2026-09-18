@@ -1,112 +1,71 @@
-"""Tests to verify that traces are sent when enabled and not sent when disabled.
+"""Explicit tracing controls gate the execution session and its transport."""
 
-VCR will record HTTP interactions. Inspect cassettes to verify tracing behavior.
-"""
+from datetime import datetime, timedelta, timezone
+from unittest.mock import Mock
 
-import pytest
 from crewai import Agent, Crew, Task
-from tests.utils import wait_for_event_handlers
+from crewai.llms.base_llm import BaseLLM
+from crewai.telemetry.tracing.grants import (
+    GrantSpanExporter,
+    TraceGrant,
+    TraceGrantClient,
+)
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+import pytest
 
 
-class TestTraceEnableDisable:
-    """Test suite to verify trace sending behavior with VCR cassette recording."""
+class LocalLLM(BaseLLM):
+    def __init__(self):
+        super().__init__(model="local-test")
 
-    @pytest.mark.vcr()
-    def test_no_http_calls_when_disabled_via_env(self):
-        """Test execution when tracing disabled via CREWAI_TRACING_ENABLED=false."""
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setenv("CREWAI_TRACING_ENABLED", "false")
-            mp.setenv("CREWAI_DISABLE_TELEMETRY", "false")
+    def call(self, messages, **kwargs):
+        return "Final Answer: hello"
 
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello",
-                expected_output="hello",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=False)
+    def supports_function_calling(self):
+        return False
 
-            result = crew.kickoff()
-            wait_for_event_handlers()
+    def supports_stop_words(self):
+        return False
 
-            assert result is not None
 
-    @pytest.mark.vcr()
-    def test_no_http_calls_when_disabled_via_tracing_false(self):
-        """Test execution when tracing=False explicitly set."""
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setenv("CREWAI_DISABLE_TELEMETRY", "false")
-
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello",
-                expected_output="hello",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=False, tracing=False)
-
-            result = crew.kickoff()
-            wait_for_event_handlers()
-
-            assert result is not None
-
-    @pytest.mark.vcr()
-    def test_trace_calls_when_enabled_via_env(self):
-        """Test execution when tracing enabled via CREWAI_TRACING_ENABLED=true."""
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setenv("CREWAI_TRACING_ENABLED", "true")
-            mp.setenv("CREWAI_DISABLE_TELEMETRY", "false")
-            mp.setenv("OTEL_SDK_DISABLED", "false")
-
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello",
-                expected_output="hello",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=False)
-
-            result = crew.kickoff()
-            wait_for_event_handlers()
-
-            assert result is not None
-
-    @pytest.mark.vcr()
-    def test_trace_calls_when_enabled_via_tracing_true(self):
-        """Test execution when tracing=True explicitly set."""
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setenv("CREWAI_DISABLE_TELEMETRY", "false")
-            mp.setenv("OTEL_SDK_DISABLED", "false")
-
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello",
-                expected_output="hello",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=False, tracing=True)
-
-            result = crew.kickoff()
-            wait_for_event_handlers()
-
-            assert result is not None
+@pytest.mark.parametrize(
+    "environment,override,enabled",
+    [
+        ("false", None, False),
+        ("true", False, False),
+        ("true", None, True),
+        ("false", True, True),
+    ],
+)
+def test_tracing_controls_gate_execution_export(
+    monkeypatch, environment, override, enabled
+):
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", environment)
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    exporter = InMemorySpanExporter()
+    grant = Mock(
+        side_effect=lambda execution_uuid: TraceGrant(
+            token="synthetic-grant",
+            collector_url="https://collector.invalid/v1/traces",
+            execution_uuid=execution_uuid,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+        )
+    )
+    monkeypatch.setattr(TraceGrantClient, "create", grant)
+    monkeypatch.setattr(
+        GrantSpanExporter, "_exporter", staticmethod(lambda _: exporter)
+    )
+    legacy = Mock(side_effect=AssertionError("legacy trace transport used"))
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.trace_batch_manager.TraceBatchManager.initialize_batch",
+        legacy,
+    )
+    agent = Agent(role="tester", goal="greet", backstory="tester", llm=LocalLLM())
+    task = Task(description="say hello", expected_output="hello", agent=agent)
+    result = Crew(agents=[agent], tasks=[task], tracing=override).kickoff()
+    assert result.raw == "hello"
+    assert grant.call_count == int(enabled)
+    assert bool(exporter.get_finished_spans()) is enabled
+    legacy.assert_not_called()

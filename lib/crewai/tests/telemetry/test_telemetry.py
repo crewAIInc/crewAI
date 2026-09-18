@@ -146,7 +146,7 @@ def test_flow_creation_span_records_crewai_version():
     span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
 
 
-@patch("crewai.telemetry.telemetry.logger.error")
+@patch("crewai_core.telemetry.logger.debug")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
     side_effect=Exception("Test exception"),
@@ -182,7 +182,7 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
     assert export_mock.called
     assert logger_mock.call_count == export_mock.call_count
     for call in logger_mock.call_args_list:
-        assert call[0][0] == error
+        assert call.args == ("Telemetry export failed: %s", error)
 
 
 @pytest.mark.telemetry

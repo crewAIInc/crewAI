@@ -187,7 +187,7 @@ def load_skill(
         if activate:
             return [resolve_registry_ref(skill, source=source)]
         return [resolve_registry_ref(skill, source=source, activate=False)]
-    if isinstance(skill, str) and skill.lstrip().startswith("---\n"):
+    if isinstance(skill, str) and skill.lstrip().startswith(("---\n", "---\r\n")):
         frontmatter_dict, body = parse_frontmatter(skill.strip())
         return [
             Skill(
