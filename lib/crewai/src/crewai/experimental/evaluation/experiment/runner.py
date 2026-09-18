@@ -140,6 +140,11 @@ class ExperimentRunner:
         - If both are dicts, actual must have matching keys with values >= expected values.
         """
 
+        if isinstance(expected, dict) and not expected:
+            raise ValueError(
+                "expected_score must contain at least one criterion to evaluate"
+            )
+
         if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
             return actual >= expected
 
