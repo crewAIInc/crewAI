@@ -143,7 +143,9 @@ class _FakeClient:
         return _FakeSession(self)
 
 
-def _patch_client(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+def _patch_client(
+    monkeypatch: pytest.MonkeyPatch, *, reuse_client: bool = False
+) -> dict[str, Any]:
     """Patch ``pymongo.MongoClient`` to build in-memory fakes.
 
     Returns a dict capturing the connection string and the created fake client
@@ -152,9 +154,16 @@ def _patch_client(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     import pymongo
 
     created: dict[str, Any] = {}
+    shared_client: _FakeClient | None = None
 
     def factory(conn: str, *args: Any, **kwargs: Any) -> _FakeClient:
-        client = _FakeClient(conn)
+        nonlocal shared_client
+        if reuse_client:
+            if shared_client is None:
+                shared_client = _FakeClient(conn)
+            client = shared_client
+        else:
+            client = _FakeClient(conn)
         created["conn"] = conn
         created["client"] = client
         return client
@@ -196,6 +205,38 @@ def test_save_state_tags_incrementing_seq(monkeypatch: pytest.MonkeyPatch) -> No
     last_filter, last_sort = states.find_one_calls[-1]
     assert last_filter == {"flow_uuid": "flow-1"}
     assert last_sort == [("seq", -1)]
+
+
+def test_persistences_sharing_a_state_collection_share_its_counter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Separate persistence instances keep one ordering sequence per collection."""
+    created = _patch_client(monkeypatch, reuse_client=True)
+    first = MongoDbFlowPersistence(CONN)
+    second = MongoDbFlowPersistence(CONN)
+
+    first.save_state("flow-1", "first", {"counter": 1})
+    second.save_state("flow-1", "second", {"counter": 2})
+
+    states = created["client"]._db["flow_states"]
+    assert [doc["seq"] for doc in states.docs] == [1, 2]
+    assert first.load_state("flow-1") == {"counter": 2}
+
+
+def test_different_state_collections_use_independent_counters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each configured state collection has an independent ordering sequence."""
+    created = _patch_client(monkeypatch, reuse_client=True)
+    default_states = MongoDbFlowPersistence(CONN)
+    billing_states = MongoDbFlowPersistence(CONN, states_collection="billing_states")
+
+    default_states.save_state("flow-1", "default", {"counter": 1})
+    billing_states.save_state("flow-1", "billing", {"counter": 1})
+
+    database = created["client"]._db
+    assert database["flow_states"].docs[0]["seq"] == 1
+    assert database["billing_states"].docs[0]["seq"] == 1
 
 
 def test_save_state_assigns_sequence_and_inserts_in_one_transaction(
@@ -333,6 +374,38 @@ def test_pending_feedback_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert created["client"].transactions_started == 1
 
 
+def test_pending_feedback_replaces_existing_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Saving feedback twice matches SQLite's INSERT OR REPLACE behavior."""
+    _patch_client(monkeypatch)
+    persistence = MongoDbFlowPersistence(CONN)
+    first_context = PendingFeedbackContext(
+        flow_id="flow-1",
+        flow_class="MyFlow",
+        method_name="first_review",
+        method_output="first draft",
+        message="First question?",
+    )
+    second_context = PendingFeedbackContext(
+        flow_id="flow-1",
+        flow_class="MyFlow",
+        method_name="second_review",
+        method_output="second draft",
+        message="Second question?",
+    )
+
+    persistence.save_pending_feedback("flow-1", first_context, {"counter": 1})
+    persistence.save_pending_feedback("flow-1", second_context, {"counter": 2})
+
+    loaded = persistence.load_pending_feedback("flow-1")
+    assert loaded is not None
+    state, context = loaded
+    assert state == {"counter": 2}
+    assert context.method_name == "second_review"
+    assert context.message == "Second question?"
+
+
 def test_pending_feedback_write_failure_rolls_back_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -384,6 +457,42 @@ def test_persisted_flow_restores_latest_mongodb_state(
     assert first_run.state.counter == 2
     assert restored_run.state.counter == 4
     assert persistence.load_state(flow_id) == {"id": flow_id, "counter": 4}
+
+
+def test_mongodb_fork_restores_source_state_without_mutating_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mongo persistence follows SQLite's restore_from_state_id fork semantics."""
+    _patch_client(monkeypatch)
+    persistence = MongoDbFlowPersistence(CONN)
+
+    class State(FlowState):
+        counter: int = 0
+
+    class ForkableFlow(Flow[State]):
+        @start()
+        @persist(persistence)
+        def step(self) -> None:
+            self.state.counter += 1
+
+    source = ForkableFlow(persistence=persistence)
+    source.kickoff()
+    source_id = source.state.id
+
+    resumed_source = ForkableFlow(persistence=persistence)
+    resumed_source.kickoff(inputs={"id": source_id})
+    assert persistence.load_state(source_id) == {"id": source_id, "counter": 2}
+
+    fork = ForkableFlow(persistence=persistence)
+    fork.kickoff(restore_from_state_id=source_id)
+
+    assert fork.state.id != source_id
+    assert fork.state.counter == 3
+    assert persistence.load_state(source_id) == {"id": source_id, "counter": 2}
+    assert persistence.load_state(fork.state.id) == {
+        "id": fork.state.id,
+        "counter": 3,
+    }
 
 
 def test_mongodb_from_pending_resumes_flow(monkeypatch: pytest.MonkeyPatch) -> None:
