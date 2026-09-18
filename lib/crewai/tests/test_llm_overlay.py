@@ -112,6 +112,19 @@ def test_only_the_whitespace_around_the_text_is_forgiven() -> None:
         assert overlay_model_for(None) is None
 
 
+def test_two_keys_that_are_one_role_with_different_models_are_refused() -> None:
+    """``"Researcher"`` and ``" Researcher "`` name one role. With one model
+    they collapse to it; with two the mapping is ambiguous and refused, so the
+    model never depends on dictionary order."""
+    with llm_overlay({"Researcher": "openai/gpt-4o", " Researcher ": "openai/gpt-4o"}):
+        assert overlay_model_for("Researcher") == "openai/gpt-4o"
+
+    with pytest.raises(ValueError, match="'Researcher' is mapped twice with different models"):
+        with llm_overlay({"Researcher": "openai/gpt-4o", " Researcher ": "openai/gpt-4o-mini"}):
+            pass  # never entered
+    assert active.get() is None  # nothing was set
+
+
 def test_the_mapping_the_caller_passed_is_not_mutated() -> None:
     mapping = {"Researcher\n": "openai/gpt-4o"}
     with llm_overlay(mapping):

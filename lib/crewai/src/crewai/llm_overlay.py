@@ -104,7 +104,22 @@ def overlay_model_for(role: str | None) -> str | None:
 
 
 def _stripped(mapping: dict[str, str] | None) -> dict[str, str] | None:
-    """A copy of ``mapping`` with the whitespace around each role dropped."""
+    """A copy of ``mapping`` with the whitespace around each role dropped.
+
+    Two keys that differ only by whitespace name one role. When they name the
+    same model the copy holds it once; when they name different models the
+    mapping is ambiguous and is refused, so the model an agent runs on never
+    depends on dictionary order.
+    """
     if mapping is None:
         return None
-    return {role.strip(): model for role, model in mapping.items()}
+    stripped: dict[str, str] = {}
+    for role, model in mapping.items():
+        key = role.strip()
+        if key in stripped and stripped[key] != model:
+            raise ValueError(
+                f"llm_overlay: role {key!r} is mapped twice with different models "
+                f"({stripped[key]!r} and {model!r}); give each role one model"
+            )
+        stripped[key] = model
+    return stripped
