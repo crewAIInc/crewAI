@@ -3,11 +3,13 @@
 from crewai_files import FileBytes, ImageFile
 from crewai_files.cache.upload_cache import UploadCache
 from crewai_files.core.resolved import InlineBase64, InlineBytes
+from crewai_files.processing.exceptions import UploaderConfigurationError
 from crewai_files.resolution.resolver import (
     FileResolver,
     FileResolverConfig,
     create_resolver,
 )
+import pytest
 
 
 # Minimal valid PNG
@@ -170,3 +172,64 @@ class TestCreateResolver:
         resolver = create_resolver(enable_cache=False)
 
         assert resolver.upload_cache is None
+
+
+class _NoUploaderResolver(FileResolver):
+    """Resolver whose provider has no usable uploader, so every file fails setup."""
+
+    def _get_uploader(self, provider):
+        raise UploaderConfigurationError(
+            f"no file uploader available for provider {provider!r}"
+        )
+
+
+class _OneBadFileResolver(FileResolver):
+    """Resolver that fails one specific file with an ordinary per-file error."""
+
+    async def aresolve(self, file, provider):
+        if file.filename == "bad.png":
+            raise ValueError("corrupt image stream")
+        return await super().aresolve(file, provider)
+
+
+class TestBatchUploaderErrors:
+    """A provider setup failure must surface, an unrelated per-file error must not."""
+
+    def test_get_uploader_wraps_lookup_failure_as_configuration_error(
+        self, monkeypatch
+    ):
+        """Bedrock with no bucket configured raises UploaderConfigurationError, not a raw ValueError."""
+        monkeypatch.delenv("CREWAI_BEDROCK_S3_BUCKET", raising=False)
+        resolver = FileResolver()
+
+        with pytest.raises(
+            UploaderConfigurationError, match="CREWAI_BEDROCK_S3_BUCKET"
+        ):
+            resolver._get_uploader("bedrock")
+
+    @pytest.mark.asyncio
+    async def test_aresolve_files_surfaces_uploader_configuration_error(self):
+        """A provider whose uploader cannot be built aborts the whole batch, since it affects every file."""
+        resolver = _NoUploaderResolver(config=FileResolverConfig(prefer_upload=True))
+        files = {
+            "image1": ImageFile(
+                source=FileBytes(data=MINIMAL_PNG, filename="test1.png")
+            )
+        }
+
+        with pytest.raises(UploaderConfigurationError):
+            await resolver.aresolve_files(files, "openai")
+
+    @pytest.mark.asyncio
+    async def test_aresolve_files_skips_unrelated_per_file_errors(self):
+        """One file failing with an ordinary error is logged and skipped; the rest still resolve."""
+        resolver = _OneBadFileResolver()
+        files = {
+            "good": ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="good.png")),
+            "bad": ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="bad.png")),
+        }
+
+        resolved = await resolver.aresolve_files(files, "openai")
+
+        assert set(resolved) == {"good"}
+        assert isinstance(resolved["good"], InlineBase64)

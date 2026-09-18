@@ -1,19 +1,28 @@
 from typing import Any
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
+from crewai_tools.rag.loaders.utils import load_from_url
 from crewai_tools.rag.source_content import SourceContent
 
 
 class TextFileLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
-        if not source_content.path_exists():
-            raise FileNotFoundError(
-                f"The following file does not exist: {source_content.source}"
+        if source_content.is_url():
+            content = load_from_url(
+                source_ref,
+                kwargs,
+                accept_header="text/plain",
+                loader_name="TextFileLoader",
             )
+        else:
+            if not source_content.path_exists():
+                raise FileNotFoundError(
+                    f"The following file does not exist: {source_content.source}"
+                )
 
-        with open(source_content.source, encoding="utf-8") as file:
-            content = file.read()
+            with open(source_content.source, encoding="utf-8") as file:
+                content = file.read()
 
         return LoaderResult(
             content=content,

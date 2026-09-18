@@ -1056,6 +1056,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
+                    from_cache=from_cache,
                 ),
             )
 
