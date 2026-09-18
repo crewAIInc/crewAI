@@ -6,7 +6,9 @@ an ``Agent`` or ``LiteAgent`` whose ``role`` is a key of the mapping is built
 with the mapped model instead of its declared ``llm``. Roles that are not
 keys, and every agent built outside the block, keep their own model.
 
-Roles are matched exactly, by the text they have when the overlay is read.
+Roles are matched exactly, by the text they have when the overlay is read;
+only whitespace around a role or a key is ignored, so a role a YAML file
+leaves with a trailing newline matches a key written for the clean text.
 An ``Agent`` is read when it is built, with its declared role, and read
 again when ``crew.kickoff(inputs=...)`` interpolates the inputs into that
 role and the text changes. The second read is what lets a role declared as
@@ -71,22 +73,38 @@ def llm_overlay(mapping: dict[str, str] | None) -> Iterator[None]:
 
     Args:
         mapping: ``{role: model}`` for the block; ``None`` clears any active
-            overlay for the block. The previous value is always restored on
-            exit, including when the block raises.
+            overlay for the block. Whitespace around each role is dropped from
+            the copy the block uses, so a key matches a role that differs from
+            it only by its surrounding whitespace; the mapping passed in is
+            left as it is. The previous value is always restored on exit,
+            including when the block raises.
     """
-    token = active.set(mapping)
+    token = active.set(_stripped(mapping))
     try:
         yield
     finally:
         active.reset(token)
 
 
-def overlay_model_for(role: str) -> str | None:
+def overlay_model_for(role: str | None) -> str | None:
     """The model the active overlay assigns to ``role``.
+
+    Whitespace around ``role`` is ignored, as it was around the keys when the
+    overlay was set. An empty or ``None`` role matches nothing.
 
     Returns:
         The mapped model string, or ``None`` when no overlay is active or
         ``role`` is not one of its keys.
     """
     mapping = active.get()
-    return mapping.get(role) if mapping else None
+    if not mapping or role is None:
+        return None
+    role = role.strip()
+    return mapping.get(role) if role else None
+
+
+def _stripped(mapping: dict[str, str] | None) -> dict[str, str] | None:
+    """A copy of ``mapping`` with the whitespace around each role dropped."""
+    if mapping is None:
+        return None
+    return {role.strip(): model for role, model in mapping.items()}

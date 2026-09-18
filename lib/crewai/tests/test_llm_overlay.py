@@ -85,6 +85,52 @@ def test_nested_overlay_restores_the_outer_one() -> None:
         assert overlay_model_for("Researcher") == "openai/gpt-4o"
 
 
+def test_whitespace_around_a_role_or_a_key_is_ignored() -> None:
+    """A role read from a YAML file often ends in a newline (``role: >`` folds
+    to one) while the caller writes the key for the clean text; the newline can
+    just as well land on the key. Either side is stripped, on the direct lookup
+    and on the read an agent does when it is built."""
+    with llm_overlay(OVERLAY):
+        assert overlay_model_for("Researcher\n") == "openai/gpt-4o"
+        assert overlay_model_for("  Researcher ") == "openai/gpt-4o"
+        assert _agent("Researcher\n").llm.model == "gpt-4o"
+
+    with llm_overlay({"Researcher\n": "openai/gpt-4o"}):
+        assert overlay_model_for("Researcher") == "openai/gpt-4o"
+        assert _agent("Researcher").llm.model == "gpt-4o"
+
+
+def test_only_the_whitespace_around_the_text_is_forgiven() -> None:
+    """The text in between is still matched exactly, and nothing matches an
+    empty role."""
+    with llm_overlay(OVERLAY):
+        assert overlay_model_for("researcher") is None
+        assert overlay_model_for("Re searcher") is None
+        assert overlay_model_for("Writer\n") is None
+        assert overlay_model_for("") is None
+        assert overlay_model_for(" \n") is None
+        assert overlay_model_for(None) is None
+
+
+def test_the_mapping_the_caller_passed_is_not_mutated() -> None:
+    mapping = {"Researcher\n": "openai/gpt-4o"}
+    with llm_overlay(mapping):
+        assert active.get() == {"Researcher": "openai/gpt-4o"}
+    assert mapping == {"Researcher\n": "openai/gpt-4o"}
+
+
+def test_a_yaml_folded_template_role_matches_after_interpolation() -> None:
+    """The CrewBase shape: a templated role from YAML keeps its trailing newline
+    through interpolation, and the key is written for the clean text."""
+    with llm_overlay(TEMPLATE_OVERLAY):
+        agent = _agent("Researcher for {repo}\n")
+        assert agent.llm.model == "gpt-4o-mini"
+        agent.interpolate_inputs({"repo": "crewAIInc/x"})
+
+    assert agent.role == "Researcher for crewAIInc/x\n"
+    assert agent.llm.model == "gpt-4o"
+
+
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
 def test_lite_agent_gets_the_overlay_model() -> None:
     with llm_overlay(OVERLAY):
