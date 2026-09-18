@@ -139,6 +139,32 @@ class TestExperimentRunner:
         assert result.passed is True
 
     @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
+    def test_run_empty_expected_score_fails_closed(
+        self, mock_create_evaluator, mock_crew, mock_evaluator_results
+    ):
+        dataset = [
+            {
+                "identifier": "empty-expectation",
+                "inputs": {"query": "Test query"},
+                "expected_score": {},
+            }
+        ]
+
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_agent_evaluation.return_value = mock_evaluator_results
+        mock_evaluator.reset_iterations_results = MagicMock()
+        mock_create_evaluator.return_value = mock_evaluator
+
+        runner = ExperimentRunner(dataset=dataset)
+
+        results = runner.run(crew=mock_crew)
+
+        (result,) = results.results
+        assert result.identifier == "empty-expectation"
+        assert result.expected_score == {}
+        assert result.passed is False
+
+    @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
     def test_run_success_with_single_metric_evaluator_and_expected_specific_metric(
         self, mock_create_evaluator, mock_crew, mock_evaluator_results
     ):
