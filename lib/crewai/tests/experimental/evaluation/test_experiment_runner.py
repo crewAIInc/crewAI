@@ -207,3 +207,41 @@ class TestExperimentRunner:
         assert isinstance(result.expected_score, dict)
         assert "unknown_metric" in result.expected_score.keys()
         assert result.passed is False
+
+    def test_assert_scores_with_empty_expected_dict_raises(self):
+        runner = ExperimentRunner(dataset=[])
+
+        with pytest.raises(ValueError, match="expected_score is an empty dict"):
+            runner._assert_scores({}, 0.9)
+
+    def test_assert_scores_with_empty_expected_dict_and_dict_actual_raises(self):
+        runner = ExperimentRunner(dataset=[])
+
+        with pytest.raises(ValueError, match="expected_score is an empty dict"):
+            runner._assert_scores({}, {"goal_alignment": 0.9})
+
+    @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
+    def test_run_records_failure_when_expected_score_is_empty(
+        self, mock_create_evaluator, mock_crew, mock_evaluator_results
+    ):
+        dataset = [
+            {
+                "identifier": "empty-expected-score",
+                "inputs": {"query": "Test query"},
+                "expected_score": {},
+            }
+        ]
+
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_agent_evaluation.return_value = mock_evaluator_results
+        mock_evaluator.reset_iterations_results = MagicMock()
+        mock_create_evaluator.return_value = mock_evaluator
+
+        runner = ExperimentRunner(dataset=dataset)
+
+        results = runner.run(crew=mock_crew)
+        (result,) = results.results
+
+        assert result.identifier == "empty-expected-score"
+        assert result.expected_score == {}
+        assert result.passed is False
