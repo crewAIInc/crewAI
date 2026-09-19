@@ -470,16 +470,18 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
 
     tools = json_crew._select_tools()
 
-    assert tools == ["SerperDevTool", "DirectoryReadTool"]
+    assert tools == ["SerperDevTool", "FileReadTool"]
     assert len(picker_calls) == 1
     labels = picker_calls[0][1]
     assert 0 in picker_calls[0][2]["separator_indices"]
     assert labels[0] == "── Common tools ──"
     assert labels[1].strip().endswith("SerperDevTool")
     assert labels[2].strip().endswith("ScrapeWebsiteTool")
-    assert labels[3].strip().endswith("DirectoryReadTool")
-    assert labels[4].strip().endswith("FileReadTool")
-    assert labels[5].strip().endswith("FileWriterTool")
+    assert labels[3].strip().endswith("FileReadTool")
+    assert labels[4].startswith("Gmail Integration")
+    assert labels[4].endswith("Platform: GmailIntegration")
+    assert labels[5].startswith("WhatsApp Integration")
+    assert labels[5].endswith("Platform: WhatsAppIntegration")
     assert labels[1].index("Google search") < labels[1].index("SerperDevTool")
     assert "More tools" not in labels
 
@@ -749,7 +751,7 @@ def test_platform_validation_announces_concurrent_apps_together(capsys):
     output = capsys.readouterr().out
     assert (failed_apps, token_invalid) == ([], False)
     assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
-    assert "Checking CrewAI Platform Integration Token and GitHub" not in output
+    assert "Checking CrewAI Platform Enterprise Action Auth Token and GitHub" not in output
 
 
 def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
@@ -779,8 +781,8 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
     assert (failed_apps, token_invalid) == ([], False)
     assert checked_apps == ["github", "gmail"]
     output = capsys.readouterr().out
-    assert "Checking CrewAI Platform Integration Token and GitHub integration" in output
-    assert "Checking CrewAI Platform Integration Token and Gmail integration" in output
+    assert "Checking CrewAI Platform Enterprise Action Auth Token and GitHub integration" in output
+    assert "Checking CrewAI Platform Enterprise Action Auth Token and Gmail integration" in output
 
 
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
@@ -1040,7 +1042,7 @@ def test_json_create_saves_platform_token_to_env_file(tmp_path, monkeypatch):
     json_crew.create_json_crew("Platform Crew", skip_provider=True)
 
     env_file = tmp_path / "platform_crew" / ".env"
-    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN=token" in env_file.read_text()
+    assert "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN=token" in env_file.read_text()
 
 
 def test_json_crew_uses_template_files():
