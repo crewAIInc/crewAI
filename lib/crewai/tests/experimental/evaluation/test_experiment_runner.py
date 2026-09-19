@@ -112,6 +112,7 @@ class TestExperimentRunner:
     def test_run_success_with_unknown_metric(
         self, mock_create_evaluator, mock_crew, mock_evaluator_results
     ):
+        """Keep known scores passing when the expectation includes an unknown metric."""
         dataset = [
             {
                 "identifier": "test-case-2",
@@ -142,6 +143,7 @@ class TestExperimentRunner:
     def test_run_empty_expected_score_fails_closed(
         self, mock_create_evaluator, mock_crew, mock_evaluator_results
     ):
+        """Treat an empty expected-score mapping as a failed evaluation."""
         dataset = [
             {
                 "identifier": "empty-expectation",
@@ -168,6 +170,7 @@ class TestExperimentRunner:
     def test_run_success_with_single_metric_evaluator_and_expected_specific_metric(
         self, mock_create_evaluator, mock_crew, mock_evaluator_results
     ):
+        """Pass when the requested metric meets its expected score."""
         dataset = [
             {
                 "identifier": "test-case-2",
