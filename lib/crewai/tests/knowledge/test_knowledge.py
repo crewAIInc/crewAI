@@ -564,6 +564,44 @@ def test_file_path_validation():
         PDFKnowledgeSource()
 
 
+def test_explicit_none_file_path_with_file_paths():
+    """An unset `file_path` must not reject a source that gives `file_paths`."""
+    pdf_path = Path(__file__).parent / "crewai_quickstart.pdf"
+
+    source = PDFKnowledgeSource(file_path=None, file_paths=[pdf_path])
+    assert source.safe_file_paths == [pdf_path]
+
+
+def test_file_paths_source_survives_round_trip():
+    """`model_validate(model_dump())` re-validates the `None` field it dumped."""
+    pdf_path = Path(__file__).parent / "crewai_quickstart.pdf"
+
+    source = PDFKnowledgeSource(file_paths=[pdf_path])
+    assert source.model_dump()["file_path"] is None
+
+    restored = PDFKnowledgeSource.model_validate(source.model_dump())
+    assert restored.safe_file_paths == [pdf_path]
+
+
+def test_file_paths_validation_still_rejects_no_path():
+    """Neither field provided is still an error, whichever way it is spelled."""
+    with pytest.raises(
+        ValueError, match="Either file_path or file_paths must be provided"
+    ):
+        PDFKnowledgeSource(file_path=None, file_paths=None)
+
+
+def test_excel_explicit_none_file_path_with_file_paths(tmp_path):
+    """`ExcelKnowledgeSource` carries its own copy of the path guard."""
+    import pandas as pd  # type: ignore[import-untyped]
+
+    excel_path = tmp_path / "data.xlsx"
+    pd.DataFrame({"Name": ["Brandon", "Alice"]}).to_excel(excel_path, index=False)
+
+    source = ExcelKnowledgeSource(file_path=None, file_paths=[excel_path])
+    assert source.safe_file_paths == [excel_path]
+
+
 def test_hash_based_id_generation_without_doc_id(mock_vector_db):
     """Test that documents without doc_id generate hash-based IDs. Duplicates are deduplicated before upsert."""
     import hashlib
