@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import asyncio
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+import time
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -49,6 +51,62 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+# Boto3's own adaptive retry mode (configured on the client below) already
+# retries ThrottlingException internally before it ever reaches this module.
+# These extra attempts cover throttling that outlasts the SDK's own retries,
+# the same way other providers' SDKs retry rate limits before crewAI sees them.
+_THROTTLE_MAX_RETRIES: Final[int] = 3
+_THROTTLE_BASE_DELAY_SECONDS: Final[float] = 1.0
+
+
+class BedrockThrottlingError(RuntimeError):
+    """Raised when Bedrock throttles a request and retries are exhausted.
+
+    Kept distinct from a plain ``RuntimeError`` so it isn't mistaken for a
+    context-window error just because AWS's throttling message happens to
+    mention tokens (e.g. "Too many tokens, please wait before trying again").
+    """
+
+
+def _is_throttling_error(error: ClientError) -> bool:
+    return error.response.get("Error", {}).get("Code") == "ThrottlingException"
+
+
+def _call_with_throttle_retry(operation: Callable[[], Any]) -> Any:
+    """Call a sync Bedrock boto3 operation, retrying throttling with backoff."""
+    delay = _THROTTLE_BASE_DELAY_SECONDS
+    for attempt in range(_THROTTLE_MAX_RETRIES + 1):
+        try:
+            return operation()
+        except ClientError as e:  # noqa: PERF203
+            if not _is_throttling_error(e) or attempt == _THROTTLE_MAX_RETRIES:
+                raise
+            logging.warning(
+                f"Bedrock throttled the request, retrying in {delay:.1f}s "
+                f"(attempt {attempt + 1}/{_THROTTLE_MAX_RETRIES})"
+            )
+            time.sleep(delay)
+            delay *= 2
+    raise AssertionError("unreachable")  # loop always returns or raises
+
+
+async def _acall_with_throttle_retry(operation: Callable[[], Awaitable[Any]]) -> Any:
+    """Async counterpart of ``_call_with_throttle_retry``."""
+    delay = _THROTTLE_BASE_DELAY_SECONDS
+    for attempt in range(_THROTTLE_MAX_RETRIES + 1):
+        try:
+            return await operation()
+        except ClientError as e:  # noqa: PERF203
+            if not _is_throttling_error(e) or attempt == _THROTTLE_MAX_RETRIES:
+                raise
+            logging.warning(
+                f"Bedrock throttled the request, retrying in {delay:.1f}s "
+                f"(attempt {attempt + 1}/{_THROTTLE_MAX_RETRIES})"
+            )
+            await asyncio.sleep(delay)
+            delay *= 2
+    raise AssertionError("unreachable")  # loop always returns or raises
 
 
 def _preprocess_structured_data(
@@ -449,7 +507,9 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if is_context_length_exceeded(e):
+                if not isinstance(
+                    e, BedrockThrottlingError
+                ) and is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
 
@@ -582,7 +642,9 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if is_context_length_exceeded(e):
+                if not isinstance(
+                    e, BedrockThrottlingError
+                ) and is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
 
@@ -669,13 +731,16 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self._get_sync_client().converse(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            sync_client = self._get_sync_client()
+            response = _call_with_throttle_retry(
+                lambda: sync_client.converse(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             # Track token usage according to AWS response format
@@ -852,7 +917,7 @@ class BedrockCompletion(BaseLLM):
             if error_code == "ResourceNotFoundException":
                 raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
             if error_code == "ThrottlingException":
-                raise RuntimeError(
+                raise BedrockThrottlingError(
                     f"API throttled, please retry later: {error_msg}"
                 ) from e
             if error_code == "ModelTimeoutException":
@@ -953,13 +1018,16 @@ class BedrockCompletion(BaseLLM):
         usage_data: dict[str, Any] | None = None
 
         try:
-            response = self._get_sync_client().converse_stream(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            sync_client = self._get_sync_client()
+            response = _call_with_throttle_retry(
+                lambda: sync_client.converse_stream(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             stream = response.get("stream")
@@ -1159,7 +1227,9 @@ class BedrockCompletion(BaseLLM):
                                 )
 
         except ClientError as e:
-            error_msg = self._handle_client_error(e)
+            error_code, error_msg = self._handle_client_error(e)
+            if error_code == "ThrottlingException":
+                raise BedrockThrottlingError(error_msg) from e
             raise RuntimeError(error_msg) from e
         except BotoCoreError as e:
             error_msg = f"Bedrock streaming connection error: {e}"
@@ -1285,13 +1355,15 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             async_client = await self._ensure_async_client()
-            response = await async_client.converse(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            response = await _acall_with_throttle_retry(
+                lambda: async_client.converse(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             usage = response.get("usage")
@@ -1461,7 +1533,7 @@ class BedrockCompletion(BaseLLM):
             if error_code == "ResourceNotFoundException":
                 raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
             if error_code == "ThrottlingException":
-                raise RuntimeError(
+                raise BedrockThrottlingError(
                     f"API throttled, please retry later: {error_msg}"
                 ) from e
             if error_code == "ModelTimeoutException":
@@ -1563,13 +1635,15 @@ class BedrockCompletion(BaseLLM):
 
         try:
             async_client = await self._ensure_async_client()
-            response = await async_client.converse_stream(
-                modelId=self.model_id,
-                messages=cast(
-                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
-                    cast(object, messages),
-                ),
-                **body,
+            response = await _acall_with_throttle_retry(
+                lambda: async_client.converse_stream(
+                    modelId=self.model_id,
+                    messages=cast(
+                        "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                        cast(object, messages),
+                    ),
+                    **body,
+                )
             )
 
             stream = response.get("stream")
@@ -1775,7 +1849,9 @@ class BedrockCompletion(BaseLLM):
                             )
 
         except ClientError as e:
-            error_msg = self._handle_client_error(e)
+            error_code, error_msg = self._handle_client_error(e)
+            if error_code == "ThrottlingException":
+                raise BedrockThrottlingError(error_msg) from e
             raise RuntimeError(error_msg) from e
         except BotoCoreError as e:
             error_msg = f"Bedrock streaming connection error: {e}"
@@ -2073,8 +2149,14 @@ class BedrockCompletion(BaseLLM):
             finish_reason = None
         return finish_reason, None
 
-    def _handle_client_error(self, e: ClientError) -> str:
-        """Handle AWS ClientError with specific error codes and return error message."""
+    def _handle_client_error(self, e: ClientError) -> tuple[str, str]:
+        """Handle AWS ClientError with specific error codes.
+
+        Returns:
+            Tuple of (error_code, error_message) so the caller can pick the
+            right exception type (e.g. ``BedrockThrottlingError`` for
+            throttling) instead of always raising a plain ``RuntimeError``.
+        """
         error_code = e.response.get("Error", {}).get("Code", "Unknown")
         error_msg = e.response.get("Error", {}).get("Message", str(e))
 
@@ -2094,7 +2176,7 @@ class BedrockCompletion(BaseLLM):
         )
         logging.error(f"Bedrock client error ({error_code}): {full_error_msg}")
 
-        return full_error_msg
+        return error_code, full_error_msg
 
     def _track_token_usage_internal(self, usage: TokenUsageTypeDef) -> None:  # type: ignore[override]
         """Track token usage from Bedrock response."""

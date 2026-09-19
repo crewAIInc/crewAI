@@ -750,7 +750,8 @@ def test_bedrock_client_error_handling():
             llm.call("Hello")
         assert "validation" in str(exc_info.value).lower()
 
-    with patch.object(llm._client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse, \
+            patch.object(bedrock_completion.time, 'sleep') as mock_sleep:
         error_response = {
             'Error': {
                 'Code': 'ThrottlingException',
@@ -759,9 +760,84 @@ def test_bedrock_client_error_handling():
         }
         mock_converse.side_effect = ClientError(error_response, 'converse')
 
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(bedrock_completion.BedrockThrottlingError) as exc_info:
             llm.call("Hello")
         assert "throttled" in str(exc_info.value).lower()
+        # 1 initial attempt + 3 retries before giving up
+        assert mock_converse.call_count == 4
+        assert mock_sleep.call_count == 3
+
+
+def test_bedrock_throttling_is_not_misclassified_as_context_length_error():
+    """A Bedrock throttling error must stay a rate-limit error, not get
+    swept into context-window handling just because AWS's own throttle
+    message happens to contain the words "too many tokens".
+    """
+    from botocore.exceptions import ClientError
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMContextLengthExceededError,
+    )
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse, \
+            patch.object(bedrock_completion.time, 'sleep'):
+        error_response = {
+            'Error': {
+                'Code': 'ThrottlingException',
+                'Message': 'Too many tokens, please wait before trying again.',
+            }
+        }
+        mock_converse.side_effect = ClientError(error_response, 'converse')
+
+        with pytest.raises(bedrock_completion.BedrockThrottlingError):
+            llm.call("Hello")
+
+        # Explicitly confirm it does NOT surface as a context-length error.
+        try:
+            llm.call("Hello")
+        except Exception as e:
+            assert not isinstance(e, LLMContextLengthExceededError)
+
+
+def test_bedrock_throttling_retries_then_succeeds():
+    """A throttled request should succeed once the backoff retries clear."""
+    from botocore.exceptions import ClientError
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    error_response = {
+        'Error': {
+            'Code': 'ThrottlingException',
+            'Message': 'Too many tokens, please wait before trying again.',
+        }
+    }
+    success_response = {
+        'output': {
+            'message': {
+                'role': 'assistant',
+                'content': [{'text': 'Hello there'}],
+            }
+        },
+        'usage': {'inputTokens': 10, 'outputTokens': 5, 'totalTokens': 15},
+    }
+
+    with patch.object(llm._client, 'converse') as mock_converse, \
+            patch.object(bedrock_completion.time, 'sleep') as mock_sleep:
+        mock_converse.side_effect = [
+            ClientError(error_response, 'converse'),
+            ClientError(error_response, 'converse'),
+            success_response,
+        ]
+
+        result = llm.call("Hello")
+
+        assert result == "Hello there"
+        assert mock_converse.call_count == 3
+        assert mock_sleep.call_count == 2
+        # Exponential backoff: 1s, then 2s
+        assert mock_sleep.call_args_list[0].args[0] == 1.0
+        assert mock_sleep.call_args_list[1].args[0] == 2.0
 
 
 def test_bedrock_stop_sequences_sync():
