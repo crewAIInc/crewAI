@@ -1384,6 +1384,22 @@ async def test_render_main_content_skips_non_dict_plan_steps() -> None:
         await pilot.pause()
 
 
+def test_try_parse_plan_skips_non_dict_steps() -> None:
+    """Parse path must not TypeError on bare ints/strings in steps."""
+    app = CrewRunApp()
+    app._try_parse_plan(
+        '{"plan":"Mixed steps from local LLM","steps":['
+        '{"step_number":1,"description":"Valid dict step"},'
+        "2,"
+        '{"step_number":3,"description":"Another valid step"},'
+        '"not-a-step"]}'
+    )
+
+    assert app._plan is not None
+    assert app._plan["plan"] == "Mixed steps from local LLM"
+    assert app._plan_step_status == {1: "pending", 3: "pending"}
+
+
 def test_step_observation_json_is_hidden_from_streaming_text() -> None:
     app = _app_with_plan()
 

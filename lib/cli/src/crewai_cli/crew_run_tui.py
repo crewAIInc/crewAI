@@ -1733,10 +1733,14 @@ FooterKey .footer-key--key {
                         data = _json.loads(stripped[start : i + 1])
                         if "steps" in data and isinstance(data["steps"], list):
                             self._plan = data
+                            # Local LLMs sometimes emit bare ints/strings in
+                            # steps; skip non-dicts before membership/subscript
+                            # (same spirit as _render_main_content /
+                            # _apply_plan_refinements).
                             self._plan_step_status = {
                                 s["step_number"]: "pending"
                                 for s in data["steps"]
-                                if "step_number" in s
+                                if isinstance(s, dict) and "step_number" in s
                             }
                             self._awaiting_replan = False
                     except (ValueError, KeyError):
