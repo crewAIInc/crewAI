@@ -285,3 +285,36 @@ def test_tar_output_hard_linked_to_an_input_file_is_rejected(
     assert "Successful" not in result
     assert "same file" in result
     assert payload.read_text(encoding="utf-8") == "hello"
+
+
+def test_zip_output_symlink_outside_input_pointing_into_it_is_rejected(
+    tmp_path, monkeypatch, tool
+):
+    """An output symlink outside the tree can still point at an in-tree input file.
+
+    ``validate_file_path`` resolves the caller's output path before the overlap guard runs, so the
+    guard only ever sees the in-tree target and would exempt it as "the output". Which path the
+    caller named is what decides that exemption, not what it resolves to.
+    """
+    monkeypatch.chdir(tmp_path)
+    source = tmp_path / "source"
+    source.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+
+    payload = source / "payload.zip"
+    with ZipFile(payload, "w") as seed:
+        seed.writestr("inner.txt", "inner")
+    try:
+        (outside / "bundle.zip").symlink_to(payload)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks are not available on this host")
+
+    result = tool._run(
+        input_path="source", output_path="outside/bundle.zip", overwrite=True
+    )
+
+    assert "Successful" not in result
+    assert "same file" in result
+    with ZipFile(payload) as archive:
+        assert archive.namelist() == ["inner.txt"]

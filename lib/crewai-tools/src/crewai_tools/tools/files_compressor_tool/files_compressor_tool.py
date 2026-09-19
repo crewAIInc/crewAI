@@ -49,6 +49,10 @@ class FileCompressorTool(BaseTool):
         if not output_path:
             output_path = self._generate_output_path(input_path, format)
 
+        # Keep the caller's spelling: ``validate_file_path`` resolves symlinks, and the overlap
+        # guard has to know which path the caller actually named as the output — otherwise an
+        # output symlink pointing into the input tree looks like the in-tree file itself.
+        requested_output_path = output_path
         output_path = validate_file_path(output_path)
 
         format_extension = {
@@ -71,7 +75,9 @@ class FileCompressorTool(BaseTool):
         try:
             # Every format opens the output before reading any input, so an output that IS an input
             # file has to be rejected for all of them, not just zip.
-            self._reject_output_aliasing_input(input_path, output_path)
+            self._reject_output_aliasing_input(
+                input_path, output_path, requested_output_path
+            )
             format_compression = {
                 "zip": self._compress_zip,
                 "tar": self._compress_tar,
@@ -115,7 +121,9 @@ class FileCompressorTool(BaseTool):
         return True
 
     @staticmethod
-    def _reject_output_aliasing_input(input_path: str, output_path: str) -> None:
+    def _reject_output_aliasing_input(
+        input_path: str, output_path: str, requested_output_path: str
+    ) -> None:
         """Raise when ``output_path`` IS a file being compressed.
 
         ``ZipFile(output_path, "w")`` truncates its target before anything is read, so an output
@@ -125,13 +133,17 @@ class FileCompressorTool(BaseTool):
 
         Only an alias of an *existing* input file is rejected. A new output inside the tree is the
         normal case and is excluded from the archive instead (see ``_compress_zip``).
+
+        ``requested_output_path`` is the caller's spelling, before ``validate_file_path`` resolved
+        it. The exemption below has to use that: ``output_path`` is already canonical, so an output
+        symlink pointing into the tree would otherwise look like the in-tree file itself.
         """
         if not os.path.exists(output_path):
             return
-        # Exempt the output's own path only — lexically, not by ``realpath``. A symlink in the tree
-        # that resolves to the output has a different path but the same target, so exempting
-        # everything that resolves there would let opening the output truncate it.
-        output_abs_path = os.path.abspath(output_path)
+        # Exempt the path the caller named as the output — lexically, not by ``realpath``. Anything
+        # else that resolves to the same file (an in-tree symlink, or a hard link) is a distinct
+        # source file, so exempting it would let opening the output truncate it.
+        requested_abs_path = os.path.abspath(requested_output_path)
 
         def _aliases(candidate: str) -> bool:
             try:
@@ -150,8 +162,8 @@ class FileCompressorTool(BaseTool):
         for root, _, files in os.walk(input_path):
             for name in files:
                 candidate = os.path.join(root, name)
-                if os.path.abspath(candidate) == output_abs_path:
-                    # Overwriting the archive that is already there is an ordinary overwrite.
+                if os.path.abspath(candidate) == requested_abs_path:
+                    # Overwriting the archive the caller named is an ordinary overwrite.
                     continue
                 if _aliases(candidate):
                     raise ValueError(
