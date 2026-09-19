@@ -473,6 +473,73 @@ class TestAsyncCrewKickoff:
 
         assert result is not None
 
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_akickoff_callback_events_keep_predecessor_chain(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Events emitted inside a before-callback stay on the event chain.
+
+        The async path used to run before-callbacks before the per-kickoff
+        event-state reset, so the reset severed the predecessor chain: the
+        kickoff events got ``previous_event_id=None`` while the callback's
+        event sat orphaned (and their sequence numbers were reused). The reset
+        now happens before the callbacks on both paths, so the first kickoff
+        event continues the chain from the callback's event.
+        """
+        from crewai.events.base_events import BaseEvent
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.crew_events import CrewKickoffStartedEvent
+
+        class _CallbackEvent(BaseEvent):
+            type: str = "before_callback_probe"
+
+        probe_event: list[BaseEvent] = []
+        kickoff_event: list[BaseEvent] = []
+
+        def _on_probe(source: Any, event: BaseEvent) -> None:
+            probe_event.append(event)
+
+        def _on_kickoff(source: Any, event: BaseEvent) -> None:
+            kickoff_event.append(event)
+
+        crewai_event_bus.on(_CallbackEvent)(_on_probe)
+        crewai_event_bus.on(CrewKickoffStartedEvent)(_on_kickoff)
+
+        async def before_callback(inputs: dict | None) -> dict | None:
+            crewai_event_bus.emit(object(), _CallbackEvent())
+            return inputs
+
+        try:
+            task = Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=test_agent,
+            )
+            crew = Crew(
+                agents=[test_agent],
+                tasks=[task],
+                before_kickoff_callbacks=[before_callback],
+                verbose=False,
+            )
+            mock_execute.return_value = TaskOutput(
+                description="Test task description",
+                raw="Task result",
+                agent="Test Agent",
+            )
+
+            await crew.akickoff()
+        finally:
+            crewai_event_bus.off(_CallbackEvent, _on_probe)
+            crewai_event_bus.off(CrewKickoffStartedEvent, _on_kickoff)
+
+        assert probe_event, "callback event was never emitted/observed"
+        assert kickoff_event, "kickoff-started event was never observed"
+        assert kickoff_event[0].previous_event_id == probe_event[0].event_id, (
+            "kickoff events must continue the predecessor chain from events "
+            "emitted inside before-callbacks, not start over after a reset"
+        )
+
 
 class TestAsyncCrewKickoffForEach:
     """Tests for async crew kickoff_for_each methods."""
