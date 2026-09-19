@@ -696,6 +696,8 @@ def test_save_task_json_output():
 
 
 def test_save_empty_json_output(tmp_path, monkeypatch):
+    """Save an empty converted JSON object instead of the raw response."""
+
     class EmptyOutput(BaseModel):
         pass
 
@@ -716,7 +718,7 @@ def test_save_empty_json_output(tmp_path, monkeypatch):
 
     with (
         patch.object(Agent, "execute_task", return_value="raw fallback"),
-        patch.object(Task, "_export_output", return_value=(None, {})),
+        patch("crewai.task.convert_to_model", return_value={}),
     ):
         result = task.execute_sync()
 
@@ -727,6 +729,8 @@ def test_save_empty_json_output(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_save_empty_json_output_async(tmp_path, monkeypatch):
+    """Save an empty converted JSON object on native async execution."""
+
     class EmptyOutput(BaseModel):
         pass
 
@@ -749,7 +753,9 @@ async def test_save_empty_json_output_async(tmp_path, monkeypatch):
         patch.object(
             Agent, "aexecute_task", new=AsyncMock(return_value="raw fallback")
         ),
-        patch.object(Task, "_aexport_output", new=AsyncMock(return_value=(None, {}))),
+        patch(
+            "crewai.task.async_convert_to_model", new=AsyncMock(return_value={})
+        ),
     ):
         result = await task.aexecute_sync()
 
