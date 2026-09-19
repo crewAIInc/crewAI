@@ -16,6 +16,7 @@ from crewai.memory.types import (
     MemoryRecord,
     ScopeInfo,
     compute_composite_score,
+    normalize_to_utc,
 )
 
 
@@ -820,6 +821,123 @@ def test_memory_recall_with_timezone_aware_records(
     assert "UTC memory" in contents
     assert "Offset memory" in contents
     assert "Naive memory" in contents
+
+
+def test_normalize_to_utc() -> None:
+    """normalize_to_utc handles naive, UTC-aware, and offset-aware datetimes."""
+    # 1. Naive datetime -> assumed UTC
+    naive = datetime(2026, 1, 1, 12, 0, 0)
+    res_naive = normalize_to_utc(naive)
+    assert res_naive.tzinfo == timezone.utc
+    assert res_naive.year == 2026 and res_naive.month == 1 and res_naive.hour == 12
+
+    # 2. Aware UTC datetime -> identity preserved
+    aware_utc = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    res_utc = normalize_to_utc(aware_utc)
+    assert res_utc is aware_utc
+
+    # 3. Aware offset datetime (e.g. UTC+5:30) -> converted to UTC
+    tz_ist = timezone(timedelta(hours=5, minutes=30))
+    aware_ist = datetime(2026, 1, 1, 17, 30, 0, tzinfo=tz_ist)
+    res_ist = normalize_to_utc(aware_ist)
+    assert res_ist.tzinfo == timezone.utc
+    assert res_ist.hour == 12 and res_ist.minute == 0
+
+
+def test_recall_flow_temporal_filter_with_mixed_timezones(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """RecallFlow query cutoff works with mixed naive and aware timestamps without TypeError."""
+    from crewai.memory.recall_flow import RecallFlow
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(tmp_path / "rf_tz_filter"))
+    emb = [0.1] * 3072
+
+    # Three records: past (2025), recent naive (2026), and recent UTC-aware (2026)
+    rec_old = MemoryRecord(
+        content="Old 2025 memory",
+        scope="/test",
+        created_at=datetime(2025, 1, 1, 0, 0, 0),
+        embedding=emb,
+    )
+    rec_recent_naive = MemoryRecord(
+        content="Recent naive memory",
+        scope="/test",
+        created_at=datetime(2026, 6, 1, 0, 0, 0),
+        embedding=emb,
+    )
+    rec_recent_utc = MemoryRecord(
+        content="Recent UTC memory",
+        scope="/test",
+        created_at=datetime(2026, 6, 2, 0, 0, 0, tzinfo=timezone.utc),
+        embedding=emb,
+    )
+    storage.save([rec_old, rec_recent_naive, rec_recent_utc])
+
+    flow = RecallFlow(
+        storage=storage,
+        llm=MagicMock(),
+        embedder=mock_embedder,
+        config=MemoryConfig(),
+    )
+    # Cutoff is timezone-aware: should filter out rec_old, and retain rec_recent_naive & rec_recent_utc
+    flow.state.time_cutoff = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    flow.state.limit = 10
+    flow.state.query_embeddings = [("memory", emb)]
+    flow.state.candidate_scopes = ["/test"]
+
+    flow._do_search()
+    flow.synthesize_results()
+
+    assert len(flow.state.final_results) == 2
+    contents = [m.record.content for m in flow.state.final_results]
+    assert "Recent naive memory" in contents
+    assert "Recent UTC memory" in contents
+    assert "Old 2025 memory" not in contents
+
+
+def test_recall_flow_naive_cutoff_with_aware_records(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """RecallFlow naive time_cutoff safely compares against aware record timestamps."""
+    from crewai.memory.recall_flow import RecallFlow
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(tmp_path / "rf_naive_cutoff"))
+    emb = [0.1] * 3072
+
+    rec_old_utc = MemoryRecord(
+        content="Old UTC memory",
+        scope="/test",
+        created_at=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        embedding=emb,
+    )
+    rec_new_ist = MemoryRecord(
+        content="New IST memory",
+        scope="/test",
+        created_at=datetime(2026, 7, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=5, minutes=30))),
+        embedding=emb,
+    )
+    storage.save([rec_old_utc, rec_new_ist])
+
+    flow = RecallFlow(
+        storage=storage,
+        llm=MagicMock(),
+        embedder=mock_embedder,
+        config=MemoryConfig(),
+    )
+    # Cutoff is naive: should filter out rec_old_utc without TypeError
+    flow.state.time_cutoff = datetime(2026, 1, 1, 0, 0, 0)
+    flow.state.limit = 10
+    flow.state.query_embeddings = [("memory", emb)]
+    flow.state.candidate_scopes = ["/test"]
+
+    flow._do_search()
+    flow.synthesize_results()
+
+    assert len(flow.state.final_results) == 1
+    assert flow.state.final_results[0].record.content == "New IST memory"
 
 
 # --- LLM fallback ---

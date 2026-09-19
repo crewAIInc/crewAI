@@ -342,6 +342,20 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     return embeddings
 
 
+def normalize_to_utc(dt: datetime) -> datetime:
+    """Normalize a datetime to a UTC timezone-aware datetime.
+
+    If dt is timezone-naive, it is assumed to be in UTC.
+    If dt has another timezone offset, it is converted to UTC.
+    If dt is already UTC-aware, it is returned directly.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is not timezone.utc:
+        return dt.astimezone(timezone.utc)
+    return dt
+
+
 def compute_composite_score(
     record: MemoryRecord,
     semantic_score: float,
@@ -363,20 +377,10 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    if now is None:
-        now = datetime.now(timezone.utc)
-    elif now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
-    elif now.tzinfo is not timezone.utc:
-        now = now.astimezone(timezone.utc)
+    ref_now = datetime.now(timezone.utc) if now is None else normalize_to_utc(now)
+    rec_time = normalize_to_utc(record.created_at)
 
-    rec_time = record.created_at
-    if rec_time.tzinfo is None:
-        rec_time = rec_time.replace(tzinfo=timezone.utc)
-    elif rec_time.tzinfo is not timezone.utc:
-        rec_time = rec_time.astimezone(timezone.utc)
-
-    age_seconds = max((now - rec_time).total_seconds(), 0.0)
+    age_seconds = max((ref_now - rec_time).total_seconds(), 0.0)
     age_days = age_seconds / 86400.0
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 

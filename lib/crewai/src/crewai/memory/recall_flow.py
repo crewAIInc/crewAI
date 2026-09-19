@@ -28,6 +28,7 @@ from crewai.memory.types import (
     MemoryRecord,
     compute_composite_score,
     embed_texts,
+    normalize_to_utc,
 )
 
 
@@ -105,7 +106,10 @@ class RecallFlow(Flow[RecallState]):
                 min_score=0.0,
             )
             if self.state.time_cutoff and raw:
-                raw = [(r, s) for r, s in raw if r.created_at >= self.state.time_cutoff]
+                cutoff = normalize_to_utc(self.state.time_cutoff)
+                raw = [
+                    (r, s) for r, s in raw if normalize_to_utc(r.created_at) >= cutoff
+                ]
             if not self.state.include_private and raw:
                 raw = [
                     (r, s)
@@ -221,8 +225,8 @@ class RecallFlow(Flow[RecallState]):
 
             if analysis.time_filter:
                 try:
-                    self.state.time_cutoff = datetime.fromisoformat(
-                        analysis.time_filter
+                    self.state.time_cutoff = normalize_to_utc(
+                        datetime.fromisoformat(analysis.time_filter)
                     )
                 except ValueError:
                     pass
