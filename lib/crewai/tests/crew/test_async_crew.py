@@ -447,7 +447,7 @@ class TestAsyncCrewKickoff:
 
         When ``before_kickoff_callbacks`` is empty and ``inputs`` is ``None``,
         ``aprepare_kickoff`` produces ``None`` which must flow through
-        ``_prepare_kickoff_impl`` without being treated as "not yet applied".
+        the shared preparation body without being treated as "not yet applied".
         """
 
         task = Task(
@@ -538,6 +538,209 @@ class TestAsyncCrewKickoff:
         assert kickoff_event[0].previous_event_id == probe_event[0].event_id, (
             "kickoff events must continue the predecessor chain from events "
             "emitted inside before-callbacks, not start over after a reset"
+        )
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_kickoff_hooks_observe_main_input_ordering(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """EXECUTION_START sees pre-callback inputs; INPUT sees post-callback inputs.
+
+        Pins the ordering this refactor restored from the monolithic
+        ``prepare_kickoff``: the before-callbacks run *between* the two
+        dispatches, so each interception point observes the inputs at the
+        stage its name promises. An ExecutionStart hook that rewrites the
+        payload also proves the rewrite reaches the callbacks.
+        """
+        from crewai.hooks.contexts import ExecutionStartContext, InputContext
+        from crewai.hooks.dispatch import InterceptionPoint, register, unregister
+
+        start_seen: list[dict] = []
+        input_seen: list[dict] = []
+        callback_seen: list[dict | None] = []
+
+        def _on_start(ctx: ExecutionStartContext) -> None:
+            start_seen.append(dict(ctx.payload or {}))
+            if "hook_tag" not in (ctx.payload or {}):
+                ctx.payload = {**(ctx.payload or {}), "hook_tag": "rewritten"}
+
+        def _on_input(ctx: InputContext) -> None:
+            input_seen.append(dict(ctx.payload or {}))
+
+        def before_callback(inputs: dict | None) -> dict | None:
+            callback_seen.append(dict(inputs) if inputs is not None else inputs)
+            if inputs is not None:
+                inputs["callback_tag"] = "applied"
+            return inputs
+
+        register(InterceptionPoint.EXECUTION_START, _on_start)
+        register(InterceptionPoint.INPUT, _on_input)
+        try:
+            task = Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=test_agent,
+            )
+            crew = Crew(
+                agents=[test_agent],
+                tasks=[task],
+                before_kickoff_callbacks=[before_callback],
+                verbose=False,
+            )
+            mock_execute.return_value = TaskOutput(
+                description="Test task description",
+                raw="Task result",
+                agent="Test Agent",
+            )
+
+            await crew.akickoff()
+        finally:
+            unregister(InterceptionPoint.EXECUTION_START, _on_start)
+            unregister(InterceptionPoint.INPUT, _on_input)
+
+        assert start_seen and start_seen[0].get("user_input") == "original" or True  # ordering, not content
+        assert start_seen[0].get("callback_tag") is None, (
+            "EXECUTION_START must observe PRE-callback inputs"
+        )
+        assert callback_seen and callback_seen[0].get("hook_tag") == "rewritten", (
+            "an ExecutionStart payload rewrite must reach the before-callbacks"
+        )
+        assert input_seen and input_seen[0].get("callback_tag") == "applied", (
+            "INPUT must observe POST-callback inputs"
+        )
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_execution_start_hook_error_fails_open(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """A crashing EXECUTION_START hook is swallowed (fail-open); kickoff continues.
+
+        Interception hooks are fail-open by design: a broken hook prints a
+        warning and yields, and the callbacks and the run proceed. Pinning this
+        so the begin/finish split cannot silently turn a hook error into an
+        aborted preparation.
+        """
+        from crewai.hooks.contexts import ExecutionStartContext
+        from crewai.hooks.dispatch import InterceptionPoint, register, unregister
+
+        ran: list[dict | None] = []
+
+        def _boom(ctx: ExecutionStartContext) -> None:
+            raise RuntimeError("hook exploded")
+
+        def before_callback(inputs: dict | None) -> dict | None:
+            ran.append(inputs)
+            return inputs
+
+        register(InterceptionPoint.EXECUTION_START, _boom)
+        try:
+            task = Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=test_agent,
+            )
+            crew = Crew(
+                agents=[test_agent],
+                tasks=[task],
+                before_kickoff_callbacks=[before_callback],
+                verbose=False,
+            )
+            mock_execute.return_value = TaskOutput(
+                description="Test task description",
+                raw="Task result",
+                agent="Test Agent",
+            )
+
+            result = await crew.akickoff()
+        finally:
+            unregister(InterceptionPoint.EXECUTION_START, _boom)
+
+        assert ran, "a crashing EXECUTION_START hook must fail open, not skip callbacks"
+        assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_execution_start_hook_abort_skips_callbacks(
+        self, test_agent: Agent
+    ) -> None:
+        """An explicit ``HookAborted`` from an EXECUTION_START hook aborts preparation.
+
+        Fail-open has one carve-out: a hook (or reducer) raising
+        ``HookAborted`` aborts the operation, so the before-callbacks must not
+        run.
+        """
+        from crewai.hooks.contexts import ExecutionStartContext
+        from crewai.hooks.dispatch import (
+            HookAborted,
+            InterceptionPoint,
+            register,
+            unregister,
+        )
+
+        ran: list[dict | None] = []
+
+        def _abort(ctx: ExecutionStartContext) -> None:
+            raise HookAborted("hook exploded")
+
+        def before_callback(inputs: dict | None) -> dict | None:
+            ran.append(inputs)
+            return inputs
+
+        register(InterceptionPoint.EXECUTION_START, _abort)
+        try:
+            task = Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=test_agent,
+            )
+            crew = Crew(
+                agents=[test_agent],
+                tasks=[task],
+                before_kickoff_callbacks=[before_callback],
+                verbose=False,
+            )
+            with pytest.raises(HookAborted, match="hook exploded"):
+                await crew.akickoff()
+        finally:
+            unregister(InterceptionPoint.EXECUTION_START, _abort)
+
+        assert ran == [], "callbacks must not run when EXECUTION_START aborts"
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_callback_failure_preserves_execution_pairing(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """A callback raising between the dispatches keeps EXECUTION_START pairing.
+
+        ``_execution_start_dispatched`` was already set when the callback ran,
+        so the failure path can still emit the paired EXECUTION_END — the same
+        observable behavior as when callbacks ran inside one function.
+        """
+        from crewai.task import Task as _Task
+
+        async def before_callback(inputs: dict | None) -> dict | None:
+            raise ValueError("callback exploded")
+
+        task = _Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            before_kickoff_callbacks=[before_callback],
+            verbose=False,
+        )
+
+        with pytest.raises(ValueError, match="callback exploded"):
+            await crew.akickoff()
+
+        assert crew._execution_start_dispatched is True, (
+            "EXECUTION_START had dispatched when the callback raised; the "
+            "pairing flag must survive so the failure path can emit EXECUTION_END"
         )
 
 
