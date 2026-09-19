@@ -787,6 +787,107 @@ def test_anthropic_thinking_blocks_preserved_across_turns():
 
         assert thinking_found, "Thinking block not found in assistant message content in second call"
 
+
+def test_anthropic_thinking_blocks_preserved_on_tool_use_turn():
+    """A tool_use assistant turn must keep the thinking blocks Anthropic requires"""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    tool_use_response = MagicMock()
+    tool_use_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [tool_use_response, final_response]
+    llm._client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    tool_calls = llm.call(messages, tools=tools)
+    assert tool_calls == [
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        }
+    ]
+
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    llm.call(messages, tools=tools)
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    assistant_message = next(
+        msg for msg in second_call_messages if msg["role"] == "assistant"
+    )
+    assert isinstance(assistant_message["content"], list)
+    assert assistant_message["content"][0] == {
+        "type": "thinking",
+        "thinking": "Check the weather in Paris.",
+        "signature": "sig-abc",
+    }
+    assert assistant_message["content"][1]["type"] == "tool_use"
+    assert assistant_message["content"][1]["id"] == "toolu_1"
+
+
 @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
 def test_anthropic_function_calling():
     """Test that function calling is properly handled"""
