@@ -2,7 +2,10 @@ import tempfile
 from unittest.mock import Mock, patch
 
 from crewai_tools.rag.base_loader import LoaderResult
-from crewai_tools.rag.loaders.docx_loader import DOCXLoader
+from crewai_tools.rag.loaders.docx_loader import (
+    DEFAULT_MAX_DOCX_BYTES,
+    DOCXLoader,
+)
 from crewai_tools.rag.source_content import SourceContent
 import pytest
 
@@ -41,15 +44,17 @@ class TestDOCXLoader:
 
             assert result.metadata["tables"] == 2
 
-    @patch("crewai_tools.security.safe_requests._raw_get")
+    @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
     @patch("docx.Document")
     @patch("tempfile.NamedTemporaryFile")
     @patch("os.unlink")
     def test_load_docx_from_url(
-        self, mock_unlink, mock_tempfile, mock_docx_class, mock_get
+        self, mock_unlink, mock_tempfile, mock_docx_class, mock_get_bounded
     ):
-        mock_get.return_value = Mock(
-            content=b"fake docx content", raise_for_status=Mock()
+        mock_get_bounded.return_value = (
+            b"fake docx content",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "https://example.com/test.docx",
         )
 
         mock_temp = Mock(name="/tmp/temp_docx_file.docx")
@@ -68,20 +73,45 @@ class TestDOCXLoader:
         assert "Content from URL" in result.content
         assert result.source == "https://example.com/test.docx"
 
-        headers = mock_get.call_args[1]["headers"]
+        headers = mock_get_bounded.call_args.kwargs["headers"]
         assert (
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             in headers["Accept"]
         )
         assert "crewai-tools DOCXLoader" in headers["User-Agent"]
 
+        assert mock_get_bounded.call_args.kwargs["max_bytes"] == DEFAULT_MAX_DOCX_BYTES
         mock_temp.write.assert_called_once_with(b"fake docx content")
+        mock_unlink.assert_called_once_with(mock_temp.name)
 
-    @patch("crewai_tools.security.safe_requests._raw_get")
+    @patch("crewai_tools.rag.loaders.docx_loader.os.unlink")
+    @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
     @patch("docx.Document")
-    def test_load_docx_from_url_with_custom_headers(self, mock_docx_class, mock_get):
-        mock_get.return_value = Mock(
-            content=b"fake docx content", raise_for_status=Mock()
+    def test_load_docx_from_url_cleans_up_after_parse_error(
+        self, mock_docx_class, mock_get_bounded, mock_unlink
+    ):
+        mock_get_bounded.return_value = (
+            b"invalid docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "https://example.com/test.docx",
+        )
+        mock_docx_class.side_effect = Exception("Invalid DOCX file")
+
+        loader = DOCXLoader()
+        with pytest.raises(ValueError, match="Error loading DOCX file"):
+            loader.load(SourceContent("https://example.com/test.docx"))
+
+        mock_unlink.assert_called_once()
+
+    @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
+    @patch("docx.Document")
+    def test_load_docx_from_url_with_custom_options(
+        self, mock_docx_class, mock_get_bounded
+    ):
+        mock_get_bounded.return_value = (
+            b"fake docx content",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "https://example.com/test.docx",
         )
         mock_docx_class.return_value = Mock(paragraphs=[], tables=[])
 
@@ -90,24 +120,40 @@ class TestDOCXLoader:
 
         with patch("tempfile.NamedTemporaryFile"), patch("os.unlink"):
             loader.load(
-                SourceContent("https://example.com/test.docx"), headers=custom_headers
+                SourceContent("https://example.com/test.docx"),
+                headers=custom_headers,
+                max_bytes=1024,
             )
 
-        assert mock_get.call_args[1]["headers"] == custom_headers
+        assert mock_get_bounded.call_args.kwargs["headers"] == custom_headers
+        assert mock_get_bounded.call_args.kwargs["max_bytes"] == 1024
 
-    @patch("crewai_tools.security.safe_requests._raw_get")
-    def test_load_docx_url_download_error(self, mock_get):
-        mock_get.side_effect = Exception("Network error")
+    @patch("crewai_tools.rag.loaders.docx_loader.tempfile.NamedTemporaryFile")
+    @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
+    def test_load_docx_url_rejects_oversized_response(
+        self, mock_get_bounded, mock_tempfile
+    ):
+        mock_get_bounded.side_effect = ValueError(
+            "Response body exceeds the 52428800 byte limit."
+        )
+
+        loader = DOCXLoader()
+        with pytest.raises(ValueError, match="exceeds the 52428800 byte limit"):
+            loader.load(SourceContent("https://example.com/large.docx"))
+
+        mock_tempfile.assert_not_called()
+
+    @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
+    def test_load_docx_url_download_error(self, mock_get_bounded):
+        mock_get_bounded.side_effect = Exception("Network error")
 
         loader = DOCXLoader()
         with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/test.docx"))
 
-    @patch("crewai_tools.security.safe_requests._raw_get")
-    def test_load_docx_url_http_error(self, mock_get):
-        mock_get.return_value = Mock(
-            raise_for_status=Mock(side_effect=Exception("404 Not Found"))
-        )
+    @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
+    def test_load_docx_url_http_error(self, mock_get_bounded):
+        mock_get_bounded.side_effect = Exception("404 Not Found")
 
         loader = DOCXLoader()
         with pytest.raises(ValueError, match="Error fetching content from URL"):
