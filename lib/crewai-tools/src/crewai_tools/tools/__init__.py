@@ -1,6 +1,7 @@
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.avel_verify_tool.avel_verify_tool import AvelVerifyTool
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
 from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
     BraveLLMContextTool,
@@ -215,6 +216,7 @@ __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
+    "AvelVerifyTool",
     "BraveImageSearchTool",
     "BraveLLMContextTool",
     "BraveLocalPOIsDescriptionTool",
