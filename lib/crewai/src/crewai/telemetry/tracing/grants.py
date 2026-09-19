@@ -16,9 +16,16 @@ from crewai_core.plus_api import PlusAPI
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult, SpanExporter
+from rich.style import Style
+from rich.text import Text
 
 from crewai.auth.token import AuthError, get_auth_token
 from crewai.context import get_platform_integration_token
+from crewai.events.listeners.tracing.utils import (
+    is_tui_mode,
+    should_suppress_tracing_messages,
+)
+from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.telemetry.tracing.session import MAX_EXPORT_BATCH_SIZE, otlp_exporter
 
 
@@ -53,6 +60,32 @@ class TraceGrant:
     collector_url: str
     execution_uuid: str
     expires_at: datetime
+    # Optional for compatibility with AMP versions without the standalone viewer.
+    trace_url: str | None = field(default=None, repr=False)
+
+
+def _trace_viewer_url(value: object, base_url: str) -> str | None:
+    """Accept an absolute AMP viewer URL without terminal control characters."""
+    if (
+        not isinstance(value, str)
+        or not value
+        or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value)
+    ):
+        return None
+    try:
+        endpoint, base = urlsplit(value), urlsplit(base_url)
+        if (
+            endpoint.scheme in ("http", "https")
+            and endpoint.hostname
+            and endpoint.username is None
+            and endpoint.password is None
+            and (endpoint.scheme, endpoint.hostname, endpoint.port)
+            == (base.scheme, base.hostname, base.port)
+        ):
+            return value
+    except ValueError:
+        pass
+    return None
 
 
 def _is_local_collector(hostname: str) -> bool:
@@ -89,7 +122,8 @@ class TraceGrantClient:
             response = self._api._make_request(
                 "POST",
                 f"{PlusAPI.TRACING_RESOURCE}/grants",
-                json={"execution_uuid": execution_uuid},
+                # Keep viewer opt-in on renewals as well as the initial grant.
+                json={"execution_uuid": execution_uuid, "include_trace_url": True},
                 timeout=5,
             )
         except Exception as error:
@@ -125,7 +159,11 @@ class TraceGrantClient:
             ):
                 raise ValueError("Invalid grant")
             return TraceGrant(
-                data["token"], data["collector_url"], execution_uuid, expiry
+                data["token"],
+                data["collector_url"],
+                execution_uuid,
+                expiry,
+                trace_url=_trace_viewer_url(data.get("trace_url"), self._api.base_url),
             )
         except (KeyError, TypeError, ValueError, AttributeError):
             raise TraceGrantError(
@@ -141,6 +179,11 @@ class GrantSpanExporter(SpanExporter):
         self._grant = grant
         self._lock = Lock()
         self._delegate = self._exporter(grant)
+        self._trace_url = grant.trace_url
+        self._exported = False
+        self._export_failed = False
+        self._summary_shown = False
+        self._suppress_output = should_suppress_tracing_messages() or is_tui_mode()
 
     @staticmethod
     def _exporter(grant: TraceGrant) -> SpanExporter:
@@ -151,50 +194,88 @@ class GrantSpanExporter(SpanExporter):
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         """Bound each request; oversized single spans are skipped with FAILURE."""
         with self._lock:
-            result = SpanExportResult.SUCCESS
-            pending = [
-                spans[offset : offset + MAX_EXPORT_BATCH_SIZE]
-                for offset in reversed(range(0, len(spans), MAX_EXPORT_BATCH_SIZE))
-            ]
-            while pending:
-                batch = pending.pop()
-                size = encode_spans(batch).ByteSize()
-                if size > MAX_EXPORT_BODY_BYTES:
-                    if len(batch) == 1:
-                        logger.warning(
-                            "Skipping execution trace span: encoded size %d exceeds "
-                            "Wharf's %d-byte request limit",
-                            size,
-                            MAX_EXPORT_BODY_BYTES,
-                        )
-                        result = SpanExportResult.FAILURE
-                    else:
-                        midpoint = len(batch) // 2
-                        # Process the left half first to retain span order.
-                        pending.extend((batch[midpoint:], batch[:midpoint]))
-                    continue
-                if (
-                    self._grant.expires_at - datetime.now(timezone.utc)
-                ).total_seconds() <= 30:
-                    try:
-                        grant = self._client.create(self._grant.execution_uuid)
-                    except TraceGrantError as error:
-                        logger.warning(
-                            "Could not renew execution trace grant (HTTP %s)",
-                            error.status_code,
-                        )
-                        return SpanExportResult.FAILURE
-                    exporter = self._exporter(grant)
-                    self._delegate.shutdown()
-                    self._delegate, self._grant = exporter, grant
-                if self._delegate.export(batch) != SpanExportResult.SUCCESS:
-                    return SpanExportResult.FAILURE
-                logger.info(
-                    "Exported %d spans to Wharf for execution %s",
-                    len(batch),
-                    self._grant.execution_uuid,
-                )
+            try:
+                result = self._export(spans)
+            except Exception:
+                self._export_failed = True
+                raise
+            self._export_failed |= result != SpanExportResult.SUCCESS
+            self._exported |= bool(spans) and result == SpanExportResult.SUCCESS
             return result
+
+    def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+        result = SpanExportResult.SUCCESS
+        pending = [
+            spans[offset : offset + MAX_EXPORT_BATCH_SIZE]
+            for offset in reversed(range(0, len(spans), MAX_EXPORT_BATCH_SIZE))
+        ]
+        while pending:
+            batch = pending.pop()
+            size = encode_spans(batch).ByteSize()
+            if size > MAX_EXPORT_BODY_BYTES:
+                if len(batch) == 1:
+                    logger.warning(
+                        "Skipping execution trace span: encoded size %d exceeds "
+                        "Wharf's %d-byte request limit",
+                        size,
+                        MAX_EXPORT_BODY_BYTES,
+                    )
+                    result = SpanExportResult.FAILURE
+                else:
+                    midpoint = len(batch) // 2
+                    # Process the left half first to retain span order.
+                    pending.extend((batch[midpoint:], batch[:midpoint]))
+                continue
+            if (
+                self._grant.expires_at - datetime.now(timezone.utc)
+            ).total_seconds() <= 30:
+                try:
+                    grant = self._client.create(self._grant.execution_uuid)
+                except TraceGrantError as error:
+                    logger.warning(
+                        "Could not renew execution trace grant (HTTP %s)",
+                        error.status_code,
+                    )
+                    return SpanExportResult.FAILURE
+                exporter = self._exporter(grant)
+                self._delegate.shutdown()
+                self._delegate, self._grant = exporter, grant
+                self._trace_url = grant.trace_url or self._trace_url
+            if self._delegate.export(batch) != SpanExportResult.SUCCESS:
+                return SpanExportResult.FAILURE
+            logger.info(
+                "Exported %d spans to Wharf for execution %s",
+                len(batch),
+                self._grant.execution_uuid,
+            )
+        return result
+
+    def show_trace_summary(self) -> None:
+        """Display the exported execution UUID and AMP's optional viewer link once."""
+        with self._lock:
+            if (
+                not self._exported
+                or self._export_failed
+                or self._summary_shown
+                or self._suppress_output
+                or should_suppress_tracing_messages()
+                or is_tui_mode()
+            ):
+                return
+            self._summary_shown = True
+            content = Text()
+            content.append("Traces exported\n", style="green bold")
+            content.append("Execution trace ID: ", style="white")
+            content.append(self._grant.execution_uuid, style="green")
+            if self._trace_url:
+                content.append("\n\nView traces:\n", style="white bold")
+                content.append(
+                    self._trace_url,
+                    style=Style(color="cyan", underline=True, link=self._trace_url),
+                )
+            ConsoleFormatter(verbose=True).print_panel(
+                content, "🔗 Execution Traces", "green"
+            )
 
     def shutdown(self) -> None:
         with self._lock:
