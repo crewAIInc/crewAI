@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Any, Final
 
 
 CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
@@ -7,7 +7,6 @@ CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
     "context length exceeded",
     "context_length_exceeded",
     "context window full",
-    "too many tokens",
     "input is too long",
     "exceeds token limit",
 ]
@@ -57,3 +56,48 @@ class LLMContextLengthExceededError(Exception):
             f"LLM context length exceeded. Original error: {error_message}\n"
             "Consider using a smaller input or implementing a text splitting strategy."
         )
+
+
+def is_rate_limit_exceeded(error: Exception) -> bool:
+    """Check whether a provider error represents a transient rate limit.
+
+    Native SDKs expose throttles through different shapes. This keeps detection
+    rules shared at the request boundary while preserving provider exceptions.
+    """
+    response: Any = getattr(error, "response", None)
+    status_code = getattr(error, "status_code", None)
+    if status_code is None:
+        status_code = getattr(response, "status_code", None)
+    if status_code == 429:
+        return True
+
+    error_code = getattr(error, "code", None)
+    if isinstance(response, dict):
+        response_error = response.get("Error") or response.get("error") or {}
+        if isinstance(response_error, dict):
+            error_code = response_error.get("Code") or response_error.get("code")
+
+    normalized_code = (
+        str(error_code or error.__class__.__name__).replace("_", "").lower()
+    )
+    if normalized_code in {
+        "429",
+        "ratelimiterror",
+        "ratelimitexceeded",
+        "throttlingexception",
+        "resourceexhausted",
+        "toomanyrequests",
+    }:
+        return True
+
+    message = str(error).lower()
+    return any(
+        phrase in message
+        for phrase in (
+            "rate limit",
+            "rate-limit",
+            "too many requests",
+            "throttl",
+            "resource exhausted",
+        )
+    )

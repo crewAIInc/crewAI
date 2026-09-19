@@ -445,6 +445,14 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
 
+def test_throttle_messages_are_not_treated_as_context_window_errors():
+    """A provider's token quota message must not trigger context summarization."""
+    from crewai.utilities.agent_utils import is_context_length_exceeded
+
+    assert is_context_length_exceeded(
+        RuntimeError("API throttled: too many tokens requested this minute")
+    ) is False
+
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""

@@ -34,10 +34,15 @@ from crewai.utilities.agent_utils import (
     handle_max_iterations_exceeded,
     execute_single_native_tool_call,
     extract_tool_call_info,
+    aget_llm_response,
+    get_llm_response,
     is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
+)
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    is_rate_limit_exceeded,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 
@@ -59,6 +64,89 @@ def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
         _estimate_token_count(str(message.get("content", "")))
         for message in summarization_messages
     )
+
+
+def test_get_llm_response_retries_rate_limits_at_the_request_boundary() -> None:
+    """A throttle retries the LLM request without re-entering an agent loop."""
+    llm = MagicMock()
+    llm.call.side_effect = [
+        RuntimeError("rate limit exceeded"),
+        RuntimeError("rate limit exceeded"),
+        "done",
+    ]
+
+    answer = get_llm_response(
+        llm=llm,
+        messages=[{"role": "user", "content": "Hello"}],
+        callbacks=[],
+        printer=MagicMock(),
+        verbose=False,
+    )
+
+    assert answer == "done"
+    assert llm.call.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_aget_llm_response_retries_rate_limits_at_the_request_boundary() -> None:
+    """Async LLM requests use the same bounded retry wrapper."""
+    llm = MagicMock()
+    llm.acall = AsyncMock(
+        side_effect=[
+            RuntimeError("rate limit exceeded"),
+            RuntimeError("rate limit exceeded"),
+            "done",
+        ]
+    )
+
+    answer = await aget_llm_response(
+        llm=llm,
+        messages=[{"role": "user", "content": "Hello"}],
+        callbacks=[],
+        printer=MagicMock(),
+        verbose=False,
+    )
+
+    assert answer == "done"
+    assert llm.acall.call_count == 3
+
+
+def test_get_llm_response_raises_after_rate_limit_retries_are_exhausted() -> None:
+    """Persistent throttling stops after the configured retry limit."""
+    llm = MagicMock()
+    error = RuntimeError("rate limit exceeded")
+    llm.call.side_effect = error
+
+    with pytest.raises(RuntimeError) as exc_info:
+        get_llm_response(
+            llm=llm,
+            messages=[{"role": "user", "content": "Hello"}],
+            callbacks=[],
+            printer=MagicMock(),
+            verbose=False,
+        )
+
+    assert llm.call.call_count == 3
+    assert exc_info.value is error
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        RuntimeError("rate limit exceeded"),
+        RuntimeError("request throttled"),
+        type("Http429Error", (Exception,), {"status_code": 429})("busy"),
+        type("BedrockThrottle", (Exception,), {"code": "ThrottlingException"})(
+            "busy"
+        ),
+    ],
+)
+def test_rate_limit_classifier_recognizes_provider_throttles(error: Exception) -> None:
+    assert is_rate_limit_exceeded(error)
+
+
+def test_rate_limit_classifier_ignores_token_context_errors() -> None:
+    assert not is_rate_limit_exceeded(RuntimeError("too many tokens"))
 
 
 class CalculatorInput(BaseModel):
@@ -1731,6 +1819,25 @@ class TestHandleMaxIterationsExceeded:
         assert isinstance(result, AgentFinish)
         assert result.text == reply
         assert result.output == reply
+
+    def test_retries_rate_limits_without_reentering_an_agent_loop(self) -> None:
+        llm = MagicMock()
+        llm.call.side_effect = [
+            RuntimeError("rate limit exceeded"),
+            RuntimeError("rate limit exceeded"),
+            "Final Answer: 42",
+        ]
+
+        result = handle_max_iterations_exceeded(
+            printer=MagicMock(),
+            messages=_react_history(),
+            llm=llm,
+            callbacks=[],
+            verbose=False,
+        )
+
+        assert result.output == "42"
+        assert llm.call.call_count == 3
 
     @pytest.mark.parametrize("reply", [None, ""], ids=["none", "empty"])
     def test_empty_reply_raises(self, reply: str | None) -> None:
