@@ -328,6 +328,20 @@ def test_o3_mini_reasoning_effort_medium():
     assert "Paris" in result
 
 
+def test_o1_family_context_window() -> None:
+    """o1/o1-pro use 200K; o1-preview and o1-mini keep their 128K override."""
+    assert LLM(model="o1").get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert LLM(model="o1-pro").get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    # The -preview and -mini variants must not pick up the base 200K window
+    assert LLM(model="o1-preview").get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert LLM(model="o1-mini").get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_o3_context_window() -> None:
+    """o3 uses 200K."""
+    assert LLM(model="o3").get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_context_window_validation():
     """Test that context window validation works correctly."""
     llm = LLM(model="o3-mini")
