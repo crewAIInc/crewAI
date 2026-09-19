@@ -324,6 +324,31 @@ def test_memory_slice_recall(tmp_path: Path, mock_embedder: MagicMock) -> None:
     assert isinstance(matches, list)
 
 
+@pytest.mark.parametrize(
+    ("slice_scopes", "scope", "expected_scopes"),
+    [
+        (["/team", "/company"], "/project", ["/team/project", "/company/project"]),
+        (["/team", "/"], "project", ["/team/project", "/project"]),
+        (["/team", "/"], "/", ["/team", "/"]),
+        (["/team", "/"], None, ["/team", "/"]),
+    ],
+)
+def test_memory_slice_recall_applies_relative_scope_to_each_root(
+    slice_scopes: list[str],
+    scope: str | None,
+    expected_scopes: list[str],
+) -> None:
+    from crewai.memory.memory_scope import MemorySlice
+
+    memory = MagicMock()
+    memory.recall.return_value = []
+    memory_slice = MemorySlice(memory=memory, scopes=slice_scopes)
+
+    memory_slice.recall("query", scope=scope, depth="shallow")
+
+    assert [call.kwargs["scope"] for call in memory.recall.call_args_list] == expected_scopes
+
+
 def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
     from crewai.memory.memory_scope import MemorySlice
