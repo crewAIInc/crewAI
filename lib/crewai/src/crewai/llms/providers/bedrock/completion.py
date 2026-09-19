@@ -14,7 +14,12 @@ from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    LLMCallBlockedError,
+    LLMRateLimitError,
+    llm_call_context,
+)
 from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -60,12 +65,14 @@ _THROTTLE_MAX_RETRIES: Final[int] = 3
 _THROTTLE_BASE_DELAY_SECONDS: Final[float] = 1.0
 
 
-class BedrockThrottlingError(RuntimeError):
+class BedrockThrottlingError(LLMRateLimitError):
     """Raised when Bedrock throttles a request and retries are exhausted.
 
-    Kept distinct from a plain ``RuntimeError`` so it isn't mistaken for a
-    context-window error just because AWS's throttling message happens to
-    mention tokens (e.g. "Too many tokens, please wait before trying again").
+    A subclass of ``LLMRateLimitError`` so it isn't mistaken for a
+    context-window error by ``is_context_length_exceeded`` just because
+    AWS's throttling message happens to mention tokens (e.g. "Too many
+    tokens, please wait before trying again") -- wherever the caller ends
+    up checking it, not just here.
     """
 
 
@@ -507,9 +514,7 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if not isinstance(
-                    e, BedrockThrottlingError
-                ) and is_context_length_exceeded(e):
+                if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
 
@@ -642,9 +647,7 @@ class BedrockCompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
-                if not isinstance(
-                    e, BedrockThrottlingError
-                ) and is_context_length_exceeded(e):
+                if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
                     raise LLMContextLengthExceededError(str(e)) from e
 
