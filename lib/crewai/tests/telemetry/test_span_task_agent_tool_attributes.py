@@ -233,6 +233,22 @@ def test_execute_agent_span_carries_the_exact_prompt_and_answer(pipeline) -> Non
     assert "gen_ai.output.messages.truncated" not in span.attributes
 
 
+def test_the_agent_text_travels_under_the_standard_keys_only(pipeline) -> None:
+    """The prompt and the answer leave under the two keys the ``call llm`` span
+    already uses for its messages, and under no other. Whatever rule an
+    exporter or a redaction processor applies to LLM message content applies
+    to these unchanged; a copy under a ``crewai.agent.*`` key would escape a
+    rule that selects by key name."""
+    span = _agent_span(pipeline, prompt="PROMPT-7597", output="ANSWER-7597")
+
+    carrying = {
+        key
+        for key, value in span.attributes.items()
+        if "PROMPT-7597" in str(value) or "ANSWER-7597" in str(value)
+    }
+    assert carrying == {"gen_ai.input.messages", "gen_ai.output.messages"}
+
+
 def test_an_over_cap_prompt_is_declared_truncated_never_silently_cut(
     pipeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:
