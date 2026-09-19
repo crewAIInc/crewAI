@@ -407,9 +407,14 @@ class CrewStructuredTool(BaseModel):
                 return await self.func(**parsed_args, **kwargs)
             import asyncio
 
-            return await asyncio.get_event_loop().run_in_executor(
+            result = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: self.func(**parsed_args, **kwargs)
             )
+            # A sync wrapper around an async function (e.g. ``Tool._run`` for an
+            # async ``@tool``) returns the coroutine, so await it here too.
+            if inspect.isawaitable(result):
+                return await result
+            return result
         except Exception:
             raise
 
