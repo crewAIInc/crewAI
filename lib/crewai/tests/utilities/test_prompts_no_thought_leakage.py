@@ -110,6 +110,80 @@ class TestNoToolsPromptGeneration:
         assert "your job depends on it" not in result["user"]
 
 
+class TestCustomTemplatesPromptGeneration:
+    """Custom system/prompt templates must respect the selected task slice.
+
+    When ``system_template`` and ``prompt_template`` are provided, the
+    ``{{ .Prompt }}`` placeholder must be filled with the task slice that was
+    actually selected (``task``, ``native_task``, or ``task_no_tools``), and
+    that slice must not also leak into the ``{{ .System }}`` section.
+    """
+
+    @staticmethod
+    def _mock_agent() -> MagicMock:
+        mock_agent = MagicMock()
+        mock_agent.role = "Test Agent"
+        mock_agent.goal = "Test goal"
+        mock_agent.backstory = "Test backstory"
+        return mock_agent
+
+    def test_custom_templates_no_tools_uses_task_no_tools_slice(self) -> None:
+        """A tool-less agent with custom templates must not get ReAct instructions."""
+        prompts = Prompts(
+            has_tools=False,
+            use_native_tool_calling=False,
+            use_system_prompt=False,
+            agent=self._mock_agent(),
+            system_template="system:\n{{ .System }}",
+            prompt_template="user:\n{{ .Prompt }}",
+        )
+
+        result = prompts.task_execution()
+        prompt = result["prompt"]
+
+        assert "Provide your complete response:" in prompt
+        assert "use the tools available" not in prompt
+        assert "Thought:" not in prompt
+        # The task slice must appear exactly once, in the user section.
+        assert prompt.count("Current Task:") == 1
+
+    def test_custom_templates_native_tools_uses_native_task_slice(self) -> None:
+        """A native-tool-calling agent with custom templates must not get ReAct instructions."""
+        prompts = Prompts(
+            has_tools=True,
+            use_native_tool_calling=True,
+            use_system_prompt=False,
+            agent=self._mock_agent(),
+            system_template="system:\n{{ .System }}",
+            prompt_template="user:\n{{ .Prompt }}",
+        )
+
+        result = prompts.task_execution()
+        prompt = result["prompt"]
+
+        assert "Thought:" not in prompt
+        assert "your job depends on it" not in prompt
+        assert prompt.count("Current Task:") == 1
+
+    def test_custom_templates_with_tools_keeps_react_task_slice(self) -> None:
+        """A ReAct agent with custom templates still gets the task slice."""
+        prompts = Prompts(
+            has_tools=True,
+            use_native_tool_calling=False,
+            use_system_prompt=False,
+            agent=self._mock_agent(),
+            system_template="system:\n{{ .System }}",
+            prompt_template="user:\n{{ .Prompt }}",
+        )
+
+        result = prompts.task_execution()
+        prompt = result["prompt"]
+
+        assert "Thought:" in prompt
+        assert "use the tools available" in prompt
+        assert prompt.count("Current Task:") == 1
+
+
 class TestNoThoughtLeakagePatterns:
     """Tests to verify prompts don't encourage thought leakage."""
 
