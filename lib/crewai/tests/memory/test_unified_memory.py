@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 from unittest.mock import MagicMock
@@ -16,6 +16,7 @@ from crewai.memory.types import (
     MemoryRecord,
     ScopeInfo,
     compute_composite_score,
+    normalize_to_utc,
 )
 
 
@@ -697,6 +698,246 @@ def test_composite_score_custom_config() -> None:
     score, reasons = compute_composite_score(record, 0.73, config)
     assert score == pytest.approx(0.73, rel=1e-5)
     assert "semantic" in reasons
+
+
+def test_composite_score_timezone_aware_datetime() -> None:
+    """compute_composite_score handles timezone-aware UTC created_at without TypeError (Issue #7529)."""
+    config = MemoryConfig()
+    record = MemoryRecord(
+        content="timezone aware memory",
+        created_at=datetime.now(timezone.utc),
+        importance=0.8,
+    )
+    score, reasons = compute_composite_score(record, 0.9, config)
+    assert 0.85 <= score <= 0.95
+    assert "semantic" in reasons
+    assert "recency" in reasons
+    assert "importance" in reasons
+
+
+def test_composite_score_timezone_offset_datetime() -> None:
+    """compute_composite_score correctly normalizes non-UTC timezone offsets (e.g. UTC+5:30)."""
+    tz_ist = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(tz_ist)
+    config = MemoryConfig(recency_half_life_days=30)
+    record = MemoryRecord(
+        content="offset memory",
+        created_at=now_ist - timedelta(days=30),
+        importance=0.5,
+    )
+    score, reasons = compute_composite_score(record, 0.8, config)
+    # 30 days old => decay == 0.5 (recency not in reasons since decay not > 0.5)
+    assert 0.60 <= score <= 0.75
+    assert "semantic" in reasons
+    assert "recency" not in reasons
+
+
+def test_composite_score_naive_datetime() -> None:
+    """compute_composite_score remains backward compatible with naive datetimes."""
+    config = MemoryConfig()
+    record = MemoryRecord(
+        content="naive memory",
+        created_at=datetime(2025, 1, 1, 12, 0, 0),
+        importance=0.5,
+    )
+    score, reasons = compute_composite_score(record, 0.8, config)
+    assert "semantic" in reasons
+
+
+def test_composite_score_future_datetime_clock_skew() -> None:
+    """Clock skew producing future timestamp is clamped to age 0.0 with decay 1.0."""
+    config = MemoryConfig()
+    future_time = datetime.now(timezone.utc) + timedelta(minutes=10)
+    record = MemoryRecord(
+        content="future memory",
+        created_at=future_time,
+        importance=0.8,
+    )
+    score, reasons = compute_composite_score(record, 0.9, config)
+    assert score > 0.85
+    assert "recency" in reasons
+
+
+def test_composite_score_custom_now_parameter() -> None:
+    """Passing explicit now parameter avoids syscalls and computes exact decay."""
+    config = MemoryConfig(
+        recency_weight=0.5,
+        semantic_weight=0.5,
+        importance_weight=0.0,
+        recency_half_life_days=30,
+    )
+    ref_now = datetime(2026, 1, 31, 12, 0, 0, tzinfo=timezone.utc)
+    rec_time = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    record = MemoryRecord(
+        content="exact half life",
+        created_at=rec_time,
+    )
+    score, reasons = compute_composite_score(record, 1.0, config, now=ref_now)
+    # decay should be exactly 0.5^(30/30) = 0.5
+    # composite = 0.5 * 1.0 + 0.5 * 0.5 = 0.75
+    assert score == pytest.approx(0.75, rel=1e-5)
+    assert "semantic" in reasons
+    assert "recency" not in reasons  # decay 0.5 is not > 0.5
+
+
+def test_memory_recall_with_timezone_aware_records(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """memory.recall() successfully retrieves and scores records with timezone-aware datetimes."""
+    from crewai.memory.unified_memory import Memory
+
+    emb = [0.1] * 3072
+    mem = Memory(
+        storage=str(tmp_path / "tz_aware_mem"),
+        llm=MagicMock(),
+        embedder=MagicMock(return_value=[emb]),
+    )
+    rec_utc = MemoryRecord(
+        content="UTC memory",
+        scope="/test",
+        created_at=datetime.now(timezone.utc),
+        importance=0.9,
+        embedding=emb,
+    )
+    rec_offset = MemoryRecord(
+        content="Offset memory",
+        scope="/test",
+        created_at=datetime.now(timezone(timedelta(hours=5))),
+        importance=0.8,
+        embedding=emb,
+    )
+    rec_naive = MemoryRecord(
+        content="Naive memory",
+        scope="/test",
+        created_at=datetime(2025, 6, 1, 12, 0, 0),
+        importance=0.7,
+        embedding=emb,
+    )
+    mem._storage.save([rec_utc, rec_offset, rec_naive])
+
+    matches = mem.recall("memory", scope="/test", limit=5, depth="shallow")
+    assert len(matches) == 3
+    contents = [m.record.content for m in matches]
+    assert "UTC memory" in contents
+    assert "Offset memory" in contents
+    assert "Naive memory" in contents
+
+
+def test_normalize_to_utc() -> None:
+    """normalize_to_utc handles naive, UTC-aware, and offset-aware datetimes."""
+    # 1. Naive datetime -> assumed UTC
+    naive = datetime(2026, 1, 1, 12, 0, 0)
+    res_naive = normalize_to_utc(naive)
+    assert res_naive.tzinfo == timezone.utc
+    assert res_naive.year == 2026 and res_naive.month == 1 and res_naive.hour == 12
+
+    # 2. Aware UTC datetime -> identity preserved
+    aware_utc = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    res_utc = normalize_to_utc(aware_utc)
+    assert res_utc is aware_utc
+
+    # 3. Aware offset datetime (e.g. UTC+5:30) -> converted to UTC
+    tz_ist = timezone(timedelta(hours=5, minutes=30))
+    aware_ist = datetime(2026, 1, 1, 17, 30, 0, tzinfo=tz_ist)
+    res_ist = normalize_to_utc(aware_ist)
+    assert res_ist.tzinfo == timezone.utc
+    assert res_ist.hour == 12 and res_ist.minute == 0
+
+
+def test_recall_flow_temporal_filter_with_mixed_timezones(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """RecallFlow query cutoff works with mixed naive and aware timestamps without TypeError."""
+    from crewai.memory.recall_flow import RecallFlow
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(tmp_path / "rf_tz_filter"))
+    emb = [0.1] * 3072
+
+    # Three records: past (2025), recent naive (2026), and recent UTC-aware (2026)
+    rec_old = MemoryRecord(
+        content="Old 2025 memory",
+        scope="/test",
+        created_at=datetime(2025, 1, 1, 0, 0, 0),
+        embedding=emb,
+    )
+    rec_recent_naive = MemoryRecord(
+        content="Recent naive memory",
+        scope="/test",
+        created_at=datetime(2026, 6, 1, 0, 0, 0),
+        embedding=emb,
+    )
+    rec_recent_utc = MemoryRecord(
+        content="Recent UTC memory",
+        scope="/test",
+        created_at=datetime(2026, 6, 2, 0, 0, 0, tzinfo=timezone.utc),
+        embedding=emb,
+    )
+    storage.save([rec_old, rec_recent_naive, rec_recent_utc])
+
+    flow = RecallFlow(
+        storage=storage,
+        llm=MagicMock(),
+        embedder=mock_embedder,
+        config=MemoryConfig(),
+    )
+    # Cutoff is timezone-aware: should filter out rec_old, and retain rec_recent_naive & rec_recent_utc
+    flow.state.time_cutoff = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    flow.state.limit = 10
+    flow.state.query_embeddings = [("memory", emb)]
+    flow.state.candidate_scopes = ["/test"]
+
+    flow._do_search()
+    flow.synthesize_results()
+
+    assert len(flow.state.final_results) == 2
+    contents = [m.record.content for m in flow.state.final_results]
+    assert "Recent naive memory" in contents
+    assert "Recent UTC memory" in contents
+    assert "Old 2025 memory" not in contents
+
+
+def test_recall_flow_naive_cutoff_with_aware_records(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """RecallFlow naive time_cutoff safely compares against aware record timestamps."""
+    from crewai.memory.recall_flow import RecallFlow
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(tmp_path / "rf_naive_cutoff"))
+    emb = [0.1] * 3072
+
+    rec_old_utc = MemoryRecord(
+        content="Old UTC memory",
+        scope="/test",
+        created_at=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        embedding=emb,
+    )
+    rec_new_ist = MemoryRecord(
+        content="New IST memory",
+        scope="/test",
+        created_at=datetime(2026, 7, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=5, minutes=30))),
+        embedding=emb,
+    )
+    storage.save([rec_old_utc, rec_new_ist])
+
+    flow = RecallFlow(
+        storage=storage,
+        llm=MagicMock(),
+        embedder=mock_embedder,
+        config=MemoryConfig(),
+    )
+    # Cutoff is naive: should filter out rec_old_utc without TypeError
+    flow.state.time_cutoff = datetime(2026, 1, 1, 0, 0, 0)
+    flow.state.limit = 10
+    flow.state.query_embeddings = [("memory", emb)]
+    flow.state.candidate_scopes = ["/test"]
+
+    flow._do_search()
+    flow.synthesize_results()
+
+    assert len(flow.state.final_results) == 1
+    assert flow.state.final_results[0].record.content == "New IST memory"
 
 
 # --- LLM fallback ---
