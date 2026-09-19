@@ -43,7 +43,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.types.streaming import StreamSession
-from crewai.types.usage_metrics import UsageMetrics
+from crewai.types.usage_metrics import UsageMetrics, get_usage_agent
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
 from crewai.utilities.streaming import (
     create_frame_generator,
@@ -1000,6 +1000,10 @@ class BaseLLM(BaseModel, ABC):
         self._token_usage["cached_prompt_tokens"] += metrics.cached_prompt_tokens
         self._token_usage["reasoning_tokens"] += metrics.reasoning_tokens
         self._token_usage["cache_creation_tokens"] += metrics.cache_creation_tokens
+
+        agent = get_usage_agent()
+        if agent is not None:
+            agent._record_llm_usage(self, metrics)
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
