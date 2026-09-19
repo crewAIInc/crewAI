@@ -1,7 +1,8 @@
+import re
 from typing import Any, Dict, List, Union
 
 import pytest
-from crewai.utilities.string_utils import interpolate_only
+from crewai.utilities.string_utils import interpolate_only, sanitize_tool_name
 
 
 class TestInterpolateOnly:
@@ -184,3 +185,27 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+
+class TestSanitizeToolName:
+    """Tests for sanitize_tool_name."""
+
+    def test_ascii_names_unchanged(self):
+        assert sanitize_tool_name("WebSearch") == "web_search"
+        assert sanitize_tool_name("Café Finder") == "cafe_finder"
+
+    @pytest.mark.parametrize("name", ["搜索工具", "抓取网页", "поиск", "🔍", "___"])
+    def test_names_without_ascii_content_are_never_empty(self, name: str):
+        result = sanitize_tool_name(name)
+        assert re.fullmatch(r"tool_[0-9a-f]{8}", result)
+
+    @pytest.mark.parametrize("name", ["", "   "])
+    def test_blank_name_stays_empty(self, name: str):
+        assert sanitize_tool_name(name) == ""
+
+    def test_fallback_is_stable_and_distinct(self):
+        assert sanitize_tool_name("搜索工具") == sanitize_tool_name("搜索工具")
+        assert sanitize_tool_name("搜索工具") != sanitize_tool_name("抓取网页")
+
+    def test_partially_ascii_name_keeps_its_ascii_part(self):
+        assert sanitize_tool_name("搜索 tool v2") == "tool_v2"
