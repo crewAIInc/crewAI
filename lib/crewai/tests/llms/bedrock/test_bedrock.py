@@ -840,6 +840,92 @@ def test_bedrock_throttling_retries_then_succeeds():
         assert mock_sleep.call_args_list[1].args[0] == 2.0
 
 
+@pytest.mark.asyncio
+async def test_bedrock_async_throttling_retries_then_succeeds():
+    """Non-streaming async converse: throttled twice, then succeeds."""
+    from unittest.mock import AsyncMock
+    from botocore.exceptions import ClientError
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    error_response = {
+        'Error': {
+            'Code': 'ThrottlingException',
+            'Message': 'Too many tokens, please wait before trying again.',
+        }
+    }
+    success_response = {
+        'output': {
+            'message': {
+                'role': 'assistant',
+                'content': [{'text': 'Hello there'}],
+            }
+        },
+        'usage': {'inputTokens': 10, 'outputTokens': 5, 'totalTokens': 15},
+    }
+
+    mock_async_client = MagicMock()
+    mock_async_client.converse = AsyncMock(
+        side_effect=[
+            ClientError(error_response, 'converse'),
+            ClientError(error_response, 'converse'),
+            success_response,
+        ]
+    )
+    llm._async_client = mock_async_client
+    llm._async_client_initialized = True
+
+    with patch.object(bedrock_completion.asyncio, 'sleep', new=AsyncMock()) as mock_sleep:
+        result = await llm.acall("Hello")
+
+        assert result == "Hello there"
+        assert mock_async_client.converse.call_count == 3
+        assert mock_sleep.await_count == 2
+        assert mock_sleep.call_args_list[0].args[0] == 1.0
+        assert mock_sleep.call_args_list[1].args[0] == 2.0
+
+
+@pytest.mark.asyncio
+async def test_bedrock_async_streaming_throttling_retries_then_succeeds():
+    """Streaming async converse_stream: throttled twice, then succeeds."""
+    from unittest.mock import AsyncMock
+    from botocore.exceptions import ClientError
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0", stream=True)
+
+    error_response = {
+        'Error': {
+            'Code': 'ThrottlingException',
+            'Message': 'Too many tokens, please wait before trying again.',
+        }
+    }
+
+    async def _empty_stream():
+        return
+        yield  # pragma: no cover - makes this an async generator
+
+    success_response = {'stream': _empty_stream()}
+
+    mock_async_client = MagicMock()
+    mock_async_client.converse_stream = AsyncMock(
+        side_effect=[
+            ClientError(error_response, 'converse_stream'),
+            ClientError(error_response, 'converse_stream'),
+            success_response,
+        ]
+    )
+    llm._async_client = mock_async_client
+    llm._async_client_initialized = True
+
+    with patch.object(bedrock_completion.asyncio, 'sleep', new=AsyncMock()) as mock_sleep:
+        await llm.acall("Hello")
+
+        assert mock_async_client.converse_stream.call_count == 3
+        assert mock_sleep.await_count == 2
+        assert mock_sleep.call_args_list[0].args[0] == 1.0
+        assert mock_sleep.call_args_list[1].args[0] == 2.0
+
+
 def test_bedrock_stop_sequences_sync():
     """Test that stop and stop_sequences attributes stay synchronized."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
