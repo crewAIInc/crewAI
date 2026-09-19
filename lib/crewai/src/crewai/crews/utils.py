@@ -241,6 +241,23 @@ def _extract_files_from_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     return files
 
 
+def _reset_kickoff_event_state(crew: Crew) -> None:
+    """Reset the per-kickoff event sequence state, unless resuming a checkpoint.
+
+    Both preparation paths call this *before* running ``before_kickoff_callbacks``
+    so events a callback emits consume fresh sequence numbers and cannot collide
+    with the kickoff events emitted after a later reset. The resume and
+    nested-parent guards mirror the single reset this used to perform inside
+    ``_prepare_kickoff_impl``.
+    """
+    from crewai.events.base_events import reset_emission_counter
+    from crewai.events.event_context import get_current_parent_id, reset_last_event_id
+
+    if crew.checkpoint_kickoff_event_id is None and get_current_parent_id() is None:
+        reset_emission_counter()
+        reset_last_event_id()
+
+
 def prepare_kickoff(
     crew: Crew,
     inputs: dict[str, Any] | None,
@@ -259,6 +276,7 @@ def prepare_kickoff(
     Returns:
         The potentially modified inputs dictionary after before callbacks.
     """
+    _reset_kickoff_event_state(crew)
     return _prepare_kickoff_impl(crew, inputs, input_files)
 
 
@@ -269,10 +287,10 @@ async def aprepare_kickoff(
 ) -> dict[str, Any] | None:
     """Async counterpart of :func:`prepare_kickoff`.
 
-    Used by ``Crew.akickoff`` so that async ``before_kickoff_callbacks`` are
-    awaited instead of silently dropped, and any blocking work inside them
-    does not stall the event loop. Sync before-callbacks continue to work
-    unchanged.
+    Used by ``Crew.akickoff`` so that awaitable results from
+    ``before_kickoff_callbacks`` are awaited. Sync callbacks run inline and
+    can block the event loop. Async callbacks can also block the event loop
+    before their first yield.
 
     Args:
         crew: The crew instance to prepare.
@@ -282,6 +300,7 @@ async def aprepare_kickoff(
     Returns:
         The potentially modified inputs dictionary after before callbacks.
     """
+    _reset_kickoff_event_state(crew)
     normalized = await _arun_before_kickoff_callbacks(crew, _normalize_inputs(inputs))
     return _prepare_kickoff_impl(
         crew, inputs, input_files, normalized_inputs=normalized
@@ -362,19 +381,14 @@ def _prepare_kickoff_impl(
     is the supported way to flow inputs through callbacks; ``None`` only stops
     being misread as "callbacks not yet applied".
     """
-    from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.event_context import (
-        get_current_parent_id,
-        reset_last_event_id,
-    )
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
+    # Per-kickoff event-sequence state is reset by the public wrappers
+    # (:func:`prepare_kickoff` / :func:`aprepare_kickoff`) *before* the
+    # before-callbacks run, so events emitted from a callback cannot collide
+    # with kickoff events after a later reset.
     resuming = crew.checkpoint_kickoff_event_id is not None
-
-    if not resuming and get_current_parent_id() is None:
-        reset_emission_counter()
-        reset_last_event_id()
 
     from crewai.hooks.contexts import ExecutionStartContext, InputContext
     from crewai.hooks.dispatch import InterceptionPoint, dispatch
