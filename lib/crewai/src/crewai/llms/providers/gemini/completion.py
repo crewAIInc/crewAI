@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
+from crewai.llms.constants import GEMINI_LATEST_ALIASES
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -65,6 +66,13 @@ class GeminiCompletion(BaseLLM):
     @model_validator(mode="before")
     @classmethod
     def _normalize_gemini_fields(cls, data: Any) -> Any:
+        """Normalize model-derived capability fields before validation.
+
+        Detects the model generation (tools support, 2.0+ flag, auto
+        thinking) from the version in the model name, including the
+        version-less ``-latest`` aliases, which resolve to the current 2.5
+        generation via ``GEMINI_LATEST_ALIASES``.
+        """
         if not isinstance(data, dict):
             return data
 
@@ -96,19 +104,26 @@ class GeminiCompletion(BaseLLM):
         data["use_vertexai"] = use_vx
 
         model = data.get("model", "gemini-2.0-flash-001")
-        version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
-        data["supports_tools"] = bool(
-            version_match and float(version_match.group(1)) >= 1.5
+        model_lower = model.lower()
+        version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model_lower)
+        # Version-less aliases from the GEMINI_MODELS table (e.g.
+        # "gemini-flash-latest") carry no digits after "gemini-", so the regex
+        # misses them; they resolve to the current 2.5 generation (#7636). An
+        # explicit map, not a looser regex, so "gemini-gemma-..." ids — which
+        # lack function calling — can't be mis-detected by their version.
+        effective_version = (
+            float(version_match.group(1))
+            if version_match
+            else GEMINI_LATEST_ALIASES.get(model_lower)
         )
-        data["is_gemini_2_0"] = bool(
-            version_match and float(version_match.group(1)) >= 2.0
-        )
+        data["supports_tools"] = bool(effective_version and effective_version >= 1.5)
+        data["is_gemini_2_0"] = bool(effective_version and effective_version >= 2.0)
 
         # Auto-enable thinking for gemini-2.5+
         if (
             data.get("thinking_config") is None
-            and version_match
-            and float(version_match.group(1)) >= 2.5
+            and effective_version
+            and effective_version >= 2.5
         ):
             data["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
 
