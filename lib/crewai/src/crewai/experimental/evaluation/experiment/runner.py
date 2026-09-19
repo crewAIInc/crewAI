@@ -144,6 +144,11 @@ class ExperimentRunner:
             return actual >= expected
 
         if isinstance(expected, dict) and isinstance(actual, (int, float)):
+            # An empty expected dict means no scoring criteria were provided;
+            # reporting "passed" with zero criteria evaluated would mask a
+            # regression, so treat it as a failure rather than vacuous True.
+            if not expected:
+                return False
             return all(actual >= exp_score for exp_score in expected.values())
 
         if isinstance(expected, (int, float)) and isinstance(actual, dict):
@@ -153,8 +158,11 @@ class ExperimentRunner:
             return avg_score >= expected
 
         if isinstance(expected, dict) and isinstance(actual, dict):
+            # Empty expected: no criteria were supplied, so there is nothing
+            # to compare against. Returning True would record the case as
+            # "passed" with zero criteria evaluated and hide a regression.
             if not expected:
-                return True
+                return False
             matching_keys = set(expected.keys()) & set(actual.keys())
             if not matching_keys:
                 return False
