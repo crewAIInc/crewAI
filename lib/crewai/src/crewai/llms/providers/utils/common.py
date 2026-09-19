@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Any
 
+from crewai.tools.base_tool import BaseTool
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -41,7 +42,9 @@ def validate_function_name(name: str, provider: str = "LLM") -> str:
     return name
 
 
-def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+def extract_tool_info(
+    tool: dict[str, Any] | BaseTool,
+) -> tuple[str, str, dict[str, Any]]:
     """Extract tool information from various schema formats.
 
     Handles both OpenAI/standard format and direct format:
@@ -57,11 +60,22 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
     Raises:
         ValueError: If tool format is invalid
     """
+
+    if isinstance(tool, BaseTool):
+        parameters: dict[str, Any] = {}
+
+        if tool.args_schema is not None:
+            schema_output = generate_model_description(tool.args_schema)
+            parameters = schema_output.get("json_schema", {}).get("schema", {})
+
+        return tool.name, tool.description, parameters
+
     if not isinstance(tool, dict):
         raise ValueError("Tool must be a dictionary")
 
     if "function" in tool:
         function_info = tool["function"]
+
         if not isinstance(function_info, dict):
             raise ValueError("Tool function must be a dictionary")
 
@@ -73,7 +87,6 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         description = tool.get("description", "")
         parameters = tool.get("parameters", {})
 
-        # Fall back to args_schema for Pydantic-defined tools
         if not parameters and "args_schema" in tool:
             if hasattr(tool["args_schema"], "model_json_schema"):
                 schema_output = generate_model_description(tool["args_schema"])
@@ -82,7 +95,10 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
     return name, description, parameters
 
 
-def log_tool_conversion(tool: dict[str, Any], provider: str) -> None:
+def log_tool_conversion(
+    tool: dict[str, Any] | BaseTool,
+    provider: str,
+) -> None:
     """Log tool conversion for debugging.
 
     Args:
@@ -113,7 +129,8 @@ def sanitize_function_name(name: str) -> str:
 
 
 def safe_tool_conversion(
-    tool: dict[str, Any], provider: str
+    tool: dict[str, Any] | BaseTool,
+    provider: str,
 ) -> tuple[str, str, dict[str, Any]]:
     """Safely extract and validate tool information.
 
