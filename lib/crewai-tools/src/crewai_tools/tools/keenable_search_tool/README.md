@@ -30,11 +30,17 @@ print(results)
 ## Configuration
 
 - `KEENABLE_API_KEY` (env, optional): lifts rate limits. Not required.
-- `KEENABLE_API_URL` (env, optional): base-URL override (HTTPS). Defaults to
-  `https://api.keenable.ai`.
+- `KEENABLE_API_URL` (env, optional): base-URL override. Must be `https://`;
+  plain `http://` is accepted only for loopback hosts (`localhost`,
+  `127.0.0.1`, `::1`). Defaults to `https://api.keenable.ai`.
 
-Tool arguments:
+`run()` takes a single input, `query`. Everything else is constructor
+configuration:
 
-- `mode` (default `"pro"`)
-- `n_results` (default `10`)
-- `timeout` (default `30`)
+```python
+tool = KeenableSearchTool(
+    n_results=5,  # results to return (default 10)
+    max_snippet_chars=300,  # cap per result description, 0 = no cap (default 500)
+    timeout=15,  # request timeout in seconds (default 30)
+)
+```

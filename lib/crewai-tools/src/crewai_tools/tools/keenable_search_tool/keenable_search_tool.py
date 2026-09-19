@@ -46,7 +46,11 @@ class KeenableSearchTool(BaseTool):
     )
     base_url: str = Field(
         default_factory=lambda: os.getenv("KEENABLE_API_URL") or DEFAULT_BASE_URL,
-        description="Keenable API base URL (HTTPS). Defaults to https://api.keenable.ai.",
+        description=(
+            "Keenable API base URL. Must be https://, except that plain http:// "
+            "is accepted for loopback hosts (localhost, 127.0.0.1, ::1) so a "
+            "local proxy can be used. Defaults to https://api.keenable.ai."
+        ),
     )
     mode: str = Field(
         default="pro",
@@ -75,6 +79,14 @@ class KeenableSearchTool(BaseTool):
                 ),
                 required=False,
             ),
+            EnvVar(
+                name="KEENABLE_API_URL",
+                description=(
+                    "Base-URL override for the Keenable API (optional; defaults to "
+                    "https://api.keenable.ai)"
+                ),
+                required=False,
+            ),
         ]
     )
 
@@ -91,7 +103,8 @@ class KeenableSearchTool(BaseTool):
             }:
                 return base
         raise ValueError(
-            f"KEENABLE_API_URL must be an https:// URL with a host, got {base!r}"
+            "KEENABLE_API_URL must be an https:// URL with a host (plain http:// "
+            f"only for loopback hosts), got {base!r}"
         )
 
     def _result_text(self, result: dict[str, Any]) -> str:
@@ -106,7 +119,8 @@ class KeenableSearchTool(BaseTool):
             str(result.get("snippet") or result.get("description") or "").split()
         )
         if 0 < self.max_snippet_chars < len(text):
-            return text[: self.max_snippet_chars].rstrip() + "…"
+            # The ellipsis counts towards the cap, so the result never exceeds it.
+            return text[: self.max_snippet_chars - 1].rstrip() + "…"
         return text
 
     def _run(self, **kwargs: Any) -> Any:
@@ -132,7 +146,15 @@ class KeenableSearchTool(BaseTool):
                 headers=headers,
                 json={"query": search_query, "mode": self.mode},
                 timeout=self.timeout,
+                # Never follow redirects: `requests` keeps custom headers such as
+                # X-API-Key across them, so a redirect could leak the key.
+                allow_redirects=False,
             )
+            if response.is_redirect or response.is_permanent_redirect:
+                return (
+                    "Error performing search: the Keenable API returned a redirect "
+                    f"({response.status_code}), which this tool does not follow."
+                )
             response.raise_for_status()
             # response.json() raises ValueError on a non-JSON body.
             data = response.json()
