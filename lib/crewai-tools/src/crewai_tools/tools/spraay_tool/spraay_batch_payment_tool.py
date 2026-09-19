@@ -20,6 +20,9 @@ from crewai_tools.tools.spraay_tool.spraay_payload import (
 from crewai_tools.tools.spraay_tool.spraay_x402 import post_with_x402
 
 
+MAX_RECIPIENTS = 200
+
+
 class SpraayRecipient(BaseModel):
     """A single recipient in a batch payment."""
 
@@ -131,11 +134,24 @@ class SpraayBatchPaymentTool(BaseTool):
         if not recipients:
             return "Error: 'recipients' list is required and cannot be empty."
 
+        if len(recipients) > MAX_RECIPIENTS:
+            return (
+                f"Error: 'recipients' list must contain at most "
+                f"{MAX_RECIPIENTS} entries."
+            )
+
         if action in ("estimate", "execute") and not sender_address:
             return f"Error: 'sender_address' is required for '{action}' action."
 
         try:
             chain = chain_slug(chain_id)
+        except ValueError as e:
+            return f"Error: {e}"
+
+        if action == "estimate":
+            return self._estimate_batch(chain, len(recipients))
+
+        try:
             decimals = token_decimals(token_address, chain_id)
             base_amounts = [to_base_units(r.amount, decimals) for r in recipients]
         except ValueError as e:
@@ -143,8 +159,6 @@ class SpraayBatchPaymentTool(BaseTool):
 
         if action == "validate":
             return self._validate_batch(chain, token_address, recipients, base_amounts)
-        if action == "estimate":
-            return self._estimate_batch(chain, len(recipients))
         return self._execute_batch(
             chain, token_address, recipients, base_amounts, sender_address, decimals
         )

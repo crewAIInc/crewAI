@@ -15,7 +15,7 @@ directory (Base) -> the token contract's decimals() via public RPC. If all
 of these fail, a ValueError is raised instead of falling back to a default.
 """
 
-from decimal import Decimal, InvalidOperation, Overflow
+from decimal import Decimal, InvalidOperation, Overflow, localcontext
 import re
 
 import requests
@@ -234,7 +234,11 @@ def to_base_units(amount: str, decimals: int) -> str:
     if not value.is_finite():
         raise ValueError(f"Invalid amount {amount!r}: must be a finite number.")
     try:
-        scaled = value.scaleb(decimals)
+        # scaleb() rounds to the context precision (default 28 digits), so
+        # widen it to hold every significant digit of the input exactly.
+        with localcontext() as ctx:
+            ctx.prec = max(ctx.prec, len(value.as_tuple().digits))
+            scaled = value.scaleb(decimals)
     except (InvalidOperation, Overflow) as e:
         raise ValueError(f"Invalid amount {amount!r}: out of range.") from e
     if scaled < 0:

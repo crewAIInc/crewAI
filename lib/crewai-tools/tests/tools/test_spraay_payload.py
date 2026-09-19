@@ -34,6 +34,32 @@ def test_to_base_units_scales_amount():
     assert to_base_units("1.5", 6) == "1500000"
 
 
+@pytest.mark.parametrize(
+    ("amount", "decimals", "expected"),
+    [
+        (
+            "123456789012345678901234567890.123456789012345678",
+            18,
+            "123456789012345678901234567890123456789012345678",
+        ),
+        (
+            "999999999999999999999999999999.999999",
+            6,
+            "999999999999999999999999999999999999",
+        ),
+    ],
+)
+def test_to_base_units_preserves_precision_beyond_28_digits(
+    amount, decimals, expected
+):
+    assert to_base_units(amount, decimals) == expected
+
+
+def test_to_base_units_rejects_excess_decimals_beyond_28_digits():
+    with pytest.raises(ValueError, match="more than 6 decimal places"):
+        to_base_units("123456789012345678901234567890.1234567", 6)
+
+
 @pytest.mark.parametrize("amount", ["1E999999", "9.99E999990"])
 def test_to_base_units_maps_decimal_overflow_to_value_error(amount):
     with pytest.raises(ValueError, match="out of range") as exc_info:
