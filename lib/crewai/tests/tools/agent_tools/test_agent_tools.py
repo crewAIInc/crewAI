@@ -124,3 +124,37 @@ def test_ask_question_to_wrong_agent():
         result
         == "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n- researcher\n"
     )
+
+
+@pytest.mark.parametrize(
+    "coworker",
+    [
+        "researcher",
+        "[researcher]",
+        '["researcher"]',
+        "['researcher']",
+        "'researcher'",
+    ],
+)
+def test_delegate_work_resolves_quoted_coworker_spellings(monkeypatch, coworker):
+    """Any quoting a weak model may emit must still resolve the role.
+
+    Python-repr lists (`['researcher']`, what `str(list)` produces) keep their
+    single quotes after the list unwrap, which role matching previously never
+    stripped — only double quotes were removed.
+    """
+    monkeypatch.setattr(
+        Agent,
+        "execute_task",
+        lambda self, task, context=None, tools=None: self.role,
+    )
+    result = delegate_tool.run(coworker=coworker, task="t", context="c")
+    assert result == "researcher"
+
+
+def test_sanitize_agent_name_strips_both_quote_styles():
+    tool = ask_tool
+    assert tool.sanitize_agent_name('"Senior Researcher"') == "senior researcher"
+    assert tool.sanitize_agent_name("'Senior Researcher'") == "senior researcher"
+    # Roles containing apostrophes still match themselves after sanitization.
+    assert tool.sanitize_agent_name("O'Brien's Team") == "obriens team"
