@@ -32,7 +32,7 @@ class BaseAgentTool(BaseTool):
         if not name:
             return ""
         normalized = " ".join(name.split())
-        return normalized.replace('"', "").casefold()
+        return normalized.replace('"', "").replace("'", "").casefold()
 
     @staticmethod
     def _get_coworker(coworker: str | None, **kwargs: Any) -> str | None:
