@@ -418,49 +418,54 @@ class LanceDBStorage:
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
+        """Delete records satisfying every supplied filter, within the given scope."""
         if self._table is None:
             return 0
         with store_lock(self._lock_name):
-            if record_ids and not (categories or metadata_filter):
-                before = int(self._table.count_rows())
-                ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
-                self._do_write("delete", f"id IN ({ids_expr})")
-                return before - int(self._table.count_rows())
+            conditions: list[str] = []
+            if record_ids:
+                escaped_ids = [rid.replace("'", "''") for rid in record_ids]
+                ids_expr = ", ".join(f"'{rid}'" for rid in escaped_ids)
+                conditions.append(f"id IN ({ids_expr})")
+            if scope_prefix is not None and scope_prefix.strip("/"):
+                prefix = "/" + scope_prefix.strip("/")
+                prefix = prefix.replace("'", "''")
+                conditions.append(
+                    f"(scope = '{prefix}' OR starts_with(scope, '{prefix}/'))"
+                )
+            if older_than is not None:
+                conditions.append(
+                    "CAST(created_at AS TIMESTAMP) "
+                    f"< CAST('{older_than.isoformat()}' AS TIMESTAMP)"
+                )
             if categories or metadata_filter:
-                rows = self._scan_rows(scope_prefix)
+                # Deletion must examine every candidate, without loading embeddings.
+                batches = (
+                    self._table.search()
+                    .where(" AND ".join(conditions) or "true")
+                    .select(["id", "categories_str", "metadata_str"])
+                    .limit(None)
+                    .to_batches()
+                )
                 to_delete: list[str] = []
-                for row in rows:
-                    record = self._row_to_record(row)
-                    if categories and not any(
-                        c in record.categories for c in categories
-                    ):
-                        continue
-                    if metadata_filter and not all(
-                        record.metadata.get(k) == v for k, v in metadata_filter.items()
-                    ):
-                        continue
-                    if older_than and record.created_at >= older_than:
-                        continue
-                    to_delete.append(record.id)
+                for batch in batches:
+                    for row in batch.to_pylist():
+                        if categories:
+                            row_categories = json.loads(row["categories_str"] or "[]")
+                            if not any(c in row_categories for c in categories):
+                                continue
+                        if metadata_filter:
+                            metadata = json.loads(row["metadata_str"] or "{}")
+                            if not all(
+                                metadata.get(k) == v for k, v in metadata_filter.items()
+                            ):
+                                continue
+                        to_delete.append(row["id"].replace("'", "''"))
                 if not to_delete:
                     return 0
-                before = int(self._table.count_rows())
                 ids_expr = ", ".join(f"'{rid}'" for rid in to_delete)
-                self._do_write("delete", f"id IN ({ids_expr})")
-                return before - int(self._table.count_rows())
-            conditions = []
-            if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
-                if not prefix.startswith("/"):
-                    prefix = "/" + prefix
-                conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
-            if older_than is not None:
-                conditions.append(f"created_at < '{older_than.isoformat()}'")
-            if not conditions:
-                before = int(self._table.count_rows())
-                self._do_write("delete", "id != ''")
-                return before - int(self._table.count_rows())
-            where_expr = " AND ".join(conditions)
+                conditions.append(f"id IN ({ids_expr})")
+            where_expr = " AND ".join(conditions) or "id != ''"
             before = int(self._table.count_rows())
             self._do_write("delete", where_expr)
             return before - int(self._table.count_rows())
