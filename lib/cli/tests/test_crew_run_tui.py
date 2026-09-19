@@ -1356,6 +1356,34 @@ def test_plan_refinement_updates_descriptions_without_new_statuses() -> None:
     )
 
 
+@pytest.mark.asyncio
+async def test_render_main_content_skips_non_dict_plan_steps() -> None:
+    """Local LLMs may emit bare ints in plan steps; render must not crash."""
+    app = CrewRunApp()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._plan = {
+            "plan": "Mixed steps from local LLM",
+            "steps": [
+                {"step_number": 1, "description": "Valid dict step"},
+                2,
+                {"step_number": 3, "description": "Another valid step"},
+                "not-a-step",
+            ],
+        }
+        app._plan_step_status = {1: "pending", 3: "active"}
+        app._status = "working"
+
+        app._render_main_content()
+        await pilot.pause()
+
+        # Completed summary path also iterates steps with .get
+        app._status = "completed"
+        app._plan_step_status = {1: "done", 3: "done"}
+        app._render_main_content()
+        await pilot.pause()
+
+
 def test_step_observation_json_is_hidden_from_streaming_text() -> None:
     app = _app_with_plan()
 
