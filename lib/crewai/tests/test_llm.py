@@ -345,6 +345,43 @@ def test_context_window_validation():
 
 
 @pytest.mark.parametrize(
+    "model,expected_size",
+    [
+        ("o1", 200000),
+        ("o1-pro", 200000),
+        ("o3", 200000),
+    ],
+)
+def test_o_series_context_window(model: str, expected_size: int) -> None:
+    """Test that o1, o1-pro, and o3 models use their official 200k context window.
+
+    Fixes https://github.com/crewAIInc/crewAI/issues/7303
+    """
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(expected_size * CONTEXT_WINDOW_USAGE_RATIO)
+
+    assert "must be between 1024 and 2097152" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "model,expected_size",
+    [
+        ("o1", 200000),
+        ("o1-pro", 200000),
+        ("o3", 200000),
+    ],
+)
+def test_o_series_context_window(model: str, expected_size: int) -> None:
+    """Test that o1, o1-pro, and o3 models use their official 200k context window.
+
+    Fixes https://github.com/crewAIInc/crewAI/issues/7303
+    """
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(expected_size * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+
+@pytest.mark.parametrize(
     "model",
     ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
 )
