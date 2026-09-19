@@ -367,6 +367,7 @@ class FunctionArgs(BaseModel):
 
 
 class AccumulatedToolArgs(BaseModel):
+    id: str | None = None
     function: FunctionArgs = Field(default_factory=FunctionArgs)
 
 
@@ -1074,6 +1075,7 @@ class LLM(BaseLLM):
                 tool_calls_list: list[ChatCompletionDeltaToolCall] = [
                     ChatCompletionDeltaToolCall(
                         index=idx,
+                        id=tool_arg.id,
                         function=Function(
                             name=tool_arg.function.name,
                             arguments=tool_arg.function.arguments,
@@ -1193,6 +1195,9 @@ class LLM(BaseLLM):
     ) -> Any:
         for tool_call in tool_calls:
             current_tool_accumulator = accumulated_tool_args[tool_call.index]
+
+            if tool_call.id and not current_tool_accumulator.id:
+                current_tool_accumulator.id = tool_call.id
 
             if tool_call.function.name:
                 current_tool_accumulator.function.name = tool_call.function.name
@@ -1683,6 +1688,11 @@ class LLM(BaseLLM):
                             if tool_calls:
                                 for tool_call in tool_calls:
                                     idx = tool_call.index
+                                    if (
+                                        tool_call.id
+                                        and not accumulated_tool_args[idx].id
+                                    ):
+                                        accumulated_tool_args[idx].id = tool_call.id
                                     if tool_call.function:
                                         if tool_call.function.name:
                                             accumulated_tool_args[
@@ -1728,6 +1738,7 @@ class LLM(BaseLLM):
                 tool_calls_list: list[ChatCompletionDeltaToolCall] = [
                     ChatCompletionDeltaToolCall(
                         index=idx,
+                        id=tool_arg.id,
                         function=Function(
                             name=tool_arg.function.name,
                             arguments=tool_arg.function.arguments,
@@ -1739,9 +1750,12 @@ class LLM(BaseLLM):
 
                 if tool_calls_list:
                     if available_functions:
+                        # Replay the rebuilt calls against a fresh accumulator —
+                        # passing the populated one would append the arguments a
+                        # second time and produce unparseable JSON.
                         result = self._handle_streaming_tool_calls(
                             tool_calls=tool_calls_list,
-                            accumulated_tool_args=accumulated_tool_args,
+                            accumulated_tool_args=defaultdict(AccumulatedToolArgs),
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
