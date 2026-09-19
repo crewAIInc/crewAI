@@ -1,7 +1,7 @@
 """Test Knowledge creation and querying functionality."""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
@@ -477,6 +477,61 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
 
     assert any("los angeles" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
+
+
+def test_csv_source_chunks_hold_file_text(tmpdir):
+    """The embedded chunk is the CSV text, not a repr of the content dict."""
+    csv_path = Path(tmpdir.join("data.csv"))
+    csv_path.write_text("Name,Age\nBrandon,30\nAlice,25\n", encoding="utf-8")
+
+    source = CSVKnowledgeSource(file_paths=[csv_path])
+    source.storage = MagicMock()
+    source.add()
+
+    assert source.chunks == ["Name Age\nBrandon 30\nAlice 25\n"]
+    source.storage.save.assert_called_once_with(source.chunks)
+
+
+def test_json_source_chunks_hold_file_text(tmpdir):
+    """`_json_to_text` output reaches the chunks instead of being repr'd."""
+    json_path = Path(tmpdir.join("data.json"))
+    json_path.write_text('{"name": "Brandon", "age": 30}', encoding="utf-8")
+
+    source = JSONKnowledgeSource(file_paths=[json_path])
+    source.storage = MagicMock()
+    source.add()
+
+    assert source.chunks == ["name: Brandon\nage: 30\n"]
+    source.storage.save.assert_called_once_with(source.chunks)
+
+
+def test_csv_source_chunks_each_file_separately(tmpdir):
+    """A multi-file source yields one chunk group per file."""
+    first = Path(tmpdir.join("first.csv"))
+    first.write_text("Name\nBrandon\n", encoding="utf-8")
+    second = Path(tmpdir.join("second.csv"))
+    second.write_text("City\nChicago\n", encoding="utf-8")
+
+    source = CSVKnowledgeSource(file_paths=[first, second])
+    source.storage = MagicMock()
+    source.add()
+
+    assert source.chunks == ["Name\nBrandon\n", "City\nChicago\n"]
+
+
+@pytest.mark.asyncio
+async def test_csv_source_aadd_chunks_hold_file_text(tmpdir):
+    """The async path embeds the same text as `add()`."""
+    csv_path = Path(tmpdir.join("data.csv"))
+    csv_path.write_text("Name,Age\nBrandon,30\n", encoding="utf-8")
+
+    source = CSVKnowledgeSource(file_paths=[csv_path])
+    source.storage = MagicMock()
+    source.storage.asave = AsyncMock()
+    await source.aadd()
+
+    assert source.chunks == ["Name Age\nBrandon 30\n"]
+    source.storage.asave.assert_called_once_with(source.chunks)
 
 
 def test_excel_knowledge_source(mock_vector_db, tmpdir):
