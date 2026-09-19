@@ -81,6 +81,16 @@ class LLMCallBlockedError(ValueError):
     """
 
 
+class LLMRateLimitError(RuntimeError):
+    """A provider rejected a call because of rate limiting or throttling.
+
+    Its own type so it can never be mistaken for a context-window error by
+    ``is_context_length_exceeded`` just because the provider's rate-limit
+    message happens to mention tokens (e.g. AWS Bedrock's "Too many tokens,
+    please wait before trying again").
+    """
+
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
