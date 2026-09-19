@@ -6,6 +6,7 @@ from typing import Any
 
 from crewai.mcp.content import content_blocks_to_text
 from crewai.tools import BaseTool
+from crewai.tools.tool_failure import ToolFailure, ToolFailureReason
 
 
 MCP_CONNECTION_TIMEOUT = 15
@@ -67,14 +68,15 @@ class MCPToolWrapper(BaseTool):
         """Get the server name."""
         return self._server_name
 
-    def _run(self, **kwargs: Any) -> str:
+    def _run(self, **kwargs: Any) -> str | ToolFailure:
         """Connect to MCP server and execute tool.
 
         Args:
             **kwargs: Arguments to pass to the MCP tool
 
         Returns:
-            Result from the MCP tool execution
+            Result from the MCP tool execution, or a :class:`ToolFailure` when
+            the server answered with ``isError: true``.
         """
         try:
             return asyncio.run(self._run_async(**kwargs))
@@ -83,15 +85,17 @@ class MCPToolWrapper(BaseTool):
         except Exception as e:
             return f"Error executing MCP tool {self.original_tool_name}: {e!s}"
 
-    async def _run_async(self, **kwargs: Any) -> str:
+    async def _run_async(self, **kwargs: Any) -> str | ToolFailure:
         """Async implementation of MCP tool execution with timeouts and retry logic."""
         return await self._retry_with_exponential_backoff(
             self._execute_tool_with_timeout, **kwargs
         )
 
     async def _retry_with_exponential_backoff(
-        self, operation_func: Callable[..., Coroutine[Any, Any, str]], **kwargs: Any
-    ) -> str:
+        self,
+        operation_func: Callable[..., Coroutine[Any, Any, str | ToolFailure]],
+        **kwargs: Any,
+    ) -> str | ToolFailure:
         """Retry operation with exponential backoff, avoiding try-except in loop for performance."""
         last_error = None
 
@@ -116,8 +120,10 @@ class MCPToolWrapper(BaseTool):
         )
 
     async def _execute_single_attempt(
-        self, operation_func: Callable[..., Coroutine[Any, Any, str]], **kwargs: Any
-    ) -> tuple[str | None, str, bool]:
+        self,
+        operation_func: Callable[..., Coroutine[Any, Any, str | ToolFailure]],
+        **kwargs: Any,
+    ) -> tuple[str | ToolFailure | None, str, bool]:
         """Execute single operation attempt and return (result, error_message, should_retry)."""
         try:
             result = await operation_func(**kwargs)
@@ -154,14 +160,19 @@ class MCPToolWrapper(BaseTool):
                 return None, f"Server response parsing error: {e!s}", True
             return None, f"MCP execution error: {e!s}", False
 
-    async def _execute_tool_with_timeout(self, **kwargs: Any) -> str:
+    async def _execute_tool_with_timeout(self, **kwargs: Any) -> str | ToolFailure:
         """Execute tool with timeout wrapper."""
         return await asyncio.wait_for(
             self._execute_tool(**kwargs), timeout=MCP_TOOL_EXECUTION_TIMEOUT
         )
 
-    async def _execute_tool(self, **kwargs: Any) -> str:
-        """Execute the actual MCP tool call."""
+    async def _execute_tool(self, **kwargs: Any) -> str | ToolFailure:
+        """Execute the actual MCP tool call.
+
+        Returns:
+            The tool's text result, or a :class:`ToolFailure` when the server
+            answered with ``isError: true``.
+        """
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
 
@@ -169,7 +180,7 @@ class MCPToolWrapper(BaseTool):
 
         try:
 
-            async def _do_mcp_call() -> str:
+            async def _do_mcp_call() -> str | ToolFailure:
                 async with streamablehttp_client(
                     server_url, terminate_on_close=True
                 ) as (read, write, _):
@@ -180,8 +191,21 @@ class MCPToolWrapper(BaseTool):
                         )
 
                         if result.content:
-                            return content_blocks_to_text(result.content)
-                        return str(result)
+                            content = content_blocks_to_text(result.content)
+                        else:
+                            content = str(result)
+
+                        if result.isError:
+                            return ToolFailure(
+                                message=content,
+                                reason=ToolFailureReason.MCP_ERROR,
+                                details={
+                                    "server": self._server_name,
+                                    "tool": self._original_tool_name,
+                                },
+                            )
+
+                        return content
 
             return await asyncio.wait_for(
                 _do_mcp_call(), timeout=MCP_TOOL_EXECUTION_TIMEOUT
