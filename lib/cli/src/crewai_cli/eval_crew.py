@@ -1,0 +1,218 @@
+"""`crewai eval`: evaluate the last traced run through CrewAI AMP.
+
+crewAI records a traced run in `.crewai/last_run.json` when the run's spans
+reach Wharf. This command reads that record (or takes `--run EXECUTION_ID`),
+asks AMP to evaluate the run, prints and opens the URL AMP answers with,
+waits for the verdict and prints it. With no traced run recorded it offers
+to turn tracing on for the project and run the crew now.
+
+Who may evaluate what is AMP's decision: an anonymous run once without an
+account, then it needs one; a run traced while logged in for that
+organization's members; a deployment execution for members who may see its
+traces. The command sends the saved `crewai login` when there is one.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import json
+import os
+from pathlib import Path
+import sys
+import time
+from typing import Any
+import webbrowser
+
+import click
+from dotenv import set_key
+import httpx
+from rich.console import Console
+
+from crewai_cli.authentication.token import get_auth_token
+from crewai_cli.plus_api import PlusAPI
+from crewai_cli.utils import get_or_create_project_id, is_dmn_mode_enabled
+
+
+console = Console()
+
+LAST_RUN_FILE = Path(".crewai") / "last_run.json"
+TRACING_ENV_VAR = "CREWAI_TRACING_ENABLED"
+POLL_SECONDS = 3.0
+FINISHED = {"done", "failed"}
+
+
+def eval_crew(run_id: str | None = None) -> None:
+    """Evaluate the last traced run of this project, or the run RUN_ID."""
+    get_or_create_project_id()
+    execution_id = run_id or last_run_id()
+    if execution_id is None:
+        execution_id = _run_now_or_explain()
+
+    client = PlusAPI(api_key=saved_login())
+    started = _start_evaluation(client, execution_id)
+    url = started.get("url")
+    console.print(f"Evaluating run [bold]{execution_id}[/bold]")
+    if url:
+        console.print(f"Follow it at [cyan underline]{url}[/cyan underline]")
+        _open(url)
+
+    finished = _wait(client, str(started["id"]), url)
+    _print_verdict(finished, url)
+    if finished.get("status") != "done":
+        raise SystemExit(1)
+
+
+def last_run_id(directory: Path | None = None) -> str | None:
+    """The execution id crewAI recorded for the project's last traced run."""
+    path = (directory or Path.cwd()) / LAST_RUN_FILE
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(loaded, dict):
+        return None
+    execution_id = loaded.get("execution_id")
+    return str(execution_id) if execution_id else None
+
+
+def saved_login() -> str | None:
+    """The `crewai login` token, or None: AMP then treats the caller as anonymous."""
+    try:
+        return get_auth_token()
+    except Exception:
+        return None
+
+
+def _run_now_or_explain() -> str:
+    """No traced run recorded here: offer to turn tracing on and run the crew now."""
+    steps = (
+        "No traced run is recorded in this project. Turn tracing on and run the crew, "
+        f"then come back:\n  1. add {TRACING_ENV_VAR}=true to .env\n  2. crewai run\n  3. crewai eval"
+    )
+    if is_dmn_mode_enabled() or not sys.stdin.isatty():
+        console.print(steps, style="yellow")
+        raise SystemExit(1)
+    if not click.confirm(
+        "No traced run is recorded in this project. Turn tracing on and run the crew now?",
+        default=True,
+    ):
+        console.print(steps, style="yellow")
+        raise SystemExit(0)
+
+    _enable_tracing()
+    from crewai_cli.run_crew import run_crew
+
+    run_crew()
+    execution_id = last_run_id()
+    if execution_id is None:
+        console.print(
+            "The run finished but no trace was recorded: the run may have failed, or sharing "
+            "the trace was declined. Run the crew again and accept when asked, then `crewai eval`.",
+            style="bold red",
+        )
+        raise SystemExit(1)
+    return execution_id
+
+
+def _enable_tracing() -> None:
+    """`CREWAI_TRACING_ENABLED=true` in the project's .env, and in this process for the run about to start."""
+    env_file = Path.cwd() / ".env"
+    env_file.touch(exist_ok=True)
+    set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
+    os.environ[TRACING_ENV_VAR] = "true"
+    console.print(
+        f"Tracing is on for this project ({TRACING_ENV_VAR}=true in .env).",
+        style="green",
+    )
+
+
+def _start_evaluation(client: PlusAPI, execution_id: str) -> dict[str, Any]:
+    response = client.create_evaluation(execution_id)
+    if response.status_code in (200, 202):
+        payload = _payload(response)
+        if payload and payload.get("id"):
+            return payload
+        _fail(f"AMP answered without an evaluation id ({response.status_code}).")
+    _refused(response, execution_id)
+    raise AssertionError("unreachable")
+
+
+def _wait(client: PlusAPI, evaluation_id: str, url: str | None) -> dict[str, Any]:
+    """Poll until the evaluation is done or failed; Ctrl-C leaves it running."""
+    console.print("Waiting for the verdict…", style="dim")
+    try:
+        while True:
+            response = client.get_evaluation(evaluation_id)
+            if response.status_code != 200:
+                _refused(response, evaluation_id)
+            payload = _payload(response) or {}
+            if payload.get("status") in FINISHED:
+                return payload
+            time.sleep(POLL_SECONDS)
+    except KeyboardInterrupt:
+        where = f" at {url}" if url else ""
+        console.print(f"\nStill running{where}.", style="yellow")
+        raise SystemExit(130) from None
+
+
+def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
+    if finished.get("status") != "done":
+        console.print(
+            f"Evaluation failed: {finished.get('error') or 'no reason given'}",
+            style="bold red",
+        )
+        return
+    verdict = finished.get("verdict") or {}
+    gate = str(verdict.get("gate") or "inconclusive").upper()
+    style = {"PASSED": "bold green", "FAILED": "bold red"}.get(gate, "bold yellow")
+    grades = verdict.get("grades") or {}
+    parts = [
+        f"{area} {grades[area]}/5"
+        if grades.get(area) is not None
+        else f"{area} not measured"
+        for area in ("goal", "quality", "process", "cost")
+    ]
+    console.print(f"Goal gate: [{style}]{gate}[/{style}] · " + " · ".join(parts))
+    if url:
+        console.print(f"Full report: {url}")
+
+
+def _open(url: str) -> None:
+    if is_dmn_mode_enabled():
+        return
+    with contextlib.suppress(Exception):  # no browser is not an error
+        webbrowser.open(url)
+
+
+def _payload(response: httpx.Response) -> dict[str, Any] | None:
+    try:
+        loaded = response.json()
+    except ValueError:
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _refused(response: httpx.Response, subject: str) -> None:
+    """AMP's own words when it sent them, then exit 1."""
+    payload = _payload(response) or {}
+    message = str(payload.get("message") or "").strip()
+    error = str(payload.get("error") or "")
+    if response.status_code in (401, 403):
+        if error == "account_required" and message:
+            _fail(message)
+        _fail(
+            f"{message or 'AMP refused the credential'}. Log in with `crewai login` and try again."
+        )
+    if response.status_code == 404:
+        _fail(message or f"AMP holds no run {subject}.")
+    if response.status_code == 429:
+        retry = response.headers.get("Retry-After")
+        _fail(
+            f"{message or 'AMP is rate limiting this request'}{f' — retry after {retry}s' if retry else ''}."
+        )
+    _fail(f"AMP answered {response.status_code}{': ' + message if message else ''}.")
+
+
+def _fail(message: str) -> None:
+    console.print(message, style="bold red")
+    raise SystemExit(1)

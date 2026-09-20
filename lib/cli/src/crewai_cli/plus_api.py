@@ -18,8 +18,21 @@ class PlusAPI(_CorePlusAPI):
 
     The ZIP deployment methods live here as well as in newer crewai-core
     versions so editable CLI installs still work when an older crewai-core is
-    present in the runtime environment.
+    present in the runtime environment. The evaluation methods live here
+    because only the CLI calls them.
     """
+
+    EVALUATIONS_RESOURCE = f"{_CorePlusAPI.TRACING_RESOURCE}/evaluations"
+
+    def create_evaluation(self, execution_id: str) -> httpx.Response:
+        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval)."""
+        return self._make_request(
+            "POST", self.EVALUATIONS_RESOURCE, json={"execution_id": execution_id}
+        )
+
+    def get_evaluation(self, evaluation_id: str) -> httpx.Response:
+        """The evaluation's status and, once done, its verdict."""
+        return self._make_request("GET", f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}")
 
     def _make_multipart_request(
         self,
