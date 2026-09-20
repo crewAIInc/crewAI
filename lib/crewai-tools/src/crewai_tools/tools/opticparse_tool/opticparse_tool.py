@@ -115,7 +115,7 @@ class OpticParseTool(BaseTool):
                 timeout=self.timeout,
                 allow_redirects=False,
             )
-            if resp.status_code in (301, 302, 307, 308):
+            if 300 <= resp.status_code < 400:
                 return "Error: Gateway redirected. Aborting to protect credentials."
             resp.raise_for_status()
             data = resp.json()
