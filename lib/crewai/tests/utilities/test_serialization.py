@@ -105,6 +105,10 @@ def test_enum_dictionary_keys_use_declared_values():
         "ready": "ok",
         "1": "urgent",
     }
+    assert to_serializable({Schedule.START: "monday", Options.DEFAULT: "both"}) == {
+        "2024-01-01": "monday",
+        '["fast", "safe"]': "both",
+    }
 
 
 @pytest.mark.parametrize(

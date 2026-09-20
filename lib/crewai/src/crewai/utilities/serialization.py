@@ -132,7 +132,10 @@ def to_serializable(
 
 def _to_serializable_key(key: Any) -> str:
     if isinstance(key, Enum):
-        return _to_serializable_key(key.value)
+        value = to_serializable(key.value, max_depth=0)
+        if isinstance(value, (str, int, float, bool)):
+            return str(value)
+        return json.dumps(value)
     if isinstance(key, (str, int)):
         return str(key)
     return f"key_{id(key)}_{key!r}"
