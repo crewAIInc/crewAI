@@ -1472,3 +1472,80 @@ async def test_memory_arecall_many(tmp_path: Path, mock_embedder: MagicMock) -> 
     assert len(matches) >= 1
     assert "Async note" in matches[0].record.content
 
+
+def test_flow_recall_fallback_deduplication_and_limit() -> None:
+    """Flow.recall fallback for legacy memory backends deduplicates, retains max score, sorts, and limits."""
+    from crewai.flow.flow import Flow
+
+    rec_a = MemoryRecord(id="rec-a", content="A", scope="/s")
+    rec_b = MemoryRecord(id="rec-b", content="B", scope="/s")
+    rec_c = MemoryRecord(id="rec-c", content="C", scope="/s")
+
+    # Legacy memory mock without recall_many
+    class LegacyMemory:
+        def recall(self, query: str, **kwargs: Any) -> list[MemoryMatch]:
+            if query == "q1":
+                return [
+                    MemoryMatch(record=rec_a, score=0.6, match_reasons=["semantic"]),
+                    MemoryMatch(record=rec_b, score=0.9, match_reasons=["semantic"]),
+                ]
+            else:
+                return [
+                    MemoryMatch(record=rec_a, score=0.8, match_reasons=["semantic"]),
+                    MemoryMatch(record=rec_c, score=0.7, match_reasons=["semantic"]),
+                ]
+
+    f = Flow()
+    f.memory = LegacyMemory()
+
+    results = f.recall(["q1", "q2"], limit=2)
+    # Total unique records: rec-b (0.9), rec-a (0.8), rec-c (0.7).
+    # With limit=2, should return rec-b and rec-a in descending order
+    assert len(results) == 2
+    assert results[0].record.id == "rec-b"
+    assert results[0].score == 0.9
+    assert results[1].record.id == "rec-a"
+    assert results[1].score == 0.8
+
+
+def test_memory_slice_recall_and_recall_many_with_subscope(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """MemorySlice applies the provided scope parameter to each slice root."""
+    from crewai.memory.memory_scope import MemorySlice
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember(
+        "Alpha child fact",
+        scope="/projects/alpha/child",
+        categories=["p"],
+        importance=0.8,
+    )
+    mem.remember(
+        "Alpha root fact", scope="/projects/alpha", categories=["p"], importance=0.8
+    )
+    mem.remember(
+        "Beta child fact",
+        scope="/projects/beta/child",
+        categories=["p"],
+        importance=0.8,
+    )
+
+    slice_view = MemorySlice(
+        memory=mem, scopes=["/projects/alpha", "/projects/beta"], read_only=True
+    )
+
+    # Scoped recall with scope="/child" should only match /child subscopes
+    matches = slice_view.recall("fact", scope="/child", depth="shallow")
+    assert len(matches) >= 2
+    assert all(m.record.scope.endswith("/child") for m in matches)
+
+    # Scoped recall_many with scope="/child"
+    matches_many = slice_view.recall_many(
+        ["child", "fact"], scope="/child", depth="shallow"
+    )
+    assert len(matches_many) >= 2
+    assert all(m.record.scope.endswith("/child") for m in matches_many)
+
+

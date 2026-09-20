@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import suppress
 import contextvars
@@ -26,6 +27,7 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
 from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.types import (
+    _RECALL_OVERSAMPLE_FACTOR,
     MemoryConfig,
     MemoryMatch,
     MemoryRecord,
@@ -896,7 +898,7 @@ class Memory(BaseModel):
                             emb,
                             scope_prefix=effective_scope,
                             categories=categories,
-                            limit=limit,
+                            limit=limit * _RECALL_OVERSAMPLE_FACTOR,
                             min_score=0.0,
                         )
 
@@ -1289,8 +1291,9 @@ class Memory(BaseModel):
         source: str | None = None,
         include_private: bool = False,
     ) -> list[MemoryMatch]:
-        """Async recall: delegates to sync for now."""
-        return self.recall(
+        """Async recall: runs recall in a worker thread."""
+        return await asyncio.to_thread(
+            self.recall,
             query,
             scope=scope,
             categories=categories,
@@ -1310,8 +1313,9 @@ class Memory(BaseModel):
         source: str | None = None,
         include_private: bool = False,
     ) -> list[MemoryMatch]:
-        """Async batch recall: delegates to sync for now."""
-        return self.recall_many(
+        """Async batch recall: runs recall_many in a worker thread."""
+        return await asyncio.to_thread(
+            self.recall_many,
             queries,
             scope=scope,
             categories=categories,

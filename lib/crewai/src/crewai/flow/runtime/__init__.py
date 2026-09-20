@@ -1016,10 +1016,27 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if isinstance(query, list):
             if hasattr(self.memory, "recall_many"):
                 return self.memory.recall_many(query, **kwargs)
-            all_matches = []
+            best_matches: dict[str, Any] = {}
             for q in query:
-                all_matches.extend(self.memory.recall(q, **kwargs))
-            return all_matches
+                matches = self.memory.recall(q, **kwargs)
+                for m in matches:
+                    rec_id = getattr(getattr(m, "record", None), "id", None) or str(
+                        id(m)
+                    )
+                    score = getattr(m, "score", 0.0)
+                    if rec_id not in best_matches or score > getattr(
+                        best_matches[rec_id], "score", 0.0
+                    ):
+                        best_matches[rec_id] = m
+            sorted_matches = sorted(
+                best_matches.values(),
+                key=lambda m: getattr(m, "score", 0.0),
+                reverse=True,
+            )
+            limit = kwargs.get("limit")
+            if limit is not None and limit > 0:
+                sorted_matches = sorted_matches[:limit]
+            return sorted_matches
         return self.memory.recall(query, **kwargs)
 
     def remember(self, content: str | list[str], **kwargs: Any) -> Any:
