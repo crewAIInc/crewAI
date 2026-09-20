@@ -17025,6 +17025,2519 @@
       }
     },
     {
+      "description": "Current Buy Box offer and its seller for an Amazon ASIN. Costs 5 points per offer.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Amazon Buy Box Offer",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Amazon Buy Box offer.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeAmazonOfferTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeAmazonOfferTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for tools that take one ASIN.",
+        "properties": {
+          "asin": {
+            "description": "Amazon ASIN, e.g. 'B004YAVF8I'.",
+            "title": "Asin",
+            "type": "string"
+          },
+          "domain": {
+            "default": "amazon.com",
+            "description": "Amazon marketplace domain, e.g. 'amazon.com', 'amazon.de', 'amazon.co.uk'.",
+            "title": "Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asin"
+        ],
+        "title": "NeuralVergeAsinSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search Amazon product listings for a keyword on any of 19 marketplaces. Costs 1 point per product.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Amazon Product Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Amazon product search.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeAmazonProductSearchTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeAmazonProductSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeAmazonProductSearchTool.",
+        "properties": {
+          "domain": {
+            "default": "amazon.com",
+            "description": "Amazon marketplace domain, e.g. 'amazon.com', 'amazon.de', 'amazon.co.uk'.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "max_items": {
+            "default": 20,
+            "description": "Maximum products (up to 250).",
+            "title": "Max Items",
+            "type": "integer"
+          },
+          "query": {
+            "description": "Search keyword, e.g. 'wireless mouse'.",
+            "title": "Query",
+            "type": "string"
+          },
+          "start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result page to start from.",
+            "title": "Start Page"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "NeuralVergeAmazonSearchSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Amazon product detail by ASIN: title, brand, price, rating, images, features, specs and variations. Costs 5 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Amazon Product",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Amazon product detail.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeAmazonProductTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeAmazonProductTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for tools that take one ASIN.",
+        "properties": {
+          "asin": {
+            "description": "Amazon ASIN, e.g. 'B004YAVF8I'.",
+            "title": "Asin",
+            "type": "string"
+          },
+          "domain": {
+            "default": "amazon.com",
+            "description": "Amazon marketplace domain, e.g. 'amazon.com', 'amazon.de', 'amazon.co.uk'.",
+            "title": "Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asin"
+        ],
+        "title": "NeuralVergeAsinSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Storefront product listings of an Amazon seller ID. Costs 1 point per product.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Amazon Seller Products",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Amazon seller storefront listings.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeAmazonSellerProductsTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeAmazonSellerProductsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeAmazonSellerProductsTool.",
+        "properties": {
+          "domain": {
+            "default": "amazon.com",
+            "description": "Amazon marketplace domain, e.g. 'amazon.com', 'amazon.de', 'amazon.co.uk'.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "max_items": {
+            "default": 20,
+            "description": "Maximum products to return.",
+            "title": "Max Items",
+            "type": "integer"
+          },
+          "seller": {
+            "description": "Amazon seller ID.",
+            "title": "Seller",
+            "type": "string"
+          },
+          "start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result page to start from.",
+            "title": "Start Page"
+          }
+        },
+        "required": [
+          "seller"
+        ],
+        "title": "NeuralVergeAmazonSellerProductsSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Amazon seller profile: name, rating, 365-day rating count, positive feedback share and business details. Costs 5 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Amazon Seller",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Amazon seller profile.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeAmazonSellerTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeAmazonSellerTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeAmazonSellerTool.",
+        "properties": {
+          "domain": {
+            "default": "amazon.com",
+            "description": "Amazon marketplace domain, e.g. 'amazon.com', 'amazon.de', 'amazon.co.uk'.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "seller": {
+            "description": "Amazon seller ID, e.g. 'A2L77EE7U53NWQ'.",
+            "title": "Seller",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seller"
+        ],
+        "title": "NeuralVergeAmazonSellerSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Company profile from a Crunchbase organization URL: website, HQ, founding year, headcount, industries, funding rounds and investors. Costs 15 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Company Funding",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Company funding and firmographics.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeCompanyFundingTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeCompanyFundingTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeCompanyFundingTool.",
+        "properties": {
+          "crunchbase_url": {
+            "description": "Crunchbase organization URL, e.g. 'https://www.crunchbase.com/organization/example'.",
+            "title": "Crunchbase Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "crunchbase_url"
+        ],
+        "title": "NeuralVergeCompanyFundingSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Find and verify a professional work email from a person's first name, last name and company domain. Costs 10 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Find Email by Name",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Work email finder.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeEmailFinderTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeEmailFinderTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeEmailFinderTool.",
+        "properties": {
+          "domain": {
+            "description": "Company domain, e.g. 'example.com'.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "first_name": {
+            "description": "Person's first name.",
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "description": "Person's last name.",
+            "title": "Last Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name",
+          "domain"
+        ],
+        "title": "NeuralVergeEmailFinderSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Verify an email address: valid / risky / invalid, catch-all flag, mail provider and confidence. Costs 1 point.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Validate Email",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Email deliverability check.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeEmailValidationTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeEmailValidationTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for tools that take one email address.",
+        "properties": {
+          "email": {
+            "description": "Email address, e.g. 'jane.doe@example.com'.",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "NeuralVergeEmailSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Load any web page and extract structured JSON from it following the instructions (optionally a JSON Schema). Costs about 5 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Extract from URL",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "AI extraction from any URL.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeExtractTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeExtractTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeExtractTool.",
+        "properties": {
+          "country_code": {
+            "default": "us",
+            "description": "Two-letter country for the fetch.",
+            "title": "Country Code",
+            "type": "string"
+          },
+          "extract_schema_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON Schema, serialized as a string, that pins the output shape.",
+            "title": "Extract Schema Json"
+          },
+          "instructions": {
+            "description": "What to extract, e.g. 'Collect company name and contact details.'",
+            "title": "Instructions",
+            "type": "string"
+          },
+          "url": {
+            "description": "Page URL to load.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "instructions"
+        ],
+        "title": "NeuralVergeExtractSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List employees of one or more companies (LinkedIn company URLs), with title, location and seniority filters. Costs 30 points per run plus 5 per profile.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge LinkedIn Company Employees",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Employees of LinkedIn companies.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeLinkedInCompanyEmployeesTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeLinkedInCompanyEmployeesTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeLinkedInCompanyEmployeesTool.",
+        "properties": {
+          "companies": {
+            "description": "LinkedIn company URLs, e.g. ['https://www.linkedin.com/company/example/'].",
+            "items": {
+              "type": "string"
+            },
+            "title": "Companies",
+            "type": "array"
+          },
+          "current_job_title": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Current job titles.",
+            "title": "Current Job Title"
+          },
+          "locations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Locations.",
+            "title": "Locations"
+          },
+          "max_results": {
+            "default": 10,
+            "description": "Maximum profiles to return.",
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "search_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Keyword filter, e.g. 'recruiter'.",
+            "title": "Search Query"
+          },
+          "seniority_level": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Seniority levels.",
+            "title": "Seniority Level"
+          },
+          "start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result page to start from.",
+            "title": "Start Page"
+          }
+        },
+        "required": [
+          "companies"
+        ],
+        "title": "NeuralVergeLinkedInEmployeesSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search LinkedIn companies by keyword, size, industry and location. Costs 5 points per company.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge LinkedIn Company Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "LinkedIn company search.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeLinkedInCompanySearchTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeLinkedInCompanySearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeLinkedInCompanySearchTool.",
+        "properties": {
+          "company_size": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Size buckets, e.g. ['51-200'].",
+            "title": "Company Size"
+          },
+          "industry_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "LinkedIn industry IDs.",
+            "title": "Industry Ids"
+          },
+          "locations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Locations, e.g. ['Amsterdam'].",
+            "title": "Locations"
+          },
+          "max_items": {
+            "default": 10,
+            "description": "Maximum companies to return.",
+            "title": "Max Items",
+            "type": "integer"
+          },
+          "search_query": {
+            "description": "Keyword, e.g. 'AI companies'.",
+            "title": "Search Query",
+            "type": "string"
+          },
+          "start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result page to start from.",
+            "title": "Start Page"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "NeuralVergeLinkedInCompanySearchSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search LinkedIn people by keyword, company, job title, seniority, function and location. Billed in blocks of 25 results (100 points per block).",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge LinkedIn People Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "LinkedIn people search.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeLinkedInPeopleSearchTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeLinkedInPeopleSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeLinkedInPeopleSearchTool.",
+        "properties": {
+          "current_company": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Current employers.",
+            "title": "Current Company"
+          },
+          "current_job_title": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Current job titles.",
+            "title": "Current Job Title"
+          },
+          "function": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Job functions.",
+            "title": "Function"
+          },
+          "locations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Locations.",
+            "title": "Locations"
+          },
+          "max_results": {
+            "default": 25,
+            "description": "Maximum profiles to return.",
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "past_company": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Past employers.",
+            "title": "Past Company"
+          },
+          "search_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Free-text keyword.",
+            "title": "Search Query"
+          },
+          "seniority_level": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Seniority levels.",
+            "title": "Seniority Level"
+          },
+          "start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Result page to start from.",
+            "title": "Start Page"
+          }
+        },
+        "title": "NeuralVergeLinkedInPeopleSearchSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get a LinkedIn profile's details plus a work email when available, from the profile URL. Costs 10 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge LinkedIn Profile with Email",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "LinkedIn profile plus work email.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeLinkedInProfileEmailTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeLinkedInProfileEmailTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeLinkedInProfileEmailTool.",
+        "properties": {
+          "include_email": {
+            "default": true,
+            "description": "Also look up a work email.",
+            "title": "Include Email",
+            "type": "boolean"
+          },
+          "profile_url": {
+            "description": "Full LinkedIn profile URL, e.g. 'https://www.linkedin.com/in/janedoe/'.",
+            "title": "Profile Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_url"
+        ],
+        "title": "NeuralVergeLinkedInProfileSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Resolve a full name plus company name or domain to a LinkedIn profile URL, headline and company. Costs 10 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Find LinkedIn Profile",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Find a LinkedIn profile by name and company.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeLinkedInProfileFinderTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeLinkedInProfileFinderTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeLinkedInProfileFinderTool.",
+        "properties": {
+          "company_or_domain": {
+            "description": "Company name or domain, e.g. 'example.com'.",
+            "title": "Company Or Domain",
+            "type": "string"
+          },
+          "full_name": {
+            "description": "Person's full name, e.g. 'Jane Doe'.",
+            "title": "Full Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "full_name",
+          "company_or_domain"
+        ],
+        "title": "NeuralVergeLinkedInFinderSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Find the person behind an email address: full name, phones, locations, company, position and social profiles including LinkedIn. Costs 10 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Find Person by Email",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Reverse email lookup.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergePersonByEmailTool",
+        "type": "object"
+      },
+      "name": "NeuralVergePersonByEmailTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for tools that take one email address.",
+        "properties": {
+          "email": {
+            "description": "Email address, e.g. 'jane.doe@example.com'.",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "NeuralVergeEmailSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Reverse phone lookup (global): name, emails, locations, company and social profiles for a phone number. Costs 10 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Find Person by Phone",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Global reverse phone lookup.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergePhoneLookupTool",
+        "type": "object"
+      },
+      "name": "NeuralVergePhoneLookupTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for phone lookup tools.",
+        "properties": {
+          "phone": {
+            "description": "Phone number with country code, e.g. '+15555550100'.",
+            "title": "Phone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "title": "NeuralVergePhoneSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Run a multi-step AI web research task and return the report (Markdown plus structured JSON). Waits until the task completes; can take several minutes. Costs 20-400 points depending on depth.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Research",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Multi-step AI research with polling.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "max_wait": {
+            "default": 600,
+            "description": "Maximum seconds to wait for the task to complete or fail.",
+            "title": "Max Wait",
+            "type": "integer"
+          },
+          "poll_interval": {
+            "default": 3.0,
+            "description": "Seconds between status polls.",
+            "title": "Poll Interval",
+            "type": "number"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeResearchTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeResearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeResearchTool.",
+        "properties": {
+          "country_code": {
+            "default": "us",
+            "description": "Two-letter country for search.",
+            "title": "Country Code",
+            "type": "string"
+          },
+          "deepsearch_model": {
+            "default": "base",
+            "description": "Depth tier for the research step.",
+            "title": "Deepsearch Model",
+            "type": "string"
+          },
+          "extract_schema_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON Schema, serialized as a string, for the structured result.",
+            "title": "Extract Schema Json"
+          },
+          "finalizer_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional model that writes the final report.",
+            "title": "Finalizer Model"
+          },
+          "instructions": {
+            "description": "The research task or question.",
+            "title": "Instructions",
+            "type": "string"
+          },
+          "search_enabled": {
+            "default": true,
+            "description": "Allow web search.",
+            "title": "Search Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "instructions"
+        ],
+        "title": "NeuralVergeResearchSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "US-only reverse phone lookup with carrier, line type and activity/validity signals. Costs 100 points; use the global phone tool unless carrier data is needed.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Find Person by US Phone",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "US reverse phone lookup with carrier data.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeUSPhoneLookupTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeUSPhoneLookupTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for phone lookup tools.",
+        "properties": {
+          "phone": {
+            "description": "Phone number with country code, e.g. '+15555550100'.",
+            "title": "Phone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "title": "NeuralVergePhoneSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web. Returns ranked results with title, url and snippet. Costs 5 points.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for NeuralVerge (app.neuralverge.ai, Settings, API)",
+          "name": "NEURALVERGE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "NeuralVerge Web Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Web search.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NeuralVerge API key. Defaults to the NEURALVERGE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.neuralverge.ai",
+            "description": "NeuralVerge API base URL.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 120,
+            "description": "HTTP timeout in seconds for one request.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "NeuralVergeWebSearchTool",
+        "type": "object"
+      },
+      "name": "NeuralVergeWebSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for NeuralVergeWebSearchTool.",
+        "properties": {
+          "country": {
+            "default": "us",
+            "description": "Two-letter country code.",
+            "title": "Country",
+            "type": "string"
+          },
+          "language": {
+            "default": "en",
+            "description": "Two-letter language code.",
+            "title": "Language",
+            "type": "string"
+          },
+          "max_results": {
+            "default": 10,
+            "description": "Number of results.",
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "query": {
+            "description": "Search query.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "NeuralVergeWebSearchSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool uses an LLM's API to extract text from an image file.",
       "env_vars": [],
       "humanized_name": "Optical Character Recognition Tool",
