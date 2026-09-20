@@ -25,7 +25,7 @@ def test_a_run_is_recorded_atomically_and_read_back(project):
         amp_base_url="https://app.crewai.com",
     )
     assert path == project / ".crewai" / "last_run.json"
-    assert not path.with_name("last_run.json.tmp").exists()
+    assert [child.name for child in path.parent.iterdir()] == ["last_run.json"]  # no temporary file left behind
     written = json.loads(path.read_text(encoding="utf-8"))
     assert written["execution_id"] == "6f31fe1a-20bd-4bfe-a011-25d6b9341f62"
     assert written["tier"] == "ephemeral"
@@ -63,3 +63,22 @@ def test_a_missing_or_broken_record_reads_as_none(project):
 def test_a_write_failure_never_raises(project, monkeypatch):
     (project / ".crewai").write_text("a file where the directory should be", encoding="utf-8")
     assert last_run.record_last_run(execution_id="x", tier=None, started_at_ns=None, finished_at_ns=None, amp_base_url=None) is None
+
+
+def test_each_writer_uses_a_temporary_file_of_its_own(project, monkeypatch):
+    """Two crews finishing together in one project: neither may replace the other's temporary file."""
+    replaced: list[str] = []
+    real_replace = last_run.os.replace
+    monkeypatch.setattr(last_run.os, "replace", lambda src, dst: replaced.append(str(src)) or real_replace(src, dst))
+    for execution_id in ("first", "second"):
+        last_run.record_last_run(execution_id=execution_id, tier=None, started_at_ns=None, finished_at_ns=None, amp_base_url=None)
+    assert len(replaced) == 2 and replaced[0] != replaced[1]
+    names = [source.rsplit("/", 1)[-1] for source in replaced]
+    assert all(name.startswith(".last_run.json.") and name.endswith(".tmp") for name in names)
+    assert [child.name for child in (project / ".crewai").iterdir()] == ["last_run.json"]
+
+
+def test_a_failed_write_leaves_no_temporary_file(project, monkeypatch):
+    monkeypatch.setattr(last_run.os, "replace", lambda src, dst: (_ for _ in ()).throw(OSError("disk full")))
+    assert last_run.record_last_run(execution_id="x", tier=None, started_at_ns=None, finished_at_ns=None, amp_base_url=None) is None
+    assert list((project / ".crewai").iterdir()) == []

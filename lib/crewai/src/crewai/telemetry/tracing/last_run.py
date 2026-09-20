@@ -12,11 +12,13 @@ before crewAI would start its own tracing, so this code never runs there.
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime, timezone
 import json
 import logging
 import os
 from pathlib import Path
+import tempfile
 from typing import Any
 
 
@@ -72,9 +74,19 @@ def record_last_run(
     try:
         path = last_run_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_name(path.name + ".tmp")
-        temporary.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, path)
+        # A temporary file of its own per writer: two crews finishing together in one
+        # project must not write through the same name, or one record is lost.
+        descriptor, temporary = tempfile.mkstemp(
+            prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+        )
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, indent=2) + "\n")
+            os.replace(temporary, path)
+        except OSError:
+            with contextlib.suppress(OSError):
+                os.unlink(temporary)
+            raise
     except OSError as error:  # a vanished cwd fails last_run_path() too; the run is never failed by this
         logger.debug(
             "Could not record the last run in %s: %s",

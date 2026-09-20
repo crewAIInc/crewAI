@@ -154,7 +154,7 @@ Traces are uploaded only after a successful authenticated export or an explicitl
 For traces associated with your account, open the [Traces tab in the CrewAI AMP dashboard](https://app.crewai.com/crewai_plus/trace_batches) to view agent interactions, tool usage, and LLM calls.
 ![CrewAI Tracing Interface](/images/view-traces.png)
 
-After a run whose spans reached CrewAI AMP, crewAI writes `.crewai/last_run.json` in the project directory: the run's execution id, whether it was traced anonymously or under your account, when it started and finished, and the AMP it was sent to. `crewai eval` reads it to evaluate the last run without you copying an id. The scaffold's `.gitignore` covers `.crewai/`; only a run exported whole is recorded, and nothing is written under `CREWAI_TESTING=true`.
+After a run whose spans reached CrewAI AMP, crewAI writes `.crewai/last_run.json` in the project directory: the run's execution id, whether it was traced anonymously or under your account, when it started and finished, and the AMP it was sent to. `crewai eval` reads it to evaluate the last run without you copying an id. The scaffold's `.gitignore` covers `.crewai/`; only a run exported whole is recorded; nothing is written under `CREWAI_TESTING=true`, and nothing inside a deployment, where the platform owns the trace.
 
 ### Alternative: Environment Variable Configuration
 
