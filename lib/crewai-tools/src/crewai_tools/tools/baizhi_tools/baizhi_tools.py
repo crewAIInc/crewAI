@@ -11,9 +11,6 @@ from typing import Any, ClassVar, Literal
 import anyio
 from crewai.tools import BaseTool, EnvVar
 import httpx
-from mcp import ClientSession
-from mcp.client.streamable_http import streamable_http_client
-from mcp.types import TextContent
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
@@ -49,7 +46,9 @@ for _logger_name in ("mcp.client.streamable_http", "client"):
 
 
 class _Input(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(
+        extra="forbid", str_strip_whitespace=True, hide_input_in_errors=True
+    )
 
 
 class BaizhiSearchFilter(_Input):
@@ -121,9 +120,9 @@ class BaizhiScrapeInput(_PageInput):
     accept_language: str | None = Field(
         default=None, description="Preferred page language, for example en-US."
     )
-    download: bool = Field(
+    download: Literal[False] = Field(
         default=False,
-        description="Create a ZIP download only when explicitly requested.",
+        description="Downloads are disabled for this research tool.",
     )
 
 
@@ -141,9 +140,9 @@ class BaizhiExtractInput(_PageInput):
     accept_language: str | None = Field(
         default=None, description="Preferred page language."
     )
-    download: bool = Field(
+    download: Literal[False] = Field(
         default=False,
-        description="Create a ZIP download only when explicitly requested.",
+        description="Downloads are disabled for this research tool.",
     )
 
     @model_validator(mode="after")
@@ -217,6 +216,14 @@ class _BaizhiTool(BaseTool):
             raise ValueError(
                 "Set BAIZHI_API_KEY or provide api_key when constructing the tool."
             )
+        try:
+            from mcp import ClientSession
+            from mcp.client.streamable_http import streamable_http_client
+            from mcp.types import TextContent
+        except ImportError:
+            raise ImportError(
+                "Baizhi Cloud tools require MCP support. Install it with: uv add 'crewai-tools[mcp]'"
+            ) from None
         log_context = _ACTIVE_KEY.set(self.api_key.get_secret_value())
         try:
             with anyio.fail_after(self.timeout):
