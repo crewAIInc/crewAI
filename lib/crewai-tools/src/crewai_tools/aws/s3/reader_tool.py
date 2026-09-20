@@ -38,7 +38,11 @@ class S3ReaderTool(BaseTool):
             )
 
             response = s3.get_object(Bucket=bucket_name, Key=object_key)
-            result: str = response["Body"].read().decode("utf-8")
+            body = response["Body"]
+            try:
+                result: str = body.read().decode("utf-8")
+            finally:
+                body.close()
             return result
 
         except ClientError as e:
