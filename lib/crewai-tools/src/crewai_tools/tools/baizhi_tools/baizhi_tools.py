@@ -30,6 +30,7 @@ class _SDKLogFilter(logging.Filter):
     """Sanitize SDK diagnostics only in the current Baizhi call context."""
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Redact the active key and raw tracebacks while retaining SDK diagnostics."""
         key = _ACTIVE_KEY.get()
         if key:
             record.msg = record.getMessage().replace(key, "[REDACTED]")
@@ -64,6 +65,7 @@ class BaizhiSearchFilter(_Input):
     @field_validator("domains", "exclude_domains")
     @classmethod
     def validate_domains(cls, values: list[str] | None) -> list[str] | None:
+        """Accept bare domains and IP addresses without URL paths or credentials."""
         for value in values or []:
             try:
                 ipaddress.ip_address(value)
@@ -92,6 +94,7 @@ class _PageInput(_Input):
     @field_validator("url")
     @classmethod
     def reject_url_credentials(cls, value: AnyHttpUrl) -> AnyHttpUrl:
+        """Reject page URLs containing a username or password before dispatch."""
         if value.username is not None or value.password is not None:
             raise ValueError("Do not send URLs with embedded credentials.")
         return value
@@ -147,6 +150,7 @@ class BaizhiExtractInput(_PageInput):
 
     @model_validator(mode="after")
     def require_extraction_target(self) -> Self:
+        """Require at least one output field or a nonempty extraction instruction."""
         if not self.fields and not self.instruction:
             raise ValueError("Provide fields or instruction.")
         return self
@@ -186,6 +190,7 @@ class _BaizhiTool(BaseTool):
     @field_validator("api_key")
     @classmethod
     def validate_api_key(cls, value: SecretStr | None) -> SecretStr | None:
+        """Reject blank or whitespace-containing keys without exposing their value."""
         if value is not None and (
             not value.get_secret_value().strip()
             or any(c.isspace() for c in value.get_secret_value())
@@ -196,6 +201,7 @@ class _BaizhiTool(BaseTool):
         return value
 
     def _redact(self, value: Any) -> Any:
+        """Replace literal key echoes in result text, lists, and dictionary entries."""
         key = self.api_key.get_secret_value() if self.api_key else ""
         if isinstance(value, str):
             return value.replace(key, "[REDACTED]") if key else value

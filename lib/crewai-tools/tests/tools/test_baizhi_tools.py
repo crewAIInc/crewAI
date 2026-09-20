@@ -32,6 +32,7 @@ CASES = [
 
 
 def dispatch_tool(tool, arguments, dispatch):
+    """Invoke one tool through the requested native or structured CrewAI path."""
     if dispatch == "run":
         return tool.run(**arguments)
     if dispatch == "arun":
@@ -60,6 +61,7 @@ def server(monkeypatch):
     original = httpx.AsyncClient
 
     async def handler(request):
+        """Emulate MCP sessions and record calls without contacting the service."""
         state["requests"].append(str(request.url))
         assert str(request.url) == "https://agent-toolkit.app.baizhi.cloud/mcp"
         assert request.headers["authorization"] == f"Bearer {KEY}"
@@ -114,6 +116,7 @@ def server(monkeypatch):
         )
 
     def client(**kwargs):
+        """Attach the offline transport and enforce redirect and proxy restrictions."""
         assert kwargs["follow_redirects"] is False
         assert kwargs["trust_env"] is False
         return original(transport=httpx.MockTransport(handler), **kwargs)
@@ -129,6 +132,7 @@ def server(monkeypatch):
 @pytest.mark.parametrize("tool_class,arguments,remote_name", CASES)
 @pytest.mark.parametrize("dispatch", ["run", "arun", "invoke", "ainvoke"])
 def test_native_dispatch(server, tool_class, arguments, remote_name, dispatch):
+    """Each host path makes one correctly typed call and closes its MCP session."""
     tool = tool_class(api_key=KEY)
     output = dispatch_tool(tool, arguments, dispatch)
     assert json.loads(output) == {"items": ["result"]}
@@ -171,12 +175,14 @@ def test_native_dispatch(server, tool_class, arguments, remote_name, dispatch):
     ],
 )
 def test_content_fallback(server, result, expected):
+    """Structured content, including an empty object, takes precedence over text."""
     server["result"] = result
     assert BaizhiSearchTool(api_key=KEY).run(query="test") == expected
 
 
 @pytest.mark.parametrize("failure", ["tool", "http"])
 def test_errors_are_sanitized_without_retry(server, failure, caplog):
+    """Provider failures hide key echoes and never trigger another tool call."""
     if failure == "tool":
         server["result"] = {"isError": True, "content": [{"type": "text", "text": KEY}]}
     else:
@@ -191,6 +197,7 @@ def test_errors_are_sanitized_without_retry(server, failure, caplog):
 def test_missing_key_is_local_and_environment_key_is_not_serialized(
     server, monkeypatch
 ):
+    """Missing credentials fail locally; environment keys stay out of tool exports."""
     with pytest.raises(ValueError, match="BAIZHI_API_KEY"):
         BaizhiSearchTool().run(query="test")
     assert not server["calls"]
@@ -216,12 +223,14 @@ def test_missing_key_is_local_and_environment_key_is_not_serialized(
     ],
 )
 def test_invalid_inputs_do_not_call_service(server, tool_class, arguments):
+    """Malformed or unsupported agent arguments fail before a service call."""
     with pytest.raises(ValueError):
         tool_class(api_key=KEY).run(**arguments)
     assert not server["calls"]
 
 
 def test_timeout_does_not_retry(server):
+    """A deadline raises an unknown-outcome warning without repeating the call."""
     server["delay"] = True
     with pytest.raises(TimeoutError, match="outcome may be unknown"):
         BaizhiSearchTool(api_key=KEY, timeout=0.05).run(query="test")
@@ -231,6 +240,7 @@ def test_timeout_does_not_retry(server):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("structured", [False, True])
 async def test_cancellation_propagates(server, structured):
+    """Native and structured async calls preserve cancellation without retries."""
     server["delay"] = True
     tool = BaizhiSearchTool(api_key=KEY)
     coroutine = (
@@ -248,6 +258,7 @@ async def test_cancellation_propagates(server, structured):
 
 
 def test_non_text_result_is_not_silently_dropped(server):
+    """Unsupported content without structured data raises a visible error."""
     server["result"] = {
         "content": [{"type": "image", "data": "", "mimeType": "image/png"}]
     }
@@ -256,12 +267,14 @@ def test_non_text_result_is_not_silently_dropped(server):
 
 
 def test_invalid_key_is_not_exposed(server):
+    """Credential validation errors do not include the rejected secret."""
     with pytest.raises(ValueError) as error:
         BaizhiSearchTool(api_key=KEY + "\n")
     assert KEY not in str(error.value)
 
 
 def test_public_exports_are_discoverable_in_tool_specs(server):
+    """Public tools expose their environment requirements but no key arguments."""
     from crewai_tools import tools
     from crewai_tools.generate_tool_specs import ToolSpecExtractor
 
@@ -278,6 +291,7 @@ def test_public_exports_are_discoverable_in_tool_specs(server):
 
 @pytest.mark.parametrize("value", ["https://example.com/path", "example.com/path", "localhost", "user@example.com"])
 def test_domain_filter_rejects_non_domains(server, value):
+    """Domain filters reject URLs, paths, local hostnames, and embedded userinfo."""
     with pytest.raises(ValueError):
         BaizhiSearchTool(api_key=KEY).run(query="test", filter={"domains": [value]})
     assert not server["calls"]
@@ -288,6 +302,7 @@ def test_domain_filter_rejects_non_domains(server, value):
 def test_urls_with_embedded_credentials_are_rejected(
     server, tool_class, dispatch, caplog, capsys
 ):
+    """All host paths reject URL credentials without exposing them in diagnostics."""
     username = "userx"
     password = "secretx"
     arguments = {"url": f"https://{username}:{password}@example.com"}
@@ -313,6 +328,7 @@ def test_urls_with_embedded_credentials_are_rejected(
 @pytest.mark.parametrize("tool_class", [BaizhiScrapeTool, BaizhiExtractTool])
 @pytest.mark.parametrize("dispatch", ["run", "arun", "invoke", "ainvoke"])
 def test_downloads_are_disabled(server, tool_class, dispatch):
+    """All host paths reject file exports before sending an HTTP request."""
     arguments = {"url": "https://example.com", "download": True}
     if tool_class is BaizhiExtractTool:
         arguments["instruction"] = "Extract the title"
@@ -326,11 +342,13 @@ def test_downloads_are_disabled(server, tool_class, dispatch):
 def test_mcp_dependency_is_loaded_only_at_call_time(
     server, monkeypatch, tool_class, arguments, _remote_name
 ):
+    """Tools load without MCP and explain how to install it when invoked."""
     from crewai_tools.tools.baizhi_tools import baizhi_tools
 
     original_import = builtins.__import__
 
     def import_without_mcp(name, *args, **kwargs):
+        """Simulate an absent MCP extra while leaving other imports unchanged."""
         if name == "mcp" or name.startswith("mcp."):
             raise ModuleNotFoundError("Synthetic missing optional MCP dependency")
         return original_import(name, *args, **kwargs)
@@ -354,6 +372,7 @@ def test_mcp_dependency_is_loaded_only_at_call_time(
 
 @pytest.mark.parametrize("structured", [True, False])
 def test_successful_result_key_echo_is_redacted(server, structured):
+    """Successful text and structured results remove literal key echoes."""
     server["result"] = {"content": [{"type": "text", "text": KEY}]}
     if structured:
         server["result"]["structuredContent"] = {KEY: [KEY]}
@@ -363,6 +382,7 @@ def test_successful_result_key_echo_is_redacted(server, structured):
 
 
 def test_malformed_sdk_response_does_not_leak_in_default_logs(server, caplog):
+    """Malformed responses retain a useful SDK diagnostic without leaking keys."""
     server["malformed"] = True
     with pytest.raises(TimeoutError):
         BaizhiSearchTool(api_key=KEY, timeout=0.1).run(query="test")
@@ -371,6 +391,7 @@ def test_malformed_sdk_response_does_not_leak_in_default_logs(server, caplog):
 
 
 def test_sdk_logging_outside_call_is_unchanged(server, caplog):
+    """Unrelated SDK logging retains its original message and interpolation args."""
     logger = logging.getLogger("mcp.client.streamable_http")
     logger.warning("unrelated %s", "diagnostic")
     assert "unrelated diagnostic" in caplog.text
@@ -379,6 +400,7 @@ def test_sdk_logging_outside_call_is_unchanged(server, caplog):
 
 @pytest.mark.parametrize("location", ["https://example.com/redirect", "https://agent-toolkit.app.baizhi.cloud/other"])
 def test_redirects_never_follow_credentials(server, location):
+    """Neither same-origin nor cross-origin redirects receive a follow-up request."""
     server.update(status=307, headers={"Location": location})
     with pytest.raises(RuntimeError):
         BaizhiSearchTool(api_key=KEY).run(query="test")
