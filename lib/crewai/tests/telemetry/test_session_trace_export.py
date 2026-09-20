@@ -252,7 +252,18 @@ def test_a_deferred_run_is_recorded_once_at_finalization_and_a_failed_export_nev
 
 
 @pytest.mark.parametrize("credential", [None, "pat"])
-def test_a_refreshed_grant_still_records_the_run_once(collector, recorded_runs, capsys, credential):
+def test_a_refreshed_grant_still_records_the_run_once(
+    collector, recorded_runs, monkeypatch, capsys, credential
+):
+    from crewai.telemetry.tracing import last_run
+
+    writes = []
+    real_record = last_run.record_last_run
+    monkeypatch.setattr(
+        last_run,
+        "record_last_run",
+        lambda **fields: (writes.append(fields["execution_id"]), real_record(**fields))[1],
+    )
     collector.grant_override = {"trace_url": collector.url + "/crewai_plus/otel_traces/original"}
     client = TraceGrantClient(credential)
     grant = replace(
@@ -267,9 +278,8 @@ def test_a_refreshed_grant_still_records_the_run_once(collector, recorded_runs, 
     finally:
         session.shutdown()
     exporter.record_export()
-    first = recorded_runs.joinpath(".crewai", "last_run.json").stat().st_mtime_ns
     exporter.record_export()
-    assert recorded_runs.joinpath(".crewai", "last_run.json").stat().st_mtime_ns == first
+    assert writes == [grant.execution_uuid]  # written once, however often the exporter is told the run ended
     assert capsys.readouterr().out == ""
     written = _last_run(recorded_runs)
     assert written is not None and written["execution_id"] == grant.execution_uuid
@@ -278,6 +288,51 @@ def test_a_refreshed_grant_still_records_the_run_once(collector, recorded_runs, 
     assert all(
         payload["include_trace_url"] is True for _, _, payload in collector.grants
     )
+
+
+def test_the_recorded_window_is_the_first_start_and_last_end_across_batches(
+    collector, recorded_runs
+):
+    """Batches reach the exporter in any order; the record spans them all."""
+    from crewai.telemetry.tracing import last_run
+
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    tracer = provider.get_tracer("window")
+    second = 1_000_000_000
+    base = 1_700_000_000 * second
+    for name, start, end in (("late", 10, 12), ("early", 0, 5), ("middle", 3, 9)):
+        tracer.start_span(name, start_time=base + start * second).end(end_time=base + end * second)
+    provider.shutdown()
+    by_name = {span.name: span for span in memory.get_finished_spans()}
+    client = TraceGrantClient(None)
+    exporter = GrantSpanExporter(client, client.create(str(uuid4())))
+    try:
+        assert exporter.export([by_name["late"]]) == SpanExportResult.SUCCESS
+        assert exporter.export([by_name["early"], by_name["middle"]]) == SpanExportResult.SUCCESS
+    finally:
+        exporter.shutdown()
+    exporter.record_export()
+    written = _last_run(recorded_runs)
+    assert written is not None
+    assert written["started_at"] == last_run._iso(base)
+    assert written["finished_at"] == last_run._iso(base + 12 * second)
+
+
+def test_a_truncated_ephemeral_trace_is_uploaded_but_not_recorded(
+    collector, recorded_runs, monkeypatch
+):
+    """The buffer dropped spans at its cap: the grader could not read the run whole."""
+    monkeypatch.setenv("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", "1")
+    buffer = EphemeralSpanBuffer()
+    monkeypatch.setattr(ephemeral, "EphemeralSpanBuffer", lambda: buffer)
+    with trace_consent(lambda: True), ephemeral_tracing(str(uuid4())) as session:
+        record(session, "first")
+        record(session, "second")
+    assert buffer._dropped == 1
+    assert len(collector.batches) == 1  # what survived was still shared
+    assert _last_run(recorded_runs) is None
 
 
 @pytest.mark.parametrize("authenticated", [True, False])

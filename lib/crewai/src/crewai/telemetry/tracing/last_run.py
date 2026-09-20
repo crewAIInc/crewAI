@@ -68,14 +68,19 @@ def record_last_run(
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
         "amp_base_url": amp_base_url,
     }
-    path = last_run_path()
+    path: Path | None = None
     try:
+        path = last_run_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_name(path.name + ".tmp")
         temporary.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         os.replace(temporary, path)
-    except OSError as error:
-        logger.debug("Could not record the last run in %s: %s", path, error)
+    except OSError as error:  # a vanished cwd fails last_run_path() too; the run is never failed by this
+        logger.debug(
+            "Could not record the last run in %s: %s",
+            path or ".crewai/last_run.json",
+            error,
+        )
         return None
     return path
 
