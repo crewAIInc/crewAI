@@ -16,16 +16,10 @@ from crewai_core.plus_api import PlusAPI
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult, SpanExporter
-from rich.style import Style
-from rich.text import Text
 
 from crewai.auth.token import AuthError, get_auth_token
 from crewai.context import get_platform_integration_token
-from crewai.events.listeners.tracing.utils import (
-    is_tui_mode,
-    should_suppress_tracing_messages,
-)
-from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.telemetry.tracing import last_run
 from crewai.telemetry.tracing.session import MAX_EXPORT_BATCH_SIZE, otlp_exporter
 
 
@@ -172,18 +166,24 @@ class TraceGrantClient:
 
 
 class GrantSpanExporter(SpanExporter):
-    """Refresh a grant before exporting; delegate OTLP transport to the shared path."""
+    """Refresh a grant before exporting; delegate OTLP transport to the shared path.
+
+    Nothing about the export is printed. Once the run's spans have reached
+    Wharf, ``record_export`` writes the project's ``.crewai/last_run.json``
+    (``last_run``) so ``crewai eval`` can find the run without an id being
+    shown to anyone.
+    """
 
     def __init__(self, client: TraceGrantClient, grant: TraceGrant):
         self._client = client
         self._grant = grant
         self._lock = Lock()
         self._delegate = self._exporter(grant)
-        self._trace_url = grant.trace_url
         self._exported = False
         self._export_failed = False
-        self._summary_shown = False
-        self._suppress_output = should_suppress_tracing_messages() or is_tui_mode()
+        self._recorded = False
+        self._first_start_ns: int | None = None
+        self._last_end_ns: int | None = None
 
     @staticmethod
     def _exporter(grant: TraceGrant) -> SpanExporter:
@@ -200,8 +200,27 @@ class GrantSpanExporter(SpanExporter):
                 self._export_failed = True
                 raise
             self._export_failed |= result != SpanExportResult.SUCCESS
-            self._exported |= bool(spans) and result == SpanExportResult.SUCCESS
+            if spans and result == SpanExportResult.SUCCESS:
+                self._exported = True
+                self._note_span_times(spans)
             return result
+
+    def _note_span_times(self, spans: Sequence[ReadableSpan]) -> None:
+        """The run's first start and last end, across every exported batch."""
+        starts = [s.start_time for s in spans if s.start_time is not None]
+        ends = [s.end_time for s in spans if s.end_time is not None]
+        if starts:
+            first = min(starts)
+            self._first_start_ns = (
+                first
+                if self._first_start_ns is None
+                else min(self._first_start_ns, first)
+            )
+        if ends:
+            last = max(ends)
+            self._last_end_ns = (
+                last if self._last_end_ns is None else max(self._last_end_ns, last)
+            )
 
     def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         result = SpanExportResult.SUCCESS
@@ -240,7 +259,6 @@ class GrantSpanExporter(SpanExporter):
                 exporter = self._exporter(grant)
                 self._delegate.shutdown()
                 self._delegate, self._grant = exporter, grant
-                self._trace_url = grant.trace_url or self._trace_url
             if self._delegate.export(batch) != SpanExportResult.SUCCESS:
                 return SpanExportResult.FAILURE
             logger.info(
@@ -250,32 +268,27 @@ class GrantSpanExporter(SpanExporter):
             )
         return result
 
-    def show_trace_summary(self) -> None:
-        """Display the exported execution UUID and AMP's optional viewer link once."""
+    def record_export(self) -> None:
+        """Record the run for `crewai eval` once its spans have reached Wharf.
+
+        Silent: nothing is printed. Only a run whose every export succeeded is
+        recorded — a partial export would name a run the grader cannot read
+        whole.
+        """
         with self._lock:
-            if (
-                not self._exported
-                or self._export_failed
-                or self._summary_shown
-                or self._suppress_output
-                or should_suppress_tracing_messages()
-                or is_tui_mode()
-            ):
+            if not self._exported or self._export_failed or self._recorded:
                 return
-            self._summary_shown = True
-            content = Text()
-            content.append("Traces exported\n", style="green bold")
-            content.append("Execution trace ID: ", style="white")
-            content.append(self._grant.execution_uuid, style="green")
-            if self._trace_url:
-                content.append("\n\nView traces:\n", style="white bold")
-                content.append(
-                    self._trace_url,
-                    style=Style(color="cyan", underline=True, link=self._trace_url),
-                )
-            ConsoleFormatter(verbose=True).print_panel(
-                content, "🔗 Execution Traces", "green"
+            self._recorded = True
+            execution_uuid = self._grant.execution_uuid
+            api = getattr(self._client, "_api", None)
+            last_run.record_last_run(
+                execution_id=execution_uuid,
+                tier=getattr(self._client, "_tier", None),
+                started_at_ns=self._first_start_ns,
+                finished_at_ns=self._last_end_ns,
+                amp_base_url=getattr(api, "base_url", None),
             )
+            logger.debug("Traces exported for execution %s", execution_uuid)
 
     def shutdown(self) -> None:
         with self._lock:

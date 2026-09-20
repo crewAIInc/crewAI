@@ -131,6 +131,177 @@ def record(session, name="execute flow"):
     ).end()
 
 
+@pytest.fixture
+def recorded_runs(monkeypatch, tmp_path):
+    """Recording on, into tmp_path (the suite's CREWAI_TESTING turns it off)."""
+    from crewai.telemetry.tracing import last_run
+
+    monkeypatch.setattr(last_run, "project_dir", lambda: tmp_path)
+    monkeypatch.setattr(last_run, "recording_enabled", lambda: True)
+    return tmp_path
+
+
+def _last_run(directory):
+    from crewai.telemetry.tracing import last_run
+
+    return last_run.read_last_run(directory)
+
+
+@pytest.mark.parametrize(
+    ("authenticated", "approved", "status", "suppression", "recorded"),
+    [
+        (True, True, 200, None, True),
+        (False, True, 200, None, True),
+        (False, False, 200, None, False),
+        (True, True, 401, None, False),
+        (False, True, 401, None, False),
+        (True, True, 200, "messages", True),
+        (False, True, 200, "messages", True),
+        (True, True, 200, "tui", True),
+        (False, True, 200, "tui", True),
+    ],
+)
+def test_nothing_is_printed_after_an_export_and_a_successful_one_is_recorded(
+    collector,
+    recorded_runs,
+    monkeypatch,
+    capsys,
+    authenticated,
+    approved,
+    status,
+    suppression,
+    recorded,
+):
+    from crewai.events.listeners.tracing.utils import (
+        set_suppress_tracing_messages,
+        set_tui_mode,
+    )
+    from crewai.execution import begin_execution, end_execution, get_execution_uuid
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    url = collector.url + "/crewai_plus/otel_traces/run?access_code=secret&x=[value]"
+    collector.grant_override = {"trace_url": url}
+    collector.export_status = status
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    seen = {}
+
+    def run():
+        if suppression == "messages":
+            set_suppress_tracing_messages(True)
+        elif suppression == "tui":
+            set_tui_mode(True)
+        with trace_consent(lambda: approved):
+            token = begin_execution(tracing=True)
+            try:
+                seen["uuid"] = get_execution_uuid()
+                session = get_trace_session()
+                record(session)
+                nested = begin_execution(tracing=True)
+                end_execution(nested)
+            finally:
+                end_execution(token)
+
+    copy_context().run(run)
+    output = capsys.readouterr().out
+    # The id and the viewer link are internal: nothing about tracing is printed.
+    assert url not in output and "View traces:" not in output
+    assert "Execution trace ID:" not in output and "Traces exported" not in output
+    assert len(collector.batches) == int(authenticated or approved)
+    # A run whose spans reached Wharf is recorded for `crewai eval`, silently,
+    # in the TUI and under message suppression too; a failed export is not.
+    written = _last_run(recorded_runs)
+    if recorded:
+        assert written is not None
+        assert written["execution_id"] == seen["uuid"]
+        assert written["tier"] == ("authenticated" if authenticated else "ephemeral")
+        assert written["started_at"] and written["finished_at"] and written["recorded_at"]
+        assert written["amp_base_url"] == collector.url
+    else:
+        assert written is None
+
+
+@pytest.mark.parametrize("first_status", [200, 401])
+def test_a_deferred_run_is_recorded_once_at_finalization_and_a_failed_export_never(
+    collector, recorded_runs, monkeypatch, capsys, first_status
+):
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    collector.export_status = first_status
+    token = begin_execution(tracing=True)
+    try:
+        session = get_trace_session()
+        record(session)
+        session.flush()
+    finally:
+        lifetime = end_execution(token, defer=True)
+    assert _last_run(recorded_runs) is None  # not finished yet
+
+    collector.export_status = 200
+    token = begin_execution(tracing=True, trace_session=lifetime)
+    try:
+        record(get_trace_session())
+    finally:
+        end_execution(token)
+    lifetime.finish()
+    assert capsys.readouterr().out == ""
+    # A run one of whose exports failed is never recorded: the grader could not read it whole.
+    assert (_last_run(recorded_runs) is not None) == (first_status == 200)
+
+
+@pytest.mark.parametrize("credential", [None, "pat"])
+def test_a_refreshed_grant_still_records_the_run_once(collector, recorded_runs, capsys, credential):
+    collector.grant_override = {"trace_url": collector.url + "/crewai_plus/otel_traces/original"}
+    client = TraceGrantClient(credential)
+    grant = replace(
+        client.create(str(uuid4())),
+        expires_at=datetime.now(timezone.utc) + timedelta(seconds=1),
+    )
+    collector.grant_override = {}
+    exporter = GrantSpanExporter(client, grant)
+    session = TraceSession(grant.execution_uuid, [exporter])
+    try:
+        record(session)
+    finally:
+        session.shutdown()
+    exporter.record_export()
+    first = recorded_runs.joinpath(".crewai", "last_run.json").stat().st_mtime_ns
+    exporter.record_export()
+    assert recorded_runs.joinpath(".crewai", "last_run.json").stat().st_mtime_ns == first
+    assert capsys.readouterr().out == ""
+    written = _last_run(recorded_runs)
+    assert written is not None and written["execution_id"] == grant.execution_uuid
+    assert written["tier"] == ("authenticated" if credential else "ephemeral")
+    assert len(collector.grants) == 2
+    assert all(
+        payload["include_trace_url"] is True for _, _, payload in collector.grants
+    )
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+def test_an_export_without_a_viewer_url_is_recorded_all_the_same(
+    collector, recorded_runs, monkeypatch, capsys, authenticated
+):
+    from crewai.execution import begin_execution, end_execution, get_execution_uuid
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    with trace_consent(lambda: True):
+        token = begin_execution(tracing=True)
+        try:
+            execution_uuid = get_execution_uuid()
+            record(get_trace_session())
+        finally:
+            end_execution(token)
+    assert capsys.readouterr().out == ""
+    written = _last_run(recorded_runs)
+    assert written is not None and written["execution_id"] == execution_uuid
+    assert len(collector.batches) == 1
+
+
 def test_credential_precedence_and_missing_login(monkeypatch):
     monkeypatch.setenv("CREWAI_USER_PAT", "pat")
     monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "integration")
@@ -212,151 +383,6 @@ def test_grant_preserves_optional_viewer_url_without_exposing_it_in_repr(
 def test_unusable_optional_viewer_url_does_not_break_grant(collector, value):
     collector.grant_override = {"trace_url": value}
     assert TraceGrantClient("pat").create(str(uuid4())).trace_url is None
-
-
-@pytest.mark.parametrize(
-    ("authenticated", "approved", "status", "suppression", "shows_link"),
-    [
-        (True, True, 200, None, True),
-        (False, True, 200, None, True),
-        (False, False, 200, None, False),
-        (True, True, 401, None, False),
-        (False, True, 401, None, False),
-        (True, True, 200, "messages", False),
-        (False, True, 200, "messages", False),
-        (True, True, 200, "tui", False),
-        (False, True, 200, "tui", False),
-    ],
-)
-def test_viewer_link_is_printed_once_after_successful_execution_export(
-    collector,
-    monkeypatch,
-    capsys,
-    authenticated,
-    approved,
-    status,
-    suppression,
-    shows_link,
-):
-    from crewai.events.listeners.tracing.utils import (
-        set_suppress_tracing_messages,
-        set_tui_mode,
-    )
-    from crewai.execution import begin_execution, end_execution
-    from crewai.telemetry.tracing.context import get_trace_session
-
-    url = collector.url + "/crewai_plus/otel_traces/run?access_code=secret&x=[value]"
-    collector.grant_override = {"trace_url": url}
-    collector.export_status = status
-    if authenticated:
-        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
-
-    def run():
-        if suppression == "messages":
-            set_suppress_tracing_messages(True)
-        elif suppression == "tui":
-            set_tui_mode(True)
-        with trace_consent(lambda: approved):
-            token = begin_execution(tracing=True)
-            try:
-                session = get_trace_session()
-                record(session)
-                nested = begin_execution(tracing=True)
-                end_execution(nested)
-                assert "View traces:" not in capsys.readouterr().out
-            finally:
-                end_execution(token)
-
-    copy_context().run(run)
-    output = capsys.readouterr().out
-    assert output.count(url) == int(shows_link)
-    assert output.count("View traces:") == int(shows_link)
-    assert output.count("Execution trace ID:") == int(shows_link)
-    assert len(collector.batches) == int(authenticated or approved)
-
-
-@pytest.mark.parametrize("first_status", [200, 401])
-def test_deferred_trace_link_waits_for_finalization_and_remembers_export_failures(
-    collector, monkeypatch, capsys, first_status
-):
-    from crewai.execution import begin_execution, end_execution
-    from crewai.telemetry.tracing.context import get_trace_session
-
-    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
-    url = collector.url + "/crewai_plus/otel_traces/run"
-    collector.grant_override = {"trace_url": url}
-    collector.export_status = first_status
-    token = begin_execution(tracing=True)
-    try:
-        session = get_trace_session()
-        record(session)
-        session.flush()
-    finally:
-        lifetime = end_execution(token, defer=True)
-    assert url not in capsys.readouterr().out
-
-    collector.export_status = 200
-    token = begin_execution(tracing=True, trace_session=lifetime)
-    try:
-        record(get_trace_session())
-    finally:
-        end_execution(token)
-    lifetime.finish()
-    assert capsys.readouterr().out.count(url) == int(first_status == 200)
-
-
-@pytest.mark.parametrize("updated_url", [False, True])
-@pytest.mark.parametrize("credential", [None, "pat"])
-def test_refreshed_grant_preserves_or_updates_viewer_url(
-    collector, capsys, updated_url, credential
-):
-    original = collector.url + "/crewai_plus/otel_traces/original"
-    renewed = collector.url + "/crewai_plus/otel_traces/renewed"
-    collector.grant_override = {"trace_url": original}
-    client = TraceGrantClient(credential)
-    grant = replace(
-        client.create(str(uuid4())),
-        expires_at=datetime.now(timezone.utc) + timedelta(seconds=1),
-    )
-    collector.grant_override = {"trace_url": renewed} if updated_url else {}
-    exporter = GrantSpanExporter(client, grant)
-    session = TraceSession(grant.execution_uuid, [exporter])
-    try:
-        record(session)
-    finally:
-        session.shutdown()
-    exporter.show_trace_summary()
-    exporter.show_trace_summary()
-    output = capsys.readouterr().out
-    assert output.count("View traces:") == 1
-    assert (renewed if updated_url else original) in output
-    assert len(collector.grants) == 2
-    assert all(
-        payload["include_trace_url"] is True for _, _, payload in collector.grants
-    )
-
-
-@pytest.mark.parametrize("authenticated", [True, False])
-def test_export_without_viewer_url_still_shows_execution_uuid(
-    collector, monkeypatch, capsys, authenticated
-):
-    from crewai.execution import begin_execution, end_execution, get_execution_uuid
-    from crewai.telemetry.tracing.context import get_trace_session
-
-    if authenticated:
-        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
-    with trace_consent(lambda: True):
-        token = begin_execution(tracing=True)
-        try:
-            execution_uuid = get_execution_uuid()
-            record(get_trace_session())
-            assert "Execution trace ID:" not in capsys.readouterr().out
-        finally:
-            end_execution(token)
-    output = capsys.readouterr().out
-    assert output.count(f"Execution trace ID: {execution_uuid}") == 1
-    assert "View traces:" not in output
-    assert len(collector.batches) == 1
 
 
 @pytest.mark.parametrize(
