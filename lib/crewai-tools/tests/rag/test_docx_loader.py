@@ -128,6 +128,23 @@ class TestDOCXLoader:
         assert mock_get_bounded.call_args.kwargs["headers"] == custom_headers
         assert mock_get_bounded.call_args.kwargs["max_bytes"] == 1024
 
+    @pytest.mark.parametrize(
+        "max_bytes",
+        [True, False, 0, -1, 1.0, float("nan"), float("inf"), "1024", None],
+    )
+    @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
+    def test_load_docx_url_rejects_invalid_max_bytes(
+        self, mock_get_bounded, max_bytes
+    ):
+        loader = DOCXLoader()
+
+        with pytest.raises(ValueError, match="max_bytes must be a positive integer"):
+            loader.load(
+                SourceContent("https://example.com/test.docx"), max_bytes=max_bytes
+            )
+
+        mock_get_bounded.assert_not_called()
+
     @patch("crewai_tools.rag.loaders.docx_loader.tempfile.NamedTemporaryFile")
     @patch("crewai_tools.rag.loaders.docx_loader.safe_get_bounded")
     def test_load_docx_url_rejects_oversized_response(

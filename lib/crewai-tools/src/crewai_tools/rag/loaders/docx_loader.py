@@ -45,9 +45,19 @@ class DOCXLoader(BaseLoader):
         )
 
         try:
+            max_bytes = kwargs.get("max_bytes", DEFAULT_MAX_DOCX_BYTES)
+            if (
+                isinstance(max_bytes, bool)
+                or not isinstance(max_bytes, int)
+                or max_bytes <= 0
+            ):
+                raise ValueError(
+                    f"max_bytes must be a positive integer, got {max_bytes!r}."
+                )
+
             body, _content_type, _final_url = safe_get_bounded(
                 url,
-                max_bytes=kwargs.get("max_bytes", DEFAULT_MAX_DOCX_BYTES),
+                max_bytes=max_bytes,
                 headers=headers,
                 timeout=30,
             )
