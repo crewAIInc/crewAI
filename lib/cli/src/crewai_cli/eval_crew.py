@@ -121,7 +121,7 @@ def _run_now_or_explain() -> str:
     if not click.confirm(
         f"No traced run is recorded in this project. Turn tracing on ({TRACING_ENV_VAR}=true "
         "stays in .env) and run the crew now?",
-        default=False,
+        default=True,  # João, 2026-09-20: y/n with Y as the default — the prompt says what Enter does
     ):
         console.print(steps, style="yellow")
         raise SystemExit(0)
