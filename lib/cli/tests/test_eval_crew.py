@@ -64,9 +64,9 @@ def record_last_run(directory: Path, execution_id: str = EXECUTION_ID, **fields)
     (directory / ".crewai" / "last_run.json").write_text(json.dumps(record))
 
 
-def install(monkeypatch, amp: FakeAMP) -> FakeAMP:
+def install(monkeypatch, amp: FakeAMP, configured_amp: str = "https://amp.test") -> FakeAMP:
     def build(api_key=None, base_url=None):
-        amp.api_key, amp.base_url = api_key, base_url
+        amp.api_key, amp.base_url = api_key, base_url or configured_amp
         return amp
 
     monkeypatch.setattr(eval_module, "PlusAPI", build)
@@ -82,7 +82,6 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
 
     out = capsys.readouterr().out
     assert amp.api_key == "login-token"
-    assert amp.base_url == "https://amp.test"  # the AMP the run was traced to, off the record
     assert amp.calls == [("create", EXECUTION_ID), ("get", "ev-1"), ("get", "ev-1")]
     assert opened == [URL]
     assert EXECUTION_ID in out and URL in out
@@ -98,7 +97,6 @@ def test_run_names_another_execution_and_an_anonymous_caller_sends_no_token(proj
     eval_module.eval_crew(run_id="other-run")
 
     assert amp.api_key is None
-    assert amp.base_url is None  # a run named by hand goes to the configured AMP, not the record's
     assert amp.calls[0] == ("create", "other-run")
     assert "Goal gate: FAILED" in capsys.readouterr().out
 
@@ -140,6 +138,46 @@ def test_amps_refusals_are_printed_in_its_words_and_exit_one(project, monkeypatc
     assert exit_.value.code == 1
     assert expected in capsys.readouterr().out
     assert opened == []
+
+
+def test_the_credential_goes_only_to_the_configured_amp_never_to_an_address_off_the_record(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory, amp_base_url="https://evil.example/steal")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]), configured_amp="https://app.crewai.com")
+
+    eval_module.eval_crew()
+
+    assert amp.api_key == "login-token" and amp.base_url == "https://app.crewai.com"  # PlusAPI got no base_url
+    out = capsys.readouterr().out
+    assert "The run was traced to https://evil.example/steal; evaluating at the configured AMP https://app.crewai.com." in out
+
+    # The project's .env is what `crewai run` traced with, so it is loaded first: same AMP, no note.
+    (directory / ".env").write_text("CREWAI_PLUS_URL=https://amp.test\n")
+    record_last_run(directory, amp_base_url="https://amp.test/")
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
+    eval_module.eval_crew()
+    assert eval_module.os.environ["CREWAI_PLUS_URL"] == "https://amp.test"
+    assert "was traced to" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "verdict",
+    [None, "passed", [], {"gate": "passed"}, {"gate": None, "grades": {}}, {"gate": "passed", "grades": "5/5"}, {"gate": "passed", "grades": {"goal": "five"}}],
+)
+def test_a_done_answer_without_a_well_formed_verdict_is_a_protocol_error(project, monkeypatch, capsys, verdict):
+    directory, _ = project
+    record_last_run(directory)
+    body = {"id": "ev-1", "status": "done", "url": URL}
+    if verdict is not None:
+        body["verdict"] = verdict
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json=body)]))
+
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+
+    assert exit_.value.code == 1
+    assert f"AMP answered done without a verdict (protocol error); follow it at {URL}." in capsys.readouterr().out
 
 
 def test_amp_unreachable_at_the_start_is_a_sentence_not_a_traceback(project, monkeypatch, capsys):
@@ -262,7 +300,8 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(eval_module.click, "confirm", lambda *args, **kwargs: True)
+    prompts: list[tuple] = []
+    monkeypatch.setattr(eval_module.click, "confirm", lambda text, **kwargs: prompts.append((text, kwargs)) or True)
     ran: list[str] = []
 
     def fake_run_crew() -> None:
@@ -279,6 +318,8 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
     eval_module.eval_crew()
 
     assert ran == ["run"]
+    text, kwargs = prompts[0]
+    assert "CREWAI_TRACING_ENABLED=true stays in .env" in text and kwargs == {"default": False}  # an explicit yes
     assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
     assert amp.calls[0] == ("create", "fresh-run")
     assert "Tracing is on for this project" in capsys.readouterr().out

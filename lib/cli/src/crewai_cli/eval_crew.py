@@ -24,7 +24,7 @@ from typing import Any
 import webbrowser
 
 import click
-from dotenv import set_key
+from dotenv import load_dotenv, set_key
 import httpx
 from rich.console import Console
 
@@ -46,15 +46,22 @@ STATUSES = {"queued", "running"} | FINISHED
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
     get_or_create_project_id()
+    _load_project_env()
     record = read_last_run() or {}
     execution_id = run_id or record.get("execution_id")
     if execution_id is None:
         execution_id = _run_now_or_explain()
         record = read_last_run() or {}
 
-    # The record names the AMP the run was traced to; a run named by hand goes to the configured AMP.
-    amp_base_url = None if run_id else record.get("amp_base_url")
-    client = PlusAPI(api_key=saved_login(), base_url=amp_base_url or None)
+    # The credential goes to the CONFIGURED AMP only (CREWAI_PLUS_URL, the saved settings,
+    # app.crewai.com) — never to an address read off a file in the project.
+    client = PlusAPI(api_key=saved_login())
+    recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
+    if not run_id and recorded_amp and recorded_amp != client.base_url.rstrip("/"):
+        console.print(
+            f"The run was traced to {recorded_amp}; evaluating at the configured AMP {client.base_url}.",
+            style="yellow",
+        )
     started = _start_evaluation(client, execution_id)
     url = started.get("url")
     console.print(f"Evaluating run [bold]{execution_id}[/bold]")
@@ -66,6 +73,13 @@ def eval_crew(run_id: str | None = None) -> None:
     _print_verdict(finished, url)
     if finished.get("status") != "done":
         raise SystemExit(1)
+
+
+def _load_project_env() -> None:
+    """The project's .env, as `crewai run` loads it — so CREWAI_PLUS_URL here is the one the run used."""
+    env_file = Path.cwd() / ".env"
+    if env_file.is_file():
+        load_dotenv(env_file, override=True)
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:
@@ -105,8 +119,9 @@ def _run_now_or_explain() -> str:
         console.print(steps, style="yellow")
         raise SystemExit(1)
     if not click.confirm(
-        "No traced run is recorded in this project. Turn tracing on and run the crew now?",
-        default=True,
+        f"No traced run is recorded in this project. Turn tracing on ({TRACING_ENV_VAR}=true "
+        "stays in .env) and run the crew now?",
+        default=False,
     ):
         console.print(steps, style="yellow")
         raise SystemExit(0)
@@ -184,6 +199,10 @@ def _wait(client: PlusAPI, evaluation_id: str, url: str | None) -> dict[str, Any
             misses = 0
             payload = _payload(response) or {}
             status = payload.get("status")
+            if status == "done" and not _well_formed_verdict(payload.get("verdict")):
+                _fail(
+                    f"AMP answered done without a verdict (protocol error); follow it{where or ' on AMP'}."
+                )
             if status in FINISHED:
                 return payload
             if status not in STATUSES:
@@ -196,6 +215,19 @@ def _wait(client: PlusAPI, evaluation_id: str, url: str | None) -> dict[str, Any
         raise SystemExit(130) from None
 
 
+def _well_formed_verdict(verdict: Any) -> bool:
+    """`{"gate": "<word>", "grades": {area: 1..5 | null}}` — anything else is a protocol error."""
+    return (
+        isinstance(verdict, dict)
+        and isinstance(verdict.get("gate"), str)
+        and isinstance(verdict.get("grades"), dict)
+        and all(
+            grade is None or isinstance(grade, int)
+            for grade in verdict["grades"].values()
+        )
+    )
+
+
 def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
     if finished.get("status") != "done":
         console.print(
@@ -203,8 +235,8 @@ def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
             style="bold red",
         )
         return
-    verdict = finished.get("verdict") or {}
-    gate = str(verdict.get("gate") or "inconclusive").upper()
+    verdict = finished["verdict"]  # _wait let only a well-formed one through
+    gate = str(verdict["gate"]).upper()
     style = {"PASSED": "bold green", "FAILED": "bold red"}.get(gate, "bold yellow")
     grades = verdict.get("grades") or {}
     parts = [
