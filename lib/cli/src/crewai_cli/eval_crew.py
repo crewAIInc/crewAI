@@ -38,17 +38,23 @@ console = Console()
 LAST_RUN_FILE = Path(".crewai") / "last_run.json"
 TRACING_ENV_VAR = "CREWAI_TRACING_ENABLED"
 POLL_SECONDS = 3.0
+POLL_RETRIES = 5  # consecutive unreachable / 5xx polls before giving up; the evaluation keeps running
 FINISHED = {"done", "failed"}
+STATUSES = {"queued", "running"} | FINISHED
 
 
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
     get_or_create_project_id()
-    execution_id = run_id or last_run_id()
+    record = read_last_run() or {}
+    execution_id = run_id or record.get("execution_id")
     if execution_id is None:
         execution_id = _run_now_or_explain()
+        record = read_last_run() or {}
 
-    client = PlusAPI(api_key=saved_login())
+    # The record names the AMP the run was traced to; a run named by hand goes to the configured AMP.
+    amp_base_url = None if run_id else record.get("amp_base_url")
+    client = PlusAPI(api_key=saved_login(), base_url=amp_base_url or None)
     started = _start_evaluation(client, execution_id)
     url = started.get("url")
     console.print(f"Evaluating run [bold]{execution_id}[/bold]")
@@ -62,17 +68,18 @@ def eval_crew(run_id: str | None = None) -> None:
         raise SystemExit(1)
 
 
-def last_run_id(directory: Path | None = None) -> str | None:
-    """The execution id crewAI recorded for the project's last traced run."""
+def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:
+    """The record crewAI wrote for the project's last traced run (execution_id,
+    tier, started_at, finished_at, amp_base_url), or None."""
     path = (directory or Path.cwd()) / LAST_RUN_FILE
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    if not isinstance(loaded, dict):
+    if not isinstance(loaded, dict) or not loaded.get("execution_id"):
         return None
-    execution_id = loaded.get("execution_id")
-    return str(execution_id) if execution_id else None
+    loaded["execution_id"] = str(loaded["execution_id"])
+    return loaded
 
 
 def saved_login() -> str | None:
@@ -85,6 +92,11 @@ def saved_login() -> str | None:
 
 def _run_now_or_explain() -> str:
     """No traced run recorded here: offer to turn tracing on and run the crew now."""
+    if not Path("pyproject.toml").is_file():
+        _fail(
+            "No crewAI project here (no pyproject.toml). Run `crewai eval` from the project's "
+            "directory, or name a run: `crewai eval --run EXECUTION_ID`."
+        )
     steps = (
         "No traced run is recorded in this project. Turn tracing on and run the crew, "
         f"then come back:\n  1. add {TRACING_ENV_VAR}=true to .env\n  2. crewai run\n  3. crewai eval"
@@ -103,15 +115,16 @@ def _run_now_or_explain() -> str:
     from crewai_cli.run_crew import run_crew
 
     run_crew()
-    execution_id = last_run_id()
-    if execution_id is None:
+    record = read_last_run()
+    if record is None:
         console.print(
-            "The run finished but no trace was recorded: the run may have failed, or sharing "
-            "the trace was declined. Run the crew again and accept when asked, then `crewai eval`.",
+            "The run finished but no trace was recorded: the run may have failed, sharing the "
+            "trace was declined, or this project's crewai is older than the version that records "
+            f"the last run ({LAST_RUN_FILE}). Run the crew again and accept when asked, then `crewai eval`.",
             style="bold red",
         )
         raise SystemExit(1)
-    return execution_id
+    return str(record["execution_id"])
 
 
 def _enable_tracing() -> None:
@@ -127,30 +140,58 @@ def _enable_tracing() -> None:
 
 
 def _start_evaluation(client: PlusAPI, execution_id: str) -> dict[str, Any]:
-    response = client.create_evaluation(execution_id)
+    try:
+        response = client.create_evaluation(execution_id)
+    except httpx.HTTPError as error:
+        _fail(f"Could not reach AMP to start the evaluation: {error}")
     if response.status_code in (200, 202):
         payload = _payload(response)
         if payload and payload.get("id"):
             return payload
         _fail(f"AMP answered without an evaluation id ({response.status_code}).")
-    _refused(response, execution_id)
+    _refused(response, f"run {execution_id}")
     raise AssertionError("unreachable")
 
 
 def _wait(client: PlusAPI, evaluation_id: str, url: str | None) -> dict[str, Any]:
     """Poll until the evaluation is done or failed; Ctrl-C leaves it running."""
     console.print("Waiting for the verdict…", style="dim")
+    where = f" at {url}" if url else ""
+    subject = f"evaluation {evaluation_id}"
+    misses = (
+        0  # AMP unreachable or answering 5xx: a blip is retried, a streak is reported
+    )
     try:
         while True:
-            response = client.get_evaluation(evaluation_id)
+            try:
+                response = client.get_evaluation(evaluation_id)
+            except httpx.HTTPError as error:
+                misses += 1
+                if misses >= POLL_RETRIES:
+                    _fail(
+                        f"Could not reach AMP while waiting ({error}); the evaluation keeps running{where}."
+                    )
+                time.sleep(POLL_SECONDS)
+                continue
+            if response.status_code >= 500:
+                misses += 1
+                if misses >= POLL_RETRIES:
+                    _refused(response, subject)
+                time.sleep(POLL_SECONDS)
+                continue
             if response.status_code != 200:
-                _refused(response, evaluation_id)
+                _refused(response, subject)
+            misses = 0
             payload = _payload(response) or {}
-            if payload.get("status") in FINISHED:
+            status = payload.get("status")
+            if status in FINISHED:
                 return payload
+            if status not in STATUSES:
+                _fail(
+                    f"AMP answered without a known evaluation status ({status!r}); follow it{where or ' on AMP'}."
+                )
             time.sleep(POLL_SECONDS)
     except KeyboardInterrupt:
-        where = f" at {url}" if url else ""
         console.print(f"\nStill running{where}.", style="yellow")
         raise SystemExit(130) from None
 
@@ -193,7 +234,7 @@ def _payload(response: httpx.Response) -> dict[str, Any] | None:
 
 
 def _refused(response: httpx.Response, subject: str) -> None:
-    """AMP's own words when it sent them, then exit 1."""
+    """AMP's own words when it sent them, then exit 1. SUBJECT is "run <id>" or "evaluation <id>"."""
     payload = _payload(response) or {}
     message = str(payload.get("message") or "").strip()
     error = str(payload.get("error") or "")
@@ -204,7 +245,7 @@ def _refused(response: httpx.Response, subject: str) -> None:
             f"{message or 'AMP refused the credential'}. Log in with `crewai login` and try again."
         )
     if response.status_code == 404:
-        _fail(message or f"AMP holds no run {subject}.")
+        _fail(message or f"AMP answered 404 for {subject}.")
     if response.status_code == 429:
         retry = response.headers.get("Retry-After")
         _fail(

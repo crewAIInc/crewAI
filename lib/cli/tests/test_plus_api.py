@@ -29,6 +29,7 @@ class TestPlusAPI(unittest.TestCase):
             "POST",
             "/crewai_plus/api/v1/tracing/evaluations",
             json={"execution_id": "6f31fe1a-20bd-4bfe-a011-25d6b9341f62"},
+            timeout=120.0,  # AMP reads the run's spans inside this request
         )
         self.assertEqual(response, mock_response)
 
@@ -40,7 +41,7 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.get_evaluation("ev-1")
 
         mock_make_request.assert_called_once_with(
-            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1"
+            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
         )
         self.assertEqual(response, mock_response)
 

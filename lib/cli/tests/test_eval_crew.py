@@ -8,6 +8,7 @@ from pathlib import Path
 from click.testing import CliRunner
 import httpx
 import pytest
+from rich.console import Console
 
 from crewai_cli import eval_crew as eval_module
 from crewai_cli.cli import eval_command
@@ -47,6 +48,7 @@ def done(gate="passed", grades=None):
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(eval_module, "console", Console(width=240))  # one sentence per line in the captured output
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: None)
     monkeypatch.setattr(eval_module, "saved_login", lambda: "login-token")
     monkeypatch.setattr(eval_module.time, "sleep", lambda seconds: None)
@@ -56,13 +58,18 @@ def project(tmp_path, monkeypatch):
     return tmp_path, opened
 
 
-def record_last_run(directory: Path, execution_id: str = EXECUTION_ID) -> None:
+def record_last_run(directory: Path, execution_id: str = EXECUTION_ID, **fields) -> None:
     (directory / ".crewai").mkdir(exist_ok=True)
-    (directory / ".crewai" / "last_run.json").write_text(json.dumps({"execution_id": execution_id, "tier": "ephemeral"}))
+    record = {"execution_id": execution_id, "tier": "ephemeral", "amp_base_url": "https://amp.test", **fields}
+    (directory / ".crewai" / "last_run.json").write_text(json.dumps(record))
 
 
 def install(monkeypatch, amp: FakeAMP) -> FakeAMP:
-    monkeypatch.setattr(eval_module, "PlusAPI", lambda api_key=None: (setattr(amp, "api_key", api_key), amp)[1])
+    def build(api_key=None, base_url=None):
+        amp.api_key, amp.base_url = api_key, base_url
+        return amp
+
+    monkeypatch.setattr(eval_module, "PlusAPI", build)
     return amp
 
 
@@ -75,6 +82,7 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
 
     out = capsys.readouterr().out
     assert amp.api_key == "login-token"
+    assert amp.base_url == "https://amp.test"  # the AMP the run was traced to, off the record
     assert amp.calls == [("create", EXECUTION_ID), ("get", "ev-1"), ("get", "ev-1")]
     assert opened == [URL]
     assert EXECUTION_ID in out and URL in out
@@ -90,6 +98,7 @@ def test_run_names_another_execution_and_an_anonymous_caller_sends_no_token(proj
     eval_module.eval_crew(run_id="other-run")
 
     assert amp.api_key is None
+    assert amp.base_url is None  # a run named by hand goes to the configured AMP, not the record's
     assert amp.calls[0] == ("create", "other-run")
     assert "Goal gate: FAILED" in capsys.readouterr().out
 
@@ -113,6 +122,8 @@ def test_a_failed_evaluation_exits_one_with_amps_reason(project, monkeypatch, ca
          "already read once without an account"),
         (httpx.Response(401, json={"error": "bad_credentials", "message": "Bad credentials"}), "Bad credentials. Log in with `crewai login`"),
         (httpx.Response(404, json={"error": "trace_not_found", "message": "No spans recorded for execution 6f31"}), "No spans recorded for execution 6f31"),
+        (httpx.Response(404, text="<html>Page not found</html>"), f"AMP answered 404 for run {EXECUTION_ID}."),
+        (httpx.Response(202, json={"url": URL}), "AMP answered without an evaluation id (202)."),
         (httpx.Response(429, json={"error": "rate_limit_exceeded", "message": "Too many requests"}, headers={"Retry-After": "60"}), "Too many requests — retry after 60s"),
         (httpx.Response(503, json={"error": "service_unavailable", "message": "Wharf could not list the spans"}), "AMP answered 503: Wharf could not list the spans"),
         (httpx.Response(500, text="boom"), "AMP answered 500."),
@@ -131,7 +142,110 @@ def test_amps_refusals_are_printed_in_its_words_and_exit_one(project, monkeypatc
     assert opened == []
 
 
+def test_amp_unreachable_at_the_start_is_a_sentence_not_a_traceback(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP())
+    monkeypatch.setattr(amp, "create_evaluation", lambda execution_id: (_ for _ in ()).throw(httpx.ConnectError("connection refused")))
+
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+
+    assert exit_.value.code == 1
+    assert "Could not reach AMP to start the evaluation: connection refused" in capsys.readouterr().out
+
+
+def test_while_waiting_a_blip_is_retried_and_a_streak_is_reported(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[httpx.Response(502), httpx.Response(503, json={"error": "service_unavailable", "message": "crew-optimize is down"}), done()]))
+
+    eval_module.eval_crew()  # two bad polls, then the verdict
+
+    assert "Goal gate: PASSED" in capsys.readouterr().out
+    assert amp.calls.count(("get", "ev-1")) == 3
+
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[httpx.Response(503, json={"error": "service_unavailable", "message": "crew-optimize is down"})] * eval_module.POLL_RETRIES))
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+    assert exit_.value.code == 1
+    assert "AMP answered 503: crew-optimize is down" in capsys.readouterr().out
+    assert amp.calls.count(("get", "ev-1")) == eval_module.POLL_RETRIES
+
+    amp = install(monkeypatch, FakeAMP())
+    monkeypatch.setattr(amp, "get_evaluation", lambda evaluation_id: (_ for _ in ()).throw(httpx.ReadTimeout("timed out")))
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+    assert exit_.value.code == 1
+    assert f"Could not reach AMP while waiting (timed out); the evaluation keeps running at {URL}." in capsys.readouterr().out
+
+
+def test_a_refusal_mid_poll_names_the_evaluation_and_an_unknown_status_stops_the_wait(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory)
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(404, text="gone")]))
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+    assert exit_.value.code == 1 and "AMP answered 404 for evaluation ev-1." in capsys.readouterr().out
+
+    for odd in (httpx.Response(200, json={"id": "ev-1", "status": "cancelled"}), httpx.Response(200, json=[]), httpx.Response(200, text="<html>")):
+        install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "queued"}), odd]))
+        with pytest.raises(SystemExit) as exit_:
+            eval_module.eval_crew()
+        assert exit_.value.code == 1
+        assert f"AMP answered without a known evaluation status" in capsys.readouterr().out
+
+
+def test_ctrl_c_leaves_the_evaluation_running_and_exits_130(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP())
+    monkeypatch.setattr(amp, "get_evaluation", lambda evaluation_id: (_ for _ in ()).throw(KeyboardInterrupt()))
+
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+
+    assert exit_.value.code == 130
+    assert f"Still running at {URL}." in capsys.readouterr().out
+
+
+def test_dmn_mode_prints_the_url_but_opens_no_browser(project, monkeypatch, capsys):
+    directory, opened = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: True)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert opened == [] and URL in capsys.readouterr().out
+
+
+def test_run_skips_the_offer_when_nothing_is_recorded(project, monkeypatch, capsys):
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *args, **kwargs: pytest.fail("no offer with --run"))
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert amp.calls[0] == ("create", "named-run")
+
+
+def test_outside_a_crewai_project_nothing_is_written_and_it_says_so(project, monkeypatch, capsys):
+    directory, _ = project
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *args, **kwargs: pytest.fail("no offer outside a project"))
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+
+    assert exit_.value.code == 1
+    assert "No crewAI project here (no pyproject.toml)" in capsys.readouterr().out
+    assert not (directory / ".env").exists() and amp.calls == []
+
+
 def test_without_a_traced_run_and_no_terminal_it_explains_and_exits(project, monkeypatch, capsys):
+    (project[0] / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: True)
     amp = install(monkeypatch, FakeAMP())
 
@@ -146,6 +260,7 @@ def test_without_a_traced_run_and_no_terminal_it_explains_and_exits(project, mon
 
 def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(project, monkeypatch, capsys):
     directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(eval_module.click, "confirm", lambda *args, **kwargs: True)
     ran: list[str] = []
@@ -170,6 +285,7 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
 
 
 def test_declining_the_offer_exits_cleanly_with_the_steps(project, monkeypatch, capsys):
+    (project[0] / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(eval_module.click, "confirm", lambda *args, **kwargs: False)
     amp = install(monkeypatch, FakeAMP())
@@ -182,6 +298,7 @@ def test_declining_the_offer_exits_cleanly_with_the_steps(project, monkeypatch, 
 
 
 def test_a_run_that_leaves_no_trace_behind_is_explained(project, monkeypatch, capsys):
+    (project[0] / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(eval_module.click, "confirm", lambda *args, **kwargs: True)
     import crewai_cli.run_crew as run_crew_module
@@ -193,7 +310,8 @@ def test_a_run_that_leaves_no_trace_behind_is_explained(project, monkeypatch, ca
         eval_module.eval_crew()
 
     assert exit_.value.code == 1
-    assert "no trace was recorded" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "no trace was recorded" in out and "older than the version that records the last run" in out
 
 
 def test_the_cli_command_maps_to_the_implementation(monkeypatch):
@@ -207,10 +325,13 @@ def test_the_cli_command_maps_to_the_implementation(monkeypatch):
     assert "Evaluate the last traced run" in runner.invoke(eval_command, ["--help"]).output
 
 
-def test_last_run_id_reads_the_record_crewai_writes(tmp_path):
-    assert eval_module.last_run_id(tmp_path) is None
+def test_read_last_run_reads_the_record_crewai_writes(tmp_path):
+    assert eval_module.read_last_run(tmp_path) is None
     (tmp_path / ".crewai").mkdir()
     (tmp_path / ".crewai" / "last_run.json").write_text("not json")
-    assert eval_module.last_run_id(tmp_path) is None
+    assert eval_module.read_last_run(tmp_path) is None
+    (tmp_path / ".crewai" / "last_run.json").write_text(json.dumps({"tier": "ephemeral"}))
+    assert eval_module.read_last_run(tmp_path) is None
     record_last_run(tmp_path)
-    assert eval_module.last_run_id(tmp_path) == EXECUTION_ID
+    record = eval_module.read_last_run(tmp_path)
+    assert record is not None and record["execution_id"] == EXECUTION_ID and record["amp_base_url"] == "https://amp.test"
