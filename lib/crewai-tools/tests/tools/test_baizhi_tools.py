@@ -1,8 +1,13 @@
 """Exercise native CrewAI dispatch with the real MCP SDK and an offline transport."""
 
 import asyncio
+import builtins
+import importlib.util
 import json
 import logging
+from pathlib import Path
+import sys
+import traceback
 from unittest.mock import patch
 
 from crewai_tools import BaizhiExtractTool, BaizhiScrapeTool, BaizhiSearchTool
@@ -24,6 +29,16 @@ CASES = [
         "web_extract",
     ),
 ]
+
+
+def dispatch_tool(tool, arguments, dispatch):
+    if dispatch == "run":
+        return tool.run(**arguments)
+    if dispatch == "arun":
+        return asyncio.run(tool.arun(**arguments))
+    if dispatch == "invoke":
+        return tool.to_structured_tool().invoke(arguments)
+    return asyncio.run(tool.to_structured_tool().ainvoke(arguments))
 
 
 @pytest.fixture
@@ -115,14 +130,7 @@ def server(monkeypatch):
 @pytest.mark.parametrize("dispatch", ["run", "arun", "invoke", "ainvoke"])
 def test_native_dispatch(server, tool_class, arguments, remote_name, dispatch):
     tool = tool_class(api_key=KEY)
-    if dispatch == "run":
-        output = tool.run(**arguments)
-    elif dispatch == "arun":
-        output = asyncio.run(tool.arun(**arguments))
-    elif dispatch == "invoke":
-        output = tool.to_structured_tool().invoke(arguments)
-    else:
-        output = asyncio.run(tool.to_structured_tool().ainvoke(arguments))
+    output = dispatch_tool(tool, arguments, dispatch)
     assert json.loads(output) == {"items": ["result"]}
     assert len(server["calls"]) == 1
     call = server["calls"][0]
@@ -130,6 +138,10 @@ def test_native_dispatch(server, tool_class, arguments, remote_name, dispatch):
     assert call["arguments"] == tool.args_schema.model_validate(arguments).model_dump(
         mode="json", exclude_none=True
     )
+    if remote_name in ("web_scrape", "web_extract"):
+        assert call["arguments"]["download"] is False
+        download_schema = tool.args_schema.model_json_schema()["properties"]["download"]
+        assert download_schema["const"] is False
     assert server["closed"]
     assert KEY not in tool.model_dump_json()
     assert KEY not in repr(tool)
@@ -272,12 +284,71 @@ def test_domain_filter_rejects_non_domains(server, value):
 
 
 @pytest.mark.parametrize("tool_class", [BaizhiScrapeTool, BaizhiExtractTool])
-def test_urls_with_embedded_credentials_are_rejected(server, tool_class):
-    arguments = {"url": "https://user:password@example.com"}
+@pytest.mark.parametrize("dispatch", ["run", "arun", "invoke", "ainvoke"])
+def test_urls_with_embedded_credentials_are_rejected(
+    server, tool_class, dispatch, caplog, capsys
+):
+    username = "userx"
+    password = "secretx"
+    arguments = {"url": f"https://{username}:{password}@example.com"}
     if tool_class is BaizhiExtractTool:
         arguments["fields"] = {"title": "string"}
-    with pytest.raises(ValueError):
-        tool_class(api_key=KEY).run(**arguments)
+    with pytest.raises(ValueError, match="embedded credentials") as error:
+        dispatch_tool(tool_class(api_key=KEY), arguments, dispatch)
+    captured = capsys.readouterr()
+    diagnostics = (
+        str(error.value)
+        + "".join(traceback.format_exception(error.value))
+        + caplog.text
+        + captured.out
+        + captured.err
+    )
+    assert username not in diagnostics
+    assert password not in diagnostics
+    assert arguments["url"] not in diagnostics
+    assert not server["requests"]
+    assert not server["calls"]
+
+
+@pytest.mark.parametrize("tool_class", [BaizhiScrapeTool, BaizhiExtractTool])
+@pytest.mark.parametrize("dispatch", ["run", "arun", "invoke", "ainvoke"])
+def test_downloads_are_disabled(server, tool_class, dispatch):
+    arguments = {"url": "https://example.com", "download": True}
+    if tool_class is BaizhiExtractTool:
+        arguments["instruction"] = "Extract the title"
+    with pytest.raises(ValueError, match="download"):
+        dispatch_tool(tool_class(api_key=KEY), arguments, dispatch)
+    assert not server["requests"]
+    assert not server["calls"]
+
+
+@pytest.mark.parametrize("tool_class,arguments,_remote_name", CASES)
+def test_mcp_dependency_is_loaded_only_at_call_time(
+    server, monkeypatch, tool_class, arguments, _remote_name
+):
+    from crewai_tools.tools.baizhi_tools import baizhi_tools
+
+    original_import = builtins.__import__
+
+    def import_without_mcp(name, *args, **kwargs):
+        if name == "mcp" or name.startswith("mcp."):
+            raise ModuleNotFoundError("Synthetic missing optional MCP dependency")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_mcp)
+    spec = importlib.util.spec_from_file_location(
+        "baizhi_without_mcp", Path(baizhi_tools.__file__)
+    )
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, module)
+    # Import a fresh module without adding duplicate process-wide log filters.
+    with patch.object(logging.Logger, "addFilter"):
+        spec.loader.exec_module(module)
+    tool = getattr(module, tool_class.__name__)(api_key=KEY)
+    assert tool.args_schema.model_json_schema()["properties"]
+    with pytest.raises(ImportError, match=r"uv add 'crewai-tools\[mcp\]'"):
+        tool.run(**arguments)
+    assert not server["requests"]
     assert not server["calls"]
 
 
