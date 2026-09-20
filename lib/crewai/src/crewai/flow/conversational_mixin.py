@@ -1505,11 +1505,22 @@ class _ConversationalMixin:
         )
 
     @staticmethod
-    def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
+    def _coerce_user_message_text(user_message: str | Mapping[str, Any] | Any) -> str:
+        """Coerce conversational user message into plain text.
+
+        Collapses strings, mapping structures, and model messages containing text or
+        multimodal content parts into a promptable string.
+        """
         if isinstance(user_message, str):
             return user_message
-        if isinstance(user_message, dict) and user_message.get("content") is not None:
-            return str(user_message["content"])
+        from crewai.utilities.agent_utils import message_content_text
+
+        if isinstance(user_message, Mapping) and "content" in user_message:
+            return message_content_text(dict(user_message))
+        if isinstance(user_message, BaseModel) and hasattr(user_message, "content"):
+            return message_content_text(user_message.model_dump())
+        if hasattr(user_message, "content"):
+            return message_content_text({"content": user_message.content})
         return str(user_message)
 
     @staticmethod
@@ -1522,10 +1533,31 @@ class _ConversationalMixin:
 
     @staticmethod
     def _format_messages(messages: Sequence[Mapping[str, Any]]) -> str:
-        return "\n".join(
-            f"{message.get('role', 'user')}: {message.get('content', '')}"
-            for message in messages
-        )
+        """Format a sequence of conversational messages into a transcript string.
+
+        Collapses string and multimodal message contents into text lines prefixed
+        by their respective role labels.
+        """
+        from crewai.utilities.agent_utils import message_content_text
+
+        formatted: list[str] = []
+        for message in messages:
+            role = (
+                message.get("role", "user")
+                if isinstance(message, Mapping)
+                else getattr(message, "role", "user")
+            )
+            msg_dict = (
+                dict(message)
+                if isinstance(message, Mapping)
+                else (
+                    message.model_dump()
+                    if isinstance(message, BaseModel)
+                    else {"content": getattr(message, "content", "")}
+                )
+            )
+            formatted.append(f"{role}: {message_content_text(msg_dict)}")
+        return "\n".join(formatted)
 
     @staticmethod
     def _coerce_llm(llm: str | BaseLLM | Any) -> Any:
