@@ -82,3 +82,26 @@ def test_a_failed_write_leaves_no_temporary_file(project, monkeypatch):
     monkeypatch.setattr(last_run.os, "replace", lambda src, dst: (_ for _ in ()).throw(OSError("disk full")))
     assert last_run.record_last_run(execution_id="x", tier=None, started_at_ns=None, finished_at_ns=None, amp_base_url=None) is None
     assert list((project / ".crewai").iterdir()) == []
+
+
+def test_the_run_that_finished_last_stays_recorded_whichever_writer_comes_last(project):
+    """Two crews finish together; the OLDER run's writer gets to the file after the newer one did."""
+    second = 1_000_000_000
+    base = 1_758_240_000 * second
+    last_run.record_last_run(execution_id="newer", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 30 * second, amp_base_url=None)
+    kept = last_run.record_last_run(execution_id="older", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 10 * second, amp_base_url=None)
+    written = last_run.read_last_run(project)
+    assert kept == project / ".crewai" / "last_run.json"
+    assert written is not None and written["execution_id"] == "newer"
+    assert [child.name for child in (project / ".crewai").iterdir()] == ["last_run.json"]  # the loser's temporary file is gone
+
+    # The same run recorded again (a refreshed grant) and a run that finished later both replace it.
+    last_run.record_last_run(execution_id="newer", tier="authenticated", started_at_ns=base, finished_at_ns=base + 30 * second, amp_base_url=None)
+    assert last_run.read_last_run(project)["tier"] == "authenticated"
+    last_run.record_last_run(execution_id="newest", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 40 * second, amp_base_url=None)
+    assert last_run.read_last_run(project)["execution_id"] == "newest"
+
+    # A record without a comparable time never blocks the run just finished.
+    (project / ".crewai" / "last_run.json").write_text(json.dumps({"execution_id": "legacy"}), encoding="utf-8")
+    last_run.record_last_run(execution_id="fresh", tier=None, started_at_ns=None, finished_at_ns=None, amp_base_url=None)
+    assert last_run.read_last_run(project)["execution_id"] == "fresh"

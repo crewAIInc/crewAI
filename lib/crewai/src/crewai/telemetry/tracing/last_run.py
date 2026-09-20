@@ -59,7 +59,11 @@ def record_last_run(
     amp_base_url: str | None,
 ) -> Path | None:
     """Write the record atomically; the path, or None when recording is off
-    or the write failed. Never raises — a run is never failed by this."""
+    or the write failed. Never raises — a run is never failed by this.
+
+    "Last" means the run that FINISHED last: a record already there for a run
+    that finished later is kept, so two crews finishing together in one
+    project leave the newer one whichever writer gets to the file last."""
     if not recording_enabled():
         return None
     record: dict[str, Any] = {
@@ -82,7 +86,13 @@ def record_last_run(
         try:
             with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, indent=2) + "\n")
-            os.replace(temporary, path)
+            if _newer_than(record, read_last_run(path.parent.parent)):
+                os.replace(temporary, path)
+            else:
+                logger.debug(
+                    "A run that finished later is already recorded in %s", path
+                )
+                os.unlink(temporary)
         except OSError:
             with contextlib.suppress(OSError):
                 os.unlink(temporary)
@@ -95,6 +105,20 @@ def record_last_run(
         )
         return None
     return path
+
+
+def _newer_than(record: dict[str, Any], existing: dict[str, Any] | None) -> bool:
+    """Is RECORD the later-finished run? A missing or unreadable existing record,
+    or one without a comparable time, never wins over the run just finished."""
+    if not existing or existing.get("execution_id") == record["execution_id"]:
+        return True
+    ours = record["finished_at"] or record["recorded_at"]
+    theirs = existing.get("finished_at") or existing.get("recorded_at")
+    if not isinstance(theirs, str) or not isinstance(ours, str):
+        return True
+    return (
+        ours >= theirs
+    )  # both ISO 8601 in UTC with the same precision: text order is time order
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:
