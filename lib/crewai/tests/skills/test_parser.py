@@ -25,6 +25,14 @@ class TestParseFrontmatter:
         assert fm["description"] == "A test"
         assert body == "Body text here."
 
+    def test_crlf_frontmatter_and_body(self) -> None:
+        content = "---\r\nname: test\r\ndescription: A test\r\n---\r\nBody text here."
+
+        fm, body = parse_frontmatter(content)
+
+        assert fm == {"name": "test", "description": "A test"}
+        assert body == "Body text here."
+
     def test_empty_body(self) -> None:
         content = "---\nname: test\ndescription: A test\n---"
         fm, body = parse_frontmatter(content)

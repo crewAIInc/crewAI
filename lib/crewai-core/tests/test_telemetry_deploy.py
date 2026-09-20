@@ -170,6 +170,60 @@ class TestStartDeployment:
         feature.assert_called_once_with("deploy:pushed")
 
 
+class TestCrewDeploymentFailed:
+    """The third deployment span: why an attempt did not become a success."""
+
+    def test_records_the_reason_and_defaults_to_cli(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        instance, span = telemetry
+        instance.crew_deployment_failed_span("network_error")
+        attributes = _attributes(span)
+        assert attributes["reason"] == "network_error"
+        assert attributes["source"] == "cli"
+
+    def test_carries_the_http_status_when_the_api_answered(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        instance, span = telemetry
+        instance.crew_deployment_failed_span("api_4xx", status_code=422)
+        assert _attributes(span)["status_code"] == 422
+
+    def test_omits_the_status_key_when_there_was_no_response(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        """A missing key means "no response"; a 0 would read as a status."""
+        instance, span = telemetry
+        instance.crew_deployment_failed_span("user_declined", source="tui")
+        attributes = _attributes(span)
+        assert "status_code" not in attributes
+        assert attributes["source"] == "tui"
+
+    def test_is_a_separate_span_from_the_attempt_and_the_success(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        instance, _span = telemetry
+        # The attempt also emits its deploy:created feature span; that count is
+        # covered elsewhere and only clutters the sequence asserted here.
+        with patch.object(instance, "feature_usage_span"):
+            instance.create_crew_deployment_span()
+            instance.crew_deployment_failed_span("api_5xx", status_code=500)
+        provider = cast(MagicMock, instance.provider)
+        assert _span_names(provider) == [
+            "Create Crew Deployment",
+            "Crew Deployment Failed",
+        ]
+
+    def test_does_not_emit_a_feature_count(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        """deploy:created is already counted by the attempt span."""
+        instance, _span = telemetry
+        with patch.object(instance, "feature_usage_span") as feature:
+            instance.crew_deployment_failed_span("zip_error")
+        feature.assert_not_called()
+
+
 class TestDisabledTelemetry:
     def test_opted_out_users_emit_nothing(self) -> None:
         """No span and no feature count when telemetry is off."""
@@ -183,6 +237,7 @@ class TestDisabledTelemetry:
         ):
             instance.create_crew_deployment_span(source="tui")
             instance.start_deployment_span("dep-123", source="tui")
+            instance.crew_deployment_failed_span("api_4xx", status_code=401)
 
         assert _span_names(provider) == []
         # feature_usage_span is itself gated, so it is still called; it is the
@@ -198,7 +253,7 @@ class TestReleaseAttribution:
 
     A span without ``crewai_version`` cannot be attributed to a version, so a
     version-filtered question returns nothing for it rather than something
-    visibly wrong. Covers all eight spans this module emits, not only the ones
+    visibly wrong. Covers all ten spans this module emits, not only the ones
     that were missing it, so a regression on the others is caught too.
     """
 
@@ -208,6 +263,8 @@ class TestReleaseAttribution:
             ("deploy_signup_error_span", ()),
             ("start_deployment_span", ("dep-123",)),
             ("create_crew_deployment_span", ()),
+            ("crew_deployment_created_span", ("dep-123",)),
+            ("crew_deployment_failed_span", ("api_5xx",)),
             ("get_crew_logs_span", ("dep-123", "deployment")),
             ("remove_crew_span", ("dep-123",)),
             ("feature_usage_span", ("memory:query",)),
