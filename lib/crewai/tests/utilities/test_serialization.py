@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+from enum import Enum, IntEnum
 from typing import Any, List
 
 import pytest
@@ -23,6 +24,22 @@ class Person(BaseModel):
 
 class Container(BaseModel):
     payload: BaseModel | None = None
+
+
+class Status(Enum):
+    READY = "ready"
+
+
+class Priority(IntEnum):
+    HIGH = 1
+
+
+class Schedule(Enum):
+    START = date(2024, 1, 1)
+
+
+class Options(Enum):
+    DEFAULT = ("fast", "safe")
 
 
 @dataclass
@@ -61,6 +78,33 @@ def test_basic_serialization(test_input, expected):
 def test_temporal_serialization(input_date, expected):
     result = to_serializable({"date": input_date})
     assert result["date"] == expected
+
+
+def test_enum_serialization_uses_declared_values():
+    value = {
+        "status": Status.READY,
+        "priority": Priority.HIGH,
+        "schedule": Schedule.START,
+        "options": Options.DEFAULT,
+    }
+
+    assert to_serializable(value) == {
+        "status": "ready",
+        "priority": 1,
+        "schedule": "2024-01-01",
+        "options": ["fast", "safe"],
+    }
+    assert to_string(value) == (
+        '{"status": "ready", "priority": 1, "schedule": "2024-01-01", '
+        '"options": ["fast", "safe"]}'
+    )
+
+
+def test_enum_dictionary_keys_use_declared_values():
+    assert to_serializable({Status.READY: "ok", Priority.HIGH: "urgent"}) == {
+        "ready": "ok",
+        "1": "urgent",
+    }
 
 
 @pytest.mark.parametrize(
