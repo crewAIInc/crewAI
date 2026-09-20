@@ -995,21 +995,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         with self._usage_metrics_lock:
             return self._aggregated_usage_metrics.model_copy()
 
-    def recall(self, query: str, **kwargs: Any) -> Any:
+    def recall(self, query: str | list[str], **kwargs: Any) -> Any:
         """Recall relevant memories. Delegates to this flow's memory.
 
+        Pass a single string for single-query recall (delegates to memory.recall).
+        Pass a list of strings for batch recall (delegates to memory.recall_many).
+
         Args:
-            query: Natural language query.
-            **kwargs: Passed to memory.recall (e.g. scope, categories, limit, depth).
+            query: Natural language query or list of queries.
+            **kwargs: Passed to memory.recall / recall_many (e.g. scope, categories, limit, depth).
 
         Returns:
-            Result of memory.recall(query, **kwargs).
+            Result of memory.recall or memory.recall_many.
 
         Raises:
             ValueError: If no memory is configured for this flow.
         """
         if self.memory is None:
             raise ValueError("No memory configured for this flow")
+        if isinstance(query, list):
+            if hasattr(self.memory, "recall_many"):
+                return self.memory.recall_many(query, **kwargs)
+            all_matches = []
+            for q in query:
+                all_matches.extend(self.memory.recall(q, **kwargs))
+            return all_matches
         return self.memory.recall(query, **kwargs)
 
     def remember(self, content: str | list[str], **kwargs: Any) -> Any:

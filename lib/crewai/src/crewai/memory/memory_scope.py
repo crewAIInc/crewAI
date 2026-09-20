@@ -169,6 +169,28 @@ class MemoryScope(BaseModel):
             include_private=include_private,
         )
 
+    def recall_many(
+        self,
+        queries: list[str],
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        limit: int = 10,
+        depth: Literal["shallow", "deep"] = "shallow",
+        source: str | None = None,
+        include_private: bool = False,
+    ) -> list[MemoryMatch]:
+        """Recall multiple queries within this scope (root path and below)."""
+        search_scope = self._scope_path(scope) if scope else (self._root or "/")
+        return self._require_memory().recall_many(
+            queries,
+            scope=search_scope,
+            categories=categories,
+            limit=limit,
+            depth=depth,
+            source=source,
+            include_private=include_private,
+        )
+
     def extract_memories(self, content: str) -> list[str]:
         """Extract discrete memories from content; delegates to underlying Memory."""
         return self._require_memory().extract_memories(content)
@@ -308,6 +330,40 @@ class MemorySlice(BaseModel):
         for sc in self.scopes:
             matches = self._require_memory().recall(
                 query,
+                scope=sc,
+                categories=cats,
+                limit=limit * _RECALL_OVERSAMPLE_FACTOR,
+                depth=depth,
+                source=source,
+                include_private=include_private,
+            )
+            all_matches.extend(matches)
+        seen_ids: set[str] = set()
+        unique: list[MemoryMatch] = []
+        for m in sorted(all_matches, key=lambda x: x.score, reverse=True):
+            if m.record.id not in seen_ids:
+                seen_ids.add(m.record.id)
+                unique.append(m)
+                if len(unique) >= limit:
+                    break
+        return unique
+
+    def recall_many(
+        self,
+        queries: list[str],
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        limit: int = 10,
+        depth: Literal["shallow", "deep"] = "shallow",
+        source: str | None = None,
+        include_private: bool = False,
+    ) -> list[MemoryMatch]:
+        """Recall multiple queries across all slice scopes; results merged and re-ranked."""
+        cats = categories or self.categories
+        all_matches: list[MemoryMatch] = []
+        for sc in self.scopes:
+            matches = self._require_memory().recall_many(
+                queries,
                 scope=sc,
                 categories=cats,
                 limit=limit * _RECALL_OVERSAMPLE_FACTOR,

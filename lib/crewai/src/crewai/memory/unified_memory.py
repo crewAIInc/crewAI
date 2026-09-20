@@ -32,6 +32,7 @@ from crewai.memory.types import (
     ScopeInfo,
     compute_composite_score,
     embed_text,
+    embed_texts,
 )
 from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
@@ -820,6 +821,194 @@ class Memory(BaseModel):
             )
             raise
 
+    def recall_many(
+        self,
+        queries: list[str],
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        limit: int = 10,
+        depth: Literal["shallow", "deep"] = "shallow",
+        source: str | None = None,
+        include_private: bool = False,
+    ) -> list[MemoryMatch]:
+        """Retrieve relevant memories for multiple queries in a single batch.
+
+        ``shallow`` (default) embeds all queries in a single embedding call,
+        searches the vector store concurrently, and deduplicates records by ID
+        (retaining the highest semantic score) before ranking.
+        ``deep`` runs the RecallFlow concurrently for each query, deduplicates
+        results, and returns top-ranked matches.
+
+        Args:
+            queries: List of natural language queries.
+            scope: Optional scope prefix to search within.
+            categories: Optional category filter.
+            limit: Max number of results.
+            depth: "shallow" (default) for single-call batch embedding & concurrent search,
+                   "deep" for concurrent intelligent recall flows.
+            source: Optional provenance filter. Private records are only visible
+                    when this matches the record's source.
+            include_private: If True, all private records are visible regardless of source.
+
+        Returns:
+            List of MemoryMatch, ordered by composite relevance score.
+        """
+        if not queries:
+            return []
+
+        valid_queries = [q.strip() for q in queries if q and q.strip()]
+        if not valid_queries:
+            return []
+
+        # Read barrier: wait for any pending background saves to finish
+        # so that the search sees all persisted records.
+        self.drain_writes()
+
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
+
+        _source = "unified_memory"
+        query_str = "; ".join(valid_queries)
+        try:
+            crewai_event_bus.emit(
+                self,
+                MemoryQueryStartedEvent(
+                    query=query_str,
+                    limit=limit,
+                    score_threshold=None,
+                    source_type=_source,
+                ),
+            )
+            start = time.perf_counter()
+
+            if depth == "shallow":
+                embeddings = embed_texts(self._embedder, valid_queries)
+                valid_embeddings = [e for e in embeddings if e]
+                if not valid_embeddings:
+                    results: list[MemoryMatch] = []
+                else:
+
+                    def _search(emb: list[float]) -> list[tuple[MemoryRecord, float]]:
+                        return self._storage.search(
+                            emb,
+                            scope_prefix=effective_scope,
+                            categories=categories,
+                            limit=limit,
+                            min_score=0.0,
+                        )
+
+                    max_workers = min(len(valid_embeddings), 8)
+                    if len(valid_embeddings) == 1:
+                        raw_searches = [_search(valid_embeddings[0])]
+                    else:
+                        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                            raw_searches = list(executor.map(_search, valid_embeddings))
+
+                    best_matches: dict[str, tuple[MemoryRecord, float]] = {}
+                    for raw in raw_searches:
+                        if not include_private:
+                            raw = [
+                                (r, s)
+                                for r, s in raw
+                                if not r.private or r.source == source
+                            ]
+                        for r, s in raw:
+                            if r.id not in best_matches or s > best_matches[r.id][1]:
+                                best_matches[r.id] = (r, s)
+
+                    results = []
+                    for r, s in best_matches.values():
+                        composite, reasons = compute_composite_score(r, s, self._config)
+                        results.append(
+                            MemoryMatch(
+                                record=r,
+                                score=composite,
+                                match_reasons=reasons,
+                            )
+                        )
+                    results.sort(key=lambda m: m.score, reverse=True)
+                    if limit is not None and limit > 0:
+                        results = results[:limit]
+            else:
+                from crewai.memory.recall_flow import RecallFlow
+
+                def _run_deep(q: str) -> list[MemoryMatch]:
+                    flow = RecallFlow(
+                        storage=self._storage,
+                        llm=self._llm,
+                        embedder=self._embedder,
+                        config=self._config,
+                    )
+                    flow.kickoff(
+                        inputs={
+                            "query": q,
+                            "scope": effective_scope,
+                            "categories": categories or [],
+                            "limit": limit,
+                            "source": source,
+                            "include_private": include_private,
+                        }
+                    )
+                    return flow.state.final_results or []
+
+                max_workers = min(len(valid_queries), 4)
+                if len(valid_queries) == 1:
+                    deep_searches = [_run_deep(valid_queries[0])]
+                else:
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        deep_searches = list(executor.map(_run_deep, valid_queries))
+
+                best_deep_matches: dict[str, MemoryMatch] = {}
+                for matches in deep_searches:
+                    for m in matches:
+                        if (
+                            m.record.id not in best_deep_matches
+                            or m.score > best_deep_matches[m.record.id].score
+                        ):
+                            best_deep_matches[m.record.id] = m
+
+                results = list(best_deep_matches.values())
+                results.sort(key=lambda m: m.score, reverse=True)
+                if limit is not None and limit > 0:
+                    results = results[:limit]
+
+            if results and not self.read_only:
+                try:
+                    touch = getattr(self._storage, "touch_records", None)
+                    if touch is not None:
+                        touch([m.record.id for m in results])
+                except Exception:  # noqa: S110
+                    pass  # Non-critical: don't fail recall because of touch
+
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            crewai_event_bus.emit(
+                self,
+                MemoryQueryCompletedEvent(
+                    query=query_str,
+                    results=results,
+                    limit=limit,
+                    score_threshold=None,
+                    query_time_ms=elapsed_ms,
+                    source_type=_source,
+                ),
+            )
+            return results
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                MemoryQueryFailedEvent(
+                    query=query_str,
+                    limit=limit,
+                    score_threshold=None,
+                    error=str(e),
+                    source_type=_source,
+                ),
+            )
+            raise
+
     def forget(
         self,
         scope: str | None = None,
@@ -1103,6 +1292,27 @@ class Memory(BaseModel):
         """Async recall: delegates to sync for now."""
         return self.recall(
             query,
+            scope=scope,
+            categories=categories,
+            limit=limit,
+            depth=depth,
+            source=source,
+            include_private=include_private,
+        )
+
+    async def arecall_many(
+        self,
+        queries: list[str],
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        limit: int = 10,
+        depth: Literal["shallow", "deep"] = "shallow",
+        source: str | None = None,
+        include_private: bool = False,
+    ) -> list[MemoryMatch]:
+        """Async batch recall: delegates to sync for now."""
+        return self.recall_many(
+            queries,
             scope=scope,
             categories=categories,
             limit=limit,
