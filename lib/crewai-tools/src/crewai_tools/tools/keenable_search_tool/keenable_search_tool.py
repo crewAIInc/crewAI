@@ -150,7 +150,9 @@ class KeenableSearchTool(BaseTool):
                 # X-API-Key across them, so a redirect could leak the key.
                 allow_redirects=False,
             )
-            if response.is_redirect or response.is_permanent_redirect:
+            # Reject the whole 3xx range, not just what `is_redirect` recognises:
+            # `raise_for_status()` lets 3xx through, and a 300 or 304 has no Location.
+            if 300 <= response.status_code < 400:
                 return (
                     "Error performing search: the Keenable API returned a redirect "
                     f"({response.status_code}), which this tool does not follow."
