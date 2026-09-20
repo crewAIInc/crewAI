@@ -1,17 +1,28 @@
 import os
 from typing import Any, Optional, Type
-import requests
 from urllib.parse import urlparse
+import requests
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
 class PhishVisionToolSchema(BaseModel):
-    target: str = Field(description="The target URL or bare domain to audit for cybersecurity threats.")
+    """Input schema for the PhishVision threat auditing tool."""
+
+    target: str = Field(
+        description="The target URL or domain to audit for cybersecurity threats."
+    )
 
 
 class PhishVisionTool(BaseTool):
+    """Pre-flight cybersecurity oracle tool for autonomous agents.
+
+    Audits URLs and domains in real-time for zero-day credential harvesting,
+    typosquatting, brand impersonation, and malicious crypto smart contract drainers
+    before autonomous agent interaction.
+    """
+
     name: str = "PhishVision Threat & Drainer Shield"
     description: str = (
         "Audit any website or domain in real-time for zero-day phishing, credential harvesting, "
@@ -35,23 +46,49 @@ class PhishVisionTool(BaseTool):
     ]
 
     def _normalize_url(self, target: str) -> str:
+        """Normalize target URL, preserving existing schemes case-insensitively.
+
+        Args:
+            target: The input URL or domain string.
+
+        Returns:
+            A normalized URL string with https scheme if none was provided.
+
+        Raises:
+            ValueError: If the target is empty or lacks a valid network location.
+        """
         clean = (target or "").strip()
         if not clean:
             raise ValueError("Target URL or domain cannot be empty.")
-        if not clean.startswith(("http://", "https://")):
-            clean = f"https://{clean}"
+
         parsed = urlparse(clean)
-        if not (parsed.scheme in ("http", "https") and parsed.netloc):
+        if not parsed.scheme:
+            clean = f"https://{clean}"
+            parsed = urlparse(clean)
+
+        scheme_lower = parsed.scheme.lower()
+        if scheme_lower not in ("http", "https") or not parsed.netloc:
             raise ValueError(f"Invalid target URL or domain: {target}")
         return clean
 
     def _run(self, target: str) -> str:
+        """Execute the security audit request against the configured PhishVision portal.
+
+        Args:
+            target: Target URL or domain to inspect for phishing and drainer threats.
+
+        Returns:
+            JSON string containing threat score, verdict, and forensic analysis.
+
+        Raises:
+            ValueError: If portal_url does not use HTTPS.
+        """
         normalized_url = self._normalize_url(target)
         portal = (self.portal_url or "https://opticparse-api.onrender.com").strip().rstrip("/")
         api_key = (self.api_key or "").strip()
 
-        if api_key and portal.startswith("http://"):
-            raise ValueError("Insecure HTTP portal URL not allowed when API key is set. Use HTTPS.")
+        if not portal.lower().startswith("https://"):
+            raise ValueError("portal_url must use a secure HTTPS endpoint to prevent cleartext data transmission.")
 
         headers = {
             "Content-Type": "application/json",
