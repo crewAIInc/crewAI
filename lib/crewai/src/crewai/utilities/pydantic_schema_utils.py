@@ -265,11 +265,32 @@ def strip_unsupported_formats(d: Any, _seen: set[int] | None = None) -> Any:
     return d
 
 
+def _infer_type_from_structure(schema: dict[str, Any]) -> str | None:
+    """Infer a missing 'type' from unambiguous structural keywords.
+
+    JSON Schema does not require 'type', but a schema with 'items' can only
+    describe an array and one with 'properties' can only describe an object.
+
+    Args:
+        schema: A schema dict with no 'type' key.
+
+    Returns:
+        The inferred type, or None if the shape is genuinely ambiguous.
+    """
+    if "items" in schema:
+        return "array"
+    if "properties" in schema:
+        return "object"
+    return None
+
+
 def ensure_type_in_schemas(d: Any, _seen: set[int] | None = None) -> Any:
     """Ensure all schema objects in anyOf/oneOf have a 'type' key.
 
-    OpenAI strict mode requires every schema to have a 'type' key.
-    Empty schemas {} in anyOf/oneOf are converted to {"type": "object"}.
+    OpenAI strict mode requires every schema to have a 'type' key. Empty
+    schemas {} in anyOf/oneOf are converted to {"type": "object"}, and
+    non-empty schemas missing 'type' get one inferred from structural
+    keywords (see :func:`_infer_type_from_structure`) when possible.
 
     Args:
         d: The dictionary/list to modify.
@@ -290,6 +311,11 @@ def ensure_type_in_schemas(d: Any, _seen: set[int] | None = None) -> Any:
                 for i, schema in enumerate(schema_list):
                     if isinstance(schema, dict) and schema == {}:
                         schema_list[i] = {"type": "object"}
+                    elif isinstance(schema, dict) and "type" not in schema:
+                        inferred = _infer_type_from_structure(schema)
+                        if inferred is not None:
+                            schema["type"] = inferred
+                        ensure_type_in_schemas(schema, _seen)
                     else:
                         ensure_type_in_schemas(schema, _seen)
         for v in d.values():
@@ -1229,6 +1255,16 @@ def _json_schema_to_pydantic_type(
         )
 
     type_ = json_schema.get("type")
+
+    if type_ is None:
+        # JSON Schema does not require "type" (some MCP servers omit it),
+        # but the shape is unambiguous when structural keywords are present.
+        # Without this, such fields silently degrade to `Any`, losing
+        # validation and, on schema round-trip, their real shape.
+        if "items" in json_schema:
+            type_ = "array"
+        elif "properties" in json_schema:
+            type_ = "object"
 
     if isinstance(type_, list):
         # JSON Schema also allows "type" to be an array, e.g.
