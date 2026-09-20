@@ -73,3 +73,35 @@ def test_s3_reader_closes_response_body_after_read_error() -> None:
         S3ReaderTool()._run("s3://bucket/key.txt")
 
     body.close.assert_called_once_with()
+
+
+def test_s3_reader_preserves_result_when_close_fails() -> None:
+    """Keep a successful read result when best-effort cleanup fails."""
+    body = Mock()
+    body.read.return_value = b"hello"
+    body.close.side_effect = OSError("close failed")
+    client = Mock()
+    client.get_object.return_value = {"Body": body}
+
+    with patch.dict(sys.modules, _boto_modules(client)):
+        result = S3ReaderTool()._run("s3://bucket/key.txt")
+
+    assert result == "hello"
+    body.close.assert_called_once_with()
+
+
+def test_s3_reader_preserves_read_error_when_close_fails() -> None:
+    """Keep the primary read error when best-effort cleanup also fails."""
+    body = Mock()
+    body.read.side_effect = OSError("connection reset")
+    body.close.side_effect = RuntimeError("close failed")
+    client = Mock()
+    client.get_object.return_value = {"Body": body}
+
+    with (
+        patch.dict(sys.modules, _boto_modules(client)),
+        pytest.raises(OSError, match="connection reset"),
+    ):
+        S3ReaderTool()._run("s3://bucket/key.txt")
+
+    body.close.assert_called_once_with()

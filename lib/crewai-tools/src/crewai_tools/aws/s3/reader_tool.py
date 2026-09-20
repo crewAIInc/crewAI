@@ -1,3 +1,4 @@
+from contextlib import suppress
 import os
 
 from crewai.tools import BaseTool
@@ -43,7 +44,8 @@ class S3ReaderTool(BaseTool):
                 result: str = body.read().decode("utf-8")
                 return result
             finally:
-                body.close()
+                with suppress(Exception):
+                    body.close()
 
         except ClientError as e:
             return f"Error reading file from S3: {e!s}"
