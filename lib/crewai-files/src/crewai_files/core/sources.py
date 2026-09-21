@@ -556,7 +556,7 @@ FileSource = FilePath | FileBytes | FileStream | AsyncFileStream | FileUrl
 
 def is_file_source(v: object) -> TypeIs[FileSource]:
     """Type guard to narrow input to FileSource."""
-    return isinstance(v, (FilePath, FileBytes, FileStream, FileUrl))
+    return isinstance(v, (FilePath, FileBytes, FileStream, AsyncFileStream, FileUrl))
 
 
 def _normalize_source(value: Any) -> FileSource:
