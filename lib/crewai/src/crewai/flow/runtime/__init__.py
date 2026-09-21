@@ -3143,7 +3143,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             str, Any
         ] = {}  # Map outcome -> HumanFeedbackResult
         pending_router_triggers = deque([(trigger_method, triggering_event_id)])
-        current_triggering_event_id = triggering_event_id
+        all_triggers = [(trigger_method, triggering_event_id)]
 
         while pending_router_triggers:
             current_trigger, source_event_id = pending_router_triggers.popleft()
@@ -3184,13 +3184,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 pending_router_triggers.append(
                     (router_result_event, current_triggering_event_id)
                 )
-
-        all_triggers = [trigger_method, *router_results]
+                all_triggers.append((router_result_event, current_triggering_event_id))
 
         with self._or_listeners_lock:
             rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
 
-        for idx, current_trigger in enumerate(all_triggers):
+        for idx, (current_trigger, current_triggering_event_id) in enumerate(
+            all_triggers
+        ):
             if current_trigger:
                 if idx > 0 and rearmable:
                     self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
