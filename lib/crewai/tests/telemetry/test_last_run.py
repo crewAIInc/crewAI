@@ -60,17 +60,23 @@ def test_nothing_is_recorded_under_the_test_suite(monkeypatch, tmp_path):
     assert not (tmp_path / ".crewai").exists()
 
 
-def test_a_project_using_platform_tools_is_still_recorded(project, monkeypatch):
+def test_a_project_using_platform_tools_is_still_recorded(monkeypatch, tmp_path):
     """`crewai create crew` writes CREWAI_PLATFORM_INTEGRATION_TOKEN into the project's
     own .env, so it says "this developer uses platform tools", never "this is a
     deployment". Reading it as a deployment marker would leave those users with no
-    run for `crewai eval` to find."""
+    run for `crewai eval` to find.
+
+    Deliberately NOT the `project` fixture: that one stubs `recording_enabled`, which
+    is the very thing under test here."""
+    monkeypatch.setattr(last_run, "project_dir", lambda: tmp_path)
+    monkeypatch.delenv("CREWAI_TESTING", raising=False)
     monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "a token from the project's .env")
 
+    assert last_run.recording_enabled() is True  # the real guard, not the fixture's stub
     path = last_run.record_last_run(execution_id="local", tier="authenticated", started_at_ns=None, finished_at_ns=None, amp_base_url=None)
 
     assert path is not None
-    assert last_run.read_last_run(project)["execution_id"] == "local"
+    assert last_run.read_last_run(tmp_path)["execution_id"] == "local"
 
 
 def test_a_missing_or_broken_record_reads_as_none(project):
@@ -191,3 +197,16 @@ def test_a_write_still_happens_where_the_platform_has_no_file_locking(project, m
     assert path is not None
     assert last_run.read_last_run(project)["execution_id"] == "unlocked"
     assert not (project / ".crewai" / last_run.LOCK_FILE).exists()
+
+
+@pytest.mark.parametrize("failure", [OSError(45, "Operation not supported"), PermissionError(13, "Permission denied")])
+def test_a_filesystem_that_refuses_the_lock_still_records_the_run(project, monkeypatch, failure):
+    """Some network mounts have no working flock. Unserialised beats not recorded."""
+    monkeypatch.setattr(
+        last_run.fcntl, "flock", lambda handle, operation: (_ for _ in ()).throw(failure)
+    )
+
+    path = last_run.record_last_run(execution_id="unlockable", tier=None, started_at_ns=None, finished_at_ns=None, amp_base_url=None)
+
+    assert path is not None
+    assert last_run.read_last_run(project)["execution_id"] == "unlockable"

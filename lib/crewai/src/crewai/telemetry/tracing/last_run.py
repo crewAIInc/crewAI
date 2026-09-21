@@ -130,10 +130,13 @@ def record_last_run(
 @contextlib.contextmanager
 def _exclusive(directory: Path) -> Iterator[None]:
     """One writer at a time in this project, across processes: a lock file beside
-    the record, held over the read, the comparison and the replace. Where the
-    platform has no `flock` (Windows), the write goes ahead unserialised — the
-    record is a convenience pointer for `crewai eval`, never a lock on the run
-    itself, and a write is never failed by the locking."""
+    the record, held over the read, the comparison and the replace.
+
+    The locking never fails a write. No `flock` at all (Windows), a lock file
+    that cannot be opened, or a filesystem that refuses the lock (some network
+    mounts) each leave the write to go ahead unserialised — the record is a
+    convenience pointer for `crewai eval`, and having it unserialised beats not
+    having it."""
     if fcntl is None:
         yield
         return
@@ -142,12 +145,18 @@ def _exclusive(directory: Path) -> Iterator[None]:
     except OSError:
         yield
         return
+    locked = False
     try:
-        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            locked = True
+        except OSError as error:
+            logger.debug("Could not lock %s: %s", directory / LOCK_FILE, error)
         yield
     finally:
-        with contextlib.suppress(OSError):
-            fcntl.flock(handle, fcntl.LOCK_UN)
+        if locked:
+            with contextlib.suppress(OSError):
+                fcntl.flock(handle, fcntl.LOCK_UN)
         handle.close()
 
 
