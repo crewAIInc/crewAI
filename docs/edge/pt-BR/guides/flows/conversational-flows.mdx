@@ -82,7 +82,7 @@ try:
     flow.handle_turn("Where is my order?", session_id=session_id)
     flow.handle_turn("What about returns?", session_id=session_id)
 finally:
-    flow.finalize_session_traces()  # one trace for the whole chat
+    flow.finalize_session_traces()  # one trace link for the whole chat
 ```
 
 ## Streaming de um turno

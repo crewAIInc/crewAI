@@ -154,8 +154,6 @@ result = flow.kickoff()
 계정에 연결된 추적은 [CrewAI AMP 대시보드의 Traces 탭](https://app.crewai.com/crewai_plus/trace_batches)에서 agent 상호 작용, 도구 사용 및 LLM 호출을 확인하세요.
 ![CrewAI Tracing Interface](/images/view-traces.png)
 
-스팬이 CrewAI AMP에 도달한 실행이 끝나면 crewAI는 프로젝트 디렉터리에 `.crewai/last_run.json`을 기록합니다. 실행 ID, 익명 또는 계정으로 추적되었는지, 시작·종료 시각, 전송된 AMP 주소가 담깁니다. `crewai eval`은 이 파일을 읽어 ID를 복사하지 않고도 마지막 실행을 평가합니다. 스캐폴드의 `.gitignore`는 `.crewai/`를 포함하며, 전체가 내보내진 실행만 기록되며, `CREWAI_TESTING=true`에서는 아무것도 기록되지 않으며, crewAI 자체 추적을 끈 채로 시작하는 배포 안에서도 기록되지 않습니다.
-
 ### 대안: 환경 변수 구성
 
 환경 변수를 설정하여 전역적으로 추적을 활성화할 수도 있습니다:

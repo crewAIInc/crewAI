@@ -154,8 +154,6 @@ Os rastreamentos são enviados somente após uma exportação autenticada bem-su
 Para rastreamentos associados à sua conta, abra a [aba Traces no painel CrewAI AMP](https://app.crewai.com/crewai_plus/trace_batches) para visualizar interações dos agentes, uso de ferramentas e chamadas de LLM.
 ![CrewAI Tracing Interface](/images/view-traces.png)
 
-Após uma execução cujos spans chegaram ao CrewAI AMP, o crewAI grava `.crewai/last_run.json` no diretório do projeto: o id da execução, se foi rastreada anonimamente ou na sua conta, quando começou e terminou, e o AMP para onde foi enviada. O `crewai eval` lê esse arquivo para avaliar a última execução sem você copiar um id. O `.gitignore` do scaffold já cobre `.crewai/`; só uma execução exportada por inteiro é registrada; nada é gravado com `CREWAI_TESTING=true`, nem dentro de um deployment, que inicia com o tracing do próprio crewAI desligado.
-
 ### Alternativa: Configuração de Variável de Ambiente
 
 Você também pode habilitar o rastreamento globalmente definindo uma variável de ambiente:
