@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import ctypes
 from datetime import datetime, timezone
 import logging
 import os
 from pathlib import Path
 import shutil
+import sys
 from typing import Any, Final
 import uuid
 
@@ -804,6 +806,35 @@ class QdrantEdgeStorage:
         except Exception:
             _logger.debug("close: flush_to_central failed", exc_info=True)
 
+    @staticmethod
+    def _worker_process_is_alive(pid: int) -> bool:
+        """Return whether a process is still running, without signaling it.
+
+        ``os.kill(pid, 0)`` is the POSIX liveness probe, but it is neither
+        usable nor safe on Windows: Python routes a non CTRL signal through
+        ``TerminateProcess``, and it raises a generic ``OSError`` (not
+        ``ProcessLookupError``) for an unknown pid, which is what crashes the
+        orphaned-shard sweep. On Windows this opens a query-only handle
+        instead. A process that exists but cannot be inspected is treated as
+        alive, so the sweep never deletes a live worker's shard.
+        """
+        if sys.platform == "win32":
+            query_limited_information = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
+            invalid_parameter = 87  # ERROR_INVALID_PARAMETER: no such process
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            handle = kernel32.OpenProcess(query_limited_information, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return ctypes.get_last_error() != invalid_parameter
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
     def _cleanup_orphaned_shards(self) -> None:
         """Sync and remove local shards from dead worker processes."""
         if not self._base_path.exists():
@@ -818,12 +849,7 @@ class QdrantEdgeStorage:
                 continue
             if pid == os.getpid():
                 continue
-            try:
-                os.kill(pid, 0)
-                continue
-            except ProcessLookupError:
-                _logger.debug("Worker %d is dead, shard is orphaned", pid)
-            except PermissionError:
+            if self._worker_process_is_alive(pid):
                 continue
 
             _logger.info("Cleaning up orphaned shard for dead worker %d", pid)
