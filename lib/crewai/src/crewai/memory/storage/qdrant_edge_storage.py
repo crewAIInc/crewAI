@@ -819,9 +819,21 @@ class QdrantEdgeStorage:
         alive, so the sweep never deletes a live worker's shard.
         """
         if sys.platform == "win32":
+            from ctypes import wintypes
+
             query_limited_information = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
             invalid_parameter = 87  # ERROR_INVALID_PARAMETER: no such process
             kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            # Declare pointer-sized HANDLE types so the handle is not truncated
+            # to the default c_int and CloseHandle marshals it correctly.
+            kernel32.OpenProcess.argtypes = (
+                wintypes.DWORD,
+                wintypes.BOOL,
+                wintypes.DWORD,
+            )
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+            kernel32.CloseHandle.restype = wintypes.BOOL
             handle = kernel32.OpenProcess(query_limited_information, False, pid)
             if handle:
                 kernel32.CloseHandle(handle)
