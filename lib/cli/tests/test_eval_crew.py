@@ -187,6 +187,49 @@ def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(proje
     assert "crewai enterprise configure" in out
 
 
+def test_a_trusted_amp_over_plain_http_still_gets_no_credential(project, monkeypatch, capsys):
+    """A cleartext connection is not a place to put a bearer token, trusted or not."""
+    directory, _ = project
+    monkeypatch.setenv("CREWAI_PLUS_URL", "http://amp.internal")  # exported, so it IS trusted
+    record_last_run(directory, amp_base_url="http://amp.internal")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.base_url == "http://amp.internal" and amp.api_key is None
+    assert "would carry the login over plain HTTP" in capsys.readouterr().out
+
+
+def test_plain_http_to_this_machine_is_fine_for_local_development(project, monkeypatch, capsys):
+    directory, _ = project
+    monkeypatch.setenv("CREWAI_PLUS_URL", "http://localhost:3000")
+    record_last_run(directory, amp_base_url="http://localhost:3000")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.api_key == "login-token"
+    assert "Reading anonymously" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("origin", "encrypted"),
+    [
+        ("https://app.crewai.com", True),
+        ("http://localhost:3000", True),
+        ("http://127.0.0.1:8000", True),
+        ("http://[::1]:8000", True),
+        ("http://amp.localhost", True),
+        ("http://amp.internal", False),
+        ("http://169.254.169.254", False),
+        ("ftp://amp.test", False),
+        (None, False),
+    ],
+)
+def test_which_connections_may_carry_the_login(origin, encrypted):
+    assert eval_module._encrypted(origin) is encrypted
+
+
 def test_an_amp_exported_in_this_shell_is_trusted(project, monkeypatch, capsys):
     directory, _ = project
     monkeypatch.setenv("CREWAI_PLUS_URL", "https://shell.amp.test")  # exported before the project is read
@@ -216,7 +259,19 @@ def test_an_origin_is_scheme_and_host_only(url, origin):
 
 @pytest.mark.parametrize(
     "verdict",
-    [None, "passed", [], {"gate": "passed"}, {"gate": None, "grades": {}}, {"gate": "passed", "grades": "5/5"}, {"gate": "passed", "grades": {"goal": "five"}}],
+    [
+        None,
+        "passed",
+        [],
+        {"gate": "passed"},
+        {"gate": None, "grades": {}},
+        {"gate": "passed", "grades": "5/5"},
+        {"gate": "passed", "grades": {"goal": "five"}},
+        {"gate": "passed", "grades": {"goal": True}},  # a bool is an int to Python, never a grade
+        {"gate": "passed", "grades": {"goal": 6}},  # out of the 1..5 range
+        {"gate": "passed", "grades": {"goal": 0}},
+        {"gate": "passed", "grades": {"goal": 4.5}},
+    ],
 )
 def test_a_done_answer_without_a_well_formed_verdict_is_a_protocol_error(project, monkeypatch, capsys, verdict):
     directory, _ = project

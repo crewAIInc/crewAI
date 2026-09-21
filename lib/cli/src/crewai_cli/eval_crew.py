@@ -15,6 +15,7 @@ traces. The command sends the saved `crewai login` when there is one.
 from __future__ import annotations
 
 import contextlib
+from ipaddress import ip_address
 import json
 import os
 from pathlib import Path
@@ -99,19 +100,46 @@ def _origin(url: str | None) -> str | None:
     )
 
 
+def _encrypted(origin: str | None) -> bool:
+    """HTTPS, or plain HTTP to this machine — the rule `TraceGrantClient` already
+    applies to collector grants (localhost, its subdomains, loopback addresses)."""
+    parsed = urlparse(origin or "")
+    if parsed.scheme == "https":
+        return True
+    if parsed.scheme != "http":
+        return False
+    hostname = (parsed.hostname or "").rstrip(".")
+    if hostname == "localhost" or hostname.endswith(".localhost"):
+        return True
+    try:
+        return ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
 def _amp_client(trusted: set[str]) -> PlusAPI:
     """The AMP to ask, and whether the saved login goes with it.
 
     A project's `.env` may point `crewai eval` at another AMP — that is how a
     self-hosted project is wired, and the run was traced there — so the request
     follows it. The credential does not: it goes only to an AMP this machine is
-    logged in to, and the run is read anonymously anywhere else."""
+    logged in to, over a connection that encrypts it. Anywhere else the run is
+    read anonymously."""
     client = PlusAPI(api_key=saved_login())
-    if client.api_key is None or _origin(client.base_url) in trusted:
+    if client.api_key is None:
         return client
 
+    origin = _origin(client.base_url)
+    if origin in trusted and _encrypted(origin):
+        return client
+
+    why = (
+        "is not an AMP this machine is logged in to"
+        if origin not in trusted
+        else "would carry the login over plain HTTP"
+    )
     console.print(
-        f"Reading anonymously: {client.base_url} is not an AMP this machine is logged in to. "
+        f"Reading anonymously: {client.base_url} {why}. "
         "Run `crewai enterprise configure <url>` to log in to it.",
         style="yellow",
     )
@@ -271,16 +299,19 @@ def _wait(client: PlusAPI, evaluation_id: str, url: str | None) -> dict[str, Any
 
 
 def _well_formed_verdict(verdict: Any) -> bool:
-    """`{"gate": "<word>", "grades": {area: 1..5 | null}}` — anything else is a protocol error."""
+    """`{"gate": "<word>", "grades": {area: 1..5 | null}}` — anything else is a
+    protocol error. A grade is an exact integer in range: `True` is an `int` to
+    Python and 6 is not a grade, and neither may print as one."""
     return (
         isinstance(verdict, dict)
         and isinstance(verdict.get("gate"), str)
         and isinstance(verdict.get("grades"), dict)
-        and all(
-            grade is None or isinstance(grade, int)
-            for grade in verdict["grades"].values()
-        )
+        and all(_a_grade(grade) for grade in verdict["grades"].values())
     )
+
+
+def _a_grade(grade: Any) -> bool:
+    return grade is None or (type(grade) is int and 1 <= grade <= 5)
 
 
 def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
