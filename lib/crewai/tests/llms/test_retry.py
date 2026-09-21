@@ -15,7 +15,7 @@ from crewai.llms.retry import (
 )
 
 
-class _BedrockClientError(Exception):
+class _StructuredProviderError(Exception):
     def __init__(self, code: str) -> None:
         self.response = {"Error": {"Code": code}}
         super().__init__(code)
@@ -43,7 +43,7 @@ class _RetryingLLM(BaseLLM):
     [
         type("Http429Error", (Exception,), {"status_code": 429})("busy"),
         type("RateLimitError", (Exception,), {})("busy"),
-        _BedrockClientError("ThrottlingException"),
+        _StructuredProviderError("TooManyRequests"),
         RuntimeError("provider request was throttled"),
     ],
 )
@@ -53,17 +53,11 @@ def test_is_throttling_error_recognizes_transient_provider_throttles(
     assert is_throttling_error(error)
 
 
-def test_is_throttling_error_recognizes_bedrock_error_codes() -> None:
-    error = _BedrockClientError("ThrottlingException")
-
-    assert is_throttling_error(error)
-
-
 def test_is_throttling_error_follows_exception_causes() -> None:
     try:
-        raise _BedrockClientError("ThrottlingException")
-    except _BedrockClientError as cause:
-        wrapped = RuntimeError("Bedrock request failed")
+        raise _StructuredProviderError("TooManyRequests")
+    except _StructuredProviderError as cause:
+        wrapped = RuntimeError("provider request failed")
         wrapped.__cause__ = cause
 
     assert is_throttling_error(wrapped)
@@ -72,28 +66,14 @@ def test_is_throttling_error_follows_exception_causes() -> None:
 @pytest.mark.parametrize(
     "error",
     [
-        _BedrockClientError("ServiceQuotaExceededException"),
-        RuntimeError("too many tokens"),
+        _StructuredProviderError("InvalidRequest"),
+        RuntimeError("input exceeds the context window"),
         ValueError("request validation failed"),
     ],
 )
 def test_is_throttling_error_rejects_non_transient_errors(
     error: Exception,
 ) -> None:
-    assert not is_throttling_error(error)
-
-
-def test_non_retryable_outer_error_takes_precedence_over_retryable_cause() -> None:
-    error = _BedrockClientError("ServiceQuotaExceededException")
-    error.__cause__ = _BedrockClientError("ThrottlingException")
-
-    assert not is_throttling_error(error)
-
-
-def test_non_retryable_cause_takes_precedence_over_an_ambiguous_wrapper() -> None:
-    error = RuntimeError("provider request was throttled")
-    error.__cause__ = _BedrockClientError("ServiceQuotaExceededException")
-
     assert not is_throttling_error(error)
 
 

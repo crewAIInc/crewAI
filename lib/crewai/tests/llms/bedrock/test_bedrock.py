@@ -729,12 +729,13 @@ def test_bedrock_handles_cohere_conversation_requirements():
     assert "continue" in formatted_messages[-1]["content"][0]["text"].lower()
 
 
-def test_bedrock_client_error_handling():
+def test_bedrock_client_error_handling(monkeypatch):
     """
     Test that Bedrock properly handles various AWS client errors
     """
     from botocore.exceptions import ClientError
 
+    monkeypatch.setattr('crewai.llms.retry.time.sleep', lambda _: None)
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     with patch.object(llm._client, 'converse') as mock_converse:
@@ -762,6 +763,21 @@ def test_bedrock_client_error_handling():
         with pytest.raises(RuntimeError) as exc_info:
             llm.call("Hello")
         assert "throttled" in str(exc_info.value).lower()
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        error_response = {
+            'Error': {
+                'Code': 'ServiceQuotaExceededException',
+                'Message': 'Quota increase required',
+            }
+        }
+        mock_converse.side_effect = ClientError(error_response, 'converse')
+
+        with pytest.raises(RuntimeError) as exc_info:
+            llm.call("Hello")
+
+        assert "quota" in str(exc_info.value).lower()
+        assert mock_converse.call_count == 1
 
 
 def test_bedrock_throttling_retries_without_context_recovery(monkeypatch):
