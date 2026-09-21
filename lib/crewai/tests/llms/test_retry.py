@@ -6,9 +6,9 @@ import pytest
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.retry import (
+    _ThrottlingErrorClassifier,
     arun_with_rate_limit_retry,
     get_retry_delay_seconds,
-    is_throttling_error,
     run_with_rate_limit_retry,
 )
 
@@ -45,20 +45,20 @@ class _RetryingLLM(BaseLLM):
         RuntimeError("provider request was throttled"),
     ],
 )
-def test_is_throttling_error_recognizes_transient_provider_throttles(
+def test_throttling_error_classifier_recognizes_transient_provider_throttles(
     error: Exception,
 ) -> None:
-    assert is_throttling_error(error)
+    assert _ThrottlingErrorClassifier.is_throttling_error(error)
 
 
-def test_is_throttling_error_follows_exception_causes() -> None:
+def test_throttling_error_classifier_follows_exception_causes() -> None:
     try:
         raise _StructuredProviderError("TooManyRequests")
     except _StructuredProviderError as cause:
         wrapped = RuntimeError("provider request failed")
         wrapped.__cause__ = cause
 
-    assert is_throttling_error(wrapped)
+    assert _ThrottlingErrorClassifier.is_throttling_error(wrapped)
 
 
 @pytest.mark.parametrize(
@@ -69,10 +69,10 @@ def test_is_throttling_error_follows_exception_causes() -> None:
         ValueError("request validation failed"),
     ],
 )
-def test_is_throttling_error_rejects_non_transient_errors(
+def test_throttling_error_classifier_rejects_non_transient_errors(
     error: Exception,
 ) -> None:
-    assert not is_throttling_error(error)
+    assert not _ThrottlingErrorClassifier.is_throttling_error(error)
 
 
 def test_get_retry_delay_seconds_uses_exponential_backoff() -> None:

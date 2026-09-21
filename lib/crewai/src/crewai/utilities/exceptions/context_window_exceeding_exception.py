@@ -1,6 +1,6 @@
 from typing import Final
 
-from crewai.llms.retry import is_throttling_error
+from crewai.llms.retry import _ThrottlingErrorClassifier
 
 
 CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
@@ -41,7 +41,9 @@ class LLMContextLengthExceededError(Exception):
         Returns:
             True if the error message indicates a context length limit error, False otherwise.
         """
-        if isinstance(error, BaseException) and is_throttling_error(error):
+        if isinstance(
+            error, BaseException
+        ) and _ThrottlingErrorClassifier.is_throttling_error(error):
             return False
 
         error_message = str(error)
