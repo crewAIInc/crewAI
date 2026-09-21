@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+import asyncio
+from collections.abc import Awaitable, Callable, Iterator
+import contextvars
 from dataclasses import dataclass
 import random
-from typing import Any, Final
+import time
+from typing import Any, Final, TypeVar, cast
 
 
 _RETRYABLE_ERROR_CODES: Final[frozenset[str]] = frozenset(
@@ -29,6 +32,10 @@ _RETRYABLE_MESSAGE_MARKERS: Final[tuple[str, ...]] = (
     "too many requests",
     "throttled",
     "resource exhausted",
+)
+_T = TypeVar("_T")
+_retry_scope: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "_retry_scope", default=False
 )
 
 
@@ -103,6 +110,72 @@ def get_retry_delay_seconds(
     return float(delay * (1 + jitter))
 
 
+def run_with_rate_limit_retry(
+    operation: Callable[[], _T],
+    *,
+    policy: LLMRetryPolicy = DEFAULT_LLM_RETRY_POLICY,
+    sleep: Callable[[float], None] = time.sleep,
+) -> _T:
+    """Run an operation with retries for transient rate-limit errors only."""
+    if _retry_scope.get():
+        return operation()
+
+    token = _retry_scope.set(True)
+    try:
+        for attempt in range(1, policy.max_attempts + 1):
+            succeeded, result, error = _attempt(operation)
+            if succeeded:
+                return cast(_T, result)
+            if error is None:
+                raise RuntimeError("failed retry attempt did not provide an error")
+            if attempt == policy.max_attempts or not is_retryable_rate_limit(error):
+                raise error
+            sleep(
+                get_retry_delay_seconds(
+                    policy,
+                    retry_number=attempt,
+                    retry_after_seconds=_retry_after_seconds(error),
+                )
+            )
+    finally:
+        _retry_scope.reset(token)
+
+    raise RuntimeError("rate-limit retry loop completed without a result")
+
+
+async def arun_with_rate_limit_retry(
+    operation: Callable[[], Awaitable[_T]],
+    *,
+    policy: LLMRetryPolicy = DEFAULT_LLM_RETRY_POLICY,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+) -> _T:
+    """Asynchronously run an operation with retries for transient rate limits."""
+    if _retry_scope.get():
+        return await operation()
+
+    token = _retry_scope.set(True)
+    try:
+        for attempt in range(1, policy.max_attempts + 1):
+            succeeded, result, error = await _aattempt(operation)
+            if succeeded:
+                return cast(_T, result)
+            if error is None:
+                raise RuntimeError("failed retry attempt did not provide an error")
+            if attempt == policy.max_attempts or not is_retryable_rate_limit(error):
+                raise error
+            await sleep(
+                get_retry_delay_seconds(
+                    policy,
+                    retry_number=attempt,
+                    retry_after_seconds=_retry_after_seconds(error),
+                )
+            )
+    finally:
+        _retry_scope.reset(token)
+
+    raise RuntimeError("rate-limit retry loop completed without a result")
+
+
 def _iter_error_chain(error: BaseException) -> Iterator[BaseException]:
     """Yield an exception and its explicit or implicit causes once each."""
     seen: set[int] = set()
@@ -111,6 +184,24 @@ def _iter_error_chain(error: BaseException) -> Iterator[BaseException]:
         seen.add(id(current))
         yield current
         current = current.__cause__ or current.__context__
+
+
+def _attempt(operation: Callable[[], _T]) -> tuple[bool, _T | None, Exception | None]:
+    """Run one synchronous operation while retaining its retryable error."""
+    try:
+        return True, operation(), None
+    except Exception as error:
+        return False, None, error
+
+
+async def _aattempt(
+    operation: Callable[[], Awaitable[_T]],
+) -> tuple[bool, _T | None, Exception | None]:
+    """Run one asynchronous operation while retaining its retryable error."""
+    try:
+        return True, await operation(), None
+    except Exception as error:
+        return False, None, error
 
 
 def _error_code(error: BaseException) -> str:
@@ -131,3 +222,23 @@ def _status_code(error: BaseException) -> int | None:
     if status_code is None:
         status_code = getattr(response, "status_code", None)
     return status_code if isinstance(status_code, int) else None
+
+
+def _retry_after_seconds(error: BaseException) -> float | None:
+    """Read a numeric ``Retry-After`` hint from common SDK response shapes."""
+    for candidate in _iter_error_chain(error):
+        headers = getattr(candidate, "headers", None)
+        response = getattr(candidate, "response", None)
+        if headers is None and isinstance(response, dict):
+            metadata = response.get("ResponseMetadata") or {}
+            headers = metadata.get("HTTPHeaders") or response.get("headers")
+        if not isinstance(headers, dict):
+            continue
+        retry_after = headers.get("retry-after") or headers.get("Retry-After")
+        if retry_after is None:
+            continue
+        try:
+            return max(0.0, float(retry_after))
+        except (TypeError, ValueError):
+            continue
+    return None
