@@ -359,6 +359,26 @@ def test_export_without_viewer_url_still_shows_execution_uuid(
     assert len(collector.batches) == 1
 
 
+def test_trace_summary_rendering_failure_does_not_fail_execution(
+    collector, monkeypatch, caplog
+):
+    """A post-export console failure cannot replace a successful result."""
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    with patch(
+        "crewai.telemetry.tracing.grants.ConsoleFormatter.print_panel",
+        side_effect=BrokenPipeError,
+    ):
+        token = begin_execution(tracing=True)
+        record(get_trace_session())
+        end_execution(token)
+
+    assert len(collector.batches) == 1
+    assert "Could not display execution trace summary (BrokenPipeError)" in caplog.text
+
+
 @pytest.mark.parametrize(
     "override",
     [

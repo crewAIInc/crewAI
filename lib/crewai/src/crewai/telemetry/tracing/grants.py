@@ -263,19 +263,31 @@ class GrantSpanExporter(SpanExporter):
             ):
                 return
             self._summary_shown = True
-            content = Text()
-            content.append("Traces exported\n", style="green bold")
-            content.append("Execution trace ID: ", style="white")
-            content.append(self._grant.execution_uuid, style="green")
-            if self._trace_url:
-                content.append("\n\nView traces:\n", style="white bold")
-                content.append(
-                    self._trace_url,
-                    style=Style(color="cyan", underline=True, link=self._trace_url),
+            try:
+                content = Text()
+                content.append("Traces exported\n", style="green bold")
+                content.append("Execution trace ID: ", style="white")
+                content.append(self._grant.execution_uuid, style="green")
+                if self._trace_url:
+                    content.append("\n\nView traces:\n", style="white bold")
+                    content.append(
+                        self._trace_url,
+                        style=Style(
+                            color="cyan",
+                            underline=True,
+                            link=self._trace_url,
+                        ),
+                    )
+                ConsoleFormatter(verbose=True).print_panel(
+                    content,
+                    "🔗 Execution Traces",
+                    "green",
                 )
-            ConsoleFormatter(verbose=True).print_panel(
-                content, "🔗 Execution Traces", "green"
-            )
+            except Exception as error:
+                logger.warning(
+                    "Could not display execution trace summary (%s)",
+                    type(error).__name__,
+                )
 
     def shutdown(self) -> None:
         with self._lock:
