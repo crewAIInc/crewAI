@@ -6,12 +6,15 @@ and whether it was traced anonymously or under an account. Nothing is
 printed — the id is internal — and ``crewai eval`` reads it back to evaluate
 the run without the user pasting anything.
 
-Inside a deployment nothing is recorded: the platform binds the execution
-before crewAI would start its own tracing, so this code never runs there.
+Inside a deployment nothing is recorded, and no check here is what stops it:
+the platform kicks off with ``tracing`` off, so crewAI never starts a trace
+session of its own, never builds a ``GrantSpanExporter``, and never reaches
+this module.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import contextlib
 from datetime import datetime, timezone
 import json
@@ -22,10 +25,16 @@ import tempfile
 from typing import Any
 
 
+try:  # POSIX only; without it the write below simply is not serialised
+    import fcntl
+except ImportError:  # pragma: no cover - Windows
+    fcntl = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 LAST_RUN_DIR = ".crewai"
 LAST_RUN_FILE = "last_run.json"
+LOCK_FILE = "last_run.lock"
 
 
 def project_dir() -> Path:
@@ -34,16 +43,14 @@ def project_dir() -> Path:
 
 
 def recording_enabled() -> bool:
-    """Off under the test suite, so kickoff-level tests leave no file behind,
-    and off inside a deployment — the platform's integration token marks one —
-    so a run there never writes a file the platform never reads. (A deployment
-    normally never gets here at all: the host binds the trace before crewAI
-    would start its own; this is the guard for a container that did not.)"""
-    from crewai.context import get_platform_integration_token
+    """Off under the test suite, so kickoff-level tests leave no file behind.
 
-    if os.environ.get("CREWAI_TESTING", "").lower() == "true":
-        return False
-    return get_platform_integration_token() is None
+    Nothing else is checked. A deployment is kept out by not getting here at
+    all, and the platform's integration token is NOT a deployment marker — it
+    is a credential `crewai create crew` writes into a project's own `.env`
+    for platform tools, so treating it as one would stop recording the runs of
+    every developer who uses them."""
+    return os.environ.get("CREWAI_TESTING", "").lower() != "true"
 
 
 def last_run_path(directory: Path | None = None) -> Path:
@@ -95,13 +102,17 @@ def record_last_run(
         try:
             with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, indent=2) + "\n")
-            if _keep(record, read_last_run(path.parent.parent)):
-                os.replace(temporary, path)
-            else:
-                logger.debug(
-                    "A run that finished later is already recorded in %s", path
-                )
-                os.unlink(temporary)
+            # Reading what is there, deciding, and replacing are one step: another
+            # process must not slip a newer record in between, or this write would
+            # compare against a record that is already gone and overwrite it.
+            with _exclusive(path.parent):
+                if _keep(record, read_last_run(path.parent.parent)):
+                    os.replace(temporary, path)
+                else:
+                    logger.debug(
+                        "A run that finished later is already recorded in %s", path
+                    )
+                    os.unlink(temporary)
         except OSError:
             with contextlib.suppress(OSError):
                 os.unlink(temporary)
@@ -114,6 +125,30 @@ def record_last_run(
         )
         return None
     return path
+
+
+@contextlib.contextmanager
+def _exclusive(directory: Path) -> Iterator[None]:
+    """One writer at a time in this project, across processes: a lock file beside
+    the record, held over the read, the comparison and the replace. Where the
+    platform has no `flock` (Windows), the write goes ahead unserialised — the
+    record is a convenience pointer for `crewai eval`, never a lock on the run
+    itself, and a write is never failed by the locking."""
+    if fcntl is None:
+        yield
+        return
+    try:
+        handle = open(directory / LOCK_FILE, "a")
+    except OSError:
+        yield
+        return
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            fcntl.flock(handle, fcntl.LOCK_UN)
+        handle.close()
 
 
 def _keep(record: dict[str, Any], existing: dict[str, Any] | None) -> bool:
