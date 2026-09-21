@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+from types import SimpleNamespace
 
 from click.testing import CliRunner
 import httpx
@@ -53,6 +55,9 @@ def project(tmp_path, monkeypatch):
     monkeypatch.setattr(eval_module, "saved_login", lambda: "login-token")
     monkeypatch.setattr(eval_module.time, "sleep", lambda seconds: None)
     monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: False)
+    # This machine is logged in to https://amp.test (`crewai enterprise configure`).
+    monkeypatch.setattr(eval_module, "Settings", lambda: SimpleNamespace(enterprise_base_url="https://amp.test"))
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
     opened: list[str] = []
     monkeypatch.setattr(eval_module.webbrowser, "open", lambda url: opened.append(url) or True)
     return tmp_path, opened
@@ -66,7 +71,9 @@ def record_last_run(directory: Path, execution_id: str = EXECUTION_ID, **fields)
 
 def install(monkeypatch, amp: FakeAMP, configured_amp: str = "https://amp.test") -> FakeAMP:
     def build(api_key=None, base_url=None):
-        amp.api_key, amp.base_url = api_key, base_url or configured_amp
+        # PlusAPI's own resolution: explicit, then CREWAI_PLUS_URL, then the saved settings.
+        amp.api_key = api_key
+        amp.base_url = base_url or os.environ.get("CREWAI_PLUS_URL") or configured_amp
         return amp
 
     monkeypatch.setattr(eval_module, "PlusAPI", build)
@@ -151,14 +158,60 @@ def test_the_credential_goes_only_to_the_configured_amp_never_to_an_address_off_
     out = capsys.readouterr().out
     assert "The run was traced to https://evil.example/steal; evaluating at the configured AMP https://app.crewai.com." in out
 
-    # The project's .env is what `crewai run` traced with, so it is loaded first: same AMP, no note.
+    # The project's .env is what `crewai run` traced with, so it is loaded first. This machine is
+    # logged in to that AMP, so the credential goes with the request and nothing is remarked on.
     (directory / ".env").write_text("CREWAI_PLUS_URL=https://amp.test\n")
     record_last_run(directory, amp_base_url="https://amp.test/")
-    install(monkeypatch, FakeAMP(statuses=[done()]))
-    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
     eval_module.eval_crew()
     assert eval_module.os.environ["CREWAI_PLUS_URL"] == "https://amp.test"
-    assert "was traced to" not in capsys.readouterr().out
+    assert amp.api_key == "login-token" and amp.base_url == "https://amp.test"
+    out = capsys.readouterr().out
+    assert "was traced to" not in out and "Reading anonymously" not in out
+
+
+def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(project, monkeypatch, capsys):
+    """A .env can send the request elsewhere — that is how a self-hosted project is wired —
+    but the token goes only to an AMP this machine is logged in to."""
+    directory, _ = project
+    (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\n")
+    record_last_run(directory, amp_base_url="https://evil.example")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()  # still works: AMP reads it anonymously
+
+    assert amp.base_url == "https://evil.example"  # the request follows the project
+    assert amp.api_key is None  # the credential does not
+    out = capsys.readouterr().out
+    assert "Reading anonymously: https://evil.example is not an AMP this machine is logged in to." in out
+    assert "crewai enterprise configure" in out
+
+
+def test_an_amp_exported_in_this_shell_is_trusted(project, monkeypatch, capsys):
+    directory, _ = project
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://shell.amp.test")  # exported before the project is read
+    record_last_run(directory, amp_base_url="https://shell.amp.test")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.base_url == "https://shell.amp.test" and amp.api_key == "login-token"
+    assert "Reading anonymously" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("url", "origin"),
+    [
+        ("https://amp.test", "https://amp.test"),
+        ("https://AMP.Test/crewai_plus/", "https://amp.test"),
+        ("http://localhost:8000/x", "http://localhost:8000"),
+        ("app.crewai.com", None),  # no scheme: not an origin, never trusted
+        ("", None),
+        (None, None),
+    ],
+)
+def test_an_origin_is_scheme_and_host_only(url, origin):
+    assert eval_module._origin(url) == origin
 
 
 @pytest.mark.parametrize(
@@ -364,6 +417,25 @@ def test_the_cli_command_maps_to_the_implementation(monkeypatch):
     assert runner.invoke(eval_command, ["--run", EXECUTION_ID]).exit_code == 0
     assert calls == [{"run_id": None}, {"run_id": EXECUTION_ID}]
     assert "Evaluate the last traced run" in runner.invoke(eval_command, ["--help"]).output
+
+
+def test_only_a_missing_login_reads_as_anonymous(monkeypatch, capsys):
+    """An unreadable credential store is not "anonymous": it is said out loud."""
+    from crewai_cli.authentication.token import AuthError
+
+    monkeypatch.setattr(eval_module, "get_auth_token", lambda: (_ for _ in ()).throw(AuthError("No token found")))
+    assert eval_module.saved_login() is None  # not logged in: AMP treats the caller as anonymous
+
+    monkeypatch.setattr(eval_module, "get_auth_token", lambda: "login-token")
+    assert eval_module.saved_login() == "login-token"
+
+    for broken in (OSError(13, "Permission denied"), ValueError("Fernet key must be 32 url-safe base64-encoded bytes.")):
+        monkeypatch.setattr(eval_module, "get_auth_token", lambda error=broken: (_ for _ in ()).throw(error))
+        with pytest.raises(SystemExit) as exit_:
+            eval_module.saved_login()
+        assert exit_.value.code == 1
+        out = capsys.readouterr().out
+        assert "Could not read the saved login" in out and type(broken).__name__ in out and "crewai login" in out
 
 
 def test_read_last_run_reads_the_record_crewai_writes(tmp_path):

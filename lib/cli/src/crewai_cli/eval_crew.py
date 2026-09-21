@@ -21,14 +21,17 @@ from pathlib import Path
 import sys
 import time
 from typing import Any
+from urllib.parse import urlparse
 import webbrowser
 
 import click
+from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai_core.settings import Settings
 from dotenv import load_dotenv, set_key
 import httpx
 from rich.console import Console
 
-from crewai_cli.authentication.token import get_auth_token
+from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.plus_api import PlusAPI
 from crewai_cli.utils import get_or_create_project_id, is_dmn_mode_enabled
 
@@ -46,6 +49,8 @@ STATUSES = {"queued", "running"} | FINISHED
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
     get_or_create_project_id()
+    # Read before the project's .env is loaded, so a project cannot add itself.
+    trusted = _trusted_amp_origins()
     _load_project_env()
     record = read_last_run() or {}
     execution_id = run_id or record.get("execution_id")
@@ -53,9 +58,7 @@ def eval_crew(run_id: str | None = None) -> None:
         execution_id = _run_now_or_explain()
         record = read_last_run() or {}
 
-    # The credential goes to the CONFIGURED AMP only (CREWAI_PLUS_URL, the saved settings,
-    # app.crewai.com) — never to an address read off a file in the project.
-    client = PlusAPI(api_key=saved_login())
+    client = _amp_client(trusted)
     recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
     if not run_id and recorded_amp and recorded_amp != client.base_url.rstrip("/"):
         console.print(
@@ -73,6 +76,46 @@ def eval_crew(run_id: str | None = None) -> None:
     _print_verdict(finished, url)
     if finished.get("status") != "done":
         raise SystemExit(1)
+
+
+def _trusted_amp_origins() -> set[str]:
+    """Where the saved login may be sent: the AMP this machine is configured for
+    (`crewai enterprise configure`), one already exported in this shell, and
+    crewAI's own."""
+    candidates = (
+        os.environ.get("CREWAI_PLUS_URL"),
+        Settings().enterprise_base_url,
+        DEFAULT_CREWAI_ENTERPRISE_URL,
+    )
+    return {origin for origin in map(_origin, candidates) if origin}
+
+
+def _origin(url: str | None) -> str | None:
+    parsed = urlparse(str(url or ""))
+    return (
+        f"{parsed.scheme}://{parsed.netloc}".lower()
+        if parsed.scheme and parsed.netloc
+        else None
+    )
+
+
+def _amp_client(trusted: set[str]) -> PlusAPI:
+    """The AMP to ask, and whether the saved login goes with it.
+
+    A project's `.env` may point `crewai eval` at another AMP — that is how a
+    self-hosted project is wired, and the run was traced there — so the request
+    follows it. The credential does not: it goes only to an AMP this machine is
+    logged in to, and the run is read anonymously anywhere else."""
+    client = PlusAPI(api_key=saved_login())
+    if client.api_key is None or _origin(client.base_url) in trusted:
+        return client
+
+    console.print(
+        f"Reading anonymously: {client.base_url} is not an AMP this machine is logged in to. "
+        "Run `crewai enterprise configure <url>` to log in to it.",
+        style="yellow",
+    )
+    return PlusAPI()
 
 
 def _load_project_env() -> None:
@@ -97,10 +140,22 @@ def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:
 
 
 def saved_login() -> str | None:
-    """The `crewai login` token, or None: AMP then treats the caller as anonymous."""
+    """The `crewai login` token, or None: AMP then treats the caller as anonymous.
+
+    Only "not logged in" reads as anonymous. A credential that exists but cannot
+    be read — a rotated key, a half-written store, a directory `sudo` left owned
+    by root — is said out loud: reading anonymously instead would quietly spend
+    the run's one anonymous read and then refuse a user who believes they are
+    logged in."""
     try:
         return get_auth_token()
-    except Exception:
+    except AuthError:
+        return None
+    except Exception as error:
+        _fail(
+            f"Could not read the saved login ({type(error).__name__}: {error}). "
+            "Run `crewai login` again, or `crewai eval` will not know who you are."
+        )
         return None
 
 
