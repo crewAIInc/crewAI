@@ -156,5 +156,6 @@ def test_sanitize_agent_name_strips_both_quote_styles():
     tool = ask_tool
     assert tool.sanitize_agent_name('"Senior Researcher"') == "senior researcher"
     assert tool.sanitize_agent_name("'Senior Researcher'") == "senior researcher"
-    # Roles containing apostrophes still match themselves after sanitization.
-    assert tool.sanitize_agent_name("O'Brien's Team") == "obriens team"
+    # Internal apostrophes are preserved and never merge distinct roles.
+    assert tool.sanitize_agent_name("O'Brien's Team") == "o'brien's team"
+    assert tool.sanitize_agent_name("O'Brien") != tool.sanitize_agent_name("Obrien")
