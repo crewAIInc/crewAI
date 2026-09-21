@@ -1,11 +1,10 @@
-"""Shared policy primitives for retrying transient LLM rate limits."""
+"""Shared primitives for retrying transient LLM rate limits."""
 
 from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Iterator
 import contextvars
-from dataclasses import dataclass
 import random
 import time
 from typing import Any, Final, TypeVar, cast
@@ -33,38 +32,14 @@ _RETRYABLE_MESSAGE_MARKERS: Final[tuple[str, ...]] = (
     "throttled",
     "resource exhausted",
 )
+_LLM_RATE_LIMIT_MAX_ATTEMPTS: Final = 3
+_LLM_RATE_LIMIT_INITIAL_DELAY_SECONDS: Final = 1.0
+_LLM_RATE_LIMIT_MAX_DELAY_SECONDS: Final = 8.0
+_LLM_RATE_LIMIT_JITTER_RATIO: Final = 0.2
 _T = TypeVar("_T")
 _active_llm_rate_limit_retry: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "_active_llm_rate_limit_retry", default=False
 )
-
-
-@dataclass(frozen=True)
-class LLMRetryPolicy:
-    """Configuration for bounded exponential-backoff retries.
-
-    ``max_attempts`` includes the original request. ``jitter_ratio`` controls
-    the symmetric random adjustment applied to backoff delays.
-    """
-
-    max_attempts: int = 3
-    initial_delay_seconds: float = 1.0
-    max_delay_seconds: float = 8.0
-    jitter_ratio: float = 0.2
-
-    def __post_init__(self) -> None:
-        """Validate retry settings before they are used by a client wrapper."""
-        if self.max_attempts < 1:
-            raise ValueError("max_attempts must be at least 1")
-        if self.initial_delay_seconds <= 0:
-            raise ValueError("initial_delay_seconds must be greater than 0")
-        if self.max_delay_seconds < self.initial_delay_seconds:
-            raise ValueError("max_delay_seconds must be at least initial_delay_seconds")
-        if not 0 <= self.jitter_ratio <= 1:
-            raise ValueError("jitter_ratio must be between 0 and 1")
-
-
-DEFAULT_LLM_RETRY_POLICY: Final = LLMRetryPolicy()
 
 
 def is_throttling_error(error: BaseException) -> bool:
@@ -86,7 +61,6 @@ def is_throttling_error(error: BaseException) -> bool:
 
 
 def get_retry_delay_seconds(
-    policy: LLMRetryPolicy,
     retry_number: int,
     *,
     retry_after_seconds: float | None = None,
@@ -103,17 +77,16 @@ def get_retry_delay_seconds(
         return max(0.0, retry_after_seconds)
 
     delay = min(
-        policy.initial_delay_seconds * (2 ** (retry_number - 1)),
-        policy.max_delay_seconds,
+        _LLM_RATE_LIMIT_INITIAL_DELAY_SECONDS * (2 ** (retry_number - 1)),
+        _LLM_RATE_LIMIT_MAX_DELAY_SECONDS,
     )
-    jitter = (float(random_value()) * 2 - 1) * policy.jitter_ratio
+    jitter = (float(random_value()) * 2 - 1) * _LLM_RATE_LIMIT_JITTER_RATIO
     return float(delay * (1 + jitter))
 
 
 def run_with_rate_limit_retry(
     operation: Callable[[], _T],
     *,
-    policy: LLMRetryPolicy = DEFAULT_LLM_RETRY_POLICY,
     sleep: Callable[[float], None] = time.sleep,
 ) -> _T:
     """Run an operation with retries for transient rate-limit errors only."""
@@ -122,17 +95,18 @@ def run_with_rate_limit_retry(
 
     token = _active_llm_rate_limit_retry.set(True)
     try:
-        for attempt in range(1, policy.max_attempts + 1):
+        for attempt in range(1, _LLM_RATE_LIMIT_MAX_ATTEMPTS + 1):
             succeeded, result, error = _attempt(operation)
             if succeeded:
                 return cast(_T, result)
             if error is None:
                 raise RuntimeError("failed retry attempt did not provide an error")
-            if attempt == policy.max_attempts or not is_throttling_error(error):
+            if attempt == _LLM_RATE_LIMIT_MAX_ATTEMPTS or not is_throttling_error(
+                error
+            ):
                 raise error
             sleep(
                 get_retry_delay_seconds(
-                    policy,
                     retry_number=attempt,
                     retry_after_seconds=_retry_after_seconds(error),
                 )
@@ -146,7 +120,6 @@ def run_with_rate_limit_retry(
 async def arun_with_rate_limit_retry(
     operation: Callable[[], Awaitable[_T]],
     *,
-    policy: LLMRetryPolicy = DEFAULT_LLM_RETRY_POLICY,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
 ) -> _T:
     """Asynchronously run an operation with retries for transient rate limits."""
@@ -155,17 +128,18 @@ async def arun_with_rate_limit_retry(
 
     token = _active_llm_rate_limit_retry.set(True)
     try:
-        for attempt in range(1, policy.max_attempts + 1):
+        for attempt in range(1, _LLM_RATE_LIMIT_MAX_ATTEMPTS + 1):
             succeeded, result, error = await _aattempt(operation)
             if succeeded:
                 return cast(_T, result)
             if error is None:
                 raise RuntimeError("failed retry attempt did not provide an error")
-            if attempt == policy.max_attempts or not is_throttling_error(error):
+            if attempt == _LLM_RATE_LIMIT_MAX_ATTEMPTS or not is_throttling_error(
+                error
+            ):
                 raise error
             await sleep(
                 get_retry_delay_seconds(
-                    policy,
                     retry_number=attempt,
                     retry_after_seconds=_retry_after_seconds(error),
                 )

@@ -6,8 +6,6 @@ import pytest
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.retry import (
-    DEFAULT_LLM_RETRY_POLICY,
-    LLMRetryPolicy,
     arun_with_rate_limit_retry,
     get_retry_delay_seconds,
     is_throttling_error,
@@ -78,38 +76,15 @@ def test_is_throttling_error_rejects_non_transient_errors(
 
 
 def test_get_retry_delay_seconds_uses_exponential_backoff() -> None:
-    policy = LLMRetryPolicy(jitter_ratio=0)
-
-    assert get_retry_delay_seconds(policy, retry_number=1) == 1
-    assert get_retry_delay_seconds(policy, retry_number=2) == 2
-    assert get_retry_delay_seconds(policy, retry_number=3) == 4
-    assert get_retry_delay_seconds(policy, retry_number=4) == 8
+    assert get_retry_delay_seconds(retry_number=1, random_value=lambda: 0.5) == 1
+    assert get_retry_delay_seconds(retry_number=2, random_value=lambda: 0.5) == 2
+    assert get_retry_delay_seconds(retry_number=3, random_value=lambda: 0.5) == 4
+    assert get_retry_delay_seconds(retry_number=4, random_value=lambda: 0.5) == 8
 
 
 def test_get_retry_delay_seconds_applies_jitter_and_honors_retry_after() -> None:
-    policy = LLMRetryPolicy(jitter_ratio=0.2)
-
-    assert get_retry_delay_seconds(policy, retry_number=1, random_value=lambda: 1) == 1.2
-    assert get_retry_delay_seconds(policy, retry_number=1, retry_after_seconds=5) == 5
-
-
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        {"max_attempts": 0},
-        {"initial_delay_seconds": 0},
-        {"max_delay_seconds": 0.5},
-        {"jitter_ratio": -0.1},
-        {"jitter_ratio": 1.1},
-    ],
-)
-def test_retry_policy_rejects_invalid_settings(kwargs: dict[str, float | int]) -> None:
-    with pytest.raises(ValueError):
-        LLMRetryPolicy(**kwargs)
-
-
-def test_default_policy_allows_two_retries_after_the_initial_request() -> None:
-    assert DEFAULT_LLM_RETRY_POLICY.max_attempts == 3
+    assert get_retry_delay_seconds(retry_number=1, random_value=lambda: 1) == 1.2
+    assert get_retry_delay_seconds(retry_number=1, retry_after_seconds=5) == 5
 
 
 def test_run_with_rate_limit_retry_retries_with_backoff() -> None:
