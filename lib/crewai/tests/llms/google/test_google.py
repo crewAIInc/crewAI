@@ -4,7 +4,7 @@ import types
 from unittest.mock import patch, MagicMock
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import LLM, CONTEXT_WINDOW_USAGE_RATIO
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -481,7 +481,7 @@ def test_gemini_flash_thinking_uses_1m_window():
     figure belonged to the earlier exp-1219 snapshot.
     """
     llm = LLM(model="google/gemini-2.0-flash-thinking-exp-01-21")
-    assert llm.get_context_window_size() > 500000
+    assert llm.get_context_window_size() == int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_gemini_message_formatting():
