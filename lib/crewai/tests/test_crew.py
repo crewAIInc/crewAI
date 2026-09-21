@@ -1608,6 +1608,7 @@ async def test_async_for_each_persists_output_for_replay(
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
     def fake_execute_sync(self: Task, *args: Any, **kwargs: Any) -> TaskOutput:
+        """Return a deterministic output while the real crew stores it."""
         return TaskOutput(
             description=self.description,
             raw=f"{self.description} result",
@@ -1617,6 +1618,7 @@ async def test_async_for_each_persists_output_for_replay(
     async def fake_aexecute_sync(
         self: Task, *args: Any, **kwargs: Any
     ) -> TaskOutput:
+        """Async counterpart used by the native execution entrypoint."""
         return fake_execute_sync(self, *args, **kwargs)
 
     execute = fake_execute_sync if executor_name == "execute_sync" else fake_aexecute_sync
