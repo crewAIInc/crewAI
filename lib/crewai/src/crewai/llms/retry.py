@@ -34,8 +34,8 @@ _RETRYABLE_MESSAGE_MARKERS: Final[tuple[str, ...]] = (
     "resource exhausted",
 )
 _T = TypeVar("_T")
-_retry_scope: contextvars.ContextVar[bool] = contextvars.ContextVar(
-    "_retry_scope", default=False
+_active_llm_rate_limit_retry: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "_active_llm_rate_limit_retry", default=False
 )
 
 
@@ -117,10 +117,10 @@ def run_with_rate_limit_retry(
     sleep: Callable[[float], None] = time.sleep,
 ) -> _T:
     """Run an operation with retries for transient rate-limit errors only."""
-    if _retry_scope.get():
+    if _active_llm_rate_limit_retry.get():
         return operation()
 
-    token = _retry_scope.set(True)
+    token = _active_llm_rate_limit_retry.set(True)
     try:
         for attempt in range(1, policy.max_attempts + 1):
             succeeded, result, error = _attempt(operation)
@@ -138,7 +138,7 @@ def run_with_rate_limit_retry(
                 )
             )
     finally:
-        _retry_scope.reset(token)
+        _active_llm_rate_limit_retry.reset(token)
 
     raise RuntimeError("rate-limit retry loop completed without a result")
 
@@ -150,10 +150,10 @@ async def arun_with_rate_limit_retry(
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
 ) -> _T:
     """Asynchronously run an operation with retries for transient rate limits."""
-    if _retry_scope.get():
+    if _active_llm_rate_limit_retry.get():
         return await operation()
 
-    token = _retry_scope.set(True)
+    token = _active_llm_rate_limit_retry.set(True)
     try:
         for attempt in range(1, policy.max_attempts + 1):
             succeeded, result, error = await _aattempt(operation)
@@ -171,7 +171,7 @@ async def arun_with_rate_limit_retry(
                 )
             )
     finally:
-        _retry_scope.reset(token)
+        _active_llm_rate_limit_retry.reset(token)
 
     raise RuntimeError("rate-limit retry loop completed without a result")
 
