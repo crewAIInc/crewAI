@@ -11,6 +11,7 @@ from crewai.llms.retry import (
     arun_with_rate_limit_retry,
     get_retry_delay_seconds,
     is_retryable_rate_limit,
+    is_throttling_error,
     run_with_rate_limit_retry,
 )
 
@@ -50,6 +51,13 @@ class _RetryingLLM(BaseLLM):
 def test_is_retryable_rate_limit_recognizes_transient_provider_throttles(
     error: Exception,
 ) -> None:
+    assert is_retryable_rate_limit(error)
+
+
+def test_is_throttling_error_is_the_shared_provider_classifier() -> None:
+    error = _BedrockClientError("ThrottlingException")
+
+    assert is_throttling_error(error)
     assert is_retryable_rate_limit(error)
 
 

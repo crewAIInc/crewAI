@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from crewai.llm import LLM
@@ -762,6 +762,73 @@ def test_bedrock_client_error_handling():
         with pytest.raises(RuntimeError) as exc_info:
             llm.call("Hello")
         assert "throttled" in str(exc_info.value).lower()
+
+
+def test_bedrock_throttling_retries_without_context_recovery(monkeypatch):
+    """Bedrock token throttles retry instead of being treated as context overflow."""
+    from botocore.exceptions import ClientError
+
+    monkeypatch.setattr('crewai.llms.retry.time.sleep', lambda _: None)
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    throttle_response = {
+        'Error': {
+            'Code': 'ThrottlingException',
+            'Message': 'Too many tokens, please wait before trying again',
+        }
+    }
+    successful_response = {
+        'output': {
+            'message': {'role': 'assistant', 'content': [{'text': 'Recovered'}]}
+        },
+        'usage': {'inputTokens': 1, 'outputTokens': 1, 'totalTokens': 2},
+    }
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.side_effect = [
+            ClientError(throttle_response, 'converse'),
+            successful_response,
+        ]
+
+        assert llm.call("Hello") == "Recovered"
+
+    assert mock_converse.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_bedrock_async_throttling_retries_without_context_recovery(monkeypatch):
+    """Async Bedrock token throttles use the same client-level retry behavior."""
+    from botocore.exceptions import ClientError
+
+    async def no_sleep(_: float) -> None:
+        return None
+
+    monkeypatch.setattr('crewai.llms.retry.asyncio.sleep', no_sleep)
+    monkeypatch.setattr(bedrock_completion, 'AIOBOTOCORE_AVAILABLE', True)
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    throttle_response = {
+        'Error': {
+            'Code': 'ThrottlingException',
+            'Message': 'Too many tokens, please wait before trying again',
+        }
+    }
+    successful_response = {
+        'output': {
+            'message': {'role': 'assistant', 'content': [{'text': 'Recovered'}]}
+        },
+        'usage': {'inputTokens': 1, 'outputTokens': 1, 'totalTokens': 2},
+    }
+    async_client = MagicMock()
+    async_client.converse = AsyncMock(
+        side_effect=[
+            ClientError(throttle_response, 'converse'),
+            successful_response,
+        ]
+    )
+
+    with patch.object(llm, '_ensure_async_client', return_value=async_client):
+        assert await llm.acall("Hello") == "Recovered"
+
+    assert async_client.converse.await_count == 2
 
 
 def test_bedrock_stop_sequences_sync():

@@ -67,7 +67,7 @@ class LLMRetryPolicy:
 DEFAULT_LLM_RETRY_POLICY: Final = LLMRetryPolicy()
 
 
-def is_retryable_rate_limit(error: BaseException) -> bool:
+def is_throttling_error(error: BaseException) -> bool:
     """Return whether an error chain represents a transient provider throttle."""
     error_chain = tuple(_iter_error_chain(error))
     error_codes = tuple(_error_code(candidate) for candidate in error_chain)
@@ -83,6 +83,11 @@ def is_retryable_rate_limit(error: BaseException) -> bool:
         if any(marker in message for marker in _RETRYABLE_MESSAGE_MARKERS):
             return True
     return False
+
+
+def is_retryable_rate_limit(error: BaseException) -> bool:
+    """Return whether retry policy permits retrying this rate-limit error."""
+    return is_throttling_error(error)
 
 
 def get_retry_delay_seconds(

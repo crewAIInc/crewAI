@@ -13,6 +13,10 @@ from crewai.events.event_types import (
 )
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, DEFAULT_CONTEXT_WINDOW_SIZE, LLM
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
@@ -430,6 +434,7 @@ def test_context_window_exceeded_error_handling():
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
 
+
     llm = LLM(model="gpt-4", stream=True, is_litellm=True)
     with patch("litellm.completion") as mock_completion:
         mock_completion.side_effect = ContextWindowExceededError(
@@ -443,6 +448,24 @@ def test_context_window_exceeded_error_handling():
 
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
+
+
+def test_rate_limits_are_not_treated_as_context_window_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    error = RuntimeError("API throttled: too many tokens requested this minute")
+
+    assert not is_context_length_exceeded(error)
+    assert not LLMContextLengthExceededError._is_context_length_exceeded_error(error)
+
+    monkeypatch.setattr("crewai.llms.retry.time.sleep", lambda _: None)
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    with patch("litellm.completion", side_effect=error) as completion:
+        with pytest.raises(RuntimeError) as exc_info:
+            llm.call("Hello")
+
+    assert exc_info.value is error
+    assert completion.call_count == 3
 
 
 @pytest.fixture
