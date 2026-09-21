@@ -85,7 +85,7 @@ class TestCSVLoader:
 
         assert result1.doc_id == result2.doc_id
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_csv_from_url(self, mock_get):
         mock_get.return_value = Mock(
             text="name,value\ntest,123", raise_for_status=Mock(return_value=None)
@@ -99,7 +99,7 @@ class TestCSVLoader:
         assert "text/csv" in headers["Accept"]
         assert "crewai-tools CSVLoader" in headers["User-Agent"]
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_csv_with_custom_headers(self, mock_get):
         mock_get.return_value = Mock(
             text="data,value\ntest,456", raise_for_status=Mock(return_value=None)
@@ -112,7 +112,7 @@ class TestCSVLoader:
         assert "Headers: data | value" in result.content
         assert mock_get.call_args[1]["headers"] == headers
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_csv_loader_handles_network_errors(self, mock_get):
         mock_get.side_effect = Exception("Network error")
         loader = CSVLoader()
@@ -120,7 +120,7 @@ class TestCSVLoader:
         with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/data.csv"))
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_csv_loader_handles_http_error(self, mock_get):
         mock_get.return_value = Mock()
         mock_get.return_value.raise_for_status.side_effect = Exception("404 Not Found")

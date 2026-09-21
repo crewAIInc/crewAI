@@ -1,0 +1,245 @@
+---
+title: أداة Stagehand
+description: أداة أتمتة الويب التي تدمج Stagehand مع CrewAI للتفاعل مع المتصفح وأتمتة المهام
+icon: hand
+mode: "wide"
+---
+
+
+# نظرة عامة
+
+تدمج أداة `StagehandTool` إطار عمل [Stagehand](https://docs.stagehand.dev/get_started/introduction) مع CrewAI، مما يتيح للوكلاء التفاعل مع المواقع الإلكترونية وأتمتة مهام المتصفح باستخدام تعليمات بلغة طبيعية.
+
+## نظرة عامة
+
+Stagehand هو إطار عمل قوي لأتمتة المتصفح تم تطويره بواسطة Browserbase ويتيح لوكلاء الذكاء الاصطناعي:
+
+- التنقل إلى المواقع الإلكترونية
+- النقر على الأزرار والروابط والعناصر الأخرى
+- ملء النماذج
+- استخراج البيانات من صفحات الويب
+- مراقبة العناصر وتحديدها
+- تنفيذ سير عمل معقدة
+
+تغلف أداة StagehandTool حزمة Stagehand Python SDK لتزويد وكلاء CrewAI بإمكانيات التحكم في المتصفح من خلال ثلاثة عمليات أساسية:
+
+1. **Act**: تنفيذ إجراءات مثل النقر والكتابة والتنقل
+2. **Extract**: استخراج بيانات منظمة من صفحات الويب
+3. **Observe**: تحديد العناصر وتحليلها في الصفحة
+
+## المتطلبات الأساسية
+
+قبل استخدام هذه الأداة، تأكد من توفر ما يلي:
+
+1. حساب على [Browserbase](https://www.browserbase.com/) مع مفتاح API ومعرف المشروع
+2. مفتاح API لنموذج لغوي كبير (OpenAI أو Anthropic Claude)
+3. تثبيت حزمة Stagehand Python SDK
+
+قم بتثبيت التبعية المطلوبة:
+
+```bash
+pip install stagehand-py
+```
+
+## الاستخدام
+
+### التنفيذ الأساسي
+
+يمكن تنفيذ أداة StagehandTool بطريقتين:
+
+#### 1. استخدام مدير السياق (موصى به)
+<Tip>
+  يُوصى باستخدام مدير السياق لأنه يضمن التنظيف السليم للموارد حتى في حالة حدوث استثناءات.
+</Tip>
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import StagehandTool
+from stagehand.schemas import AvailableModel
+
+# Initialize the tool with your API keys using a context manager
+with StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",  # OpenAI or Anthropic API key
+    model_name=AvailableModel.CLAUDE_3_7_SONNET_LATEST,  # Optional: specify which model to use
+) as stagehand_tool:
+    # Create an agent with the tool
+    researcher = Agent(
+        role="Web Researcher",
+        goal="Find and summarize information from websites",
+        backstory="I'm an expert at finding information online.",
+        verbose=True,
+        tools=[stagehand_tool],
+    )
+
+    # Create a task that uses the tool
+    research_task = Task(
+        description="Go to https://www.example.com and tell me what you see on the homepage.",
+        agent=researcher,
+    )
+
+    # Run the crew
+    crew = Crew(
+        agents=[researcher],
+        tasks=[research_task],
+        verbose=True,
+    )
+
+    result = crew.kickoff()
+    print(result)
+```
+
+#### 2. إدارة الموارد يدوياً
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import StagehandTool
+from stagehand.schemas import AvailableModel
+
+# Initialize the tool with your API keys
+stagehand_tool = StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",
+    model_name=AvailableModel.CLAUDE_3_7_SONNET_LATEST,
+)
+
+try:
+    # Create an agent with the tool
+    researcher = Agent(
+        role="Web Researcher",
+        goal="Find and summarize information from websites",
+        backstory="I'm an expert at finding information online.",
+        verbose=True,
+        tools=[stagehand_tool],
+    )
+
+    # Create a task that uses the tool
+    research_task = Task(
+        description="Go to https://www.example.com and tell me what you see on the homepage.",
+        agent=researcher,
+    )
+
+    # Run the crew
+    crew = Crew(
+        agents=[researcher],
+        tasks=[research_task],
+        verbose=True,
+    )
+
+    result = crew.kickoff()
+    print(result)
+finally:
+    # Explicitly clean up resources
+    stagehand_tool.close()
+```
+
+## أنواع الأوامر
+
+تدعم أداة StagehandTool ثلاثة أنواع مختلفة من الأوامر لمهام أتمتة الويب المحددة:
+
+### 1. أمر Act
+
+يتيح نوع الأمر `act` (الافتراضي) التفاعل مع صفحات الويب مثل النقر على الأزرار وملء النماذج والتنقل.
+
+```python
+# Perform an action (default behavior)
+result = stagehand_tool.run(
+    instruction="Click the login button",
+    url="https://example.com",
+    command_type="act"  # Default, so can be omitted
+)
+
+# Fill out a form
+result = stagehand_tool.run(
+    instruction="Fill the contact form with name 'John Doe', email 'john@example.com', and message 'Hello world'",
+    url="https://example.com/contact"
+)
+```
+
+### 2. أمر Extract
+
+يسترجع نوع الأمر `extract` بيانات منظمة من صفحات الويب.
+
+```python
+# Extract all product information
+result = stagehand_tool.run(
+    instruction="Extract all product names, prices, and descriptions",
+    url="https://example.com/products",
+    command_type="extract"
+)
+
+# Extract specific information with a selector
+result = stagehand_tool.run(
+    instruction="Extract the main article title and content",
+    url="https://example.com/blog/article",
+    command_type="extract",
+    selector=".article-container"  # Optional CSS selector
+)
+```
+
+### 3. أمر Observe
+
+يحدد نوع الأمر `observe` عناصر صفحات الويب ويحللها.
+
+```python
+# Find interactive elements
+result = stagehand_tool.run(
+    instruction="Find all interactive elements in the navigation menu",
+    url="https://example.com",
+    command_type="observe"
+)
+
+# Identify form fields
+result = stagehand_tool.run(
+    instruction="Identify all the input fields in the registration form",
+    url="https://example.com/register",
+    command_type="observe",
+    selector="#registration-form"
+)
+```
+
+## خيارات الإعداد
+
+يمكنك تخصيص سلوك أداة StagehandTool باستخدام المعاملات التالية:
+
+```python
+stagehand_tool = StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",
+    model_name=AvailableModel.CLAUDE_3_7_SONNET_LATEST,
+    dom_settle_timeout_ms=5000,  # Wait longer for DOM to settle
+    headless=True,  # Run browser in headless mode
+    self_heal=True,  # Attempt to recover from errors
+    wait_for_captcha_solves=True,  # Wait for CAPTCHA solving
+    verbose=1,  # Control logging verbosity (0-3)
+)
+```
+
+## أفضل الممارسات
+
+1. **كن محدداً**: قدم تعليمات مفصلة للحصول على نتائج أفضل
+2. **اختر نوع الأمر المناسب**: حدد نوع الأمر الصحيح لمهمتك
+3. **استخدم المحددات**: استفد من محددات CSS لتحسين الدقة
+4. **قسّم المهام المعقدة**: قسّم سير العمل المعقدة إلى عدة استدعاءات للأداة
+5. **طبّق معالجة الأخطاء**: أضف معالجة الأخطاء للمشكلات المحتملة
+
+## استكشاف الأخطاء وإصلاحها
+
+
+المشكلات الشائعة وحلولها:
+
+- **مشكلات الجلسة**: تحقق من مفاتيح API لكل من Browserbase ومزود النموذج اللغوي
+- **العنصر غير موجود**: قم بزيادة قيمة `dom_settle_timeout_ms` للصفحات البطيئة
+- **فشل الإجراء**: استخدم `observe` لتحديد العناصر الصحيحة أولاً
+- **بيانات غير مكتملة**: حسّن التعليمات أو قدم محددات محددة
+
+
+## موارد إضافية
+
+للأسئلة حول تكامل CrewAI:
+- انضم إلى مجتمع Stagehand على [Slack](https://stagehand.dev/slack)
+- افتح مشكلة في [مستودع Stagehand](https://github.com/browserbase/stagehand)
+- قم بزيارة [وثائق Stagehand](https://docs.stagehand.dev/)

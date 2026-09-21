@@ -163,8 +163,14 @@ def test_navigate_command(mock_run, stagehand_tool):
         command_type="navigate",
     )
 
-    # Assertions
-    assert "https://example.com" in result
+    # Assertions — compare the full mocked result (avoid URL substring checks)
+    assert result == "Successfully navigated to https://example.com"
+    mock_run.assert_called_once_with(
+        stagehand_tool,
+        instruction="Go to example.com",
+        url="https://example.com",
+        command_type="navigate",
+    )
 
 
 @patch(

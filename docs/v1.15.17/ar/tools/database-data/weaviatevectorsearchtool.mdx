@@ -1,0 +1,168 @@
+---
+title: بحث متجهي Weaviate
+description: أداة `WeaviateVectorSearchTool` مصممة للبحث في قاعدة بيانات Weaviate المتجهية عن مستندات متشابهة دلالياً باستخدام البحث الهجين.
+icon: network-wired
+mode: "wide"
+---
+
+## نظرة عامة
+
+صُممت `WeaviateVectorSearchTool` خصيصاً لإجراء عمليات بحث دلالي داخل المستندات المخزنة في قاعدة بيانات Weaviate المتجهية. تتيح لك هذه الأداة العثور على مستندات متشابهة دلالياً لاستعلام معين، من خلال الاستفادة من قوة البحث المتجهي والبحث بالكلمات المفتاحية للحصول على نتائج بحث أكثر دقة وذات صلة بالسياق.
+
+[Weaviate](https://weaviate.io/) هي قاعدة بيانات متجهية تخزن وتستعلم عن التضمينات المتجهية، مما يتيح إمكانيات البحث الدلالي.
+
+## التثبيت
+
+لدمج هذه الأداة في مشروعك، تحتاج إلى تثبيت عميل Weaviate:
+
+```shell
+uv add weaviate-client
+```
+
+## خطوات البدء
+
+لاستخدام `WeaviateVectorSearchTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت الحزمة**: تأكد من تثبيت حزمتي `crewai[tools]` و `weaviate-client` في بيئة Python الخاصة بك.
+2. **إعداد Weaviate**: قم بإعداد مجموعة Weaviate. يمكنك اتباع [وثائق Weaviate](https://weaviate.io/developers/wcs/manage-clusters/connect) للتعليمات.
+3. **مفاتيح API**: احصل على عنوان URL لمجموعة Weaviate ومفتاح API.
+4. **مفتاح OpenAI API**: تأكد من تعيين مفتاح OpenAI API في متغيرات البيئة كـ `OPENAI_API_KEY`.
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة وتنفيذ بحث:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+
+# Initialize the tool
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    alpha=0.75,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+@agent
+def search_agent(self) -> Agent:
+    '''
+    This agent uses the WeaviateVectorSearchTool to search for
+    semantically similar documents in a Weaviate vector database.
+    '''
+    return Agent(
+        config=self.agents_config["search_agent"],
+        tools=[tool]
+    )
+```
+
+## المعاملات
+
+تقبل `WeaviateVectorSearchTool` المعاملات التالية:
+
+- **collection_name**: مطلوب. اسم المجموعة المراد البحث فيها.
+- **weaviate_cluster_url**: مطلوب. عنوان URL لمجموعة Weaviate.
+- **weaviate_api_key**: مطلوب. مفتاح API لمجموعة Weaviate.
+- **limit**: اختياري. عدد النتائج المُرجعة. الافتراضي هو `3`.
+- **alpha**: اختياري. يتحكم في الترجيح بين البحث المتجهي والبحث بالكلمات المفتاحية (BM25). alpha = 0 -> BM25 فقط، alpha = 1 -> بحث متجهي فقط. الافتراضي هو `0.75`.
+- **vectorizer**: اختياري. المحوّل المتجهي المستخدم. إذا لم يُحدد، سيستخدم `text2vec_openai` مع نموذج `nomic-embed-text`.
+- **generative_model**: اختياري. النموذج التوليدي المستخدم. إذا لم يُحدد، سيستخدم `gpt-4o` من OpenAI.
+
+## التكوين المتقدم
+
+يمكنك تخصيص المحوّل المتجهي والنموذج التوليدي المستخدمين في الأداة:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+from weaviate.classes.config import Configure
+
+# Setup custom model for vectorizer and generative model
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    alpha=0.75,
+    vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+    generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## تحميل المستندات مسبقاً
+
+يمكنك تحميل قاعدة بيانات Weaviate بالمستندات مسبقاً قبل استخدام الأداة:
+
+```python Code
+import os
+from crewai_tools import WeaviateVectorSearchTool
+import weaviate
+from weaviate.classes.init import Auth
+
+# Connect to Weaviate
+client = weaviate.connect_to_weaviate_cloud(
+    cluster_url="https://your-weaviate-cluster-url.com",
+    auth_credentials=Auth.api_key("your-weaviate-api-key"),
+    headers={"X-OpenAI-Api-Key": "your-openai-api-key"}
+)
+
+# Get or create collection
+test_docs = client.collections.get("example_collections")
+if not test_docs:
+    test_docs = client.collections.create(
+        name="example_collections",
+        vectorizer_config=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+        generative_config=Configure.Generative.openai(model="gpt-4o"),
+    )
+
+# Load documents
+docs_to_load = os.listdir("knowledge")
+with test_docs.batch.dynamic() as batch:
+    for d in docs_to_load:
+        with open(os.path.join("knowledge", d), "r") as f:
+            content = f.read()
+        batch.add_object(
+            {
+                "content": content,
+                "year": d.split("_")[0],
+            }
+        )
+
+# Initialize the tool
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    alpha=0.75,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## مثال على التكامل مع الوكيل
+
+إليك كيفية دمج `WeaviateVectorSearchTool` مع وكيل CrewAI:
+
+```python Code
+from crewai import Agent
+from crewai_tools import WeaviateVectorSearchTool
+
+# Initialize the tool
+weaviate_tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    alpha=0.75,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+# Create an agent with the tool
+rag_agent = Agent(
+    name="rag_agent",
+    role="You are a helpful assistant that can answer questions with the help of the WeaviateVectorSearchTool.",
+    llm="gpt-4o-mini",
+    tools=[weaviate_tool],
+)
+```
+
+## الخلاصة
+
+توفر `WeaviateVectorSearchTool` طريقة قوية للبحث عن مستندات متشابهة دلالياً في قاعدة بيانات Weaviate المتجهية. من خلال الاستفادة من التضمينات المتجهية، تتيح نتائج بحث أكثر دقة وذات صلة بالسياق مقارنة بعمليات البحث التقليدية القائمة على الكلمات المفتاحية. هذه الأداة مفيدة بشكل خاص للتطبيقات التي تتطلب العثور على المعلومات بناءً على المعنى بدلاً من التطابق الحرفي.

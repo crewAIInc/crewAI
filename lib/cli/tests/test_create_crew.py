@@ -1,14 +1,25 @@
+import asyncio
+import builtins
 import keyword
 import shutil
 import tempfile
+import threading
+import warnings
 from pathlib import Path
 from unittest import mock
 
 import pytest
+import tomli
 from click.testing import CliRunner
+from crewai_core.platform_apps import PLATFORM_APPS
+from packaging.requirements import Requirement
+from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
+from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
+from crewai_cli.utils import render_template
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 @pytest.fixture
@@ -104,6 +115,7 @@ def test_create_crew_with_trailing_slash_creates_valid_project(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "test_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "test_project",
@@ -138,6 +150,7 @@ def test_create_crew_with_multiple_trailing_slashes(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "test_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "test_project",
@@ -162,6 +175,7 @@ def test_create_crew_normal_name_still_works(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "normal_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "normal_project",
@@ -171,6 +185,26 @@ def test_create_crew_normal_name_still_works(
             create_crew("normal-project", skip_provider=True)
 
             mock_create_folder.assert_called_once_with("normal-project", None)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
+@pytest.mark.parametrize(
+    ("args", "project_root"),
+    [
+        (["create", "crew", "Git Crew"], "git_crew"),
+        (["create", "flow", "Git Flow"], "git_flow"),
+    ],
+)
+def test_create_initializes_git_repo_when_git_is_available(
+    args, project_root, tmp_path, monkeypatch, runner
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    result = runner.invoke(crewai, args)
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / project_root / ".git").is_dir()
 
 
 def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
@@ -591,6 +625,164 @@ def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypat
     }.isdisjoint(tool_names)
 
 
+def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
+    picker_calls = 0
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        nonlocal picker_calls
+        picker_calls += 1
+        if picker_calls == 1:
+            platform_row = next(
+                idx for idx, label in enumerate(labels) if "CrewAI Platform" in label
+            )
+            return [], platform_row
+
+        github = next(
+            idx
+            for idx, label in enumerate(labels)
+            if label.startswith("GitHub Integration")
+            and label.endswith("Platform: GitHubIntegration")
+        )
+        return [github], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+    monkeypatch.setattr(
+        json_crew, "_prompt_text", lambda label, **kwargs: label.lower()
+    )
+    monkeypatch.setattr(json_crew, "_select_model", lambda: "openai/gpt-5.5")
+    monkeypatch.setattr(json_crew, "_confirm", lambda *_args, **_kwargs: False)
+
+    agent = json_crew._wizard_agent(agent_num=1, existing_names=[])
+
+    assert agent is not None
+    assert agent["tools"] == ["platform:github"]
+    assert '"tools": ["platform:github"]' in json_crew._agent_to_jsonc(agent)
+
+
+def test_json_wizard_platform_catalog_contains_every_supported_app():
+    platform_category = next(
+        tools
+        for category, tools in json_crew._TOOL_CATEGORIES
+        if category == "CrewAI Platform"
+    )
+
+    assert [name for name, _description in platform_category] == [
+        f"platform:{app}" for app in PLATFORM_APPS
+    ]
+
+
+def test_platform_auth_suppresses_warnings_only_while_importing_tools(
+    monkeypatch,
+):
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    fake_client = mock.Mock()
+    fake_client.get_actions.return_value = [object()]
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=lambda _selector: fake_client,
+    )
+    original_import = builtins.__import__
+
+    def import_with_warning(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            warnings.warn("optional dependency import warning", UserWarning)
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", import_with_warning)
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        json_crew._setup_platform_auth([{"tools": ["platform:github"]}])
+        warnings.warn("warning after import", UserWarning)
+
+    assert [str(warning.message) for warning in caught_warnings] == [
+        "warning after import"
+    ]
+
+
+def test_platform_validation_checks_apps_concurrently():
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    barrier = threading.Barrier(2)
+
+    class FakeClient:
+        def get_actions(self, _selectors):
+            barrier.wait(timeout=1)
+            return [object()]
+
+    results = asyncio.run(
+        json_crew._check_platform_apps_concurrently(
+            ["github", "gmail"],
+            FakeApplicationSelector,
+            lambda _selector: FakeClient(),
+        )
+    )
+
+    assert all(actions and error is None for actions, error in results)
+
+
+def test_platform_validation_announces_concurrent_apps_together(capsys):
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    class FakeClient:
+        def get_actions(self, _selectors):
+            return [object()]
+
+    failed_apps, token_invalid = json_crew._validate_platform_apps(
+        ["github", "gmail", "google_calendar"],
+        FakeApplicationSelector,
+        lambda _selector: FakeClient(),
+    )
+
+    output = capsys.readouterr().out
+    assert (failed_apps, token_invalid) == ([], False)
+    assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
+    assert "Checking CrewAI Platform Integration Token and GitHub" not in output
+
+
+def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    checked_apps: list[str] = []
+
+    class FakeClient:
+        def __init__(self, app: str):
+            self.app = app
+
+        def get_actions(self, _selectors):
+            checked_apps.append(self.app)
+            return [object()]
+
+    monkeypatch.setattr(json_crew.asyncio, "get_running_loop", object)
+
+    failed_apps, token_invalid = json_crew._validate_platform_apps(
+        ["github", "gmail"],
+        FakeApplicationSelector,
+        lambda app: FakeClient(app),
+    )
+
+    assert (failed_apps, token_invalid) == ([], False)
+    assert checked_apps == ["github", "gmail"]
+    output = capsys.readouterr().out
+    assert "Checking CrewAI Platform Integration Token and GitHub integration" in output
+    assert "Checking CrewAI Platform Integration Token and Gmail integration" in output
+
+
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
     cursors: list[int] = []
 
@@ -709,8 +901,39 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         default_llm="openai/gpt-5.5",
     )
     assert (tmp_path / "json_crew" / "crew.jsonc").exists()
+    assert not (tmp_path / "json_crew" / "src").exists()
     assert not (tmp_path / "json_crew" / "tests").exists()
     assert not (tmp_path / "json_crew" / "config.jsonc").exists()
+    generated_paths = {
+        path.relative_to(tmp_path / "json_crew").as_posix()
+        for path in (tmp_path / "json_crew").rglob("*")
+        if path.is_file()
+    }
+    assert not any(
+        path.endswith("/crew.py") or path == "crew.py" for path in generated_paths
+    )
+    assert not any(
+        path.endswith("/agents.yaml") or path == "agents.yaml"
+        for path in generated_paths
+    )
+    assert not any(
+        path.endswith("/tasks.yaml") or path == "tasks.yaml"
+        for path in generated_paths
+    )
+    assert not any(path.startswith("src/") for path in generated_paths)
+
+    pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
+    dependency = pyproject["project"]["dependencies"][0]
+    assert dependency == get_crewai_tools_dependency()
+    assert Version("1.15.0") in Requirement(dependency).specifier
+    assert Version("2.0.0") not in Requirement(dependency).specifier
+    assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
+        "only-include"
+    ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
+    assert pyproject["tool"]["crewai"] == {
+        "type": "crew",
+        "definition": "crew.jsonc",
+    }
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
@@ -782,6 +1005,75 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert '"knowledge_sources": []' in agent_template
 
 
+def test_json_create_saves_platform_token_to_env_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: (
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-5.5",
+                    "tools": ["platform:github"],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        ),
+    )
+    monkeypatch.setattr(json_crew, "_setup_platform_auth", lambda _agents: "token")
+
+    json_crew.create_json_crew("Platform Crew", skip_provider=True)
+
+    env_file = tmp_path / "platform_crew" / ".env"
+    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN=token" in env_file.read_text()
+
+
+def test_json_crew_uses_template_files():
+    template_names = {
+        "pyproject.toml",
+        "README.md",
+        ".gitignore",
+        "agent.jsonc",
+        "agent_settings.jsonc",
+        "task.jsonc",
+        "crew.jsonc",
+        "knowledge/user_preference.txt",
+    }
+
+    for template_name in template_names:
+        assert (json_crew._TEMPLATES_DIR / template_name).is_file()
+
+
+def test_render_template_does_not_replace_tokens_inside_replacement_values(tmp_path):
+    template = tmp_path / "template.txt"
+    template.write_text("{{first}} {{second}}", encoding="utf-8")
+
+    rendered = render_template(
+        template,
+        {
+            "first": "{{second}}",
+            "second": "done",
+        },
+    )
+
+    assert rendered == "{{second}} done"
+
+
 def test_json_provider_default_model_helper():
     assert json_crew._default_model_for_provider("openai") == "openai/gpt-5.5"
     assert json_crew._default_model_for_provider("anthropic/claude-custom") == (
@@ -838,8 +1130,80 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     crew_template = (project_root / "crew.jsonc").read_text()
     agent_template = (project_root / "agents" / "researcher.jsonc").read_text()
 
-    assert '"memory": false' in crew_template
+    assert '"memory": true' in crew_template
     assert '"description": "Research current AI trends and write a concise summary."' in (
         crew_template
     )
     assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+
+
+def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    project_root = tmp_path / "my_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    [keep_on] = [
+        line
+        for line in agents_md.splitlines()
+        if "Never disable, block, or silence CrewAI's built-in observability" in line
+    ]
+    assert "any of the instrumentation that ships execution data out" in keep_on
+    assert "Turning it off is the user's decision to make" in keep_on
+    assert "- Treating built-in observability" in agents_md
+    assert "free" not in agents_md.lower()
+
+
+def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with mock.patch(
+        "crewai_cli.create_json_crew._wizard_agents_and_tasks",
+        return_value=(
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-4o",
+                    "tools": [],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        ),
+    ):
+        json_crew.create_json_crew("JSON Crew", provider="openai", skip_provider=True)
+
+    project_root = tmp_path / "json_crew"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert "crew.jsonc" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()

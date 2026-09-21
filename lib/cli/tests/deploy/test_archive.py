@@ -1,10 +1,11 @@
 from pathlib import Path
 import subprocess
+import tempfile
 import zipfile
 
 import pytest
 
-from crewai_cli.deploy.archive import create_project_zip
+from crewai_cli.deploy.archive import ArchiveError, create_project_zip
 
 
 def test_create_project_zip_excludes_local_artifacts(tmp_path: Path):
@@ -132,7 +133,7 @@ def test_create_project_zip_excludes_symlinked_files(tmp_path: Path):
     assert names == {"pyproject.toml"}
 
 
-def test_create_project_zip_adds_json_project_wrapper(tmp_path: Path):
+def test_create_project_zip_preserves_json_project_shape(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -146,6 +147,7 @@ build-backend = "hatchling.build"
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """.strip()
         + "\n"
     )
@@ -157,8 +159,6 @@ type = "crew"
     try:
         with zipfile.ZipFile(archive_path) as archive:
             names = set(archive.namelist())
-            crew_py = archive.read("src/json_crew/crew.py").decode()
-            main_py = archive.read("src/json_crew/main.py").decode()
             pyproject = archive.read("pyproject.toml").decode()
     finally:
         archive_path.unlink(missing_ok=True)
@@ -166,18 +166,51 @@ type = "crew"
     assert "uv.lock" not in names
     assert "crew.jsonc" in names
     assert "agents/researcher.jsonc" in names
-    assert "src/json_crew/__init__.py" in names
-    assert "src/json_crew/crew.py" in names
-    assert "src/json_crew/main.py" in names
-    assert "src/json_crew/config/agents.yaml" in names
-    assert "src/json_crew/config/tasks.yaml" in names
-    assert "load_crew(_crew_path())" in crew_py
-    assert "JsonCrew" in crew_py
-    assert "from json_crew.crew import JsonCrew" in main_py
-    assert "run_crew = \"json_crew.main:run\"" in pyproject
+    assert all(not name.startswith("src/") for name in names)
+    assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
 
 
-def test_create_project_zip_updates_existing_json_project_scripts(tmp_path: Path):
+def test_create_project_zip_keeps_json_project_root_shape(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "json_crew"
+version = "0.1.0"
+dependencies = ["crewai[tools]>=1.15.0,<2.0.0"]
+
+[tool.crewai]
+type = "crew"
+definition = "crew.jsonc"
+""".strip()
+        + "\n"
+    )
+    (tmp_path / "uv.lock").write_text("# lock\n")
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents" / "foo.jsonc").write_text("{}\n")
+    (tmp_path / "crew.jsonc").write_text("{}\n")
+
+    archive_path = create_project_zip("json_crew", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+            pyproject = archive.read("pyproject.toml").decode()
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert names == {
+        "agents/foo.jsonc",
+        "crew.jsonc",
+        "pyproject.toml",
+        "uv.lock",
+    }
+    assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
+
+
+def test_create_project_zip_does_not_rewrite_json_project_scripts(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -191,6 +224,7 @@ custom = "custom.module:main"
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """.strip()
         + "\n"
     )
@@ -203,14 +237,10 @@ type = "crew"
     finally:
         archive_path.unlink(missing_ok=True)
 
-    assert 'json_crew = "json_crew.main:run"' in pyproject
-    assert 'run_crew = "json_crew.main:run"' in pyproject
-    assert 'train = "json_crew.main:train"' in pyproject
-    assert 'replay = "json_crew.main:replay"' in pyproject
-    assert 'test = "json_crew.main:test"' in pyproject
-    assert 'run_with_trigger = "json_crew.main:run_with_trigger"' in pyproject
+    assert 'json_crew = "old.module:run"' in pyproject
+    assert 'run_crew = "old.module:run"' in pyproject
     assert 'custom = "custom.module:main"' in pyproject
-    assert "old.module:run" not in pyproject
+    assert pyproject.count("[project.scripts]") == 1
     assert "[tool.crewai]" in pyproject
 
 
@@ -221,7 +251,7 @@ type = "crew"
         '[tool]\ncrewai = "invalid"\n',
     ],
 )
-def test_create_project_zip_adds_json_wrapper_for_malformed_tool_config(
+def test_create_project_zip_preserves_json_project_with_malformed_tool_config(
     tmp_path: Path, tool_config: str
 ):
     (tmp_path / "pyproject.toml").write_text(
@@ -244,12 +274,13 @@ version = "0.1.0"
     finally:
         archive_path.unlink(missing_ok=True)
 
-    assert "src/json_crew/crew.py" in names
-    assert "src/json_crew/main.py" in names
-    assert "run_crew = \"json_crew.main:run\"" in pyproject
+    assert names == {"crew.jsonc", "pyproject.toml"}
+    assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
 
 
-def test_create_project_zip_rejects_empty_normalized_package_name(tmp_path: Path):
+def test_create_project_zip_accepts_json_project_without_package_name(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -263,8 +294,72 @@ type = "crew"
     )
     (tmp_path / "crew.jsonc").write_text("{}\n")
 
-    with pytest.raises(
-        ValueError,
-        match=r"Could not derive a valid Python package name",
-    ):
-        create_project_zip("invalid", project_dir=tmp_path)
+    archive_path = create_project_zip("invalid", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+            pyproject = archive.read("pyproject.toml").decode()
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert names == {"crew.jsonc", "pyproject.toml"}
+    assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
+
+
+def test_create_project_zip_with_nothing_to_deploy_raises_archive_error(
+    tmp_path: Path,
+):
+    """Still a ValueError for existing callers, and a distinct type for the deploy command."""
+    with pytest.raises(ArchiveError, match="No deployable project files were found"):
+        create_project_zip("demo", project_dir=tmp_path)
+    assert issubclass(ArchiveError, ValueError)
+
+
+def test_create_project_zip_wraps_a_write_failure_and_removes_the_partial_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / "uv.lock").write_text("# lock\n")
+    created: list[Path] = []
+
+    def failing_zipfile(path, *args, **kwargs):
+        created.append(Path(path))
+        raise OSError("disk full")
+
+    monkeypatch.setattr("crewai_cli.deploy.archive.zipfile.ZipFile", failing_zipfile)
+
+    with pytest.raises(ArchiveError, match="Could not build the project ZIP: disk full"):
+        create_project_zip("demo", project_dir=tmp_path)
+
+    assert created and not created[0].exists()
+
+
+@pytest.mark.parametrize(
+    "failing_step",
+    [
+        "crewai_cli.deploy.archive.shutil.copy2",
+        "crewai_cli.deploy.archive.tempfile.NamedTemporaryFile",
+    ],
+)
+def test_create_project_zip_wraps_staging_and_temp_file_failures_and_cleans_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failing_step: str
+):
+    """A full disk while staging or creating the archive is an archive failure too."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+
+    def fail(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(failing_step, fail)
+
+    with pytest.raises(ArchiveError, match="Could not build the project ZIP: disk full"):
+        create_project_zip("demo", project_dir=project)
+
+    assert list(scratch.iterdir()) == []

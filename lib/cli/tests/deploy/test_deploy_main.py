@@ -9,6 +9,7 @@ import pytest
 import json
 
 import crewai_cli.deploy.main as deploy_main
+from crewai_cli.deploy.archive import ArchiveError
 import httpx
 from crewai_cli.deploy.validate import Severity, ValidationResult
 from crewai_cli.utils import parse_toml
@@ -167,6 +168,36 @@ def test_prepare_project_for_deploy_creates_missing_lock_after_validation(
     assert validators == []
 
 
+def test_deployment_page_url_prefers_deployment_id():
+    assert (
+        deploy_main._deployment_page_url(
+            "https://app.crewai.com",
+            {"uuid": "crew-uuid", "deployment_id": 128687},
+        )
+        == "https://app.crewai.com/crewai_plus/deployments/128687"
+    )
+
+
+def test_deployment_page_url_prefers_nested_deployment_id_over_crew_uuid():
+    assert (
+        deploy_main._deployment_page_url(
+            "https://app.crewai.com",
+            {"uuid": "crew-uuid", "deployment": {"deployment_id": 128687}},
+        )
+        == "https://app.crewai.com/crewai_plus/deployments/128687"
+    )
+
+
+def test_deployment_page_url_does_not_use_uuid_as_deployment_id():
+    assert (
+        deploy_main._deployment_page_url(
+            "https://app.crewai.com/",
+            {"uuid": "crew-uuid", "deployment": {"uuid": "deployment-uuid"}},
+        )
+        is None
+    )
+
+
 class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.command.get_auth_token")
     @patch("crewai_cli.deploy.main.get_project_name")
@@ -186,6 +217,27 @@ class TestDeployCommand(unittest.TestCase):
 
         self.deploy_command = deploy_main.DeployCommand()
         self.mock_client = self.deploy_command.plus_api_client
+        self.mock_client.base_url = "https://app.crewai.com"
+        self.mock_browser_open_patcher = patch(
+            "crewai_cli.deploy.main.webbrowser.open"
+        )
+        self.mock_browser_open = self.mock_browser_open_patcher.start()
+        self.addCleanup(self.mock_browser_open_patcher.stop)
+
+    def _status_response(
+        self,
+        *,
+        uuid: str = "test-uuid",
+        zip_deployment: bool | None = None,
+        is_success: bool = True,
+    ) -> MagicMock:
+        response = MagicMock()
+        response.is_success = is_success
+        payload: dict = {"uuid": uuid}
+        if zip_deployment is not None:
+            payload["zip_deployment"] = zip_deployment
+        response.json.return_value = payload
+        return response
 
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
@@ -272,11 +324,95 @@ class TestDeployCommand(unittest.TestCase):
     def test_display_deployment_info(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command._display_deployment_info(
-                {"uuid": "test-uuid", "status": "deployed"}
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
             )
             self.assertIn("Deploying the crew...", fake_out.getvalue())
             self.assertIn("test-uuid", fake_out.getvalue())
             self.assertIn("deployed", fake_out.getvalue())
+            self.assertIn(
+                "https://app.crewai.com/crewai_plus/deployments/128687",
+                fake_out.getvalue(),
+            )
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
+    def test_display_deployment_info_warns_when_browser_open_returns_false(self):
+        self.mock_browser_open.return_value = False
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_deployment_info(
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
+            )
+            self.assertIn(
+                "Could not open the deployment page automatically.",
+                fake_out.getvalue(),
+            )
+
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
+    def test_display_deployment_info_warns_when_browser_open_raises(self):
+        self.mock_browser_open.side_effect = RuntimeError("no browser")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_deployment_info(
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
+            )
+            self.assertIn(
+                "Could not open the deployment page automatically.",
+                fake_out.getvalue(),
+            )
+
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
+    def test_display_creation_success_resolves_deployment_page_id_from_status(self):
+        status_response = MagicMock()
+        status_response.is_success = True
+        status_response.json.return_value = {
+            "uuid": "new-uuid",
+            "id": 128774,
+            "status": "created",
+        }
+        self.mock_client.crew_status_by_uuid.return_value = status_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_creation_success(
+                {"uuid": "new-uuid", "status": "created"}
+            )
+            output = fake_out.getvalue()
+
+        self.assertIn("crewai deploy push --uuid new-uuid", output)
+        self.assertIn(
+            "https://app.crewai.com/crewai_plus/deployments/128774",
+            output,
+        )
+        self.assertNotIn(
+            "https://app.crewai.com/crewai_plus/deployments/new-uuid",
+            output,
+        )
+        self.mock_client.crew_status_by_uuid.assert_called_once_with("new-uuid")
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128774"
+        )
+
+    def test_open_deployment_page_does_not_open_uuid_url_when_status_lookup_fails(
+        self,
+    ):
+        status_response = MagicMock()
+        status_response.is_success = False
+        self.mock_client.crew_status_by_uuid.return_value = status_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._open_deployment_page({"uuid": "new-uuid"})
+            output = fake_out.getvalue()
+
+        self.mock_client.crew_status_by_uuid.assert_called_once_with("new-uuid")
+        self.mock_browser_open.assert_not_called()
+        self.assertNotIn("deployments/new-uuid", output)
 
     def test_display_logs(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -294,6 +430,9 @@ class TestDeployCommand(unittest.TestCase):
         mock_repository.return_value.create_initial_commit_if_needed.return_value = (
             False
         )
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response(
+            zip_deployment=False
+        )
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"uuid": "test-uuid"}
@@ -301,6 +440,7 @@ class TestDeployCommand(unittest.TestCase):
 
         self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
 
+        self.mock_client.crew_status_by_uuid.assert_called_once_with("test-uuid")
         self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
@@ -313,6 +453,9 @@ class TestDeployCommand(unittest.TestCase):
         mock_repository.return_value.create_initial_commit_if_needed.return_value = (
             False
         )
+        self.mock_client.crew_status_by_name.return_value = self._status_response(
+            zip_deployment=False
+        )
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"uuid": "test-uuid"}
@@ -320,6 +463,7 @@ class TestDeployCommand(unittest.TestCase):
 
         self.deploy_command.deploy(skip_validate=True)
 
+        self.mock_client.crew_status_by_name.assert_called_once_with("test_project")
         self.mock_client.deploy_by_name.assert_called_once_with("test_project")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
@@ -333,6 +477,9 @@ class TestDeployCommand(unittest.TestCase):
         repository.origin_url.return_value = "https://github.com/test/repo.git"
         repository.fetch.side_effect = ValueError("fetch failed")
         repository.create_initial_commit_if_needed.return_value = False
+        self.mock_client.crew_status_by_name.return_value = self._status_response(
+            zip_deployment=False
+        )
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.is_success = True
@@ -361,6 +508,9 @@ class TestDeployCommand(unittest.TestCase):
         repository.origin_url.return_value = "https://github.com/test/repo.git"
         repository.create_initial_commit_if_needed.side_effect = RuntimeError(
             "commit failed"
+        )
+        self.mock_client.crew_status_by_name.return_value = self._status_response(
+            zip_deployment=False
         )
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -393,6 +543,9 @@ class TestDeployCommand(unittest.TestCase):
             False
         )
         mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response(
+            zip_deployment=True
+        )
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"uuid": "test-uuid"}
@@ -400,6 +553,7 @@ class TestDeployCommand(unittest.TestCase):
 
         self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
 
+        self.mock_client.crew_status_by_uuid.assert_called_once_with("test-uuid")
         self.mock_client.update_crew_from_zip.assert_called_once_with(
             "test-uuid",
             Path("/tmp/test_project.zip"),
@@ -421,14 +575,12 @@ class TestDeployCommand(unittest.TestCase):
             False
         )
         mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
-        status_response = MagicMock()
-        status_response.status_code = 200
-        status_response.is_success = True
-        status_response.json.return_value = {"uuid": "test-uuid"}
         update_response = MagicMock()
         update_response.status_code = 200
         update_response.json.return_value = {"uuid": "test-uuid"}
-        self.mock_client.crew_status_by_name.return_value = status_response
+        self.mock_client.crew_status_by_name.return_value = self._status_response(
+            zip_deployment=True
+        )
         self.mock_client.update_crew_from_zip.return_value = update_response
 
         self.deploy_command.deploy(skip_validate=True)
@@ -440,6 +592,118 @@ class TestDeployCommand(unittest.TestCase):
             env={"ENV_VAR": "value"},
         )
         self.mock_client.deploy_by_name.assert_not_called()
+        mock_display.assert_called_once_with({"uuid": "test-uuid"})
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_deploy_zip_amp_source_uploads_even_when_origin_exists(
+        self, mock_display, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response(
+            zip_deployment=True
+        )
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.update_crew_from_zip.return_value = mock_response
+
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+        self.mock_client.update_crew_from_zip.assert_called_once_with(
+            "test-uuid",
+            Path("/tmp/test_project.zip"),
+            env={"ENV_VAR": "value"},
+        )
+        self.mock_client.deploy_by_uuid.assert_not_called()
+        mock_display.assert_called_once_with({"uuid": "test-uuid"})
+
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_deploy_falls_back_to_origin_when_zip_deployment_is_missing(
+        self, mock_display, mock_repository
+    ):
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.deploy_by_uuid.return_value = mock_response
+
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+        self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
+        self.mock_client.update_crew_from_zip.assert_not_called()
+        mock_display.assert_called_once_with({"uuid": "test-uuid"})
+
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_deploy_falls_back_to_origin_when_status_request_fails(
+        self, mock_display, mock_repository
+    ):
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response(
+            zip_deployment=True, is_success=False
+        )
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.deploy_by_uuid.return_value = mock_response
+
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+        self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
+        self.mock_client.update_crew_from_zip.assert_not_called()
+        mock_display.assert_called_once_with({"uuid": "test-uuid"})
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_deploy_falls_back_to_zip_when_status_fails_and_origin_is_missing(
+        self, mock_display, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = None
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+        self.mock_client.crew_status_by_uuid.side_effect = httpx.ConnectError(
+            "offline"
+        )
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.update_crew_from_zip.return_value = mock_response
+
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+        self.mock_client.update_crew_from_zip.assert_called_once_with(
+            "test-uuid",
+            Path("/tmp/test_project.zip"),
+            env={"ENV_VAR": "value"},
+        )
+        self.mock_client.deploy_by_uuid.assert_not_called()
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
@@ -466,6 +730,364 @@ class TestDeployCommand(unittest.TestCase):
             self.deploy_command.create_crew(skip_validate=True)
             self.assertIn("Deployment created successfully!", fake_out.getvalue())
             self.assertIn("new-uuid", fake_out.getvalue())
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    @pytest.mark.timeout(180)
+    def test_create_crew_reports_the_created_uuid_from_the_git_path(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """The attempt span cannot carry the uuid; the post-success span must."""
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_input.return_value = ""
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.is_success = True
+        mock_response.json.return_value = {"uuid": "new-uuid", "status": "created"}
+        self.mock_client.create_crew.return_value = mock_response
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_created_span.assert_called_once_with(
+            uuid="new-uuid", source="cli"
+        )
+        telemetry.create_crew_deployment_span.assert_called_once_with(source="cli")
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_crew_reports_the_created_uuid_from_the_zip_path(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        """The two creation paths converge, so the uuid must arrive from both."""
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.side_effect = ValueError("not a Git repository")
+        initialized_repository = MagicMock()
+        initialized_repository.origin_url.return_value = None
+        mock_repository.initialize.return_value = initialized_repository
+        mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.is_success = True
+        mock_response.json.return_value = {"uuid": "zip-uuid", "status": "created"}
+        self.mock_client.create_crew_from_zip.return_value = mock_response
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                self.deploy_command.create_crew(skip_validate=True, confirm=True)
+
+        telemetry.crew_deployment_created_span.assert_called_once_with(
+            uuid="zip-uuid", source="cli"
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_failed_create_counts_the_attempt_but_reports_no_creation(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """The whole point of two spans: a failed create is an attempt, not a success.
+
+        Collapsing them into one post-success span would silently convert the
+        creation-attempt metric into a creation-success metric, which the churn
+        figures are built on.
+        """
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_input.return_value = ""
+
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.is_success = False
+        mock_response.json.return_value = {"error": "boom"}
+        self.mock_client.create_crew.return_value = mock_response
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.create_crew_deployment_span.assert_called_once_with(source="cli")
+        telemetry.crew_deployment_created_span.assert_not_called()
+
+    # --- why a create failed (the Crew Deployment Failed span) ---------------
+
+    def _git_path(self, mock_input, mock_repository, mock_fetch_env):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_input.return_value = ""
+
+    @staticmethod
+    def _api_response(status_code: int, body: object) -> MagicMock:
+        response = MagicMock()
+        response.status_code = status_code
+        response.is_success = 200 <= status_code < 300
+        if isinstance(body, Exception):
+            response.json.side_effect = body
+        else:
+            response.json.return_value = body
+        return response
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_rejected_create_reports_the_api_class_and_status(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """A 4xx names the class and carries the exact code; the message never leaves."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            422, {"name": ["has already been taken"]}
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "api_4xx", source="cli", status_code=422
+        )
+        telemetry.crew_deployment_created_span.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_server_error_reports_api_5xx(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            503, {"error": "upstream unavailable"}
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "api_5xx", source="cli", status_code=503
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_non_json_success_body_reports_invalid_json(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """A proxy's 200 HTML page: _validate_response rejects it, so it is a
+        failure with a 2xx attached, and it is not the same failure as a JSON
+        body that is missing the creation fields."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            200, ValueError("not json")
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "invalid_json", source="cli", status_code=200
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_transport_failure_reports_network_error_and_propagates(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """No response, so no status; the exception reaches the caller unchanged."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.side_effect = httpx.ConnectError("refused")
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with pytest.raises(httpx.ConnectError, match="refused"):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "network_error", source="cli"
+        )
+        telemetry.crew_deployment_created_span.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_a_failed_archive_reports_zip_error(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.side_effect = ValueError("not a Git repository")
+        initialized_repository = MagicMock()
+        initialized_repository.origin_url.return_value = None
+        mock_repository.initialize.return_value = initialized_repository
+        mock_create_project_zip.side_effect = ArchiveError(
+            "No deployable project files were found."
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with pytest.raises(ArchiveError, match="No deployable project files"):
+                    self.deploy_command.create_crew(skip_validate=True, confirm=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "zip_error", source="cli"
+        )
+        self.mock_client.create_crew_from_zip.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_git_helper_error_is_not_a_zip_error(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """The git helpers raise plain ValueError; only ArchiveError is a ZIP problem."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        mock_repository.return_value.origin_url.side_effect = ValueError(
+            "Git remote lookup failed"
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with pytest.raises(ValueError, match="Git remote lookup failed"):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "unexpected", source="cli"
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_non_json_error_page_keeps_its_api_class(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """A gateway's HTML 502 is an api_5xx, not an invalid response."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            502, ValueError("not json")
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "api_5xx", source="cli", status_code=502
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_success_body_that_is_not_a_creation_reports_invalid_creation_response(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """A 2xx JSON body without a deployment uuid is a broken creation
+        contract, not a success, and must not crash."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        for body in ([{"uuid": "in-a-list"}], {"status": "created"}, {}):
+            with self.subTest(body=body):
+                self.mock_client.create_crew.return_value = self._api_response(
+                    200, body
+                )
+                with patch.object(self.deploy_command, "_telemetry") as telemetry:
+                    with patch("sys.stdout", new=StringIO()) as fake_out:
+                        with self.assertRaises(SystemExit) as exit_info:
+                            self.deploy_command.create_crew(skip_validate=True)
+
+                assert exit_info.exception.code == 1
+                assert "no deployment uuid was returned" in fake_out.getvalue()
+                telemetry.crew_deployment_failed_span.assert_called_once_with(
+                    "invalid_creation_response", source="cli", status_code=200
+                )
+                telemetry.crew_deployment_created_span.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_an_abort_at_the_prompt_reports_user_declined(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        mock_input.side_effect = KeyboardInterrupt
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(KeyboardInterrupt):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "user_declined", source="cli"
+        )
+        self.mock_client.create_crew.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_failure_from_the_run_tui_keeps_its_source(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """The TUI succeeds far less often than the CLI; the split must survive."""
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            403, {"error": "forbidden"}
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(
+                        skip_validate=True, confirm=True, source="tui"
+                    )
+
+        telemetry.crew_deployment_failed_span.assert_called_once_with(
+            "api_4xx", source="tui", status_code=403
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_successful_create_reports_no_failure(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        self._git_path(mock_input, mock_repository, mock_fetch_env)
+        self.mock_client.create_crew.return_value = self._api_response(
+            201, {"uuid": "new-uuid", "status": "created"}
+        )
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_failed_span.assert_not_called()
+        telemetry.crew_deployment_created_span.assert_called_once_with(
+            uuid="new-uuid", source="cli"
+        )
 
     @patch("crewai_cli.deploy.main.create_project_zip")
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")

@@ -1,0 +1,188 @@
+---
+title: أداة استدعاء وكيل Bedrock
+description: تتيح لوكلاء CrewAI استدعاء وكلاء Amazon Bedrock والاستفادة من قدراتهم ضمن سير العمل الخاص بك
+icon: aws
+mode: "wide"
+---
+
+# `BedrockInvokeAgentTool`
+
+تتيح `BedrockInvokeAgentTool` لوكلاء CrewAI استدعاء وكلاء Amazon Bedrock والاستفادة من قدراتهم ضمن سير العمل الخاص بك.
+
+## التثبيت
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## المتطلبات
+
+- بيانات اعتماد AWS مُهيأة (إما من خلال متغيرات البيئة أو AWS CLI)
+- حزمتا `boto3` و `python-dotenv`
+- الوصول إلى وكلاء Amazon Bedrock
+
+## الاستخدام
+
+إليك كيفية استخدام الأداة مع وكيل CrewAI:
+
+```python {2, 4-8}
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# Initialize the tool
+agent_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id"
+)
+
+# Create a CrewAI agent that uses the tool
+aws_expert = Agent(
+    role='AWS Service Expert',
+    goal='Help users understand AWS services and quotas',
+    backstory='I am an expert in AWS services and can provide detailed information about them.',
+    tools=[agent_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+quota_task = Task(
+    description="Find out the current service quotas for EC2 in us-west-2 and explain any recent changes.",
+    agent=aws_expert
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[aws_expert],
+    tasks=[quota_task],
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+## معاملات الأداة
+
+| المعامل | النوع | مطلوب | الافتراضي | الوصف |
+|:---------|:-----|:---------|:--------|:------------|
+| **agent_id** | `str` | نعم | None | المعرّف الفريد لوكيل Bedrock |
+| **agent_alias_id** | `str` | نعم | None | المعرّف الفريد لاسم الوكيل المستعار |
+| **session_id** | `str` | لا | الطابع الزمني | المعرّف الفريد للجلسة |
+| **enable_trace** | `bool` | لا | False | ما إذا كان سيتم تفعيل التتبع لأغراض التصحيح |
+| **end_session** | `bool` | لا | False | ما إذا كان سيتم إنهاء الجلسة بعد الاستدعاء |
+| **description** | `str` | لا | None | وصف مخصص للأداة |
+
+## متغيرات البيئة
+
+```bash
+BEDROCK_AGENT_ID=your-agent-id           # Alternative to passing agent_id
+BEDROCK_AGENT_ALIAS_ID=your-agent-alias-id # Alternative to passing agent_alias_id
+AWS_REGION=your-aws-region               # Defaults to us-west-2
+AWS_ACCESS_KEY_ID=your-access-key        # Required for AWS authentication
+AWS_SECRET_ACCESS_KEY=your-secret-key    # Required for AWS authentication
+```
+
+## الاستخدام المتقدم
+
+### سير عمل متعدد الوكلاء مع إدارة الجلسات
+
+```python {2, 4-22}
+from crewai import Agent, Task, Crew, Process
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# Initialize tools with session management
+initial_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id"
+)
+
+followup_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id"
+)
+
+final_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id",
+    end_session=True
+)
+
+# Create agents for different stages
+researcher = Agent(
+    role='AWS Service Researcher',
+    goal='Gather information about AWS services',
+    backstory='I am specialized in finding detailed AWS service information.',
+    tools=[initial_tool]
+)
+
+analyst = Agent(
+    role='Service Compatibility Analyst',
+    goal='Analyze service compatibility and requirements',
+    backstory='I analyze AWS services for compatibility and integration possibilities.',
+    tools=[followup_tool]
+)
+
+summarizer = Agent(
+    role='Technical Documentation Writer',
+    goal='Create clear technical summaries',
+    backstory='I specialize in creating clear, concise technical documentation.',
+    tools=[final_tool]
+)
+
+# Create tasks
+research_task = Task(
+    description="Find all available AWS services in us-west-2 region.",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analyze which services support IPv6 and their implementation requirements.",
+    agent=analyst
+)
+
+summary_task = Task(
+    description="Create a summary of IPv6-compatible services and their key features.",
+    agent=summarizer
+)
+
+# Create a crew with the agents and tasks
+crew = Crew(
+    agents=[researcher, analyst, summarizer],
+    tasks=[research_task, analysis_task, summary_task],
+    process=Process.sequential,
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+```
+
+## حالات الاستخدام
+
+### التعاون الهجين متعدد الوكلاء
+- إنشاء سير عمل حيث يتعاون وكلاء CrewAI مع وكلاء Bedrock المُدارة التي تعمل كخدمات في AWS
+- تمكين سيناريوهات حيث تتم معالجة البيانات الحساسة داخل بيئة AWS الخاصة بك بينما تعمل وكلاء أخرى خارجياً
+- ربط وكلاء CrewAI المحلية مع وكلاء Bedrock السحابية لسير عمل ذكاء موزع
+
+### سيادة البيانات والامتثال
+- الحفاظ على سير عمل الوكلاء الحساسة للبيانات داخل بيئة AWS الخاصة بك مع السماح لوكلاء CrewAI الخارجية بتنسيق المهام
+- الحفاظ على الامتثال لمتطلبات إقامة البيانات من خلال معالجة المعلومات الحساسة فقط داخل حساب AWS الخاص بك
+- تمكين التعاون الآمن متعدد الوكلاء حيث لا يمكن لبعض الوكلاء الوصول إلى البيانات الخاصة بمؤسستك
+
+### التكامل السلس مع خدمات AWS
+- الوصول إلى أي خدمة AWS من خلال Amazon Bedrock Actions دون كتابة كود تكامل معقد
+- تمكين وكلاء CrewAI من التفاعل مع خدمات AWS من خلال طلبات اللغة الطبيعية
+- الاستفادة من قدرات وكلاء Bedrock المبنية مسبقاً للتفاعل مع خدمات AWS مثل Bedrock Knowledge Bases و Lambda والمزيد
+
+### هياكل وكلاء هجينة قابلة للتوسع
+- تفريغ المهام الحسابية المكثفة إلى وكلاء Bedrock المُدارة بينما تعمل المهام الخفيفة في CrewAI
+- توسيع معالجة الوكلاء من خلال توزيع أعباء العمل بين وكلاء CrewAI المحلية ووكلاء Bedrock السحابية
+
+### التعاون بين المؤسسات
+- تمكين التعاون الآمن بين وكلاء CrewAI الخاصة بمؤسستك ووكلاء Bedrock الخاصة بالمؤسسات الشريكة
+- إنشاء سير عمل حيث يمكن دمج الخبرة الخارجية من وكلاء Bedrock دون كشف البيانات الحساسة
+- بناء أنظمة وكلاء تمتد عبر حدود المؤسسات مع الحفاظ على الأمان والتحكم في البيانات

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import inspect
+from contextlib import closing
 import json
 import os
 import sqlite3
 import tempfile
 import time
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -378,6 +380,25 @@ class TestJsonProviderFork:
             assert path.endswith(".json")
             assert os.path.isfile(path)
 
+    def test_checkpoint_uses_utf8_for_non_ascii_json(self) -> None:
+        provider = JsonProvider()
+        data = '{"message": "olá niño"}'
+        with tempfile.TemporaryDirectory() as d:
+            path = provider.checkpoint(data, d, branch="main")
+
+            assert Path(path).read_bytes() == data.encode("utf-8")
+            assert provider.from_checkpoint(path) == data
+
+    @pytest.mark.asyncio
+    async def test_acheckpoint_uses_utf8_for_non_ascii_json(self) -> None:
+        provider = JsonProvider()
+        data = '{"message": "olá niño"}'
+        with tempfile.TemporaryDirectory() as d:
+            path = await provider.acheckpoint(data, d, branch="main")
+
+            assert Path(path).read_bytes() == data.encode("utf-8")
+            assert await provider.afrom_checkpoint(path) == data
+
     def test_checkpoint_fork_branch_subdir(self) -> None:
         provider = JsonProvider()
         with tempfile.TemporaryDirectory() as d:
@@ -485,7 +506,7 @@ class TestSqliteProviderFork:
             loc = provider.checkpoint("{}", db, parent_id="p1", branch="exp")
             cid = provider.extract_id(loc)
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 row = conn.execute(
                     "SELECT parent_id, branch FROM checkpoints WHERE id = ?",
                     (cid,),
@@ -503,7 +524,7 @@ class TestSqliteProviderFork:
 
             provider.prune(db, max_keep=1, branch="main")
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 main_count = conn.execute(
                     "SELECT COUNT(*) FROM checkpoints WHERE branch = 'main'"
                 ).fetchone()[0]
@@ -529,7 +550,7 @@ class TestSqliteProviderFork:
             id2 = state._checkpoint_id
             assert id2 != id1
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 row = conn.execute(
                     "SELECT parent_id FROM checkpoints WHERE id = ?", (id2,)
                 ).fetchone()
@@ -631,7 +652,7 @@ class TestLegacyMethodOutputsRestore:
         assert restored.method_outputs == ["first", "second"]
 
     def test_restore_legacy_outputs_evaluates_expressions(self) -> None:
-        from crewai.flow.runtime._expressions import _expression_context
+        from crewai.flow.expressions import Expression
 
         flow = Flow()
         flow._method_outputs = ["legacy"]
@@ -642,7 +663,7 @@ class TestLegacyMethodOutputsRestore:
             cfg = CheckpointConfig(restore_from=loc)
             restored = Flow.from_checkpoint(cfg)
 
-        context = _expression_context(restored)
+        context = Expression._flow_context(restored)
         assert context["outputs"] == {"": "legacy"}
 
     def test_raw_legacy_outputs_property_remains_readable(self) -> None:

@@ -26,6 +26,7 @@ name = "json_crew"
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """.strip()
     )
     (tmp_path / "crew.jsonc").write_text("{}\n")
@@ -45,6 +46,7 @@ name = "hybrid-crew"
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """.strip()
     )
     (tmp_path / "crew.jsonc").write_text("{}\n")

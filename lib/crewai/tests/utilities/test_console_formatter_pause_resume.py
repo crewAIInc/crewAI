@@ -46,6 +46,16 @@ class TestConsoleFormatterPauseResume:
 
         formatter.resume_live_updates()
 
+    def test_flow_method_status_ignores_formatter_verbose(self):
+        formatter = ConsoleFormatter(verbose=False)
+
+        with patch.object(formatter, "print_panel") as mock_print_panel:
+            formatter.handle_method_status("categorize_tickets")
+
+        mock_print_panel.assert_called_once()
+        _, kwargs = mock_print_panel.call_args
+        assert kwargs["is_flow"] is True
+
     def test_streaming_after_pause_resume_creates_new_session(self):
         """Test that streaming after pause/resume creates new Live session."""
         formatter = ConsoleFormatter()

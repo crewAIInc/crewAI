@@ -54,11 +54,29 @@ def test_create_success(mock_subprocess, capsys, tool_command):
         )
         assert os.path.isfile(os.path.join("test_tool", "src", "test_tool", "tool.py"))
 
+        with open(os.path.join("test_tool", "pyproject.toml"), "r") as f:
+            content = f.read()
+            assert '"crewai[tools]>=1.15.0,<2.0.0"' in content
+
         with open(os.path.join("test_tool", "src", "test_tool", "tool.py"), "r") as f:
             content = f.read()
             assert "class TestTool" in content
 
         mock_subprocess.assert_called_once_with(["git", "init"], check=True)
+
+
+@patch("crewai_cli.tools.main.subprocess.run")
+def test_create_scaffolds_assistant_instructions(mock_subprocess, tool_command):
+    with in_temp_dir():
+        tool_command.create("test-tool")
+
+        agents_md = Path("test_tool", "AGENTS.md").read_text(encoding="utf-8")
+        assert "CrewAI Reference for AI Coding Assistants" in agents_md
+        assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
+        claude_md = Path("test_tool", "CLAUDE.md").read_text(encoding="utf-8")
+        assert "@AGENTS.md" in claude_md.splitlines()
+        gemini_md = Path("test_tool", "GEMINI.md").read_text(encoding="utf-8")
+        assert "@./AGENTS.md" in gemini_md.splitlines()
 
 
 @patch("crewai_cli.tools.main.subprocess.run")

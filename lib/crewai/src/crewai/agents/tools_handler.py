@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -25,14 +26,14 @@ class ToolsHandler(BaseModel):
     def on_tool_use(
         self,
         calling: ToolCalling | InstructorToolCalling,
-        output: str,
+        output: Any,
         should_cache: bool = True,
     ) -> None:
         """Run when tool ends running.
 
         Args:
             calling: The tool calling instance.
-            output: The output from the tool execution.
+            output: The raw output from the tool execution.
             should_cache: Whether to cache the tool output.
         """
         self.last_used_tool = calling

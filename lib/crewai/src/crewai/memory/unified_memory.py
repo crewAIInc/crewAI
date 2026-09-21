@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import suppress
 import contextvars
+import copy
 from datetime import datetime
 import threading
 import time
@@ -51,6 +53,24 @@ def _default_embedder() -> OpenAIEmbeddingFunction:
     """Build default OpenAI embedder for memory."""
     spec: OpenAIProviderSpec = {"provider": "openai", "config": {}}
     return build_embedder(spec)
+
+
+def _non_streaming_analysis_llm(llm: Any) -> Any:
+    """Return an isolated non-streaming LLM for internal memory analysis."""
+    if not isinstance(llm, BaseLLM):
+        return llm
+
+    try:
+        analysis_llm = copy.copy(llm)
+    except Exception:
+        try:
+            analysis_llm = llm.model_copy(deep=False)
+        except Exception:
+            return llm
+
+    with suppress(Exception):
+        analysis_llm.stream = False
+    return analysis_llm
 
 
 class Memory(BaseModel):
@@ -127,7 +147,12 @@ class Memory(BaseModel):
     )
     read_only: bool = Field(
         default=False,
-        description="If True, remember() and remember_many() are silent no-ops.",
+        description=(
+            "If True, stored records are left unchanged: remember() and "
+            "remember_many() store nothing, update() leaves the record "
+            "untouched, and recall() does not refresh access times. Explicit "
+            "deletion through forget()/reset() is unaffected."
+        ),
     )
     root_scope: str | None = Field(
         default=None,
@@ -200,7 +225,9 @@ class Memory(BaseModel):
             query_analysis_threshold=self.query_analysis_threshold,
         )
 
-        self._llm_instance = None if isinstance(self.llm, str) else self.llm
+        self._llm_instance = (
+            None if isinstance(self.llm, str) else _non_streaming_analysis_llm(self.llm)
+        )
         self._embedder_instance = (
             self.embedder
             if (self.embedder is not None and not isinstance(self.embedder, dict))
@@ -759,7 +786,7 @@ class Memory(BaseModel):
                 )
                 results = flow.state.final_results
 
-            if results:
+            if results and not self.read_only:
                 try:
                     touch = getattr(self._storage, "touch_records", None)
                     if touch is not None:
@@ -847,7 +874,8 @@ class Memory(BaseModel):
             importance: New importance score.
 
         Returns:
-            The updated MemoryRecord.
+            The updated MemoryRecord, or the unchanged record when ``read_only``
+            is set.
 
         Raises:
             ValueError: If the record is not found.
@@ -855,6 +883,8 @@ class Memory(BaseModel):
         existing = self._storage.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
+        if self.read_only:
+            return existing
         now = datetime.utcnow()
         updates: dict[str, Any] = {"last_accessed": now}
         if content is not None:

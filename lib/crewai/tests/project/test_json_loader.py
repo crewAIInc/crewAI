@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import (
@@ -14,6 +15,7 @@ from crewai.project.json_loader import (
     _looks_like_windows_absolute_path,
     find_json_project_file,
     load_agent,
+    load_agent_from_definition,
     strip_jsonc_comments,
 )
 
@@ -353,17 +355,145 @@ class TestLoadAgent:
         with pytest.raises(Exception):
             load_agent(agent_file)
 
+    @pytest.mark.parametrize("field", ["role", "goal", "backstory"])
+    def test_load_agent_rejects_null_required_fields(
+        self, tmp_path: Path, field: str
+    ):
+        agent_def = {
+            "role": "Researcher",
+            "goal": "Find information",
+            "backstory": "Expert researcher.",
+        }
+        agent_def[field] = None
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        with pytest.raises(
+            JSONProjectValidationError, match=f"missing required field '{field}'"
+        ):
+            load_agent(agent_file)
+
     def test_load_agent_file_not_found(self):
         with pytest.raises(FileNotFoundError):
             load_agent(Path("/nonexistent/agent.json"))
 
 
+class TestLoadAgentFromDefinition:
+    def test_resolves_response_format_from_project_module(self, tmp_path: Path):
+        (tmp_path / "models.py").write_text(
+            "from pydantic import BaseModel\n"
+            "class AnswerModel(BaseModel):\n"
+            "    answer: str\n"
+        )
+
+        _, response_format = load_agent_from_definition(
+            {
+                "role": "Analyst",
+                "goal": "Analyze data",
+                "backstory": "Data expert.",
+                "input": "Summarize this",
+                "response_format": {"python": "models.AnswerModel"},
+            },
+            source="agent action",
+            project_root=tmp_path,
+        )
+
+        assert issubclass(response_format, BaseModel)
+        assert response_format.__name__ == "AnswerModel"
+
+
 class TestResolveTools:
+    def test_platform_tool_refs_materialize_multiple_application_tools(
+        self, monkeypatch
+    ):
+        from crewai.project.json_loader import _resolve_tools
+
+        github_tools = [object()]
+        linear_tools = [object(), object()]
+        calls: list[list[str]] = []
+
+        def build_platform_tools(apps: list[str]):
+            calls.append(apps)
+            return {
+                "github": github_tools,
+                "linear": linear_tools,
+            }[apps[0]]
+
+        monkeypatch.setattr(
+            "crewai_tools.CrewaiPlatformTools", build_platform_tools
+        )
+
+        tools = _resolve_tools(["platform:github", "platform:linear"])
+
+        assert tools == github_tools + linear_tools
+        assert calls == [["github"], ["linear"]]
+
+    def test_empty_platform_tool_ref_raises_with_guidance(self):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        with pytest.raises(JSONProjectError, match="platform:<application>"):
+            _resolve_tools(["platform:"])
+
+    def test_platform_tool_discovery_errors_are_json_project_errors(
+        self, monkeypatch
+    ):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        def fail_platform_tool_discovery(apps: list[str]):
+            raise RuntimeError("discovery unavailable")
+
+        monkeypatch.setattr(
+            "crewai_tools.CrewaiPlatformTools", fail_platform_tool_discovery
+        )
+
+        with pytest.raises(JSONProjectError, match="discovery unavailable"):
+            _resolve_tools(["platform:github"])
+
+    def test_import_ref_tool_resolves(self, tmp_path, monkeypatch):
+        from crewai.project.json_loader import _resolve_tools
+
+        (tmp_path / "project_tools.py").write_text(
+            "from crewai.tools.base_tool import BaseTool\n"
+            "\n"
+            "class LookupTool(BaseTool):\n"
+            "    name: str = 'lookup'\n"
+            "    description: str = 'lookup input'\n"
+            "\n"
+            "    def _run(self, text: str) -> str:\n"
+            "        return text\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        tools = _resolve_tools(["project_tools:LookupTool"])
+
+        assert len(tools) == 1
+        assert tools[0].name == "lookup"
+
     def test_unknown_tool_raises_with_guidance(self):
         from crewai.project.json_loader import JSONProjectError, _resolve_tools
 
         with pytest.raises(JSONProjectError, match="Unknown tool 'NotARealToolXYZ'"):
             _resolve_tools(["NotARealToolXYZ"])
+
+    def test_import_ref_tool_must_resolve_to_basetool_class(
+        self, tmp_path, monkeypatch
+    ):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        (tmp_path / "not_tools.py").write_text(
+            "class NotATool:\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        with pytest.raises(JSONProjectError, match="expected a BaseTool class"):
+            _resolve_tools(["not_tools:NotATool"])
+
+    def test_unresolvable_import_ref_tool_raises_guidance(self):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        with pytest.raises(JSONProjectError, match="unresolvable tool ref"):
+            _resolve_tools(["not_a_real_module:MissingTool"])
 
     def test_missing_custom_tool_raises(self, tmp_path, monkeypatch):
         from crewai.project.json_loader import JSONProjectError, _resolve_tools
@@ -479,6 +609,30 @@ class TestValidationDoesNotExecuteTools:
 
         assert not sentinel.exists(), "validation must not import Python refs"
 
+    def test_validate_does_not_import_tool_refs(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ):
+        from crewai.project.json_loader import validate_crew_project
+
+        sentinel = tmp_path / "tool_ref_executed.txt"
+        (tmp_path / "project_tools.py").write_text(
+            "from pathlib import Path\n"
+            f"Path({str(sentinel)!r}).write_text('boom')\n"
+            "from crewai.tools.base_tool import BaseTool\n"
+            "class LookupTool(BaseTool):\n"
+            "    name: str = 'lookup'\n"
+            "    description: str = 'lookup input'\n"
+            "    def _run(self, text: str) -> str:\n"
+            "        return text\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        sys.modules.pop("project_tools", None)
+        crew_path = self._write_project(tmp_path, tool_line='"project_tools:LookupTool"')
+
+        validate_crew_project(crew_path, tmp_path / "agents")
+
+        assert not sentinel.exists(), "validation must not import tool refs"
+
     def test_validate_reports_missing_custom_tool_file(self, tmp_path):
         from crewai.project.json_loader import (
             JSONProjectValidationError,
@@ -505,6 +659,19 @@ class TestValidationDoesNotExecuteTools:
             validate_crew_project(crew_path, tmp_path / "agents")
 
         assert "Invalid custom tool name" in str(exc_info.value)
+
+    def test_validate_rejects_empty_platform_tool_ref(self, tmp_path):
+        from crewai.project.json_loader import (
+            JSONProjectValidationError,
+            validate_crew_project,
+        )
+
+        crew_path = self._write_project(tmp_path, tool_line='"platform:"')
+
+        with pytest.raises(JSONProjectValidationError) as exc_info:
+            validate_crew_project(crew_path, tmp_path / "agents")
+
+        assert "platform:<application>" in str(exc_info.value)
 
     def test_validate_rejects_deep_python_ref_nesting(self, tmp_path):
         from crewai.project.json_loader import validate_crew_project

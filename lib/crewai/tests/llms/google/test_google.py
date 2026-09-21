@@ -20,27 +20,44 @@ def mock_google_api_key():
         yield
 
 
-def test_gemini_completion_is_used_when_google_provider():
+@pytest.mark.parametrize(
+    "model, expected_model",
+    [
+        ("google/gemini-2.0-flash-001", "gemini-2.0-flash-001"),
+        ("google/gemini-3.8-flash", "gemini-3.8-flash"),
+    ],
+)
+def test_gemini_completion_is_used_when_google_provider(model, expected_model):
     """
-    Test that GeminiCompletion from completion.py is used when LLM uses provider 'google'
+    Test that GeminiCompletion is used when LLM uses provider 'google'
     """
-    llm = LLM(model="google/gemini-2.0-flash-001")
+    llm = LLM(model=model)
 
     assert llm.__class__.__name__ == "GeminiCompletion"
     assert llm.provider == "gemini"
-    assert llm.model == "gemini-2.0-flash-001"
+    assert llm.model == expected_model
 
 
-def test_gemini_completion_is_used_when_gemini_provider():
+
+@pytest.mark.parametrize(
+    "model, expected_model",
+    [
+        ("gemini/gemini-2.0-flash-001", "gemini-2.0-flash-001"),
+        ("gemini/gemini-3.8-flash", "gemini-3.8-flash"),
+    ],
+)
+def test_gemini_completion_is_used_when_gemini_provider(model, expected_model):
     """
     Test that GeminiCompletion is used when provider is 'gemini'
     """
-    llm = LLM(model="gemini/gemini-2.0-flash-001")
-
     from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = LLM(model=model)
+
     assert isinstance(llm, GeminiCompletion)
     assert llm.provider == "gemini"
-    assert llm.model == "gemini-2.0-flash-001"
+    assert llm.model == expected_model
+
 
 def test_gemini_completion_module_is_imported():
     """
@@ -123,12 +140,12 @@ def test_gemini_completion_initialization_parameters():
 
 
 def test_gemini_started_event_surfaces_max_output_tokens():
-    from crewai.events.event_bus import CrewAIEventsBus
+    from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallStartedEvent
 
     llm = LLM(model="google/gemini-2.0-flash-001", max_output_tokens=2000, api_key="test-key")
 
-    with patch.object(CrewAIEventsBus, "emit") as mock_emit:
+    with patch.object(crewai_event_bus, "emit") as mock_emit:
         llm._emit_call_started_event(messages="hi")
 
     event = mock_emit.call_args[1]["event"]
@@ -330,7 +347,7 @@ def test_gemini_completion_with_tools():
 
 
 def test_gemini_raises_error_when_model_not_supported():
-    """Test that GeminiCompletion raises ValueError when model not supported"""
+    """Test that GeminiCompletion raises an API error for an unsupported model."""
 
     with patch('crewai.llms.providers.gemini.completion.genai') as mock_genai:
         mock_client = MagicMock()
@@ -342,7 +359,7 @@ def test_gemini_raises_error_when_model_not_supported():
         mock_response.body_segments = [{
             'error': {
                 'code': 404,
-                'message': 'models/model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
+                'message': 'models/gemini-model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
                 'status': 'NOT_FOUND'
             }
         }]
@@ -350,10 +367,12 @@ def test_gemini_raises_error_when_model_not_supported():
 
         mock_client.models.generate_content.side_effect = ClientError(404, mock_response)
 
-        llm = LLM(model="google/model-doesnt-exist")
+        llm = LLM(model="google/gemini-model-doesnt-exist")
 
-        with pytest.raises(Exception):  # Should raise some error for unsupported model
+        with pytest.raises(ClientError, match="404"):
             llm.call("Hello")
+
+        mock_client.models.generate_content.assert_called_once()
 
 
 def test_gemini_vertex_ai_setup():
@@ -440,6 +459,8 @@ def test_gemini_model_detection():
     """
     # Test Gemini model naming patterns that actually work with provider detection
     gemini_test_cases = [
+        "gemini/gemini-3.8-flash",
+        "google/gemini-3.8-flash",
         "google/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-001",
         "google/gemini-1.5-pro",
@@ -468,6 +489,11 @@ def test_gemini_context_window_size():
     llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
     context_size_2_0 = llm_2_0.get_context_window_size()
     assert context_size_2_0 > 500000
+
+    # Test Gemini 3.8 Flash
+    llm_3_8 = LLM(model="google/gemini-3.8-flash")
+    context_size_3_8 = llm_3_8.get_context_window_size()
+    assert context_size_3_8 == 891289
 
     # Test Gemini 1.5 Pro
     llm_1_5 = LLM(model="google/gemini-1.5-pro")
@@ -498,6 +524,131 @@ def test_gemini_message_formatting():
 
     assert formatted_contents[0].role == "user"
     assert formatted_contents[1].role == "model"
+
+
+@pytest.mark.parametrize(
+    "file_uri",
+    [
+        "https://storage.googleapis.com/example/image.jpg",
+        "gs://example-bucket/image.jpg",
+    ],
+)
+def test_gemini_message_formatting_preserves_file_data(file_uri):
+    """Test that Gemini file references are preserved in their original order."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {"text": "Before"},
+                    {
+                        "fileData": {
+                            "fileUri": file_uri,
+                            "mimeType": "image/jpeg",
+                        }
+                    },
+                    {"text": "After"},
+                ],
+            }
+        ]
+    )
+
+    parts = formatted_contents[0].parts
+    assert parts[0].text == "Before"
+    assert parts[1].file_data is not None
+    assert parts[1].file_data.file_uri == file_uri
+    assert parts[1].file_data.mime_type == "image/jpeg"
+    assert parts[2].text == "After"
+
+
+def test_gemini_message_formatting_preserves_file_data_without_text():
+    """Test that a message containing only a file reference is preserved."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+    file_uri = "gs://example-bucket/image.jpg"
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "fileData": {
+                            "fileUri": file_uri,
+                            "mimeType": "image/jpeg",
+                        }
+                    }
+                ],
+            }
+        ]
+    )
+
+    parts = formatted_contents[0].parts
+    assert len(parts) == 1
+    assert parts[0].file_data is not None
+    assert parts[0].file_data.file_uri == file_uri
+    assert parts[0].file_data.mime_type == "image/jpeg"
+
+
+def test_gemini_message_formatting_appends_user_turn_after_trailing_model_turn():
+    """
+    Gemini's generateContent API rejects a request whose history ends on a
+    model turn ("Requests ending with a model turn are not supported"). Agent
+    loops can produce this (e.g. after max-iteration handling or a guardrail
+    retry), so formatting must append a synthetic user turn to recover.
+    """
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert [content.role for content in formatted_contents] == [
+        "user",
+        "model",
+        "user",
+    ]
+    assert formatted_contents[0].parts[0].text == "Hello"
+    assert formatted_contents[1].parts[0].text == "Hi there!"
+    assert formatted_contents[2].parts[0].text == "Please continue."
+    assert test_messages == [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+
+def test_gemini_message_formatting_leaves_user_terminated_history_unchanged():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [{"role": "user", "content": "Hello"}]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert len(formatted_contents) == 1
+    assert formatted_contents[0].role == "user"
+    assert formatted_contents[0].parts[0].text == "Hello"
+
+
+def test_gemini_message_formatting_raises_on_unresolved_function_call():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [
+        {"role": "user", "content": "What's the weather?"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"function": {"name": "get_weather", "arguments": "{}"}}
+            ],
+        },
+    ]
+
+    with pytest.raises(ValueError, match="unresolved function call"):
+        llm._format_messages_for_gemini(test_messages)
 
 
 def test_gemini_streaming_parameter():

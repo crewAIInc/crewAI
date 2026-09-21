@@ -127,7 +127,7 @@ class TestJSONLoader:
             os.unlink(path)
 
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_url_response_valid_json(self, mock_get):
         mock_get.return_value = Mock(
             text='{"key": "value", "number": 123}',
@@ -143,7 +143,7 @@ class TestJSONLoader:
         assert "application/json" in headers["Accept"]
         assert "crewai-tools JSONLoader" in headers["User-Agent"]
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_url_response_not_json(self, mock_get):
         mock_get.return_value = Mock(
             text='{"key": "value"}',
@@ -155,7 +155,7 @@ class TestJSONLoader:
         result = loader.load(SourceContent("https://example.com/data.json"))
         assert all(part in result.content for part in ["key", "value"])
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_url_with_custom_headers(self, mock_get):
         mock_get.return_value = Mock(
             text='{"data": "test"}',
@@ -169,14 +169,14 @@ class TestJSONLoader:
 
         assert mock_get.call_args[1]["headers"] == headers
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_url_network_failure(self, mock_get):
         mock_get.side_effect = Exception("Network error")
         loader = JSONLoader()
         with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://api.example.com/data.json"))
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_url_http_error(self, mock_get):
         mock_get.return_value = Mock(
             raise_for_status=Mock(side_effect=Exception("404"))

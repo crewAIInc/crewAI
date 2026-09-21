@@ -19,6 +19,39 @@ from crewai.memory.types import (
 )
 
 
+def test_memory_analysis_llm_is_isolated_from_streaming_agent_llm(
+    tmp_path: Path,
+) -> None:
+    """Memory analysis should not share a mutable streaming LLM with the agent UI."""
+    from crewai.llms.base_llm import BaseLLM
+    from crewai.memory.unified_memory import Memory
+    from crewai.utilities.types import LLMMessage
+
+    class FakeStreamingLLM(BaseLLM):
+        def call(
+            self,
+            messages: str | list[LLMMessage],
+            tools: list[dict] | None = None,
+            callbacks: list | None = None,
+            available_functions: dict | None = None,
+            from_task: object | None = None,
+            from_agent: object | None = None,
+            response_model: type | None = None,
+        ) -> str:
+            return ""
+
+    agent_llm = FakeStreamingLLM(model="fake-model", stream=True)
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=agent_llm,
+        embedder=lambda texts: [[0.1] for _ in texts],
+    )
+
+    assert mem._llm is not agent_llm
+    assert mem._llm.stream is False
+
+    agent_llm.stream = True
+    assert mem._llm.stream is False
 
 
 def test_memory_record_defaults() -> None:
@@ -207,6 +240,50 @@ def test_memory_scope_slice(tmp_path: Path, mock_embedder: MagicMock) -> None:
     assert "/a" in sl.scopes and "/b" in sl.scopes
 
 
+def test_memory_scope_config_can_be_reused() -> None:
+    """Constructing a scope must not remove the memory from caller-owned config."""
+    from crewai.memory.memory_scope import MemoryScope
+
+    memory = MagicMock()
+    config = {"memory": memory, "root_path": "/agent/1"}
+
+    first = MemoryScope.model_validate(config)
+    second = MemoryScope.model_validate(config)
+
+    assert config == {"memory": memory, "root_path": "/agent/1"}
+    assert first._require_memory() is memory
+    assert second._require_memory() is memory
+
+
+def test_memory_slice_config_can_be_reused_without_normalizing_it_in_place() -> None:
+    """Constructing a slice must preserve caller-owned dependencies and paths."""
+    from crewai.memory.memory_scope import MemorySlice
+
+    memory = MagicMock()
+    config = {"memory": memory, "scopes": ["/team/", "/"]}
+
+    first = MemorySlice.model_validate(config)
+    second = MemorySlice.model_validate(config)
+
+    assert config == {"memory": memory, "scopes": ["/team/", "/"]}
+    assert first.scopes == ["/team", "/"]
+    assert second.scopes == ["/team", "/"]
+    assert first._require_memory() is memory
+    assert second._require_memory() is memory
+
+
+def test_memory_kind_inference_preserves_input() -> None:
+    """Inferring a legacy config's discriminator must not mutate that config."""
+    from crewai.memory.memory_scope import _ensure_memory_kind
+
+    config = {"root_path": "/agent/1"}
+
+    normalized = _ensure_memory_kind(config)
+
+    assert config == {"root_path": "/agent/1"}
+    assert normalized == {"root_path": "/agent/1", "memory_kind": "scope"}
+
+
 def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
 
@@ -256,6 +333,65 @@ def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embed
     result = sl.remember("x", scope="/a")
     assert result is None
     assert mem.list_records() == []
+
+
+def test_update_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """A read-only Memory leaves stored records untouched when update() is called."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db8"), llm=MagicMock(), embedder=mock_embedder)
+    record = mem.remember(
+        "original", scope="/a", categories=[], importance=0.5, metadata={}
+    )
+    assert record is not None
+
+    mem.read_only = True
+    returned = mem.update(record.id, content="rewritten", importance=0.9)
+
+    assert returned.content == "original"
+    assert returned.importance == 0.5
+    stored = mem.list_records()
+    assert [(r.content, r.importance) for r in stored] == [("original", 0.5)]
+
+
+def test_update_still_writes_when_not_read_only(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """The read-only guard does not change update() for a writable Memory."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db9"), llm=MagicMock(), embedder=mock_embedder)
+    record = mem.remember(
+        "original", scope="/a", categories=[], importance=0.5, metadata={}
+    )
+    assert record is not None
+
+    returned = mem.update(record.id, content="rewritten", importance=0.9)
+
+    assert returned.content == "rewritten"
+    assert returned.importance == 0.9
+    stored = mem.list_records()
+    assert [(r.content, r.importance) for r in stored] == [("rewritten", 0.9)]
+
+
+def test_recall_does_not_refresh_access_time_when_read_only(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Recall against a read-only Memory leaves last_accessed untouched."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db10"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember("alpha", scope="/a", categories=[], importance=0.5, metadata={})
+    before = mem.list_records()[0].last_accessed
+
+    mem.read_only = True
+    assert mem.recall("alpha", scope="/a", limit=5, depth="shallow")
+    assert mem.list_records()[0].last_accessed == before
+
+    # Positive control: a writable Memory still refreshes the access time.
+    mem.read_only = False
+    assert mem.recall("alpha", scope="/a", limit=5, depth="shallow")
+    assert mem.list_records()[0].last_accessed > before
 
 
 

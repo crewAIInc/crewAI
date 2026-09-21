@@ -1,8 +1,6 @@
 import os
 import unittest
-from unittest.mock import ANY, AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import ANY, MagicMock, patch
 
 from crewai_cli.plus_api import PlusAPI
 
@@ -19,6 +17,33 @@ class TestPlusAPI(unittest.TestCase):
         self.assertEqual(self.api.headers["Content-Type"], "application/json")
         self.assertIn("CrewAI-CLI/", self.api.headers["User-Agent"])
         self.assertTrue(self.api.headers["X-Crewai-Version"])
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.create_evaluation("6f31fe1a-20bd-4bfe-a011-25d6b9341f62")
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={"execution_id": "6f31fe1a-20bd-4bfe-a011-25d6b9341f62"},
+            timeout=120.0,  # AMP reads the run's spans inside this request
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_get_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.get_evaluation("ev-1")
+
+        mock_make_request.assert_called_once_with(
+            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
+        )
+        self.assertEqual(response, mock_response)
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_login_to_tool_repository(self, mock_make_request):
@@ -343,28 +368,23 @@ class TestPlusAPI(unittest.TestCase):
         )
 
 
-@pytest.mark.asyncio
-@patch("httpx.AsyncClient")
-async def test_get_agent(mock_async_client_class):
+@patch("crewai_core.plus_api.PlusAPI._make_request")
+def test_get_agent(mock_make_request):
     api = PlusAPI("test_api_key")
     mock_response = MagicMock()
-    mock_client_instance = AsyncMock()
-    mock_client_instance.get.return_value = mock_response
-    mock_async_client_class.return_value.__aenter__.return_value = mock_client_instance
+    mock_make_request.return_value = mock_response
 
-    response = await api.get_agent("test_agent_handle")
+    response = api.get_agent("test_agent_handle")
 
-    mock_client_instance.get.assert_called_once_with(
-        f"{api.base_url}/crewai_plus/api/v1/agents/test_agent_handle",
-        headers=api.headers,
+    mock_make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
     )
     assert response == mock_response
 
 
-@pytest.mark.asyncio
-@patch("httpx.AsyncClient")
+@patch("crewai_core.plus_api.PlusAPI._make_request")
 @patch("crewai_core.plus_api.Settings")
-async def test_get_agent_with_org_uuid(mock_settings_class, mock_async_client_class):
+def test_get_agent_with_org_uuid(mock_settings_class, mock_make_request):
     org_uuid = "test-org-uuid"
     mock_settings = MagicMock()
     mock_settings.org_uuid = org_uuid
@@ -374,15 +394,12 @@ async def test_get_agent_with_org_uuid(mock_settings_class, mock_async_client_cl
     api = PlusAPI("test_api_key")
 
     mock_response = MagicMock()
-    mock_client_instance = AsyncMock()
-    mock_client_instance.get.return_value = mock_response
-    mock_async_client_class.return_value.__aenter__.return_value = mock_client_instance
+    mock_make_request.return_value = mock_response
 
-    response = await api.get_agent("test_agent_handle")
+    response = api.get_agent("test_agent_handle")
 
-    mock_client_instance.get.assert_called_once_with(
-        f"{api.base_url}/crewai_plus/api/v1/agents/test_agent_handle",
-        headers=api.headers,
+    mock_make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
     )
     assert "X-Crewai-Organization-Id" in api.headers
     assert api.headers["X-Crewai-Organization-Id"] == org_uuid

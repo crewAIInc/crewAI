@@ -31,6 +31,10 @@ def _build_docs_root(tmp_path: Path) -> Path:
     (edge_en / "api.mdx").write_text(
         '---\nopenapi: "/enterprise-api.en.yaml GET /foo"\n---\n'
     )
+    # A page added to Edge after the previous release. It exists as a file and
+    # is wired into the Edge nav, but is intentionally absent from the v1.14.7
+    # nav below — the freeze must still surface it in the new version.
+    (edge_en / "datadog.mdx").write_text("# Datadog (Edge)\n")
     (docs / "edge" / "enterprise-api.en.yaml").write_text("openapi: 3.0.0\n")
 
     # A pre-existing frozen snapshot to clone the nav structure from.
@@ -58,6 +62,7 @@ def _build_docs_root(tmp_path: Path) -> Path:
                                         "edge/en/introduction",
                                         "edge/en/changelog",
                                         "edge/en/api",
+                                        "edge/en/datadog",
                                     ],
                                 }
                             ],
@@ -145,6 +150,25 @@ class TestFreeze:
         previous = versions[2]
         assert "default" not in previous
         assert previous.get("tag") != "Latest"
+
+    def test_new_version_nav_is_cloned_from_edge_not_previous(
+        self, tmp_path: Path
+    ) -> None:
+        # Regression: the new version's nav must come from Edge so pages added
+        # to Edge since the last release ship in the freeze. Cloning the
+        # previous version's nav silently dropped them (the file was copied
+        # into the snapshot but never linked in the version selector).
+        docs = _build_docs_root(tmp_path)
+
+        freeze("1.15.0", docs)
+
+        data = json.loads((docs / "docs.json").read_text())
+        versions = data["navigation"]["languages"][0]["versions"]
+        new_entry = next(v for v in versions if v["version"] == "v1.15.0")
+        pages = [p for tab in new_entry["tabs"] for p in tab["pages"]]
+        assert "v1.15.0/en/datadog" in pages
+        # And the file is present in the snapshot it points at.
+        assert (docs / "v1.15.0" / "en" / "datadog.mdx").is_file()
 
     def test_updates_canonical_url_redirect_to_new_default(
         self, tmp_path: Path

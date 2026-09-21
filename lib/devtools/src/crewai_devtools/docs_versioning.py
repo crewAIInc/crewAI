@@ -201,49 +201,46 @@ def _walk_pages(node: Any, transform: Callable[[str], str]) -> Any:
     return node
 
 
-def _is_version_slug(value: str) -> bool:
-    return bool(VERSION_SLUG_RE.match(value))
-
-
-def _previous_default(versions: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Return the entry currently marked default (or the first versioned)."""
+def _edge_entry(versions: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Return the Edge version entry, the rolling channel matching main HEAD."""
     for v in versions:
-        if v.get("default") and _is_version_slug(v.get("version", "")):
-            return v
-    for v in versions:
-        if _is_version_slug(v.get("version", "")):
+        if v.get("version") == EDGE_VERSION:
             return v
     return None
 
 
 def _build_new_entry(
-    previous: dict[str, Any], version_slug: str, locale: str, docs_root: Path
+    edge: dict[str, Any], version_slug: str, docs_root: Path
 ) -> dict[str, Any] | None:
-    """Clone the previous default's nav into a new entry for ``version_slug``.
+    """Clone the Edge nav into a new entry for ``version_slug``.
 
-    Page paths are rewritten from ``v<prev>/<locale>/...`` to
+    Freezing a release means promoting *Edge* (which tracks main HEAD) to the
+    new Latest, so the new version's navigation is cloned from the Edge entry
+    rather than from the previous frozen version. Cloning from the previous
+    version would silently drop every page that landed in Edge since the last
+    release (the file gets copied into the snapshot by ``_copy_snapshot`` but
+    never appears in the version selector) and would ignore any Edge nav
+    restructuring.
+
+    Page paths are rewritten from ``edge/<locale>/...`` to
     ``v<new>/<locale>/...``. Paths that don't resolve to a file in the
-    snapshot are pruned and the now-empty groups/tabs cascade away. Returns
-    ``None`` if the locale has no resolvable content under the snapshot (e.g.
-    a locale that wasn't present in Edge yet).
+    freshly-copied snapshot are pruned and the now-empty groups/tabs cascade
+    away. Returns ``None`` if Edge has no resolvable content under the
+    snapshot.
     """
-    new_entry = copy.deepcopy(previous)
+    new_entry = copy.deepcopy(edge)
     new_entry["version"] = version_slug
     new_entry["default"] = True
     new_entry["tag"] = LATEST_TAG
 
-    old_prefix = re.compile(rf"^{re.escape(previous['version'])}/")
-    locale_prefix = f"{locale}/"
+    edge_prefix = f"{EDGE_PREFIX}/"
     new_prefix = f"{version_slug}/"
 
     def transform(page: str) -> str:
         if page.startswith(new_prefix):
             return page
-        rewritten = old_prefix.sub(new_prefix, page)
-        if rewritten != page:
-            return rewritten
-        if page.startswith(locale_prefix):
-            return f"{new_prefix}{page}"
+        if page.startswith(edge_prefix):
+            return f"{new_prefix}{page[len(edge_prefix) :]}"
         return page
 
     rewritten = _walk_pages(new_entry, transform)
@@ -389,18 +386,18 @@ def _migrate_docs_json(docs_json: Path, version_slug: str) -> tuple[int, int, in
     inserted = 0
     skipped = 0
     for block in data["navigation"]["languages"]:
-        locale = block["language"]
         versions: list[dict[str, Any]] = block.get("versions", [])
         if any(v.get("version") == version_slug for v in versions):
             skipped += 1
             continue
 
-        previous = _previous_default(versions)
-        if previous is None:
+        edge = _edge_entry(versions)
+        if edge is None:
+            # No Edge channel for this locale; nothing to freeze.
             skipped += 1
             continue
 
-        new_entry = _build_new_entry(previous, version_slug, locale, docs_root)
+        new_entry = _build_new_entry(edge, version_slug, docs_root)
         if new_entry is None:
             # Locale has no resolvable content under the snapshot yet (e.g. a
             # locale that didn't exist in Edge). Leave the block untouched.
