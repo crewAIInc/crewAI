@@ -1567,8 +1567,19 @@ async def test_async_kickoff_for_each_async_empty_input():
 
 
 @pytest.mark.asyncio
-async def test_kickoff_for_each_async_persists_output_for_replay():
-    """kickoff_for_each_async must not wipe every copy's replay data.
+@pytest.mark.parametrize(
+    ("entrypoint", "executor_name"),
+    [
+        pytest.param(
+            "kickoff_for_each_async", "execute_sync", id="thread-backed"
+        ),
+        pytest.param("akickoff_for_each", "aexecute_sync", id="native-async"),
+    ],
+)
+async def test_async_for_each_persists_output_for_replay(
+    entrypoint: str, executor_name: str
+):
+    """Both async for-each entrypoints must retain replay data.
 
     run_for_each_async backs kickoff_for_each_async and akickoff_for_each, and
     used to unconditionally reset the shared replay store right after
@@ -1603,11 +1614,18 @@ async def test_kickoff_for_each_async_persists_output_for_replay():
             agent="Researcher",
         )
 
+    async def fake_aexecute_sync(
+        self: Task, *args: Any, **kwargs: Any
+    ) -> TaskOutput:
+        return fake_execute_sync(self, *args, **kwargs)
+
+    execute = fake_execute_sync if executor_name == "execute_sync" else fake_aexecute_sync
+
     try:
         with patch.object(
-            Task, "execute_sync", side_effect=fake_execute_sync, autospec=True
+            Task, executor_name, side_effect=execute, autospec=True
         ) as mock_execute_task:
-            results = await crew.kickoff_for_each_async(
+            results = await getattr(crew, entrypoint)(
                 inputs=[{"topic": "first"}, {"topic": "latest"}]
             )
 
