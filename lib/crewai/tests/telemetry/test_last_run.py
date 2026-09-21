@@ -51,6 +51,15 @@ def test_nothing_is_recorded_under_the_test_suite(monkeypatch, tmp_path):
     assert not (tmp_path / ".crewai").exists()
 
 
+def test_nothing_is_recorded_inside_a_deployment(monkeypatch, tmp_path):
+    """The platform's integration token marks a deployment: no file the platform never reads."""
+    monkeypatch.setattr(last_run, "project_dir", lambda: tmp_path)
+    monkeypatch.delenv("CREWAI_TESTING", raising=False)
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "platform-token")
+    assert last_run.record_last_run(execution_id="x", tier="authenticated", started_at_ns=None, finished_at_ns=None, amp_base_url=None) is None
+    assert not (tmp_path / ".crewai").exists()
+
+
 def test_a_missing_or_broken_record_reads_as_none(project):
     assert last_run.read_last_run(project) is None
     (project / ".crewai").mkdir()
@@ -99,6 +108,10 @@ def test_the_run_that_finished_last_stays_recorded_whichever_writer_comes_last(p
     last_run.record_last_run(execution_id="newer", tier="authenticated", started_at_ns=base, finished_at_ns=base + 30 * second, amp_base_url=None)
     assert last_run.read_last_run(project)["tier"] == "authenticated"
     last_run.record_last_run(execution_id="newest", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 40 * second, amp_base_url=None)
+    assert last_run.read_last_run(project)["execution_id"] == "newest"
+
+    # A tie to the millisecond keeps what is there: the file orders runs no finer than it stores them.
+    last_run.record_last_run(execution_id="same-instant", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 40 * second + 400_000, amp_base_url=None)
     assert last_run.read_last_run(project)["execution_id"] == "newest"
 
     # A record without a comparable time never blocks the run just finished.

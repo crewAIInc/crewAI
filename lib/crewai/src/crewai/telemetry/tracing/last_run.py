@@ -34,8 +34,16 @@ def project_dir() -> Path:
 
 
 def recording_enabled() -> bool:
-    """Off under the test suite, so kickoff-level tests leave no file behind."""
-    return os.environ.get("CREWAI_TESTING", "").lower() != "true"
+    """Off under the test suite, so kickoff-level tests leave no file behind,
+    and off inside a deployment — the platform's integration token marks one —
+    so a run there never writes a file the platform never reads. (A deployment
+    normally never gets here at all: the host binds the trace before crewAI
+    would start its own; this is the guard for a container that did not.)"""
+    from crewai.context import get_platform_integration_token
+
+    if os.environ.get("CREWAI_TESTING", "").lower() == "true":
+        return False
+    return get_platform_integration_token() is None
 
 
 def last_run_path(directory: Path | None = None) -> Path:
@@ -62,8 +70,9 @@ def record_last_run(
     or the write failed. Never raises — a run is never failed by this.
 
     "Last" means the run that FINISHED last: a record already there for a run
-    that finished later is kept, so two crews finishing together in one
-    project leave the newer one whichever writer gets to the file last."""
+    that finished later — or in the same millisecond — is kept, so two crews
+    finishing together in one project leave the newer one whichever writer
+    gets to the file last."""
     if not recording_enabled():
         return None
     record: dict[str, Any] = {
@@ -109,16 +118,17 @@ def record_last_run(
 
 def _newer_than(record: dict[str, Any], existing: dict[str, Any] | None) -> bool:
     """Is RECORD the later-finished run? A missing or unreadable existing record,
-    or one without a comparable time, never wins over the run just finished."""
+    or one without a comparable time, never wins over the run just finished; a
+    tie (the same millisecond) keeps what is there — the times are stored to
+    the millisecond, and no finer order is worth a field in the file."""
     if not existing or existing.get("execution_id") == record["execution_id"]:
         return True
     ours = record["finished_at"] or record["recorded_at"]
     theirs = existing.get("finished_at") or existing.get("recorded_at")
     if not isinstance(theirs, str) or not isinstance(ours, str):
         return True
-    return (
-        ours >= theirs
-    )  # both ISO 8601 in UTC with the same precision: text order is time order
+    # Both ISO 8601 in UTC at the same precision: text order is time order.
+    return ours > theirs
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:
