@@ -16,9 +16,17 @@ from crewai_core.plus_api import PlusAPI
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult, SpanExporter
+from rich.console import Console
+from rich.style import Style
+from rich.text import Text
 
 from crewai.auth.token import AuthError, get_auth_token
 from crewai.context import get_platform_integration_token
+from crewai.events.listeners.tracing.utils import (
+    is_tui_mode,
+    should_suppress_tracing_messages,
+)
+from crewai.telemetry.tracing import last_run
 from crewai.telemetry.tracing.session import MAX_EXPORT_BATCH_SIZE, otlp_exporter
 
 
@@ -53,6 +61,32 @@ class TraceGrant:
     collector_url: str
     execution_uuid: str
     expires_at: datetime
+    # Optional for compatibility with AMP versions without the standalone viewer.
+    trace_url: str | None = field(default=None, repr=False)
+
+
+def _trace_viewer_url(value: object, base_url: str) -> str | None:
+    """Accept an absolute AMP viewer URL without terminal control characters."""
+    if (
+        not isinstance(value, str)
+        or not value
+        or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value)
+    ):
+        return None
+    try:
+        endpoint, base = urlsplit(value), urlsplit(base_url)
+        if (
+            endpoint.scheme in ("http", "https")
+            and endpoint.hostname
+            and endpoint.username is None
+            and endpoint.password is None
+            and (endpoint.scheme, endpoint.hostname, endpoint.port)
+            == (base.scheme, base.hostname, base.port)
+        ):
+            return value
+    except ValueError:
+        pass
+    return None
 
 
 def _is_local_collector(hostname: str) -> bool:
@@ -89,7 +123,8 @@ class TraceGrantClient:
             response = self._api._make_request(
                 "POST",
                 f"{PlusAPI.TRACING_RESOURCE}/grants",
-                json={"execution_uuid": execution_uuid},
+                # Keep viewer opt-in on renewals as well as the initial grant.
+                json={"execution_uuid": execution_uuid, "include_trace_url": True},
                 timeout=5,
             )
         except Exception as error:
@@ -125,7 +160,11 @@ class TraceGrantClient:
             ):
                 raise ValueError("Invalid grant")
             return TraceGrant(
-                data["token"], data["collector_url"], execution_uuid, expiry
+                data["token"],
+                data["collector_url"],
+                execution_uuid,
+                expiry,
+                trace_url=_trace_viewer_url(data.get("trace_url"), self._api.base_url),
             )
         except (KeyError, TypeError, ValueError, AttributeError):
             raise TraceGrantError(
@@ -134,13 +173,25 @@ class TraceGrantClient:
 
 
 class GrantSpanExporter(SpanExporter):
-    """Refresh a grant before exporting; delegate OTLP transport to the shared path."""
+    """Refresh a grant before exporting; delegate OTLP transport to the shared path.
+
+    Once the run's spans have reached Wharf, ``record_export`` writes the
+    project's ``.crewai/last_run.json`` (``last_run``) so ``crewai eval`` can
+    find the run without an id being shown to anyone, and prints AMP's viewer
+    link once for whoever wants to look at the run.
+    """
 
     def __init__(self, client: TraceGrantClient, grant: TraceGrant):
         self._client = client
         self._grant = grant
         self._lock = Lock()
         self._delegate = self._exporter(grant)
+        self._trace_url = grant.trace_url
+        self._exported = False
+        self._export_failed = False
+        self._recorded = False
+        self._first_start_ns: int | None = None
+        self._last_end_ns: int | None = None
 
     @staticmethod
     def _exporter(grant: TraceGrant) -> SpanExporter:
@@ -151,50 +202,122 @@ class GrantSpanExporter(SpanExporter):
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         """Bound each request; oversized single spans are skipped with FAILURE."""
         with self._lock:
-            result = SpanExportResult.SUCCESS
-            pending = [
-                spans[offset : offset + MAX_EXPORT_BATCH_SIZE]
-                for offset in reversed(range(0, len(spans), MAX_EXPORT_BATCH_SIZE))
-            ]
-            while pending:
-                batch = pending.pop()
-                size = encode_spans(batch).ByteSize()
-                if size > MAX_EXPORT_BODY_BYTES:
-                    if len(batch) == 1:
-                        logger.warning(
-                            "Skipping execution trace span: encoded size %d exceeds "
-                            "Wharf's %d-byte request limit",
-                            size,
-                            MAX_EXPORT_BODY_BYTES,
-                        )
-                        result = SpanExportResult.FAILURE
-                    else:
-                        midpoint = len(batch) // 2
-                        # Process the left half first to retain span order.
-                        pending.extend((batch[midpoint:], batch[:midpoint]))
-                    continue
-                if (
-                    self._grant.expires_at - datetime.now(timezone.utc)
-                ).total_seconds() <= 30:
-                    try:
-                        grant = self._client.create(self._grant.execution_uuid)
-                    except TraceGrantError as error:
-                        logger.warning(
-                            "Could not renew execution trace grant (HTTP %s)",
-                            error.status_code,
-                        )
-                        return SpanExportResult.FAILURE
-                    exporter = self._exporter(grant)
-                    self._delegate.shutdown()
-                    self._delegate, self._grant = exporter, grant
-                if self._delegate.export(batch) != SpanExportResult.SUCCESS:
-                    return SpanExportResult.FAILURE
-                logger.info(
-                    "Exported %d spans to Wharf for execution %s",
-                    len(batch),
-                    self._grant.execution_uuid,
-                )
+            try:
+                result = self._export(spans)
+            except Exception:
+                self._export_failed = True
+                raise
+            self._export_failed |= result != SpanExportResult.SUCCESS
+            if spans and result == SpanExportResult.SUCCESS:
+                self._exported = True
+                self._note_span_times(spans)
             return result
+
+    def _note_span_times(self, spans: Sequence[ReadableSpan]) -> None:
+        """The run's first start and last end, across every exported batch."""
+        starts = [s.start_time for s in spans if s.start_time is not None]
+        ends = [s.end_time for s in spans if s.end_time is not None]
+        if starts:
+            first = min(starts)
+            self._first_start_ns = (
+                first
+                if self._first_start_ns is None
+                else min(self._first_start_ns, first)
+            )
+        if ends:
+            last = max(ends)
+            self._last_end_ns = (
+                last if self._last_end_ns is None else max(self._last_end_ns, last)
+            )
+
+    def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+        result = SpanExportResult.SUCCESS
+        pending = [
+            spans[offset : offset + MAX_EXPORT_BATCH_SIZE]
+            for offset in reversed(range(0, len(spans), MAX_EXPORT_BATCH_SIZE))
+        ]
+        while pending:
+            batch = pending.pop()
+            size = encode_spans(batch).ByteSize()
+            if size > MAX_EXPORT_BODY_BYTES:
+                if len(batch) == 1:
+                    logger.warning(
+                        "Skipping execution trace span: encoded size %d exceeds "
+                        "Wharf's %d-byte request limit",
+                        size,
+                        MAX_EXPORT_BODY_BYTES,
+                    )
+                    result = SpanExportResult.FAILURE
+                else:
+                    midpoint = len(batch) // 2
+                    # Process the left half first to retain span order.
+                    pending.extend((batch[midpoint:], batch[:midpoint]))
+                continue
+            if (
+                self._grant.expires_at - datetime.now(timezone.utc)
+            ).total_seconds() <= 30:
+                try:
+                    grant = self._client.create(self._grant.execution_uuid)
+                except TraceGrantError as error:
+                    logger.warning(
+                        "Could not renew execution trace grant (HTTP %s)",
+                        error.status_code,
+                    )
+                    return SpanExportResult.FAILURE
+                exporter = self._exporter(grant)
+                self._delegate.shutdown()
+                self._delegate, self._grant = exporter, grant
+                # A renewed grant may carry the viewer URL the first one lacked.
+                self._trace_url = grant.trace_url or self._trace_url
+            if self._delegate.export(batch) != SpanExportResult.SUCCESS:
+                return SpanExportResult.FAILURE
+            logger.info(
+                "Exported %d spans to Wharf for execution %s",
+                len(batch),
+                self._grant.execution_uuid,
+            )
+        return result
+
+    def record_export(self) -> None:
+        """Record the run for `crewai eval` once its spans have reached Wharf,
+        and say where to look at it.
+
+        Only a run whose every export succeeded is recorded — a partial export
+        would name a run the grader cannot read whole — and only such a run
+        gets a link, for the same reason.
+        """
+        with self._lock:
+            if not self._exported or self._export_failed or self._recorded:
+                return
+            self._recorded = True
+            execution_uuid = self._grant.execution_uuid
+            api = getattr(self._client, "_api", None)
+            last_run.record_last_run(
+                execution_id=execution_uuid,
+                tier=getattr(self._client, "_tier", None),
+                started_at_ns=self._first_start_ns,
+                finished_at_ns=self._last_end_ns,
+                amp_base_url=getattr(api, "base_url", None),
+            )
+            logger.debug("Traces exported for execution %s", execution_uuid)
+            self._show_trace_link()
+
+    def _show_trace_link(self) -> None:
+        """One line, once: where to see the run that was just exported.
+
+        The execution id stays out of it — `crewai eval` reads that from the
+        record — but whoever wants to open the trace gets AMP's viewer link.
+        Silent when AMP granted no viewer URL, under the TUI, and wherever
+        tracing messages are suppressed.
+        """
+        if not self._trace_url or should_suppress_tracing_messages() or is_tui_mode():
+            return
+        line = Text("View traces: ", style="white")
+        line.append(
+            self._trace_url,
+            style=Style(color="cyan", underline=True, link=self._trace_url),
+        )
+        Console().print(line)
 
     def shutdown(self) -> None:
         with self._lock:
