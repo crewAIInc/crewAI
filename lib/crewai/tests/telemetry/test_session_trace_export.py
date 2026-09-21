@@ -161,7 +161,7 @@ def _last_run(directory):
         (False, True, 200, "tui", True),
     ],
 )
-def test_nothing_is_printed_after_an_export_and_a_successful_one_is_recorded(
+def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recorded(
     collector,
     recorded_runs,
     monkeypatch,
@@ -204,9 +204,15 @@ def test_nothing_is_printed_after_an_export_and_a_successful_one_is_recorded(
 
     copy_context().run(run)
     output = capsys.readouterr().out
-    # The id and the viewer link are internal: nothing about tracing is printed.
-    assert url not in output and "View traces:" not in output
+    # The id is internal — `crewai eval` reads it from the record — so it is never
+    # printed, nor is the old "Traces exported" panel around it.
+    assert seen["uuid"] not in output
     assert "Execution trace ID:" not in output and "Traces exported" not in output
+    # The viewer link IS shown, once, for whoever wants to look at the run: only for
+    # a run that was exported whole, and not where tracing messages are suppressed.
+    shown = recorded and suppression is None
+    assert ("View traces:" in output) == shown
+    assert (url in output.replace("\n", "")) == shown
     assert len(collector.batches) == int(authenticated or approved)
     # A run whose spans reached Wharf is recorded for `crewai eval`, silently,
     # in the TUI and under message suppression too; a failed export is not.
@@ -246,7 +252,7 @@ def test_a_deferred_run_is_recorded_once_at_finalization_and_a_failed_export_nev
     finally:
         end_execution(token)
     lifetime.finish()
-    assert capsys.readouterr().out == ""
+    assert capsys.readouterr().out == ""  # this grant carries no viewer URL, so there is nothing to show
     # A run one of whose exports failed is never recorded: the grader could not read it whole.
     assert (_last_run(recorded_runs) is not None) == (first_status == 200)
 
@@ -280,7 +286,9 @@ def test_a_refreshed_grant_still_records_the_run_once(
     exporter.record_export()
     exporter.record_export()
     assert writes == [grant.execution_uuid]  # written once, however often the exporter is told the run ended
-    assert capsys.readouterr().out == ""
+    shown = capsys.readouterr().out
+    assert shown.count("View traces:") == 1  # and the link with it, once
+    assert grant.execution_uuid not in shown
     written = _last_run(recorded_runs)
     assert written is not None and written["execution_id"] == grant.execution_uuid
     assert written["tier"] == ("authenticated" if credential else "ephemeral")
@@ -351,6 +359,7 @@ def test_an_export_without_a_viewer_url_is_recorded_all_the_same(
             record(get_trace_session())
         finally:
             end_execution(token)
+    # AMP granted no viewer URL, so there is no link to show — and never the id.
     assert capsys.readouterr().out == ""
     written = _last_run(recorded_runs)
     assert written is not None and written["execution_id"] == execution_uuid

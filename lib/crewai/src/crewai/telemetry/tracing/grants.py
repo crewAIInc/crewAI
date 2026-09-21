@@ -16,9 +16,16 @@ from crewai_core.plus_api import PlusAPI
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult, SpanExporter
+from rich.console import Console
+from rich.style import Style
+from rich.text import Text
 
 from crewai.auth.token import AuthError, get_auth_token
 from crewai.context import get_platform_integration_token
+from crewai.events.listeners.tracing.utils import (
+    is_tui_mode,
+    should_suppress_tracing_messages,
+)
 from crewai.telemetry.tracing import last_run
 from crewai.telemetry.tracing.session import MAX_EXPORT_BATCH_SIZE, otlp_exporter
 
@@ -168,10 +175,10 @@ class TraceGrantClient:
 class GrantSpanExporter(SpanExporter):
     """Refresh a grant before exporting; delegate OTLP transport to the shared path.
 
-    Nothing about the export is printed. Once the run's spans have reached
-    Wharf, ``record_export`` writes the project's ``.crewai/last_run.json``
-    (``last_run``) so ``crewai eval`` can find the run without an id being
-    shown to anyone.
+    Once the run's spans have reached Wharf, ``record_export`` writes the
+    project's ``.crewai/last_run.json`` (``last_run``) so ``crewai eval`` can
+    find the run without an id being shown to anyone, and prints AMP's viewer
+    link once for whoever wants to look at the run.
     """
 
     def __init__(self, client: TraceGrantClient, grant: TraceGrant):
@@ -179,6 +186,7 @@ class GrantSpanExporter(SpanExporter):
         self._grant = grant
         self._lock = Lock()
         self._delegate = self._exporter(grant)
+        self._trace_url = grant.trace_url
         self._exported = False
         self._export_failed = False
         self._recorded = False
@@ -259,6 +267,8 @@ class GrantSpanExporter(SpanExporter):
                 exporter = self._exporter(grant)
                 self._delegate.shutdown()
                 self._delegate, self._grant = exporter, grant
+                # A renewed grant may carry the viewer URL the first one lacked.
+                self._trace_url = grant.trace_url or self._trace_url
             if self._delegate.export(batch) != SpanExportResult.SUCCESS:
                 return SpanExportResult.FAILURE
             logger.info(
@@ -269,11 +279,12 @@ class GrantSpanExporter(SpanExporter):
         return result
 
     def record_export(self) -> None:
-        """Record the run for `crewai eval` once its spans have reached Wharf.
+        """Record the run for `crewai eval` once its spans have reached Wharf,
+        and say where to look at it.
 
-        Silent: nothing is printed. Only a run whose every export succeeded is
-        recorded — a partial export would name a run the grader cannot read
-        whole.
+        Only a run whose every export succeeded is recorded — a partial export
+        would name a run the grader cannot read whole — and only such a run
+        gets a link, for the same reason.
         """
         with self._lock:
             if not self._exported or self._export_failed or self._recorded:
@@ -289,6 +300,24 @@ class GrantSpanExporter(SpanExporter):
                 amp_base_url=getattr(api, "base_url", None),
             )
             logger.debug("Traces exported for execution %s", execution_uuid)
+            self._show_trace_link()
+
+    def _show_trace_link(self) -> None:
+        """One line, once: where to see the run that was just exported.
+
+        The execution id stays out of it — `crewai eval` reads that from the
+        record — but whoever wants to open the trace gets AMP's viewer link.
+        Silent when AMP granted no viewer URL, under the TUI, and wherever
+        tracing messages are suppressed.
+        """
+        if not self._trace_url or should_suppress_tracing_messages() or is_tui_mode():
+            return
+        line = Text("View traces: ", style="white")
+        line.append(
+            self._trace_url,
+            style=Style(color="cyan", underline=True, link=self._trace_url),
+        )
+        Console().print(line)
 
     def shutdown(self) -> None:
         with self._lock:
