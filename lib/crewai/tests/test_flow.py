@@ -1193,6 +1193,95 @@ def test_multiple_routers_from_same_trigger():
     )
 
 
+@pytest.mark.parametrize("second_outcome", ["right", None])
+def test_sibling_router_outcomes_continue_their_chains(second_outcome: str | None) -> None:
+    """Every sibling outcome must reach downstream routers, even before a None result."""
+    execution_order: list[str] = []
+
+    class SiblingRouterFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "input"
+
+        @router(begin)
+        def first_route(self, result: str) -> str:
+            assert result == "input"
+            execution_order.append("first_route")
+            return "left"
+
+        @router(begin)
+        def second_route(self, result: str) -> str | None:
+            assert result == "input"
+            execution_order.append("second_route")
+            return second_outcome
+
+        @router("left")
+        def left_route(self, result: str) -> str:
+            assert result == "input"
+            execution_order.append("left_route")
+            return "left_done"
+
+        @router("right")
+        def right_route(self, result: str) -> str:
+            assert result == "input"
+            execution_order.append("right_route")
+            return "right_done"
+
+        @listen("left_done")
+        def left_listener(self, result: str) -> None:
+            assert result == "left_done"
+            execution_order.append("left_listener")
+
+        @listen("right_done")
+        def right_listener(self, result: str) -> None:
+            assert result == "right_done"
+            execution_order.append("right_listener")
+
+    SiblingRouterFlow().kickoff()
+
+    expected = ["first_route", "second_route", "left_route"]
+    if second_outcome is not None:
+        expected.append("right_route")
+    expected.append("left_listener")
+    if second_outcome is not None:
+        expected.append("right_listener")
+    assert execution_order == expected
+
+
+def test_sibling_router_outcomes_satisfy_and_router_and_or_listener() -> None:
+    calls: list[str] = []
+
+    class JoinedRouterFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @router(begin)
+        def first_route(self) -> str:
+            return "left"
+
+        @router(begin)
+        def second_route(self) -> str:
+            return "right"
+
+        @router(and_("left", "right"))
+        def join_routes(self) -> str:
+            calls.append("join")
+            return "joined"
+
+        @listen(or_("left", "right"))
+        def either_route(self) -> None:
+            calls.append("either")
+
+        @listen("joined")
+        def after_join(self) -> None:
+            calls.append("after_join")
+
+    JoinedRouterFlow().kickoff()
+
+    assert calls == ["join", "either", "after_join"]
+
+
 def test_flow_name():
     class MyFlow(Flow):
         name = "MyFlow"
