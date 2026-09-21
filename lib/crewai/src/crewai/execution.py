@@ -164,7 +164,7 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
 
         def finish_authenticated_trace() -> None:
             if session.shutdown():
-                exporter.show_trace_summary()
+                exporter.record_export()
 
         stack.callback(finish_authenticated_trace)
     _activate_tracing(ExecutionTrace(session, stack))
