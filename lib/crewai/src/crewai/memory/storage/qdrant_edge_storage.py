@@ -15,6 +15,7 @@ import logging
 import os
 from pathlib import Path
 import shutil
+import sys
 from typing import Any, Final
 import uuid
 
@@ -76,6 +77,36 @@ def _build_scope_ancestors(scope: str) -> list[str]:
             current = f"{current}/{part}"
             ancestors.append(current)
     return ancestors
+
+
+def _pid_is_alive(pid: int) -> bool:
+    """Check whether a process with the given PID is currently running.
+
+    ``os.kill(pid, 0)`` is the POSIX idiom for probing liveness without
+    sending a real signal, but Windows does not support signal ``0`` the
+    same way -- it raises a generic ``OSError`` instead of
+    ``ProcessLookupError``, so it can't be used there to tell "dead" apart
+    from any other failure.
+    """
+    if sys.platform == "win32":
+        import ctypes
+
+        process_query_limited_information = 0x1000
+        handle = ctypes.windll.kernel32.OpenProcess(
+            process_query_limited_information, False, pid
+        )
+        if handle:
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return True
+        return False
+
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 class QdrantEdgeStorage:
@@ -818,13 +849,9 @@ class QdrantEdgeStorage:
                 continue
             if pid == os.getpid():
                 continue
-            try:
-                os.kill(pid, 0)
+            if _pid_is_alive(pid):
                 continue
-            except ProcessLookupError:
-                _logger.debug("Worker %d is dead, shard is orphaned", pid)
-            except PermissionError:
-                continue
+            _logger.debug("Worker %d is dead, shard is orphaned", pid)
 
             _logger.info("Cleaning up orphaned shard for dead worker %d", pid)
             try:
