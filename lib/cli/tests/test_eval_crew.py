@@ -17,6 +17,7 @@ from crewai_cli.cli import eval_command
 
 
 EXECUTION_ID = "6f31fe1a-20bd-4bfe-a011-25d6b9341f62"
+PROJECT_ID = "3e0f4b5a-1111-2222-3333-444455556666"
 URL = "https://evolve.crewai.test/e/ev-1"
 
 
@@ -31,8 +32,8 @@ class FakeAMP:
         self.calls: list[tuple] = []
         self.api_key = None
 
-    def create_evaluation(self, execution_id):
-        self.calls.append(("create", execution_id))
+    def create_evaluation(self, execution_id, project_id=None):
+        self.calls.append(("create", execution_id, project_id))
         return self.create
 
     def get_evaluation(self, evaluation_id):
@@ -51,7 +52,7 @@ def done(gate="passed", grades=None):
 def project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(eval_module, "console", Console(width=240))  # one sentence per line in the captured output
-    monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: None)
+    monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: PROJECT_ID)
     monkeypatch.setattr(eval_module, "saved_login", lambda: "login-token")
     monkeypatch.setattr(eval_module.time, "sleep", lambda seconds: None)
     monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: False)
@@ -89,7 +90,7 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
 
     out = capsys.readouterr().out
     assert amp.api_key == "login-token"
-    assert amp.calls == [("create", EXECUTION_ID), ("get", "ev-1"), ("get", "ev-1")]
+    assert amp.calls == [("create", EXECUTION_ID, PROJECT_ID), ("get", "ev-1"), ("get", "ev-1")]
     assert opened == [URL]
     assert EXECUTION_ID in out and URL in out
     assert "Goal gate: PASSED" in out and "goal 5/5" in out and "cost not measured" in out
@@ -104,7 +105,7 @@ def test_run_names_another_execution_and_an_anonymous_caller_sends_no_token(proj
     eval_module.eval_crew(run_id="other-run")
 
     assert amp.api_key is None
-    assert amp.calls[0] == ("create", "other-run")
+    assert amp.calls[0] == ("create", "other-run", PROJECT_ID)
     assert "Goal gate: FAILED" in capsys.readouterr().out
 
 
@@ -292,7 +293,7 @@ def test_amp_unreachable_at_the_start_is_a_sentence_not_a_traceback(project, mon
     directory, _ = project
     record_last_run(directory)
     amp = install(monkeypatch, FakeAMP())
-    monkeypatch.setattr(amp, "create_evaluation", lambda execution_id: (_ for _ in ()).throw(httpx.ConnectError("connection refused")))
+    monkeypatch.setattr(amp, "create_evaluation", lambda execution_id, project_id=None: (_ for _ in ()).throw(httpx.ConnectError("connection refused")))
 
     with pytest.raises(SystemExit) as exit_:
         eval_module.eval_crew()
@@ -373,7 +374,7 @@ def test_run_skips_the_offer_when_nothing_is_recorded(project, monkeypatch, caps
 
     eval_module.eval_crew(run_id="named-run")
 
-    assert amp.calls[0] == ("create", "named-run")
+    assert amp.calls[0] == ("create", "named-run", PROJECT_ID)
 
 
 def test_outside_a_crewai_project_nothing_is_written_and_it_says_so(project, monkeypatch, capsys):
@@ -429,7 +430,7 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
     text, kwargs = prompts[0]
     assert "CREWAI_TRACING_ENABLED=true stays in .env" in text and kwargs == {"default": True}  # Enter is yes (João's call); the prompt names both effects
     assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
-    assert amp.calls[0] == ("create", "fresh-run")
+    assert amp.calls[0] == ("create", "fresh-run", PROJECT_ID)
     assert "Tracing is on for this project" in capsys.readouterr().out
 
 
@@ -491,6 +492,24 @@ def test_only_a_missing_login_reads_as_anonymous(monkeypatch, capsys):
         assert exit_.value.code == 1
         out = capsys.readouterr().out
         assert "Could not read the saved login" in out and type(broken).__name__ in out and "crewai login" in out
+
+
+def test_the_projects_own_id_rides_along_so_its_runs_can_be_shown_together(project, monkeypatch, capsys):
+    """crewAI keeps the id in pyproject.toml, committed — so it is the same id on
+    every machine, in CI, and for a teammate."""
+    directory, _ = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls[0] == ("create", EXECUTION_ID, PROJECT_ID)
+
+    # outside a crewAI project there is no id, and the request simply omits it
+    monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: None)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+    eval_module.eval_crew()
+    assert amp.calls[0] == ("create", EXECUTION_ID, None)
 
 
 def test_read_last_run_reads_the_record_crewai_writes(tmp_path):

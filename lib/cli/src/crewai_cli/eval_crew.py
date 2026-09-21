@@ -49,7 +49,9 @@ STATUSES = {"queued", "running"} | FINISHED
 
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
-    get_or_create_project_id()
+    # The project's own id, minted into pyproject.toml and committed, so a
+    # project's evaluations can be shown together later. None outside a project.
+    project_id = get_or_create_project_id()
     # Read before the project's .env is loaded, so a project cannot add itself.
     trusted = _trusted_amp_origins()
     _load_project_env()
@@ -66,7 +68,7 @@ def eval_crew(run_id: str | None = None) -> None:
             f"The run was traced to {recorded_amp}; evaluating at the configured AMP {client.base_url}.",
             style="yellow",
         )
-    started = _start_evaluation(client, execution_id)
+    started = _start_evaluation(client, execution_id, project_id)
     url = started.get("url")
     console.print(f"Evaluating run [bold]{execution_id}[/bold]")
     if url:
@@ -237,9 +239,11 @@ def _enable_tracing() -> None:
     )
 
 
-def _start_evaluation(client: PlusAPI, execution_id: str) -> dict[str, Any]:
+def _start_evaluation(
+    client: PlusAPI, execution_id: str, project_id: str | None = None
+) -> dict[str, Any]:
     try:
-        response = client.create_evaluation(execution_id)
+        response = client.create_evaluation(execution_id, project_id)
     except httpx.HTTPError as error:
         _fail(f"Could not reach AMP to start the evaluation: {error}")
     if response.status_code in (200, 202):

@@ -27,12 +27,22 @@ class PlusAPI(_CorePlusAPI):
     EVALUATION_START_TIMEOUT = 120.0
     EVALUATION_POLL_TIMEOUT = 30.0
 
-    def create_evaluation(self, execution_id: str) -> httpx.Response:
-        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval)."""
+    def create_evaluation(
+        self, execution_id: str, project_id: str | None = None
+    ) -> httpx.Response:
+        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval).
+
+        PROJECT_ID is the id crewAI keeps in the project's pyproject.toml, sent
+        so a project's evaluations can be shown together; omitted when this is
+        not a crewAI project.
+        """
+        body: dict[str, str] = {"execution_id": execution_id}
+        if project_id:
+            body["project_id"] = project_id
         return self._make_request(
             "POST",
             self.EVALUATIONS_RESOURCE,
-            json={"execution_id": execution_id},
+            json=body,
             timeout=self.EVALUATION_START_TIMEOUT,
         )
 
