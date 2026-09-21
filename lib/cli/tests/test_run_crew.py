@@ -4,13 +4,101 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from typing import Any
 
 import click
+from click.testing import CliRunner
 import pytest
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
 import crewai_cli.input_prompt as input_prompt_module
 import crewai_cli.run_crew as run_crew_module
+from crewai_cli.cli import crewai
+
+
+@pytest.mark.parametrize(
+    "project_type, script_name", [("crew", "run_crew"), ("flow", "kickoff")]
+)
+@pytest.mark.parametrize("returncode", [0, 1, 42])
+def test_run_preserves_project_script_exit_code(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    project_type: str,
+    script_name: str,
+    returncode: int,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "exit-demo"\nversion = "0.1.0"\n'
+        f'[project.scripts]\n{script_name} = "exit_demo:run"\n'
+        f'[tool.crewai]\ntype = "{project_type}"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "exit_demo.py").write_text(
+        f"def run():\n    raise SystemExit({returncode})\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: os.environ.copy()
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+    subprocess_run = subprocess.run
+
+    def run_project_script(
+        command: list[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[str]:
+        assert command == ["uv", "run", script_name]
+        return subprocess_run(
+            [sys.executable, "-c", "from exit_demo import run; run()"], **kwargs
+        )
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", run_project_script)
+
+    result = CliRunner().invoke(crewai, ["run"])
+
+    assert result.exit_code == returncode
+    if returncode:
+        assert f"An error occurred while running the {project_type}" in result.output
+    else:
+        assert result.exception is None
+
+
+@pytest.mark.parametrize(
+    "project_type, script_name", [("crew", "run_crew"), ("flow", "kickoff")]
+)
+def test_run_exits_nonzero_when_project_script_cannot_start(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    project_type: str,
+    script_name: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "exit-demo"\nversion = "0.1.0"\n'
+        f'[project.scripts]\n{script_name} = "exit_demo:run"\n'
+        f'[tool.crewai]\ntype = "{project_type}"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "exit_demo.py").write_text("def run():\n    pass\n", encoding="utf-8")
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+
+    def fail_to_start(*args: Any, **kwargs: Any) -> None:
+        raise FileNotFoundError("uv executable not found")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fail_to_start)
+
+    result = CliRunner().invoke(crewai, ["run"])
+
+    assert result.exit_code == 1
+    assert "An unexpected error occurred: uv executable not found" in result.output
 
 
 def test_missing_crewai_package_shows_full_install_hint(monkeypatch):

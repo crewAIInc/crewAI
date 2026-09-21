@@ -772,9 +772,11 @@ def _execute_uv_script(
 
     except subprocess.CalledProcessError as e:
         _handle_run_error(e, entity_type)
+        raise SystemExit(e.returncode) from e
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        raise SystemExit(1) from e
 
 
 def _handle_run_error(error: subprocess.CalledProcessError, entity_type: str) -> None:
