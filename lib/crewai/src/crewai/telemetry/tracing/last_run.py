@@ -70,9 +70,9 @@ def record_last_run(
     or the write failed. Never raises — a run is never failed by this.
 
     "Last" means the run that FINISHED last: a record already there for a run
-    that finished later — or in the same millisecond — is kept, so two crews
-    finishing together in one project leave the newer one whichever writer
-    gets to the file last."""
+    with a later `finished_at` is kept, so two crews finishing together in one
+    project leave the later-finished one whichever writer gets to the file
+    last. With no completion time to compare, the write stands."""
     if not recording_enabled():
         return None
     record: dict[str, Any] = {
@@ -95,7 +95,7 @@ def record_last_run(
         try:
             with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, indent=2) + "\n")
-            if _newer_than(record, read_last_run(path.parent.parent)):
+            if _keep(record, read_last_run(path.parent.parent)):
                 os.replace(temporary, path)
             else:
                 logger.debug(
@@ -116,19 +116,20 @@ def record_last_run(
     return path
 
 
-def _newer_than(record: dict[str, Any], existing: dict[str, Any] | None) -> bool:
-    """Is RECORD the later-finished run? A missing or unreadable existing record,
-    or one without a comparable time, never wins over the run just finished; a
-    tie (the same millisecond) keeps what is there — the times are stored to
-    the millisecond, and no finer order is worth a field in the file."""
+def _keep(record: dict[str, Any], existing: dict[str, Any] | None) -> bool:
+    """Does RECORD replace EXISTING? Only a record we can PROVE finished later
+    holds the file: a different run with a `finished_at` after ours. Everything
+    else — no record there, the same run recorded again, a missing completion
+    time on either side, a tie to the millisecond — leaves the write to stand,
+    so the last run recorded is the one a reader gets."""
     if not existing or existing.get("execution_id") == record["execution_id"]:
         return True
-    ours = record["finished_at"] or record["recorded_at"]
-    theirs = existing.get("finished_at") or existing.get("recorded_at")
-    if not isinstance(theirs, str) or not isinstance(ours, str):
-        return True
-    # Both ISO 8601 in UTC at the same precision: text order is time order.
-    return ours > theirs
+    ours, theirs = record["finished_at"], existing.get("finished_at")
+    if not isinstance(ours, str) or not isinstance(theirs, str):
+        return True  # nothing to order by: the write stands
+    # Both ISO 8601 in UTC at the same precision, so text order is time order;
+    # a tie means two runs finished in the same millisecond and either is a fair "last run".
+    return ours >= theirs
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:

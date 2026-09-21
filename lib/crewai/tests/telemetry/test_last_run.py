@@ -110,9 +110,13 @@ def test_the_run_that_finished_last_stays_recorded_whichever_writer_comes_last(p
     last_run.record_last_run(execution_id="newest", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 40 * second, amp_base_url=None)
     assert last_run.read_last_run(project)["execution_id"] == "newest"
 
-    # A tie to the millisecond keeps what is there: the file orders runs no finer than it stores them.
+    # A tie to the millisecond: either run is a fair "last run", so the write stands.
     last_run.record_last_run(execution_id="same-instant", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 40 * second + 400_000, amp_base_url=None)
-    assert last_run.read_last_run(project)["execution_id"] == "newest"
+    assert last_run.read_last_run(project)["execution_id"] == "same-instant"
+
+    # An OLDER run still loses that tie-free comparison, however late its writer arrives.
+    last_run.record_last_run(execution_id="stale", tier="ephemeral", started_at_ns=base, finished_at_ns=base + 5 * second, amp_base_url=None)
+    assert last_run.read_last_run(project)["execution_id"] == "same-instant"
 
     # A record without a comparable time never blocks the run just finished.
     (project / ".crewai" / "last_run.json").write_text(json.dumps({"execution_id": "legacy"}), encoding="utf-8")
