@@ -830,6 +830,21 @@ class TestEnsureTypeInSchemas:
         result = ensure_type_in_schemas(deepcopy(schema))
         assert "type" not in result["anyOf"][0]
 
+    def test_items_and_properties_together_left_untyped(self) -> None:
+        """A schema with both 'items' and 'properties' is contradictory,
+        not unambiguous -- guessing either type would be wrong."""
+        schema = {
+            "anyOf": [
+                {
+                    "items": {"type": "string"},
+                    "properties": {"name": {"type": "string"}},
+                },
+                {"type": "null"},
+            ],
+        }
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert "type" not in result["anyOf"][0]
+
 
 class TestConvertOneofToAnyof:
     def test_converts_top_level(self) -> None:

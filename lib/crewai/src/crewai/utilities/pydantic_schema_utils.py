@@ -270,6 +270,8 @@ def _infer_type_from_structure(schema: dict[str, Any]) -> str | None:
 
     JSON Schema does not require 'type', but a schema with 'items' can only
     describe an array and one with 'properties' can only describe an object.
+    A schema carrying both is contradictory rather than unambiguous, so it
+    is left untyped instead of guessing.
 
     Args:
         schema: A schema dict with no 'type' key.
@@ -277,9 +279,11 @@ def _infer_type_from_structure(schema: dict[str, Any]) -> str | None:
     Returns:
         The inferred type, or None if the shape is genuinely ambiguous.
     """
-    if "items" in schema:
+    has_items = "items" in schema
+    has_properties = "properties" in schema
+    if has_items and not has_properties:
         return "array"
-    if "properties" in schema:
+    if has_properties and not has_items:
         return "object"
     return None
 
@@ -1261,10 +1265,7 @@ def _json_schema_to_pydantic_type(
         # but the shape is unambiguous when structural keywords are present.
         # Without this, such fields silently degrade to `Any`, losing
         # validation and, on schema round-trip, their real shape.
-        if "items" in json_schema:
-            type_ = "array"
-        elif "properties" in json_schema:
-            type_ = "object"
+        type_ = _infer_type_from_structure(json_schema)
 
     if isinstance(type_, list):
         # JSON Schema also allows "type" to be an array, e.g.
