@@ -85,11 +85,6 @@ def is_throttling_error(error: BaseException) -> bool:
     return False
 
 
-def is_retryable_rate_limit(error: BaseException) -> bool:
-    """Return whether retry policy permits retrying this rate-limit error."""
-    return is_throttling_error(error)
-
-
 def get_retry_delay_seconds(
     policy: LLMRetryPolicy,
     retry_number: int,
@@ -133,7 +128,7 @@ def run_with_rate_limit_retry(
                 return cast(_T, result)
             if error is None:
                 raise RuntimeError("failed retry attempt did not provide an error")
-            if attempt == policy.max_attempts or not is_retryable_rate_limit(error):
+            if attempt == policy.max_attempts or not is_throttling_error(error):
                 raise error
             sleep(
                 get_retry_delay_seconds(
@@ -166,7 +161,7 @@ async def arun_with_rate_limit_retry(
                 return cast(_T, result)
             if error is None:
                 raise RuntimeError("failed retry attempt did not provide an error")
-            if attempt == policy.max_attempts or not is_retryable_rate_limit(error):
+            if attempt == policy.max_attempts or not is_throttling_error(error):
                 raise error
             await sleep(
                 get_retry_delay_seconds(
