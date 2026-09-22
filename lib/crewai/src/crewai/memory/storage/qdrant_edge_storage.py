@@ -91,14 +91,22 @@ def _pid_is_alive(pid: int) -> bool:
     if sys.platform == "win32":
         import ctypes
 
+        error_invalid_parameter = 87
         process_query_limited_information = 0x1000
-        handle = ctypes.windll.kernel32.OpenProcess(
-            process_query_limited_information, False, pid
-        )
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
         if handle:
-            ctypes.windll.kernel32.CloseHandle(handle)
+            kernel32.CloseHandle(handle)
             return True
-        return False
+
+        if ctypes.get_last_error() == error_invalid_parameter:
+            # No such process: this really is an orphaned shard.
+            return False
+        # ERROR_ACCESS_DENIED (and anything else we don't recognize) means
+        # we can't be sure the process is dead -- assume it's alive rather
+        # than risk deleting an active worker's shard out from under it.
+        return True
 
     try:
         os.kill(pid, 0)
