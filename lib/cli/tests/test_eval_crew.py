@@ -30,6 +30,8 @@ class FakeAMP:
         self.statuses = list(statuses or [])
         self.calls: list[tuple] = []
         self.api_key = None
+        # PlusAPI loads the saved organization ID unless callers remove it.
+        self.headers = {"X-Crewai-Organization-Id": "saved-org-id"}
 
     def create_evaluation(self, execution_id):
         self.calls.append(("create", execution_id))
@@ -298,9 +300,36 @@ def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(proje
     out = capsys.readouterr().out
     assert "Reading anonymously: https://evil.example is not an AMP this machine is logged in to." in out
     assert "crewai enterprise configure" in out
+    assert "X-Crewai-Organization-Id" not in amp.headers
 
 
-def test_a_trusted_amp_over_plain_http_still_gets_no_credential(project, monkeypatch, capsys):
+def test_an_untrusted_amp_gets_no_saved_organization_id_without_a_login(project, monkeypatch, capsys):
+    """Anonymous means all machine-local identity, not just the bearer token."""
+    directory, _ = project
+    (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\n")
+    record_last_run(directory, amp_base_url="https://evil.example")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.base_url == "https://evil.example" and amp.api_key is None
+    assert "X-Crewai-Organization-Id" not in amp.headers
+
+
+def test_a_trusted_amp_over_plain_http_still_gets_no_organization_id(project, monkeypatch, capsys):
+    """Cleartext requests must not leak saved identity either."""
+    directory, _ = project
+    monkeypatch.setenv("CREWAI_PLUS_URL", "http://amp.internal")  # exported, so it IS trusted
+    record_last_run(directory, amp_base_url="http://amp.internal")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.base_url == "http://amp.internal" and amp.api_key is None
+    assert "X-Crewai-Organization-Id" not in amp.headers
+
+
     """A cleartext connection is not a place to put a bearer token, trusted or not."""
     directory, _ = project
     monkeypatch.setenv("CREWAI_PLUS_URL", "http://amp.internal")  # exported, so it IS trusted

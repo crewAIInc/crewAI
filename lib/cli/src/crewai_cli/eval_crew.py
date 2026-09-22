@@ -132,26 +132,28 @@ def _amp_client(trusted: set[str]) -> PlusAPI:
     logged in to, over a connection that encrypts it. Anywhere else the run is
     read anonymously."""
     client = PlusAPI(api_key=saved_login())
-    if client.api_key is None:
-        return client
-
     origin = _origin(client.base_url)
     if origin in trusted and _encrypted(origin):
         return client
 
-    why = (
-        "is not an AMP this machine is logged in to"
-        if origin not in trusted
-        else "would carry the login over plain HTTP"
-    )
-    console.print(
-        Text(
-            f"Reading anonymously: {client.base_url} {why}. "
-            "Run `crewai enterprise configure <url>` to log in to it."
-        ),
-        style="yellow",
-    )
-    return PlusAPI()
+    if client.api_key is not None:
+        why = (
+            "is not an AMP this machine is logged in to"
+            if origin not in trusted
+            else "would carry the login over plain HTTP"
+        )
+        console.print(
+            Text(
+                f"Reading anonymously: {client.base_url} {why}. "
+                "Run `crewai enterprise configure <url>` to log in to it."
+            ),
+            style="yellow",
+        )
+
+    # The organization ID is machine-local saved state too. Keep it with the
+    # credential instead of disclosing it to an untrusted or cleartext origin.
+    client.headers.pop("X-Crewai-Organization-Id", None)
+    return client
 
 
 def _load_project_env() -> None:
