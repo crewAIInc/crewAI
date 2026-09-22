@@ -64,7 +64,9 @@ def eval_crew(run_id: str | None = None) -> None:
     recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
     if not run_id and recorded_amp and recorded_amp != client.base_url.rstrip("/"):
         console.print(
-            Text(f"The run was traced to {recorded_amp}; evaluating at the configured AMP {client.base_url}."),
+            Text(
+                f"The run was traced to {recorded_amp}; evaluating at the configured AMP {client.base_url}."
+            ),
             style="yellow",
         )
     started = _start_evaluation(client, execution_id)
@@ -345,7 +347,9 @@ def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
     # segment after it, so there is never one with nothing behind it.
     for area, grade in (verdict.get("grades") or {}).items():
         line.append(" · ")
-        line.append(f"{area} {grade}/5" if grade is not None else f"{area} not measured")
+        line.append(
+            f"{area} {grade}/5" if grade is not None else f"{area} not measured"
+        )
     console.print(line)
     if url:
         console.print(Text(f"Full report: {url}"))
