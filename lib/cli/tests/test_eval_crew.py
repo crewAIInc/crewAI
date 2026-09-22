@@ -114,6 +114,52 @@ def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkey
     assert "quality" not in out and "process" not in out
 
 
+def test_an_areas_name_is_printed_literally_never_as_markup(project, monkeypatch, capsys):
+    # Every part of this line came over the wire, and a Console parses square
+    # brackets. A fixed list of areas made that impossible; printing what
+    # arrives does not, so an area named `[red]tasks[/red]` must show its own
+    # brackets rather than restyling the verdict.
+    directory, _ = project
+    record_last_run(directory)
+    graded = done(grades={"[red]tasks[/red]": 4, "[bold]goal": 5})
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), graded]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "[red]tasks[/red] 4/5" in out
+    assert "[bold]goal 5/5" in out
+
+
+def test_the_follow_link_cannot_be_retargeted_by_the_url_amp_sends(project, monkeypatch, capsys):
+    # This line invites a click, so a `url` carrying `[link=…]` would print a
+    # trustworthy label over a hostile target. It is the worst place in this
+    # command to let markup through.
+    directory, _ = project
+    record_last_run(directory)
+    hostile = "[link=http://attacker.test/]https://app.crewai.com/e/ev-1[/link]"
+    created = httpx.Response(202, json={"id": "ev-1", "url": hostile, "status": "queued"})
+    install(monkeypatch, FakeAMP(create=created, statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "[link=http://attacker.test/]" in out  # printed, not followed
+
+
+def test_amps_refusal_is_printed_literally_too(project, monkeypatch, capsys):
+    # The same defect on the refusal path: AMP's own sentence reaches a Console.
+    directory, _ = project
+    record_last_run(directory)
+    refusal = httpx.Response(404, json={"error": "trace_not_found", "message": "No spans for [id]"})
+    install(monkeypatch, FakeAMP(create=refusal))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    assert "No spans for [id]" in capsys.readouterr().out
+
+
 def test_an_evaluation_that_graded_nothing_prints_the_gate_alone(project, monkeypatch, capsys):
     # A well-formed verdict may carry no grades at all, and a fixed list of
     # areas used to hide that: there was always something after the separator.

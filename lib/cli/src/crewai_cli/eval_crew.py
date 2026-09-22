@@ -31,6 +31,7 @@ from crewai_core.settings import Settings
 from dotenv import load_dotenv, set_key
 import httpx
 from rich.console import Console
+from rich.text import Text
 
 from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.plus_api import PlusAPI
@@ -63,14 +64,17 @@ def eval_crew(run_id: str | None = None) -> None:
     recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
     if not run_id and recorded_amp and recorded_amp != client.base_url.rstrip("/"):
         console.print(
-            f"The run was traced to {recorded_amp}; evaluating at the configured AMP {client.base_url}.",
+            Text(f"The run was traced to {recorded_amp}; evaluating at the configured AMP {client.base_url}."),
             style="yellow",
         )
     started = _start_evaluation(client, execution_id)
     url = started.get("url")
-    console.print(f"Evaluating run [bold]{execution_id}[/bold]")
+    console.print(Text("Evaluating run ").append(execution_id, style="bold"))
     if url:
-        console.print(f"Follow it at [cyan underline]{url}[/cyan underline]")
+        # Appended, never interpolated: this line invites a click, so a `url`
+        # carrying `[link=…]` would print a trustworthy label over a hostile
+        # target. The style belongs to the span, not to the string.
+        console.print(Text("Follow it at ").append(url, style="cyan underline"))
         _open(url)
 
     finished = _wait(client, str(started["id"]), url)
@@ -139,8 +143,10 @@ def _amp_client(trusted: set[str]) -> PlusAPI:
         else "would carry the login over plain HTTP"
     )
     console.print(
-        f"Reading anonymously: {client.base_url} {why}. "
-        "Run `crewai enterprise configure <url>` to log in to it.",
+        Text(
+            f"Reading anonymously: {client.base_url} {why}. "
+            "Run `crewai enterprise configure <url>` to log in to it."
+        ),
         style="yellow",
     )
     return PlusAPI()
@@ -294,7 +300,7 @@ def _wait(client: PlusAPI, evaluation_id: str, url: str | None) -> dict[str, Any
                 )
             time.sleep(POLL_SECONDS)
     except KeyboardInterrupt:
-        console.print(f"\nStill running{where}.", style="yellow")
+        console.print(Text(f"\nStill running{where}."), style="yellow")
         raise SystemExit(130) from None
 
 
@@ -315,33 +321,34 @@ def _a_grade(grade: Any) -> bool:
 
 
 def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
+    """Everything printed here came over the wire, so it is composed as `Text`
+    and never as markup: a `Console` parses square brackets, and an area named
+    `[red]tasks[/red]`, a gate, an error or a URL carrying one would restyle
+    the line or break it. A fixed list of areas used to make that impossible;
+    printing what arrives does not, so the escaping is explicit instead."""
     if finished.get("status") != "done":
         console.print(
-            f"Evaluation failed: {finished.get('error') or 'no reason given'}",
+            Text(f"Evaluation failed: {finished.get('error') or 'no reason given'}"),
             style="bold red",
         )
         return
     verdict = finished["verdict"]  # _wait let only a well-formed one through
     gate = str(verdict["gate"]).upper()
     style = {"PASSED": "bold green", "FAILED": "bold red"}.get(gate, "bold yellow")
+    line = Text("Goal gate: ")
+    line.append(gate, style=style)
     # Whatever areas the evaluation graded, in the order it sent them — never a
     # fixed list. The areas are the evaluator's to name, and a client that
     # printed its own would silently drop any it had not heard of while
-    # inventing "not measured" for ones that no longer exist.
-    grades = verdict.get("grades") or {}
-    parts = [
-        f"{area} {grade}/5" if grade is not None else f"{area} not measured"
-        for area, grade in grades.items()
-    ]
-    # `_well_formed_verdict` accepts an empty `grades`, and a fixed list of
-    # areas used to hide that: there was always something after the separator.
-    # An evaluation that graded nothing prints the gate alone.
-    line = f"Goal gate: [{style}]{gate}[/{style}]"
-    if parts:
-        line += " · " + " · ".join(parts)
+    # inventing "not measured" for ones that no longer exist. An evaluation
+    # that graded nothing prints the gate alone: the separator belongs to the
+    # segment after it, so there is never one with nothing behind it.
+    for area, grade in (verdict.get("grades") or {}).items():
+        line.append(" · ")
+        line.append(f"{area} {grade}/5" if grade is not None else f"{area} not measured")
     console.print(line)
     if url:
-        console.print(f"Full report: {url}")
+        console.print(Text(f"Full report: {url}"))
 
 
 def _open(url: str) -> None:
@@ -381,5 +388,8 @@ def _refused(response: httpx.Response, subject: str) -> None:
 
 
 def _fail(message: str) -> None:
-    console.print(message, style="bold red")
+    # `Text`, because most of what reaches here is AMP's own sentence and a
+    # `Console` parses square brackets. No caller relies on markup; the colour
+    # comes from `style`.
+    console.print(Text(message), style="bold red")
     raise SystemExit(1)
