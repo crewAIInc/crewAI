@@ -95,6 +95,24 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
     assert "Goal gate: PASSED" in out and "goal 5/5" in out and "cost not measured" in out
 
 
+def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkeypatch, capsys):
+    # The areas are the evaluator's to name. A client printing its own list
+    # would drop the ones it had not heard of and invent "not measured" for
+    # ones that no longer exist — which is what happens the moment the
+    # evaluation's vocabulary moves ahead of an installed CLI.
+    directory, _ = project
+    record_last_run(directory)
+    graded = done(grades={"goal": 5, "tasks": 3, "agents": 4, "tools": None})
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), graded]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "goal 5/5" in out and "tasks 3/5" in out and "agents 4/5" in out
+    assert "tools not measured" in out
+    assert "quality" not in out and "process" not in out
+
+
 def test_run_names_another_execution_and_an_anonymous_caller_sends_no_token(project, monkeypatch, capsys):
     directory, _ = project
     record_last_run(directory)

@@ -324,12 +324,14 @@ def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
     verdict = finished["verdict"]  # _wait let only a well-formed one through
     gate = str(verdict["gate"]).upper()
     style = {"PASSED": "bold green", "FAILED": "bold red"}.get(gate, "bold yellow")
+    # Whatever areas the evaluation graded, in the order it sent them — never a
+    # fixed list. The areas are the evaluator's to name, and a client that
+    # printed its own would silently drop any it had not heard of while
+    # inventing "not measured" for ones that no longer exist.
     grades = verdict.get("grades") or {}
     parts = [
-        f"{area} {grades[area]}/5"
-        if grades.get(area) is not None
-        else f"{area} not measured"
-        for area in ("goal", "quality", "process", "cost")
+        f"{area} {grade}/5" if grade is not None else f"{area} not measured"
+        for area, grade in grades.items()
     ]
     console.print(f"Goal gate: [{style}]{gate}[/{style}] · " + " · ".join(parts))
     if url:
