@@ -78,7 +78,8 @@ class AdanosToolInput(BaseModel):
             "compare uses tickers (crypto: symbols), a list of strings; search uses query; "
             "analyze uses text. Optional period: from_ and to, inclusive UTC YYYY-MM-DD. "
             "trending/mentions accept limit and offset; search accepts limit. Stock trending "
-            "also accepts type. Reddit mentions accept include_inherited. stats/health/explain "
+            "also accepts type. News trends accept source to filter publishers. "
+            "Reddit mentions accept include_inherited. stats/health/explain "
             "do not accept dates. Never pass days, API keys, URLs or headers."
         ),
     )

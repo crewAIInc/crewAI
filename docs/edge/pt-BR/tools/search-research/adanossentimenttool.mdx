@@ -37,6 +37,8 @@ A ferramenta também pode ser incluída na lista `tools` de um Agent. Como alter
 
 Para histórico, forneça `from_` e `to` como datas UTC inclusivas (`YYYY-MM-DD`), dentro da retenção do plano. Omita ambos para o período padrão da API. `days` está obsoleto e é rejeitado. Search, explain, analyze, stats e health não aceitam datas. Agregados históricos não garantem dados disponíveis naquele momento para backtests; explicações descrevem o contexto atual.
 
+Tendências de notícias (incluindo setores/países) também aceitam `source` em `parameters`, com um ID canônico de publicador ou alias conhecido. Isso é separado do seletor `source="news"` de nível superior.
+
 ## Resultados e Falhas
 
 Sucesso retorna `source`, `operation` e `data` do SDK sem alterações, incluindo zeros e nulos. Métricas não são normalizadas nem combinadas. Falhas retornam `error` e uma `message` segura, nunca sentimento neutro inventado. Corpos brutos de erros são omitidos. O timeout é de 30 segundos e não há repetição automática; verifique credenciais, cota ou acesso antes de tentar novamente.

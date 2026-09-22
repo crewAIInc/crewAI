@@ -37,6 +37,8 @@ The tool can also be passed in an Agent's `tools` list. Alternatively, supply `a
 
 For historical requests supply both `from_` and `to` as inclusive UTC dates (`YYYY-MM-DD`), within your plan's retention. Omit both for the API's default period. `days` is deprecated and rejected. Search, explain, analyze, stats and health do not accept date filters. Historical aggregates are not guaranteed point-in-time backtest data; explanations describe current context.
 
+News trends (including sectors/countries) also accept `source` inside `parameters`, using a canonical publisher ID or known alias. This is separate from the top-level `source="news"` selector.
+
 ## Results and Failures
 
 Success returns `source`, `operation` and the SDK's unmodified `data`, including zero and null values. Source metrics are not normalized or combined. Failures return `error` and a safe `message`, never fabricated neutral sentiment. Raw error bodies are withheld. A request has a 30-second timeout and is not automatically retried; inspect credentials, quota or plan access before retrying.

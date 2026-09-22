@@ -223,3 +223,25 @@ def test_dict_and_list_results(tool, source, operation, parameters, payload):
     ):
         result = tool.run(source=source, operation=operation, parameters=parameters)
     assert result["data"] == payload
+
+
+@pytest.mark.parametrize(
+    "operation,suffix",
+    [
+        ("trending", "trending"),
+        ("trending_sectors", "trending/sectors"),
+        ("trending_countries", "trending/countries"),
+    ],
+)
+def test_news_publisher_filter(tool, operation, suffix):
+    def send(client, request, **kwargs):
+        assert request.url.path == f"/news/stocks/v1/{suffix}"
+        assert request.url.params["source"] == "reuters"
+        return httpx.Response(401, json={"detail": "Unauthorized"}, request=request)
+
+    with patch.object(httpx.Client, "send", autospec=True, side_effect=send) as request:
+        result = tool.run(
+            source="news", operation=operation, parameters={"source": "reuters"}
+        )
+    assert request.call_count == 1
+    assert result["error"] == "api_error"
