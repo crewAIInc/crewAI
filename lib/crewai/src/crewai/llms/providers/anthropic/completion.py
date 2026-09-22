@@ -1972,28 +1972,25 @@ class AnthropicCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+        # Backwards-compat: validate against crewai.llm.LLM_CONTEXT_WINDOW_SIZES
+        # so existing tests using patch.dict("crewai.llm.LLM_CONTEXT_WINDOW_SIZES", ...) work.
+        from crewai.llm import LLM_CONTEXT_WINDOW_SIZES as _LLM_SIZES
+        from crewai.llms.context_window import (
+            ANTHROPIC_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        # Current offered models. Unknown and retired IDs fall back to 200k.
-        context_windows = {
-            "claude-fable-5": 1000000,
-            "claude-mythos-5": 1000000,
-            "claude-opus-5": 1000000,
-            "claude-sonnet-5": 1000000,
-            "claude-opus-4-8": 1000000,
-            "claude-opus-4-7": 1000000,
-            "claude-opus-4-6": 1000000,
-            "claude-sonnet-4-6": 1000000,
-            "claude-opus-4-5": 200000,
-            "claude-sonnet-4-5": 200000,
-            "claude-haiku-4-5": 200000,
-        }
+        for _key, _value in _LLM_SIZES.items():
+            if _value < 1024 or _value > 2097152:
+                raise ValueError(
+                    f"Context window for {_key} must be between 1024 and 2097152"
+                )
 
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model,
+            ANTHROPIC_CONTEXT_WINDOWS,
+            default=200_000,
+        )
 
     @staticmethod
     def _extract_finish_reason_and_id(
