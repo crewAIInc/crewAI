@@ -365,6 +365,7 @@ def test_windows_live_process_returns_true_and_closes_handle(
 
 
 def test_memory_with_qdrant_edge(tmp_path: Path) -> None:
+    """Memory.remember/recall work end-to-end against QdrantEdgeStorage."""
     from crewai.memory.unified_memory import Memory
 
     mock_embedder = MagicMock()
