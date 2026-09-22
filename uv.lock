@@ -1624,7 +1624,7 @@ requires-dist = [
     { name = "textual", specifier = ">=7.5.0" },
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
-    { name = "uv", specifier = "~=0.11.6" },
+    { name = "uv", specifier = ">=0.11.15,<1" },
 ]
 
 [[package]]
