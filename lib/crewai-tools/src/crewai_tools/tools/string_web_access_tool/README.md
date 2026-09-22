@@ -11,8 +11,8 @@ Two tools:
 
 - `StringWebAccessScrapeTool` — fetch a URL as Markdown, the verbatim body, or a JSON envelope with
   the destination's status code and headers.
-- `StringWebAccessSearchTool` — search Google, DuckDuckGo, Brave, Mojeek or Bing and return the
-  organic results as structured JSON.
+- `StringWebAccessSearchTool` — search Google, DuckDuckGo, Brave or Mojeek and return the organic
+  results as structured JSON.
 
 ## Installation
 
@@ -71,7 +71,7 @@ Crew(agents=[researcher], tasks=[task]).kickoff(
 | Argument | Default | Description |
 | --- | --- | --- |
 | `query` | — | **Required.** The search query to run. |
-| `engine` | `google` | `google`, `duckduckgo`, `brave`, `mojeek` or `bing`. |
+| `engine` | `google` | `google`, `duckduckgo`, `brave` or `mojeek`. |
 | `country` | `US` | ISO 3166-1 alpha-2 country code used to localize results. |
 | `language` | `None` | Language tag such as `"en"` or `"pt-br"`. |
 | `max_results` | `10` | Maximum number of organic results to return. |

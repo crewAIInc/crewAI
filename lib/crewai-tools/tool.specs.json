@@ -26106,7 +26106,7 @@
       }
     },
     {
-      "description": "Search the web and get the organic results back as structured JSON \u2014 position, title, url, displayUrl and snippet for each. Supports Google, DuckDuckGo, Brave, Mojeek and Bing, localized by country and language.",
+      "description": "Search the web and get the organic results back as structured JSON \u2014 position, title, url, displayUrl and snippet for each. Supports Google, DuckDuckGo, Brave and Mojeek, localized by country and language.",
       "env_vars": [
         {
           "default": null,
@@ -26217,8 +26217,7 @@
                   "google",
                   "duckduckgo",
                   "brave",
-                  "mojeek",
-                  "bing"
+                  "mojeek"
                 ],
                 "type": "string"
               },
@@ -26246,6 +26245,7 @@
           "max_results": {
             "anyOf": [
               {
+                "exclusiveMinimum": 0,
                 "type": "integer"
               },
               {

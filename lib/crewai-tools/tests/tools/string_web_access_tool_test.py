@@ -15,6 +15,17 @@ def mock_string_api_key():
         yield
 
 
+@pytest.fixture(autouse=True)
+def mock_validate_url():
+    # the scrape tool's real validate_url() does a DNS lookup (SSRF guard);
+    # stub it to the identity function so tests never touch the network
+    with patch(
+        "crewai_tools.tools.string_web_access_tool.string_web_access_tool.validate_url",
+        side_effect=lambda url: url,
+    ):
+        yield
+
+
 def _mock_response(*, json_body=None, text=None):
     response = Mock()
     response.raise_for_status.return_value = None
@@ -137,14 +148,14 @@ def test_search_honours_engine_language_and_max_results(mock_post):
     )
 
     result = StringWebAccessSearchTool()._run(
-        query="anything", engine="bing", country="GB", language="en", max_results=2
+        query="anything", engine="brave", country="GB", language="en", max_results=2
     )
 
     assert len(json.loads(result)) == 2
     _, kwargs = mock_post.call_args
     assert kwargs["json"] == {
         "query": "anything",
-        "engine": "bing",
+        "engine": "brave",
         "country": "GB",
         "language": "en",
     }

@@ -96,31 +96,30 @@ class StringWebAccessScrapeTool(BaseTool):
         execute_js: bool | None = None,
         country_code: str | None = None,
     ) -> str | None:
-        url = validate_url(url)
-        payload: dict[str, Any] = {"url": url, "format": format}
-        if main_content_only is not None:
-            payload["mainContentOnly"] = main_content_only
-        if execute_js is not None:
-            payload["executeJS"] = execute_js
-        if country_code is not None:
-            payload["countryCode"] = country_code
-
         try:
+            url = validate_url(url)
+            payload: dict[str, Any] = {"url": url, "format": format}
+            if main_content_only is not None:
+                payload["mainContentOnly"] = main_content_only
+            if execute_js is not None:
+                payload["executeJS"] = execute_js
+            if country_code is not None:
+                payload["countryCode"] = country_code
+
             response = _post("/fetch", payload, _api_key(self.api_key), self.timeout)
+            if format == "json":
+                return json.dumps(response.json(), indent=2)
+            return response.text
         except Exception as e:
             if self.ignore_failures:
                 logger.error(f"Error fetching {url} through String Web Access: {e}")
                 return None
             raise
 
-        if format == "json":
-            return json.dumps(response.json(), indent=2)
-        return response.text
-
 
 class StringWebAccessSearchToolSchema(BaseModel):
     query: str = Field(description="The search query to run")
-    engine: Literal["google", "duckduckgo", "brave", "mojeek", "bing"] | None = Field(
+    engine: Literal["google", "duckduckgo", "brave", "mojeek"] | None = Field(
         default="google", description="Search engine to query"
     )
     country: str | None = Field(
@@ -132,7 +131,7 @@ class StringWebAccessSearchToolSchema(BaseModel):
         description="Language tag for the results, such as 'en' or 'pt-br'",
     )
     max_results: int | None = Field(
-        default=10, description="Maximum number of organic results to return"
+        default=10, gt=0, description="Maximum number of organic results to return"
     )
 
 
@@ -142,8 +141,8 @@ class StringWebAccessSearchTool(BaseTool):
     name: str = "String Web Access search tool"
     description: str = (
         "Search the web and get the organic results back as structured JSON — position, title, "
-        "url, displayUrl and snippet for each. Supports Google, DuckDuckGo, Brave, Mojeek and "
-        "Bing, localized by country and language."
+        "url, displayUrl and snippet for each. Supports Google, DuckDuckGo, Brave and Mojeek, "
+        "localized by country and language."
     )
     args_schema: type[BaseModel] = StringWebAccessSearchToolSchema
     api_key: str | None = None
@@ -173,13 +172,13 @@ class StringWebAccessSearchTool(BaseTool):
 
         try:
             response = _post("/search", payload, _api_key(self.api_key), self.timeout)
+            results = response.json().get("results", [])[:max_results]
         except Exception as e:
             if self.ignore_failures:
                 logger.error(f"Error searching String Web Access for '{query}': {e}")
                 return None
             raise
 
-        results = response.json().get("results", [])[:max_results]
         if not results:
             return f"No results found for '{query}'."
         return json.dumps(results, indent=2)
