@@ -142,9 +142,6 @@ class SeleniumScrapingTool(BaseTool):
             return "\n".join(content)
         except Exception as e:
             return f"Error scraping website: {e!s}"
-        finally:
-            if self.driver is not None:
-                self.driver.close()
 
     def _get_content(
         self, css_element: str | None, return_html: bool | None
@@ -207,5 +204,6 @@ class SeleniumScrapingTool(BaseTool):
             time.sleep(sleep_time)
 
     def close(self) -> None:
+        """End the browser session so the process does not linger."""
         if self.driver is not None:
-            self.driver.close()
+            self.driver.quit()
