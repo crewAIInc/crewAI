@@ -38,6 +38,15 @@ class PlanningConfig(BaseModel):
         system_prompt: Custom system prompt for planning. Uses default if None.
         plan_prompt: Custom prompt for creating the initial plan.
         refine_prompt: Custom prompt for refining the plan.
+        max_replans: Maximum number of full replanning attempts before
+            finalizing.
+        max_step_iterations: Maximum LLM iterations per step in the
+            StepExecutor multi-turn loop. Lower values make steps faster
+            but less thorough.
+        step_timeout: Maximum wall-clock seconds for a single step
+            execution. If exceeded, the step is marked as failed and
+            observation decides whether to continue or replan. None means
+            no per-step timeout.
         llm: LLM to use for planning. Uses agent's LLM if None.
 
     Example:
