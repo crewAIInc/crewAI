@@ -95,6 +95,119 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
     assert "Goal gate: PASSED" in out and "goal 5/5" in out and "cost not measured" in out
 
 
+def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkeypatch, capsys):
+    # The areas are the evaluator's to name. A client printing its own list
+    # would drop the ones it had not heard of and invent "not measured" for
+    # ones that no longer exist — which is what happens the moment the
+    # evaluation's vocabulary moves ahead of an installed CLI.
+    directory, _ = project
+    record_last_run(directory)
+    graded = done(grades={"goal": 5, "tasks": 3, "agents": 4, "tools": None})
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), graded]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    # The whole segment, in order: asserting the parts one by one would pass
+    # even if this path sorted them or printed its own list.
+    assert "Goal gate: PASSED · goal 5/5 · tasks 3/5 · agents 4/5 · tools not measured" in out
+    assert "quality" not in out and "process" not in out
+
+
+def test_an_areas_name_is_printed_literally_never_as_markup(project, monkeypatch, capsys):
+    # Every part of this line came over the wire, and a Console parses square
+    # brackets. A fixed list of areas made that impossible; printing what
+    # arrives does not, so an area named `[red]tasks[/red]` must show its own
+    # brackets rather than restyling the verdict.
+    directory, _ = project
+    record_last_run(directory)
+    graded = done(grades={"[red]tasks[/red]": 4, "[bold]goal": 5})
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), graded]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "[red]tasks[/red] 4/5" in out
+    assert "[bold]goal 5/5" in out
+
+
+def test_the_follow_link_cannot_be_retargeted_by_the_url_amp_sends(project, monkeypatch, capsys):
+    # This line invites a click, so a `url` carrying `[link=…]` would print a
+    # trustworthy label over a hostile target. It is the worst place in this
+    # command to let markup through.
+    directory, _ = project
+    record_last_run(directory)
+    hostile = "[link=http://attacker.test/]https://app.crewai.com/e/ev-1[/link]"
+    created = httpx.Response(202, json={"id": "ev-1", "url": hostile, "status": "queued"})
+    install(monkeypatch, FakeAMP(create=created, statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "[link=http://attacker.test/]" in out  # printed, not followed
+
+
+def test_a_url_that_is_not_a_string_costs_the_link_and_nothing_else(project, monkeypatch, capsys):
+    # Composing the line means appending the url rather than interpolating it,
+    # and `Text.append` wants a string. A malformed one must not become a
+    # traceback: the evaluation is already running and its verdict is what the
+    # user came for, so the link is dropped and the run carries on.
+    directory, opened = project
+    record_last_run(directory)
+    created = httpx.Response(202, json={"id": "ev-1", "url": ["not", "a", "string"], "status": "queued"})
+    install(monkeypatch, FakeAMP(create=created, statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "report url that is not a string" in out  # said, not swallowed
+    assert "Goal gate: PASSED" in out  # and the verdict still arrives
+    assert opened == []  # nothing was handed to a browser
+    assert "Follow it at" not in out
+
+
+def test_an_id_that_is_not_a_string_is_a_protocol_error(project, monkeypatch, capsys):
+    # The id is what every later call is made with, so there is nothing to
+    # carry on with — unlike the url, which is only ever shown.
+    directory, _ = project
+    record_last_run(directory)
+    created = httpx.Response(202, json={"id": {"oops": 1}, "url": URL, "status": "queued"})
+    install(monkeypatch, FakeAMP(create=created))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    assert "without an evaluation id" in capsys.readouterr().out
+
+
+def test_amps_refusal_is_printed_literally_too(project, monkeypatch, capsys):
+    # The same defect on the refusal path: AMP's own sentence reaches a Console.
+    directory, _ = project
+    record_last_run(directory)
+    refusal = httpx.Response(404, json={"error": "trace_not_found", "message": "No spans for [id]"})
+    install(monkeypatch, FakeAMP(create=refusal))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    assert "No spans for [id]" in capsys.readouterr().out
+
+
+def test_an_evaluation_that_graded_nothing_prints_the_gate_alone(project, monkeypatch, capsys):
+    # A well-formed verdict may carry no grades at all, and a fixed list of
+    # areas used to hide that: there was always something after the separator.
+    directory, _ = project
+    record_last_run(directory)
+    graded = done(grades={})
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), graded]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "Goal gate: PASSED" in out
+    assert "Goal gate: PASSED ·" not in out  # no separator with nothing after it
+
+
 def test_run_names_another_execution_and_an_anonymous_caller_sends_no_token(project, monkeypatch, capsys):
     directory, _ = project
     record_last_run(directory)
