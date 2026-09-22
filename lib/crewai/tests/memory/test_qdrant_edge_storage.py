@@ -293,8 +293,6 @@ def test_orphaned_shard_cleanup_skips_when_pid_probe_unsupported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """On Windows, os.kill(pid, 0) raises OSError; cleanup must skip, not crash."""
-    import os
-
     from crewai.memory.storage import qdrant_edge_storage
 
     base = tmp_path / "edge"

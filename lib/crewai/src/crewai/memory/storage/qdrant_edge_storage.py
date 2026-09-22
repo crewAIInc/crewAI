@@ -13,6 +13,7 @@ import atexit
 from datetime import datetime, timezone
 import logging
 import os
+import sys
 from pathlib import Path
 import shutil
 from typing import Any, Final
@@ -826,16 +827,18 @@ class QdrantEdgeStorage:
             except PermissionError:
                 continue
             except OSError:
-                # Windows: os.kill(pid, 0) is not a supported liveness probe and
-                # raises a generic OSError instead of ProcessLookupError, so the
-                # orphan check cannot run. Skip cleanup rather than crash on init;
-                # the shard is retried on the next startup.
-                _logger.debug(
-                    "Skipping orphaned-shard check for worker %d: os.kill(pid, 0) "
-                    "is not supported on this platform",
-                    pid,
-                )
-                continue
+                if sys.platform == "win32":
+                    # Windows: os.kill(pid, 0) is not a supported liveness probe
+                    # and raises a generic OSError instead of ProcessLookupError.
+                    # Skip cleanup rather than crash on init; the shard is
+                    # retried on the next startup.
+                    _logger.debug(
+                        "Skipping orphaned-shard check for worker %d: "
+                        "os.kill(pid, 0) is not supported on Windows",
+                        pid,
+                    )
+                    continue
+                raise
 
             _logger.info("Cleaning up orphaned shard for dead worker %d", pid)
             try:
