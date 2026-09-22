@@ -229,6 +229,36 @@ def test_memory_forget(tmp_path: Path, mock_embedder: MagicMock) -> None:
     assert m._storage.count("/x") == 0
 
 
+def test_memory_forget_drains_pending_saves(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    from crewai.memory.unified_memory import Memory
+
+    m = Memory(storage=str(tmp_path / "db2-drain"), llm=MagicMock(), embedder=mock_embedder)
+    object.__setattr__(m, "drain_writes", MagicMock())
+    m._storage.delete = MagicMock(return_value=0)
+
+    assert m.forget(scope="/x") == 0
+    m.drain_writes.assert_called_once()
+    m._storage.delete.assert_called_once()
+
+
+def test_memory_update_drains_pending_saves(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    from crewai.memory.unified_memory import Memory
+
+    m = Memory(storage=str(tmp_path / "db2-update-drain"), llm=MagicMock(), embedder=mock_embedder)
+    record = MemoryRecord(content="old", scope="/x")
+    object.__setattr__(m, "drain_writes", MagicMock())
+    m._storage.get_record = MagicMock(return_value=record)
+    m._storage.update = MagicMock(return_value=record)
+
+    updated = m.update(record.id, content="new")
+
+    assert updated.content == "new"
+    m.drain_writes.assert_called_once()
+    m._storage.get_record.assert_called_once_with(record.id)
+    m.drain_writes.assert_called_once()
+    m._storage.get_record.assert_called_once_with(record.id)
+
+
 def test_memory_scope_slice(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
 

@@ -841,6 +841,10 @@ class Memory(BaseModel):
         Returns:
             Number of records deleted.
         """
+        # A destructive operation must observe the write barrier: otherwise a pending background save
+        # from ``remember_many()`` can commit after this deletion and resurrect the content.
+        self.drain_writes()
+
         effective_scope = scope
         if effective_scope is None and self.root_scope:
             effective_scope = self.root_scope
@@ -880,6 +884,9 @@ class Memory(BaseModel):
         Raises:
             ValueError: If the record is not found.
         """
+        # Wait for pending saves so an update cannot be overwritten by a stale background save.
+        self.drain_writes()
+
         existing = self._storage.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
