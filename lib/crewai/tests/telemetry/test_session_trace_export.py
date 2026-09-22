@@ -445,6 +445,7 @@ def test_grant_preserves_optional_viewer_url_without_exposing_it_in_repr(
     ],
 )
 def test_unusable_optional_viewer_url_does_not_break_grant(collector, value):
+    """Unsafe or malformed viewer URLs are ignored without rejecting the grant."""
     collector.grant_override = {"trace_url": value}
     assert TraceGrantClient("pat").create(str(uuid4())).trace_url is None
 
@@ -486,6 +487,7 @@ def test_trace_link_rendering_failure_does_not_fail_execution(
     ],
 )
 def test_invalid_grant_is_rejected_without_trace_upload(collector, override):
+    """Invalid grant fields prevent any trace payload from being uploaded."""
     collector.grant_override = override
     with pytest.raises(TraceGrantError):
         TraceGrantClient("credential").create(str(uuid4()))
