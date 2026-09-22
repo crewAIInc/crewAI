@@ -12,7 +12,7 @@ import httpx
 import pytest
 from rich.console import Console
 
-from crewai_cli import eval_crew as eval_module
+from crewai_cli.experimental import eval_crew as eval_module
 from crewai_cli.cli import eval_command
 
 
