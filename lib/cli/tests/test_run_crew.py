@@ -27,6 +27,7 @@ def test_run_preserves_project_script_exit_code(
     script_name: str,
     returncode: int,
 ) -> None:
+    """Preserve the project's exit status through the public crew and flow CLI."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "exit-demo"\nversion = "0.1.0"\n'
@@ -35,7 +36,9 @@ def test_run_preserves_project_script_exit_code(
         encoding="utf-8",
     )
     (tmp_path / "exit_demo.py").write_text(
-        f"def run():\n    raise SystemExit({returncode})\n", encoding="utf-8"
+        'def run():\n    """Exit with the configured regression-test status."""\n'
+        f"    raise SystemExit({returncode})\n",
+        encoding="utf-8",
     )
     monkeypatch.setattr(
         run_crew_module, "build_env_with_all_tool_credentials", lambda: os.environ.copy()
@@ -49,6 +52,7 @@ def test_run_preserves_project_script_exit_code(
     def run_project_script(
         command: list[str], **kwargs: Any
     ) -> subprocess.CompletedProcess[str]:
+        """Run the fixture with Python while verifying the expected uv command."""
         assert command == ["uv", "run", script_name]
         return subprocess_run(
             [sys.executable, "-c", "from exit_demo import run; run()"], **kwargs
@@ -74,6 +78,7 @@ def test_run_exits_nonzero_when_project_script_cannot_start(
     project_type: str,
     script_name: str,
 ) -> None:
+    """Report a failed launch and exit nonzero when uv is unavailable."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "exit-demo"\nversion = "0.1.0"\n'
@@ -81,7 +86,10 @@ def test_run_exits_nonzero_when_project_script_cannot_start(
         f'[tool.crewai]\ntype = "{project_type}"\n',
         encoding="utf-8",
     )
-    (tmp_path / "exit_demo.py").write_text("def run():\n    pass\n", encoding="utf-8")
+    (tmp_path / "exit_demo.py").write_text(
+        'def run():\n    """Provide a valid entry point for the launch-error test."""\n    pass\n',
+        encoding="utf-8",
+    )
     monkeypatch.setattr(
         run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
     )
@@ -91,6 +99,7 @@ def test_run_exits_nonzero_when_project_script_cannot_start(
     )
 
     def fail_to_start(*args: Any, **kwargs: Any) -> None:
+        """Simulate a missing uv executable before the project script starts."""
         raise FileNotFoundError("uv executable not found")
 
     monkeypatch.setattr(run_crew_module.subprocess, "run", fail_to_start)
