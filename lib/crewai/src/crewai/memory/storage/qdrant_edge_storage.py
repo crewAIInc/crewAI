@@ -825,6 +825,17 @@ class QdrantEdgeStorage:
                 _logger.debug("Worker %d is dead, shard is orphaned", pid)
             except PermissionError:
                 continue
+            except OSError:
+                # Windows: os.kill(pid, 0) is not a supported liveness probe and
+                # raises a generic OSError instead of ProcessLookupError, so the
+                # orphan check cannot run. Skip cleanup rather than crash on init;
+                # the shard is retried on the next startup.
+                _logger.debug(
+                    "Skipping orphaned-shard check for worker %d: os.kill(pid, 0) "
+                    "is not supported on this platform",
+                    pid,
+                )
+                continue
 
             _logger.info("Cleaning up orphaned shard for dead worker %d", pid)
             try:
