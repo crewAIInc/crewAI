@@ -79,6 +79,7 @@ from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
+from crewai.llm_overlay import active as overlay_active, overlay_model_for
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -113,7 +114,7 @@ from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_llm, create_llm_like
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -244,6 +245,14 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
+    # The construction-time ``llm_overlay`` read happened; see post_init_setup.
+    _overlay_read: bool = PrivateAttr(default=False)
+    # The llm the agent was declared with, resolved before any overlay read: what
+    # an overlay swap is configured like, and what a role outside it runs on.
+    _declared_llm: BaseLLM | None = PrivateAttr(default=None)
+    # The instance the overlay built and put on ``llm``; any other ``llm`` found
+    # there later was assigned by the caller and is the declared one from then on.
+    _overlay_built: BaseLLM | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
@@ -400,7 +409,25 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
         """Initialize LLM, executor, code tools, and skills after model creation."""
-        self.llm = create_llm(self.llm)
+        if self._overlay_read:
+            # A re-validation of an existing instance — the event bus registers
+            # an agent in its RuntimeState the first time it emits, which runs
+            # this validator again on the same object. The overlay was read when
+            # the agent was built (and again by interpolate_inputs if its role
+            # changed); reading it once more here would replace an llm the agent
+            # already runs on, and drop state set on it such as ``stream``.
+            self.llm = create_llm(self.llm)
+        else:
+            declared = create_llm(self.llm)
+            self._declared_llm = declared
+            overlay_model = overlay_model_for(self.role)
+            if overlay_model:
+                self.llm = self._overlay_built = create_llm_like(
+                    overlay_model, declared
+                )
+            else:
+                self.llm = declared
+            self._overlay_read = True
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
@@ -445,6 +472,78 @@ class Agent(BaseAgent):
     def planning_enabled(self) -> bool:
         """Check if planning is enabled for this agent."""
         return self.planning_config is not None or self.planning
+
+    def _llm_for_copy(self) -> Any:
+        """Inside an ``llm_overlay`` block a copy is built from the declared llm.
+
+        ``Crew.copy`` — ``kickoff_for_each``, ``train``, ``test`` — copies every
+        agent before its input is interpolated. Built from the llm this agent
+        currently runs on, a copy would record a model the overlay mapped as its
+        declared one and never revert on a miss; built from the declared llm, its
+        construction resolves the overlay for its own role like any agent built
+        inside the block. Outside any block a copy keeps the llm this agent runs
+        on.
+        """
+        if overlay_active.get() is not None:
+            declared = self._declared_now()
+            if declared is not None:
+                return declared
+        return self.llm
+
+    def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
+        """Interpolate inputs, then re-resolve the ``llm_overlay`` if the role changed.
+
+        A role declared as a template (``"Researcher for {repo}"``) is not a
+        key of an overlay written for the text a trace records until a kickoff
+        fills the placeholders in, and that happens after ``post_init_setup``
+        resolved ``llm``. So when interpolation rewrites the role inside an
+        active overlay, the overlay is looked up again with the new text: a
+        key sets ``llm`` to the mapped model, built with the declared llm's
+        configuration (``create_llm_like``); a miss puts the declared ``llm``
+        instance back, so a ``Crew`` reused for another input never keeps a
+        previous role's model. Outside any block the rewrite changes nothing.
+        A role the rewrite did not change is not looked up again —
+        construction's resolution stands, and its ``llm`` instance is kept.
+
+        The ``llm`` the agent ends up on inherits the streaming flag of the
+        one it replaces: ``Crew.kickoff(stream=True)`` sets ``agent.llm.stream``
+        before it interpolates. Two things resolved from ``llm`` before kickoff
+        do NOT follow the swap — a task's string guardrail LLM (built with the
+        Task) and the crew_creation telemetry span; a crew ``Memory`` built at
+        kickoff does.
+
+        The executor sees the new ``llm`` because it binds ``self.llm`` when a
+        task runs, after kickoff has interpolated: ``execute_task`` ->
+        ``_finalize_task_prompt`` -> ``prepare_tools`` ->
+        ``create_agent_executor``, which assigns ``self.llm`` to the executor
+        on every task (``_update_executor_parameters`` once it exists).
+        """
+        role_before = self.role
+        super().interpolate_inputs(inputs)
+        if self.role == role_before or overlay_active.get() is None:
+            return
+        previous = self.llm
+        declared = self._declared_now()
+        overlay_model = overlay_model_for(self.role)
+        if overlay_model:
+            self.llm = self._overlay_built = create_llm_like(overlay_model, declared)
+        else:
+            self.llm = declared
+        if isinstance(previous, BaseLLM) and isinstance(self.llm, BaseLLM):
+            self.llm.stream = previous.stream
+
+    def _declared_now(self) -> BaseLLM | None:
+        """The llm this agent is declared with, as of now.
+
+        Construction's ``create_llm(self.llm)`` unless the caller assigned
+        another ``llm`` since: whatever is on ``llm`` that the overlay did not
+        put there is the caller's, and a miss reverts to it. ``llm`` is a plain
+        field, so what the caller assigned may be a model string or ``None``;
+        it is resolved the way construction resolves it.
+        """
+        if self.llm is None or self.llm is not self._overlay_built:
+            self._declared_llm = create_llm(self.llm)
+        return self._declared_llm
 
     def _setup_agent_executor(self) -> None:
         """Initialize the agent's tools handler and optional tool cache.

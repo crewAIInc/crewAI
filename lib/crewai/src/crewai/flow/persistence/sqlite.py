@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from contextlib import closing
+from datetime import date, datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,20 @@ from crewai.flow.persistence.base import FlowPersistence
 
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+
+def _json_default(obj: Any) -> Any:
+    """Fallback serializer for non-primitive types in JSON dumps."""
+    if isinstance(obj, BaseModel):
+        try:
+            return obj.model_dump(mode="json")
+        except Exception:
+            return obj.model_dump(mode="python")
+    if isinstance(obj, (set, tuple)):
+        return list(obj)
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -72,7 +87,8 @@ class SQLiteFlowPersistence(FlowPersistence):
         """Create the necessary tables if they don't exist."""
         with (
             store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(sqlite3.connect(self.db_path, timeout=30)) as conn,
+            conn,
         ):
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(
@@ -139,7 +155,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 flow_uuid,
                 method_name,
                 datetime.now(timezone.utc).isoformat(),
-                json.dumps(state_dict),
+                json.dumps(state_dict, default=_json_default),
             ),
         )
 
@@ -147,7 +163,10 @@ class SQLiteFlowPersistence(FlowPersistence):
     def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to a plain dict."""
         if isinstance(state_data, BaseModel):
-            return state_data.model_dump()
+            try:
+                return state_data.model_dump(mode="json")
+            except Exception:
+                return state_data.model_dump(mode="python")
         if isinstance(state_data, dict):
             return state_data
         raise ValueError(
@@ -171,7 +190,8 @@ class SQLiteFlowPersistence(FlowPersistence):
 
         with (
             store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(sqlite3.connect(self.db_path, timeout=30)) as conn,
+            conn,
         ):
             self._save_state_sql(conn, flow_uuid, method_name, state_dict)
 
@@ -184,7 +204,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         Returns:
             The most recent state as a dictionary, or None if no state exists
         """
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
+        with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
             cursor = conn.execute(
                 """
             SELECT state_json
@@ -222,7 +242,8 @@ class SQLiteFlowPersistence(FlowPersistence):
 
         with (
             store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(sqlite3.connect(self.db_path, timeout=30)) as conn,
+            conn,
         ):
             self._save_state_sql(conn, flow_uuid, context.method_name, state_dict)
 
@@ -237,8 +258,8 @@ class SQLiteFlowPersistence(FlowPersistence):
             """,
                 (
                     flow_uuid,
-                    json.dumps(context.to_dict()),
-                    json.dumps(state_dict),
+                    json.dumps(context.to_dict(), default=_json_default),
+                    json.dumps(state_dict, default=_json_default),
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
@@ -259,7 +280,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         # Import here to avoid circular imports
         from crewai.flow.async_feedback.types import PendingFeedbackContext
 
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
+        with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
             cursor = conn.execute(
                 """
             SELECT state_json, context_json
@@ -285,7 +306,8 @@ class SQLiteFlowPersistence(FlowPersistence):
         """
         with (
             store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(sqlite3.connect(self.db_path, timeout=30)) as conn,
+            conn,
         ):
             conn.execute(
                 """

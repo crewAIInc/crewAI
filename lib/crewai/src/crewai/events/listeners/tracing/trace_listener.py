@@ -70,10 +70,14 @@ from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFailedEvent,
     FlowFinishedEvent,
+    FlowPausedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
+    HumanFeedbackReceivedEvent,
+    HumanFeedbackRequestedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.knowledge_events import (
@@ -279,6 +283,34 @@ class TraceCollectionListener(BaseEventListener):
         @self._on(event_bus, MethodExecutionFailedEvent)
         def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
             self._handle_trace_event("method_execution_failed", source, event)
+
+        # Registered through `_on`, like every other handler here: while a kickoff
+        # owns an execution uuid the OTEL session records these events (see
+        # `telemetry/tracing/handlers.py`) and this legacy collector stays idle.
+
+        @self._on(event_bus, MethodExecutionPausedEvent)
+        def on_method_paused(source: Any, event: MethodExecutionPausedEvent) -> None:
+            """Collect a method pausing for human feedback, whole."""
+            self._handle_action_event("method_execution_paused", source, event)
+
+        @self._on(event_bus, HumanFeedbackRequestedEvent)
+        def on_human_feedback_requested(
+            source: Any, event: HumanFeedbackRequestedEvent
+        ) -> None:
+            """Collect what the reviewer was shown when a gate asked for feedback."""
+            self._handle_action_event("human_feedback_requested", source, event)
+
+        @self._on(event_bus, HumanFeedbackReceivedEvent)
+        def on_human_feedback_received(
+            source: Any, event: HumanFeedbackReceivedEvent
+        ) -> None:
+            """Collect the reviewer's answer and where the flow routed on it."""
+            self._handle_action_event("human_feedback_received", source, event)
+
+        @self._on(event_bus, FlowPausedEvent)
+        def on_flow_paused(source: Any, event: FlowPausedEvent) -> None:
+            """Collect a flow pausing (a gate or an explicit pause), whole."""
+            self._handle_action_event("flow_paused", source, event)
 
         @self._on(event_bus, ConversationMessageAddedEvent)
         def on_conversation_message_added(
@@ -1013,12 +1045,14 @@ class TraceCollectionListener(BaseEventListener):
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
+                "task_prompt": event.task_prompt,
             }
         if event_type == "agent_execution_completed":
             return {
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
+                "output": event.output,
             }
         if event_type == "llm_call_started":
             event_data = safe_serialize_to_dict(event)

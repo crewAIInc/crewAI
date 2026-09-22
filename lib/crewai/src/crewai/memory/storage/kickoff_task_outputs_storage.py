@@ -1,3 +1,4 @@
+from contextlib import closing
 import json
 import logging
 import os
@@ -40,7 +41,7 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("PRAGMA journal_mode=WAL")
                     cursor = conn.cursor()
                     cursor.execute(
@@ -97,7 +98,7 @@ class KickoffTaskOutputsSQLiteStorage:
         inputs = inputs or {}
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("BEGIN TRANSACTION")
                     cursor = conn.cursor()
                     cursor.execute(
@@ -142,7 +143,7 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("BEGIN TRANSACTION")
                     cursor = conn.cursor()
 
@@ -183,7 +184,7 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If loading task outputs fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path, timeout=30) as conn:
+            with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                 cursor = conn.cursor()
                 cursor.execute("""
                 SELECT task_id, task_key, expected_output, output, task_index, inputs, was_replayed, timestamp
@@ -224,7 +225,7 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         try:
             with store_lock(self._lock_name):
-                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
                     conn.execute("BEGIN TRANSACTION")
                     cursor = conn.cursor()
                     cursor.execute("DELETE FROM latest_kickoff_task_outputs")

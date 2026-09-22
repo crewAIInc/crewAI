@@ -2,6 +2,7 @@
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -41,6 +42,8 @@ pytestmark = pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$"])
 
 @pytest.fixture(autouse=True)
 def tracing_environment(monkeypatch):
+    # Keep viewer URLs on one line when asserting their literal output.
+    monkeypatch.setenv("COLUMNS", "240")
     monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
     for name in (
@@ -82,6 +85,8 @@ def collector(monkeypatch):
                     ).isoformat(),
                     **state.grant_override,
                 }
+                if not payload.get("include_trace_url"):
+                    response.pop("trace_url", None)
                 encoded = json.dumps(response).encode()
             else:
                 state.batches.append(
@@ -126,6 +131,241 @@ def record(session, name="execute flow"):
     ).end()
 
 
+@pytest.fixture
+def recorded_runs(monkeypatch, tmp_path):
+    """Recording on, into tmp_path (the suite's CREWAI_TESTING turns it off)."""
+    from crewai.telemetry.tracing import last_run
+
+    monkeypatch.setattr(last_run, "project_dir", lambda: tmp_path)
+    monkeypatch.setattr(last_run, "recording_enabled", lambda: True)
+    return tmp_path
+
+
+def _last_run(directory):
+    from crewai.telemetry.tracing import last_run
+
+    return last_run.read_last_run(directory)
+
+
+@pytest.mark.parametrize(
+    ("authenticated", "approved", "status", "suppression", "recorded"),
+    [
+        (True, True, 200, None, True),
+        (False, True, 200, None, True),
+        (False, False, 200, None, False),
+        (True, True, 401, None, False),
+        (False, True, 401, None, False),
+        (True, True, 200, "messages", True),
+        (False, True, 200, "messages", True),
+        (True, True, 200, "tui", True),
+        (False, True, 200, "tui", True),
+    ],
+)
+def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recorded(
+    collector,
+    recorded_runs,
+    monkeypatch,
+    capsys,
+    authenticated,
+    approved,
+    status,
+    suppression,
+    recorded,
+):
+    from crewai.events.listeners.tracing.utils import (
+        set_suppress_tracing_messages,
+        set_tui_mode,
+    )
+    from crewai.execution import begin_execution, end_execution, get_execution_uuid
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    url = collector.url + "/crewai_plus/otel_traces/run?access_code=secret&x=[value]"
+    collector.grant_override = {"trace_url": url}
+    collector.export_status = status
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    seen = {}
+
+    def run():
+        if suppression == "messages":
+            set_suppress_tracing_messages(True)
+        elif suppression == "tui":
+            set_tui_mode(True)
+        with trace_consent(lambda: approved):
+            token = begin_execution(tracing=True)
+            try:
+                seen["uuid"] = get_execution_uuid()
+                session = get_trace_session()
+                record(session)
+                nested = begin_execution(tracing=True)
+                end_execution(nested)
+            finally:
+                end_execution(token)
+
+    copy_context().run(run)
+    output = capsys.readouterr().out
+    # The id is internal — `crewai eval` reads it from the record — so it is never
+    # printed, nor is the old "Traces exported" panel around it.
+    assert seen["uuid"] not in output
+    assert "Execution trace ID:" not in output and "Traces exported" not in output
+    # The viewer link IS shown, once, for whoever wants to look at the run: only for
+    # a run that was exported whole, and not where tracing messages are suppressed.
+    shown = recorded and suppression is None
+    assert ("View traces:" in output) == shown
+    assert (url in output.replace("\n", "")) == shown
+    assert len(collector.batches) == int(authenticated or approved)
+    # A run whose spans reached Wharf is recorded for `crewai eval`, silently,
+    # in the TUI and under message suppression too; a failed export is not.
+    written = _last_run(recorded_runs)
+    if recorded:
+        assert written is not None
+        assert written["execution_id"] == seen["uuid"]
+        assert written["tier"] == ("authenticated" if authenticated else "ephemeral")
+        assert written["started_at"] and written["finished_at"] and written["recorded_at"]
+        assert written["amp_base_url"] == collector.url
+    else:
+        assert written is None
+
+
+@pytest.mark.parametrize("first_status", [200, 401])
+def test_a_deferred_run_is_recorded_once_at_finalization_and_a_failed_export_never(
+    collector, recorded_runs, monkeypatch, capsys, first_status
+):
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    collector.export_status = first_status
+    token = begin_execution(tracing=True)
+    try:
+        session = get_trace_session()
+        record(session)
+        session.flush()
+    finally:
+        lifetime = end_execution(token, defer=True)
+    assert _last_run(recorded_runs) is None  # not finished yet
+
+    collector.export_status = 200
+    token = begin_execution(tracing=True, trace_session=lifetime)
+    try:
+        record(get_trace_session())
+    finally:
+        end_execution(token)
+    lifetime.finish()
+    assert capsys.readouterr().out == ""  # this grant carries no viewer URL, so there is nothing to show
+    # A run one of whose exports failed is never recorded: the grader could not read it whole.
+    assert (_last_run(recorded_runs) is not None) == (first_status == 200)
+
+
+@pytest.mark.parametrize("credential", [None, "pat"])
+def test_a_refreshed_grant_still_records_the_run_once(
+    collector, recorded_runs, monkeypatch, capsys, credential
+):
+    from crewai.telemetry.tracing import last_run
+
+    writes = []
+    real_record = last_run.record_last_run
+    monkeypatch.setattr(
+        last_run,
+        "record_last_run",
+        lambda **fields: (writes.append(fields["execution_id"]), real_record(**fields))[1],
+    )
+    collector.grant_override = {"trace_url": collector.url + "/crewai_plus/otel_traces/original"}
+    client = TraceGrantClient(credential)
+    grant = replace(
+        client.create(str(uuid4())),
+        expires_at=datetime.now(timezone.utc) + timedelta(seconds=1),
+    )
+    collector.grant_override = {}
+    exporter = GrantSpanExporter(client, grant)
+    session = TraceSession(grant.execution_uuid, [exporter])
+    try:
+        record(session)
+    finally:
+        session.shutdown()
+    exporter.record_export()
+    exporter.record_export()
+    assert writes == [grant.execution_uuid]  # written once, however often the exporter is told the run ended
+    shown = capsys.readouterr().out
+    assert shown.count("View traces:") == 1  # and the link with it, once
+    assert grant.execution_uuid not in shown
+    written = _last_run(recorded_runs)
+    assert written is not None and written["execution_id"] == grant.execution_uuid
+    assert written["tier"] == ("authenticated" if credential else "ephemeral")
+    assert len(collector.grants) == 2
+    assert all(
+        payload["include_trace_url"] is True for _, _, payload in collector.grants
+    )
+
+
+def test_the_recorded_window_is_the_first_start_and_last_end_across_batches(
+    collector, recorded_runs
+):
+    """Batches reach the exporter in any order; the record spans them all."""
+    from crewai.telemetry.tracing import last_run
+
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    tracer = provider.get_tracer("window")
+    second = 1_000_000_000
+    base = 1_700_000_000 * second
+    for name, start, end in (("late", 10, 12), ("early", 0, 5), ("middle", 3, 9)):
+        tracer.start_span(name, start_time=base + start * second).end(end_time=base + end * second)
+    provider.shutdown()
+    by_name = {span.name: span for span in memory.get_finished_spans()}
+    client = TraceGrantClient(None)
+    exporter = GrantSpanExporter(client, client.create(str(uuid4())))
+    try:
+        assert exporter.export([by_name["late"]]) == SpanExportResult.SUCCESS
+        assert exporter.export([by_name["early"], by_name["middle"]]) == SpanExportResult.SUCCESS
+    finally:
+        exporter.shutdown()
+    exporter.record_export()
+    written = _last_run(recorded_runs)
+    assert written is not None
+    assert written["started_at"] == last_run._iso(base)
+    assert written["finished_at"] == last_run._iso(base + 12 * second)
+
+
+def test_a_truncated_ephemeral_trace_is_uploaded_but_not_recorded(
+    collector, recorded_runs, monkeypatch
+):
+    """The buffer dropped spans at its cap: the grader could not read the run whole."""
+    monkeypatch.setenv("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", "1")
+    buffer = EphemeralSpanBuffer()
+    monkeypatch.setattr(ephemeral, "EphemeralSpanBuffer", lambda: buffer)
+    with trace_consent(lambda: True), ephemeral_tracing(str(uuid4())) as session:
+        record(session, "first")
+        record(session, "second")
+    assert buffer._dropped == 1
+    assert len(collector.batches) == 1  # what survived was still shared
+    assert _last_run(recorded_runs) is None
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+def test_an_export_without_a_viewer_url_is_recorded_all_the_same(
+    collector, recorded_runs, monkeypatch, capsys, authenticated
+):
+    from crewai.execution import begin_execution, end_execution, get_execution_uuid
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    with trace_consent(lambda: True):
+        token = begin_execution(tracing=True)
+        try:
+            execution_uuid = get_execution_uuid()
+            record(get_trace_session())
+        finally:
+            end_execution(token)
+    # AMP granted no viewer URL, so there is no link to show — and never the id.
+    assert capsys.readouterr().out == ""
+    written = _last_run(recorded_runs)
+    assert written is not None and written["execution_id"] == execution_uuid
+    assert len(collector.batches) == 1
+
+
 def test_credential_precedence_and_missing_login(monkeypatch):
     monkeypatch.setenv("CREWAI_USER_PAT", "pat")
     monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "integration")
@@ -155,7 +395,7 @@ def test_authenticated_spans_go_directly_to_collector(collector, credential):
     assert len(collector.grants) == 1
     auth, _, payload = collector.grants[0]
     assert auth == f"Bearer {credential}"
-    assert payload == {"execution_uuid": execution_uuid}
+    assert payload == {"execution_uuid": execution_uuid, "include_trace_url": True}
     assert len(collector.batches) == 1
     bearer, batch = collector.batches[0]
     assert bearer == "Bearer grant-1"
@@ -172,6 +412,41 @@ def test_invalid_credentials_do_not_request_anonymous_grants(collector):
     assert error.value.status_code == 401
     assert len(collector.grants) == 1 and not collector.batches
     assert collector.grants[0][0] == "Bearer invalid"
+
+
+@pytest.mark.parametrize("credential", [None, "pat"])
+def test_grant_preserves_optional_viewer_url_without_exposing_it_in_repr(
+    collector, credential
+):
+    client = TraceGrantClient(credential)
+    assert client.create(str(uuid4())).trace_url is None
+    url = collector.url + "/crewai_plus/ephemeral_trace_batches/run?access_code=private"
+    collector.grant_override = {"trace_url": url}
+    grant = client.create(str(uuid4()))
+    assert grant.trace_url == url
+    assert url not in repr(grant) and "private" not in repr(grant)
+    assert grant.token not in repr(grant)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        "",
+        42,
+        {},
+        "/relative",
+        "javascript:alert(1)",
+        "https://unrelated.example/trace",
+        "http://[invalid/trace",
+        "http://user:secret@127.0.0.1/trace",
+        "\n",
+        "\x1b[2J",
+    ],
+)
+def test_unusable_optional_viewer_url_does_not_break_grant(collector, value):
+    collector.grant_override = {"trace_url": value}
+    assert TraceGrantClient("pat").create(str(uuid4())).trace_url is None
 
 
 @pytest.mark.parametrize(
@@ -224,7 +499,8 @@ def test_anonymous_grant_omits_saved_organization_and_rejects_wrong_tier(collect
     client.create(str(uuid4()))
     auth, headers, payload = collector.grants[0]
     assert auth is None and "X-Crewai-Organization-Id" not in headers
-    assert set(payload) == {"execution_uuid"}
+    assert set(payload) == {"execution_uuid", "include_trace_url"}
+    assert payload["include_trace_url"] is True
     collector.grant_override = {"tier": "authenticated"}
     with pytest.raises(TraceGrantError):
         client.create(str(uuid4()))
@@ -281,8 +557,8 @@ def test_expired_grant_is_renewed_for_same_execution(collector):
     record(session)
     session.shutdown()
     assert [payload for _, _, payload in collector.grants] == [
-        {"execution_uuid": execution_uuid},
-        {"execution_uuid": execution_uuid},
+        {"execution_uuid": execution_uuid, "include_trace_url": True},
+        {"execution_uuid": execution_uuid, "include_trace_url": True},
     ]
     assert collector.batches[0][0] == "Bearer grant-2"
 
