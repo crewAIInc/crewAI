@@ -108,9 +108,25 @@ def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkey
     eval_module.eval_crew()
 
     out = capsys.readouterr().out
-    assert "goal 5/5" in out and "tasks 3/5" in out and "agents 4/5" in out
-    assert "tools not measured" in out
+    # The whole segment, in order: asserting the parts one by one would pass
+    # even if this path sorted them or printed its own list.
+    assert "Goal gate: PASSED · goal 5/5 · tasks 3/5 · agents 4/5 · tools not measured" in out
     assert "quality" not in out and "process" not in out
+
+
+def test_an_evaluation_that_graded_nothing_prints_the_gate_alone(project, monkeypatch, capsys):
+    # A well-formed verdict may carry no grades at all, and a fixed list of
+    # areas used to hide that: there was always something after the separator.
+    directory, _ = project
+    record_last_run(directory)
+    graded = done(grades={})
+    install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), graded]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "Goal gate: PASSED" in out
+    assert "Goal gate: PASSED ·" not in out  # no separator with nothing after it
 
 
 def test_run_names_another_execution_and_an_anonymous_caller_sends_no_token(project, monkeypatch, capsys):

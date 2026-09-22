@@ -333,7 +333,13 @@ def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
         f"{area} {grade}/5" if grade is not None else f"{area} not measured"
         for area, grade in grades.items()
     ]
-    console.print(f"Goal gate: [{style}]{gate}[/{style}] · " + " · ".join(parts))
+    # `_well_formed_verdict` accepts an empty `grades`, and a fixed list of
+    # areas used to hide that: there was always something after the separator.
+    # An evaluation that graded nothing prints the gate alone.
+    line = f"Goal gate: [{style}]{gate}[/{style}]"
+    if parts:
+        line += " · " + " · ".join(parts)
+    console.print(line)
     if url:
         console.print(f"Full report: {url}")
 
