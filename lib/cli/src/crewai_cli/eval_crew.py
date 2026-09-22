@@ -79,7 +79,7 @@ def eval_crew(run_id: str | None = None) -> None:
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
         _open(url)
 
-    finished = _wait(client, str(started["id"]), url)
+    finished = _wait(client, started["id"], url)
     _print_verdict(finished, url)
     if finished.get("status") != "done":
         raise SystemExit(1)
@@ -252,7 +252,22 @@ def _start_evaluation(client: PlusAPI, execution_id: str) -> dict[str, Any]:
         _fail(f"Could not reach AMP to start the evaluation: {error}")
     if response.status_code in (200, 202):
         payload = _payload(response)
-        if payload and payload.get("id"):
+        # The id is what every later call is made with, so a missing or
+        # non-string one is a protocol error and not something to carry on
+        # with. The url is only ever shown and opened, so a malformed one
+        # costs the link and nothing else: the evaluation is already running
+        # and its verdict is what the user came for.
+        if payload and isinstance(payload.get("id"), str) and payload["id"]:
+            if not isinstance(payload.get("url"), str):
+                if payload.get("url") is not None:
+                    console.print(
+                        Text(
+                            "AMP answered with a report url that is not a string; "
+                            "the link is unavailable for this run."
+                        ),
+                        style="yellow",
+                    )
+                payload["url"] = None
             return payload
         _fail(f"AMP answered without an evaluation id ({response.status_code}).")
     _refused(response, f"run {execution_id}")

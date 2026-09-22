@@ -147,6 +147,39 @@ def test_the_follow_link_cannot_be_retargeted_by_the_url_amp_sends(project, monk
     assert "[link=http://attacker.test/]" in out  # printed, not followed
 
 
+def test_a_url_that_is_not_a_string_costs_the_link_and_nothing_else(project, monkeypatch, capsys):
+    # Composing the line means appending the url rather than interpolating it,
+    # and `Text.append` wants a string. A malformed one must not become a
+    # traceback: the evaluation is already running and its verdict is what the
+    # user came for, so the link is dropped and the run carries on.
+    directory, opened = project
+    record_last_run(directory)
+    created = httpx.Response(202, json={"id": "ev-1", "url": ["not", "a", "string"], "status": "queued"})
+    install(monkeypatch, FakeAMP(create=created, statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "report url that is not a string" in out  # said, not swallowed
+    assert "Goal gate: PASSED" in out  # and the verdict still arrives
+    assert opened == []  # nothing was handed to a browser
+    assert "Follow it at" not in out
+
+
+def test_an_id_that_is_not_a_string_is_a_protocol_error(project, monkeypatch, capsys):
+    # The id is what every later call is made with, so there is nothing to
+    # carry on with — unlike the url, which is only ever shown.
+    directory, _ = project
+    record_last_run(directory)
+    created = httpx.Response(202, json={"id": {"oops": 1}, "url": URL, "status": "queued"})
+    install(monkeypatch, FakeAMP(create=created))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    assert "without an evaluation id" in capsys.readouterr().out
+
+
 def test_amps_refusal_is_printed_literally_too(project, monkeypatch, capsys):
     # The same defect on the refusal path: AMP's own sentence reaches a Console.
     directory, _ = project
