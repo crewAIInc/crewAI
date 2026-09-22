@@ -107,29 +107,30 @@ def should_suppress_tracing_messages() -> bool:
 
 
 def tracing_asked_for() -> bool:
-    """True when a PERSON turned tracing on for this run — `CREWAI_TRACING_ENABLED`,
-    or `tracing=True` on the crew or flow in this context — and is there to have
-    meant it.
+    """True when somebody turned tracing on for this run — `CREWAI_TRACING_ENABLED`,
+    or `tracing=True` on the crew or flow in this context.
 
     Turning tracing on is the answer to "may we collect this?"; asking again when
     the run ends is asking the same question twice. First-time auto-collection is
     the case that still has to ask, because nobody asked for it.
 
-    Where the prompt could not be shown, there is nothing to answer. A copied
-    `.env` that reaches CI, a container or a server carries the variable without
-    carrying the person; a suite under test, and a host that asked for tracing
-    messages to be suppressed, are the same case. An ephemeral run has always
-    failed closed in all three rather than upload what nobody approved in front
-    of a screen, and it still does — this turns a second question into an
-    answer, and changes nothing about where the first one is asked.
+    That holds where no prompt could be shown too — CI, a container, an agent, a
+    host that suppressed tracing messages. There the prompt returns False rather
+    than block for twenty seconds with nobody to answer it, and for an ephemeral
+    run that False was a silent no: the spans of a run whose tracing the user had
+    explicitly turned on were buffered and then dropped without a word. The
+    switch is the answer, so it is taken as one. A host that must refuse keeps
+    the say through its own consent callback, which is consulted first.
+
+    A suite under test is the one exception: a test that sets the variable is
+    not somebody asking to upload.
     """
-    if not (
-        is_tracing_enabled_in_context()
-        or os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1")
-    ):
+    if _is_test_environment():
         return False
 
-    return _prompt_can_be_shown()
+    return is_tracing_enabled_in_context() or os.getenv(
+        "CREWAI_TRACING_ENABLED", ""
+    ).lower() in ("true", "1")
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
@@ -520,8 +521,8 @@ def _prompt_can_be_shown() -> bool:
     tracing messages to be suppressed, and a process with no terminal (CI, API
     servers, Docker) where a prompt would block for twenty seconds with nobody
     to answer it. `prompt_user_for_trace_viewing` returns False in each, which
-    is what keeps an unapproved ephemeral trace on the machine — and
-    `tracing_asked_for` asks the same question, so the two cannot drift apart.
+    keeps a trace nobody asked for on the machine; a run whose tracing was
+    turned on never reaches the prompt (`tracing_asked_for`).
     """
     if _is_test_environment():
         return False

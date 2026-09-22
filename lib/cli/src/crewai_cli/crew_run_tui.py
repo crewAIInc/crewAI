@@ -1235,21 +1235,17 @@ FooterKey .footer-key--key {
         this worker thread — and a flow never sets it at all. So the declaration
         is read off the object itself.
 
-        Only ONE of the helper's guards is dropped: it refuses while tracing
-        messages are suppressed, which this app does deliberately to keep
-        crewAI's console out of its own layout, and that guard is about a prompt
-        nobody would see. The others hold. A suite under test, or a TUI with no
-        interactive user behind it — embedded, redirected — has nobody whose yes
-        this could be, and gets the modal's own fail-closed answer instead.
+        The helper's one guard holds: a suite under test is nobody asking to
+        upload. Neither suppressed tracing messages (which this app sets to keep
+        crewAI's console out of its layout) nor a TUI with no interactive user
+        behind it changes the answer — the switch is the yes whether or not a
+        prompt could have been shown.
         """
         import os
 
-        from crewai.events.listeners.tracing.utils import (
-            _is_interactive_terminal,
-            _is_test_environment,
-        )
+        from crewai.events.listeners.tracing.utils import _is_test_environment
 
-        if _is_test_environment() or not _is_interactive_terminal():
+        if _is_test_environment():
             return False
 
         if os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1"):

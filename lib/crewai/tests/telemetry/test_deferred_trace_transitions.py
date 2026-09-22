@@ -122,8 +122,8 @@ def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
     """Turning tracing on IS consent. The prompt at the end of a run is for the
     first-time collection nobody asked for — not for a user who said collect it."""
     buffers, grants, recorders, prompt = traces
-    # the rule only holds where a prompt could have been shown, and a suite is
-    # one of the places it could not — so say a person is here
+    # a suite under test is the one place the switch is not an answer — so say
+    # this is not one (and that somebody is at a terminal, the ordinary case)
     utils = "crewai.events.listeners.tracing.utils"
     monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
     monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
@@ -145,26 +145,28 @@ def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
     assert grants and recorders         # and the trace went where it was told to go
 
 
-@pytest.mark.parametrize(
-    "closed", ["no terminal", "under test", "messages suppressed"]
-)
-def test_where_the_prompt_could_not_be_shown_nothing_is_uploaded(
-    traces, monkeypatch, closed
+@pytest.mark.parametrize("how", ["env", "flag"])
+@pytest.mark.parametrize("closed", ["no terminal", "messages suppressed"])
+def test_where_no_prompt_can_be_shown_the_switch_is_the_answer(
+    traces, monkeypatch, closed, how
 ):
-    """The switch answers a question; where the question could not have been
-    put to anybody, there is nothing to answer. A copied `.env` reaching CI
-    carries the variable, not the person — and a suite under test, and a host
-    that suppressed tracing messages, are the same case. All three have always
-    failed closed, and still do."""
+    """CI, a container, an agent: nobody is there to answer the prompt, and it
+    answers False rather than block. For an ephemeral run that False was a
+    silent no — the spans of a run whose tracing the user had explicitly turned
+    on were buffered and then dropped without a word. The switch is the answer
+    here too, whether it was the variable or `tracing=True` in code."""
     buffers, grants, recorders, prompt = traces
-    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
     utils = "crewai.events.listeners.tracing.utils"
     monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: closed != "no terminal")
-    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: closed == "under test")
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
     monkeypatch.setattr(
         f"{utils}.should_suppress_tracing_messages",
         lambda: closed == "messages suppressed",
     )
+    if how == "env":
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    else:  # the flag alone must carry it, or this case proves nothing
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     prompt.return_value = False  # what the prompt answers where nobody can answer
 
     class Conversation(Flow):
@@ -172,10 +174,58 @@ def test_where_the_prompt_could_not_be_shown_nothing_is_uploaded(
         def turn(self):
             return "said in a container"
 
-    assert Conversation(tracing=True).kickoff() == "said in a container"
+    flow = Conversation(tracing=(how == "flag") or None)
+    assert flow.kickoff() == "said in a container"
+    assert crewai_event_bus.flush()
+
+    prompt.assert_not_called()
+    assert grants and recorders  # the trace went where it was told to go
+
+
+def test_under_test_the_switch_uploads_nothing(traces, monkeypatch):
+    """A suite that sets the variable is not somebody asking to upload."""
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: True)
+    prompt.return_value = False
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "said under test"
+
+    assert Conversation(tracing=True).kickoff() == "said under test"
     assert crewai_event_bus.flush()
 
     assert not grants and not recorders  # nothing left the machine
+
+
+def test_tracing_nobody_asked_for_is_still_a_no_without_a_terminal(
+    traces, monkeypatch
+):
+    """The first-time collection turns tracing on by itself; nobody asked, so
+    with nobody to answer, nothing is uploaded."""
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
+    monkeypatch.setattr(f"{utils}.is_tracing_enabled_in_context", lambda: False)
+    written = Mock()
+    monkeypatch.setattr("crewai.telemetry.tracing.ephemeral.update_user_data", written)
+    prompt.return_value = False
+
+    buffer = EphemeralSpanBuffer()
+    buffer._spans.append((object(), 1))
+    buffer.share("run-nobody-asked-for", first_time=True)
+
+    prompt.assert_called_once()
+    written.assert_called_once_with(
+        {"first_execution_done": True, "trace_consent": False}
+    )
+    assert not grants and not recorders
 
 
 def test_enabling_deferred_trace_opens_a_new_flow_root(traces):

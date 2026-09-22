@@ -403,12 +403,13 @@ def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, why) -> None
     assert "not traced" in notices[0]
 
 
-def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
+def test_tracing_asked_for_reads_the_declaration_and_keeps_the_test_guard(
     monkeypatch,
 ) -> None:
     """The ContextVar is set where the crew is CONSTRUCTED, not on the worker
-    thread that later asks — but an app with nobody in front of it is still
-    nobody's yes."""
+    thread that later asks — so the declaration is read off the object. With no
+    interactive user behind the app the declaration is still the yes; under test
+    it is nobody's."""
     utils = "crewai.events.listeners.tracing.utils"
     monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
     monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
@@ -421,11 +422,11 @@ def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
     app._crew = SimpleNamespace(tracing=None)
     assert app._tracing_was_asked_for() is False
 
-    # embedded, redirected, or under test: the declaration is not a person
+    # embedded or redirected: the switch still answers
     app._crew = SimpleNamespace(tracing=True)
     monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
-    assert app._tracing_was_asked_for() is False
-    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+    assert app._tracing_was_asked_for() is True
+    # under test: it does not
     monkeypatch.setattr(f"{utils}._is_test_environment", lambda: True)
     assert app._tracing_was_asked_for() is False
 

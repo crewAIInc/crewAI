@@ -129,7 +129,7 @@ class EphemeralSpanBuffer(SpanExporter):
             # an embedder may answer no for reasons of its own. What it replaces
             # is the PROMPT, and a prompt is what a user who turned tracing on
             # has already answered: CREWAI_TRACING_ENABLED, or tracing=True, is
-            # the yes. (A callback that opens its own prompt — the TUI's modal —
+            # the yes — with a terminal or without one. (A callback that opens its own prompt — the TUI's modal —
             # asks `tracing_asked_for()` for itself.)
             consent = self._consent or _trace_consent.get()
             approved = (
