@@ -17,7 +17,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-09-15T05:55:17.52834Z"
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -129,6 +129,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ca/14/787e5498cd062640f0f3d92ef4ae4063174f76f9afd29d13fc52a319daae/accelerate-1.13.0.tar.gz", hash = "sha256:d631b4e0f5b3de4aff2d7e9e6857d164810dfc3237d54d017f075122d057b236", size = 402835, upload-time = "2026-03-04T19:34:12.359Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/46/02ac5e262d4af18054b3e922b2baedbb2a03289ee792162de60a865defc5/accelerate-1.13.0-py3-none-any.whl", hash = "sha256:cf1a3efb96c18f7b152eb0fa7490f3710b19c3f395699358f08decca2b8b62e0", size = 383744, upload-time = "2026-03-04T19:34:10.313Z" },
+]
+
+[[package]]
+name = "adanos"
+version = "2.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "httpx" },
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f3/7b/eebe00e923a4019e526dbc4133c41a64615bf02220f26108c33a4070c7d6/adanos-2.7.0.tar.gz", hash = "sha256:803e7eb0c377d6ed110efb5473c6002ef4c19eac9abd0fb3becc493ef8a2c606", size = 114903, upload-time = "2026-08-09T08:08:29.003Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/23/037b5c7f9c067cf0b273d7e5bd2de68c340b60b1e4856ef9ca0d3a5a4f51/adanos-2.7.0-py3-none-any.whl", hash = "sha256:3f570ad9d489981e34f04cfe4f5c15db375d618be8247bc8fecab5b42fdb86dd", size = 289791, upload-time = "2026-08-09T08:08:27.693Z" },
 ]
 
 [[package]]
@@ -1725,6 +1739,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+adanos = [
+    { name = "adanos" },
+]
 apify = [
     { name = "langchain-apify" },
 ]
@@ -1853,6 +1870,7 @@ xml = [
 
 [package.metadata]
 requires-dist = [
+    { name = "adanos", marker = "extra == 'adanos'", specifier = ">=2.7.0,<3" },
     { name = "beautifulsoup4", specifier = ">=4.13.4,<5" },
     { name = "beautifulsoup4", marker = "extra == 'beautifulsoup4'", specifier = ">=4.12.3" },
     { name = "beautifulsoup4", marker = "extra == 'bedrock'", specifier = ">=4.13.4" },
@@ -1911,7 +1929,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["adanos", "apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"

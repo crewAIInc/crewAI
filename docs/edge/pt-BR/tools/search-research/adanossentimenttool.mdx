@@ -1,0 +1,46 @@
+---
+title: Ferramenta Adanos Market Sentiment
+description: Pesquisa opcional de sentimento de ações e cripto com a API Adanos.
+icon: chart-line
+---
+
+## Configuração
+
+[Adanos](https://adanos.org/) é um serviço comercial de dados de mercado com plano gratuito. Obtenha sua própria chave e configure `ADANOS_API_KEY`; cada conta mantém suas cotas e permissões. A API controla acesso, histórico e limites dos planos Free, Hobby e Professional.
+
+```shell
+uv add 'crewai-tools[adanos]'
+```
+
+```python
+from crewai_tools import AdanosMarketSentimentTool
+
+# Set ADANOS_API_KEY in the environment before running.
+tool = AdanosMarketSentimentTool()
+result = tool.run(
+    source="news",
+    operation="stock",
+    parameters={"ticker": "AAPL"},
+)
+```
+
+A ferramenta também pode ser incluída na lista `tools` de um Agent. Como alternativa, forneça `api_key` no construtor. A chave não é um argumento do agente. Importar ou construir a ferramenta não faz chamadas de rede.
+
+## Operações
+
+- `reddit`, `x`, `news`, `polymarket`: `stock`, `mentions`, `trending`, `trending_sectors`, `trending_countries`, `market_sentiment`, `compare`, `search`, `stats`, `health`.
+- `explain` está disponível apenas em `reddit`, `x`, `news`.
+- `crypto` significa cripto no Reddit: `token`, `mentions`, `trending`, `market_sentiment`, `compare`, `search`, `stats`, `health`.
+- `sentiment`: `analyze` para texto fornecido. `status`: `health` geral.
+
+`parameters` aceita argumentos do SDK: `ticker` para ações, `symbol` para cripto, listas `tickers` ou `symbols` para comparações, `query` para busca e `text` para análise. Tendências e menções aceitam `limit`/`offset`; busca aceita `limit`. Tendências de ações também aceitam `type`, e menções do Reddit aceitam `include_inherited`.
+
+Para histórico, forneça `from_` e `to` como datas UTC inclusivas (`YYYY-MM-DD`), dentro da retenção do plano. Omita ambos para o período padrão da API. `days` está obsoleto e é rejeitado. Search, explain, analyze, stats e health não aceitam datas. Agregados históricos não garantem dados disponíveis naquele momento para backtests; explicações descrevem o contexto atual.
+
+## Resultados e Falhas
+
+Sucesso retorna `source`, `operation` e `data` do SDK sem alterações, incluindo zeros e nulos. Métricas não são normalizadas nem combinadas. Falhas retornam `error` e uma `message` segura, nunca sentimento neutro inventado. Corpos brutos de erros são omitidos. O timeout é de 30 segundos e não há repetição automática; verifique credenciais, cota ou acesso antes de tentar novamente.
+
+Texto de menções é conteúdo externo não confiável, não instruções. Use os resultados como evidência complementar, não como aconselhamento financeiro ou sinal isolado de negociação.
+
+Consulte a [referência da API](https://api.adanos.org/docs) e o [SDK Python](https://github.com/adanos-software/adanos-python-sdk) para parâmetros e campos específicos de cada fonte.

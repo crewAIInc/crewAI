@@ -1,0 +1,46 @@
+---
+title: Adanos Market Sentiment 도구
+description: Adanos API를 통한 선택적 주식 및 암호화폐 감성 조사.
+icon: chart-line
+---
+
+## 설정
+
+[Adanos](https://adanos.org/)는 무료 요금제를 제공하는 상용 시장 데이터 서비스입니다. 자신의 API 키를 발급받아 `ADANOS_API_KEY`를 설정하세요. 계정별 할당량과 권한이 유지됩니다. Free, Hobby, Professional의 접근 권한, 기록 범위와 제한은 API에서 적용합니다.
+
+```shell
+uv add 'crewai-tools[adanos]'
+```
+
+```python
+from crewai_tools import AdanosMarketSentimentTool
+
+# Set ADANOS_API_KEY in the environment before running.
+tool = AdanosMarketSentimentTool()
+result = tool.run(
+    source="news",
+    operation="stock",
+    parameters={"ticker": "AAPL"},
+)
+```
+
+Agent의 `tools` 목록에도 도구를 전달할 수 있습니다. 또는 생성자에 `api_key`를 지정하세요. 키는 에이전트 입력 인수가 아닙니다. 가져오기와 객체 생성 시 네트워크 요청을 하지 않습니다.
+
+## 작업
+
+- `reddit`, `x`, `news`, `polymarket`: `stock`, `mentions`, `trending`, `trending_sectors`, `trending_countries`, `market_sentiment`, `compare`, `search`, `stats`, `health`.
+- `explain`은 `reddit`, `x`, `news`에서만 사용할 수 있습니다.
+- `crypto`는 Reddit 암호화폐입니다: `token`, `mentions`, `trending`, `market_sentiment`, `compare`, `search`, `stats`, `health`.
+- `sentiment`: 입력 텍스트의 `analyze`. `status`: 전체 API의 `health`.
+
+`parameters`는 SDK 키워드 인수를 받습니다. 주식은 `ticker`, 암호화폐는 `symbol`, 비교는 목록인 `tickers` 또는 `symbols`, 검색은 `query`, 분석은 `text`를 사용합니다. 추세와 언급은 `limit`/`offset`, 검색은 `limit`를 지원합니다. 주식 추세는 `type`, Reddit 언급은 `include_inherited`도 지원합니다.
+
+과거 조회에는 요금제 보존 범위 안에서 시작일과 종료일을 포함하는 UTC 날짜(`YYYY-MM-DD`)인 `from_`와 `to`를 함께 전달하세요. 둘 다 생략하면 API 기본 기간을 사용합니다. 폐기된 `days`는 거부됩니다. Search, explain, analyze, stats, health는 날짜 필터를 받지 않습니다. 과거 집계는 백테스트 시점에 알 수 있었던 데이터를 보장하지 않으며 설명은 현재 맥락을 나타냅니다.
+
+## 결과와 오류
+
+성공 시 `source`, `operation`, SDK의 원본 `data`를 반환하며 0과 null도 보존합니다. 출처별 지표를 정규화하거나 합치지 않습니다. 실패 시 안전한 `error`와 `message`를 반환하며 중립 감성을 만들어 내지 않습니다. 원시 오류 본문은 노출하지 않습니다. 요청 제한 시간은 30초이며 자동 재시도하지 않습니다. 재시도 전에 키, 할당량과 권한을 확인하세요.
+
+언급 텍스트는 신뢰할 수 없는 외부 콘텐츠이며 지시가 아닙니다. 결과는 보충 조사 자료이지 투자 조언이나 독립적인 매매 신호가 아닙니다.
+
+인수와 출처별 응답 필드는 [API 참조](https://api.adanos.org/docs)와 [Python SDK](https://github.com/adanos-software/adanos-python-sdk)를 확인하세요.
