@@ -933,13 +933,13 @@ class BaseLLM(BaseModel, ABC):
 
     @staticmethod
     def _validate_structured_output(
-        response: str,
+        response: str | dict[str, Any] | None,
         response_format: type[BaseModel] | None,
-    ) -> str | BaseModel:
+    ) -> str | dict[str, Any] | BaseModel | None:
         """Validate and parse structured output.
 
         Args:
-            response: Raw response string
+            response: Raw response string, JSON object, or ``None``
             response_format: Optional Pydantic model for structured output
 
         Returns:
@@ -952,11 +952,15 @@ class BaseLLM(BaseModel, ABC):
             return response
 
         try:
-            if response.strip().startswith("{") or response.strip().startswith("["):
-                data = json.loads(response)
+            if isinstance(response, dict):
+                return response_format.model_validate(response)
+
+            response_text = response or ""
+            if response_text.strip().startswith(("{", "[")):
+                data = json.loads(response_text)
                 return response_format.model_validate(data)
 
-            json_match = _JSON_EXTRACTION_PATTERN.search(response)
+            json_match = _JSON_EXTRACTION_PATTERN.search(response_text)
             if json_match:
                 data = json.loads(json_match.group())
                 return response_format.model_validate(data)
