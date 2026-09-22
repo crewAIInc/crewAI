@@ -24,6 +24,7 @@ class FakeAMP:
     """A PlusAPI double: scripted answers, calls recorded."""
 
     def __init__(self, create=None, statuses=None):
+        """Initialize scripted responses and saved machine identity."""
         self.create = create if create is not None else httpx.Response(
             202, json={"id": "ev-1", "url": URL, "status": "queued"}
         )
@@ -192,6 +193,7 @@ def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(proje
 def test_an_untrusted_amp_gets_no_saved_organization_without_a_login(
     project, monkeypatch
 ):
+    """A logged-out client must not expose the saved organization UUID."""
     monkeypatch.setenv("CREWAI_PLUS_URL", "https://evil.example")
     monkeypatch.setattr(eval_module, "saved_login", lambda: None)
     amp = install(monkeypatch, FakeAMP())
