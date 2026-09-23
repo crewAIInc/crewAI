@@ -91,11 +91,19 @@ class PersistenceDecorator:
             RuntimeError: If state persistence fails
             AttributeError: If flow instance lacks required state attributes
         """
-        try:
-            state = getattr(flow_instance, "state", None)
-            if state is None:
-                raise ValueError("Flow instance has no state")
+        # Resolve "no state" before the ValueError remap below. Raising
+        # ValueError("Flow instance has no state") inside the try used to be
+        # caught by `except (TypeError, ValueError)` and re-raised as the
+        # id_missing message (#7220).
+        state = getattr(flow_instance, "state", None)
+        if state is None:
+            error_msg = LOG_MESSAGES["state_missing"]
+            if verbose:
+                PRINTER.print(error_msg, color="red")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
+        try:
             flow_uuid: str | None = None
             if isinstance(state, dict):
                 flow_uuid = state.get("id")

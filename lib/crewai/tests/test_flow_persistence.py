@@ -619,3 +619,30 @@ def test_save_pending_feedback_complex_types(tmp_path):
     assert loaded_state["session_id"] == str(uid)
     assert set(loaded_state["categories"]) == {"ai", "agents"}
 
+def test_persist_state_none_reports_state_missing(tmp_path):
+    """None Flow.state must raise state_missing, not id_missing (#7220)."""
+    from types import SimpleNamespace
+
+    from crewai.flow.persistence.decorators import PersistenceDecorator
+
+    db_path = os.path.join(tmp_path, "none_state.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    flow_instance = SimpleNamespace(state=None)
+
+    with pytest.raises(ValueError, match="Flow instance has no state"):
+        PersistenceDecorator.persist_state(flow_instance, "some_method", persistence)
+
+
+def test_persist_state_missing_id_still_reports_id_missing(tmp_path):
+    """State present without id must still raise the id_missing message."""
+    from types import SimpleNamespace
+
+    from crewai.flow.persistence.decorators import PersistenceDecorator
+
+    db_path = os.path.join(tmp_path, "missing_id.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    flow_instance = SimpleNamespace(state={"message": "no-id"})
+
+    with pytest.raises(ValueError, match="Flow state must have an 'id' field"):
+        PersistenceDecorator.persist_state(flow_instance, "some_method", persistence)
+
