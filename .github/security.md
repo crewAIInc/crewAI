@@ -78,7 +78,8 @@ security issue in good faith and follows these rules:
   scanning against AMP, no spam.
 - No social engineering of CrewAI staff, customers, or vendors; no physical
   attempts against CrewAI property.
-- Report promptly through security@crewai.com and give us the agreed time to
+- Report promptly via private vulnerability reporting for this repository's
+  code, or security@crewai.com for other issues. Give us the agreed time to
   fix before disclosing publicly.
 
 Good-faith research within these rules is authorized access for the purposes
