@@ -812,6 +812,43 @@ def test_bedrock_stop_sequences_sent_to_api():
         assert call_kwargs["inferenceConfig"]["stopSequences"] == ["\nObservation:", "\nThought:"]
 
 
+@pytest.mark.parametrize(
+    "model",
+    [
+        "bedrock/us.openai.gpt-6-sol",
+        "bedrock/global.openai.gpt-6-luna",
+        "bedrock/openai.gpt-oss-120b-1:0",
+    ],
+)
+def test_bedrock_openai_models_do_not_send_stop_sequences(model):
+    """Test that OpenAI models on Bedrock get stop words client-side, not as stopSequences."""
+    llm = LLM(model=model)
+    llm.stop = ["\nObservation:"]
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.return_value = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'Thought: done\nObservation: extra'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 15
+            }
+        }
+
+        result = llm.call("Say hello in one word")
+
+        assert "stopSequences" not in mock_converse.call_args[1]["inferenceConfig"]
+        assert result == "Thought: done"
+
+    # Agent executors read this to fall back to client-side stop handling.
+    assert llm.supports_stop_words() is False
+
+
 # Agent Kickoff Structured Output Tests
 
 
