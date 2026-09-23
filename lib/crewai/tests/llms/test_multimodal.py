@@ -296,14 +296,19 @@ class TestBedrockMultimodal:
     @pytest.mark.parametrize(
         "model",
         [
+            "bedrock/openai.gpt-6-sol",
+            "bedrock/openai.gpt-6-luna",
+            "bedrock/openai.gpt-6-astra",
             "bedrock/us.openai.gpt-6-sol",
             "bedrock/us.openai.gpt-6-luna",
+            "bedrock/us.openai.gpt-6-astra",
             "bedrock/global.openai.gpt-6-sol",
             "bedrock/global.openai.gpt-6-luna",
+            "bedrock/global.openai.gpt-6-astra",
         ],
     )
     def test_supports_multimodal_openai_gpt_6(self, model: str) -> None:
-        """Test Bedrock OpenAI GPT-6 Sol/Luna support multimodal."""
+        """Test Bedrock OpenAI GPT-6 Sol/Luna/Astra support multimodal."""
         llm = LLM(model=model)
         assert llm.supports_multimodal() is True
 
