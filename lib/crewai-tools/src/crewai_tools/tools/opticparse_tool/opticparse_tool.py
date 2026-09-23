@@ -122,7 +122,9 @@ class OpticParseTool(BaseTool):
             data = resp.json()
             if isinstance(data, dict):
                 content = data.get("markdown") or data.get("extracted_data")
-                if content:
+                if content is not None:
+                    if isinstance(content, (dict, list)):
+                        return json.dumps(content, indent=2)
                     return str(content)
                 return json.dumps(data, indent=2)
             return json.dumps(data) if not isinstance(data, str) else data
