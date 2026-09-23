@@ -421,3 +421,21 @@ def test_check_index_exists_fail_global(tool_config):
     ):
         with pytest.raises(ValueError, match="Index test_index does not exist"):
             CouchbaseFTSVectorSearchTool(**tool_config)
+
+
+def test_bucket_check_propagates_non_missing_bucket_errors(mock_cluster, tool_config):
+    """A failed bucket check must not be reported as a missing bucket.
+
+    _check_bucket_exists answers "does this bucket exist", and it reaches the cluster to do it.
+    When that call fails for any other reason - a timeout, an authentication failure, an
+    unreachable node - the caller previously raised "Bucket ... does not exist. Please create the
+    bucket before searching.", which sends the user to create a bucket that is already there.
+    """
+
+    class TimeoutError_(Exception):
+        pass
+
+    mock_cluster.buckets().get_bucket.side_effect = TimeoutError_("unambiguous timeout")
+
+    with pytest.raises(TimeoutError_):
+        CouchbaseFTSVectorSearchTool(**tool_config)

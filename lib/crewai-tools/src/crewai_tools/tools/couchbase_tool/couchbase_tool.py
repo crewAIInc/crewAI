@@ -5,6 +5,9 @@ from typing import Any
 
 try:
     from couchbase.cluster import Cluster  # type: ignore[import-untyped]
+    from couchbase.exceptions import (  # type: ignore[import-untyped]
+        BucketNotFoundException,
+    )
     from couchbase.options import SearchOptions  # type: ignore[import-untyped]
     import couchbase.search as search  # type: ignore[import-untyped]
     from couchbase.vector_search import (  # type: ignore[import-untyped]
@@ -15,6 +18,7 @@ try:
     COUCHBASE_AVAILABLE = True
 except ImportError:
     COUCHBASE_AVAILABLE = False
+    BucketNotFoundException = Exception  # type: ignore[assignment,misc,unused-ignore]
     search = Any  # type: ignore[assignment,unused-ignore]
     Cluster = Any  # type: ignore[assignment,unused-ignore]
     SearchOptions = Any  # type: ignore[assignment,unused-ignore]
@@ -75,7 +79,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
         try:
             bucket_manager.get_bucket(self.bucket_name)
             return True
-        except Exception:
+        except BucketNotFoundException:
             return False
 
     def _check_scope_and_collection_exists(self) -> bool:
