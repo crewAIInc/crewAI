@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Optional, Type
 from urllib.parse import urlparse
@@ -110,6 +111,6 @@ class PhishVisionTool(BaseTool):
                 return "Error: Gateway redirected. Aborting to protect credentials."
             resp.raise_for_status()
             data = resp.json()
-            return str(data)
+            return json.dumps(data, indent=2)
         except Exception as e:
             return f"PhishVision execution error: {str(e)}"
