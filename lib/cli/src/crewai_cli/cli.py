@@ -682,6 +682,11 @@ def run(
 
 @crewai.command(name="eval")
 @click.option(
+    "--no-open",
+    is_flag=True,
+    help="Print the report URL without opening a browser.",
+)
+@click.option(
     "--run",
     "run_id",
     type=str,
@@ -692,9 +697,9 @@ def run(
         "crewAI recorded for the run."
     ),
 )
-def eval_command(run_id: str | None) -> None:
+def eval_command(run_id: str | None, no_open: bool) -> None:
     """Evaluate the last traced run through CrewAI AMP."""
-    eval_crew(run_id=run_id)
+    eval_crew(run_id=run_id, open_browser=not no_open)
 
 
 @crewai.command()

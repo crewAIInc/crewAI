@@ -95,6 +95,19 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
     assert "Goal gate: PASSED" in out and "goal 5/5" in out and "cost not measured" in out
 
 
+def test_eval_can_print_the_report_without_opening_a_browser(project, monkeypatch, capsys):
+    directory, opened = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew(open_browser=False)
+
+    assert opened == []
+    assert amp.calls == [("create", EXECUTION_ID), ("get", "ev-1")]
+    out = capsys.readouterr().out
+    assert URL in out and "Goal gate: PASSED" in out
+
+
 def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkeypatch, capsys):
     # The areas are the evaluator's to name. A client printing its own list
     # would drop the ones it had not heard of and invent "not measured" for
@@ -583,8 +596,17 @@ def test_the_cli_command_maps_to_the_implementation(monkeypatch):
 
     assert runner.invoke(eval_command, []).exit_code == 0
     assert runner.invoke(eval_command, ["--run", EXECUTION_ID]).exit_code == 0
-    assert calls == [{"run_id": None}, {"run_id": EXECUTION_ID}]
-    assert "Evaluate the last traced run" in runner.invoke(eval_command, ["--help"]).output
+    assert runner.invoke(eval_command, ["--no-open"]).exit_code == 0
+    assert runner.invoke(eval_command, ["--run", EXECUTION_ID, "--no-open"]).exit_code == 0
+    assert calls == [
+        {"run_id": None, "open_browser": True},
+        {"run_id": EXECUTION_ID, "open_browser": True},
+        {"run_id": None, "open_browser": False},
+        {"run_id": EXECUTION_ID, "open_browser": False},
+    ]
+    help_text = runner.invoke(eval_command, ["--help"]).output
+    assert "Evaluate the last traced run" in help_text
+    assert "--no-open" in help_text
 
 
 def test_only_a_missing_login_reads_as_anonymous(monkeypatch, capsys):
