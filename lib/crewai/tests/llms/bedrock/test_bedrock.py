@@ -1175,3 +1175,50 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+@pytest.mark.parametrize(
+    "model,expect_forced",
+    [
+        ("us.anthropic.claude-opus-5-5", False),
+        ("global.anthropic.claude-opus-5-5", False),
+        ("us.anthropic.claude-fable-5-1", False),
+        ("us.anthropic.claude-opus-5", True),
+    ],
+)
+def test_bedrock_structured_output_tool_choice_for_models_rejecting_forced_tools(
+    model, expect_forced
+):
+    """Models that reject a forced toolChoice get structured_output without toolChoice."""
+    from pydantic import BaseModel
+
+    class City(BaseModel):
+        name: str
+        country: str
+
+    llm = LLM(model=f"bedrock/{model}")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.return_value = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{
+                        'toolUse': {
+                            'toolUseId': 'tool-1',
+                            'name': 'structured_output',
+                            'input': {'name': 'Paris', 'country': 'France'},
+                        }
+                    }]
+                }
+            },
+            'stopReason': 'tool_use',
+            'usage': {'inputTokens': 10, 'outputTokens': 5, 'totalTokens': 15}
+        }
+
+        result = llm.call("Paris", response_model=City)
+
+    tool_config = mock_converse.call_args[1]["toolConfig"]
+    assert [t["toolSpec"]["name"] for t in tool_config["tools"]] == ["structured_output"]
+    assert ("toolChoice" in tool_config) is expect_forced
+    assert result == City(name="Paris", country="France")
