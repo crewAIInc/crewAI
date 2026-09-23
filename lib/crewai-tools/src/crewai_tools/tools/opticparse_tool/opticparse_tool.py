@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Optional, Type
 from urllib.parse import urlparse
@@ -120,7 +121,10 @@ class OpticParseTool(BaseTool):
             resp.raise_for_status()
             data = resp.json()
             if isinstance(data, dict):
-                return data.get("markdown") or data.get("extracted_data") or str(data)
-            return str(data)
+                content = data.get("markdown") or data.get("extracted_data")
+                if content:
+                    return str(content)
+                return json.dumps(data, indent=2)
+            return json.dumps(data) if not isinstance(data, str) else data
         except Exception as e:
             return f"OpticParse execution error: {str(e)}"
