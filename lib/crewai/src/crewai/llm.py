@@ -534,7 +534,8 @@ class LLM(BaseLLM):
             return True
 
         if provider == "requesty":
-            # Requesty uses provider/model format but accepts anything
+            # Requesty takes provider/model ids and slash free managed policy ids
+            # (e.g. claude-sonnet-4-5), so any model string is passed through
             return True
 
         if provider == "snowflake":
