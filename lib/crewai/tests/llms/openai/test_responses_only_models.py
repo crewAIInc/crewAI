@@ -16,7 +16,7 @@ is paid once per process.
 
 import httpx
 import pytest
-from openai import NotFoundError
+from openai import BadRequestError, NotFoundError
 
 from crewai.llms.providers.openai import completion as completion_module
 from crewai.llms.providers.openai.completion import OpenAICompletion
@@ -207,3 +207,113 @@ class TestNotFoundMessage:
 
         assert "not found" in msg
         assert 'api="responses"' not in msg
+
+
+# The tools + reasoning_effort 400 from Bedrock's OpenAI-compatible endpoints
+# (bedrock-runtime and bedrock-mantle /openai/v1). GPT-6 Sol offers "none" as a
+# way out, like GPT-5.6 on OpenAI. GPT-6 Astra doesn't, and rejects "none"
+# itself, so its function tools are only served on /v1/responses.
+TOOLS_NONE_WAY_OUT = (
+    "Function tools with reasoning_effort are not supported for us.openai.gpt-6-sol "
+    "in /v1/chat/completions. To use function tools, use /v1/responses or set "
+    "reasoning_effort to 'none'."
+)
+TOOLS_RESPONSES_ONLY = (
+    "Function tools with reasoning_effort are not supported for "
+    "us.openai.gpt-6-astra in /v1/chat/completions. To use function tools, use "
+    "/v1/responses."
+)
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    }
+]
+
+
+def make_tools_error(message: str) -> BadRequestError:
+    body = {
+        "error": {
+            "message": message,
+            "type": "invalid_request_error",
+            "param": "reasoning_effort",
+            "code": "validation_error",
+        }
+    }
+    response = httpx.Response(
+        status_code=400,
+        json=body,
+        request=httpx.Request("POST", "https://api.openai.com/v1/chat/completions"),
+    )
+    return BadRequestError(message, response=response, body=body)
+
+
+class TestToolsOnlyOnResponses:
+    def test_detects_tools_only_on_responses(self):
+        assert OpenAICompletion._is_responses_only_error(
+            make_tools_error(TOOLS_RESPONSES_ONLY)
+        )
+
+    def test_keeps_the_none_retry_when_offered(self):
+        """GPT-5.6 / GPT-6 Sol still recover with reasoning_effort="none"."""
+        assert not OpenAICompletion._is_responses_only_error(
+            make_tools_error(TOOLS_NONE_WAY_OUT)
+        )
+
+    def test_falls_back_to_responses_without_a_none_retry(self, monkeypatch):
+        llm = build("us.openai.gpt-6-astra")
+        sent: list[dict] = []
+        rerouted: list[dict] = []
+
+        def fail_completion(params, **kwargs):
+            sent.append(params)
+            raise make_tools_error(TOOLS_RESPONSES_ONLY)
+
+        monkeypatch.setattr(llm, "_handle_completion", fail_completion)
+        monkeypatch.setattr(
+            llm, "_call_responses", lambda **kwargs: rerouted.append(kwargs) or "ok"
+        )
+
+        assert llm._call_completions(MESSAGES, tools=TOOLS) == "ok"
+        assert len(sent) == 1, "no reasoning_effort='none' retry"
+        assert rerouted[0]["tools"] == TOOLS
+
+    def test_custom_endpoint_falls_back_too(self, monkeypatch):
+        """The 400 names /v1/responses, unlike a 404 from a server that may lack it."""
+        llm = build(
+            "us.openai.gpt-6-astra",
+            custom_openai=True,
+            base_url="https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1",
+        )
+        sent: list[dict] = []
+
+        def fail_completion(params, **kwargs):
+            sent.append(params)
+            raise make_tools_error(TOOLS_RESPONSES_ONLY)
+
+        monkeypatch.setattr(llm, "_handle_completion", fail_completion)
+        monkeypatch.setattr(llm, "_call_responses", lambda **kwargs: "ok")
+
+        assert llm._call_completions(MESSAGES, tools=TOOLS) == "ok"
+        assert len(sent) == 1
+
+    @pytest.mark.asyncio
+    async def test_async_path_falls_back_too(self, monkeypatch):
+        llm = build("us.openai.gpt-6-astra")
+        sent: list[dict] = []
+
+        async def fail_completion(params, **kwargs):
+            sent.append(params)
+            raise make_tools_error(TOOLS_RESPONSES_ONLY)
+
+        async def ok_responses(**kwargs):
+            return "ok"
+
+        monkeypatch.setattr(llm, "_ahandle_completion", fail_completion)
+        monkeypatch.setattr(llm, "_acall_responses", ok_responses)
+
+        assert await llm._acall_completions(MESSAGES, tools=TOOLS) == "ok"
+        assert len(sent) == 1
