@@ -19,12 +19,14 @@ from crewai.hooks.tool_hooks import (
 from crewai.agents.parser import AgentFinish
 from crewai.tools.base_tool import BaseTool
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+from crewai.llms.base_llm import LLMRateLimitError
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
     _estimate_token_count,
     _expand_oversized_message,
     _extract_summary_tags,
     _format_messages_for_summary,
+    is_context_length_exceeded,
     message_content_text,
     _normalize_messages_for_chunking,
     _split_messages_into_chunks,
@@ -1758,3 +1760,37 @@ class TestHandleMaxIterationsExceeded:
             )
         else:
             printer.print.assert_not_called()
+
+
+class TestIsContextLengthExceeded:
+    """`is_context_length_exceeded` is the single choke point every executor
+    (CrewAgentExecutor, LiteAgent, the experimental executor) calls on a
+    caught exception to decide whether to run context-window recovery. A
+    rate-limit error must never be classified as a context-length error here,
+    regardless of which provider raised it or what its message says.
+    """
+
+    def test_generic_context_length_message_is_detected(self) -> None:
+        assert is_context_length_exceeded(
+            RuntimeError("maximum context length is 4096 tokens")
+        )
+
+    def test_rate_limit_error_is_never_context_length_even_with_token_wording(
+        self,
+    ) -> None:
+        # This is the exact real-world Bedrock throttling message: it contains
+        # "too many tokens" and would otherwise false-positive as context-length.
+        error = LLMRateLimitError(
+            "API throttled, please retry later: Too many tokens, please wait "
+            "before trying again."
+        )
+
+        assert not is_context_length_exceeded(error)
+
+    def test_rate_limit_subclass_is_also_excluded(self) -> None:
+        class ProviderRateLimitError(LLMRateLimitError):
+            pass
+
+        assert not is_context_length_exceeded(
+            ProviderRateLimitError("too many tokens per minute")
+        )

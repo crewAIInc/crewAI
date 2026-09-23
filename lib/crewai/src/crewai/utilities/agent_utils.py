@@ -24,7 +24,12 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
+from crewai.llms.base_llm import (
+    BaseLLM,
+    LLMCallBlockedError,
+    LLMRateLimitError,
+    call_stop_override,
+)
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -795,6 +800,12 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
+    if isinstance(exception, LLMRateLimitError):
+        # A rate-limit/throttling error is never a context-length error, even
+        # if the provider's own message happens to mention tokens (e.g. AWS
+        # Bedrock's "Too many tokens, please wait before trying again").
+        return False
+
     return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
         str(exception)
     )
