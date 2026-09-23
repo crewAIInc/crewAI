@@ -26,6 +26,7 @@ class MockCouchbaseException(Exception):
 
 
 mock_couchbase.exceptions = MagicMock()
+mock_couchbase.exceptions.BucketDoesNotExistException = MockCouchbaseException
 mock_couchbase.exceptions.BucketNotFoundException = MockCouchbaseException
 mock_couchbase.exceptions.ScopeNotFoundException = MockCouchbaseException
 mock_couchbase.exceptions.CollectionNotFoundException = MockCouchbaseException
@@ -353,7 +354,7 @@ def test_check_bucket_exists_fail(tool_config):
     """Test check for bucket non-existence."""
     mock_cluster = tool_config["cluster"]
     mock_cluster.buckets().get_bucket.side_effect = (
-        mock_couchbase.exceptions.BucketNotFoundException("Bucket not found")
+        mock_couchbase.exceptions.BucketDoesNotExistException("Bucket not found")
     )
 
     with patch(
