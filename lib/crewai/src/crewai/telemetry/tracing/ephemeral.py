@@ -143,7 +143,10 @@ class EphemeralSpanBuffer(SpanExporter):
                     logger.warning("Ephemeral trace export failed; buffer discarded")
             finally:
                 exporter.shutdown()
-            exporter.show_trace_summary()
+            if (
+                not self._dropped
+            ):  # a truncated trace is not recorded: the grader could not read it whole
+                exporter.record_export()
         except TraceGrantError as error:
             logger.warning(
                 "Ephemeral trace grant failed (HTTP %s); buffer discarded",
