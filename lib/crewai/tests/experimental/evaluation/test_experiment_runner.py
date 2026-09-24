@@ -162,6 +162,30 @@ class TestExperimentRunner:
         }
         assert result.passed is False
 
+    @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
+    def test_run_passes_when_actual_has_extra_metrics(
+        self, mock_create_evaluator, mock_crew, mock_evaluator_results
+    ):
+        dataset = [
+            {
+                "identifier": "extra-actual-metrics",
+                "inputs": {"query": "Test query"},
+                "expected_score": {"goal_alignment": 7},
+            }
+        ]
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_agent_evaluation.return_value = mock_evaluator_results
+        mock_create_evaluator.return_value = mock_evaluator
+
+        (result,) = ExperimentRunner(dataset=dataset).run(crew=mock_crew).results
+
+        assert result.score == {
+            "goal_alignment": 9,
+            "parameter_extraction": 7,
+            "tool_selection": 8,
+        }
+        assert result.passed is True
+
     @pytest.mark.parametrize(
         ("expected_score", "passed"),
         [
