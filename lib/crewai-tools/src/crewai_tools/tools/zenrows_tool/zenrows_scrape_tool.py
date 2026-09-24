@@ -71,14 +71,15 @@ class ZenRowsScrapeTool(BaseTool):
     list rather than reason about it.
 
     Advanced Zenrows parameters that a page consistently needs (for example
-    ``js_instructions`` to interact with the page, ``wait_for``/``wait`` for
-    slow-rendering content, or turning Adaptive Stealth off in favor of
-    manually pinned ``js_render``/``premium_proxy``/``proxy_country`` values)
-    can be set once at construction time via ``config`` and then apply to
-    every request made by this tool instance. Note that ``proxy_country``
-    requires ``premium_proxy: True`` and cannot be combined with
-    ``mode: "auto"``, which manages ``premium_proxy`` itself -- see
-    :meth:`__init__` validation below. See
+    ``proxy_country`` to pin a geography, ``js_instructions`` to interact
+    with the page, ``wait_for``/``wait`` for slow-rendering content, or
+    turning Adaptive Stealth off in favor of manually pinned
+    ``js_render``/``premium_proxy`` values) can be set once at construction
+    time via ``config`` and then apply to every request made by this tool
+    instance. ``proxy_country`` works alongside ``mode: "auto"`` --
+    Zenrows enables ``premium_proxy`` for it automatically -- but outside
+    auto mode it requires ``premium_proxy: True`` to be set explicitly, or
+    it has no effect; see :meth:`__init__` validation below. See
     https://docs.zenrows.com/universal-scraper-api/api-reference for the
     full parameter reference.
 
@@ -159,15 +160,24 @@ class ZenRowsScrapeTool(BaseTool):
                     "remove them and let Adaptive Stealth Mode choose."
                 )
 
-        if self.config.get("proxy_country") and not self.config.get("premium_proxy"):
+        # Outside mode="auto", Zenrows only applies geolocation to premium
+        # (residential) proxies -- proxy_country alone is silently ignored
+        # there. Under mode="auto" this restriction doesn't apply: Zenrows
+        # documents proxy_country as usable alongside Adaptive Stealth Mode
+        # and enables premium_proxy for it automatically.
+        if (
+            self.config.get("proxy_country")
+            and not self.config.get("premium_proxy")
+            and self.config.get("mode") != "auto"
+        ):
             raise ValueError(
-                "config sets `proxy_country` without `premium_proxy: True`. "
+                "config sets `proxy_country` without `premium_proxy: True` "
+                'and without `mode: "auto"`. Outside Adaptive Stealth Mode, '
                 "Zenrows only applies geolocation to premium (residential) "
                 "proxies, so `proxy_country` alone has no effect -- it is "
-                "silently ignored rather than raising an error. Set "
-                "`premium_proxy: True` alongside `proxy_country` (this also "
-                'means dropping `mode: "auto"`, since Adaptive Stealth Mode '
-                "manages `premium_proxy` itself)."
+                "silently ignored rather than raising an error. Either set "
+                "`premium_proxy: True` alongside `proxy_country`, or add "
+                '`mode: "auto"` and let Zenrows enable premium_proxy itself.'
             )
 
     def _run(

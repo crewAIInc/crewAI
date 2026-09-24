@@ -40,20 +40,20 @@ result = tool.run(url="https://example.com", response_type="plaintext")
 
 ## إعدادات متقدمة
 
-المعاملات التي يحتاجها فريق عمل معيّن باستمرار — مثل تنفيذ `js_instructions`، أو الانتظار لعنصر محدد، أو إيقاف Adaptive Stealth لصالح تثبيت `js_render`/`premium_proxy`/`proxy_country` يدويًا — تُضبط مرة واحدة عند الإنشاء عبر `config`، وتُطبَّق بعدها على كل طلب تصدره هذه النسخة من الأداة.
-
-<Note>
-  يتطلب `proxy_country` تفعيل `premium_proxy: True` — إذ لا تطبّق Zenrows تحديد الموقع الجغرافي إلا على البروكسي المميز (السكني)، لذا فإن `proxy_country` وحده يُتجاهل بصمت. كما لا يمكن الجمع بينه وبين `mode: "auto"`، لأن Adaptive Stealth Mode تدير `premium_proxy` بنفسها وترفض الطلب إذا تم ضبطه يدويًا أيضًا. تتحقق `ZenRowsScrapeTool` من ذلك عند الإنشاء وتُطلق `ValueError` بدلاً من الفشل بصمت أو عند وقت الطلب.
-</Note>
+المعاملات التي يحتاجها فريق عمل معيّن باستمرار — مثل تنفيذ `js_instructions`، أو الانتظار لعنصر محدد، أو تثبيت `proxy_country` — تُضبط مرة واحدة عند الإنشاء عبر `config`، وتُطبَّق بعدها على كل طلب تصدره هذه النسخة من الأداة.
 
 ```python Code
 tool = ZenRowsScrapeTool(
     config={
-        "premium_proxy": True,
+        "mode": "auto",
         "proxy_country": "us",
     }
 )
 ```
+
+<Note>
+  يعمل `proxy_country` جنبًا إلى جنب مع `mode: "auto"` — إذ تُفعّل Zenrows خاصية `premium_proxy` تلقائيًا من أجله. أما خارج `mode: "auto"`، فيتطلب `proxy_country` تفعيل `premium_proxy: True` صراحةً، وإلا فإن Zenrows لا تطبّق تحديد الموقع الجغرافي إلا على البروكسي المميز (السكني) وستتجاهله بصمت. أما ضبط `premium_proxy` (أو `js_render`) يدويًا مع `mode: "auto"` فهو تركيبة مختلفة، وغير صالحة أيضًا — إذ تدير Adaptive Stealth Mode هذين الخيارين بنفسها وترفض الطلب إذا تم ضبطهما يدويًا أيضًا. تتحقق `ZenRowsScrapeTool` من كلتا القاعدتين عند الإنشاء وتُطلق `ValueError` بدلاً من ترك أي منهما يفشل بصمت أو عند وقت الطلب.
+</Note>
 
 للتحكم اليدوي الكامل بدلاً من Adaptive Stealth:
 

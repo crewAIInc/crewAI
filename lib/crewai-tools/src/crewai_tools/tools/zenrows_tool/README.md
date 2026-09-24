@@ -41,27 +41,27 @@ result = tool.run(url="https://example.com", response_type="plaintext")
 ## Advanced configuration
 
 Parameters a given crew consistently needs — running `js_instructions`, waiting for a
-selector, or opting out of Adaptive Stealth in favor of manually pinned
-`js_render`/`premium_proxy`/`proxy_country` — are set once at construction time via
-`config` and then apply to every request this tool instance makes.
+selector, or pinning a `proxy_country` — are set once at construction time via `config`
+and then apply to every request this tool instance makes:
+
+```python
+tool = ZenRowsScrapeTool(
+    config={
+        "mode": "auto",
+        "proxy_country": "us",
+    }
+)
+```
 
 > [!NOTE]
-> `proxy_country` requires `premium_proxy: True` — Zenrows only applies geolocation to
-> premium (residential) proxies, so `proxy_country` alone is silently ignored. It also
-> can't be combined with `mode: "auto"`, since Adaptive Stealth Mode manages
-> `premium_proxy` itself and rejects the request if it's also set manually. `ZenRowsScrapeTool`
-> validates this at construction time and raises a `ValueError` rather than let it fail
-> silently or at request time. To pin a country, drop `mode` and set `premium_proxy`
-> explicitly:
->
-> ```python
-> tool = ZenRowsScrapeTool(
->     config={
->         "premium_proxy": True,
->         "proxy_country": "us",
->     }
-> )
-> ```
+> `proxy_country` works alongside `mode: "auto"` — Zenrows enables `premium_proxy` for it
+> automatically. Outside `mode: "auto"`, `proxy_country` requires `premium_proxy: True` to
+> be set explicitly, since Zenrows only applies geolocation to premium (residential)
+> proxies and would otherwise silently ignore it. Manually setting `premium_proxy` (or
+> `js_render`) together with `mode: "auto"` is a separate, still-invalid combination —
+> Adaptive Stealth Mode manages those two itself and rejects the request if they're also
+> set manually. `ZenRowsScrapeTool` validates both rules at construction time and raises
+> a `ValueError` rather than let either fail silently or at request time.
 
 To take full manual control instead of Adaptive Stealth:
 

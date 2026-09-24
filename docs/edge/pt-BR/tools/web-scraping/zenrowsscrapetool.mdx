@@ -40,20 +40,20 @@ result = tool.run(url="https://example.com", response_type="plaintext")
 
 ## Configuração avançada
 
-Parâmetros que uma crew específica sempre precisa — executar `js_instructions`, aguardar um seletor, ou desativar o Adaptive Stealth em favor de `js_render`/`premium_proxy`/`proxy_country` fixados manualmente — são definidos uma vez na construção via `config` e passam a valer para toda requisição feita por essa instância da tool.
-
-<Note>
-  `proxy_country` exige `premium_proxy: True` — o Zenrows só aplica geolocalização a proxies premium (residenciais), então `proxy_country` sozinho é silenciosamente ignorado. Também não pode ser combinado com `mode: "auto"`, já que o Adaptive Stealth Mode gerencia `premium_proxy` por conta própria e rejeita a requisição se ele também for definido manualmente. A `ZenRowsScrapeTool` valida isso no momento da construção e levanta um `ValueError` em vez de falhar silenciosamente ou apenas no momento da requisição.
-</Note>
+Parâmetros que uma crew específica sempre precisa — executar `js_instructions`, aguardar um seletor, ou fixar um `proxy_country` — são definidos uma vez na construção via `config` e passam a valer para toda requisição feita por essa instância da tool.
 
 ```python Code
 tool = ZenRowsScrapeTool(
     config={
-        "premium_proxy": True,
+        "mode": "auto",
         "proxy_country": "us",
     }
 )
 ```
+
+<Note>
+  `proxy_country` funciona junto com `mode: "auto"` — o Zenrows ativa `premium_proxy` automaticamente para ele. Fora de `mode: "auto"`, `proxy_country` exige `premium_proxy: True` definido explicitamente, já que o Zenrows só aplica geolocalização a proxies premium (residenciais) e o ignoraria silenciosamente caso contrário. Definir `premium_proxy` (ou `js_render`) manualmente junto com `mode: "auto"` é uma combinação diferente, e ainda inválida — o Adaptive Stealth Mode gerencia esses dois por conta própria e rejeita a requisição se também forem definidos manualmente. A `ZenRowsScrapeTool` valida as duas regras no momento da construção e levanta um `ValueError` em vez de deixar qualquer uma falhar silenciosamente ou apenas no momento da requisição.
+</Note>
 
 Para ter controle manual total em vez do Adaptive Stealth:
 

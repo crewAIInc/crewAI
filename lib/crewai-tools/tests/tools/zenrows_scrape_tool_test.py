@@ -49,14 +49,33 @@ def test_default_config_is_adaptive_stealth():
 
 
 @patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
-def test_proxy_country_without_premium_proxy_is_rejected():
-    with pytest.raises(ValueError, match="premium_proxy"):
-        ZenRowsScrapeTool(config={"mode": "auto", "proxy_country": "us"})
-
-    # Also rejected outside Adaptive Stealth -- proxy_country alone is a
-    # no-op regardless of `mode`.
+def test_proxy_country_without_premium_proxy_is_rejected_outside_auto_mode():
+    """Outside mode="auto", Zenrows only geolocates premium proxies, so
+    proxy_country alone is a silent no-op there.
+    """
     with pytest.raises(ValueError, match="premium_proxy"):
         ZenRowsScrapeTool(config={"proxy_country": "us"})
+
+    with pytest.raises(ValueError, match="premium_proxy"):
+        ZenRowsScrapeTool(config={"mode": "manual", "proxy_country": "us"})
+
+
+@patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
+@patch(f"{TOOL_MODULE}.requests.get")
+def test_proxy_country_with_mode_auto_and_no_premium_proxy_is_accepted(mock_get):
+    """Zenrows documents proxy_country as usable alongside Adaptive Stealth
+    Mode, enabling premium_proxy for it automatically -- this must not be
+    confused with the (still-invalid) manual premium_proxy + mode=auto case.
+    """
+    mock_get.return_value = _mock_response()
+    tool = ZenRowsScrapeTool(config={"mode": "auto", "proxy_country": "us"})
+
+    tool._run(url="https://example.com")
+
+    params = mock_get.call_args.kwargs["params"]
+    assert params["mode"] == "auto"
+    assert params["proxy_country"] == "us"
+    assert "premium_proxy" not in params
 
 
 @patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})

@@ -40,20 +40,20 @@ result = tool.run(url="https://example.com", response_type="plaintext")
 
 ## 고급 설정
 
-특정 crew가 항상 필요로 하는 매개변수 — `js_instructions` 실행, 셀렉터 대기, 또는 Adaptive Stealth를 끄고 `js_render`/`premium_proxy`/`proxy_country`를 수동으로 고정하는 것 — 는 생성 시점에 `config`로 한 번만 설정하면 이 tool 인스턴스가 만드는 모든 요청에 적용됩니다.
-
-<Note>
-  `proxy_country`는 `premium_proxy: True`를 필요로 합니다 — Zenrows는 프리미엄(레지덴셜) 프록시에만 지역 설정을 적용하므로, `proxy_country`만 단독으로 설정하면 조용히 무시됩니다. 또한 `mode: "auto"`와는 함께 사용할 수 없는데, Adaptive Stealth Mode가 `premium_proxy` 자체를 관리하며 수동으로도 설정되면 요청을 거부하기 때문입니다. `ZenRowsScrapeTool`은 생성 시점에 이를 검증하여, 조용히 실패하거나 요청 시점에야 실패하는 대신 `ValueError`를 발생시킵니다.
-</Note>
+특정 crew가 항상 필요로 하는 매개변수 — `js_instructions` 실행, 셀렉터 대기, 또는 `proxy_country` 고정 — 는 생성 시점에 `config`로 한 번만 설정하면 이 tool 인스턴스가 만드는 모든 요청에 적용됩니다.
 
 ```python Code
 tool = ZenRowsScrapeTool(
     config={
-        "premium_proxy": True,
+        "mode": "auto",
         "proxy_country": "us",
     }
 )
 ```
+
+<Note>
+  `proxy_country`는 `mode: "auto"`와 함께 사용할 수 있습니다 — Zenrows가 이를 위해 자동으로 `premium_proxy`를 활성화합니다. `mode: "auto"`가 아닌 경우에는 `proxy_country`를 사용하려면 `premium_proxy: True`를 명시적으로 설정해야 합니다. 그렇지 않으면 Zenrows가 프리미엄(레지덴셜) 프록시에만 지역 설정을 적용하므로 조용히 무시됩니다. `premium_proxy`(또는 `js_render`)를 `mode: "auto"`와 함께 수동으로 설정하는 것은 별개의, 여전히 유효하지 않은 조합입니다 — Adaptive Stealth Mode가 이 둘을 자체적으로 관리하며 수동으로도 설정되면 요청을 거부합니다. `ZenRowsScrapeTool`은 생성 시점에 두 규칙을 모두 검증하여, 조용히 실패하거나 요청 시점에야 실패하는 대신 `ValueError`를 발생시킵니다.
+</Note>
 
 Adaptive Stealth 대신 완전한 수동 제어를 원한다면:
 
