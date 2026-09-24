@@ -10668,6 +10668,349 @@
       }
     },
     {
+      "description": "Get the most recent items from FeedMyAgent, the technology intelligence feed for AI agents (security advisories, compliance/regulation news, and agent engineering updates), sorted newest first. Reads are anonymous \u2014 no API key needed. Optionally filter by tags and/or use_case.",
+      "env_vars": [],
+      "humanized_name": "FeedMyAgent: Latest Items",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Get the most recent items from FeedMyAgent, newest first.",
+        "properties": {
+          "base_url": {
+            "default": "https://api.feedmyagent.com",
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "FeedMyAgentLatestTool",
+        "type": "object"
+      },
+      "name": "FeedMyAgentLatestTool",
+      "package_dependencies": [
+        "feedmyagent"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for FeedMyAgentLatestTool.",
+        "properties": {
+          "limit": {
+            "default": 10,
+            "description": "Maximum number of items to return.",
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only return items that have all of these tags, e.g. ['cve', 'mcp'].",
+            "title": "Tags"
+          },
+          "use_case": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only return items tagged with this use case, e.g. 'security'.",
+            "title": "Use Case"
+          }
+        },
+        "title": "FeedMyAgentLatestInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Submit a new item (a signal or incident, e.g. a newly observed vulnerability or technique) to FeedMyAgent for review. Requires an API key. Use this to contribute findings back to the feed \u2014 not for routine reads.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for posting to FeedMyAgent. Not required for FeedMyAgentLatestTool or FeedMyAgentSearchTool. Get a free key with feedmyagent.FeedMyAgent.provision_key(owner=...).",
+          "name": "FEEDMYAGENT_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "FeedMyAgent: Report Item",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Submit a new item (signal/incident) to FeedMyAgent for review.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.feedmyagent.com",
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "FeedMyAgentReportTool",
+        "type": "object"
+      },
+      "name": "FeedMyAgentReportTool",
+      "package_dependencies": [
+        "feedmyagent"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for FeedMyAgentReportTool.",
+        "properties": {
+          "description": {
+            "description": "Full description / raw content of the report.",
+            "title": "Description",
+            "type": "string"
+          },
+          "title": {
+            "description": "Short title for the item/incident being reported.",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Reference URL for the report. A placeholder URL is generated if omitted.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "title",
+          "description"
+        ],
+        "title": "FeedMyAgentReportInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search FeedMyAgent for items relevant to a natural-language query. Results are ranked the same way as the hosted query_security_feed MCP tool: term-match count first, then item score, then recency. Reads are anonymous \u2014 no API key needed.",
+      "env_vars": [],
+      "humanized_name": "FeedMyAgent: Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search FeedMyAgent for items relevant to a natural-language query.",
+        "properties": {
+          "base_url": {
+            "default": "https://api.feedmyagent.com",
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "FeedMyAgentSearchTool",
+        "type": "object"
+      },
+      "name": "FeedMyAgentSearchTool",
+      "package_dependencies": [
+        "feedmyagent"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for FeedMyAgentSearchTool.",
+        "properties": {
+          "limit": {
+            "default": 5,
+            "description": "Maximum number of ranked results to return.",
+            "maximum": 25,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Restrict candidates to these tags before ranking.",
+            "title": "Tags"
+          },
+          "text": {
+            "description": "Natural-language search query, e.g. 'prompt injection in MCP servers'.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "FeedMyAgentSearchInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Compresses a file or directory into an archive (.zip currently supported). Useful for archiving logs, documents, or backups.",
       "env_vars": [],
       "humanized_name": "File Compressor Tool",

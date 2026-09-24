@@ -81,6 +81,11 @@ from crewai_tools.tools.e2b_sandbox_tool import (
     E2BPythonTool,
 )
 from crewai_tools.tools.exa_tools.exa_search_tool import EXASearchTool, ExaSearchTool
+from crewai_tools.tools.feedmyagent_tool.feedmyagent_tool import (
+    FeedMyAgentLatestTool,
+    FeedMyAgentReportTool,
+    FeedMyAgentSearchTool,
+)
 from crewai_tools.tools.file_read_tool.file_read_tool import FileReadTool
 from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
 from crewai_tools.tools.files_compressor_tool.files_compressor_tool import (
@@ -267,6 +272,9 @@ __all__ = [
     "EXASearchTool",
     "EnterpriseActionTool",
     "ExaSearchTool",
+    "FeedMyAgentLatestTool",
+    "FeedMyAgentReportTool",
+    "FeedMyAgentSearchTool",
     "FileCompressorTool",
     "FileReadTool",
     "FileWriterTool",
