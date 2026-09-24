@@ -250,6 +250,7 @@
                           "edge/en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "edge/en/tools/web-scraping/oxylabsscraperstool",
                           "edge/en/tools/web-scraping/brightdata-tools",
+                          "edge/en/tools/web-scraping/zenrowsscrapetool",
                           "edge/en/tools/web-scraping/youai-contents"
                         ]
                       },
@@ -15531,7 +15532,8 @@
                           "edge/pt-BR/tools/web-scraping/stagehandtool",
                           "edge/pt-BR/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "edge/pt-BR/tools/web-scraping/firecrawlscrapewebsitetool",
-                          "edge/pt-BR/tools/web-scraping/oxylabsscraperstool"
+                          "edge/pt-BR/tools/web-scraping/oxylabsscraperstool",
+                          "edge/pt-BR/tools/web-scraping/zenrowsscrapetool"
                         ]
                       },
                       {
@@ -29709,7 +29711,8 @@
                           "edge/ko/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "edge/ko/tools/web-scraping/firecrawlscrapewebsitetool",
                           "edge/ko/tools/web-scraping/oxylabsscraperstool",
-                          "edge/ko/tools/web-scraping/brightdata-tools"
+                          "edge/ko/tools/web-scraping/brightdata-tools",
+                          "edge/ko/tools/web-scraping/zenrowsscrapetool"
                         ]
                       },
                       {
@@ -44364,7 +44367,8 @@
                           "edge/ar/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "edge/ar/tools/web-scraping/firecrawlscrapewebsitetool",
                           "edge/ar/tools/web-scraping/oxylabsscraperstool",
-                          "edge/ar/tools/web-scraping/brightdata-tools"
+                          "edge/ar/tools/web-scraping/brightdata-tools",
+                          "edge/ar/tools/web-scraping/zenrowsscrapetool"
                         ]
                       },
                       {
