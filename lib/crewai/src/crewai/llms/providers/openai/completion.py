@@ -1902,7 +1902,8 @@ class OpenAICompletion(BaseLLM):
             tools, use /v1/responses."
         """
         if OpenAICompletion._rejects_reasoning_effort_with_tools(error):
-            return "'none'" not in str(error)
+            text = str(error).lower()
+            return "'none'" not in text and "use /v1/responses" in text
         if not isinstance(error, NotFoundError):
             return False
         body = getattr(error, "body", None)

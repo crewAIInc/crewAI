@@ -263,6 +263,14 @@ class TestToolsOnlyOnResponses:
             make_tools_error(TOOLS_NONE_WAY_OUT)
         )
 
+    def test_keeps_the_old_path_when_responses_is_not_named(self):
+        """A server that doesn't point at /v1/responses may not implement it."""
+        assert not OpenAICompletion._is_responses_only_error(
+            make_tools_error(
+                "Function tools with reasoning_effort are not supported for this model."
+            )
+        )
+
     def test_falls_back_to_responses_without_a_none_retry(self, monkeypatch):
         llm = build("us.openai.gpt-6-astra")
         sent: list[dict] = []
