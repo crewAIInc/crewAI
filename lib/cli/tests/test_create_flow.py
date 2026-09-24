@@ -67,6 +67,7 @@ def test_create_flow_scaffolds_assistant_instructions(
 
 
 def test_create_flow_writes_files_as_utf8(tmp_path: Path, monkeypatch: MonkeyPatch):
+    """Every scaffolded file is UTF-8, so non-ASCII template text survives on Windows."""
     monkeypatch.chdir(tmp_path)
     create_flow("Research Flow")
 
