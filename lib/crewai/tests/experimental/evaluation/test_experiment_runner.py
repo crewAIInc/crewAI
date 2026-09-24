@@ -136,7 +136,70 @@ class TestExperimentRunner:
         assert isinstance(result.expected_score, dict)
         assert "goal_alignment" in result.expected_score.keys()
         assert "unknown_metric" in result.expected_score.keys()
-        assert result.passed is True
+        assert result.passed is False
+
+    @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
+    def test_run_fails_when_expected_metric_has_no_score(
+        self, mock_create_evaluator, mock_crew, mock_evaluator_results
+    ):
+        dataset = [
+            {
+                "identifier": "missing-reasoning-score",
+                "inputs": {"query": "Test query"},
+                "expected_score": {"goal_alignment": 7, "reasoning_efficiency": 8},
+            }
+        ]
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_agent_evaluation.return_value = mock_evaluator_results
+        mock_create_evaluator.return_value = mock_evaluator
+
+        (result,) = ExperimentRunner(dataset=dataset).run(crew=mock_crew).results
+
+        assert result.score == {
+            "goal_alignment": 9,
+            "parameter_extraction": 7,
+            "tool_selection": 8,
+        }
+        assert result.passed is False
+
+    @pytest.mark.parametrize(
+        ("expected_score", "passed"),
+        [
+            ({"goal_alignment": 7, "reasoning_efficiency": 8}, False),
+            ({"reasoning_efficiency": 8}, False),
+            ({"goal_alignment": 7}, True),
+        ],
+    )
+    @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
+    def test_run_checks_metric_names_with_single_score(
+        self,
+        mock_create_evaluator,
+        mock_crew,
+        mock_evaluator_results,
+        expected_score,
+        passed,
+    ):
+        mock_evaluator_results["Test Agent"].metrics = {
+            MetricCategory.GOAL_ALIGNMENT: EvaluationScore(
+                score=9,
+                feedback="Test feedback for goal alignment",
+                raw_response="Test raw response for goal alignment",
+            ),
+            MetricCategory.REASONING_EFFICIENCY: EvaluationScore(
+                score=None,
+                feedback="Reasoning efficiency not applicable",
+                raw_response="Reasoning efficiency not applicable",
+            ),
+        }
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_agent_evaluation.return_value = mock_evaluator_results
+        mock_create_evaluator.return_value = mock_evaluator
+
+        dataset = [{"inputs": {"query": "Test query"}, "expected_score": expected_score}]
+        (result,) = ExperimentRunner(dataset=dataset).run(crew=mock_crew).results
+
+        assert result.score == 9
+        assert result.passed is passed
 
     @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
     def test_run_success_with_single_metric_evaluator_and_expected_specific_metric(
