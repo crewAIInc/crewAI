@@ -230,8 +230,16 @@ class ZenRowsScrapeTool(BaseTool):
             )
         except requests.HTTPError as exc:
             return self._format_http_error(exc, validated_url)
-        except requests.RequestException as exc:
-            return f"Zenrows request failed for '{validated_url}': {exc}"
+        except requests.RequestException:
+            # Don't interpolate the exception itself: requests/urllib3
+            # embed the full request URL -- including the `apikey` query
+            # param -- in connection-level error messages (e.g. via
+            # urllib3's MaxRetryError), which would leak the credential
+            # into the agent's context.
+            return (
+                f"Zenrows request failed for '{validated_url}'. The Zenrows "
+                "API may be unreachable."
+            )
 
         return response.text
 

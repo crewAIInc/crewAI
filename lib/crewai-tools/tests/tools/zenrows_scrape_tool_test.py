@@ -269,7 +269,24 @@ def test_generic_request_exception_is_returned_not_raised(mock_get):
     result = tool._run(url="https://example.com")
 
     assert "Zenrows request failed" in result
-    assert "connection refused" in result
+
+
+@patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
+@patch(f"{TOOL_MODULE}.requests.get")
+def test_generic_request_exception_does_not_leak_the_api_key(mock_get):
+    """requests/urllib3 embed the full request URL -- apikey included -- in
+    connection-level error messages (e.g. urllib3's MaxRetryError). The
+    exception text must never reach the returned string.
+    """
+    mock_get.side_effect = requests.ConnectionError(
+        "HTTPSConnectionPool(host='api.zenrows.com', port=443): Max retries "
+        "exceeded with url: /v1/?apikey=test_api_key&url=https://example.com"
+    )
+    tool = ZenRowsScrapeTool()
+
+    result = tool._run(url="https://example.com")
+
+    assert "test_api_key" not in result
 
 
 @patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
