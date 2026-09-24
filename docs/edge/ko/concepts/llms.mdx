@@ -755,6 +755,88 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Nebius Serverless Endpoint (vLLM)">
+    vLLM을 실행하는 Nebius Serverless Endpoint는 OpenAI 호환 API를 제공합니다. Nebius AI Studio의 `NEBIUS_API_KEY`가 아니라 Endpoint의 관리형 HTTPS URL과 bearer token을 사용합니다.
+
+    Endpoint를 만든 후 다음 값을 설정하세요:
+
+    ```toml Code
+    NEBIUS_ENDPOINT_URL=https://your-endpoint.example.nebius.cloud
+    NEBIUS_ENDPOINT_TOKEN=<your-endpoint-bearer-token>
+    NEBIUS_MODEL_ID=Qwen/Qwen3-0.6B
+    ```
+
+    `NEBIUS_MODEL_ID`는 Endpoint의 `/v1/models` 경로가 반환하는 ID와 정확히 일치해야 합니다. `nebius/` 같은 제공자 접두사는 추가하지 마세요.
+
+    Crew를 시작하기 전에 Endpoint와 모델이 모두 준비될 때까지 기다리세요:
+
+    ```bash
+    curl --fail-with-body "$NEBIUS_ENDPOINT_URL/health" \
+      -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
+    curl --fail-with-body "$NEBIUS_ENDPOINT_URL/v1/models" \
+      -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
+    ```
+
+    그런 다음 CrewAI의 네이티브 OpenAI 호환 클라이언트로 연결합니다:
+
+    ```python Code
+    import os
+
+    from crewai import Agent, Crew, LLM, Process, Task
+    from crewai.tools import tool
+
+
+    @tool("add_numbers")
+    def add_numbers(a: float, b: float) -> float:
+        """Add two numbers."""
+        return a + b
+
+
+    endpoint_url = os.environ["NEBIUS_ENDPOINT_URL"].rstrip("/")
+    llm = LLM(
+        model=os.environ["NEBIUS_MODEL_ID"],
+        custom_openai=True,
+        base_url=f"{endpoint_url}/v1",
+        api_key=os.environ["NEBIUS_ENDPOINT_TOKEN"],
+        stream=True,
+    )
+
+    calculator = Agent(
+        role="Arithmetic specialist",
+        goal="Use the provided tool to calculate exact answers.",
+        backstory="You verify every arithmetic result with a tool.",
+        llm=llm,
+        tools=[add_numbers],
+    )
+    addition = Task(
+        description="Use add_numbers to calculate 19.5 + 22.75.",
+        expected_output="The exact numeric total.",
+        agent=calculator,
+    )
+
+    result = Crew(
+        agents=[calculator],
+        tasks=[addition],
+        process=Process.sequential,
+    ).kickoff()
+    print(result)
+    ```
+
+    <Warning>
+      도구 사용에는 tool calling을 지원하는 모델과 해당 모델에 맞는 tool-call parser 및 automatic tool choice가 설정된 vLLM 배포가 필요합니다. CrewAI 도구를 사용하기 전에 모델의 옵션을 확인하세요.
+    </Warning>
+
+    요청이 실패하면 다음을 확인하세요:
+
+    - HTTP `401` 또는 `403`: Nebius control-plane token이나 AI Studio key가 아닌 Endpoint bearer token을 사용하세요.
+    - 시작 중 HTTP `404`: Endpoint가 `RUNNING` 상태가 되고 `/health`가 성공할 때까지 기다리세요.
+    - 모델을 찾을 수 없다는 오류: `/v1/models`에서 정확한 모델 ID를 복사하세요.
+    - tool-call 오류: 모델과 vLLM tool parser가 function calling을 지원하는지 확인하세요.
+    - 스트리밍 오류: 먼저 `stream=False`로 다시 시도하여 Endpoint 스트리밍 문제와 모델 문제를 구분하세요.
+
+    필수 조건, Endpoint 생성, 로그 및 준비 상태 확인은 [Nebius Serverless용 vLLM 배포 가이드](https://docs.vllm.ai/en/latest/deployment/frameworks/nebius/)를 참고하세요. 더 이상 필요하지 않으면 Endpoint를 중지하거나 삭제하세요. 클라이언트를 닫아도 배포나 과금은 중지되지 않습니다.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답

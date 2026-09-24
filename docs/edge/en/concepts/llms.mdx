@@ -1155,6 +1155,94 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Nebius Serverless Endpoint (vLLM)">
+    A Nebius Serverless Endpoint running vLLM exposes an OpenAI-compatible API. It uses the
+    endpoint's managed HTTPS URL and bearer token, not `NEBIUS_API_KEY` from Nebius AI Studio.
+
+    Set these values after creating the endpoint:
+
+    ```toml Code
+    NEBIUS_ENDPOINT_URL=https://your-endpoint.example.nebius.cloud
+    NEBIUS_ENDPOINT_TOKEN=<your-endpoint-bearer-token>
+    NEBIUS_MODEL_ID=Qwen/Qwen3-0.6B
+    ```
+
+    `NEBIUS_MODEL_ID` must exactly match an ID returned by the endpoint's `/v1/models` route.
+    Do not add a provider prefix such as `nebius/`.
+
+    Before starting a Crew, wait for both the endpoint and the model to be ready:
+
+    ```bash
+    curl --fail-with-body "$NEBIUS_ENDPOINT_URL/health" \
+      -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
+    curl --fail-with-body "$NEBIUS_ENDPOINT_URL/v1/models" \
+      -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
+    ```
+
+    Then connect through CrewAI's native OpenAI-compatible client:
+
+    ```python Code
+    import os
+
+    from crewai import Agent, Crew, LLM, Process, Task
+    from crewai.tools import tool
+
+
+    @tool("add_numbers")
+    def add_numbers(a: float, b: float) -> float:
+        """Add two numbers."""
+        return a + b
+
+
+    endpoint_url = os.environ["NEBIUS_ENDPOINT_URL"].rstrip("/")
+    llm = LLM(
+        model=os.environ["NEBIUS_MODEL_ID"],
+        custom_openai=True,
+        base_url=f"{endpoint_url}/v1",
+        api_key=os.environ["NEBIUS_ENDPOINT_TOKEN"],
+        stream=True,
+    )
+
+    calculator = Agent(
+        role="Arithmetic specialist",
+        goal="Use the provided tool to calculate exact answers.",
+        backstory="You verify every arithmetic result with a tool.",
+        llm=llm,
+        tools=[add_numbers],
+    )
+    addition = Task(
+        description="Use add_numbers to calculate 19.5 + 22.75.",
+        expected_output="The exact numeric total.",
+        agent=calculator,
+    )
+
+    result = Crew(
+        agents=[calculator],
+        tasks=[addition],
+        process=Process.sequential,
+    ).kickoff()
+    print(result)
+    ```
+
+    <Warning>
+      Tool use requires a model with tool-calling support and a vLLM deployment configured with
+      the matching tool-call parser and automatic tool choice. Verify those options for your model
+      before using CrewAI tools.
+    </Warning>
+
+    If requests fail, check the following:
+
+    - HTTP `401` or `403`: use the Endpoint bearer token, not a Nebius control-plane or AI Studio key.
+    - HTTP `404` while starting: wait until the Endpoint is `RUNNING` and `/health` succeeds.
+    - Model-not-found errors: copy the exact model ID from `/v1/models`.
+    - Tool-call errors: confirm the model and vLLM tool parser support function calling.
+    - Streaming errors: first retry with `stream=False` to separate endpoint streaming from model issues.
+
+    See the [vLLM deployment guide for Nebius Serverless](https://docs.vllm.ai/en/latest/deployment/frameworks/nebius/)
+    for prerequisites, endpoint creation, logs, and readiness checks. Stop or delete the Endpoint
+    when it is no longer needed; closing the client does not stop the deployment or its billing.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
