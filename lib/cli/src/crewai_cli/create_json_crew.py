@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
 import re
 import sys
 from typing import Any
+import warnings
 
 import click
 from crewai_core.telemetry import Telemetry
@@ -75,6 +77,7 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
     ],
     "gemini": [
+        ("gemini-3.8-flash", "Gemini 3.8 Flash"),
         ("gemini-3.5-flash", "Gemini 3.5 Flash"),
         ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
         ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
@@ -621,10 +624,6 @@ def _wizard_agents_and_tasks(
         "inputs": {},
     }
 
-    # Platform authentication belongs to the final wizard step, after the
-    # user has finished configuring agents, tasks, and crew settings.
-    _setup_platform_auth(agents)
-
     return agents, tasks, crew_settings
 
 
@@ -918,48 +917,106 @@ def _prompt_platform_token() -> str:
     ).strip()
 
 
+def _check_platform_app(
+    app: str, application_selector: Any, client_for_selector: Any
+) -> tuple[Any | None, Exception | None]:
+    """Check one AMP application with the synchronous platform client."""
+    try:
+        selector = application_selector.from_string(app)
+        return client_for_selector(selector).get_actions([selector]), None
+    except Exception as error:
+        return None, error
+
+
+async def _check_platform_apps_concurrently(
+    apps: list[str], application_selector: Any, client_for_selector: Any
+) -> list[tuple[Any | None, Exception | None]]:
+    """Run independent AMP application checks concurrently."""
+    return await asyncio.gather(
+        *(
+            asyncio.to_thread(
+                _check_platform_app, app, application_selector, client_for_selector
+            )
+            for app in apps
+        )
+    )
+
+
+def _report_platform_app_validation(
+    app: str,
+    actions: Any | None,
+    error: Exception | None,
+    failed: list[str],
+) -> bool:
+    """Print one AMP application validation result and return token validity."""
+    app_name = _platform_app_name(app)
+    if error is not None:
+        status_code = getattr(getattr(error, "response", None), "status_code", None)
+        if status_code in {401, 403}:
+            click.secho(
+                "  ✘ CrewAI Platform Integration Token is invalid or expired",
+                fg="red",
+            )
+            return True
+        click.secho(
+            f"  ✘ {app_name} integration could not be validated: {error}",
+            fg="red",
+        )
+        failed.append(app)
+        return False
+
+    if not actions:
+        click.secho(
+            f"  ✘ {app_name} integration is not connected on CrewAI Platform",
+            fg="red",
+        )
+        failed.append(app)
+    else:
+        click.secho(
+            f"  ✔ {app_name} integration is connected on CrewAI Platform",
+            fg="green",
+        )
+    return False
+
+
 def _validate_platform_apps(
     apps: list[str], application_selector: Any, client_for_selector: Any
 ) -> tuple[list[str], bool]:
-    """Check selected AMP applications and return failures and token validity."""
+    """Check selected AMP applications concurrently when no event loop is running."""
     failed: list[str] = []
-    for app in apps:
-        app_name = _platform_app_name(app)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        app_names = [_platform_app_name(app) for app in apps]
         click.echo()
         click.secho(
-            "  Checking CrewAI Platform Integration Token and "
-            f"{app_name} integration on AMP...",
+            "  Checking "
+            f"{', '.join(app_names)} integration{'s' if len(app_names) != 1 else ''} "
+            "together on AMP...",
             fg="cyan",
         )
-        try:
-            selector = application_selector.from_string(app)
-            actions = client_for_selector(selector).get_actions([selector])
-        except Exception as error:
-            status_code = getattr(getattr(error, "response", None), "status_code", None)
-            if status_code in {401, 403}:
-                click.secho(
-                    "  ✘ CrewAI Platform Integration Token is invalid or expired",
-                    fg="red",
-                )
+        results = asyncio.run(
+            _check_platform_apps_concurrently(
+                apps, application_selector, client_for_selector
+            )
+        )
+        for app, (actions, error) in zip(apps, results, strict=True):
+            if _report_platform_app_validation(app, actions, error, failed):
                 return failed, True
+    else:
+        for app in apps:
+            app_name = _platform_app_name(app)
+            click.echo()
             click.secho(
-                f"  ✘ {app_name} integration could not be validated: {error}",
-                fg="red",
+                "  Checking CrewAI Platform Integration Token and "
+                f"{app_name} integration on AMP...",
+                fg="cyan",
             )
-            failed.append(app)
-            continue
-
-        if not actions:
-            click.secho(
-                f"  ✘ {app_name} integration is not connected on CrewAI Platform",
-                fg="red",
+            actions, error = _check_platform_app(
+                app, application_selector, client_for_selector
             )
-            failed.append(app)
-        else:
-            click.secho(
-                f"  ✔ {app_name} integration is connected on CrewAI Platform",
-                fg="green",
-            )
+            if _report_platform_app_validation(app, actions, error, failed):
+                return failed, True
     return failed, False
 
 
@@ -1010,10 +1067,14 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
 
     click.echo()
     try:
-        from crewai_tools.tools.crewai_platform_tools.integrations_client import (
-            ApplicationSelector,
-            client_for_selector,
-        )
+        # Importing crewai_tools currently initializes optional tool SDKs. Keep
+        # their import-time warnings out of the interactive token setup flow.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+                ApplicationSelector,
+                client_for_selector,
+            )
     except ImportError as error:
         raise click.ClickException(
             "Platform tools require the 'crewai-tools' package. "
@@ -1104,11 +1165,9 @@ def create_json_crew(
             default_llm=default_llm,
         )
 
-    platform_token = (
-        os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN")
-        if _platform_apps_from_agents(agents) and not dmn_mode
-        else None
-    )
+    # Authenticate only after the full wizard is complete, but before any
+    # project files are created. The returned token is then persisted below.
+    platform_token = _setup_platform_auth(agents) if not dmn_mode else None
 
     # Create directories only after platform authentication succeeds.
     folder_path.mkdir(parents=True)
@@ -1123,6 +1182,7 @@ def create_json_crew(
         env_vars = load_env_vars(folder_path)
         env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
         write_env_file(folder_path, env_vars)
+        _success("CrewAI Platform integration token saved to .env")
 
     for agent in agents:
         _write_jsonc(

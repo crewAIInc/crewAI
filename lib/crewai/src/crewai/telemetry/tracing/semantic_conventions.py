@@ -23,6 +23,7 @@ Custom conventions (crewai.* namespace):
     crewai_policy()     crewai.policy.*
     crewai_memory()     crewai.memory.*
     crewai_knowledge()  crewai.knowledge.*
+    crewai_tool()       crewai.tool.*
     crewai_llm()        crewai.llm.*
     crewai_mcp()        crewai.mcp.*
     crewai_a2a()        crewai.a2a.*
@@ -57,6 +58,17 @@ MCP_CONNECTION_DURATION_MS = "crewai.mcp.connection_duration_ms"
 MCP_TOOL_EXECUTION_DURATION_MS = "crewai.mcp.tool_execution_duration_ms"
 HUMAN_FEEDBACK_WAIT_DURATION_MS = "crewai.human_feedback.wait_duration_ms"
 HUMAN_FEEDBACK_REQUEST_ID = "crewai.human_feedback.request_id"
+
+# Attribute keys that let a consumer of the spans reason about a run without
+# reconstructing it from raw text.
+TASK_OUTPUT_FORMAT = "crewai.task.output_format"
+"""The output format the task declared: ``json``, ``pydantic`` or ``raw``."""
+TASK_OUTPUT_PYDANTIC_PRODUCED = "crewai.task.output_pydantic_produced"
+"""Whether the task's output actually carries a parsed Pydantic object."""
+TASK_OUTPUT_JSON_PRODUCED = "crewai.task.output_json_produced"
+"""Whether the task's output actually carries a parsed JSON dict."""
+TOOL_FROM_CACHE = "crewai.tool.from_cache"
+"""Whether the tool result came from the tool cache rather than a live run."""
 
 GEN_AI_OP_INVOKE_WORKFLOW = "invoke_workflow"
 GEN_AI_OP_EXECUTE_METHOD = "execute_method"
@@ -360,6 +372,9 @@ def crewai_task(
     description: str | None = None,
     expected_output: str | None = None,
     output: str | None = None,
+    output_format: str | None = None,
+    output_pydantic_produced: bool | None = None,
+    output_json_produced: bool | None = None,
 ) -> dict[str, Any]:
     return _filter_none(
         {
@@ -369,6 +384,9 @@ def crewai_task(
             "crewai.task.description": description,
             "crewai.task.expected_output": expected_output,
             "crewai.task.output": output,
+            TASK_OUTPUT_FORMAT: output_format,
+            TASK_OUTPUT_PYDANTIC_PRODUCED: output_pydantic_produced,
+            TASK_OUTPUT_JSON_PRODUCED: output_json_produced,
         }
     )
 
@@ -533,6 +551,23 @@ def crewai_knowledge(
             "crewai.knowledge.task_prompt": task_prompt,
             "crewai.knowledge.query": query,
             "crewai.knowledge.retrieved_knowledge": retrieved_knowledge,
+        }
+    )
+
+
+def crewai_tool(
+    *,
+    from_cache: bool | None = None,
+) -> dict[str, Any]:
+    """Attributes of a tool call that completed, whatever it returned.
+
+    ``from_cache`` says whether the result was served from the tool cache; a
+    cached call never ran the tool, so its duration and result mean something
+    different to a consumer than a live call's.
+    """
+    return _filter_none(
+        {
+            TOOL_FROM_CACHE: from_cache,
         }
     )
 

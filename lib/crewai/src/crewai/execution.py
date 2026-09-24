@@ -159,8 +159,14 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     else:
         client = TraceGrantClient(amp_credential)
         grant = client.create(execution_uuid)
-        session = TraceSession(grant.execution_uuid, [GrantSpanExporter(client, grant)])
-        stack.callback(session.shutdown)
+        exporter = GrantSpanExporter(client, grant)
+        session = TraceSession(grant.execution_uuid, [exporter])
+
+        def finish_authenticated_trace() -> None:
+            if session.shutdown():
+                exporter.record_export()
+
+        stack.callback(finish_authenticated_trace)
     _activate_tracing(ExecutionTrace(session, stack))
 
 
