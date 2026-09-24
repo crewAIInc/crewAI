@@ -1,27 +1,27 @@
 ---
 title: Integração Agent Action Capsule (capsule-emit)
-description: Registros de evidência selados e endereçados por conteúdo para execuções de crew — uma cadeia de duas cápsulas por chamada de ferramenta, com ancoragem de digests em um log de transparência para evidência de violação.
+description: Registros de evidência selados, assinados e endereçados por conteúdo para execuções de crew — uma cadeia de duas cápsulas por chamada de ferramenta, verificável offline.
 icon: file-shield
 mode: "wide"
 ---
 
 # Visão Geral do Agent Action Capsule
 
-O [capsule-emit](https://github.com/action-state-group/capsule-emit) registra cada chamada de ferramenta em uma execução de crew como uma cadeia de **Agent Action Capsules**: uma cápsula *planejada* selada quando a chamada inicia e, ao terminar, uma cápsula *confirmada* (ou *com erro*) selada e encadeada à planejada pelo id da cápsula. Cápsulas são evidência de auditoria e conformidade do que a crew realmente fez — complementares ao rastreamento.
+O [capsule-emit](https://github.com/action-state-group/capsule-emit) registra cada chamada de ferramenta em uma execução de crew como uma cadeia de **Agent Action Capsules**: uma cápsula *planejada* selada quando a chamada inicia e, ao terminar, uma cápsula *confirmada* (ou *com falha*) selada e encadeada à planejada pelo id da cápsula. Cápsulas são evidência de auditoria e conformidade do que a crew realmente fez — complementares ao rastreamento.
 
 Duas camadas de verificação, deliberadamente distintas:
 
-- **Offline, `verify()`** checa estrutura, endereçamento por conteúdo (cada digest é recalculado a partir do próprio conteúdo do registro) e consistência da cadeia — sem serviço, sem credenciais.
-- **Evidência de violação perante um terceiro** vem da etapa de ancoragem: os digests das cápsulas são registrados em um log de transparência SCITT, e o recibo do log é o que torna alterações posteriores evidentes para alguém fora do seu ambiente. O quickstart executa essa etapa contra um serviço stub local para manter a demo hermética; a ancoragem em produção aponta para um log real.
+- **Verificação offline** checa estrutura, endereçamento por conteúdo (cada digest é recalculado a partir do próprio conteúdo do registro), consistência da cadeia e a assinatura do produtor de cada registro — sem serviço, sem credenciais. Uma assinatura prova que a chave nomeada no registro o assinou, não quem detém essa chave: a assinatura e o id da chave ficam fora do digest, então um ledger reassinado com uma chave nova ainda passa.
+- **Evidência de violação perante um terceiro** vem do fluxo de checkpoint/testemunha, ativado por padrão (veja a tabela abaixo). Cada checkpoint aceito pela testemunha dá a um terceiro uma referência para conferir o ledger, na medida em que esse terceiro confia que a testemunha é independente de você. Registros selados após o último checkpoint aceito ainda não estão comprometidos fora do seu ambiente; uma execução que sela menos de 100 registros, todos em até 900 segundos, termina sem publicar nenhum. A antiga âncora SCITT por selagem é um canal legado, desativado por padrão.
 
 ### Recursos
 
 - **Um listener, todas as chamadas de ferramenta**: registre `CapsuleEventListener()` uma única vez pelo mecanismo padrão `BaseEventListener` do CrewAI — sem alterações de código por ferramenta.
 - **Cadeias planejado → confirmado**: uma cápsula planejada é selada quando a chamada de ferramenta inicia; ao terminar, uma segunda cápsula confirmada é selada e encadeada a ela (`prior_capsule_id`); erros selam uma cápsula de efeito falho encadeada.
-- **Privacidade somente por digest**: entradas/saídas das ferramentas são registradas como digests SHA-256 — o conteúdo bruto permanece local; apenas digests são ancorados.
-- **Checagens de consistência offline**: `verify()` reverifica estrutura, endereçamento por conteúdo e elos da cadeia apenas a partir do registro.
-- **Evidência de violação ancorada**: registro somente por digest em um log de transparência SCITT; o recibo é a etapa central da evidência de violação independente.
-- **Seguro para a crew por construção**: o listener respeita `is_replaying()` e nunca lança exceções na execução da crew; uma âncora inacessível não pode quebrar a crew.
+- **Privacidade somente por digest**: entradas/saídas das ferramentas são registradas como digests SHA-256 — o conteúdo bruto permanece local; o fluxo de testemunha carrega apenas metadados de checkpoint, nunca o conteúdo dos registros.
+- **Checagens de consistência offline**: reverifique estrutura, endereçamento por conteúdo, elos da cadeia e assinaturas do produtor apenas a partir do ledger.
+- **Evidência de violação por checkpoint**: cada checkpoint aceito compromete o hash raiz do ledger fora do seu ambiente; o trecho posterior ainda não está coberto. `CAPSULE_WITNESS=off` interrompe todo o tráfego de saída; a verificação offline nunca consulta um checkpoint, em nenhum dos casos.
+- **Seguro para a crew por construção**: o listener respeita `is_replaying()` e nunca lança exceções na execução da crew; um serviço de transparência inacessível não pode quebrar a crew.
 
 ## Instruções de Configuração
 
@@ -43,17 +43,18 @@ Duas camadas de verificação, deliberadamente distintas:
       ```python
       result = crew.kickoff()
       ```
-      Cada chamada de ferramenta agora produz registros selados no ledger local (`ledger.jsonl` por padrão), com digests ancorados no serviço de transparência SCITT configurado.
+      Cada chamada de ferramenta agora produz registros selados e assinados no ledger local (`ledger.jsonl` por padrão).
     </Step>
     <Step title="Confira a evidência">
       ```python
       import json
-      from agent_action_capsule import verify_store
+      from capsule_emit.signing import verify_store_signed
 
       rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
       if not rows:
           raise SystemExit("empty ledger — nothing to verify")
-      results = verify_store([row.get("capsule", row) for row in rows])
+      # checks each signature against the key named in the record, not against a key you trust
+      results = verify_store_signed([row.get("capsule", row) for row in rows], require_signature=True)
       ok = all(r.ok for r in results)
       print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
       ```
@@ -62,24 +63,26 @@ Duas camadas de verificação, deliberadamente distintas:
 
 ## Quickstart executável
 
-Uma demonstração hermética de ponta a ponta acompanha o pacote (event bus real do CrewAI, serviço de transparência stub local, sem chave de LLM e sem serviço externo):
+Uma demonstração hermética de ponta a ponta está no repositório do capsule-emit (event bus real do CrewAI, a âncora legada apontada para um stub local, sem chave de LLM):
 
 ```shell
+git clone --depth 1 --branch v0.8.6 https://github.com/action-state-group/capsule-emit.git
+cd capsule-emit
 pip install "capsule-emit[crewai]"
 python examples/crewai-listener/demo.py
 ```
 
-Saída de exemplo (capsule-emit 0.4.0, crewai 1.15.x):
+Saída de exemplo (capsule-emit 0.8.6, crewai 1.15.22):
 
 ```text
-action                             effect     verdict   chained  verify()
+action                             effect     verdict   chained  verify_store_signed()
 ---------------------------------------------------------------------------
-crew_kickoff_started/1b68ae38-6137 -          executed  -        OK
-fetch_supplier/4817753c-2972-43b6- planned    executed  -        OK
-fetch_supplier/6f16fea8-ed7b-49f2- confirmed  executed  yes      OK
-write_po/05daa3c0-b099-4152-b320-f planned    executed  -        OK
-write_po/43ea7df6-106c-4b1b-87fe-2 failed     errored   yes      OK
-crew_kickoff_completed/3ea9a64d-53 -          executed  -        OK
+crew_kickoff_started/7bf66bc3-11b3 -          executed  -        VALID
+fetch_supplier/70206d21-a261-43c8- planned    executed  -        VALID
+fetch_supplier/fa5be16a-886d-411d- confirmed  executed  yes      VALID
+write_po/376d4199-d967-4472-8960-5 planned    executed  -        VALID
+write_po/af0fe96e-2503-4e10-bf77-4 failed     errored   yes      VALID
+crew_kickoff_completed/7f95d83c-e3 -          executed  -        VALID
 ---------------------------------------------------------------------------
 6 capsules, verify: ALL OK
 ```
@@ -90,8 +93,9 @@ crew_kickoff_completed/3ea9a64d-53 -          executed  -        OK
 |---|---|
 | `action_id` / nome da ferramenta | qual chamada de ferramenta ou evento de ciclo de vida da crew (kickoff iniciado/concluído/falho) esta cápsula registra |
 | digests de entrada/saída | compromissos SHA-256 — o conteúdo bruto nunca sai do seu ambiente |
-| `effect` | `planned`, `executed`, `confirmed` ou `errored` |
-| cadeia `confirms` | a cápsula executada cita a cápsula planejada por endereço de conteúdo |
-| envio de âncora | registro somente por digest enviado de forma assíncrona a um log de transparência SCITT (opcional, ativado por padrão); o status padrão é `submitted` — um recibo confirmado requer bloqueio com `anchor_wait` |
+| `effect` | `planned`, `confirmed` ou `failed` nas chamadas de ferramenta (registros de ciclo de vida da crew não têm efeito); o veredito é `executed` ou `errored` |
+| cadeia `confirms` | a cápsula confirmada cita a cápsula planejada por endereço de conteúdo |
+| `signature` / `key_id` | uma assinatura de produtor COSE_Sign1 sobre o id da cápsula e a chave que a gerou — fora do digest, portanto provam qual chave assinou, não quem a detém |
+| tráfego de saída | por padrão, um checkpoint (tamanho do log, hash raiz, timestamp; nunca o conteúdo dos registros) a cada 100 registros, ou no próximo selo depois de passados 900 segundos (não há timer em segundo plano), publicado na testemunha pública do projeto em `witness.agentactioncapsule.org`; `CAPSULE_WITNESS_URL` o envia a uma testemunha de sua escolha, `CAPSULE_WITNESS=off` o desativa. A âncora legada por selagem fica desativada a menos que `CAPSULE_ANCHOR=legacy-on` |
 
 O formato do registro é uma especificação aberta (`draft-mih-scitt-agent-action-capsule`, um Internet-Draft individual do IETF) com implementação de referência Apache-2.0.
