@@ -45,8 +45,8 @@ class DirectoryReadTool(BaseTool):
         if directory[-1] == "/":
             directory = directory[:-1]
         files_list = [
-            f"{directory}/{(os.path.join(root, filename).replace(directory, '').lstrip(os.path.sep))}"
-            for root, dirs, files in os.walk(directory)
+            os.path.join(root, filename)
+            for root, _, files in os.walk(directory)
             for filename in files
         ]
         files = "\n- ".join(files_list)

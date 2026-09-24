@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
   issues: write
+  # GitHub accepts either Issues or Pull requests write access for PR comments.
+  # Request both scopes to match the first-time PR workflow and retain a
+  # supported permission path when GitHub issues the Actions token.
+  pull-requests: write
 
 jobs:
   welcome:

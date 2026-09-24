@@ -1,0 +1,156 @@
+---
+title: Channels
+description: CopilotKit Channels SDK와 관리형 Intelligence 플랫폼으로 동일한 CrewAI 에이전트를 Slack 또는 Teams 봇으로 실행하세요.
+icon: messages
+mode: "wide"
+---
+
+## 사용자가 이미 있는 곳에서 만나세요
+
+[Overview](/edge/ko/guides/frontend/overview)에서 만든 CrewAI 에이전트는 반드시 웹 앱 뒤에서만 동작할 필요가 없습니다. 동일한 Crew 또는 Flow를 메시징 플랫폼 안에서 봇으로 실행할 수 있습니다. 다시 빌드할 필요도, 에이전트 로직을 두 번 복사할 필요도 없습니다. 에이전트는 [AG-UI 프로토콜](https://docs.ag-ui.com)을 통해 그대로 노출되고, **channel**이 Slack 또는 Microsoft Teams에서 이를 구동합니다.
+
+CopilotKit의 [Channels SDK](https://docs.copilotkit.ai/slack)가 그 channel을 제공합니다. 작은 런타임에 `createChannel`을 선언하고 이를 CrewAI 에이전트에 연결하면, CopilotKit의 관리형 **Intelligence** 플랫폼이 메시징 제공자와의 연결을 중개합니다.
+
+<Note>
+이 섹션의 나머지 내용과 달리 Channels는 **셀프 호스팅되지 않습니다**. Channels는 **CopilotKit Intelligence**를 통해 실행되며, 이는 설계상 Channels에 필수적인 서비스입니다(무료 티어 제공). Intelligence는 플랫폼 연결과 자격 증명을 보관하고, 각 플랫폼 이벤트를 수신하며, 해당 턴을 여러분의 channel 프로세스로 전달합니다. 여러분의 프로세스는 에이전트를 실행하고 응답을 다시 스트리밍합니다. Slack은 Intelligence 대시보드에서 한 번만 구성하면 되며, 플랫폼 자격 증명은 결코 여러분의 프로세스로 들어오지 않습니다. 에이전트, 도구, 상태는 온전히 여러분의 것으로 유지됩니다.
+</Note>
+
+## 어떻게 맞물리는가
+
+CrewAI 에이전트 서버에 관한 것은 아무것도 바뀌지 않습니다. Overview에서와 똑같이 AG-UI를 통해 Crew 또는 Flow를 계속 제공합니다. 여러분이 추가하는 것은 `@copilotkit/channels`로 빌드된 별도의 장시간 실행 Node 프로세스입니다. 이 프로세스는 `CopilotRuntime`에 channel을 등록하고, Intelligence에 연결하며, 메시지가 도착할 때마다 에이전트를 실행합니다.
+
+```
+Slack / Teams  ──►  CopilotKit Intelligence  ──►  channel process (Node)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+channel 프로세스는 Intelligence 게이트웨이에 대한 지속적인 연결을 유지하므로, 장시간 실행되는 호스트가 필요합니다. 서버리스 요청 핸들러는 그 연결을 소유할 수 없습니다. CrewAI 서버는 동시에 Overview의 웹 프론트엔드를 계속 제공할 수 있습니다. 웹 앱과 channel은 하나의 AG-UI 엔드포인트에 연결된 두 개의 클라이언트일 뿐입니다.
+
+## 통합 가이드
+
+<Steps>
+
+<Step title="Channels 패키지 설치">
+
+Channels SDK는 모든 것이 포함되어 있습니다. 모든 플랫폼이 하나의 패키지로 제공되며, 플랫폼별로 설치할 어댑터가 없습니다. channel을 호스팅하는 런타임 및 CrewAI AG-UI 클라이언트와 함께 다음을 추가하세요:
+
+```bash
+npm install @copilotkit/channels @copilotkit/runtime @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="Intelligence에서 Channel 생성">
+
+[CopilotKit 대시보드](https://docs.copilotkit.ai/slack)에서 Channel을 생성하고 Slack을 연결하세요. Intelligence가 Slack 앱 생성 과정을 안내하고 그 자격 증명을 보관합니다. 그러면 여러분의 프로세스를 위한 두 개의 환경 변수가 남으며, 둘 다 대시보드에서 얻습니다:
+
+```bash
+export INTELLIGENCE_API_KEY=...      # authenticates the runtime with Intelligence (free tier available)
+export INTELLIGENCE_CHANNEL_ID=...   # the Channel ID, matched by createChannel({ name })
+```
+
+</Step>
+
+<Step title="channel 정의">
+
+`createChannel`은 channel을 선언하고 에이전트를 연결합니다. 각 대화가 자신만의 세션을 갖도록 에이전트를 스레드별 팩토리로 빌드하되, Overview가 웹 런타임에서 사용하는 것과 동일한 `CrewAIAgent`를 여러분의 AG-UI 엔드포인트를 가리키도록 설정하세요. `identifyUser: "platform"`은 Intelligence가 각 플랫폼 사용자를 안정적인 신원에 매핑하도록 합니다.
+
+```ts
+// channel.ts
+import { createChannel } from "@copilotkit/channels";
+import { CrewAIAgent } from "@ag-ui/crewai";
+
+const channel = createChannel({
+  name: process.env.INTELLIGENCE_CHANNEL_ID!, // must match the Channel ID in Intelligence
+  identifyUser: "platform",
+  // A fresh agent per conversation, pointed at your CrewAI AG-UI endpoint.
+  agent: (threadId) => {
+    const agent = new CrewAIAgent({ url: "http://localhost:8000/recipe" });
+    agent.threadId = threadId;
+    return agent;
+  },
+});
+
+// A mention subscribes the thread and runs the agent; afterwards every message
+// in a subscribed thread runs it without needing another mention.
+channel.onMention(async ({ thread }) => {
+  await thread.subscribe();
+  await thread.runAgent();
+});
+
+channel.onMessage(async ({ thread }) => {
+  if (await thread.isSubscribed()) await thread.runAgent();
+});
+
+export { channel };
+```
+
+</Step>
+
+<Step title="런타임에 channel 등록">
+
+Intelligence 게이트웨이와 여러분의 channel로 `CopilotRuntime`을 생성한 다음, `createCopilotNodeListener`로 이를 제공하세요. `agents` 맵은 비어 있는 상태로 둡니다. channel이 자신의 에이전트를 제공하기 때문입니다. 잘못된 구성이 시작 시 명확하게 실패하도록 channel이 준비될 때까지 기다리세요.
+
+```ts
+// server.ts
+import { createServer } from "node:http";
+import { CopilotRuntime, CopilotKitIntelligence } from "@copilotkit/runtime/v2";
+import { createCopilotNodeListener } from "@copilotkit/runtime/v2/node";
+import { channel } from "./channel";
+
+const runtime = new CopilotRuntime({
+  agents: {}, // the channel supplies its own agent; no web-facing agents needed
+  intelligence: new CopilotKitIntelligence({
+    apiKey: process.env.INTELLIGENCE_API_KEY!, // free tier available
+  }),
+  channels: [channel],
+});
+
+const listener = createCopilotNodeListener({ runtime });
+await listener.channels?.ready({ timeoutMs: 15_000 });
+
+createServer(listener).listen(3123, () => {
+  console.log("Channels runtime listening on port 3123");
+});
+```
+
+</Step>
+
+<Step title="channel 런타임 실행">
+
+CrewAI 에이전트 서버와 함께 시작하세요:
+
+```bash
+uvicorn server:app --port 8000   # terminal 1 — CrewAI agent server
+npx tsx server.ts                 # terminal 2 — Channels runtime
+```
+
+Slack 또는 Teams에서 봇을 멘션하면 Crew 또는 Flow를 실행하고 응답을 스레드로 다시 스트리밍합니다. 스레드는 구독된 상태로 유지되므로 후속 메시지는 또다시 멘션할 필요 없이 실행됩니다.
+
+</Step>
+
+</Steps>
+
+## 이벤트 모델
+
+channel은 핸들러로 플랫폼 이벤트에 반응하며, 각 핸들러는 몇 가지 메서드로 구동하는 `thread`를 받습니다:
+
+- **`channel.onMention`**은 사용자가 봇을 @-멘션할 때 발생합니다. `thread.subscribe()`를 호출해 스레드에 참여한 다음, `thread.runAgent()`로 멘션에 대해 CrewAI 에이전트를 실행하세요.
+- **`channel.onMessage`**는 봇이 볼 수 있는 스레드의 모든 메시지에서 발생합니다. `thread.isSubscribed()`로 게이트를 걸어 에이전트가 참여한 곳에서만 응답하도록 한 다음, `thread.runAgent()`를 호출하세요.
+- **`thread.runAgent()`**는 현재 턴에 대해 연결된 CrewAI 에이전트를 실행하고 그 출력을 channel로 다시 스트리밍합니다. 에이전트가 실행할 텍스트를 재정의하려면 `{ prompt }`를 전달하세요.
+
+여러분의 에이전트는 일반적인 AG-UI `RunAgentInput`을 받고 일반적인 AG-UI 이벤트를 방출합니다. 플랫폼 메커니즘은 channel 뒤에 머무르므로, 동일한 Crew 또는 Flow가 모든 플랫폼에서 변경 없이 실행됩니다. channel은 환영 인사, 인터럽트, 명령, 반응, 모달을 위한 핸들러도 노출합니다. 전체 표면은 [`Channel` 레퍼런스](https://docs.copilotkit.ai/reference/channels/classes/Channel)를 참조하세요.
+
+## 플랫폼 지원
+
+관리형 Intelligence 경로는 현재 **Slack**과 **Microsoft Teams**를 지원합니다. 동일한 channel 코드가 양쪽에서 실행되며, `message.platform` / `thread.platform`이 원래의 출처를 보고합니다. 다른 플랫폼(Discord, Telegram, WhatsApp)은 관리형 경로가 아니라 개발자가 운영하는 **direct adapters**를 통해 연결됩니다. 여러분 자신의 프로세스가 플랫폼 자격 증명과 전송을 보유합니다. 현재 지원 플랫폼 목록과 플랫폼별 설정은 [CopilotKit Channels 문서](https://docs.copilotkit.ai/slack)를 확인하세요.
+
+## 관련 항목
+
+<CardGroup cols={2}>
+  <Card title="Frontend Overview" icon="browser" href="/edge/ko/guides/frontend/overview">
+    Crew 또는 Flow를 AG-UI를 통해 제공하세요. 모든 channel이 그 위에 세워지는 토대입니다.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    실행 도중 사용자 승인이나 입력을 수집하기 위해 에이전트를 일시 중지하세요.
+  </Card>
+</CardGroup>

@@ -1,0 +1,690 @@
+---
+title: "خوادم MCP كأدوات في CrewAI"
+description: "تعلم كيفية دمج خوادم MCP كأدوات في وكلاء CrewAI باستخدام مكتبة `crewai-tools`."
+icon: plug
+mode: "wide"
+---
+
+## نظرة عامة
+
+يوفر [بروتوكول سياق النموذج](https://modelcontextprotocol.io/introduction) (MCP) طريقة موحدة لوكلاء الذكاء الاصطناعي لتوفير سياق لنماذج اللغة الكبيرة من خلال التواصل مع خدمات خارجية تُعرف بخوادم MCP.
+
+يقدم CrewAI **نهجين** لتكامل MCP:
+
+### تكامل DSL البسيط (الموصى به)
+
+استخدم حقل `mcps` مباشرة على الوكلاء لتكامل سلس مع أدوات MCP. يدعم DSL كلاً من **المراجع النصية** (للإعداد السريع) و**الإعدادات المنظمة** (للتحكم الكامل).
+
+#### المراجع النصية (إعداد سريع)
+
+مثالية لخوادم HTTPS البعيدة وتكاملات MCP المتصلة من كتالوج CrewAI:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Research and analyze information",
+    backstory="Expert researcher with access to external tools",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=your_key",           # External MCP server
+        "https://api.weather.com/mcp#get_forecast",          # Specific tool from server
+        "snowflake",                                         # Connected MCP from catalog
+        "stripe#list_invoices"                               # Specific tool from connected MCP
+    ]
+)
+# MCP tools are now automatically available to your agent!
+```
+
+#### الإعدادات المنظمة (تحكم كامل)
+
+للتحكم الكامل في إعدادات الاتصال وتصفية الأدوات وجميع أنواع النقل:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerStdio, MCPServerHTTP, MCPServerSSE
+from crewai.mcp.filters import create_static_tool_filter
+
+agent = Agent(
+    role="Advanced Research Analyst",
+    goal="Research with full control over MCP connections",
+    backstory="Expert researcher with advanced tool access",
+    mcps=[
+        # Stdio transport for local servers
+        MCPServerStdio(
+            command="npx",
+            args=["-y", "@modelcontextprotocol/server-filesystem"],
+            env={"API_KEY": "your_key"},
+            tool_filter=create_static_tool_filter(
+                allowed_tool_names=["read_file", "list_directory"]
+            ),
+            cache_tools_list=True,
+        ),
+        # HTTP/Streamable HTTP transport for remote servers
+        MCPServerHTTP(
+            url="https://api.example.com/mcp",
+            headers={"Authorization": "Bearer your_token"},
+            streamable=True,
+            cache_tools_list=True,
+        ),
+        # SSE transport for real-time streaming
+        MCPServerSSE(
+            url="https://stream.example.com/mcp/sse",
+            headers={"Authorization": "Bearer your_token"},
+        ),
+    ]
+)
+```
+
+### متقدم: MCPServerAdapter (للسيناريوهات المعقدة)
+
+لحالات الاستخدام المتقدمة التي تتطلب إدارة اتصال يدوية، توفر مكتبة `crewai-tools` فئة `MCPServerAdapter`.
+
+ندعم حالياً آليات النقل التالية:
+
+- **Stdio**: للخوادم المحلية (التواصل عبر الإدخال/الإخراج القياسي بين العمليات على نفس الجهاز)
+- **Server-Sent Events (SSE)**: للخوادم البعيدة (بث بيانات أحادي الاتجاه في الوقت الفعلي من الخادم إلى العميل عبر HTTP)
+- **Streamable HTTPS**: للخوادم البعيدة (اتصال مرن، ربما ثنائي الاتجاه عبر HTTPS، يستخدم غالباً SSE للتدفقات من الخادم إلى العميل)
+
+## فيديو تعليمي
+
+شاهد هذا الفيديو التعليمي للحصول على دليل شامل حول تكامل MCP مع CrewAI:
+
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.youtube.com/embed/TpQ45lAZh48"
+  title="CrewAI MCP Integration Guide"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+## التثبيت
+
+يتطلب تكامل CrewAI MCP مكتبة `mcp`:
+
+```shell
+# For Simple DSL Integration (Recommended)
+uv add mcp
+
+# For Advanced MCPServerAdapter usage
+uv pip install 'crewai-tools[mcp]'
+```
+
+## البدء السريع: تكامل DSL البسيط
+
+أسهل طريقة لدمج خوادم MCP هي استخدام حقل `mcps` على وكلائك. يمكنك استخدام مراجع نصية أو إعدادات منظمة.
+
+### البدء السريع مع المراجع النصية
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create agent with MCP tools using string references
+research_agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information using advanced search tools",
+    backstory="Expert researcher with access to multiple data sources",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=your_key&profile=your_profile",
+        "snowflake#run_query"
+    ]
+)
+
+# Create task
+research_task = Task(
+    description="Research the latest developments in AI agent frameworks",
+    expected_output="Comprehensive research report with citations",
+    agent=research_agent
+)
+
+# Create and run crew
+crew = Crew(agents=[research_agent], tasks=[research_task])
+result = crew.kickoff()
+```
+
+### البدء السريع مع الإعدادات المنظمة
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.mcp import MCPServerStdio, MCPServerHTTP, MCPServerSSE
+
+# Create agent with structured MCP configurations
+research_agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information using advanced search tools",
+    backstory="Expert researcher with access to multiple data sources",
+    mcps=[
+        # Local stdio server
+        MCPServerStdio(
+            command="python",
+            args=["local_server.py"],
+            env={"API_KEY": "your_key"},
+        ),
+        # Remote HTTP server
+        MCPServerHTTP(
+            url="https://api.research.com/mcp",
+            headers={"Authorization": "Bearer your_token"},
+        ),
+    ]
+)
+
+# Create task
+research_task = Task(
+    description="Research the latest developments in AI agent frameworks",
+    expected_output="Comprehensive research report with citations",
+    agent=research_agent
+)
+
+# Create and run crew
+crew = Crew(agents=[research_agent], tasks=[research_task])
+result = crew.kickoff()
+```
+
+هذا كل شيء! يتم اكتشاف أدوات MCP تلقائياً وإتاحتها لوكيلك.
+
+## تنسيقات مراجع MCP
+
+يدعم حقل `mcps` كلاً من **المراجع النصية** (للإعداد السريع) و**الإعدادات المنظمة** (للتحكم الكامل). يمكنك مزج كلا التنسيقين في نفس القائمة.
+
+### المراجع النصية
+
+#### خوادم MCP الخارجية
+
+```python
+mcps=[
+    # Full server - get all available tools
+    "https://mcp.example.com/api",
+
+    # Specific tool from server using # syntax
+    "https://api.weather.com/mcp#get_current_weather",
+
+    # Server with authentication parameters
+    "https://mcp.exa.ai/mcp?api_key=your_key&profile=your_profile"
+]
+```
+
+#### تكاملات MCP المتصلة
+
+اربط خوادم MCP من كتالوج CrewAI أو أحضر خوادمك الخاصة. بمجرد الاتصال في حسابك، أشر إليها بالمعرف المختصر:
+
+```python
+mcps=[
+    # Connected MCP - get all available tools
+    "snowflake",
+
+    # Specific tool from a connected MCP using # syntax
+    "stripe#list_invoices",
+
+    # Multiple connected MCPs
+    "snowflake",
+    "stripe",
+    "github"
+]
+```
+
+### الإعدادات المنظمة
+
+#### نقل Stdio (خوادم محلية)
+
+مثالي لخوادم MCP المحلية التي تعمل كعمليات:
+
+```python
+from crewai.mcp import MCPServerStdio
+from crewai.mcp.filters import create_static_tool_filter
+
+mcps=[
+    MCPServerStdio(
+        command="npx",
+        args=["-y", "@modelcontextprotocol/server-filesystem"],
+        env={"API_KEY": "your_key"},
+        tool_filter=create_static_tool_filter(
+            allowed_tool_names=["read_file", "write_file"]
+        ),
+        cache_tools_list=True,
+    ),
+    # Python-based server
+    MCPServerStdio(
+        command="python",
+        args=["path/to/server.py"],
+        env={"UV_PYTHON": "3.12", "API_KEY": "your_key"},
+    ),
+]
+```
+
+#### نقل HTTP/Streamable HTTP (خوادم بعيدة)
+
+لخوادم MCP البعيدة عبر HTTP/HTTPS:
+
+```python
+from crewai.mcp import MCPServerHTTP
+
+mcps=[
+    # Streamable HTTP (default)
+    MCPServerHTTP(
+        url="https://api.example.com/mcp",
+        headers={"Authorization": "Bearer your_token"},
+        streamable=True,
+        cache_tools_list=True,
+    ),
+    # Standard HTTP
+    MCPServerHTTP(
+        url="https://api.example.com/mcp",
+        headers={"Authorization": "Bearer your_token"},
+        streamable=False,
+    ),
+]
+```
+
+#### نقل SSE (البث في الوقت الفعلي)
+
+للخوادم البعيدة التي تستخدم Server-Sent Events:
+
+```python
+from crewai.mcp import MCPServerSSE
+
+mcps=[
+    MCPServerSSE(
+        url="https://stream.example.com/mcp/sse",
+        headers={"Authorization": "Bearer your_token"},
+        cache_tools_list=True,
+    ),
+]
+```
+
+### مراجع مختلطة
+
+يمكنك دمج المراجع النصية والإعدادات المنظمة:
+
+```python
+from crewai.mcp import MCPServerStdio, MCPServerHTTP
+
+mcps=[
+    # String references
+    "https://external-api.com/mcp",              # External server
+    "snowflake",                                 # Connected MCP from catalog
+
+    # Structured configurations
+    MCPServerStdio(
+        command="npx",
+        args=["-y", "@modelcontextprotocol/server-filesystem"],
+    ),
+    MCPServerHTTP(
+        url="https://api.example.com/mcp",
+        headers={"Authorization": "Bearer token"},
+    ),
+]
+```
+
+### تصفية الأدوات
+
+تدعم الإعدادات المنظمة تصفية أدوات متقدمة:
+
+```python
+from crewai.mcp import MCPServerStdio
+from crewai.mcp.filters import create_static_tool_filter, create_dynamic_tool_filter, ToolFilterContext
+
+# Static filtering (allow/block lists)
+static_filter = create_static_tool_filter(
+    allowed_tool_names=["read_file", "write_file"],
+    blocked_tool_names=["delete_file"],
+)
+
+# Dynamic filtering (context-aware)
+def dynamic_filter(context: ToolFilterContext, tool: dict) -> bool:
+    # Block dangerous tools for certain agent roles
+    if context.agent.role == "Code Reviewer":
+        if "delete" in tool.get("name", "").lower():
+            return False
+    return True
+
+mcps=[
+    MCPServerStdio(
+        command="npx",
+        args=["-y", "@modelcontextprotocol/server-filesystem"],
+        tool_filter=static_filter,  # or dynamic_filter
+    ),
+]
+```
+
+## معاملات الإعداد
+
+يدعم كل نوع نقل خيارات إعداد محددة:
+
+### معاملات MCPServerStdio
+
+- **`command`** (مطلوب): الأمر المراد تنفيذه (مثل `"python"` أو `"node"` أو `"npx"` أو `"uvx"`)
+- **`args`** (اختياري): قائمة وسيطات الأمر (مثل `["server.py"]` أو `["-y", "@mcp/server"]`)
+- **`env`** (اختياري): قاموس متغيرات البيئة لتمريرها إلى العملية
+- **`tool_filter`** (اختياري): دالة تصفية الأدوات لتصفية الأدوات المتاحة
+- **`cache_tools_list`** (اختياري): ما إذا كان يجب تخزين قائمة الأدوات مؤقتاً لوصول أسرع لاحقاً (الافتراضي: `False`)
+
+### معاملات MCPServerHTTP
+
+- **`url`** (مطلوب): عنوان URL الخادم (مثل `"https://api.example.com/mcp"`)
+- **`headers`** (اختياري): قاموس رؤوس HTTP للمصادقة أو أغراض أخرى
+- **`streamable`** (اختياري): ما إذا كان يجب استخدام نقل HTTP القابل للبث (الافتراضي: `True`)
+- **`tool_filter`** (اختياري): دالة تصفية الأدوات لتصفية الأدوات المتاحة
+- **`cache_tools_list`** (اختياري): ما إذا كان يجب تخزين قائمة الأدوات مؤقتاً (الافتراضي: `False`)
+
+### معاملات MCPServerSSE
+
+- **`url`** (مطلوب): عنوان URL الخادم (مثل `"https://api.example.com/mcp/sse"`)
+- **`headers`** (اختياري): قاموس رؤوس HTTP للمصادقة أو أغراض أخرى
+- **`tool_filter`** (اختياري): دالة تصفية الأدوات لتصفية الأدوات المتاحة
+- **`cache_tools_list`** (اختياري): ما إذا كان يجب تخزين قائمة الأدوات مؤقتاً (الافتراضي: `False`)
+
+### المعاملات المشتركة
+
+تدعم جميع أنواع النقل:
+
+- **`tool_filter`**: دالة تصفية للتحكم في الأدوات المتاحة. يمكن أن تكون:
+  - `None` (الافتراضي): جميع الأدوات متاحة
+  - تصفية ثابتة: تُنشأ باستخدام `create_static_tool_filter()` لقوائم السماح/الحظر
+  - تصفية ديناميكية: تُنشأ باستخدام `create_dynamic_tool_filter()` للتصفية الواعية بالسياق
+- **`cache_tools_list`**: عند `True`، تخزن قائمة الأدوات مؤقتاً بعد أول اكتشاف لتحسين الأداء في الاتصالات اللاحقة
+
+## الميزات الرئيسية
+
+- **اكتشاف تلقائي للأدوات**: يتم اكتشاف الأدوات ودمجها تلقائياً
+- **منع تعارض الأسماء**: تُضاف بادئات أسماء الخوادم لأسماء الأدوات
+- **محسّن للأداء**: اتصالات حسب الطلب مع تخزين مؤقت للمخططات
+- **مرونة في الأخطاء**: تعامل أنيق مع الخوادم غير المتاحة
+- **حماية المهلة الزمنية**: مهلات زمنية مدمجة تمنع تعليق الاتصالات
+- **تكامل شفاف**: يعمل بسلاسة مع ميزات CrewAI الموجودة
+- **دعم نقل كامل**: أنواع نقل Stdio وHTTP/Streamable HTTP وSSE
+- **تصفية متقدمة**: قدرات تصفية أدوات ثابتة وديناميكية
+- **مصادقة مرنة**: دعم للرؤوس ومتغيرات البيئة ومعاملات الاستعلام
+
+## معالجة الأخطاء
+
+صُمم تكامل MCP DSL ليكون مرناً ويتعامل مع الفشل بأناقة:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerStdio, MCPServerHTTP
+
+agent = Agent(
+    role="Resilient Agent",
+    goal="Continue working despite server issues",
+    backstory="Agent that handles failures gracefully",
+    mcps=[
+        # String references
+        "https://reliable-server.com/mcp",        # Will work
+        "https://unreachable-server.com/mcp",     # Will be skipped gracefully
+        "snowflake",                              # Connected MCP from catalog
+
+        # Structured configs
+        MCPServerStdio(
+            command="python",
+            args=["reliable_server.py"],          # Will work
+        ),
+        MCPServerHTTP(
+            url="https://slow-server.com/mcp",     # Will timeout gracefully
+        ),
+    ]
+)
+# Agent will use tools from working servers and log warnings for failing ones
+```
+
+جميع أخطاء الاتصال تُعالج بأناقة:
+
+- **فشل الاتصال**: تُسجل كتحذيرات، ويستمر الوكيل مع الأدوات المتاحة
+- **أخطاء المهلة الزمنية**: تنتهي الاتصالات بعد 30 ثانية (قابلة للتعديل)
+- **أخطاء المصادقة**: تُسجل بوضوح للتصحيح
+- **إعدادات غير صالحة**: تُرفع أخطاء التحقق عند إنشاء الوكيل
+
+## متقدم: MCPServerAdapter
+
+للسيناريوهات المعقدة التي تتطلب إدارة اتصال يدوية، استخدم فئة `MCPServerAdapter` من `crewai-tools`. استخدام مدير سياق Python (تعليمة `with`) هو النهج الموصى به لأنه يتعامل تلقائياً مع بدء وإيقاف الاتصال بخادم MCP.
+
+## إعداد الاتصال
+
+يدعم `MCPServerAdapter` عدة خيارات إعداد لتخصيص سلوك الاتصال:
+
+- **`connect_timeout`** (اختياري): الحد الأقصى للوقت بالثواني لانتظار إنشاء اتصال بخادم MCP. القيمة الافتراضية 30 ثانية إذا لم تُحدد. هذا مفيد بشكل خاص للخوادم البعيدة التي قد يكون لها أوقات استجابة متغيرة.
+
+```python
+# Example with custom connection timeout
+with MCPServerAdapter(server_params, connect_timeout=60) as tools:
+    # Connection will timeout after 60 seconds if not established
+    pass
+```
+
+```python
+from crewai import Agent
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters # For Stdio Server
+
+# Example server_params (choose one based on your server type):
+# 1. Stdio Server:
+server_params=StdioServerParameters(
+    command="python3",
+    args=["servers/your_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+# 2. SSE Server:
+server_params = {
+    "url": "http://localhost:8000/sse",
+    "transport": "sse"
+}
+
+# 3. Streamable HTTP Server:
+server_params = {
+    "url": "http://localhost:8001/mcp",
+    "transport": "streamable-http"
+}
+
+# Example usage (uncomment and adapt once server_params is set):
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=mcp_tools, # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    # ... rest of your crew setup ...
+```
+
+يوضح هذا النمط العام كيفية دمج الأدوات. للحصول على أمثلة محددة مصممة لكل نوع نقل، راجع الأدلة التفصيلية أدناه.
+
+## تصفية الأدوات
+
+هناك طريقتان لتصفية الأدوات:
+
+1. الوصول إلى أداة محددة باستخدام فهرسة نمط القاموس.
+2. تمرير قائمة أسماء الأدوات إلى منشئ `MCPServerAdapter`.
+
+### الوصول إلى أداة محددة باستخدام فهرسة نمط القاموس.
+
+```python
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=[mcp_tools["tool_name"]], # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    # ... rest of your crew setup ...
+```
+
+### تمرير قائمة أسماء الأدوات إلى منشئ `MCPServerAdapter`.
+
+```python
+with MCPServerAdapter(server_params, "tool_name", connect_timeout=60) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=mcp_tools, # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    # ... rest of your crew setup ...
+```
+
+## الاستخدام مع CrewBase
+
+لاستخدام أدوات MCPServer ضمن فئة CrewBase، استخدم طريقة `get_mcp_tools`. يجب توفير إعدادات الخادم عبر خاصية `mcp_server_params`. يمكنك تمرير إعداد واحد أو قائمة من إعدادات خوادم متعددة.
+
+```python
+@CrewBase
+class CrewWithMCP:
+  # ... define your agents and tasks config file ...
+
+  mcp_server_params = [
+    # Streamable HTTP Server
+    {
+        "url": "http://localhost:8001/mcp",
+        "transport": "streamable-http"
+    },
+    # SSE Server
+    {
+        "url": "http://localhost:8000/sse",
+        "transport": "sse"
+    },
+    # StdIO Server
+    StdioServerParameters(
+        command="python3",
+        args=["servers/your_stdio_server.py"],
+        env={"UV_PYTHON": "3.12", **os.environ},
+    )
+  ]
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools()) # get all available tools
+
+    # ... rest of your crew setup ...
+```
+
+<Tip>
+عندما تكون فئة الطاقم مزينة بـ `@CrewBase`، تُدار دورة حياة المحول نيابة عنك:
+
+- أول استدعاء لـ `get_mcp_tools()` ينشئ بكسل `MCPServerAdapter` مشتركاً يُعاد استخدامه من قبل كل وكيل في الطاقم.
+- يُغلق المحول تلقائياً بعد اكتمال `.kickoff()` بفضل خطاف ما بعد التشغيل الضمني المحقون من `@CrewBase`، لذا لا حاجة للتنظيف اليدوي.
+- إذا لم يتم تعريف `mcp_server_params`، يُرجع `get_mcp_tools()` ببساطة قائمة فارغة، مما يسمح لنفس مسارات الكود بالعمل مع أو بدون إعداد MCP.
+
+هذا يجعل من الآمن استدعاء `get_mcp_tools()` من طرق وكلاء متعددة أو تفعيل MCP بشكل انتقائي لكل بيئة.
+</Tip>
+
+### إعداد مهلة الاتصال
+
+يمكنك إعداد مهلة الاتصال لخوادم MCP عن طريق تعيين خاصية فئة `mcp_connect_timeout`. إذا لم تُحدد مهلة، تكون القيمة الافتراضية 30 ثانية.
+
+```python
+@CrewBase
+class CrewWithMCP:
+  mcp_server_params = [...]
+  mcp_connect_timeout = 60  # 60 seconds timeout for all MCP connections
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools())
+```
+
+### تصفية الأدوات
+
+يمكنك تصفية الأدوات المتاحة لوكيلك عن طريق تمرير قائمة أسماء الأدوات إلى طريقة `get_mcp_tools`.
+
+```python
+@agent
+def another_agent(self):
+    return Agent(
+      config=self.agents_config["your_agent"],
+      tools=self.get_mcp_tools("tool_1", "tool_2") # get specific tools
+    )
+```
+
+## استكشاف تكاملات MCP
+
+<CardGroup cols={2}>
+  <Card
+    title="تكامل DSL البسيط"
+    icon="code"
+    href="/ar/mcp/dsl-integration"
+    color="#3B82F6"
+  >
+    **الموصى به**: استخدم صياغة حقل `mcps=[]` البسيطة لتكامل MCP بلا جهد.
+  </Card>
+  <Card
+    title="نقل Stdio"
+    icon="server"
+    href="/ar/mcp/stdio"
+    color="#10B981"
+  >
+    الاتصال بخوادم MCP المحلية عبر الإدخال/الإخراج القياسي. مثالي للنصوص البرمجية والملفات التنفيذية المحلية.
+  </Card>
+  <Card title="نقل SSE" icon="wifi" href="/ar/mcp/sse" color="#F59E0B">
+    التكامل مع خوادم MCP البعيدة باستخدام Server-Sent Events لبث البيانات في الوقت الفعلي.
+  </Card>
+  <Card
+    title="نقل Streamable HTTP"
+    icon="globe"
+    href="/ar/mcp/streamable-http"
+    color="#8B5CF6"
+  >
+    استخدام Streamable HTTP المرن للاتصال القوي مع خوادم MCP البعيدة.
+  </Card>
+  <Card
+    title="الاتصال بخوادم متعددة"
+    icon="layer-group"
+    href="/ar/mcp/multiple-servers"
+    color="#EF4444"
+  >
+    تجميع الأدوات من عدة خوادم MCP بشكل متزامن باستخدام محول واحد.
+  </Card>
+  <Card
+    title="اعتبارات الأمان"
+    icon="lock"
+    href="/ar/mcp/security"
+    color="#DC2626"
+  >
+    مراجعة أفضل ممارسات الأمان المهمة لتكامل MCP للحفاظ على سلامة وكلائك.
+  </Card>
+</CardGroup>
+
+تحقق من هذا المستودع للحصول على عروض وأمثلة كاملة لتكامل MCP مع CrewAI!
+
+<Card
+  title="GitHub Repository"
+  icon="github"
+  href="https://github.com/tonykipkemboi/crewai-mcp-demo"
+  target="_blank"
+>
+  CrewAI MCP Demo
+</Card>
+
+## البقاء آمناً مع MCP
+
+<Warning>تأكد دائماً من أنك تثق بخادم MCP قبل استخدامه.</Warning>
+
+#### تحذير أمني: هجمات إعادة ربط DNS
+
+يمكن أن تكون عمليات نقل SSE عرضة لهجمات إعادة ربط DNS إذا لم تكن مؤمنة بشكل صحيح.
+لمنع ذلك:
+
+1. **تحقق دائماً من رؤوس Origin** على اتصالات SSE الواردة للتأكد من أنها تأتي من مصادر متوقعة
+2. **تجنب ربط الخوادم بجميع واجهات الشبكة** (0.0.0.0) عند التشغيل محلياً - اربط فقط بـ localhost (127.0.0.1) بدلاً من ذلك
+3. **نفّذ مصادقة مناسبة** لجميع اتصالات SSE
+
+بدون هذه الحمايات، يمكن للمهاجمين استخدام إعادة ربط DNS للتفاعل مع خوادم MCP المحلية من مواقع ويب بعيدة.
+
+لمزيد من التفاصيل، راجع [وثائق أمان نقل MCP من Anthropic](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).
+
+### القيود
+
+- **الأوليات المدعومة**: حالياً، يدعم `MCPServerAdapter` بشكل أساسي تكييف `أدوات` MCP.
+  لا يتم دمج أوليات MCP الأخرى مثل `prompts` أو `resources` مباشرة كمكونات CrewAI من خلال هذا المحول في هذا الوقت.
+- **معالجة المخرجات**: يعالج المحول عادةً المخرجات النصية الرئيسية من أداة MCP (مثل `.content[0].text`). قد تتطلب المخرجات المعقدة أو متعددة الوسائط معالجة مخصصة إذا لم تتناسب مع هذا النمط.
