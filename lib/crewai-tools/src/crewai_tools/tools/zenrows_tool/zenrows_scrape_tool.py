@@ -9,6 +9,7 @@ parameter reference.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any, Literal
@@ -193,7 +194,12 @@ class ZenRowsScrapeTool(BaseTool):
         params["url"] = validated_url
         # Set last so nothing in `config` can shadow the resolved credential.
         params["apikey"] = self._resolved_api_key
-        if response_type != "html":
+        if response_type == "html":
+            # `config` isn't documented as a place to set `response_type`, but
+            # nothing stops a caller from putting it there anyway -- drop it
+            # so an explicit per-call `"html"` always wins.
+            params.pop("response_type", None)
+        else:
             params["response_type"] = response_type
 
         try:
@@ -259,4 +265,7 @@ class ZenRowsScrapeTool(BaseTool):
         )
 
     async def _arun(self, *args: Any, **kwargs: Any) -> str:
-        return self._run(*args, **kwargs)
+        # `_run` makes a blocking `requests.get()` call (up to `timeout`
+        # seconds); running it directly here would stall the event loop for
+        # the whole crew. Offload it to a worker thread instead.
+        return await asyncio.to_thread(self._run, *args, **kwargs)

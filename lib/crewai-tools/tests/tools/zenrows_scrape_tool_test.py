@@ -1,4 +1,5 @@
-from unittest.mock import Mock, patch
+import asyncio
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 import requests
@@ -97,6 +98,22 @@ def test_run_success_sends_url_and_apikey(mock_get):
 def test_html_response_type_omits_the_param(mock_get):
     mock_get.return_value = _mock_response(text="<html></html>")
     tool = ZenRowsScrapeTool()
+
+    tool._run(url="https://example.com", response_type="html")
+
+    params = mock_get.call_args.kwargs["params"]
+    assert "response_type" not in params
+
+
+@patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
+@patch(f"{TOOL_MODULE}.requests.get")
+def test_html_response_type_overrides_one_set_via_config(mock_get):
+    """`config` isn't documented as a place to set `response_type`, but if a
+    caller puts one there anyway, an explicit per-call "html" must still win
+    rather than silently returning the configured format.
+    """
+    mock_get.return_value = _mock_response(text="<html></html>")
+    tool = ZenRowsScrapeTool(config={"response_type": "plaintext"})
 
     tool._run(url="https://example.com", response_type="html")
 
@@ -226,11 +243,24 @@ def test_arun_delegates_to_run(mock_get):
     mock_get.return_value = _mock_response(text="ok")
     tool = ZenRowsScrapeTool()
 
-    import asyncio
-
     result = asyncio.run(tool._arun(url="https://example.com"))
 
     assert result == "ok"
+
+
+@patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
+def test_arun_offloads_the_blocking_call_to_a_worker_thread():
+    """`_run` makes a blocking `requests.get()` call; `_arun` must not run it
+    directly on the event loop, or one slow scrape would stall every other
+    concurrent task in an async crew.
+    """
+    tool = ZenRowsScrapeTool()
+    with patch(f"{TOOL_MODULE}.asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
+        mock_to_thread.return_value = "ok"
+        result = asyncio.run(tool._arun(url="https://example.com"))
+
+    assert result == "ok"
+    mock_to_thread.assert_called_once_with(tool._run, url="https://example.com")
 
 
 @patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
