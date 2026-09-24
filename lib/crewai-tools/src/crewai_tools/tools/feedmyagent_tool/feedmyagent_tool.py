@@ -22,9 +22,10 @@ requires an API key, via ``FEEDMYAGENT_API_KEY`` or
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 try:
@@ -41,10 +42,31 @@ except ImportError:
 
 
 DEFAULT_BASE_URL = "https://api.feedmyagent.com"
+
+
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
+def _validate_base_url(value: str) -> str:
+    """Require HTTPS for the API base URL so the API key never travels in cleartext.
+
+    Plain ``http`` is allowed only for local development hosts.
+    """
+    parsed = urlparse(value)
+    if parsed.scheme == "https":
+        return value
+    if parsed.scheme == "http" and parsed.hostname in _LOCAL_HOSTS:
+        return value
+    raise ValueError(
+        f"base_url must use https (http is only allowed for localhost), got {value!r}"
+    )
+
+
 USER_AGENT = "feedmyagent-crewai/0.1"
 
 
 def _require_feedmyagent(tool_name: str) -> None:
+    """Raise an actionable ImportError if the optional ``feedmyagent`` SDK is missing."""
     """Ensure the optional ``feedmyagent`` dependency is installed.
 
     Mirrors the install-prompt pattern used by the other optional-dependency
@@ -87,6 +109,7 @@ def _require_feedmyagent(tool_name: str) -> None:
 
 
 def _format_items(items: list[Any]) -> str:
+    """Render feed items as a compact numbered list for the agent."""
     """Render a list of feed Items as a compact, agent-readable block."""
     if not items:
         return "No matching items found on FeedMyAgent."
@@ -103,6 +126,7 @@ def _format_items(items: list[Any]) -> str:
 
 
 def _format_error(exc: Any) -> str:
+    """Render a FeedMyAgent API error as a message instead of raising."""
     return f"FeedMyAgent error ({exc.code}): {exc}"
 
 
@@ -134,9 +158,17 @@ class FeedMyAgentLatestTool(BaseTool):
     )
     args_schema: type[BaseModel] = FeedMyAgentLatestInput
     base_url: str = DEFAULT_BASE_URL
+
+    @field_validator("base_url")
+    @classmethod
+    def _check_base_url(cls, value: str) -> str:
+        """Reject non-HTTPS base URLs (see ``_validate_base_url``)."""
+        return _validate_base_url(value)
+
     package_dependencies: list[str] = Field(default_factory=lambda: ["feedmyagent"])
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialise the tool and verify the optional SDK is installed."""
         super().__init__(**kwargs)
         _require_feedmyagent(self.__class__.__name__)
 
@@ -146,6 +178,7 @@ class FeedMyAgentLatestTool(BaseTool):
         use_case: str | None = None,
         limit: int = 10,
     ) -> str:
+        """Call the FeedMyAgent API and return a text result for the agent."""
         client = FeedMyAgent(base_url=self.base_url, user_agent=USER_AGENT)
         try:
             items = client.latest(tags=tags, use_case=use_case, limit=limit)
@@ -184,9 +217,17 @@ class FeedMyAgentSearchTool(BaseTool):
     )
     args_schema: type[BaseModel] = FeedMyAgentSearchInput
     base_url: str = DEFAULT_BASE_URL
+
+    @field_validator("base_url")
+    @classmethod
+    def _check_base_url(cls, value: str) -> str:
+        """Reject non-HTTPS base URLs (see ``_validate_base_url``)."""
+        return _validate_base_url(value)
+
     package_dependencies: list[str] = Field(default_factory=lambda: ["feedmyagent"])
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialise the tool and verify the optional SDK is installed."""
         super().__init__(**kwargs)
         _require_feedmyagent(self.__class__.__name__)
 
@@ -196,6 +237,7 @@ class FeedMyAgentSearchTool(BaseTool):
         tags: list[str] | None = None,
         limit: int = 5,
     ) -> str:
+        """Call the FeedMyAgent API and return a text result for the agent."""
         client = FeedMyAgent(base_url=self.base_url, user_agent=USER_AGENT)
         try:
             items = client.query(text, tags=tags, limit=limit)
@@ -230,6 +272,13 @@ class FeedMyAgentReportTool(BaseTool):
     )
     args_schema: type[BaseModel] = FeedMyAgentReportInput
     base_url: str = DEFAULT_BASE_URL
+
+    @field_validator("base_url")
+    @classmethod
+    def _check_base_url(cls, value: str) -> str:
+        """Reject non-HTTPS base URLs (see ``_validate_base_url``)."""
+        return _validate_base_url(value)
+
     api_key: str | None = None
     package_dependencies: list[str] = Field(default_factory=lambda: ["feedmyagent"])
     env_vars: list[EnvVar] = Field(
@@ -247,10 +296,12 @@ class FeedMyAgentReportTool(BaseTool):
     )
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialise the tool and verify the optional SDK is installed."""
         super().__init__(**kwargs)
         _require_feedmyagent(self.__class__.__name__)
 
     def _run(self, title: str, description: str, url: str | None = None) -> str:
+        """Call the FeedMyAgent API and return a text result for the agent."""
         client = FeedMyAgent(
             api_key=self.api_key, base_url=self.base_url, user_agent=USER_AGENT
         )

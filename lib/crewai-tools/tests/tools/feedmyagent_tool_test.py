@@ -20,6 +20,7 @@ from crewai_tools.tools.feedmyagent_tool.feedmyagent_tool import (
 
 
 def _item(**overrides: object) -> Item:
+    """Build a feed Item with sensible defaults, overridable per test."""
     defaults = dict(
         id="1",
         title="New prompt-injection technique in MCP tool descriptions",
@@ -42,6 +43,7 @@ PATCH_TARGET = "crewai_tools.tools.feedmyagent_tool.feedmyagent_tool.FeedMyAgent
 
 @patch(PATCH_TARGET)
 def test_latest_tool_formats_items(mock_fma_cls: MagicMock) -> None:
+    """Latest tool renders returned items as a numbered list."""
     mock_client = MagicMock()
     mock_client.latest.return_value = [_item()]
     mock_fma_cls.return_value = mock_client
@@ -61,6 +63,7 @@ def test_latest_tool_formats_items(mock_fma_cls: MagicMock) -> None:
 
 @patch(PATCH_TARGET)
 def test_latest_tool_no_results(mock_fma_cls: MagicMock) -> None:
+    """Latest tool reports an empty feed instead of failing."""
     mock_client = MagicMock()
     mock_client.latest.return_value = []
     mock_fma_cls.return_value = mock_client
@@ -73,6 +76,7 @@ def test_latest_tool_no_results(mock_fma_cls: MagicMock) -> None:
 
 @patch(PATCH_TARGET)
 def test_latest_tool_formats_api_error(mock_fma_cls: MagicMock) -> None:
+    """API errors are returned as text, not raised."""
     mock_client = MagicMock()
     mock_client.latest.side_effect = FeedMyAgentError("invalid_request", "bad tag", 400)
     mock_fma_cls.return_value = mock_client
@@ -90,6 +94,7 @@ def test_latest_tool_formats_api_error(mock_fma_cls: MagicMock) -> None:
 
 @patch(PATCH_TARGET)
 def test_search_tool_passes_query_through(mock_fma_cls: MagicMock) -> None:
+    """Search tool forwards the query, tags and limit to the SDK."""
     mock_client = MagicMock()
     mock_client.query.return_value = [_item(id="2", title="Another item", score=3.0)]
     mock_fma_cls.return_value = mock_client
@@ -105,6 +110,7 @@ def test_search_tool_passes_query_through(mock_fma_cls: MagicMock) -> None:
 
 
 def test_search_tool_args_schema_requires_text() -> None:
+    """Search input schema rejects a missing query."""
     from crewai_tools.tools.feedmyagent_tool.feedmyagent_tool import (
         FeedMyAgentSearchInput,
     )
@@ -120,6 +126,7 @@ def test_search_tool_args_schema_requires_text() -> None:
 
 @patch(PATCH_TARGET)
 def test_report_tool_posts_and_formats_confirmation(mock_fma_cls: MagicMock) -> None:
+    """Report tool posts the item and confirms with its URL."""
     mock_client = MagicMock()
     mock_client.report.return_value = _item(id="pending-1", title="Reported title")
     mock_fma_cls.return_value = mock_client
@@ -142,6 +149,7 @@ def test_report_tool_posts_and_formats_confirmation(mock_fma_cls: MagicMock) -> 
 
 @patch(PATCH_TARGET)
 def test_report_tool_surfaces_missing_api_key_error(mock_fma_cls: MagicMock) -> None:
+    """Report tool surfaces the SDK's missing-key error as text."""
     mock_client = MagicMock()
     mock_client.report.side_effect = FeedMyAgentError(
         "unauthorized", "An API key is required for this operation.", 401
@@ -152,3 +160,11 @@ def test_report_tool_surfaces_missing_api_key_error(mock_fma_cls: MagicMock) -> 
     result = tool.run(title="t", description="d")
 
     assert result.startswith("FeedMyAgent error (unauthorized):")
+
+
+def test_base_url_must_be_https() -> None:
+    """Non-HTTPS base URLs are rejected so the API key is never sent in cleartext."""
+    with pytest.raises(ValueError):
+        FeedMyAgentReportTool(base_url="http://example.com", api_key="ask_x")
+    tool = FeedMyAgentReportTool(base_url="http://localhost:8787", api_key="ask_x")
+    assert tool.base_url == "http://localhost:8787"
