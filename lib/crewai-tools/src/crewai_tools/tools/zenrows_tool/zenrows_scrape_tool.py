@@ -182,6 +182,13 @@ class ZenRowsScrapeTool(BaseTool):
                 f"{_RESPONSE_TYPES}."
             )
 
+        # `config` is only guaranteed valid as of the last time this ran. It's
+        # a plain dict, so `validate_assignment` on the field only checks it's
+        # still a dict, not that its contents are sane -- reassigning
+        # `tool.config`, or mutating a dict object the caller kept a
+        # reference to, would otherwise bypass the __init__ check silently.
+        self._validate_config()
+
         # Zenrows fetches `url` on our behalf -- the actual HTTP request this
         # process makes always targets `self.base_url` (Zenrows' own,
         # trusted API host). Validation here rejects unsafe schemes

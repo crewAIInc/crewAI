@@ -75,6 +75,22 @@ def test_premium_proxy_and_proxy_country_without_mode_auto_is_accepted():
 
 
 @patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
+def test_config_mutated_after_construction_is_revalidated_on_run():
+    """`_validate_config` must not be a construction-time-only check --
+    reassigning `.config` after the tool is built must still be caught before
+    a request goes out, not surface as an opaque 400 from Zenrows instead.
+    """
+    tool = ZenRowsScrapeTool()
+    tool.config = {"mode": "auto", "premium_proxy": True}
+
+    with patch(f"{TOOL_MODULE}.requests.get") as mock_get:
+        with pytest.raises(ValueError, match='mode: "auto"'):
+            tool._run(url="https://example.com")
+
+    mock_get.assert_not_called()
+
+
+@patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
 @patch(f"{TOOL_MODULE}.requests.get")
 def test_run_success_sends_url_and_apikey(mock_get):
     mock_get.return_value = _mock_response(text="# Hello")
