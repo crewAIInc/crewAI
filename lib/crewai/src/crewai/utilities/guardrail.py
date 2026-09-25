@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import warnings
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from crewai.utilities.guardrail_types import GuardrailCallable
@@ -78,29 +78,14 @@ class GuardrailResult(BaseModel):
         default=None, description="Error message if validation failed"
     )
 
-    @field_validator("result", "error")
-    @classmethod
-    def validate_result_error_exclusivity(cls, v: Any, info: Any) -> Any:
-        """Ensure that result and error are mutually exclusive based on success.
-
-        Args:
-          v: The value being validated (either result or error)
-          info: Validation info containing the entire model data
-
-        Returns:
-          The original value if validation passes
-        """
-        values = info.data
-        if "success" in values:
-            if values["success"] and v and "error" in values and values["error"]:
-                raise ValueError(
-                    "Cannot have both result and error when success is True"
-                )
-            if not values["success"] and v and "result" in values and values["result"]:
-                raise ValueError(
-                    "Cannot have both result and error when success is False"
-                )
-        return v
+    @model_validator(mode="after")
+    def validate_result_error_exclusivity(self) -> Self:
+        """Reject payloads that populate the field opposite to ``success``."""
+        if self.success and self.error is not None:
+            raise ValueError("Cannot have an error when success is True")
+        if not self.success and self.result is not None:
+            raise ValueError("Cannot have a result when success is False")
+        return self
 
     @classmethod
     def from_tuple(cls, result: tuple[bool, Any | str]) -> Self:
