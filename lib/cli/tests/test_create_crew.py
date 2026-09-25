@@ -470,16 +470,18 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
 
     tools = json_crew._select_tools()
 
-    assert tools == ["SerperDevTool", "DirectoryReadTool"]
+    assert tools == ["SerperDevTool", "FileReadTool"]
     assert len(picker_calls) == 1
     labels = picker_calls[0][1]
     assert 0 in picker_calls[0][2]["separator_indices"]
     assert labels[0] == "── Common tools ──"
     assert labels[1].strip().endswith("SerperDevTool")
     assert labels[2].strip().endswith("ScrapeWebsiteTool")
-    assert labels[3].strip().endswith("DirectoryReadTool")
-    assert labels[4].strip().endswith("FileReadTool")
-    assert labels[5].strip().endswith("FileWriterTool")
+    assert labels[3].strip().endswith("FileReadTool")
+    assert labels[4].startswith("Gmail Integration")
+    assert labels[4].endswith("Platform: GmailIntegration (66 tools)")
+    assert labels[5].startswith("WhatsApp Integration")
+    assert labels[5].endswith("Platform: WhatsAppIntegration (58 tools)")
     assert labels[1].index("Google search") < labels[1].index("SerperDevTool")
     assert "More tools" not in labels
 
@@ -504,6 +506,7 @@ def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     assert len(action_indices) >= 4
     # Only the common tools section is visible beyond the category rows
     assert len(labels) == 1 + 5 + len(action_indices)
+    assert any(label == "▸ CrewAI Platform  (125 applications)" for label in labels)
 
 
 def test_json_wizard_tool_picker_expands_one_category_at_a_time(monkeypatch):
@@ -584,15 +587,26 @@ def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypat
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
     expanded_labels: list[str] = []
 
+    categories = [
+        "Search & Research",
+        "Web Scraping",
+        "File & Document",
+        "Code & Data",
+        "Cloud & Storage",
+        "Sandbox & Automation",
+        "AI & Vision",
+    ]
+
     def pick_many(title: str, labels: list[str], **kwargs):
         picker_calls.append((title, labels, kwargs))
         expanded_labels.extend(labels)
-        action_indices = sorted(kwargs["action_indices"])
         call_num = len(picker_calls)
-        if call_num <= len(action_indices):
-            # Expand the n-th category (indices shift between renders, so
-            # recompute from this render's action rows)
-            return [], action_indices[call_num - 1]
+        if call_num <= len(categories):
+            category = categories[call_num - 1]
+            category_row = next(
+                idx for idx, label in enumerate(labels) if category in label
+            )
+            return [], category_row
         return [], None
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
@@ -637,13 +651,28 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
             )
             return [], platform_row
 
-        github = next(
+        if picker_calls == 2:
+            engineering = next(
+                idx
+                for idx, label in enumerate(labels)
+                if "Engineering, data & infrastructure" in label
+            )
+            return [], engineering
+
+        if picker_calls == 3:
+            github = next(
+                idx
+                for idx, label in enumerate(labels)
+                if label.strip().startswith("GitHub Integration")
+            )
+            return [github], None
+
+        create_repository = next(
             idx
             for idx, label in enumerate(labels)
-            if label.startswith("GitHub Integration")
-            and label.endswith("Platform: GitHubIntegration")
+            if label == "Create repository (create_repository)"
         )
-        return [github], None
+        return [create_repository]
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
     monkeypatch.setattr(
@@ -655,8 +684,56 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
     agent = json_crew._wizard_agent(agent_num=1, existing_names=[])
 
     assert agent is not None
-    assert agent["tools"] == ["platform:github"]
-    assert '"tools": ["platform:github"]' in json_crew._agent_to_jsonc(agent)
+    assert agent["tools"] == ["platform:github/create_repository"]
+    assert (
+        '"tools": ["platform:github/create_repository"]'
+        in json_crew._agent_to_jsonc(agent)
+    )
+
+
+def test_platform_applications_expand_in_the_main_tool_picker(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append((title, labels, kwargs))
+        if len(picker_calls) == 1:
+            platform = next(
+                index
+                for index, label in enumerate(labels)
+                if "CrewAI Platform" in label
+            )
+            return [], platform
+        if len(picker_calls) == 2:
+            group = next(
+                index
+                for index, label in enumerate(labels)
+                if "Engineering, data & infrastructure" in label
+            )
+            return [], group
+        github = next(
+            index
+            for index, label in enumerate(labels)
+            if label.strip().startswith("GitHub Integration")
+        )
+        return [github], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    assert json_crew._select_tools() == ["platform:github"]
+    labels = picker_calls[1][1]
+    assert labels[0] == "── Common tools ──"
+    assert any(
+        label == "  ▸ Google Workspace & Google Cloud  (17 applications)"
+        for label in labels
+    )
+    assert any(
+        label == "  ▸ Engineering, data & infrastructure  (11 applications)"
+        for label in labels
+    )
+    assert picker_calls[1][2]["initial_cursor"] == next(
+        index for index, label in enumerate(labels) if "CrewAI Platform" in label
+    )
+    assert all(title != "Platform applications (space to toggle, enter to return):" for title, *_ in picker_calls)
 
 
 def test_json_wizard_platform_catalog_contains_every_supported_app():
@@ -671,8 +748,39 @@ def test_json_wizard_platform_catalog_contains_every_supported_app():
     ]
 
 
+def test_platform_validation_deduplicates_actions_by_application() -> None:
+    apps = json_crew._platform_apps_from_agents(
+        [
+            {
+                "tools": [
+                    "platform:github/create_repository",
+                    "platform:github/get_repository_content",
+                    "platform:gmail/send_email",
+                ]
+            },
+            {"tools": ["platform:github/list_repository_issues"]},
+        ]
+    )
+
+    assert apps == ["github", "gmail"]
+
+
+def test_platform_token_prompts_show_entered_values(monkeypatch) -> None:
+    prompt_options: list[dict[str, object]] = []
+
+    def prompt(_label: str, **kwargs: object) -> str:
+        prompt_options.append(kwargs)
+        return "token"
+
+    monkeypatch.setattr(json_crew.click, "prompt", prompt)
+
+    assert json_crew._prompt_platform_token() == "token"
+    assert json_crew._prompt_platform_revalidation_token() == "token"
+    assert [options["hide_input"] for options in prompt_options] == [False, False]
+
+
 def test_platform_auth_suppresses_warnings_only_while_importing_tools(
-    monkeypatch,
+    monkeypatch, capsys
 ):
     class FakeApplicationSelector:
         @classmethod
@@ -694,6 +802,7 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         return original_import(name, globals, locals, fromlist, level)
 
     monkeypatch.setattr(builtins, "__import__", import_with_warning)
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "ignored-token")
     monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
 
     with warnings.catch_warnings(record=True) as caught_warnings:
@@ -704,6 +813,12 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     assert [str(warning.message) for warning in caught_warnings] == [
         "warning after import"
     ]
+    output = capsys.readouterr().out
+    assert "Checking for CREWAI_PLATFORM_INTEGRATION_TOKEN" in output
+    assert (
+        "Platform Integration token found via "
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable" in output
+    )
 
 
 def test_platform_validation_checks_apps_concurrently():
@@ -749,7 +864,7 @@ def test_platform_validation_announces_concurrent_apps_together(capsys):
     output = capsys.readouterr().out
     assert (failed_apps, token_invalid) == ([], False)
     assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
-    assert "Checking CrewAI Platform Integration Token and GitHub" not in output
+    assert "Checking CrewAI Platform Integration token and GitHub" not in output
 
 
 def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
@@ -779,8 +894,8 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
     assert (failed_apps, token_invalid) == ([], False)
     assert checked_apps == ["github", "gmail"]
     output = capsys.readouterr().out
-    assert "Checking CrewAI Platform Integration Token and GitHub integration" in output
-    assert "Checking CrewAI Platform Integration Token and Gmail integration" in output
+    assert "Checking CrewAI Platform Integration token and GitHub integration" in output
+    assert "Checking CrewAI Platform Integration token and Gmail integration" in output
 
 
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
