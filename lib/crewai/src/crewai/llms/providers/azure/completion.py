@@ -1329,6 +1329,11 @@ class AzureCompletion(BaseLLM):
             "gpt-4o-mini": 128000,
             "gpt-4-turbo": 128000,
             "gpt-5.6": 1050000,
+            "o1-mini": 128000,
+            "o3-mini": 200000,
+            "o1": 200000,
+            "o1-pro": 200000,
+            "o3": 200000,
             "gpt-4o": 128000,
             "gpt-4": 8192,
         }
