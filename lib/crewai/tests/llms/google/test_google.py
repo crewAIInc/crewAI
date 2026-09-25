@@ -430,6 +430,66 @@ def test_gemini_model_capabilities():
     assert llm_1_5.supports_tools == True
 
 
+@pytest.mark.parametrize(
+    "alias",
+    [
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
+        "gemini-pro-latest",
+    ],
+)
+def test_gemini_latest_alias_supports_tools(alias):
+    """
+    Test that version-less aliases from GEMINI_MODELS resolve to their
+    numbered generation capabilities (tools, function calling, thinking)
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = LLM(model=f"google/{alias}")
+    assert isinstance(llm, GeminiCompletion)
+    assert llm.supports_tools is True
+    assert llm.is_gemini_2_0 is True
+    assert llm.supports_function_calling() is True
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "lookup",
+                "description": "Look up a term",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"term": {"type": "string"}},
+                    "required": ["term"],
+                },
+            },
+        }
+    ]
+    config = llm._prepare_generation_config(None, tools, None)
+    assert config.tools
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gemini-1.0-pro",
+        "gemini-gemma-2-27b-it",
+    ],
+)
+def test_gemini_models_without_tool_support(model):
+    """
+    Test that pre-1.5 Gemini models and gemma-derived models still
+    report no tool support (no regex over-matching on alias digits)
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = LLM(model=f"google/{model}")
+    assert isinstance(llm, GeminiCompletion)
+    assert llm.supports_tools is False
+    assert llm.is_gemini_2_0 is False
+    assert llm.supports_function_calling() is False
+
+
 def test_gemini_generation_config():
     """
     Test that generation config is properly prepared
