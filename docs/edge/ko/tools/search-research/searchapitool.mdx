@@ -1,0 +1,74 @@
+---
+title: SearchApi 검색
+description: SearchApiTool은(는) 여러 검색 엔진을 하나의 엔드포인트로 제공하는 SearchApi를 통해 인터넷을 검색합니다.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `SearchApiTool`
+
+## 설명
+
+`SearchApiTool`은 [SearchApi](https://www.searchapi.io)를 통해 인터넷을 검색합니다. 하나의 엔드포인트가 여러 엔진을 제공하며 `engine` 파라미터로 선택하므로, 단일 도구로 Google 웹 검색, 뉴스, 학술, 채용 정보는 물론 Bing, YouTube, Baidu 및 나머지 [지원 엔진](https://www.searchapi.io/docs)까지 다룰 수 있습니다. 이 도구는 엔진의 JSON을 그대로 반환하므로 결과는 해당 엔진의 문서와 일치합니다.
+
+에이전트가 응답을 보기 전에 두 가지 처리가 이루어집니다:
+
+- 인라인 `data:` URI가 제거됩니다. SearchApi는 파비콘과 썸네일을 base64 문자열로 반환하는데, 하나만으로도 수십 킬로바이트에 이를 수 있으며 에이전트에게는 아무런 의미가 없습니다.
+- 긴 문자열은 `max_string_length`에서 잘리고, 모든 `*_results` 목록은 `n_results` 개수로 제한됩니다.
+
+## 설치
+
+1. **패키지 설치**: Python 환경에 `crewai[tools]` 패키지가 설치되어 있는지 확인하세요.
+2. **API 키 발급**: https://www.searchapi.io 에서 SearchApi 키를 발급받으세요(무료 티어 제공).
+3. **환경 설정**: 발급받은 키를 `SEARCHAPI_API_KEY`라는 환경 변수에 저장하세요.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+키는 쿼리 문자열이 아니라 `Authorization` 헤더로 전송되므로, 요청 로그와 SearchApi가 `search_metadata`에 되돌려주는 `request_url`에 노출되지 않습니다.
+
+## 예제
+
+```python Code
+from crewai_tools import SearchApiTool
+
+# Initialize the tool for internet searching capabilities
+tool = SearchApiTool()
+```
+
+## 파라미터
+
+- **engine**: 호출할 SearchApi 엔진입니다. 예: `google`, `google_news`, `google_scholar`, `google_jobs`, `bing`, `youtube`, `baidu`. 기본값은 `google`입니다. 호출할 때마다 전달할 수도 있습니다.
+- **n_results**: 응답에서 각 `*_results` 목록의 최대 길이입니다. 기본값은 `10`입니다.
+- **country**: 선택 사항. 검색 대상 국가이며 `gl`로 전송됩니다(예: `uk`).
+- **locale**: 선택 사항. 인터페이스 언어이며 `hl`로 전송됩니다(예: `en`).
+- **location**: 선택 사항. 검색의 표준 위치입니다(예: `London,England`).
+- **max_string_length**: 응답에서 그대로 유지되는 문자열의 최대 길이입니다. 기본값은 `1000`입니다.
+- **timeout**: 요청 타임아웃(초)입니다. 기본값은 `30`입니다.
+- **api_key**: 선택 사항. SearchApi 키입니다. 지정하지 않으면 `SEARCHAPI_API_KEY` 환경 변수를 사용합니다.
+- **search_url**: 호출할 엔드포인트입니다. 기본값은 `https://www.searchapi.io/api/v1/search`입니다.
+
+## 파라미터를 사용한 예제
+
+```python Code
+from crewai_tools import SearchApiTool
+
+# Recent news, localized to the UK
+news_tool = SearchApiTool(
+    engine="google_news",
+    country="uk",
+    locale="en",
+    location="London,England",
+    n_results=5,
+)
+
+# Academic search through the same tool
+scholar_tool = SearchApiTool(engine="google_scholar")
+```
+
+## 오류
+
+요청이 실패하면 SearchApi의 메시지를 담은 `RuntimeError`가 발생합니다. 예: `SearchApi request failed (HTTP 401): Invalid API key.`
+
+검색은 성공했지만 결과가 없는 경우는 오류가 아닙니다. SearchApi는 HTTP 200과 함께 `"Google didn't return any results."` 같은 `error` 메시지를 반환하며, 이 도구는 에이전트가 그 이유를 읽을 수 있도록 해당 메시지를 그대로 전달합니다.
