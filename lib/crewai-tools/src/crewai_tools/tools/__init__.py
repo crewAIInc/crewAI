@@ -1,3 +1,5 @@
+from .opticparse_tool.opticparse_tool import OpticParseTool
+from .phishvision_tool.phishvision_tool import PhishVisionTool
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
@@ -212,6 +214,8 @@ from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActio
 
 
 __all__ = [
+    "OpticParseTool",
+    "PhishVisionTool",
     "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
