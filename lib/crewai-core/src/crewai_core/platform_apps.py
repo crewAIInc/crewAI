@@ -1,32 +1,42 @@
 """CrewAI Platform application catalog."""
 
-from typing import Final, Literal, get_args
+from importlib.resources import files
+import json
+from typing import Final, TypeAlias
 
 
-PlatformApp = Literal[
-    "gmail",
-    "github",
-    "google_drive",
-    "google_sheets",
-    "slack",
-    "google_calendar",
-    "whatsapp",
-    "youtube",
-    "instagram",
-    "outlook",
-    "google_docs",
-    "linkedin",
-    "asana",
-    "box",
-    "clickup",
-    "hubspot",
-    "jira",
-    "linear",
-    "notion",
-    "salesforce",
-    "shopify",
-    "stripe",
-    "zendesk",
-]
+PlatformApp: TypeAlias = str
 
-PLATFORM_APPS: Final[tuple[str, ...]] = (*get_args(PlatformApp),)
+
+def _load_platform_catalog() -> tuple[tuple[str, ...], dict[str, str]]:
+    """Load and validate the generated Clipper application catalog."""
+    catalog_path = files("crewai_core").joinpath("platform_catalog.json")
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    applications = catalog.get("applications") if isinstance(catalog, dict) else None
+    if not isinstance(applications, list):
+        raise ValueError("Platform catalog must contain an 'applications' list.")
+
+    apps: list[str] = []
+    display_names: dict[str, str] = {}
+    for application in applications:
+        if not isinstance(application, dict):
+            raise ValueError("Every platform catalog application must be an object.")
+        slug = application.get("slug")
+        display_name = application.get("display_name")
+        if not isinstance(slug, str) or not slug:
+            raise ValueError("Every platform catalog application must have a slug.")
+        if not isinstance(display_name, str) or not display_name:
+            raise ValueError(
+                f"Platform catalog application '{slug}' must have a display name."
+            )
+        if slug in display_names:
+            raise ValueError(f"Platform catalog contains duplicate slug '{slug}'.")
+        apps.append(slug)
+        display_names[slug] = display_name
+
+    return tuple(apps), display_names
+
+
+_platform_apps, _platform_app_display_names = _load_platform_catalog()
+PLATFORM_APPS: Final[tuple[str, ...]] = _platform_apps
+PLATFORM_APP_DISPLAY_NAMES: Final[dict[str, str]] = _platform_app_display_names

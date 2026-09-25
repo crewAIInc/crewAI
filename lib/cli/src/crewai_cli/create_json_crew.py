@@ -12,6 +12,7 @@ from typing import Any
 import warnings
 
 import click
+from crewai_core.platform_apps import PLATFORM_APPS, PLATFORM_APP_DISPLAY_NAMES
 from crewai_core.telemetry import Telemetry
 from rich.console import Console
 from rich.text import Text
@@ -19,7 +20,6 @@ from rich.text import Text
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
-from crewai_cli.platform_tools_catalog import PLATFORM_TOOLS
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     copy_assistant_instructions,
@@ -109,7 +109,13 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 # ── Common tools for picker ────────────────────────────────────
 
 _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
-    ("CrewAI Platform", PLATFORM_TOOLS),
+    (
+        "CrewAI Platform",
+        [
+            (f"platform:{app}", f"{PLATFORM_APP_DISPLAY_NAMES[app]} Integration")
+            for app in PLATFORM_APPS
+        ],
+    ),
     (
         "Search & Research",
         [
@@ -890,11 +896,7 @@ def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
 
 def _platform_app_name(app: str) -> str:
     """Return the display name for a platform application slug."""
-    return (
-        dict(PLATFORM_TOOLS)
-        .get(f"platform:{app}", app.replace("_", " ").title())
-        .removesuffix(" Integration")
-    )
+    return PLATFORM_APP_DISPLAY_NAMES.get(app, app.replace("_", " ").title())
 
 
 def _prompt_platform_token() -> str:
