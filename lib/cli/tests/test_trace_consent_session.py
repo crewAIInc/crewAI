@@ -64,6 +64,20 @@ async def test_session_consent_buttons_and_keys_resolve_execution_worker(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("value", ["true", "1"])
+async def test_tracing_asked_for_needs_no_modal(monkeypatch, value):
+    """The user turned tracing on for this project; the modal would be the same
+    question a second time."""
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", value)
+    app = ConsentApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        assert await asyncio.to_thread(app._request_trace_consent) is True
+        await pilot.pause()
+        assert not isinstance(app.screen, TraceConsentScreen)
+    assert app._trace_consent_pending is None
+
+
+@pytest.mark.asyncio
 async def test_consent_timeout_returns_false_and_dismisses_modal(monkeypatch):
     app = ConsentApp()
     waits = []

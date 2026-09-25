@@ -996,9 +996,18 @@ FooterKey .footer-key--key {
         self.exit(self._crew_result)
 
     def _request_trace_consent(self) -> bool:
-        """Wait in the execution worker while the UI asks for upload consent."""
+        """Wait in the execution worker while the UI asks for upload consent.
+
+        Unless the user already answered: turning tracing on — in the project's
+        .env, or with ``tracing=True`` — is the yes, and a modal at the end of
+        the run would be the same question a second time.
+        """
+        from crewai.events.listeners.tracing.utils import tracing_asked_for
+
         if self._discard_trace_on_exit:
             return False
+        if tracing_asked_for():
+            return True
         done = threading.Event()
         decision: list[bool] = []
         self._trace_consent_pending = done

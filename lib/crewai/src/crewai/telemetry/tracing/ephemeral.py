@@ -125,10 +125,13 @@ class EphemeralSpanBuffer(SpanExporter):
                 )
             if not buffered:
                 return
+            # A host's consent callback stays authoritative — it is policy, and
+            # an embedder may answer no for reasons of its own. What it replaces
+            # is the PROMPT, and a prompt is what a user who turned tracing on
+            # has already answered: CREWAI_TRACING_ENABLED, or tracing=True, is
+            # the yes. (A callback that opens its own prompt — the TUI's modal —
+            # asks `tracing_asked_for()` for itself.)
             consent = self._consent or _trace_consent.get()
-            # Turning tracing on IS the answer: a user who set
-            # CREWAI_TRACING_ENABLED, or passed tracing=True, has already said
-            # collect this run. Asking again when it ends asks twice.
             approved = (
                 consent()
                 if consent is not None

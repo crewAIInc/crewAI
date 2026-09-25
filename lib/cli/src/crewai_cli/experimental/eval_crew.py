@@ -203,14 +203,16 @@ def _run_now_or_explain() -> str:
             "directory, or name a run: `crewai eval --run EXECUTION_ID`."
         )
     steps = (
-        "No traced run is recorded in this project. Turn tracing on and run the crew, "
-        f"then come back:\n  1. add {TRACING_ENV_VAR}=true to .env\n  2. crewai run\n  3. crewai eval"
+        "No traced run is recorded in this project. Turn tracing on — its runs are then "
+        "traced to CrewAI AMP — and run the crew, then come back:\n"
+        f"  1. add {TRACING_ENV_VAR}=true to .env\n  2. crewai run\n  3. crewai eval"
     )
     if is_dmn_mode_enabled() or not sys.stdin.isatty():
         console.print(steps, style="yellow")
         raise SystemExit(1)
     if not click.confirm(
-        "No traced run is recorded in this project. Turn tracing on and run the crew now?",
+        "No traced run is recorded in this project. Turn tracing on and run the crew now? "
+        "The run's trace is sent to CrewAI AMP.",
         default=True,  # João, 2026-09-20: y/n with Y as the default — the prompt says what Enter does
     ):
         console.print(steps, style="yellow")
@@ -238,7 +240,9 @@ def _enable_tracing() -> None:
     env_file.touch(exist_ok=True)
     set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
     os.environ[TRACING_ENV_VAR] = "true"
-    console.print("Tracing is on for this project.", style="green")
+    console.print(
+        "Tracing is on for this project — its runs are traced to CrewAI AMP.", style="green"
+    )
 
 
 def _start_evaluation(client: PlusAPI, execution_id: str) -> dict[str, Any]:
