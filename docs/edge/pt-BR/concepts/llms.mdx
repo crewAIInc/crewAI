@@ -745,11 +745,28 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     Antes de iniciar um Crew, aguarde até que o Endpoint e o modelo estejam prontos:
 
     ```bash
+    set -a
+    source .env
+    set +a
+
     curl --fail-with-body "$NEBIUS_ENDPOINT_URL/health" \
       -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
     curl --fail-with-body "$NEBIUS_ENDPOINT_URL/v1/models" \
       -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
     ```
+
+    <Warning>
+      Antes de executar o exemplo com ferramentas abaixo, configure os argumentos do vLLM no Endpoint
+      com escolha automática de ferramentas e o parser documentado para o seu modelo:
+
+      ```text
+      --enable-auto-tool-choice
+      --tool-call-parser <parser-for-your-model>
+      ```
+
+      Consulte a [lista de parsers de tool calling do vLLM](https://docs.vllm.ai/en/latest/features/tool_calling/#automatic-function-calling).
+      Esses argumentos não são necessários quando o Crew não usa ferramentas.
+    </Warning>
 
     Em seguida, conecte-se pelo cliente nativo compatível com OpenAI do CrewAI:
 
@@ -795,10 +812,6 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     ).kickoff()
     print(result)
     ```
-
-    <Warning>
-      O uso de ferramentas exige um modelo com suporte a tool calling e uma implantação vLLM configurada com o tool-call parser correspondente e automatic tool choice. Verifique essas opções para o seu modelo antes de usar ferramentas do CrewAI.
-    </Warning>
 
     Se as solicitações falharem, verifique o seguinte:
 

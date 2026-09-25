@@ -772,11 +772,27 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     Crew를 시작하기 전에 Endpoint와 모델이 모두 준비될 때까지 기다리세요:
 
     ```bash
+    set -a
+    source .env
+    set +a
+
     curl --fail-with-body "$NEBIUS_ENDPOINT_URL/health" \
       -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
     curl --fail-with-body "$NEBIUS_ENDPOINT_URL/v1/models" \
       -H "Authorization: Bearer $NEBIUS_ENDPOINT_TOKEN"
     ```
+
+    <Warning>
+      아래의 도구 사용 예제를 실행하기 전에 Endpoint의 vLLM 인수에 automatic tool choice와 모델에 맞는 문서화된 parser를 설정하세요:
+
+      ```text
+      --enable-auto-tool-choice
+      --tool-call-parser <parser-for-your-model>
+      ```
+
+      [vLLM tool-calling parser 목록](https://docs.vllm.ai/en/latest/features/tool_calling/#automatic-function-calling)을 참조하세요.
+      Crew가 도구를 사용하지 않는 경우에는 이 인수가 필요하지 않습니다.
+    </Warning>
 
     그런 다음 CrewAI의 네이티브 OpenAI 호환 클라이언트로 연결합니다:
 
@@ -822,10 +838,6 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     ).kickoff()
     print(result)
     ```
-
-    <Warning>
-      도구 사용에는 tool calling을 지원하는 모델과 해당 모델에 맞는 tool-call parser 및 automatic tool choice가 설정된 vLLM 배포가 필요합니다. CrewAI 도구를 사용하기 전에 모델의 옵션을 확인하세요.
-    </Warning>
 
     요청이 실패하면 다음을 확인하세요:
 
