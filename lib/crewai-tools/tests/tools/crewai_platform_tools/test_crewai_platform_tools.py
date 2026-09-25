@@ -164,9 +164,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(ValueError) as context:
                 CrewaiPlatformTools(apps=["github"])
-            assert "No Platform Enterprise Action Auth Token found" in str(
-                context.exception
-            )
+            assert "CREWAI_PLATFORM_INTEGRATION_TOKEN" in str(context.exception)
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
