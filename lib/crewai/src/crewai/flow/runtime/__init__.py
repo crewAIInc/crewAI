@@ -9,6 +9,7 @@ Structure (see ``flow_definition``) and executed here.
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
@@ -3141,30 +3142,25 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         router_result_to_feedback: dict[
             str, Any
         ] = {}  # Map outcome -> HumanFeedbackResult
-        current_trigger = trigger_method
-        current_result = result  # Track the result to pass to each router
-        current_triggering_event_id = triggering_event_id
+        pending_router_triggers = deque([(trigger_method, triggering_event_id)])
+        all_triggers = [(trigger_method, triggering_event_id)]
 
-        while True:
+        while pending_router_triggers:
+            current_trigger, source_event_id = pending_router_triggers.popleft()
             routers_triggered = self._find_triggered_methods(
                 current_trigger, router_only=True
             )
-            if not routers_triggered:
-                break
+            # Sibling routers share the same input and triggering event.
+            router_input = router_result_to_feedback.get(str(current_trigger), result)
 
             for router_name in routers_triggered:
-                # For routers triggered by a router outcome, pass the HumanFeedbackResult
-                router_input = router_result_to_feedback.get(
-                    str(current_trigger), current_result
-                )
                 (
                     router_result,
                     current_triggering_event_id,
                 ) = await self._execute_single_listener(
-                    router_name, router_input, current_triggering_event_id
+                    router_name, router_input, source_event_id
                 )
                 if router_result is None:
-                    current_trigger = FlowMethodName("")
                     continue
 
                 router_result = (
@@ -3185,14 +3181,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     router_result_to_feedback[router_result_str] = (
                         self.last_human_feedback
                     )
-                current_trigger = router_result_event
-
-        all_triggers = [trigger_method, *router_results]
+                pending_router_triggers.append(
+                    (router_result_event, current_triggering_event_id)
+                )
+                all_triggers.append((router_result_event, current_triggering_event_id))
 
         with self._or_listeners_lock:
             rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
 
-        for idx, current_trigger in enumerate(all_triggers):
+        for idx, (current_trigger, current_triggering_event_id) in enumerate(
+            all_triggers
+        ):
             if current_trigger:
                 if idx > 0 and rearmable:
                     self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
