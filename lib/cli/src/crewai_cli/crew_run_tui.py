@@ -1413,12 +1413,21 @@ FooterKey .footer-key--key {
         # Plan section
         if self._plan and self._plan.get("steps"):
             plan_title = self._plan.get("plan", "Plan")
-            completed = self._status == "completed" and all(
-                self._plan_step_status.get(step.get("step_number")) == "done"
-                for step in self._plan["steps"]
+            # Local LLMs sometimes emit bare ints/strings in steps; skip
+            # non-dicts the same way _apply_plan_refinements already does.
+            plan_steps = [
+                step for step in self._plan["steps"] if isinstance(step, dict)
+            ]
+            completed = (
+                self._status == "completed"
+                and bool(plan_steps)
+                and all(
+                    self._plan_step_status.get(step.get("step_number")) == "done"
+                    for step in plan_steps
+                )
             )
             if completed:
-                total = len(self._plan["steps"])
+                total = len(plan_steps)
                 t.append("  PLAN  ", style=f"bold {_C_MUTED}")
                 t.append(f"✔ {total} steps completed\n\n", style=_C_MUTED)
             else:
@@ -1427,7 +1436,7 @@ FooterKey .footer-key--key {
                 t.append(f"{plan_title[:80]}\n", style=f"bold {_C_TEAL}")
                 t.append("\n")
 
-                for step in self._plan["steps"]:
+                for step in plan_steps:
                     sn = step.get("step_number", 0)
                     desc = step.get("description", "")
                     short = desc[:90]
@@ -1724,10 +1733,14 @@ FooterKey .footer-key--key {
                         data = _json.loads(stripped[start : i + 1])
                         if "steps" in data and isinstance(data["steps"], list):
                             self._plan = data
+                            # Local LLMs sometimes emit bare ints/strings in
+                            # steps; skip non-dicts before membership/subscript
+                            # (same spirit as _render_main_content /
+                            # _apply_plan_refinements).
                             self._plan_step_status = {
                                 s["step_number"]: "pending"
                                 for s in data["steps"]
-                                if "step_number" in s
+                                if isinstance(s, dict) and "step_number" in s
                             }
                             self._awaiting_replan = False
                     except (ValueError, KeyError):
