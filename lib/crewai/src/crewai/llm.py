@@ -1149,7 +1149,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
 
             logging.error(f"Error in streaming response: {e!s}")
@@ -1346,7 +1346,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
@@ -1501,7 +1501,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
@@ -1773,7 +1773,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
 
             if chunk_count == 0:
