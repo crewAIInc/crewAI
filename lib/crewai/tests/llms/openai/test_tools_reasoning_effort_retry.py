@@ -80,6 +80,15 @@ def unsupported_value_error() -> BadRequestError:
     return _bad_request("Unsupported value: 'reasoning_effort' does not support 'none'.")
 
 
+def responses_only_tools_error() -> BadRequestError:
+    """GPT-6 Astra on Bedrock (live wording): no "none" way out, and it rejects it."""
+    return _bad_request(
+        "Function tools with reasoning_effort are not supported for "
+        "us.openai.gpt-6-astra in /v1/chat/completions. To use function tools, use "
+        "/v1/responses."
+    )
+
+
 class TestErrorDetection:
     def test_matches_the_tools_effort_400(self):
         assert OpenAICompletion._rejects_reasoning_effort_with_tools(
@@ -112,6 +121,22 @@ class TestErrorDetection:
         assert not OpenAICompletion._rejects_reasoning_effort_with_tools(
             RuntimeError("boom")
         )
+
+    @pytest.mark.parametrize(
+        ("error", "responses_only"),
+        [
+            (responses_only_tools_error(), True),
+            (tools_effort_error("us.openai.gpt-6-sol"), False),
+            (
+                _bad_request("Function tools with reasoning_effort are not supported."),
+                False,
+            ),
+        ],
+        ids=["names-only-responses", "offers-none", "names-neither"],
+    )
+    def test_spots_the_400_only_responses_can_serve(self, error, responses_only):
+        """Only a 400 naming /v1/responses and not offering "none" skips the retry."""
+        assert OpenAICompletion._is_responses_only_error(error) is responses_only
 
 
 class TestRetryParams:
@@ -233,6 +258,46 @@ class TestRetryBehaviour:
 
         assert await llm._acall_completions(MESSAGES, tools=TOOLS) == "ok"
         assert seen[1]["reasoning_effort"] == "none"
+
+    @pytest.mark.parametrize("custom_openai", [False, True])
+    def test_goes_to_responses_when_none_is_not_offered(
+        self, monkeypatch, custom_openai
+    ):
+        """Custom endpoints too: the server itself names /v1/responses."""
+        llm = build(
+            "us.openai.gpt-6-astra",
+            custom_openai=custom_openai,
+            base_url="https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1",
+        )
+        seen: list[dict] = []
+
+        def fake_handle(params, **kwargs):
+            seen.append(params)
+            raise responses_only_tools_error()
+
+        monkeypatch.setattr(llm, "_handle_completion", fake_handle)
+        monkeypatch.setattr(llm, "_call_responses", lambda **kwargs: kwargs["tools"])
+
+        assert llm._call_completions(MESSAGES, tools=TOOLS) == TOOLS
+        assert len(seen) == 1, "no reasoning_effort='none' retry"
+
+    @pytest.mark.asyncio
+    async def test_async_path_goes_to_responses_too(self, monkeypatch):
+        llm = build("us.openai.gpt-6-astra")
+        seen: list[dict] = []
+
+        async def fake_handle(params, **kwargs):
+            seen.append(params)
+            raise responses_only_tools_error()
+
+        async def fake_responses(**kwargs):
+            return "ok"
+
+        monkeypatch.setattr(llm, "_ahandle_completion", fake_handle)
+        monkeypatch.setattr(llm, "_acall_responses", fake_responses)
+
+        assert await llm._acall_completions(MESSAGES, tools=TOOLS) == "ok"
+        assert len(seen) == 1
 
 
 class TestAgentDefinitions:
