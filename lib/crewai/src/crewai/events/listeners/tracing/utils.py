@@ -115,11 +115,13 @@ def tracing_asked_for() -> bool:
     the run ends is asking the same question twice. First-time auto-collection is
     the case that still has to ask, because nobody asked for it.
 
-    The terminal matters. A copied `.env` that reaches CI, a container or a
-    server carries the variable without carrying the person, and an ephemeral
-    run there has always failed closed rather than upload what nobody approved
-    in front of a screen. This answers a prompt; where no prompt could be shown,
-    there is nothing to answer.
+    Where the prompt could not be shown, there is nothing to answer. A copied
+    `.env` that reaches CI, a container or a server carries the variable without
+    carrying the person; a suite under test, and a host that asked for tracing
+    messages to be suppressed, are the same case. An ephemeral run has always
+    failed closed in all three rather than upload what nobody approved in front
+    of a screen, and it still does — this turns a second question into an
+    answer, and changes nothing about where the first one is asked.
     """
     if not (
         is_tracing_enabled_in_context()
@@ -127,7 +129,7 @@ def tracing_asked_for() -> bool:
     ):
         return False
 
-    return _is_interactive_terminal()
+    return _prompt_can_be_shown()
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
@@ -511,6 +513,25 @@ def _is_interactive_terminal() -> bool:
         return False
 
 
+def _prompt_can_be_shown() -> bool:
+    """Could a question about traces be put to somebody at all?
+
+    Three cases where it cannot: a suite under test, a host that asked for
+    tracing messages to be suppressed, and a process with no terminal (CI, API
+    servers, Docker) where a prompt would block for twenty seconds with nobody
+    to answer it. `prompt_user_for_trace_viewing` returns False in each, which
+    is what keeps an unapproved ephemeral trace on the machine — and
+    `tracing_asked_for` asks the same question, so the two cannot drift apart.
+    """
+    if _is_test_environment():
+        return False
+
+    if should_suppress_tracing_messages():
+        return False
+
+    return _is_interactive_terminal()
+
+
 def prompt_user_for_trace_viewing(
     timeout_seconds: int = 20, *, sharing: bool = False
 ) -> bool:
@@ -519,15 +540,7 @@ def prompt_user_for_trace_viewing(
     Returns True if user agrees, False otherwise. ``sharing`` explicitly asks
     permission to upload locally buffered spans rather than merely view a trace.
     """
-    if _is_test_environment():
-        return False
-
-    if should_suppress_tracing_messages():
-        return False
-
-    # Skip prompt in non-interactive contexts (CI, API servers, Docker, etc.)
-    # This avoids blocking for 20 seconds when no one can respond
-    if not _is_interactive_terminal():
+    if not _prompt_can_be_shown():
         return False
 
     try:

@@ -1084,15 +1084,18 @@ FooterKey .footer-key--key {
     def _tracing_was_asked_for(self) -> bool:
         """Did somebody turn tracing on for this run?
 
-        `tracing_asked_for()` reads the env var and a ContextVar — and the
-        ContextVar is set where the crew is CONSTRUCTED, which is not this
-        worker thread, and a flow never sets it at all. So the declaration is
-        read off the object as well: `tracing=True` is the same yes wherever it
-        was written.
+        Read here rather than through `tracing_asked_for()`, for two reasons
+        that both come from where this runs. The ContextVar that helper reads is
+        set where the crew is CONSTRUCTED — not this worker thread — and a flow
+        never sets it at all, so the declaration is read off the object itself.
+        And the helper refuses while tracing messages are suppressed, which this
+        app does deliberately to keep crewAI's console out of its own layout;
+        that guard is about a prompt nobody would see, and this app has a screen
+        and somebody in front of it.
         """
-        from crewai.events.listeners.tracing.utils import tracing_asked_for
+        import os
 
-        if tracing_asked_for():
+        if os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1"):
             return True
 
         return any(

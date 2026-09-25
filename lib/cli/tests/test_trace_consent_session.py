@@ -69,15 +69,29 @@ async def test_tracing_asked_for_needs_no_modal(monkeypatch, value):
     """The user turned tracing on for this project; the modal would be the same
     question a second time."""
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", value)
-    monkeypatch.setattr(
-        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: True
-    )
     app = ConsentApp()
     async with app.run_test(size=(100, 40)) as pilot:
         assert await asyncio.to_thread(app._request_trace_consent) is True
         await pilot.pause()
         assert not isinstance(app.screen, TraceConsentScreen)
     assert app._trace_consent_pending is None
+
+
+@pytest.mark.asyncio
+async def test_the_app_suppresses_messages_and_still_needs_no_modal(monkeypatch):
+    """This app silences crewAI's console to keep it out of its own layout. That
+    is a reason a PROMPT cannot be shown, not a reason to ask again — the app
+    has a screen and somebody in front of it."""
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils.should_suppress_tracing_messages",
+        lambda: True,
+    )
+    app = ConsentApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        assert await asyncio.to_thread(app._request_trace_consent) is True
+        await pilot.pause()
+        assert not isinstance(app.screen, TraceConsentScreen)
 
 
 @pytest.mark.asyncio

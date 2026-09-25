@@ -122,11 +122,11 @@ def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
     """Turning tracing on IS consent. The prompt at the end of a run is for the
     first-time collection nobody asked for — not for a user who said collect it."""
     buffers, grants, recorders, prompt = traces
-    # the rule only holds where a prompt could have been shown; pytest's stdin
-    # is not a terminal, so say a person is here
-    monkeypatch.setattr(
-        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: True
-    )
+    # the rule only holds where a prompt could have been shown, and a suite is
+    # one of the places it could not — so say a person is here
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
     if how == "env":
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
 
@@ -143,15 +143,25 @@ def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
     assert grants and recorders         # and the trace went where it was told to go
 
 
-def test_a_process_with_no_terminal_is_still_asked_nothing_and_uploads_nothing(
-    traces, monkeypatch
+@pytest.mark.parametrize(
+    "closed", ["no terminal", "under test", "messages suppressed"]
+)
+def test_where_the_prompt_could_not_be_shown_nothing_is_uploaded(
+    traces, monkeypatch, closed
 ):
-    """A copied `.env` reaching CI carries the variable, not the person. The
-    ephemeral path has always failed closed there, and still does."""
+    """The switch answers a question; where the question could not have been
+    put to anybody, there is nothing to answer. A copied `.env` reaching CI
+    carries the variable, not the person — and a suite under test, and a host
+    that suppressed tracing messages, are the same case. All three have always
+    failed closed, and still do."""
     buffers, grants, recorders, prompt = traces
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: closed != "no terminal")
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: closed == "under test")
     monkeypatch.setattr(
-        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: False
+        f"{utils}.should_suppress_tracing_messages",
+        lambda: closed == "messages suppressed",
     )
     prompt.return_value = False  # what the prompt answers where nobody can answer
 
