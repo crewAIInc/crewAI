@@ -14,6 +14,7 @@ import warnings
 import click
 from crewai_core.platform_apps import (
     PLATFORM_APPS,
+    PLATFORM_APP_CATEGORIES,
     PLATFORM_APP_DISPLAY_NAMES,
     PLATFORM_APP_TOOLS,
     PLATFORM_APP_TOOL_COUNTS,
@@ -337,16 +338,97 @@ def _tool_category_label(category: str) -> str:
 
 
 def _category_row_label(
-    category: str, tools: list[tuple[str, str]], selected: set[str], expanded: bool
+    category: str,
+    tools: list[tuple[str, str]],
+    selected: set[str],
+    expanded: bool,
+    *,
+    item_label: str | None = None,
 ) -> str:
     """Render an accordion category row with tool/selection counts."""
     marker = "▾" if expanded else "▸"
     sel_count = sum(1 for name, _desc in tools if name in selected)
-    item_label = "applications" if category == "CrewAI Platform" else "tools"
+    item_label = item_label or (
+        "applications" if category == "CrewAI Platform" else "tools"
+    )
     suffix = f"{len(tools)} {item_label}"
     if sel_count:
         suffix += f", {sel_count} selected"
     return f"{marker} {category}  ({suffix})"
+
+
+def _select_platform_applications(selected: set[str]) -> set[str]:
+    """Select Platform applications from their curated presentation groups."""
+    grouped_apps = [
+        (
+            category.name,
+            [
+                (
+                    f"platform:{app}",
+                    f"{PLATFORM_APP_DISPLAY_NAMES[app]} Integration",
+                )
+                for app in category.apps
+            ],
+        )
+        for category in PLATFORM_APP_CATEGORIES
+    ]
+    expanded: str | None = None
+    focus_category: str | None = None
+    first_render = True
+
+    while True:
+        labels: list[str] = [_tool_category_label("CrewAI Platform")]
+        tool_by_index: dict[int, str] = {}
+        separator_indices = {0}
+        action_indices: set[int] = set()
+        category_by_index: dict[int, str] = {}
+        preselected: set[int] = set()
+        initial_cursor: int | None = None
+
+        for category, apps in grouped_apps:
+            row = len(labels)
+            action_indices.add(row)
+            category_by_index[row] = category
+            is_expanded = category == expanded
+            if category == focus_category:
+                initial_cursor = row
+            labels.append(
+                _category_row_label(
+                    category,
+                    apps,
+                    selected,
+                    is_expanded,
+                    item_label="applications",
+                )
+            )
+            if is_expanded:
+                for name, description in apps:
+                    if name in selected:
+                        preselected.add(len(labels))
+                    tool_by_index[len(labels)] = name
+                    labels.append(_tool_label(name, description))
+
+        indices, action = pick_many(
+            "Platform applications (space to toggle, enter to return):"
+            if first_render
+            else "",
+            labels,
+            action_indices=action_indices,
+            separator_indices=separator_indices,
+            preselected=preselected,
+            initial_cursor=initial_cursor,
+        )
+        first_render = False
+
+        visible = set(tool_by_index.values())
+        chosen = {tool_by_index[index] for index in indices if index in tool_by_index}
+        selected = (selected - visible) | chosen
+
+        if action is None:
+            return selected
+        if toggled := category_by_index.get(action):
+            focus_category = toggled
+            expanded = None if toggled == expanded else toggled
 
 
 def _select_tools() -> list[str]:
@@ -364,8 +446,14 @@ def _select_tools() -> list[str]:
     ]
     common_tool_names = {name for name, _desc in common_tools}
 
+    platform_tools = next(
+        tools for category, tools in _TOOL_CATEGORIES if category == "CrewAI Platform"
+    )
+    platform_tool_names = {name for name, _desc in platform_tools}
     categories: list[tuple[str, list[tuple[str, str]]]] = []
     for category, category_tools in _TOOL_CATEGORIES:
+        if category == "CrewAI Platform":
+            continue
         remaining_tools = [
             (name, desc)
             for name, desc in category_tools
@@ -395,6 +483,15 @@ def _select_tools() -> list[str]:
                 preselected.add(len(labels))
             tool_by_index[len(labels)] = name
             labels.append(_tool_label(name, desc))
+
+        platform_row = len(labels)
+        action_indices.add(platform_row)
+        category_by_index[platform_row] = "CrewAI Platform"
+        labels.append(
+            _category_row_label(
+                "CrewAI Platform", platform_tools, selected, expanded=False
+            )
+        )
 
         for category, category_tools in categories:
             row = len(labels)
@@ -431,13 +528,28 @@ def _select_tools() -> list[str]:
 
         if action is None:
             break
+        if category_by_index.get(action) == "CrewAI Platform":
+            selected_platform_tools = selected & platform_tool_names
+            selected = (selected - platform_tool_names) | _select_platform_applications(
+                selected_platform_tools
+            )
+            focus_category = None
+            expanded = None
+            continue
         if toggled := category_by_index.get(action):
             focus_category = toggled
             expanded = None if toggled == expanded else toggled
 
-    ordered = [name for name, _desc in common_tools] + [
-        name for _cat, cat_tools in categories for name, _desc in cat_tools
-    ]
+    ordered = (
+        [name for name, _desc in common_tools]
+        + [
+            f"platform:{app}"
+            for category in PLATFORM_APP_CATEGORIES
+            for app in category.apps
+            if f"platform:{app}" not in common_tool_names
+        ]
+        + [name for _cat, cat_tools in categories for name, _desc in cat_tools]
+    )
     return [name for name in ordered if name in selected]
 
 

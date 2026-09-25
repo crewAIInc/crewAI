@@ -506,7 +506,7 @@ def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     assert len(action_indices) >= 4
     # Only the common tools section is visible beyond the category rows
     assert len(labels) == 1 + 5 + len(action_indices)
-    assert any(label == "▸ CrewAI Platform  (123 applications)" for label in labels)
+    assert any(label == "▸ CrewAI Platform  (125 applications)" for label in labels)
 
 
 def test_json_wizard_tool_picker_expands_one_category_at_a_time(monkeypatch):
@@ -652,6 +652,14 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
             return [], platform_row
 
         if picker_calls == 2:
+            engineering = next(
+                idx
+                for idx, label in enumerate(labels)
+                if "Engineering, data & infrastructure" in label
+            )
+            return [], engineering
+
+        if picker_calls == 3:
             github = next(
                 idx
                 for idx, label in enumerate(labels)
@@ -659,12 +667,15 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
             )
             return [github], None
 
+        if picker_calls == 4:
+            return [], None
+
         create_repository = next(
             idx
             for idx, label in enumerate(labels)
             if label == "Create repository (create_repository)"
         )
-        return [create_repository], None
+        return [create_repository]
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
     monkeypatch.setattr(
@@ -680,6 +691,40 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
     assert (
         '"tools": ["platform:github/create_repository"]'
         in json_crew._agent_to_jsonc(agent)
+    )
+
+
+def test_platform_application_picker_groups_catalog_apps(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append((title, labels, kwargs))
+        if len(picker_calls) == 1:
+            group = next(
+                index
+                for index, label in enumerate(labels)
+                if "Engineering, data & infrastructure" in label
+            )
+            return [], group
+        github = next(
+            index
+            for index, label in enumerate(labels)
+            if label.startswith("GitHub Integration")
+        )
+        return [github], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    assert json_crew._select_platform_applications(set()) == {"platform:github"}
+    labels = picker_calls[0][1]
+    assert labels[0] == "── CrewAI Platform ──"
+    assert any(
+        label == "▸ Google Workspace & Google Cloud  (17 applications)"
+        for label in labels
+    )
+    assert any(
+        label == "▸ Engineering, data & infrastructure  (11 applications)"
+        for label in labels
     )
 
 
