@@ -608,6 +608,44 @@ from crewai.flow import (
 )
 ```
 
+## 실험적: `/btw` 명령
+
+<Warning>
+`/btw`는 실험적 애드온입니다. 대화형 Flow는 명시적으로 켜기 전까지 슬래시 줄을 무시하며, API는 바뀔 수 있습니다.
+</Warning>
+
+각 `handle_turn()`은 사용자 줄을 새로운 그래프 실행으로 취급합니다. `/btw`는 사이드 채널이므로 사용자 메시지를 추가하거나 그래프를 실행하지 **않고** 스티어링 노트(또는 강제 라우트)를 끼워 넣을 수 있습니다.
+
+```python
+from crewai.experimental.conversation_commands import btw_commands
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+
+
+@btw_commands
+@ConversationConfig()
+class SupportFlow(Flow[ConversationState]):
+    @listen("RESEARCH")
+    def handle_research(self) -> str:
+        """Fresh web research."""
+        reply = "I would research that."
+        self.append_assistant_message(reply)
+        return reply
+```
+
+| 줄 | 효과 |
+|------|--------|
+| `/btw keep answers under 20 words` | 스티어링 노트를 유지합니다. 사용자 턴은 기록되지 않습니다. 이후 `converse`와 라우터 프롬프트에 노트가 포함됩니다. |
+| `/btw route RESEARCH` | **다음** 턴만 해당 라우트로 강제하고 이후에는 일반 라우팅으로 돌아갑니다. |
+| `/btw stay RESEARCH` 또는 `/btw route RESEARCH persist` | `/btw clear` 전까지 그 라우트를 계속 강제합니다. |
+| `/btw clear` | 노트와 강제 라우트를 제거합니다. |
+| `/btw` 또는 `/btw show` | 현재 스티어링을 보여 줍니다. |
+| `/help` | 명령 목록을 출력합니다. |
+| `What's the weather /btw keep it to one sentence` | 명령을 적용한 뒤 남은 텍스트를 사용자 턴으로 실행합니다. |
+
+이미 만든 Flow( `Flow.from_declaration(...)` 포함)에는 데코레이터 대신 `enable_btw_commands(flow)`를 호출하세요.
+
+단독 `/btw` 줄은 확인 메시지를 반환하며 `kickoff()`를 호출하지 않습니다. `chat()`과 CLI TUI는 `handle_turn()`을 감싸므로, 애드온이 설치된 뒤에는 자동으로 동작합니다. 애드온이 없는 Flow는 `/btw …`를 일반 사용자 메시지로 취급합니다.
+
 ## 참고
 
 - [Flow 상태 관리 마스터하기](/ko/guides/flows/mastering-flow-state)
