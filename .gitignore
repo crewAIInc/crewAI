@@ -27,6 +27,7 @@ conceptual_plan.md
 build_image
 chromadb-*.lock
 .claude
+.codex
 .crewai/memory
 blogs/*
 secrets/*
