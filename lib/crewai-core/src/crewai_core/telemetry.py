@@ -572,8 +572,18 @@ class Telemetry:
 
         self._safe_telemetry_procedure(_operation)
 
-    def feature_usage_span(self, feature: str) -> None:
-        """Records that a feature was used. One span = one count."""
+    def feature_usage_span(
+        self, feature: str, attributes: dict[str, str] | None = None
+    ) -> None:
+        """Records that a feature was used. One span = one count.
+
+        Args:
+            feature: Feature identifier, e.g. ``"cli_usage:eval"``.
+            attributes: What a caller knows about THIS use that the common
+                attributes cannot know — never prompts, outputs or anything
+                about the work itself. Every span already carries the project
+                id, the runtime and the version.
+        """
         from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
@@ -581,6 +591,8 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "feature", feature)
+            for key, value in (attributes or {}).items():
+                self._add_attribute(span, key, value)
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)

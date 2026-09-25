@@ -1285,13 +1285,18 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
-    def feature_usage_span(self, feature: str) -> None:
+    def feature_usage_span(
+        self, feature: str, attributes: dict[str, str] | None = None
+    ) -> None:
         """Records that a feature was used. One span = one count.
 
         Args:
             feature: Feature identifier, e.g. "planning:creation",
                      "mcp:connection", "a2a:delegation",
                      "hooks:pre_tool_call", "hooks:aborted".
+            attributes: What a caller knows about THIS use that the common
+                attributes cannot know — never prompts, outputs or anything
+                about the work itself.
         """
 
         def _operation() -> None:
@@ -1299,6 +1304,8 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "feature", feature)
+            for key, value in (attributes or {}).items():
+                self._add_attribute(span, key, value)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

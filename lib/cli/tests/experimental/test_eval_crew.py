@@ -549,26 +549,40 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
     assert "Tracing is on for this project" in capsys.readouterr().out
 
 
-def test_the_command_counts_itself_however_it_was_started(project, monkeypatch):
+@pytest.mark.parametrize("logged_in", [True, False])
+def test_the_command_counts_the_evaluation_and_what_it_can_be_joined_on(
+    project, monkeypatch, logged_in
+):
     """`cli_usage:eval` is every evaluation; the TUI's own `cli_usage:evaluate`
-    is the subset that came from the button."""
+    is intent, and the difference is intent that never became one. The span
+    carries which run, whether the caller was logged in, and to which
+    organization — never anything about the run's content."""
     directory, _ = project
     record_last_run(directory, "counted-run")
-    features: list[str] = []
+    spans: list[tuple[str, dict[str, str]]] = []
 
     class FakeTelemetry:
         def set_tracer(self) -> None:
             pass
 
-        def feature_usage_span(self, feature: str) -> None:
-            features.append(feature)
+        def feature_usage_span(self, feature, attributes=None) -> None:
+            spans.append((feature, attributes or {}))
 
     monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
+    monkeypatch.setattr(
+        "crewai_core.settings.Settings", lambda: SimpleNamespace(org_uuid="org-42")
+    )
+    monkeypatch.setattr(eval_module, "saved_login", lambda: "tok" if logged_in else None)
     install(monkeypatch, FakeAMP(statuses=[done()]))
 
     eval_module.eval_crew()
 
-    assert features == ["cli_usage:eval"]
+    feature, attributes = spans[0]
+    assert feature == "cli_usage:eval"
+    assert attributes["execution_id"] == "counted-run"
+    assert attributes["authenticated"] == ("true" if logged_in else "false")
+    # an anonymous caller has no organization to report, and is not asked for one
+    assert attributes["organization_id"] == ("org-42" if logged_in else "")
 
 
 def test_telemetry_never_breaks_the_command(project, monkeypatch):

@@ -48,26 +48,40 @@ FINISHED = {"done", "failed"}
 STATUSES = {"queued", "running"} | FINISHED
 
 
-def _record_usage() -> None:
-    """Count the command without recording anything about the run itself.
+def _record_usage(execution_id: str, *, logged_in: bool) -> None:
+    """Count an evaluation that is actually starting, and what can be joined on.
 
-    The TUI's button counts `cli_usage:evaluate` and then calls this function,
-    so `cli_usage:eval` is every evaluation and the difference between the two
-    is how many were started from the button.
+    The project id, the runtime and the version ride every span already. What
+    only this command knows is WHICH run is being graded, whether the caller was
+    logged in, and — when they are — which organization they are logged in to.
+    Nothing about the run's content is recorded here: no inputs, no output, no
+    verdict. Those live in AMP, which the execution id joins to.
+
+    The TUI's button counts `cli_usage:evaluate` when it is pressed, so the
+    difference between that and `cli_usage:eval` is intent that never became an
+    evaluation.
     """
     try:
+        from crewai_core.settings import Settings
         from crewai_core.telemetry import Telemetry
 
+        organization = str(getattr(Settings(), "org_uuid", "") or "") if logged_in else ""
         telemetry = Telemetry()
         telemetry.set_tracer()
-        telemetry.feature_usage_span("cli_usage:eval")
+        telemetry.feature_usage_span(
+            "cli_usage:eval",
+            {
+                "execution_id": execution_id,
+                "authenticated": "true" if logged_in else "false",
+                "organization_id": organization,
+            },
+        )
     except Exception:  # noqa: S110 - telemetry must never break a command
         pass
 
 
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
-    _record_usage()
     get_or_create_project_id()
     # Read before the project's .env is loaded, so a project cannot add itself.
     trusted = _trusted_amp_origins()
@@ -87,6 +101,7 @@ def eval_crew(run_id: str | None = None) -> None:
             ),
             style="yellow",
         )
+    _record_usage(execution_id, logged_in=client.api_key is not None)
     started = _start_evaluation(client, execution_id)
     url = started.get("url")
     console.print(Text("Evaluating run ").append(execution_id, style="bold"))
