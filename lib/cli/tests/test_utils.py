@@ -55,6 +55,25 @@ def test_tree_find_and_replace_nested_content(temp_tree):
         assert f.read() == "Updated content"
 
 
+def test_tree_find_and_replace_writes_utf8(temp_tree):
+    """Replaced content is written back as UTF-8, not the locale encoding."""
+    utils.tree_find_and_replace(temp_tree, "world", "wörld ✓")
+    content = Path(temp_tree, "file1.txt").read_text(encoding="utf-8")
+    assert content == "Hello, wörld ✓!"
+
+
+def test_copy_template_writes_utf8(tmp_path):
+    """A non-ASCII project name renders into a valid UTF-8 file."""
+    src =tmp_path / "template.toml"
+    src.write_text('description = "{{name}} — using crewAI"\n', encoding="utf-8")
+    dst = tmp_path / "pyproject.toml"
+
+    utils.copy_template(src, dst, "Café ✓", "CafCrew", "caf")
+
+    content = dst.read_text(encoding="utf-8")
+    assert content == 'description = "Café ✓ — using crewAI"\n'
+
+
 def test_tree_find_and_replace_no_matches(temp_tree):
     utils.tree_find_and_replace(temp_tree, "nonexistent", "replacement")
     assert set(os.listdir(temp_tree)) == {

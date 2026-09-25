@@ -86,7 +86,7 @@ def _create_python_flow(
             "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
         )
 
-        with open(dst_file, "w") as file:
+        with open(dst_file, "w", encoding="utf-8") as file:
             file.write(content)
 
     for file_name in root_template_files:
