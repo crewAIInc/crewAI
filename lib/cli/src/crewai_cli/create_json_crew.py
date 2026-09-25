@@ -15,6 +15,7 @@ import click
 from crewai_core.platform_apps import (
     PLATFORM_APPS,
     PLATFORM_APP_DISPLAY_NAMES,
+    PLATFORM_APP_TOOLS,
     PLATFORM_APP_TOOL_COUNTS,
 )
 from crewai_core.telemetry import Telemetry
@@ -430,14 +431,41 @@ def _select_tools() -> list[str]:
 
         if action is None:
             break
-        toggled = category_by_index.get(action)
-        focus_category = toggled
-        expanded = None if toggled == expanded else toggled
+        if toggled := category_by_index.get(action):
+            focus_category = toggled
+            expanded = None if toggled == expanded else toggled
 
     ordered = [name for name, _desc in common_tools] + [
         name for _cat, cat_tools in categories for name, _desc in cat_tools
     ]
     return [name for name in ordered if name in selected]
+
+
+def _select_platform_actions(selected_tools: list[str]) -> list[str]:
+    """Replace selected Platform applications with the chosen actions for an agent."""
+    platform_apps = [
+        tool.removeprefix("platform:")
+        for tool in selected_tools
+        if tool.startswith("platform:") and "/" not in tool
+    ]
+    non_platform_tools = [
+        tool for tool in selected_tools if not tool.startswith("platform:")
+    ]
+    platform_actions = [
+        tool for tool in selected_tools if tool.startswith("platform:") and "/" in tool
+    ]
+
+    for app in platform_apps:
+        action_indices = pick_many(
+            f"{PLATFORM_APP_DISPLAY_NAMES[app]} actions for this agent (space to toggle):",
+            [f"{item.display_name} ({item.slug})" for item in PLATFORM_APP_TOOLS[app]],
+        )
+        platform_actions.extend(
+            f"platform:{app}/{PLATFORM_APP_TOOLS[app][index].slug}"
+            for index in action_indices
+        )
+
+    return non_platform_tools + platform_actions
 
 
 def _wizard_agent(
@@ -488,7 +516,7 @@ def _wizard_agent(
     else:
         llm = _select_model()
 
-    tools = _select_tools()
+    tools = _select_platform_actions(_select_tools())
     if tools:
         _success(f"{len(tools)} tool{'s' if len(tools) != 1 else ''}")
     else:

@@ -587,15 +587,26 @@ def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypat
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
     expanded_labels: list[str] = []
 
+    categories = [
+        "Search & Research",
+        "Web Scraping",
+        "File & Document",
+        "Code & Data",
+        "Cloud & Storage",
+        "Sandbox & Automation",
+        "AI & Vision",
+    ]
+
     def pick_many(title: str, labels: list[str], **kwargs):
         picker_calls.append((title, labels, kwargs))
         expanded_labels.extend(labels)
-        action_indices = sorted(kwargs["action_indices"])
         call_num = len(picker_calls)
-        if call_num <= len(action_indices):
-            # Expand the n-th category (indices shift between renders, so
-            # recompute from this render's action rows)
-            return [], action_indices[call_num - 1]
+        if call_num <= len(categories):
+            category = categories[call_num - 1]
+            category_row = next(
+                idx for idx, label in enumerate(labels) if category in label
+            )
+            return [], category_row
         return [], None
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
@@ -640,13 +651,20 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
             )
             return [], platform_row
 
-        github = next(
+        if picker_calls == 2:
+            github = next(
+                idx
+                for idx, label in enumerate(labels)
+                if label.startswith("GitHub Integration")
+            )
+            return [github], None
+
+        create_repository = next(
             idx
             for idx, label in enumerate(labels)
-            if label.startswith("GitHub Integration")
-            and label.endswith("Platform: GitHubIntegration (877 tools)")
+            if label == "Create repository (create_repository)"
         )
-        return [github], None
+        return [create_repository], None
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
     monkeypatch.setattr(
@@ -658,8 +676,11 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
     agent = json_crew._wizard_agent(agent_num=1, existing_names=[])
 
     assert agent is not None
-    assert agent["tools"] == ["platform:github"]
-    assert '"tools": ["platform:github"]' in json_crew._agent_to_jsonc(agent)
+    assert agent["tools"] == ["platform:github/create_repository"]
+    assert (
+        '"tools": ["platform:github/create_repository"]'
+        in json_crew._agent_to_jsonc(agent)
+    )
 
 
 def test_json_wizard_platform_catalog_contains_every_supported_app():
