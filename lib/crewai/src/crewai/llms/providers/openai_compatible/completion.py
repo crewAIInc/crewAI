@@ -90,6 +90,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "cheaperinference": ProviderConfig(
+        base_url="https://api.cheaperinference.com/v1",
+        api_key_env="CHEAPER_INFERENCE_API_KEY",
+        base_url_env="CHEAPER_INFERENCE_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -142,6 +148,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
+        - cheaperinference: Cheaper Inference (https://cheaperinference.com)
 
     Example:
         # Using provider prefix

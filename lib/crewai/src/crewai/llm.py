@@ -346,6 +346,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "cheaperinference",
     "snowflake",
 ]
 
@@ -532,6 +533,10 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "cheaperinference":
+            # Cheaper Inference serves models from many labs under bare ids
+            return True
+
         if provider == "snowflake":
             return True
 
@@ -589,6 +594,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "cheaperinference": "cheaperinference",
                 "snowflake": "snowflake",
             }
 
@@ -758,6 +764,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "cheaperinference",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

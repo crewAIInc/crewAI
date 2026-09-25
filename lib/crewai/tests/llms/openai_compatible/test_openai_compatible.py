@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_cheaperinference_config(self):
+        """Test Cheaper Inference provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["cheaperinference"]
+        assert config.base_url == "https://api.cheaperinference.com/v1"
+        assert config.api_key_env == "CHEAPER_INFERENCE_API_KEY"
+        assert config.base_url_env == "CHEAPER_INFERENCE_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -311,6 +319,15 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
             assert llm.base_url == "https://my-dashscope.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_cheaperinference(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Cheaper Inference."""
+        with patch.dict(os.environ, {"CHEAPER_INFERENCE_API_KEY": "test-key"}):
+            llm = LLM(model="cheaperinference/gpt-5.4-mini")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "cheaperinference"
+            assert llm.model == "gpt-5.4-mini"
+            assert llm.base_url == "https://api.cheaperinference.com/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
