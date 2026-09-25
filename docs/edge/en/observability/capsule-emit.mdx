@@ -1,0 +1,101 @@
+---
+title: Agent Action Capsule (capsule-emit) Integration
+description: Sealed, signed, content-addressed evidence records for crew runs — a two-record capsule chain per tool call, checkable offline.
+icon: file-shield
+mode: "wide"
+---
+
+# Agent Action Capsule Overview
+
+[capsule-emit](https://github.com/action-state-group/capsule-emit) records each tool call in a crew run as a chain of **Agent Action Capsules**: a *planned* capsule sealed when the call starts, then a *confirmed* (or *failed*) capsule sealed when it ends, chained to the planned one by capsule id. Capsules are audit and compliance evidence for what a crew actually did — complementary to tracing.
+
+Two verification layers, deliberately distinct:
+
+- **Offline verification** checks structure, content addressing (every digest recomputes from the record's own contents), chain consistency, and each record's producer signature — no service, no credentials. A signature proves the key named in the record signed it, not who holds that key: the signature and key id sit outside the digest, so a ledger re-signed under a fresh key still passes.
+- **Tamper-evidence toward an outside party** comes from the checkpoint/witness stream, on by default (see the table below). Each checkpoint the witness accepts gives an outside party a reference to check the ledger against, to the extent that party trusts the witness to be independent of you. Records sealed after the last accepted checkpoint are not yet committed outside your environment; a run that seals fewer than 100 records, all within 900 seconds, exits without posting one. The older per-seal SCITT anchor is a legacy channel, off by default.
+
+### Features
+
+- **One listener, every tool call**: register `CapsuleEventListener()` once via CrewAI's standard `BaseEventListener` mechanism — no per-tool code changes.
+- **Planned → confirmed chains**: a planned capsule is sealed when a tool call starts; when it finishes, a second confirmed capsule is sealed and chained to it (`prior_capsule_id`); errors seal a chained failed-effect capsule instead.
+- **Digest-only privacy**: tool inputs/outputs are committed as SHA-256 digests — raw content stays local; the witness stream carries checkpoint metadata only, never record content.
+- **Offline consistency checks**: re-check structure, content addressing, chain links, and producer signatures from the ledger alone.
+- **Checkpointed tamper-evidence**: each accepted checkpoint commits the ledger's root hash outside your environment; the tail after it is not covered yet. `CAPSULE_WITNESS=off` stops all egress; offline verification never consults a checkpoint either way.
+- **Crew-safe by construction**: the listener honors `is_replaying()` and never raises into the crew run; an unreachable transparency service cannot break a crew.
+
+## Setup Instructions
+
+<Steps>
+    <Step title="Install capsule-emit with the CrewAI extra">
+      ```shell
+      pip install "capsule-emit[crewai]"
+      ```
+    </Step>
+    <Step title="Register the listener">
+      ```python
+      from capsule_emit.adapters.crewai_listener import CapsuleEventListener
+
+      # Register once, before kickoff — every tool call in the crew seals a capsule.
+      listener = CapsuleEventListener(operator="acme-crew", developer="platform-team")
+      ```
+    </Step>
+    <Step title="Run your crew as usual">
+      ```python
+      result = crew.kickoff()
+      ```
+      Each tool call now produces sealed, signed records in the local ledger (`ledger.jsonl` by default).
+    </Step>
+    <Step title="Check the evidence">
+      ```python
+      import json
+      from capsule_emit.signing import verify_store_signed
+
+      rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
+      if not rows:
+          raise SystemExit("empty ledger — nothing to verify")
+      # checks each signature against the key named in the record, not against a key you trust
+      results = verify_store_signed([row.get("capsule", row) for row in rows], require_signature=True)
+      ok = all(r.ok for r in results)
+      print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
+      ```
+    </Step>
+</Steps>
+
+## Runnable quickstart
+
+A hermetic end-to-end demo (real CrewAI event bus, the legacy anchor pointed at a local stub, no LLM key) ships in the capsule-emit repository:
+
+```shell
+git clone --depth 1 --branch v0.8.6 https://github.com/action-state-group/capsule-emit.git
+cd capsule-emit
+pip install "capsule-emit[crewai]"
+python examples/crewai-listener/demo.py
+```
+
+Sample output (capsule-emit 0.8.6, crewai 1.15.22):
+
+```text
+action                             effect     verdict   chained  verify_store_signed()
+---------------------------------------------------------------------------
+crew_kickoff_started/7bf66bc3-11b3 -          executed  -        VALID
+fetch_supplier/70206d21-a261-43c8- planned    executed  -        VALID
+fetch_supplier/fa5be16a-886d-411d- confirmed  executed  yes      VALID
+write_po/376d4199-d967-4472-8960-5 planned    executed  -        VALID
+write_po/af0fe96e-2503-4e10-bf77-4 failed     errored   yes      VALID
+crew_kickoff_completed/7f95d83c-e3 -          executed  -        VALID
+---------------------------------------------------------------------------
+6 capsules, verify: ALL OK
+```
+
+## What gets recorded
+
+| Field | Content |
+|---|---|
+| `action_id` / tool name | which tool call or crew lifecycle event (kickoff started/completed/failed) this capsule records |
+| input / output digests | SHA-256 commitments — raw content never leaves your environment |
+| `effect` | `planned`, `confirmed`, or `failed` on tool calls (crew lifecycle records carry none); the verdict reads `executed` or `errored` |
+| `confirms` chain | the confirmed capsule cites the planned capsule by content address |
+| `signature` / `key_id` | a COSE_Sign1 producer signature over the capsule id, and the key that made it — outside the digest, so they prove which key signed, not who holds it |
+| network egress | by default, a checkpoint (log size, root hash, timestamp; never record content) after every 100 records, or at the next seal once 900 seconds have passed (no background timer), posted to the project's public witness at `witness.agentactioncapsule.org`; `CAPSULE_WITNESS_URL` sends it to a witness you choose, `CAPSULE_WITNESS=off` disables it. The legacy per-seal anchor is off unless `CAPSULE_ANCHOR=legacy-on` |
+
+The record format is an open specification (`draft-mih-scitt-agent-action-capsule`, an individual IETF Internet-Draft) with an Apache-2.0 reference implementation.
