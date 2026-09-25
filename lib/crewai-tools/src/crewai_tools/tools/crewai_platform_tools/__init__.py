@@ -11,8 +11,8 @@ from crewai_core.platform_apps import (
     PLATFORM_APP_DISPLAY_NAMES,
     PLATFORM_APP_TOOLS,
     PLATFORM_APP_TOOL_COUNTS,
-    PLATFORM_CATALOG,
 )
+from crewai_core.platform_catalog import PLATFORM_CATALOG
 
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
     CrewAIPlatformActionTool,
