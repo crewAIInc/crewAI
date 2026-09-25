@@ -418,7 +418,7 @@ def test_id_restore_still_drops_unknown_keys(
 # ── TUI vs terminal (headless/deploy) routing ──────────────────────
 
 
-def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False, want_eval=False):
+def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False, evaluation=None):
     """Replace CrewRunApp/EventListener/summary so _run_declarative_flow_tui is
     driven by a controllable fake app."""
 
@@ -430,8 +430,7 @@ def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False, want_eval=
             self._crew_name = crew_name
             self._status = status
             self._want_deploy = want_deploy
-            self._want_eval = want_eval
-            self._eval_execution_id = "flow-run" if want_eval else None
+            self._evaluation = evaluation
             self._crew_result = "result"
 
         def run(self):
@@ -543,17 +542,32 @@ def test_run_declarative_flow_tui_no_deploy_when_not_requested(
     assert deploy_calls == []
 
 
-def test_run_declarative_flow_tui_chains_eval(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A declarative flow has the button too, and the same tail runs it."""
-    _install_fake_flow_app(monkeypatch, status="completed", want_eval=True)
-    graded: list[str | None] = []
-    monkeypatch.setattr("crewai_cli.run_crew._chain_eval", lambda run_id=None: graded.append(run_id))
-
-    run_declarative_flow_module._run_declarative_flow_tui(
-        SimpleNamespace(name="Flow"), None
+def test_run_declarative_flow_tui_leaves_the_report_link_behind(capsys) -> None:
+    """A declarative flow evaluates inside the app like a crew does. What the
+    terminal is for is afterwards: the link, once the screen that held it is
+    gone."""
+    app = SimpleNamespace(
+        _crew_name="Flow",
+        _status="completed",
+        _elapsed_frozen=1.0,
+        _start_time=0.0,
+        _input_tokens=0,
+        _output_tokens=0,
+        _live_out_tokens=0,
+        _final_output=None,
+        _error=None,
+        _evaluation={
+            "state": "done",
+            "url": "https://optimize.example/e/1",
+            "verdict": {"gate": "passed"},
+        },
     )
 
-    assert graded == ["flow-run"]  # the run the button watched, not the last recorded
+    run_declarative_flow_module._print_flow_post_tui_summary(app)
+
+    printed = capsys.readouterr().out
+    assert "goal gate PASSED" in printed
+    assert "https://optimize.example/e/1" in printed
 
 
 def test_run_declarative_flow_tui_enables_flow_events(

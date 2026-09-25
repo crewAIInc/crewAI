@@ -14,6 +14,7 @@ traces. The command sends the saved `crewai login` when there is one.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import contextlib
 from datetime import datetime
 from ipaddress import ip_address
@@ -93,6 +94,10 @@ def _record_usage(execution_id: str, *, logged_in: bool) -> None:
         pass
 
 
+def _note(text: str) -> None:
+    console.print(text, style="dim")
+
+
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
     get_or_create_project_id()
@@ -101,10 +106,12 @@ def eval_crew(run_id: str | None = None) -> None:
     _load_project_env()
     record = read_last_run() or {}
     execution_id = run_id or record.get("execution_id")
-    watched = execution_id is None
     if execution_id is None:
-        execution_id = _run_now_or_explain()
-        record = read_last_run() or {}
+        # Nothing traced here: the crew runs first, and the app that runs it
+        # carries the evaluation on its own screen — link, progress, verdict —
+        # so this command has nothing left to say once it returns.
+        _run_and_let_the_app_evaluate()
+        return
 
     client = _amp_client(trusted)
     recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
@@ -115,11 +122,14 @@ def eval_crew(run_id: str | None = None) -> None:
             ),
             style="yellow",
         )
-    started = _start_evaluation(
-        client,
-        execution_id,
-        wait_for_spans=watched or (run_id is None and _ran_just_now(record)),
-    )
+    try:
+        started = _start_evaluation(
+            client,
+            execution_id,
+            wait_for_spans=run_id is None and _ran_just_now(record),
+        )
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
     # After, not before: `cli_usage:eval` counts an evaluation, and a refused
     # request — a run AMP does not hold, a credential it will not take — is not
     # one. `_start_evaluation` raises rather than returning on those.
@@ -133,7 +143,16 @@ def eval_crew(run_id: str | None = None) -> None:
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
         _open(url)
 
-    finished = _wait(client, started["id"], url)
+    console.print("Waiting for the verdict…", style="dim")
+    try:
+        finished = _wait(client, started["id"], url)
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
+    except KeyboardInterrupt:
+        console.print(
+            Text(f"\nStill running{f' at {url}' if url else ''}."), style="yellow"
+        )
+        raise SystemExit(130) from None
     _print_verdict(finished, url)
     if finished.get("status") != "done":
         raise SystemExit(1)
@@ -157,6 +176,31 @@ def _ran_just_now(record: dict[str, Any]) -> bool:
 
     now = datetime.now(when.tzinfo) if when.tzinfo else datetime.now()
     return 0 <= (now - when).total_seconds() <= RUN_IS_FRESH_SECONDS
+
+
+def evaluate_run(
+    execution_id: str,
+    *,
+    on_started: Callable[[dict[str, Any]], None],
+    on_status: Callable[[dict[str, Any]], None] | None = None,
+    note: Callable[[str], None] = _note,
+) -> dict[str, Any]:
+    """Start the evaluation of EXECUTION_ID and wait for its verdict.
+
+    The run app's door into this command: it has a screen of its own to show
+    the link and the verdict on, so nothing here prints and nothing exits — the
+    url reaches ON_STARTED as soon as AMP gives it, every unfinished answer
+    reaches ON_STATUS, and anything that stops the evaluation is an
+    `EvaluationStoppedError` carrying the sentence to show.
+
+    The spans of a run that just ended may still be in flight, which is the
+    whole reason this is called from inside the app that ran it, so the wait
+    for them is always on here.
+    """
+    client = _amp_client(_trusted_amp_origins())
+    started = _start_evaluation(client, execution_id, wait_for_spans=True, note=note)
+    on_started(started)
+    return _wait(client, started["id"], started.get("url"), on_status=on_status)
 
 
 def _trusted_amp_origins() -> set[str]:
@@ -269,8 +313,13 @@ def saved_login() -> str | None:
         return None
 
 
-def _run_now_or_explain() -> str:
-    """No traced run recorded here: offer to turn tracing on and run the crew now."""
+def _run_and_let_the_app_evaluate() -> None:
+    """No traced run recorded here: offer to turn tracing on and run the crew.
+
+    The run app evaluates what it ran, on its own screen, so this returns when
+    the reader closes it — and says something only when there was nothing to
+    evaluate at all.
+    """
     if not Path("pyproject.toml").is_file():
         _fail(
             "No crewAI project here (no pyproject.toml). Run `crewai eval` from the project's "
@@ -296,25 +345,22 @@ def _run_now_or_explain() -> str:
     from crewai_cli.crew_run_tui import evaluating_after_run
     from crewai_cli.run_crew import run_crew
 
-    # The app closes itself when the run ends and leaves its own execution id
-    # here — no quitting a screen to get to the evaluation that opened it. A run
-    # without the app (no terminal, `--dmn`) leaves nothing, and the project's
-    # record answers as it did.
+    # The app is told an evaluation is waiting and starts it itself when the run
+    # ends. It runs in this process for some projects and in a child for others,
+    # so what says a run was traced is either the holder's id or the record the
+    # run wrote.
     with evaluating_after_run() as watched:
         run_crew()
-    if watched["execution_id"]:
-        return str(watched["execution_id"])
+    if watched["execution_id"] or (read_last_run() or {}).get("execution_id"):
+        return
 
-    record = read_last_run()
-    if record is None:
-        console.print(
-            "The run finished but no trace was recorded: the run may have failed, sharing the "
-            "trace was declined, or this project's crewai is older than the version that records "
-            f"the last run ({LAST_RUN_FILE}). Run the crew again and accept when asked, then `crewai eval`.",
-            style="bold red",
-        )
-        raise SystemExit(1)
-    return str(record["execution_id"])
+    console.print(
+        "The run finished but no trace was recorded: the run may have failed, sharing the "
+        "trace was declined, or this project's crewai is older than the version that records "
+        f"the last run ({LAST_RUN_FILE}). Run the crew again and accept when asked, then `crewai eval`.",
+        style="bold red",
+    )
+    raise SystemExit(1)
 
 
 def _enable_tracing() -> None:
@@ -329,8 +375,21 @@ def _enable_tracing() -> None:
     )
 
 
+class EvaluationStoppedError(RuntimeError):
+    """The evaluation cannot go on, in words meant for a reader.
+
+    Raised rather than printed-and-exited, because the same two functions serve
+    the terminal and the run app: one of them owns the screen, and a line
+    printed underneath it is a smear nobody asked for.
+    """
+
+
 def _start_evaluation(
-    client: PlusAPI, execution_id: str, *, wait_for_spans: bool = False
+    client: PlusAPI,
+    execution_id: str,
+    *,
+    wait_for_spans: bool = False,
+    note: Callable[[str], None] = _note,
 ) -> dict[str, Any]:
     deadline = time.monotonic() + SPANS_WAIT_SECONDS if wait_for_spans else 0.0
     said = False
@@ -338,15 +397,16 @@ def _start_evaluation(
         try:
             response = client.create_evaluation(execution_id)
         except httpx.HTTPError as error:
-            _fail(f"Could not reach AMP to start the evaluation: {error}")
+            raise EvaluationStoppedError(
+                f"Could not reach AMP to start the evaluation: {error}"
+            ) from error
         # The run finished moments ago and its spans are still on their way:
         # waiting is the answer, not a 404 the reader can do nothing with.
         if response.status_code == 404 and time.monotonic() < deadline:
             if not said:
-                console.print(
+                note(
                     "The run's trace has not reached CrewAI AMP yet — waiting up to "
-                    f"{int(SPANS_WAIT_SECONDS // 60)} minutes for it (Ctrl-C to stop)…",
-                    style="dim",
+                    f"{int(SPANS_WAIT_SECONDS // 60)} minutes for it…"
                 )
                 said = True
             time.sleep(SPANS_POLL_SECONDS)
@@ -362,65 +422,70 @@ def _start_evaluation(
         if payload and isinstance(payload.get("id"), str) and payload["id"]:
             if not isinstance(payload.get("url"), str):
                 if payload.get("url") is not None:
-                    console.print(
-                        Text(
-                            "AMP answered with a report url that is not a string; "
-                            "the link is unavailable for this run."
-                        ),
-                        style="yellow",
+                    note(
+                        "AMP answered with a report url that is not a string; "
+                        "the link is unavailable for this run."
                     )
                 payload["url"] = None
             return payload
-        _fail(f"AMP answered without an evaluation id ({response.status_code}).")
-    _refused(response, f"run {execution_id}")
-    raise AssertionError("unreachable")
+        raise EvaluationStoppedError(
+            f"AMP answered without an evaluation id ({response.status_code})."
+        )
+    raise EvaluationStoppedError(_refusal_message(response, f"run {execution_id}"))
 
 
-def _wait(client: PlusAPI, evaluation_id: str, url: str | None) -> dict[str, Any]:
-    """Poll until the evaluation is done or failed; Ctrl-C leaves it running."""
-    console.print("Waiting for the verdict…", style="dim")
+def _wait(
+    client: PlusAPI,
+    evaluation_id: str,
+    url: str | None,
+    *,
+    on_status: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Poll until the evaluation is done or failed.
+
+    Every unfinished answer goes to ON_STATUS, so a caller that has somewhere to
+    show progress can show it; the caller decides what a Ctrl-C means.
+    """
     where = f" at {url}" if url else ""
     subject = f"evaluation {evaluation_id}"
     misses = (
         0  # AMP unreachable or answering 5xx: a blip is retried, a streak is reported
     )
-    try:
-        while True:
-            try:
-                response = client.get_evaluation(evaluation_id)
-            except httpx.HTTPError as error:
-                misses += 1
-                if misses >= POLL_RETRIES:
-                    _fail(
-                        f"Could not reach AMP while waiting ({error}); the evaluation keeps running{where}."
-                    )
-                time.sleep(POLL_SECONDS)
-                continue
-            if response.status_code >= 500:
-                misses += 1
-                if misses >= POLL_RETRIES:
-                    _refused(response, subject)
-                time.sleep(POLL_SECONDS)
-                continue
-            if response.status_code != 200:
-                _refused(response, subject)
-            misses = 0
-            payload = _payload(response) or {}
-            status = payload.get("status")
-            if status == "done" and not _well_formed_verdict(payload.get("verdict")):
-                _fail(
-                    f"AMP answered done without a verdict (protocol error); follow it{where or ' on AMP'}."
-                )
-            if status in FINISHED:
-                return payload
-            if status not in STATUSES:
-                _fail(
-                    f"AMP answered without a known evaluation status ({status!r}); follow it{where or ' on AMP'}."
-                )
+    while True:
+        try:
+            response = client.get_evaluation(evaluation_id)
+        except httpx.HTTPError as error:
+            misses += 1
+            if misses >= POLL_RETRIES:
+                raise EvaluationStoppedError(
+                    f"Could not reach AMP while waiting ({error}); the evaluation keeps running{where}."
+                ) from error
             time.sleep(POLL_SECONDS)
-    except KeyboardInterrupt:
-        console.print(Text(f"\nStill running{where}."), style="yellow")
-        raise SystemExit(130) from None
+            continue
+        if response.status_code >= 500:
+            misses += 1
+            if misses >= POLL_RETRIES:
+                raise EvaluationStoppedError(_refusal_message(response, subject))
+            time.sleep(POLL_SECONDS)
+            continue
+        if response.status_code != 200:
+            raise EvaluationStoppedError(_refusal_message(response, subject))
+        misses = 0
+        payload = _payload(response) or {}
+        status = payload.get("status")
+        if status == "done" and not _well_formed_verdict(payload.get("verdict")):
+            raise EvaluationStoppedError(
+                f"AMP answered done without a verdict (protocol error); follow it{where or ' on AMP'}."
+            )
+        if status in FINISHED:
+            return payload
+        if status not in STATUSES:
+            raise EvaluationStoppedError(
+                f"AMP answered without a known evaluation status ({status!r}); follow it{where or ' on AMP'}."
+            )
+        if on_status is not None:
+            on_status(payload)
+        time.sleep(POLL_SECONDS)
 
 
 def _well_formed_verdict(verdict: Any) -> bool:
@@ -487,25 +552,30 @@ def _payload(response: httpx.Response) -> dict[str, Any] | None:
     return loaded if isinstance(loaded, dict) else None
 
 
-def _refused(response: httpx.Response, subject: str) -> None:
-    """AMP's own words when it sent them, then exit 1. SUBJECT is "run <id>" or "evaluation <id>"."""
+def _refusal_message(response: httpx.Response, subject: str) -> str:
+    """AMP's own words when it sent them. SUBJECT is "run <id>" or "evaluation <id>".
+
+    A sentence, not a print: the terminal and the run app both show it, and only
+    one of them shows it by printing.
+    """
     payload = _payload(response) or {}
     message = str(payload.get("message") or "").strip()
     error = str(payload.get("error") or "")
     if response.status_code in (401, 403):
         if error == "account_required" and message:
-            _fail(message)
-        _fail(
-            f"{message or 'AMP refused the credential'}. Log in with `crewai login` and try again."
-        )
+            return message
+        return f"{message or 'AMP refused the credential'}. Log in with `crewai login` and try again."
     if response.status_code == 404:
-        _fail(message or f"AMP answered 404 for {subject}.")
+        return message or f"AMP answered 404 for {subject}."
     if response.status_code == 429:
         retry = response.headers.get("Retry-After")
-        _fail(
-            f"{message or 'AMP is rate limiting this request'}{f' — retry after {retry}s' if retry else ''}."
-        )
-    _fail(f"AMP answered {response.status_code}{': ' + message if message else ''}.")
+        return f"{message or 'AMP is rate limiting this request'}{f' — retry after {retry}s' if retry else ''}."
+    return f"AMP answered {response.status_code}{': ' + message if message else ''}."
+
+
+def _refused(response: httpx.Response, subject: str) -> None:
+    """The same words, printed, then exit 1."""
+    _fail(_refusal_message(response, subject))
 
 
 def _fail(message: str) -> None:

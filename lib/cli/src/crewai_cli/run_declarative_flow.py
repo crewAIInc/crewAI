@@ -218,11 +218,6 @@ def _run_declarative_flow_tui(
 
         _chain_deploy()
 
-    if getattr(app, "_want_eval", False):
-        from crewai_cli.run_crew import _chain_eval
-
-        _chain_eval(getattr(app, "_eval_execution_id", None))
-
     return app._crew_result
 
 
@@ -332,6 +327,10 @@ def _print_flow_post_tui_summary(app: Any) -> None:
                 padding=(0, 1),
             )
         )
+
+    from crewai_cli.run_crew import _print_evaluation_line
+
+    _print_evaluation_line(app, console, crewai_teal)
 
 
 def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:

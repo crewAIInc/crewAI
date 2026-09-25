@@ -43,6 +43,7 @@ from crewai_cli.crew_run_tui import (
     _try_parse_structured,
 )
 import pytest
+from rich.text import Text
 
 
 def _app_with_plan() -> CrewRunApp:
@@ -137,37 +138,6 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
     assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
 
-def test_chain_eval_runs_the_command_itself(monkeypatch, capsys) -> None:
-    """The button must not reimplement `crewai eval`, or the two can disagree."""
-    graded: list[str | None] = []
-    monkeypatch.setattr(
-        "crewai_cli.experimental.eval_crew.eval_crew", lambda run_id=None: graded.append(run_id)
-    )
-
-    run_crew._chain_eval("run-just-now")
-
-    assert graded == ["run-just-now"]  # the run the button meant, named
-    assert "Evaluating this run" in capsys.readouterr().out
-
-
-def test_chain_eval_lets_the_command_say_why_it_stopped(monkeypatch, capsys) -> None:
-    """`crewai eval` exits with its own words and its own code; a clean exit is
-    not an error, and a failure is the command's to report."""
-    def refuse(run_id=None) -> None:
-        raise SystemExit(0)
-
-    monkeypatch.setattr("crewai_cli.experimental.eval_crew.eval_crew", refuse)
-    run_crew._chain_eval("run-1")  # no traceback, nothing added
-
-    def blow_up(run_id=None) -> None:
-        raise RuntimeError("AMP said no")
-
-    monkeypatch.setattr("crewai_cli.experimental.eval_crew.eval_crew", blow_up)
-    run_crew._chain_eval("run-1")  # a failed evaluation never fails the run
-
-    assert "Evaluation failed: AMP said no" in capsys.readouterr().out
-
-
 def test_view_traces_button_click_records_telemetry(monkeypatch) -> None:
     app = CrewRunApp()
     app._status = "completed"
@@ -201,26 +171,84 @@ def test_deploy_button_click_records_telemetry() -> None:
     assert exits == [app._crew_result]
 
 
-def test_evaluate_button_leaves_the_tui_with_the_run_it_watched(monkeypatch) -> None:
-    """Evaluate behaves like Deploy — the app exits and the command takes over,
-    because `crewai eval` prints a link, waits, and prints a verdict — and it
-    names THIS app's execution, not whichever run finished last in the project."""
+def test_evaluate_button_evaluates_here_and_does_not_leave(monkeypatch) -> None:
+    """The evaluation takes minutes, has a link worth showing and a verdict
+    worth reading. Sending somebody to a bare terminal to wait for them is the
+    worst of both, so it runs on this screen — and it names THIS app's
+    execution, not whichever run finished last in the project."""
     app = CrewRunApp()
     app._status = "completed"
-    app._crew_result = object()
     app._telemetry = Mock()
     app._execution_uuid = "run-this-app"
-    app._unsubscribe = lambda: None  # type: ignore[method-assign]
-    exits: list[object] = []
-    app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
+    app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]
+    started: list[str] = []
+    monkeypatch.setattr(
+        CrewRunApp, "_evaluate_worker", lambda self, execution_id: started.append(execution_id)
+    )
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: uuid == "run-this-app")
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-eval")))
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
-    assert app._want_eval is True
-    assert app._eval_execution_id == "run-this-app"
-    assert exits == [app._crew_result]
+    assert started == ["run-this-app"]
+    assert app._evaluation == {"state": "starting", "execution_id": "run-this-app"}
+
+
+def test_pressing_evaluate_again_opens_the_report_it_already_made(monkeypatch) -> None:
+    """One evaluation per run: the second press is somebody looking for the
+    report, not asking to pay for another."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._evaluation = {"state": "done", "url": "https://optimize.example/e/1"}
+    monkeypatch.setattr(
+        CrewRunApp, "_evaluate_worker", lambda self, execution_id: pytest.fail("evaluated twice")
+    )
+    opened: list[str] = []
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: opened.append(url))
+
+    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-eval")))
+
+    assert opened == ["https://optimize.example/e/1"]
+    app._telemetry.feature_usage_span.assert_not_called()
+
+
+def test_the_evaluation_shows_its_link_its_progress_and_its_verdict() -> None:
+    """Everything the reader came for is on the run's own screen."""
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    app._evaluation_started({"id": "ev-1", "url": "https://optimize.example/e/1"})
+    app._open_report = lambda url: None  # type: ignore[method-assign]
+
+    line = Text()
+    app._append_evaluation(line)
+    assert "Evaluating this run" in line.plain
+    assert "https://optimize.example/e/1" in line.plain
+
+    app._evaluation_progress({"events": [{"data": {"subject": "the final output", "planned": 9}}]})
+    line = Text()
+    app._append_evaluation(line)
+    assert "judged 1 of 9" in line.plain
+
+    app._evaluation_finished(
+        {"status": "done", "verdict": {"gate": "passed", "grades": {"goal": 5, "tools": None}}}
+    )
+    line = Text()
+    app._append_evaluation(line)
+    assert "Goal gate PASSED" in line.plain
+    assert "goal 5/5" in line.plain and "tools —/5" in line.plain
+    assert "https://optimize.example/e/1" in line.plain
+
+
+def test_an_evaluation_that_stopped_says_so_where_it_was_running() -> None:
+    app = CrewRunApp()
+    app._evaluation = {"state": "running", "url": "https://optimize.example/e/1"}
+    app._evaluation_failed("AMP answered 404 for run x.")
+
+    line = Text()
+    app._append_evaluation(line)
+    assert "Evaluation stopped" in line.plain
+    assert "AMP answered 404 for run x." in line.plain
 
 
 @pytest.mark.parametrize("why", ["not traced at all", "another run replaced the record"])
@@ -239,7 +267,7 @@ def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, why) -> None
 
     app.action_evaluate_crew()
 
-    assert app._want_eval is False
+    assert app._evaluation is None
     assert "not traced" in notices[0]
 
 
@@ -270,25 +298,26 @@ def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
     assert app._tracing_was_asked_for() is False
 
 
-def test_a_run_started_for_an_evaluation_closes_itself(monkeypatch) -> None:
-    """`crewai eval` runs the crew when nothing is traced. Leaving the app open
-    would make the reader quit it before the evaluation they asked for begins."""
+def test_a_run_started_for_an_evaluation_evaluates_it_here(monkeypatch) -> None:
+    """`crewai eval` runs the crew when nothing is traced. The evaluation it
+    came for starts on this screen when the run ends — the app does not close
+    and leave somebody in a bare terminal watching for a link."""
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: True)
+    started: list[str] = []
+    monkeypatch.setattr(
+        CrewRunApp,
+        "_evaluate_worker",
+        lambda self, execution_id: started.append(execution_id),
+    )
     with crew_run_tui.evaluating_after_run() as watched:
         app = CrewRunApp()
         app._execution_uuid = "run-this-app"
-        app._crew_result = object()
-        app._unsubscribe = lambda: None  # type: ignore[method-assign]
-        exits: list[object] = []
-        app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
+        app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]
 
-        app._leave_if_an_evaluation_is_waiting()
+        app._evaluate_if_one_is_waiting()
 
+    assert started == ["run-this-app"]
     assert watched["execution_id"] == "run-this-app"
-    assert exits == [app._crew_result]
-    # the command that opened the app is the one evaluating; the app must not
-    # chain into an evaluation of its own
-    assert app._want_eval is False
 
 
 def test_a_child_process_run_reads_the_waiting_evaluation_off_its_environment(
@@ -296,8 +325,14 @@ def test_a_child_process_run_reads_the_waiting_evaluation_off_its_environment(
 ) -> None:
     """A project's crew runs through `uv run …`, so the app is in another
     process — the one thing that crosses is the environment the command passed
-    it, and the id travels back through the project's last-run record."""
+    it."""
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: True)
+    started: list[str] = []
+    monkeypatch.setattr(
+        CrewRunApp,
+        "_evaluate_worker",
+        lambda self, execution_id: started.append(execution_id),
+    )
     with crew_run_tui.evaluating_after_run():
         passed = crew_run_tui.os.environ["CREWAI_EVAL_AWAITING_RUN"]
 
@@ -306,38 +341,59 @@ def test_a_child_process_run_reads_the_waiting_evaluation_off_its_environment(
     monkeypatch.setenv("CREWAI_EVAL_AWAITING_RUN", passed)
     app = CrewRunApp()
     app._execution_uuid = "run-in-the-child"
-    app._unsubscribe = lambda: None  # type: ignore[method-assign]
-    exits: list[object] = []
-    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+    app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]
 
-    app._leave_if_an_evaluation_is_waiting()
+    app._evaluate_if_one_is_waiting()
 
-    assert exits == [app._crew_result]
-    assert app._want_eval is False
+    assert started == ["run-in-the-child"]
 
 
-def test_a_run_that_failed_leaves_too(monkeypatch) -> None:
-    """The command behind the screen says there is nothing to grade; it cannot
-    say it while somebody has to quit a screen first."""
+def test_a_run_with_no_trace_says_so_instead_of_evaluating(monkeypatch) -> None:
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    monkeypatch.setattr(
+        CrewRunApp,
+        "_evaluate_worker",
+        lambda self, execution_id: pytest.fail("nothing to grade"),
+    )
     with crew_run_tui.evaluating_after_run() as watched:
         app = CrewRunApp()
-        app._status = "failed"
-        app._unsubscribe = lambda: None  # type: ignore[method-assign]
-        exits: list[object] = []
-        app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+        app._execution_uuid = "run-this-app"
+        notices: list[str] = []
+        app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
 
-        app._leave_if_an_evaluation_is_waiting()
+        app._evaluate_if_one_is_waiting()
 
-    assert exits == [app._crew_result]
     assert watched["execution_id"] is None
+    assert "not traced" in notices[0]
 
 
-def test_a_run_nobody_is_waiting_on_stays_open() -> None:
+def test_a_run_that_failed_is_still_evaluated(monkeypatch) -> None:
+    """Where a run went wrong is what somebody asking for an evaluation wants
+    to know, and the trace it exported is still there."""
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: True)
+    started: list[str] = []
+    monkeypatch.setattr(
+        CrewRunApp,
+        "_evaluate_worker",
+        lambda self, execution_id: started.append(execution_id),
+    )
+    with crew_run_tui.evaluating_after_run():
+        app = CrewRunApp()
+        app._status = "failed"
+        app._execution_uuid = "the-run-that-broke"
+
+        app._evaluate_if_one_is_waiting()
+
+    assert started == ["the-run-that-broke"]
+
+
+def test_a_run_nobody_is_waiting_on_evaluates_nothing() -> None:
     app = CrewRunApp()
     app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]
 
-    app._leave_if_an_evaluation_is_waiting()
+    app._evaluate_if_one_is_waiting()
+
+    assert app._evaluation is None
 
 
 def test_evaluate_before_completion_records_nothing() -> None:
@@ -348,7 +404,7 @@ def test_evaluate_before_completion_records_nothing() -> None:
     app.action_evaluate_crew()
 
     app._telemetry.feature_usage_span.assert_not_called()
-    assert app._want_eval is False
+    assert app._evaluation is None
 
 
 def test_conversation_turn_done_records_assistant_message() -> None:

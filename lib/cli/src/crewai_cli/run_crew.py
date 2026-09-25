@@ -370,9 +370,6 @@ def _run_json_crew(
     if getattr(app, "_want_deploy", False):
         _chain_deploy()
 
-    if getattr(app, "_want_eval", False):
-        _chain_eval(getattr(app, "_eval_execution_id", None))
-
     return app._crew_result
 
 
@@ -496,34 +493,6 @@ def _run_json_crew_in_project_env(
     return None
 
 
-def _chain_eval(execution_id: str | None = None) -> None:
-    """Grade the run that just finished, in the terminal the TUI has left.
-
-    `crewai eval` is the whole command: it asks AMP to evaluate a run, prints
-    the link to follow and then the verdict. Running it here rather than
-    reimplementing it means the button and the command can never say different
-    things.
-
-    The id is named rather than left to the command's own lookup: the button is
-    about the run you just watched, and a lookup would find whatever was
-    recorded last — a previous run when this one was not traced, or nothing at
-    all, in which case the command would offer to run the crew again.
-    """
-    from rich.console import Console
-
-    console = Console()
-    try:
-        from crewai_cli.experimental.eval_crew import eval_crew
-
-        console.print("\nEvaluating this run…\n", style="bold #FF5A50")
-        eval_crew(execution_id)
-    except SystemExit as exc:  # the command says why and picks the code
-        if isinstance(exc.code, int) and exc.code not in (0, None):
-            raise
-    except Exception as error:  # a failed evaluation never fails the run
-        console.print(f"\nEvaluation failed: {error}\n", style="bold red")
-
-
 def _chain_deploy() -> None:
     from rich.console import Console
 
@@ -630,6 +599,38 @@ def _print_post_tui_summary(app: CrewRunApp) -> None:
                 padding=(0, 1),
             )
         )
+
+    _print_evaluation_line(app, console, crewai_teal)
+
+
+def _print_evaluation_line(app: CrewRunApp, console: Any, teal: str) -> None:
+    """The evaluation's link, once the app that showed it has gone.
+
+    An evaluation started inside the app is read there; the terminal is what is
+    left afterwards, and a link that only ever existed on a screen that is now
+    closed is a link nobody can open again.
+    """
+    evaluation = getattr(app, "_evaluation", None) or {}
+    url = str(evaluation.get("url") or "")
+    if not url:
+        return
+
+    from rich.text import Text
+
+    state = str(evaluation.get("state"))
+    line = Text("\n  ")
+    if state == "done":
+        verdict = evaluation.get("verdict") or {}
+        line.append("Evaluated: ", style="dim")
+        line.append(
+            f"goal gate {str(verdict.get('gate') or '').upper()}  ", style="bold"
+        )
+    elif state == "failed":
+        line.append("Evaluation stopped — the report has what it got: ", style="dim")
+    else:
+        line.append("Evaluation still running at ", style="dim")
+    line.append(url, style=f"{teal} underline")
+    console.print(line)
 
 
 def run_crew(
