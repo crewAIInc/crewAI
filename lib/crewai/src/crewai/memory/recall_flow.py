@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from typing import Any, ClassVar
 from uuid import uuid4
@@ -28,6 +28,7 @@ from crewai.memory.types import (
     MemoryRecord,
     compute_composite_score,
     embed_texts,
+    normalize_to_utc,
 )
 
 
@@ -105,7 +106,10 @@ class RecallFlow(Flow[RecallState]):
                 min_score=0.0,
             )
             if self.state.time_cutoff and raw:
-                raw = [(r, s) for r, s in raw if r.created_at >= self.state.time_cutoff]
+                cutoff = normalize_to_utc(self.state.time_cutoff)
+                raw = [
+                    (r, s) for r, s in raw if normalize_to_utc(r.created_at) >= cutoff
+                ]
             if not self.state.include_private and raw:
                 raw = [
                     (r, s)
@@ -221,8 +225,8 @@ class RecallFlow(Flow[RecallState]):
 
             if analysis.time_filter:
                 try:
-                    self.state.time_cutoff = datetime.fromisoformat(
-                        analysis.time_filter
+                    self.state.time_cutoff = normalize_to_utc(
+                        datetime.fromisoformat(analysis.time_filter)
                     )
                 except ValueError:
                     pass
@@ -351,6 +355,7 @@ class RecallFlow(Flow[RecallState]):
         """Deduplicate, composite-score, rank, and attach evidence gaps."""
         seen_ids: set[str] = set()
         matches: list[MemoryMatch] = []
+        now = datetime.now(timezone.utc)
         for finding in self.state.chunk_findings:
             if not isinstance(finding, dict):
                 continue
@@ -365,7 +370,7 @@ class RecallFlow(Flow[RecallState]):
                 if isinstance(record, MemoryRecord) and record.id not in seen_ids:
                     seen_ids.add(record.id)
                     composite, reasons = compute_composite_score(
-                        record, float(score), self._config
+                        record, float(score), self._config, now=now
                     )
                     matches.append(
                         MemoryMatch(

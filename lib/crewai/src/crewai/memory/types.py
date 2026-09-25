@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -342,10 +342,25 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     return embeddings
 
 
+def normalize_to_utc(dt: datetime) -> datetime:
+    """Normalize a datetime to a UTC timezone-aware datetime.
+
+    If dt is timezone-naive, it is assumed to be in UTC.
+    If dt has another timezone offset, it is converted to UTC.
+    If dt is already UTC-aware, it is returned directly.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is not timezone.utc:
+        return dt.astimezone(timezone.utc)
+    return dt
+
+
 def compute_composite_score(
     record: MemoryRecord,
     semantic_score: float,
     config: MemoryConfig,
+    now: datetime | None = None,
 ) -> tuple[float, list[str]]:
     """Compute a weighted composite relevance score from semantic, recency, and importance.
 
@@ -356,13 +371,17 @@ def compute_composite_score(
         record: The memory record (provides created_at and importance).
         semantic_score: Raw semantic similarity from vector search, in [0, 1].
         config: Weights and recency half-life.
+        now: Optional reference timestamp. If None, current UTC time is used.
 
     Returns:
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
-    age_days = max(age_seconds / 86400.0, 0.0)
+    ref_now = datetime.now(timezone.utc) if now is None else normalize_to_utc(now)
+    rec_time = normalize_to_utc(record.created_at)
+
+    age_seconds = max((ref_now - rec_time).total_seconds(), 0.0)
+    age_days = age_seconds / 86400.0
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 
     composite = (
