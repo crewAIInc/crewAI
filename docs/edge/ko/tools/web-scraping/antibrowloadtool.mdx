@@ -1,0 +1,78 @@
+---
+title: AntiBrow Load Tool
+description: '`AntibrowLoadTool`은 실행 사이에 로그인 상태가 유지되는 영속 브라우저 프로필에서 페이지를 불러옵니다.'
+icon: globe
+mode: "wide"
+---
+
+# `AntibrowLoadTool`
+
+## 설명
+
+`AntibrowLoadTool`은 [AntiBrow](https://antibrow.com) 프로필에서 페이지를 열고 화면에 보이는 텍스트를 반환합니다. 여기 있는 다른 스크래핑 도구와 다른 점은 상태가 어디에 있는지입니다. 단위가 *프로필*이므로 쿠키, 스토리지, 엔진 수준에서 적용되는 핑거프린트, 그리고 그 프로필 전용 프록시가 실행 사이에도 유지됩니다. 로그인이 필요한 페이지는 새 브라우저에서 처음부터 시작하는 대신 이미 로그인된 상태로 열립니다.
+
+주요 기능:
+- 지속되는 신원 - 같은 프로필 이름은 항상 같은 핑거프린트, 쿠키, 스토리지를 받습니다
+- 프로필당 프록시 하나 - 브라우저 엔진 내부에서 처리하므로 확장 프로그램으로 로드되는 것이 없습니다
+- 내부는 표준 Playwright - SDK는 일반적인 Playwright 객체를 반환합니다
+- 로컬 실행 - 브라우저가 내 컴퓨터에서 돌기 때문에 구매할 브라우저 사용 시간이 없습니다
+
+## 설치
+
+이 도구를 사용하려면 AntiBrow SDK를 설치해야 합니다:
+
+```shell
+uv add antibrow
+```
+
+## 시작하기
+
+1. **가입**: [AntiBrow](https://antibrow.com/dashboard)에서 가입하고 API key를 생성합니다.
+2. **API Key**: `ANTIBROW_API_KEY` 환경 변수를 설정하거나 도구 생성자에 직접 전달합니다.
+3. **SDK 설치**: 위 명령으로 AntiBrow SDK를 설치합니다. 브라우저 엔진은 첫 실행에서 내려받아 캐시됩니다.
+
+## 예시
+
+```python Code
+from crewai_tools import AntibrowLoadTool
+from crewai import Agent
+
+# The profile name is the identity. Reuse it and the session is still there.
+tool = AntibrowLoadTool(profile="research-01")  # api_key read from the environment
+
+@agent
+def web_researcher(self) -> Agent:
+    '''
+    This agent reads pages through a persistent AntiBrow profile, so pages
+    that need a login keep working across runs.
+    '''
+    return Agent(
+        config=self.agents_config["web_researcher"],
+        tools=[tool]
+    )
+```
+
+## 파라미터
+
+실행 시 받는 인자:
+
+- **url**: 필수. 불러올 URL.
+- **selector**: 선택. 페이지 전체 대신 읽을 CSS 선택자, 예를 들어 `main` 또는 `h1`.
+
+생성자 옵션:
+
+- **api_key**: 선택. AntiBrow API key. 없으면 `ANTIBROW_API_KEY`를 사용합니다.
+- **profile**: 선택. 프로필 이름, 기본값 `agent`. 로컬에서는 개수 제한 없이 무료입니다.
+- **proxy**: 선택. 이 프로필에 쓸 프록시 URL (`http`, `https` 또는 `socks5`, 자격 증명은 URL에 포함).
+- **temporary**: 선택. 브라우저가 닫힐 때 프로필을 버립니다. 기본값 `False`.
+- **headless**: 선택. 브라우저 창을 숨깁니다. 기본값 `False`.
+- **keep_open**: 선택. 호출 사이에 브라우저 하나를 재사용하여 crew의 단계 사이에서도 로그인이 유지되게 합니다. 기본값 `True`.
+- **max_content_length**: 선택. 페이지 텍스트를 이 글자 수에서 자릅니다. 기본값 `100000`.
+
+## 참고
+
+crew가 끝나면 `tool.close()`를 호출하세요. 방치된 브라우저는 그대로 계속 돌고 있는 브라우저 하나입니다.
+
+신원을 공유해서는 안 되는 두 agent에게는 탭 두 개가 아니라 프로필 이름 두 개가 필요합니다. 동시에 몇 개를 돌릴 수 있는지는 플랜의 동시 실행 한도입니다.
+
+지속되는 신원은 매 실행마다 처음부터 시작할 때 생기는 흔적, 즉 새 프로필, 자동화 기본 핑거프린트, 자신의 IP를 제거합니다. 특정 사이트가 자동화된 세션을 받아들인다고 보장하지는 않습니다.
