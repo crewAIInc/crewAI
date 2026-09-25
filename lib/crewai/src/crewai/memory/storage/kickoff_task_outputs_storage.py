@@ -16,6 +16,17 @@ from crewai.utilities.errors import DatabaseError, DatabaseOperationError
 
 logger = logging.getLogger(__name__)
 
+_JSON_COLUMNS = frozenset({"output", "inputs"})
+
+
+def _load_json(value: str | float | None) -> Any:
+    """Decode a JSON column.
+
+    NULL comes back as ``None``. The column has NUMERIC affinity, so SQLite
+    stores a JSON number as a number and it is returned unchanged.
+    """
+    return json.loads(value) if isinstance(value, str) else value
+
 
 class KickoffTaskOutputsSQLiteStorage:
     """
@@ -136,7 +147,8 @@ class KickoffTaskOutputsSQLiteStorage:
         Args:
             task_index: Integer index of the task to update.
             **kwargs: Arbitrary keyword arguments representing fields to update.
-                     Values that are dictionaries will be JSON encoded.
+                     Values for the JSON columns (``output``, ``inputs``) and
+                     dictionaries are JSON encoded; ``None`` is stored as NULL.
 
         Raises:
             DatabaseOperationError: If updating the task output fails due to SQLite errors.
@@ -153,7 +165,8 @@ class KickoffTaskOutputsSQLiteStorage:
                         fields.append(f"{key} = ?")
                         values.append(
                             json.dumps(value, cls=CrewJSONEncoder)
-                            if isinstance(value, dict)
+                            if value is not None
+                            and (key in _JSON_COLUMNS or isinstance(value, dict))
                             else value
                         )
 
@@ -181,7 +194,8 @@ class KickoffTaskOutputsSQLiteStorage:
             inputs, was_replayed, and timestamp.
 
         Raises:
-            DatabaseOperationError: If loading task outputs fails due to SQLite errors.
+            DatabaseOperationError: If loading task outputs fails due to SQLite
+                errors or a stored JSON column cannot be decoded.
         """
         try:
             with closing(sqlite3.connect(self.db_path, timeout=30)) as conn, conn:
@@ -199,9 +213,9 @@ class KickoffTaskOutputsSQLiteStorage:
                         "task_id": row[0],
                         "task_key": row[1],
                         "expected_output": row[2],
-                        "output": json.loads(row[3]),
+                        "output": _load_json(row[3]),
                         "task_index": row[4],
-                        "inputs": json.loads(row[5]),
+                        "inputs": _load_json(row[5]),
                         "was_replayed": row[6],
                         "timestamp": row[7],
                     }
@@ -209,7 +223,7 @@ class KickoffTaskOutputsSQLiteStorage:
 
                 return results
 
-        except sqlite3.Error as e:
+        except (sqlite3.Error, json.JSONDecodeError) as e:
             error_msg = DatabaseError.format_error(DatabaseError.LOAD_ERROR, e)
             logger.error(error_msg)
             raise DatabaseOperationError(error_msg, e) from e
