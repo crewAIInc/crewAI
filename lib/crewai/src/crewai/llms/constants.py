@@ -325,6 +325,15 @@ GEMINI_MODELS: list[GeminiModels] = [
     "learnlm-2.0-flash-experimental",
 ]
 
+# Version-less aliases resolve to the current 2.5 generation: the capability
+# check in providers/gemini/completion.py matches a version regex these names
+# don't satisfy, so they need an explicit mapping (#7636).
+GEMINI_LATEST_ALIASES: dict[str, float] = {
+    "gemini-flash-latest": 2.5,
+    "gemini-flash-lite-latest": 2.5,
+    "gemini-pro-latest": 2.5,
+}
+
 
 AzureModels: TypeAlias = Literal[
     "gpt-3.5-turbo",
