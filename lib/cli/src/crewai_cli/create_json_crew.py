@@ -12,7 +12,11 @@ from typing import Any
 import warnings
 
 import click
-from crewai_core.platform_apps import PLATFORM_APPS, PLATFORM_APP_DISPLAY_NAMES
+from crewai_core.platform_apps import (
+    PLATFORM_APPS,
+    PLATFORM_APP_DISPLAY_NAMES,
+    PLATFORM_APP_TOOL_COUNTS,
+)
 from crewai_core.telemetry import Telemetry
 from rich.console import Console
 from rich.text import Text
@@ -319,7 +323,11 @@ def _show_interpolation_hint(kind: str) -> None:
 def _tool_label(name: str, description: str) -> str:
     if name.startswith("platform:"):
         app_name = description.removesuffix(" Integration").replace(" ", "")
-        return f"{description:<48s} Platform: {app_name.replace(' ', '')}Integration"
+        tool_count = PLATFORM_APP_TOOL_COUNTS.get(name.removeprefix("platform:"), 0)
+        return (
+            f"{description:<48s} Platform: {app_name.replace(' ', '')}Integration "
+            f"({tool_count} tools)"
+        )
     return f"{description:<48s} {name}"
 
 
@@ -333,7 +341,8 @@ def _category_row_label(
     """Render an accordion category row with tool/selection counts."""
     marker = "▾" if expanded else "▸"
     sel_count = sum(1 for name, _desc in tools if name in selected)
-    suffix = f"{len(tools)} tools"
+    item_label = "applications" if category == "CrewAI Platform" else "tools"
+    suffix = f"{len(tools)} {item_label}"
     if sel_count:
         suffix += f", {sel_count} selected"
     return f"{marker} {category}  ({suffix})"

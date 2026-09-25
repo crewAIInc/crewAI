@@ -8,7 +8,7 @@ from typing import Final, TypeAlias
 PlatformApp: TypeAlias = str
 
 
-def _load_platform_catalog() -> tuple[tuple[str, ...], dict[str, str]]:
+def _load_platform_catalog() -> tuple[tuple[str, ...], dict[str, str], dict[str, int]]:
     """Load and validate the generated Clipper application catalog."""
     catalog_path = files("crewai_core").joinpath("platform_catalog.json")
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
@@ -18,6 +18,7 @@ def _load_platform_catalog() -> tuple[tuple[str, ...], dict[str, str]]:
 
     apps: list[str] = []
     display_names: dict[str, str] = {}
+    tool_counts: dict[str, int] = {}
     for application in applications:
         if not isinstance(application, dict):
             raise ValueError("Every platform catalog application must be an object.")
@@ -31,12 +32,21 @@ def _load_platform_catalog() -> tuple[tuple[str, ...], dict[str, str]]:
             )
         if slug in display_names:
             raise ValueError(f"Platform catalog contains duplicate slug '{slug}'.")
+        tools = application.get("tools", [])
+        if not isinstance(tools, list):
+            raise ValueError(
+                f"Platform catalog application '{slug}' must have a tools list."
+            )
         apps.append(slug)
         display_names[slug] = display_name
+        tool_counts[slug] = len(tools)
 
-    return tuple(apps), display_names
+    return tuple(apps), display_names, tool_counts
 
 
-_platform_apps, _platform_app_display_names = _load_platform_catalog()
+_platform_apps, _platform_app_display_names, _platform_app_tool_counts = (
+    _load_platform_catalog()
+)
 PLATFORM_APPS: Final[tuple[str, ...]] = _platform_apps
 PLATFORM_APP_DISPLAY_NAMES: Final[dict[str, str]] = _platform_app_display_names
+PLATFORM_APP_TOOL_COUNTS: Final[dict[str, int]] = _platform_app_tool_counts

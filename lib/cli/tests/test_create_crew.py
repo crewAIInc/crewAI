@@ -479,9 +479,9 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     assert labels[2].strip().endswith("ScrapeWebsiteTool")
     assert labels[3].strip().endswith("FileReadTool")
     assert labels[4].startswith("Gmail Integration")
-    assert labels[4].endswith("Platform: GmailIntegration")
+    assert labels[4].endswith("Platform: GmailIntegration (66 tools)")
     assert labels[5].startswith("WhatsApp Integration")
-    assert labels[5].endswith("Platform: WhatsAppIntegration")
+    assert labels[5].endswith("Platform: WhatsAppIntegration (58 tools)")
     assert labels[1].index("Google search") < labels[1].index("SerperDevTool")
     assert "More tools" not in labels
 
@@ -506,6 +506,7 @@ def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     assert len(action_indices) >= 4
     # Only the common tools section is visible beyond the category rows
     assert len(labels) == 1 + 5 + len(action_indices)
+    assert any(label == "▸ CrewAI Platform  (123 applications)" for label in labels)
 
 
 def test_json_wizard_tool_picker_expands_one_category_at_a_time(monkeypatch):
@@ -643,7 +644,7 @@ def test_json_wizard_platform_tool_selection_stays_in_agent_tools(monkeypatch):
             idx
             for idx, label in enumerate(labels)
             if label.startswith("GitHub Integration")
-            and label.endswith("Platform: GitHubIntegration")
+            and label.endswith("Platform: GitHubIntegration (877 tools)")
         )
         return [github], None
 
