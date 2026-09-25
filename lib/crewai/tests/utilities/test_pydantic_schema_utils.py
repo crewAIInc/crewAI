@@ -800,6 +800,51 @@ class TestEnsureTypeInSchemas:
         result = ensure_type_in_schemas(deepcopy(schema))
         assert result == schema
 
+    def test_items_without_type_in_anyof_gets_array_type(self) -> None:
+        """MCP servers may spec-legally omit 'type' on an array schema."""
+        schema = {
+            "anyOf": [{"items": {"type": "string"}}, {"type": "null"}],
+        }
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert result["anyOf"][0] == {
+            "type": "array",
+            "items": {"type": "string"},
+        }
+
+    def test_properties_without_type_in_anyof_gets_object_type(self) -> None:
+        schema = {
+            "anyOf": [
+                {"properties": {"name": {"type": "string"}}},
+                {"type": "null"},
+            ],
+        }
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert result["anyOf"][0] == {
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+
+    def test_ambiguous_non_empty_schema_left_untyped(self) -> None:
+        """No structural hint (e.g. only a description) can't be inferred."""
+        schema = {"anyOf": [{"description": "opaque"}, {"type": "string"}]}
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert "type" not in result["anyOf"][0]
+
+    def test_items_and_properties_together_left_untyped(self) -> None:
+        """A schema with both 'items' and 'properties' is contradictory,
+        not unambiguous -- guessing either type would be wrong."""
+        schema = {
+            "anyOf": [
+                {
+                    "items": {"type": "string"},
+                    "properties": {"name": {"type": "string"}},
+                },
+                {"type": "null"},
+            ],
+        }
+        result = ensure_type_in_schemas(deepcopy(schema))
+        assert "type" not in result["anyOf"][0]
+
 
 class TestConvertOneofToAnyof:
     def test_converts_top_level(self) -> None:
@@ -1027,6 +1072,56 @@ MUTUAL_RECURSION_SCHEMA: dict = {
     },
     "$ref": "#/$defs/A",
 }
+
+
+class TestUntypedStructuralSchemas:
+    """MCP servers may spec-legally omit 'type' when 'items'/'properties'
+    already make the shape unambiguous (e.g. Atlassian's remote MCP server)."""
+
+    def test_untyped_items_in_anyof_not_degraded_to_any(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "fields": {
+                    "anyOf": [
+                        {"items": {"type": "string"}},
+                        {"type": "null"},
+                    ],
+                },
+            },
+            "required": [],
+        }
+        Model = create_model_from_schema(schema)
+
+        obj = Model(fields=["a", "b"])
+        assert obj.fields == ["a", "b"]
+
+        obj_none = Model(fields=None)
+        assert obj_none.fields is None
+
+        with pytest.raises(Exception):
+            Model(fields=42)
+
+    def test_untyped_properties_in_anyof_not_degraded_to_any(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "meta": {
+                    "anyOf": [
+                        {"properties": {"key": {"type": "string"}}},
+                        {"type": "null"},
+                    ],
+                },
+            },
+            "required": [],
+        }
+        Model = create_model_from_schema(schema)
+
+        obj = Model(meta={"key": "value"})
+        assert obj.meta.key == "value"
+
+        with pytest.raises(Exception):
+            Model(meta="not-an-object")
 
 
 class TestResolveRefsRecursive:
