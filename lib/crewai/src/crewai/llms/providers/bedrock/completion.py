@@ -51,6 +51,16 @@ except ImportError:
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
+# Claude models that reject a forced toolChoice ("any" or a named "tool") on
+# Bedrock with a 400. For these, structured_output is offered without forcing.
+_FORCED_TOOL_CHOICE_UNSUPPORTED = ("claude-opus-5-5", "claude-fable-5-1")
+
+
+def _supports_forced_tool_choice(model: str) -> bool:
+    """Return False for models that reject a forced toolChoice on Bedrock."""
+    model_lower = model.lower()
+    return not any(m in model_lower for m in _FORCED_TOOL_CHOICE_UNSUPPORTED)
+
 
 def _preprocess_structured_data(
     data: dict[str, Any], response_model: type[BaseModel]
@@ -645,7 +655,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
                         "ToolConfigurationTypeDef",
@@ -934,7 +944,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     # Append structured_output to existing tools, don't force toolChoice
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
@@ -1261,7 +1271,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     # Append structured_output to existing tools, don't force toolChoice
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
@@ -1543,7 +1553,7 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                if existing_tools:
+                if existing_tools or not _supports_forced_tool_choice(self.model):
                     # Append structured_output to existing tools, don't force toolChoice
                     existing_tools.append(structured_tool)
                     body["toolConfig"] = cast(
