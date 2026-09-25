@@ -48,8 +48,26 @@ FINISHED = {"done", "failed"}
 STATUSES = {"queued", "running"} | FINISHED
 
 
+def _record_usage() -> None:
+    """Count the command without recording anything about the run itself.
+
+    The TUI's button counts `cli_usage:evaluate` and then calls this function,
+    so `cli_usage:eval` is every evaluation and the difference between the two
+    is how many were started from the button.
+    """
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span("cli_usage:eval")
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
+
+
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
+    _record_usage()
     get_or_create_project_id()
     # Read before the project's .env is loaded, so a project cannot add itself.
     trusted = _trusted_amp_origins()

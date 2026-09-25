@@ -549,6 +549,43 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
     assert "Tracing is on for this project" in capsys.readouterr().out
 
 
+def test_the_command_counts_itself_however_it_was_started(project, monkeypatch):
+    """`cli_usage:eval` is every evaluation; the TUI's own `cli_usage:evaluate`
+    is the subset that came from the button."""
+    directory, _ = project
+    record_last_run(directory, "counted-run")
+    features: list[str] = []
+
+    class FakeTelemetry:
+        def set_tracer(self) -> None:
+            pass
+
+        def feature_usage_span(self, feature: str) -> None:
+            features.append(feature)
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert features == ["cli_usage:eval"]
+
+
+def test_telemetry_never_breaks_the_command(project, monkeypatch):
+    directory, _ = project
+    record_last_run(directory, "counted-run")
+
+    def explode() -> None:
+        raise RuntimeError("no tracer here")
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", lambda: explode())
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls[0] == ("create", "counted-run")
+
+
 def test_declining_the_offer_exits_cleanly_with_the_steps(project, monkeypatch, capsys):
     (project[0] / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
