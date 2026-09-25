@@ -1261,6 +1261,8 @@ def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     assert "CrewAI Reference for AI Coding Assistants" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
+    cursor_md = (project_root / "CURSOR.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in cursor_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
 
@@ -1320,5 +1322,7 @@ def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     assert "crew.jsonc" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
+    cursor_md = (project_root / "CURSOR.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in cursor_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
