@@ -371,7 +371,7 @@ def _run_json_crew(
         _chain_deploy()
 
     if getattr(app, "_want_eval", False):
-        _chain_eval()
+        _chain_eval(getattr(app, "_eval_execution_id", None))
 
     return app._crew_result
 
@@ -496,13 +496,18 @@ def _run_json_crew_in_project_env(
     return None
 
 
-def _chain_eval() -> None:
+def _chain_eval(execution_id: str | None = None) -> None:
     """Grade the run that just finished, in the terminal the TUI has left.
 
-    `crewai eval` is the whole command: it finds the run crewAI recorded, asks
-    AMP to evaluate it, prints the link to follow and then the verdict. Running
-    it here rather than reimplementing it means the button and the command can
-    never say different things.
+    `crewai eval` is the whole command: it asks AMP to evaluate a run, prints
+    the link to follow and then the verdict. Running it here rather than
+    reimplementing it means the button and the command can never say different
+    things.
+
+    The id is named rather than left to the command's own lookup: the button is
+    about the run you just watched, and a lookup would find whatever was
+    recorded last — a previous run when this one was not traced, or nothing at
+    all, in which case the command would offer to run the crew again.
     """
     from rich.console import Console
 
@@ -511,11 +516,11 @@ def _chain_eval() -> None:
         from crewai_cli.experimental.eval_crew import eval_crew
 
         console.print("\nEvaluating this run…\n", style="bold #FF5A50")
-        eval_crew()
+        eval_crew(execution_id)
     except SystemExit as exc:  # the command says why and picks the code
         if isinstance(exc.code, int) and exc.code not in (0, None):
             raise
-    except Exception as error:  # noqa: BLE001 - a failed evaluation never fails the run
+    except Exception as error:  # a failed evaluation never fails the run
         console.print(f"\nEvaluation failed: {error}\n", style="bold red")
 
 

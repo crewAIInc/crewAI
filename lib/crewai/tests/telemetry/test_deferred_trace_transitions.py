@@ -122,6 +122,11 @@ def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
     """Turning tracing on IS consent. The prompt at the end of a run is for the
     first-time collection nobody asked for — not for a user who said collect it."""
     buffers, grants, recorders, prompt = traces
+    # the rule only holds where a prompt could have been shown; pytest's stdin
+    # is not a terminal, so say a person is here
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: True
+    )
     if how == "env":
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
 
@@ -136,6 +141,29 @@ def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
 
     prompt.assert_not_called()          # asked once, not twice
     assert grants and recorders         # and the trace went where it was told to go
+
+
+def test_a_process_with_no_terminal_is_still_asked_nothing_and_uploads_nothing(
+    traces, monkeypatch
+):
+    """A copied `.env` reaching CI carries the variable, not the person. The
+    ephemeral path has always failed closed there, and still does."""
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: False
+    )
+    prompt.return_value = False  # what the prompt answers where nobody can answer
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "said in a container"
+
+    assert Conversation(tracing=True).kickoff() == "said in a container"
+    assert crewai_event_bus.flush()
+
+    assert not grants and not recorders  # nothing left the machine
 
 
 def test_enabling_deferred_trace_opens_a_new_flow_root(traces):

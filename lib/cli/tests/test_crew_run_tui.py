@@ -32,7 +32,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai_cli import run_crew
+from crewai_cli import crew_run_tui, run_crew
 from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.crew_run_tui import (
     _LOG_ARGS_TEXT_LIMIT,
@@ -139,31 +139,31 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
 
 def test_chain_eval_runs_the_command_itself(monkeypatch, capsys) -> None:
     """The button must not reimplement `crewai eval`, or the two can disagree."""
-    called: list[bool] = []
+    graded: list[str | None] = []
     monkeypatch.setattr(
-        "crewai_cli.experimental.eval_crew.eval_crew", lambda: called.append(True)
+        "crewai_cli.experimental.eval_crew.eval_crew", lambda run_id=None: graded.append(run_id)
     )
 
-    run_crew._chain_eval()
+    run_crew._chain_eval("run-just-now")
 
-    assert called == [True]
+    assert graded == ["run-just-now"]  # the run the button meant, named
     assert "Evaluating this run" in capsys.readouterr().out
 
 
 def test_chain_eval_lets_the_command_say_why_it_stopped(monkeypatch, capsys) -> None:
     """`crewai eval` exits with its own words and its own code; a clean exit is
     not an error, and a failure is the command's to report."""
-    def refuse() -> None:
+    def refuse(run_id=None) -> None:
         raise SystemExit(0)
 
     monkeypatch.setattr("crewai_cli.experimental.eval_crew.eval_crew", refuse)
-    run_crew._chain_eval()  # no traceback, nothing added
+    run_crew._chain_eval("run-1")  # no traceback, nothing added
 
-    def blow_up() -> None:
+    def blow_up(run_id=None) -> None:
         raise RuntimeError("AMP said no")
 
     monkeypatch.setattr("crewai_cli.experimental.eval_crew.eval_crew", blow_up)
-    run_crew._chain_eval()  # a failed evaluation never fails the run
+    run_crew._chain_eval("run-1")  # a failed evaluation never fails the run
 
     assert "Evaluation failed: AMP said no" in capsys.readouterr().out
 
@@ -201,9 +201,11 @@ def test_deploy_button_click_records_telemetry() -> None:
     assert exits == [app._crew_result]
 
 
-def test_evaluate_button_leaves_the_tui_and_records_telemetry() -> None:
-    """Evaluate behaves like Deploy: the app exits and the command takes over,
-    because `crewai eval` prints a link, waits, and prints a verdict."""
+def test_evaluate_button_leaves_the_tui_with_the_run_it_watched(monkeypatch) -> None:
+    """Evaluate behaves like Deploy — the app exits and the command takes over,
+    because `crewai eval` prints a link, waits, and prints a verdict — and it
+    names the run that was just traced rather than whatever was recorded last."""
+    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: "run-before")
     app = CrewRunApp()
     app._status = "completed"
     app._crew_result = object()
@@ -211,12 +213,46 @@ def test_evaluate_button_leaves_the_tui_and_records_telemetry() -> None:
     app._unsubscribe = lambda: None  # type: ignore[method-assign]
     exits: list[object] = []
     app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: "run-just-now")
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-eval")))
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
     assert app._want_eval is True
+    assert app._eval_execution_id == "run-just-now"
     assert exits == [app._crew_result]
+
+
+@pytest.mark.parametrize("recorded", ["run-before", None])
+def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, recorded) -> None:
+    """An untraced run leaves the previous record in place — or none at all.
+    Grading that would answer a question nobody asked."""
+    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: "run-before")
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    notices: list[str] = []
+    app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
+    app.exit = lambda result=None: pytest.fail("the TUI must not leave for nothing")  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: recorded)
+
+    app.action_evaluate_crew()
+
+    assert app._want_eval is False
+    assert "not traced" in notices[0]
+
+
+def test_tracing_asked_for_reads_the_declaration_not_only_the_context() -> None:
+    """The ContextVar is set where the crew is CONSTRUCTED, which is not the
+    worker thread that later asks, and a flow never sets it at all."""
+    app = CrewRunApp()
+    app._crew = SimpleNamespace(tracing=True)
+
+    assert app._tracing_was_asked_for() is True
+    assert app._request_trace_consent() is True
+
+    app._crew = SimpleNamespace(tracing=None)
+    assert app._tracing_was_asked_for() is False
 
 
 def test_evaluate_before_completion_records_nothing() -> None:

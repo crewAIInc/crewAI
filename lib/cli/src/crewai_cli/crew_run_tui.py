@@ -289,6 +289,21 @@ class TraceConsentScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+def _recorded_execution_id() -> str | None:
+    """The execution id crewAI last recorded for this project, if any.
+
+    Read through crewai's own reader so the TUI and `crewai eval` can never
+    disagree about which run that is.
+    """
+    try:
+        from crewai.telemetry.tracing.last_run import read_last_run
+
+        record = read_last_run() or {}
+        return str(record.get("execution_id") or "") or None
+    except Exception:  # a missing or unreadable record simply means "no run"
+        return None
+
+
 class CrewRunApp(App[Any]):
     TITLE = "CrewAI"
 
@@ -544,6 +559,10 @@ FooterKey .footer-key--key {
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
         self._want_eval: bool = False
+        # The id crewAI had recorded before this run started; the button uses it
+        # to tell a trace of THIS run from whatever was there before.
+        self._run_recorded_before: str | None = _recorded_execution_id()
+        self._eval_execution_id: str | None = None
         self._consent_screen: TraceConsentScreen | None = None
         self._trace_consent_pending: threading.Event | None = None
         self._discard_trace_on_exit = False
@@ -1018,11 +1037,9 @@ FooterKey .footer-key--key {
         .env, or with ``tracing=True`` — is the yes, and a modal at the end of
         the run would be the same question a second time.
         """
-        from crewai.events.listeners.tracing.utils import tracing_asked_for
-
         if self._discard_trace_on_exit:
             return False
-        if tracing_asked_for():
+        if self._tracing_was_asked_for():
             return True
         done = threading.Event()
         decision: list[bool] = []
@@ -1064,6 +1081,26 @@ FooterKey .footer-key--key {
             title="Execution traces",
         )
 
+    def _tracing_was_asked_for(self) -> bool:
+        """Did somebody turn tracing on for this run?
+
+        `tracing_asked_for()` reads the env var and a ContextVar — and the
+        ContextVar is set where the crew is CONSTRUCTED, which is not this
+        worker thread, and a flow never sets it at all. So the declaration is
+        read off the object as well: `tracing=True` is the same yes wherever it
+        was written.
+        """
+        from crewai.events.listeners.tracing.utils import tracing_asked_for
+
+        if tracing_asked_for():
+            return True
+
+        return any(
+            getattr(target, "tracing", None) is True
+            for target in (self._crew, self._flow)
+            if target is not None
+        )
+
     def _dismiss_consent_modal(self) -> None:
         try:
             screen = self._consent_screen
@@ -1082,6 +1119,19 @@ FooterKey .footer-key--key {
         self._unsubscribe()
         self.exit(self._crew_result)
 
+    def _traced_execution_id(self) -> str | None:
+        """The id of the run just finished, or None when it was not traced.
+
+        crewAI records the run when its trace is exported. A record that is the
+        same one as before this run started is a PREVIOUS run's — grading that
+        would answer a question nobody asked.
+        """
+        recorded = _recorded_execution_id()
+        if recorded is None or recorded == self._run_recorded_before:
+            return None
+
+        return recorded
+
     def action_evaluate_crew(self) -> None:
         """Grade the run that just finished.
 
@@ -1093,6 +1143,17 @@ FooterKey .footer-key--key {
             return
 
         self._record_tui_button_click("evaluate")
+        traced = self._traced_execution_id()
+        if traced is None:
+            self.notify(
+                "This run was not traced, so there is nothing to evaluate. "
+                "Turn tracing on and run it again.",
+                title="Evaluate",
+                severity="warning",
+            )
+            return
+
+        self._eval_execution_id = traced
         self._want_eval = True
         self._unsubscribe()
         self.exit(self._crew_result)

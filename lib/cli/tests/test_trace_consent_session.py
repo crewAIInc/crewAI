@@ -69,12 +69,28 @@ async def test_tracing_asked_for_needs_no_modal(monkeypatch, value):
     """The user turned tracing on for this project; the modal would be the same
     question a second time."""
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", value)
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: True
+    )
     app = ConsentApp()
     async with app.run_test(size=(100, 40)) as pilot:
         assert await asyncio.to_thread(app._request_trace_consent) is True
         await pilot.pause()
         assert not isinstance(app.screen, TraceConsentScreen)
     assert app._trace_consent_pending is None
+
+
+@pytest.mark.asyncio
+async def test_a_declaration_is_the_same_yes_as_the_variable(monkeypatch):
+    """`tracing=True` never reaches this worker's context — the crew set it on
+    the thread it was built on — so the declaration itself is read."""
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    app = ConsentApp()
+    app._crew = SimpleNamespace(tracing=True)
+    async with app.run_test(size=(100, 40)) as pilot:
+        assert await asyncio.to_thread(app._request_trace_consent) is True
+        await pilot.pause()
+        assert not isinstance(app.screen, TraceConsentScreen)
 
 
 @pytest.mark.asyncio

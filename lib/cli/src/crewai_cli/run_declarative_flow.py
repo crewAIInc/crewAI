@@ -221,7 +221,7 @@ def _run_declarative_flow_tui(
     if getattr(app, "_want_eval", False):
         from crewai_cli.run_crew import _chain_eval
 
-        _chain_eval()
+        _chain_eval(getattr(app, "_eval_execution_id", None))
 
     return app._crew_result
 

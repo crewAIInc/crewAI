@@ -65,7 +65,9 @@ def _record_usage(execution_id: str, *, logged_in: bool) -> None:
         from crewai_core.settings import Settings
         from crewai_core.telemetry import Telemetry
 
-        organization = str(getattr(Settings(), "org_uuid", "") or "") if logged_in else ""
+        organization = (
+            str(getattr(Settings(), "org_uuid", "") or "") if logged_in else ""
+        )
         telemetry = Telemetry()
         telemetry.set_tracer()
         telemetry.feature_usage_span(
@@ -274,7 +276,8 @@ def _enable_tracing() -> None:
     set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
     os.environ[TRACING_ENV_VAR] = "true"
     console.print(
-        "Tracing is on for this project — its runs are traced to CrewAI AMP.", style="green"
+        "Tracing is on for this project — its runs are traced to CrewAI AMP.",
+        style="green",
     )
 
 

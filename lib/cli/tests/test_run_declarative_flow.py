@@ -431,6 +431,7 @@ def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False, want_eval=
             self._status = status
             self._want_deploy = want_deploy
             self._want_eval = want_eval
+            self._eval_execution_id = "flow-run" if want_eval else None
             self._crew_result = "result"
 
         def run(self):
@@ -545,14 +546,14 @@ def test_run_declarative_flow_tui_no_deploy_when_not_requested(
 def test_run_declarative_flow_tui_chains_eval(monkeypatch: pytest.MonkeyPatch) -> None:
     """A declarative flow has the button too, and the same tail runs it."""
     _install_fake_flow_app(monkeypatch, status="completed", want_eval=True)
-    eval_calls: list[bool] = []
-    monkeypatch.setattr("crewai_cli.run_crew._chain_eval", lambda: eval_calls.append(True))
+    graded: list[str | None] = []
+    monkeypatch.setattr("crewai_cli.run_crew._chain_eval", lambda run_id=None: graded.append(run_id))
 
     run_declarative_flow_module._run_declarative_flow_tui(
         SimpleNamespace(name="Flow"), None
     )
 
-    assert eval_calls == [True]
+    assert graded == ["flow-run"]  # the run the button watched, not the last recorded
 
 
 def test_run_declarative_flow_tui_enables_flow_events(

@@ -47,7 +47,6 @@ __all__ = [
     "mark_first_execution_done",
     "on_first_execution_tracing_confirmation",
     "prompt_user_for_trace_viewing",
-    "tracing_asked_for",
     "reset_tracing_enabled",
     "safe_serialize_to_dict",
     "set_suppress_tracing_messages",
@@ -56,6 +55,7 @@ __all__ = [
     "should_auto_collect_first_time_traces",
     "should_enable_tracing",
     "should_suppress_tracing_messages",
+    "tracing_asked_for",
     "truncate_messages",
     "update_user_data",
 ]
@@ -107,17 +107,27 @@ def should_suppress_tracing_messages() -> bool:
 
 
 def tracing_asked_for() -> bool:
-    """True when tracing is on because somebody SAID so — `CREWAI_TRACING_ENABLED`,
-    or `tracing=True` on the crew or flow in this context.
+    """True when a PERSON turned tracing on for this run — `CREWAI_TRACING_ENABLED`,
+    or `tracing=True` on the crew or flow in this context — and is there to have
+    meant it.
 
     Turning tracing on is the answer to "may we collect this?"; asking again when
     the run ends is asking the same question twice. First-time auto-collection is
     the case that still has to ask, because nobody asked for it.
-    """
-    if is_tracing_enabled_in_context():
-        return True
 
-    return os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1")
+    The terminal matters. A copied `.env` that reaches CI, a container or a
+    server carries the variable without carrying the person, and an ephemeral
+    run there has always failed closed rather than upload what nobody approved
+    in front of a screen. This answers a prompt; where no prompt could be shown,
+    there is nothing to answer.
+    """
+    if not (
+        is_tracing_enabled_in_context()
+        or os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1")
+    ):
+        return False
+
+    return _is_interactive_terminal()
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:

@@ -118,6 +118,9 @@ def test_pause_resume_exports_traces_and_preserves_deferred_root(
         def finish(self, feedback):
             return feedback.feedback
 
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: True
+    )
     with patch(
         "crewai.telemetry.tracing.ephemeral.prompt_user_for_trace_viewing",
         return_value=True,
