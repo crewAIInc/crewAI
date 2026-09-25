@@ -2166,7 +2166,8 @@ class BedrockCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+        Claude 3+, Nova Lite/Pro/Premier and OpenAI GPT-6 (Sol, Luna, Astra)
+        on Bedrock support vision.
 
         Returns:
             True if the model supports images.
@@ -2177,6 +2178,9 @@ class BedrockCompletion(BaseLLM):
             "anthropic.claude-sonnet-4",
             "anthropic.claude-opus-4",
             "anthropic.claude-haiku-4",
+            "openai.gpt-6",
+            "us.openai.gpt-6",
+            "global.openai.gpt-6",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
