@@ -673,6 +673,23 @@ def test_azure_gpt54_mini_keeps_its_window() -> None:
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+@pytest.mark.parametrize(
+    "model",
+    ["azure/o1", "azure/o1-pro", "azure/o3", "azure/o3-mini", "azure/o4-mini"],
+)
+def test_azure_o_series_reasoning_models_use_official_context_window(model: str) -> None:
+    """Azure o-series deployments must not fall back to the 8k default."""
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize("model", ["azure/o1-preview", "azure/o1-mini"])
+def test_azure_o1_preview_and_mini_keep_128k_context_window(model: str) -> None:
+    """The shared "o1" entry must not swallow the longer 128k prefixes."""
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_azure_message_formatting():
     """
     Test that messages are properly formatted for Azure API
