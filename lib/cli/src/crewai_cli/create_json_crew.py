@@ -1004,12 +1004,12 @@ def _setup_env(folder_path: Path, llm_model: str) -> None:
 
 
 def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
-    """Return unique platform applications selected across all agents."""
+    """Return unique platform application slugs selected across all agents."""
     apps: list[str] = []
     for agent in agents:
         for tool in agent.get("tools", []):
             if isinstance(tool, str) and tool.startswith("platform:"):
-                app = tool.removeprefix("platform:")
+                app = tool.removeprefix("platform:").split("/", maxsplit=1)[0]
                 if app and app not in apps:
                     apps.append(app)
     return apps
@@ -1205,12 +1205,31 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             "`pip install 'crewai[tools]'`."
         ) from error
 
-    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN") or os.environ.get(
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN", ""
+    click.secho(
+        "  Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN...",
+        fg="cyan",
     )
+    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "")
+    credential_location: str | None = None
+    if token:
+        credential_location = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable"
+    else:
+        token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
+        if token:
+            credential_location = (
+                "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable"
+            )
+
     while True:
         if not token:
+            click.secho(
+                "  No CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN or "
+                "CREWAI_PLATFORM_INTEGRATION_TOKEN found; prompting for one.",
+                fg="yellow",
+            )
             token = _prompt_platform_token()
+            if token:
+                credential_location = "interactive prompt"
         if not token:
             click.secho(
                 "  A CrewAI Platform Enterprise Action Auth Token is required to validate "
@@ -1219,6 +1238,9 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             )
             continue
 
+        _success(
+            f"Enterprise Action Auth Token found via {credential_location}", dim=True
+        )
         os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
         failed_apps, token_invalid = _validate_platform_apps(
             apps, ApplicationSelector, client_for_selector
@@ -1235,6 +1257,7 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         replacement_token = _prompt_platform_revalidation_token()
         if replacement_token:
             token = replacement_token
+            credential_location = "interactive replacement prompt"
             os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
 
 

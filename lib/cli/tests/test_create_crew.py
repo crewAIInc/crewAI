@@ -748,8 +748,25 @@ def test_json_wizard_platform_catalog_contains_every_supported_app():
     ]
 
 
+def test_platform_validation_deduplicates_actions_by_application() -> None:
+    apps = json_crew._platform_apps_from_agents(
+        [
+            {
+                "tools": [
+                    "platform:github/create_repository",
+                    "platform:github/get_repository_content",
+                    "platform:gmail/send_email",
+                ]
+            },
+            {"tools": ["platform:github/list_repository_issues"]},
+        ]
+    )
+
+    assert apps == ["github", "gmail"]
+
+
 def test_platform_auth_suppresses_warnings_only_while_importing_tools(
-    monkeypatch,
+    monkeypatch, capsys
 ):
     class FakeApplicationSelector:
         @classmethod
@@ -771,6 +788,7 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         return original_import(name, globals, locals, fromlist, level)
 
     monkeypatch.setattr(builtins, "__import__", import_with_warning)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
     monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
 
     with warnings.catch_warnings(record=True) as caught_warnings:
@@ -781,6 +799,12 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     assert [str(warning.message) for warning in caught_warnings] == [
         "warning after import"
     ]
+    output = capsys.readouterr().out
+    assert "Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN" in output
+    assert (
+        "Enterprise Action Auth Token found via "
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable" in output
+    )
 
 
 def test_platform_validation_checks_apps_concurrently():
