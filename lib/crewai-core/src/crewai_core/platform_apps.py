@@ -1,9 +1,9 @@
 """CrewAI Platform application catalog."""
 
 from dataclasses import dataclass
-from importlib.resources import files
-import json
-from typing import Final, TypeAlias
+from typing import Any, Final, TypeAlias
+
+from crewai_core.platform_catalog import PLATFORM_CATALOG
 
 
 PlatformApp: TypeAlias = str
@@ -34,11 +34,11 @@ class PlatformAppCategory:
     apps: tuple[PlatformApp, ...]
 
 
-def _load_platform_catalog() -> tuple[PlatformApplicationDefinition, ...]:
+def _load_platform_catalog(
+    catalog: dict[str, Any],
+) -> tuple[PlatformApplicationDefinition, ...]:
     """Load and validate the generated Clipper application catalog."""
-    catalog_path = files("crewai_core").joinpath("platform_catalog.json")
-    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    applications = catalog.get("applications") if isinstance(catalog, dict) else None
+    applications = catalog.get("applications")
     if not isinstance(applications, list):
         raise ValueError("Platform catalog must contain an 'applications' list.")
 
@@ -97,7 +97,7 @@ def _load_platform_catalog() -> tuple[PlatformApplicationDefinition, ...]:
 
 
 PLATFORM_APPLICATION_CATALOG: Final[tuple[PlatformApplicationDefinition, ...]] = (
-    _load_platform_catalog()
+    _load_platform_catalog(PLATFORM_CATALOG)
 )
 PLATFORM_APPS: Final[tuple[str, ...]] = tuple(
     application.slug for application in PLATFORM_APPLICATION_CATALOG

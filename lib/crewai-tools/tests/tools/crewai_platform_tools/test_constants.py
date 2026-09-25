@@ -1,4 +1,5 @@
 from crewai_core.platform_apps import (
+    PLATFORM_CATALOG,
     PLATFORM_APP_CATEGORIES,
     PLATFORM_APP_DISPLAY_NAMES,
     PLATFORM_APP_TOOL_COUNTS,
@@ -8,6 +9,7 @@ from crewai_core.platform_apps import (
 
 
 def test_platform_apps_contains_supported_application_catalog() -> None:
+    assert isinstance(PLATFORM_CATALOG["applications"], list)
     assert len(PLATFORM_APPS) == 125
     assert len(set(PLATFORM_APPS)) == len(PLATFORM_APPS)
     assert PLATFORM_APPS[0] == "airtable"
