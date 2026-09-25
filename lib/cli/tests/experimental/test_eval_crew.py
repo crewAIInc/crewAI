@@ -540,7 +540,9 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
 
     assert ran == ["run"]
     text, kwargs = prompts[0]
-    assert "CREWAI_TRACING_ENABLED=true stays in .env" in text and kwargs == {"default": True}  # Enter is yes (João's call); the prompt names both effects
+    # the offer is about what happens, not about the variable that makes it happen
+    assert "Turn tracing on and run the crew now?" in text and kwargs == {"default": True}  # Enter is yes (João's call)
+    assert "CREWAI_TRACING_ENABLED" not in text
     assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
     assert amp.calls[0] == ("create", "fresh-run")
     assert "Tracing is on for this project" in capsys.readouterr().out

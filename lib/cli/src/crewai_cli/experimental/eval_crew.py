@@ -210,8 +210,7 @@ def _run_now_or_explain() -> str:
         console.print(steps, style="yellow")
         raise SystemExit(1)
     if not click.confirm(
-        f"No traced run is recorded in this project. Turn tracing on ({TRACING_ENV_VAR}=true "
-        "stays in .env) and run the crew now?",
+        "No traced run is recorded in this project. Turn tracing on and run the crew now?",
         default=True,  # João, 2026-09-20: y/n with Y as the default — the prompt says what Enter does
     ):
         console.print(steps, style="yellow")
@@ -239,10 +238,7 @@ def _enable_tracing() -> None:
     env_file.touch(exist_ok=True)
     set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
     os.environ[TRACING_ENV_VAR] = "true"
-    console.print(
-        f"Tracing is on for this project ({TRACING_ENV_VAR}=true in .env).",
-        style="green",
-    )
+    console.print("Tracing is on for this project.", style="green")
 
 
 def _start_evaluation(client: PlusAPI, execution_id: str) -> dict[str, Any]:

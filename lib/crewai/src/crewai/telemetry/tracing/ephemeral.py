@@ -19,7 +19,10 @@ from opentelemetry.sdk.trace.export import (
     SpanExporter,
 )
 
-from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
+from crewai.events.listeners.tracing.utils import (
+    prompt_user_for_trace_viewing,
+    tracing_asked_for,
+)
 from crewai.telemetry.tracing.grants import (
     GrantSpanExporter,
     TraceGrantClient,
@@ -123,9 +126,14 @@ class EphemeralSpanBuffer(SpanExporter):
             if not buffered:
                 return
             consent = self._consent or _trace_consent.get()
+            # Turning tracing on IS the answer: a user who set
+            # CREWAI_TRACING_ENABLED, or passed tracing=True, has already said
+            # collect this run. Asking again when it ends asks twice.
             approved = (
                 consent()
                 if consent is not None
+                else True
+                if tracing_asked_for()
                 else prompt_user_for_trace_viewing(sharing=True)
             )
             if first_time:

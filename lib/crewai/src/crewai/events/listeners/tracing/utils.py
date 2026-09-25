@@ -47,6 +47,7 @@ __all__ = [
     "mark_first_execution_done",
     "on_first_execution_tracing_confirmation",
     "prompt_user_for_trace_viewing",
+    "tracing_asked_for",
     "reset_tracing_enabled",
     "safe_serialize_to_dict",
     "set_suppress_tracing_messages",
@@ -103,6 +104,20 @@ def should_suppress_tracing_messages() -> bool:
         True if messages should be suppressed, False otherwise.
     """
     return _suppress_tracing_messages.get()
+
+
+def tracing_asked_for() -> bool:
+    """True when tracing is on because somebody SAID so — `CREWAI_TRACING_ENABLED`,
+    or `tracing=True` on the crew or flow in this context.
+
+    Turning tracing on is the answer to "may we collect this?"; asking again when
+    the run ends is asking the same question twice. First-time auto-collection is
+    the case that still has to ask, because nobody asked for it.
+    """
+    if is_tracing_enabled_in_context():
+        return True
+
+    return os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1")
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:

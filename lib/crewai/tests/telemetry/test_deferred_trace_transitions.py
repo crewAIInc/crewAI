@@ -115,6 +115,29 @@ def test_disabling_deferred_trace_discards_without_consent(
     assert get_trace_session() is None and get_execution_uuid() is None
 
 
+@pytest.mark.parametrize("how", ["env", "flag"])
+def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
+    traces, monkeypatch, how
+):
+    """Turning tracing on IS consent. The prompt at the end of a run is for the
+    first-time collection nobody asked for — not for a user who said collect it."""
+    buffers, grants, recorders, prompt = traces
+    if how == "env":
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "said out loud"
+
+    flow = Conversation(tracing=(how == "flag") or None)
+    assert flow.kickoff() == "said out loud"
+    assert crewai_event_bus.flush()
+
+    prompt.assert_not_called()          # asked once, not twice
+    assert grants and recorders         # and the trace went where it was told to go
+
+
 def test_enabling_deferred_trace_opens_a_new_flow_root(traces):
     buffers, grants, recorders, prompt = traces
     sessions = []
