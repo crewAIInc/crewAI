@@ -1596,6 +1596,7 @@ def test_azure_credential_scopes_in_to_config_dict():
         ("o1", 200000),
         ("o1-pro", 200000),
         ("o3", 200000),
+        ("o3-mini", 200000),
         ("o1-preview", 128000),
         ("o1-mini", 128000),
     ],

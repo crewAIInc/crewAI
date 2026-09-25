@@ -2387,6 +2387,7 @@ def test_openai_no_detail_fields_omitted():
         ("o1", 200000),
         ("o1-pro", 200000),
         ("o3", 200000),
+        ("o3-mini", 200000),
         ("o1-preview", 128000),
         ("o1-mini", 128000),
     ],
