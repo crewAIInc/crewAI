@@ -109,9 +109,15 @@ class TestExperimentRunner:
         assert mock_evaluator.get_agent_evaluation.call_count == 3
 
     @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
-    def test_run_success_with_unknown_metric(
+    def test_run_fails_when_expected_metric_absent_from_actual(
         self, mock_create_evaluator, mock_crew, mock_evaluator_results
     ):
+        """A multi-metric expected_score must fail if any expected metric produced no score.
+
+        Regression test for the dict/dict intersection bug where missing metrics were
+        silently ignored, allowing a test case to pass even when an evaluator returned
+        score=None or raised for a metric.
+        """
         dataset = [
             {
                 "identifier": "test-case-2",
@@ -136,7 +142,9 @@ class TestExperimentRunner:
         assert isinstance(result.expected_score, dict)
         assert "goal_alignment" in result.expected_score.keys()
         assert "unknown_metric" in result.expected_score.keys()
-        assert result.passed is True
+        # Fail closed: unknown_metric is absent from actual scores (evaluator never
+        # scored it), so the test case must not pass.
+        assert result.passed is False
 
     @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
     def test_run_success_with_single_metric_evaluator_and_expected_specific_metric(
