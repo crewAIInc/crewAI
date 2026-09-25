@@ -151,7 +151,7 @@ from crewai import Agent, Task, Crew, LLM
 manager_llm = LLM(model="gemini/gemini-3.7-flash", temperature=0.1)
 
 # Modelo criativo para gerar conteúdo
-content_llm = LLM(model="claude-3-5-sonnet-20241022", temperature=0.7)
+content_llm = LLM(model="claude-sonnet-4-6", temperature=0.7)
 
 # Modelo eficiente para processamento de dados
 processing_llm = LLM(model="gpt-4o-mini", temperature=0)
@@ -324,7 +324,7 @@ domain_expert = Agent(
     You've worked with companies like Salesforce, HubSpot, and emerging unicorns, giving
     you perspective on both established and disruptive go-to-market strategies.
     """,
-    llm=LLM(model="claude-3-5-sonnet", temperature=0.3)  # Criatividade balanceada com conhecimento de domínio
+    llm=LLM(model="claude-sonnet-4-6", temperature=0.3)  # Criatividade balanceada com conhecimento de domínio
 )
 
 # Esse contexto faz o Claude agir como especialista do setor
@@ -356,7 +356,7 @@ tech_writer = Agent(
     and practical use cases. You prioritize accuracy and usability over marketing fluff.
     """,
     llm=LLM(
-        model="claude-3-5-sonnet",
+        model="claude-sonnet-4-6",
         temperature=0.1
     ),
     tools=[code_analyzer_tool, api_scanner_tool],
@@ -420,7 +420,7 @@ Em vez de repetir o framework estratégico, segue um checklist tático para impl
     # Agentes criativos ou customer-facing
     content_agent = Agent(
         role="Content Creator",
-        llm=LLM(model="claude-3-5-sonnet"),
+        llm=LLM(model="claude-sonnet-4-6"),
         # ... demais configs
     )
     ```
@@ -515,7 +515,7 @@ Em vez de repetir o framework estratégico, segue um checklist tático para impl
     )
 
     # Agentes herdam o LLM da crew, salvo sobrescrita
-    agent1 = Agent(llm=LLM(model="claude-3-5-sonnet"))
+    agent1 = Agent(llm=LLM(model="claude-sonnet-4-6"))
     ```
 
   </Accordion>
@@ -533,7 +533,7 @@ Em vez de repetir o framework estratégico, segue um checklist tático para impl
         tools=[search_tool, api_tool, data_tool],
         llm=LLM(model="gpt-4o"),
         # OU
-        llm=LLM(model="claude-3-5-sonnet")
+        llm=LLM(model="claude-sonnet-4-6")
     )
     ```
 
