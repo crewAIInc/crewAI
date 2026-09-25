@@ -204,37 +204,38 @@ def test_deploy_button_click_records_telemetry() -> None:
 def test_evaluate_button_leaves_the_tui_with_the_run_it_watched(monkeypatch) -> None:
     """Evaluate behaves like Deploy — the app exits and the command takes over,
     because `crewai eval` prints a link, waits, and prints a verdict — and it
-    names the run that was just traced rather than whatever was recorded last."""
-    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: "run-before")
+    names THIS app's execution, not whichever run finished last in the project."""
     app = CrewRunApp()
     app._status = "completed"
     app._crew_result = object()
     app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
     app._unsubscribe = lambda: None  # type: ignore[method-assign]
     exits: list[object] = []
     app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
-    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: "run-just-now")
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: uuid == "run-this-app")
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-eval")))
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
     assert app._want_eval is True
-    assert app._eval_execution_id == "run-just-now"
+    assert app._eval_execution_id == "run-this-app"
     assert exits == [app._crew_result]
 
 
-@pytest.mark.parametrize("recorded", ["run-before", None])
-def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, recorded) -> None:
-    """An untraced run leaves the previous record in place — or none at all.
-    Grading that would answer a question nobody asked."""
-    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: "run-before")
+@pytest.mark.parametrize("why", ["not traced at all", "another run replaced the record"])
+def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, why) -> None:
+    """A run with no session of its own, or whose trace never reached AMP, has
+    nothing to grade — and a record naming a DIFFERENT run is not evidence that
+    this one was traced."""
     app = CrewRunApp()
     app._status = "completed"
     app._telemetry = Mock()
+    app._execution_uuid = None if why == "not traced at all" else "run-this-app"
     notices: list[str] = []
     app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
     app.exit = lambda result=None: pytest.fail("the TUI must not leave for nothing")  # type: ignore[method-assign]
-    monkeypatch.setattr(crew_run_tui, "_recorded_execution_id", lambda: recorded)
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
 
     app.action_evaluate_crew()
 
@@ -242,9 +243,15 @@ def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, recorded) ->
     assert "not traced" in notices[0]
 
 
-def test_tracing_asked_for_reads_the_declaration_not_only_the_context() -> None:
-    """The ContextVar is set where the crew is CONSTRUCTED, which is not the
-    worker thread that later asks, and a flow never sets it at all."""
+def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
+    monkeypatch,
+) -> None:
+    """The ContextVar is set where the crew is CONSTRUCTED, not on the worker
+    thread that later asks — but an app with nobody in front of it is still
+    nobody's yes."""
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
     app = CrewRunApp()
     app._crew = SimpleNamespace(tracing=True)
 
@@ -253,6 +260,42 @@ def test_tracing_asked_for_reads_the_declaration_not_only_the_context() -> None:
 
     app._crew = SimpleNamespace(tracing=None)
     assert app._tracing_was_asked_for() is False
+
+    # embedded, redirected, or under test: the declaration is not a person
+    app._crew = SimpleNamespace(tracing=True)
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
+    assert app._tracing_was_asked_for() is False
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: True)
+    assert app._tracing_was_asked_for() is False
+
+
+def test_a_run_started_for_an_evaluation_closes_itself(monkeypatch) -> None:
+    """`crewai eval` runs the crew when nothing is traced. Leaving the app open
+    would make the reader quit it before the evaluation they asked for begins."""
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: True)
+    with crew_run_tui.evaluating_after_run() as watched:
+        app = CrewRunApp()
+        app._execution_uuid = "run-this-app"
+        app._crew_result = object()
+        app._unsubscribe = lambda: None  # type: ignore[method-assign]
+        exits: list[object] = []
+        app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
+
+        app._leave_if_an_evaluation_is_waiting()
+
+    assert watched["execution_id"] == "run-this-app"
+    assert exits == [app._crew_result]
+    # the command that opened the app is the one evaluating; the app must not
+    # chain into an evaluation of its own
+    assert app._want_eval is False
+
+
+def test_a_run_nobody_is_waiting_on_stays_open() -> None:
+    app = CrewRunApp()
+    app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]
+
+    app._leave_if_an_evaluation_is_waiting()
 
 
 def test_evaluate_before_completion_records_nothing() -> None:

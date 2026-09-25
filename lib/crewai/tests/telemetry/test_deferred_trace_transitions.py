@@ -129,6 +129,8 @@ def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
     monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
     if how == "env":
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    else:  # the flag alone must carry it, or this case proves nothing
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
 
     class Conversation(Flow):
         @start()

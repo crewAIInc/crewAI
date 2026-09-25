@@ -18,10 +18,22 @@ class ConsentApp(CrewRunApp):
             event.prevent_default()
 
 
+def _say_a_person_is_here(monkeypatch):
+    """The rule only holds where a prompt could have been shown, and a suite is
+    one of the places it could not. These cases are about a real session."""
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+
+
 async def wait_for_consent(app, pilot):
     for _ in range(50):
         await pilot.pause(0.01)
-        if isinstance(app.screen, TraceConsentScreen):
+        # A pushed screen is not a laid-out one, and a click lands on the
+        # region the buttons have — zero-sized until the first layout pass.
+        if isinstance(app.screen, TraceConsentScreen) and all(
+            button.region for button in app.screen.query(Button)
+        ):
             return app.screen
     raise AssertionError("The execution worker did not open the consent prompt")
 
@@ -69,6 +81,7 @@ async def test_tracing_asked_for_needs_no_modal(monkeypatch, value):
     """The user turned tracing on for this project; the modal would be the same
     question a second time."""
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", value)
+    _say_a_person_is_here(monkeypatch)
     app = ConsentApp()
     async with app.run_test(size=(100, 40)) as pilot:
         assert await asyncio.to_thread(app._request_trace_consent) is True
@@ -83,6 +96,7 @@ async def test_the_app_suppresses_messages_and_still_needs_no_modal(monkeypatch)
     is a reason a PROMPT cannot be shown, not a reason to ask again — the app
     has a screen and somebody in front of it."""
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    _say_a_person_is_here(monkeypatch)
     monkeypatch.setattr(
         "crewai.events.listeners.tracing.utils.should_suppress_tracing_messages",
         lambda: True,
@@ -99,6 +113,7 @@ async def test_a_declaration_is_the_same_yes_as_the_variable(monkeypatch):
     """`tracing=True` never reaches this worker's context — the crew set it on
     the thread it was built on — so the declaration itself is read."""
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    _say_a_person_is_here(monkeypatch)
     app = ConsentApp()
     app._crew = SimpleNamespace(tracing=True)
     async with app.run_test(size=(100, 40)) as pilot:

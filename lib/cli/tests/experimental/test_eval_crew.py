@@ -12,6 +12,7 @@ import httpx
 import pytest
 from rich.console import Console
 
+from crewai_cli import run_crew as run_crew_module
 from crewai_cli.experimental import eval_crew as eval_module
 from crewai_cli.cli import eval_command
 
@@ -533,6 +534,7 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
     import crewai_cli.run_crew as run_crew_module
 
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     amp = install(monkeypatch, FakeAMP(statuses=[done()]))
 
@@ -598,6 +600,32 @@ def test_telemetry_never_breaks_the_command(project, monkeypatch):
     eval_module.eval_crew()
 
     assert amp.calls[0] == ("create", "counted-run")
+
+
+def test_the_run_it_starts_hands_its_own_id_back(project, monkeypatch):
+    """With nothing traced, the command runs the crew — and the app it opens
+    closes itself and names its execution, so nobody has to quit a screen to
+    reach the evaluation that opened it."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+
+    def fake_run_crew() -> None:
+        from crewai_cli.crew_run_tui import _AUTO_EVAL
+
+        holder = _AUTO_EVAL.get()
+        assert holder is not None, "the app must be told an evaluation is waiting"
+        holder["execution_id"] = "run-it-just-did"
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    # the run it just watched, not whatever the project last recorded
+    assert amp.calls[0] == ("create", "run-it-just-did")
 
 
 def test_declining_the_offer_exits_cleanly_with_the_steps(project, monkeypatch, capsys):

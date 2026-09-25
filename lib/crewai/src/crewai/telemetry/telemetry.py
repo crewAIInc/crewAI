@@ -1285,6 +1285,13 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
+    # What a caller may add to a feature span. Anything else is dropped: the
+    # span counts a use, and a key nobody agreed on is how run content — a
+    # prompt, an output, a path — reaches a place that promises not to hold it.
+    # The dimensions every span already carries are reserved: a caller that
+    # could overwrite `feature` could file its use under somebody else's name.
+    FEATURE_ATTRIBUTES = frozenset({"execution_id", "authenticated", "organization_id"})
+
     def feature_usage_span(
         self, feature: str, attributes: dict[str, str] | None = None
     ) -> None:
@@ -1295,8 +1302,9 @@ class Telemetry:
                      "mcp:connection", "a2a:delegation",
                      "hooks:pre_tool_call", "hooks:aborted".
             attributes: What a caller knows about THIS use that the common
-                attributes cannot know — never prompts, outputs or anything
-                about the work itself.
+                attributes cannot know. Only the keys in ``FEATURE_ATTRIBUTES``
+                are kept; anything else is dropped, including the dimensions
+                every span already carries.
         """
 
         def _operation() -> None:
@@ -1305,7 +1313,8 @@ class Telemetry:
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "feature", feature)
             for key, value in (attributes or {}).items():
-                self._add_attribute(span, key, value)
+                if key in self.FEATURE_ATTRIBUTES:
+                    self._add_attribute(span, key, str(value))
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

@@ -5,6 +5,9 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 """
 
 import asyncio
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 import json as _json
 import re
 import threading
@@ -289,19 +292,44 @@ class TraceConsentScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-def _recorded_execution_id() -> str | None:
-    """The execution id crewAI last recorded for this project, if any.
+_AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
+    "crewai_tui_auto_eval", default=None
+)
 
-    Read through crewai's own reader so the TUI and `crewai eval` can never
-    disagree about which run that is.
+
+@contextmanager
+def evaluating_after_run() -> Iterator[dict[str, str | None]]:
+    """Run the crew for an evaluation that is already under way.
+
+    `crewai eval` with nothing traced offers to run the crew first. The app it
+    opens would otherwise sit there until somebody quits it, with the command
+    waiting behind — so inside this block the app closes itself when the run
+    ends and leaves its execution id in the holder. It does NOT chain into an
+    evaluation of its own: the command that opened it is the one evaluating.
+    """
+    holder: dict[str, str | None] = {"execution_id": None}
+    token = _AUTO_EVAL.set(holder)
+    try:
+        yield holder
+    finally:
+        _AUTO_EVAL.reset(token)
+
+
+def _trace_was_recorded(execution_uuid: str) -> bool:
+    """Did this execution's trace actually reach AMP?
+
+    crewAI records a run when its trace is exported, so the record answers the
+    one question the uuid alone cannot: whether there is anything to grade. It
+    is matched by id rather than trusted as "the last run", which it is only
+    until another run in the project finishes.
     """
     try:
         from crewai.telemetry.tracing.last_run import read_last_run
 
         record = read_last_run() or {}
-        return str(record.get("execution_id") or "") or None
-    except Exception:  # a missing or unreadable record simply means "no run"
-        return None
+        return str(record.get("execution_id") or "") == execution_uuid
+    except Exception:  # a missing or unreadable record simply means "not traced"
+        return False
 
 
 class CrewRunApp(App[Any]):
@@ -423,28 +451,28 @@ FooterKey .footer-key--key {
     text-style: bold;
 }
 
-#btn-traces {
+#btn-eval {
     background: #1F7982;
     color: #e0e0e0;
     border: none;
 }
-#btn-traces:hover {
+#btn-eval:hover {
     background: #28969f;
 }
-#btn-traces:disabled {
+#btn-eval:disabled {
     background: #1a4a50;
     color: #888888;
 }
 
-#btn-eval {
+#btn-traces {
     background: #2b2b2b;
     color: #e0e0e0;
     border: none;
 }
-#btn-eval:hover {
+#btn-traces:hover {
     background: #3d3d3d;
 }
-#btn-eval:disabled {
+#btn-traces:disabled {
     background: #202020;
     color: #888888;
 }
@@ -559,10 +587,15 @@ FooterKey .footer-key--key {
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
         self._want_eval: bool = False
-        # The id crewAI had recorded before this run started; the button uses it
-        # to tell a trace of THIS run from whatever was there before.
-        self._run_recorded_before: str | None = _recorded_execution_id()
+        # This app's own execution, captured from the run while it runs. The
+        # project-wide record is the last run to FINISH anywhere, which another
+        # run in the same project can replace between this one ending and its
+        # button being pressed.
+        self._execution_uuid: str | None = None
         self._eval_execution_id: str | None = None
+        # Read here, on the thread that built the app, because that is where
+        # `crewai eval` set it.
+        self._auto_eval: dict[str, str | None] | None = _AUTO_EVAL.get()
         self._consent_screen: TraceConsentScreen | None = None
         self._trace_consent_pending: threading.Event | None = None
         self._discard_trace_on_exit = False
@@ -590,8 +623,8 @@ FooterKey .footer-key--key {
             with VerticalScroll(id="sidebar"):
                 yield Static(id="sidebar-content")
                 with Vertical(id="sidebar-actions"):
-                    yield Button("View Traces", id="btn-traces", classes="action-btn")
                     yield Button("Evaluate", id="btn-eval", classes="action-btn")
+                    yield Button("View Traces", id="btn-traces", classes="action-btn")
                     yield Button("Deploy", id="btn-deploy", classes="action-btn")
             with Vertical(id="main-panel"):
                 yield Static(id="task-header")
@@ -781,6 +814,21 @@ FooterKey .footer-key--key {
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
         self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+        self._leave_if_an_evaluation_is_waiting()
+
+    def _leave_if_an_evaluation_is_waiting(self) -> None:
+        """Close the app when `crewai eval` is the reason this run happened.
+
+        The evaluation is the errand; the run was the prerequisite. Leaving the
+        app open would make the reader quit it before the thing they asked for
+        could begin.
+        """
+        if self._auto_eval is None:
+            return
+
+        self._auto_eval["execution_id"] = self._traced_execution_id()
+        self._unsubscribe()
+        self.exit(self._crew_result)
 
     def _on_crew_failed(self, error: str) -> None:
         with self._lock:
@@ -1081,19 +1129,46 @@ FooterKey .footer-key--key {
             title="Execution traces",
         )
 
+    def _capture_execution_uuid(self) -> None:
+        """Remember which execution this app is watching.
+
+        Read as the run announces itself, from the run's own context, and kept:
+        the uuid is gone by the time the kickoff returns, and the project's
+        record cannot say which run was THIS one.
+        """
+        if self._execution_uuid is not None:
+            return
+        try:
+            from crewai.execution import get_execution_uuid
+
+            self._execution_uuid = get_execution_uuid()
+        except Exception:  # a run without tracing simply has no execution
+            self._execution_uuid = None
+
     def _tracing_was_asked_for(self) -> bool:
         """Did somebody turn tracing on for this run?
 
-        Read here rather than through `tracing_asked_for()`, for two reasons
-        that both come from where this runs. The ContextVar that helper reads is
-        set where the crew is CONSTRUCTED — not this worker thread — and a flow
-        never sets it at all, so the declaration is read off the object itself.
-        And the helper refuses while tracing messages are suppressed, which this
-        app does deliberately to keep crewAI's console out of its own layout;
-        that guard is about a prompt nobody would see, and this app has a screen
-        and somebody in front of it.
+        Read here rather than through `tracing_asked_for()`, because the
+        ContextVar that helper reads is set where the crew is CONSTRUCTED — not
+        this worker thread — and a flow never sets it at all. So the declaration
+        is read off the object itself.
+
+        Only ONE of the helper's guards is dropped: it refuses while tracing
+        messages are suppressed, which this app does deliberately to keep
+        crewAI's console out of its own layout, and that guard is about a prompt
+        nobody would see. The others hold. A suite under test, or a TUI with no
+        interactive user behind it — embedded, redirected — has nobody whose yes
+        this could be, and gets the modal's own fail-closed answer instead.
         """
         import os
+
+        from crewai.events.listeners.tracing.utils import (
+            _is_interactive_terminal,
+            _is_test_environment,
+        )
+
+        if _is_test_environment() or not _is_interactive_terminal():
+            return False
 
         if os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1"):
             return True
@@ -1123,17 +1198,20 @@ FooterKey .footer-key--key {
         self.exit(self._crew_result)
 
     def _traced_execution_id(self) -> str | None:
-        """The id of the run just finished, or None when it was not traced.
+        """This app's own execution, if it was traced.
 
-        crewAI records the run when its trace is exported. A record that is the
-        same one as before this run started is a PREVIOUS run's — grading that
-        would answer a question nobody asked.
+        Taken from the session the run itself opened, not from the project's
+        last-run record: that record is whichever run finished last anywhere in
+        the project, and a second TUI in the same project can replace it between
+        this run ending and its button being pressed. A run with no session was
+        not traced, and there is nothing to grade.
         """
-        recorded = _recorded_execution_id()
-        if recorded is None or recorded == self._run_recorded_before:
+        if self._execution_uuid is None:
             return None
 
-        return recorded
+        return (
+            self._execution_uuid if _trace_was_recorded(self._execution_uuid) else None
+        )
 
     def action_evaluate_crew(self) -> None:
         """Grade the run that just finished.
@@ -2083,6 +2161,7 @@ FooterKey .footer-key--key {
 
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
+            self._capture_execution_uuid()
             with self._lock:
                 # In flow mode the app is named for the flow; a nested crew's
                 # kickoff (a `call: crew` step) must not rename it.
@@ -2096,6 +2175,7 @@ FooterKey .footer-key--key {
         # ── Declarative-flow method events → STEPS panel ────────
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
+            self._capture_execution_uuid()
             with self._lock:
                 self._status = "working"
 

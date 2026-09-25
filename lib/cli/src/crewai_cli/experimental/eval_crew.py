@@ -103,8 +103,11 @@ def eval_crew(run_id: str | None = None) -> None:
             ),
             style="yellow",
         )
-    _record_usage(execution_id, logged_in=client.api_key is not None)
     started = _start_evaluation(client, execution_id)
+    # After, not before: `cli_usage:eval` counts an evaluation, and a refused
+    # request — a run AMP does not hold, a credential it will not take — is not
+    # one. `_start_evaluation` raises rather than returning on those.
+    _record_usage(execution_id, logged_in=client.api_key is not None)
     url = started.get("url")
     console.print(Text("Evaluating run ").append(execution_id, style="bold"))
     if url:
@@ -254,9 +257,18 @@ def _run_now_or_explain() -> str:
         raise SystemExit(0)
 
     _enable_tracing()
+    from crewai_cli.crew_run_tui import evaluating_after_run
     from crewai_cli.run_crew import run_crew
 
-    run_crew()
+    # The app closes itself when the run ends and leaves its own execution id
+    # here — no quitting a screen to get to the evaluation that opened it. A run
+    # without the app (no terminal, `--dmn`) leaves nothing, and the project's
+    # record answers as it did.
+    with evaluating_after_run() as watched:
+        run_crew()
+    if watched["execution_id"]:
+        return str(watched["execution_id"])
+
     record = read_last_run()
     if record is None:
         console.print(
