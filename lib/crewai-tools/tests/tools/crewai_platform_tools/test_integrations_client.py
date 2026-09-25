@@ -350,7 +350,10 @@ def test_clipper_client_executes_without_deployment_instance_uuid(
 
 @patch.dict(
     "os.environ",
-    {"CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id"},
+    {
+        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "ignored-token",
+    },
     clear=True,
 )
 @patch(
@@ -367,7 +370,7 @@ def test_clipper_client_requires_platform_integration_token(
         parameters={},
     )
 
-    with pytest.raises(ValueError, match="CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"):
+    with pytest.raises(ValueError, match="CREWAI_PLATFORM_INTEGRATION_TOKEN"):
         ClipperClient().execute_action(tool, {})
 
     mock_post.assert_not_called()

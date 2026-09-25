@@ -1033,7 +1033,7 @@ def _prompt_platform_token() -> str:
     )
     return str(
         click.prompt(
-            click.style("  CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", fg="cyan"),
+            click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
             hide_input=True,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
@@ -1206,25 +1206,18 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         ) from error
 
     click.secho(
-        "  Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN...",
+        "  Checking for CREWAI_PLATFORM_INTEGRATION_TOKEN...",
         fg="cyan",
     )
-    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "")
+    token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
     credential_location: str | None = None
     if token:
-        credential_location = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable"
-    else:
-        token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
-        if token:
-            credential_location = (
-                "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable"
-            )
+        credential_location = "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable"
 
     while True:
         if not token:
             click.secho(
-                "  No CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN or "
-                "CREWAI_PLATFORM_INTEGRATION_TOKEN found; prompting for one.",
+                "  No CREWAI_PLATFORM_INTEGRATION_TOKEN found; prompting for one.",
                 fg="yellow",
             )
             token = _prompt_platform_token()
@@ -1241,7 +1234,7 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         _success(
             f"Enterprise Action Auth Token found via {credential_location}", dim=True
         )
-        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
         failed_apps, token_invalid = _validate_platform_apps(
             apps, ApplicationSelector, client_for_selector
         )
@@ -1258,7 +1251,7 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         if replacement_token:
             token = replacement_token
             credential_location = "interactive replacement prompt"
-            os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+            os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
 
 
 # ── Main ────────────────────────────────────────────────────────
@@ -1326,11 +1319,11 @@ def create_json_crew(
     copy_assistant_instructions(folder_path)
 
     if platform_token:
-        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
         env_vars = load_env_vars(folder_path)
-        env_vars["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
+        env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
         write_env_file(folder_path, env_vars)
-        _success("CrewAI Platform Enterprise Action Auth Token saved to .env")
+        _success("CrewAI Platform integration token saved to .env")
 
     for agent in agents:
         _write_jsonc(
