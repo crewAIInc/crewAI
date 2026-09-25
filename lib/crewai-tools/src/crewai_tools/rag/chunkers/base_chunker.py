@@ -107,46 +107,35 @@ class RecursiveCharacterTextSplitter:
 
     def _merge_splits(self, splits: list[str], separator: str) -> list[str]:
         """Merge splits into chunks with proper overlap."""
+        separator = "" if self._keep_separator else separator
+        separator_len = len(separator)
         docs: list[str] = []
         current_doc: list[str] = []
         total = 0
 
         for split in splits:
             split_len = len(split)
+            next_size = total + split_len + (separator_len if current_doc else 0)
 
-            if total + split_len > self._chunk_size and current_doc:
-                if separator == "":
-                    doc = "".join(current_doc)
-                else:
-                    if self._keep_separator and separator == " ":
-                        doc = "".join(current_doc)
-                    else:
-                        doc = separator.join(current_doc)
-
+            if next_size > self._chunk_size and current_doc:
+                doc = separator.join(current_doc)
                 if doc:
                     docs.append(doc)
 
-                # Handle overlap by keeping some of the previous content
-                while total > self._chunk_overlap and len(current_doc) > 1:
+                while current_doc and (
+                    total > self._chunk_overlap
+                    or total + split_len + separator_len > self._chunk_size
+                ):
                     removed = current_doc.pop(0)
-                    total -= len(removed)
-                    if separator != "":
-                        total -= len(separator)
+                    total -= len(removed) + (separator_len if current_doc else 0)
 
             current_doc.append(split)
             total += split_len
-            if separator != "" and len(current_doc) > 1:
-                total += len(separator)
+            if len(current_doc) > 1:
+                total += separator_len
 
         if current_doc:
-            if separator == "":
-                doc = "".join(current_doc)
-            else:
-                if self._keep_separator and separator == " ":
-                    doc = "".join(current_doc)
-                else:
-                    doc = separator.join(current_doc)
-
+            doc = separator.join(current_doc)
             if doc:
                 docs.append(doc)
 
