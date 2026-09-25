@@ -387,6 +387,20 @@ def test_unrecognized_provider_prefix_is_not_stripped() -> None:
     )
 
 
+@pytest.mark.parametrize("model", ["o1", "o1-pro", "o3"])
+def test_o1_o3_reasoning_models_use_official_context_window(model: str) -> None:
+    """o1, o1-pro, and o3 have a 200k window, not the 8k default (issue #7303)."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize("model", ["o1-preview", "o1-mini"])
+def test_o1_broad_entry_keeps_preview_and_mini_at_128k(model: str) -> None:
+    """The new o1 prefix must not steal the 128k window from o1-preview/o1-mini."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 @pytest.fixture
 def get_weather_tool_schema():
     return {

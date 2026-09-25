@@ -2379,3 +2379,23 @@ def test_openai_no_detail_fields_omitted():
     assert usage["completion_tokens"] == 30
     assert "cached_prompt_tokens" not in usage
     assert "reasoning_tokens" not in usage
+
+
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("o1", 200000),
+        ("o1-pro", 200000),
+        ("o3", 200000),
+        ("o3-mini", 200000),
+        ("o1-preview", 128000),
+        ("o1-mini", 128000),
+    ],
+)
+def test_openai_provider_context_window_for_o_series(model: str, expected: int) -> None:
+    """OpenAICompletion gives o1/o1-pro/o3 a 200k window and keeps o1-preview/o1-mini at 128k."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
+        completion = OpenAICompletion(model=model)
+    assert completion.get_context_window_size() == int(
+        expected * CONTEXT_WINDOW_USAGE_RATIO
+    )

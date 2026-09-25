@@ -1588,3 +1588,28 @@ def test_azure_credential_scopes_in_to_config_dict():
         )
         config = llm.to_config_dict()
         assert config["credential_scopes"] == scopes
+
+
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("o1", 200000),
+        ("o1-pro", 200000),
+        ("o3", 200000),
+        ("o3-mini", 200000),
+        ("o1-preview", 128000),
+        ("o1-mini", 128000),
+    ],
+)
+def test_azure_provider_context_window_for_o_series(model: str, expected: int) -> None:
+    """AzureCompletion gives o1/o1-pro/o3 a 200k window and keeps o1-preview/o1-mini at 128k."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    completion = AzureCompletion(
+        model=model,
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+    )
+    assert completion.get_context_window_size() == int(
+        expected * CONTEXT_WINDOW_USAGE_RATIO
+    )
