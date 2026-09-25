@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator, Iterator
 import inspect
 import json
 import mimetypes
+import os
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
 
@@ -361,7 +362,7 @@ class FileStream(BaseModel):
         """Extract filename and detect content type."""
         if self.filename is None:
             name = getattr(self.stream, "name", None)
-            if name is not None:
+            if isinstance(name, (str, os.PathLike)):
                 self.filename = Path(name).name
 
         position = self.stream.tell()
