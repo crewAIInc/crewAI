@@ -699,6 +699,52 @@ def test_composite_score_custom_config() -> None:
     assert "semantic" in reasons
 
 
+def test_composite_score_timezone_aware_created_at() -> None:
+    """Regression for #7529: tz-aware created_at (e.g. datetime.now(timezone.utc),
+    ISO 8601 with offset, or "Z"-suffixed timestamps loaded from external stores)
+    must not raise TypeError when subtracted from a tz-aware utcnow().
+
+    Pre-fix: `(datetime.utcnow() - record.created_at)` raised TypeError when
+    record.created_at was tz-aware. The fix normalizes naive legacy records to
+    UTC and uses tz-aware math for both sides.
+    """
+    from datetime import timezone
+
+    config = MemoryConfig()
+    # tz-aware in the canonical form
+    tz_record = MemoryRecord(
+        content="tz-aware",
+        scope="/",
+        importance=0.5,
+        created_at=datetime.now(timezone.utc),
+    )
+    score, reasons = compute_composite_score(tz_record, 0.8, config)
+    assert 0.0 <= score <= 1.0
+    assert "semantic" in reasons
+
+    # tz-aware with a non-UTC offset (e.g. +05:00 from an external store)
+    tz_plus5 = datetime.now(timezone(timedelta(hours=5))) - timedelta(hours=1)
+    tz_offset_record = MemoryRecord(
+        content="tz-offset",
+        scope="/",
+        importance=0.5,
+        created_at=tz_plus5,
+    )
+    score2, _ = compute_composite_score(tz_offset_record, 0.8, config)
+    assert 0.0 <= score2 <= 1.0
+
+    # naive (legacy default_factory=datetime.utcnow path) still works
+    naive_record = MemoryRecord(
+        content="naive legacy",
+        scope="/",
+        importance=0.5,
+        created_at=datetime.utcnow() - timedelta(days=10),
+    )
+    score3, reasons3 = compute_composite_score(naive_record, 0.8, config)
+    assert 0.0 <= score3 <= 1.0
+    assert "recency" not in reasons3  # 10 days > 7-day default half-life
+
+
 # --- LLM fallback ---
 
 
