@@ -13,7 +13,7 @@ import warnings
 
 import click
 from crewai_core.platform_apps import (
-    PLATFORM_APPS,
+    PLATFORM_APPLICATION_CATALOG,
     PLATFORM_APP_CATEGORIES,
     PLATFORM_APP_DISPLAY_NAMES,
     PLATFORM_APP_TOOLS,
@@ -118,8 +118,11 @@ _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
     (
         "CrewAI Platform",
         [
-            (f"platform:{app}", f"{PLATFORM_APP_DISPLAY_NAMES[app]} Integration")
-            for app in PLATFORM_APPS
+            (
+                f"platform:{application.slug}",
+                f"{application.display_name} Integration",
+            )
+            for application in PLATFORM_APPLICATION_CATALOG
         ],
     ),
     (

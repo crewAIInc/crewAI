@@ -5,6 +5,7 @@ through the CrewAI platform API.
 """
 
 from crewai_core.platform_apps import (
+    PLATFORM_APPLICATION_CATALOG,
     PLATFORM_APPS,
     PLATFORM_APP_CATEGORIES,
     PLATFORM_APP_DISPLAY_NAMES,
@@ -21,6 +22,7 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
 
 
 __all__ = [
+    "PLATFORM_APPLICATION_CATALOG",
     "PLATFORM_APPS",
     "PLATFORM_APP_CATEGORIES",
     "PLATFORM_APP_DISPLAY_NAMES",

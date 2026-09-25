@@ -18,6 +18,15 @@ class PlatformToolDefinition:
 
 
 @dataclass(frozen=True)
+class PlatformApplicationDefinition:
+    """Describe one CrewAI Platform application and its available actions."""
+
+    slug: PlatformApp
+    display_name: str
+    tools: tuple[PlatformToolDefinition, ...]
+
+
+@dataclass(frozen=True)
 class PlatformAppCategory:
     """Describe a presentation group of CrewAI Platform applications."""
 
@@ -25,12 +34,7 @@ class PlatformAppCategory:
     apps: tuple[PlatformApp, ...]
 
 
-def _load_platform_catalog() -> tuple[
-    tuple[str, ...],
-    dict[str, str],
-    dict[str, int],
-    dict[str, tuple[PlatformToolDefinition, ...]],
-]:
+def _load_platform_catalog() -> tuple[PlatformApplicationDefinition, ...]:
     """Load and validate the generated Clipper application catalog."""
     catalog_path = files("crewai_core").joinpath("platform_catalog.json")
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
@@ -38,10 +42,8 @@ def _load_platform_catalog() -> tuple[
     if not isinstance(applications, list):
         raise ValueError("Platform catalog must contain an 'applications' list.")
 
-    apps: list[str] = []
-    display_names: dict[str, str] = {}
-    tool_counts: dict[str, int] = {}
-    app_tools: dict[str, tuple[PlatformToolDefinition, ...]] = {}
+    applications_by_slug: set[str] = set()
+    parsed_applications: list[PlatformApplicationDefinition] = []
     for application in applications:
         if not isinstance(application, dict):
             raise ValueError("Every platform catalog application must be an object.")
@@ -53,7 +55,7 @@ def _load_platform_catalog() -> tuple[
             raise ValueError(
                 f"Platform catalog application '{slug}' must have a display name."
             )
-        if slug in display_names:
+        if slug in applications_by_slug:
             raise ValueError(f"Platform catalog contains duplicate slug '{slug}'.")
         tools = application.get("tools", [])
         if not isinstance(tools, list):
@@ -82,26 +84,35 @@ def _load_platform_catalog() -> tuple[
                     display_name=tool_display_name,
                 )
             )
-        apps.append(slug)
-        display_names[slug] = display_name
-        tool_counts[slug] = len(parsed_tools)
-        app_tools[slug] = tuple(parsed_tools)
+        applications_by_slug.add(slug)
+        parsed_applications.append(
+            PlatformApplicationDefinition(
+                slug=slug,
+                display_name=display_name,
+                tools=tuple(parsed_tools),
+            )
+        )
 
-    return tuple(apps), display_names, tool_counts, app_tools
+    return tuple(parsed_applications)
 
 
-(
-    _platform_apps,
-    _platform_app_display_names,
-    _platform_app_tool_counts,
-    _platform_app_tools,
-) = _load_platform_catalog()
-PLATFORM_APPS: Final[tuple[str, ...]] = _platform_apps
-PLATFORM_APP_DISPLAY_NAMES: Final[dict[str, str]] = _platform_app_display_names
-PLATFORM_APP_TOOL_COUNTS: Final[dict[str, int]] = _platform_app_tool_counts
-PLATFORM_APP_TOOLS: Final[dict[str, tuple[PlatformToolDefinition, ...]]] = (
-    _platform_app_tools
+PLATFORM_APPLICATION_CATALOG: Final[tuple[PlatformApplicationDefinition, ...]] = (
+    _load_platform_catalog()
 )
+PLATFORM_APPS: Final[tuple[str, ...]] = tuple(
+    application.slug for application in PLATFORM_APPLICATION_CATALOG
+)
+PLATFORM_APP_DISPLAY_NAMES: Final[dict[str, str]] = {
+    application.slug: application.display_name
+    for application in PLATFORM_APPLICATION_CATALOG
+}
+PLATFORM_APP_TOOL_COUNTS: Final[dict[str, int]] = {
+    application.slug: len(application.tools)
+    for application in PLATFORM_APPLICATION_CATALOG
+}
+PLATFORM_APP_TOOLS: Final[dict[str, tuple[PlatformToolDefinition, ...]]] = {
+    application.slug: application.tools for application in PLATFORM_APPLICATION_CATALOG
+}
 
 
 def _platform_app_categories() -> tuple[PlatformAppCategory, ...]:
