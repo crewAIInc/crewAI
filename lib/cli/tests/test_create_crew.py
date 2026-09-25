@@ -802,7 +802,7 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     output = capsys.readouterr().out
     assert "Checking for CREWAI_PLATFORM_INTEGRATION_TOKEN" in output
     assert (
-        "Enterprise Action Auth Token found via "
+        "Platform Integration token found via "
         "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable" in output
     )
 
@@ -850,7 +850,7 @@ def test_platform_validation_announces_concurrent_apps_together(capsys):
     output = capsys.readouterr().out
     assert (failed_apps, token_invalid) == ([], False)
     assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
-    assert "Checking CrewAI Platform Enterprise Action Auth Token and GitHub" not in output
+    assert "Checking CrewAI Platform Integration token and GitHub" not in output
 
 
 def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
@@ -880,8 +880,8 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
     assert (failed_apps, token_invalid) == ([], False)
     assert checked_apps == ["github", "gmail"]
     output = capsys.readouterr().out
-    assert "Checking CrewAI Platform Enterprise Action Auth Token and GitHub integration" in output
-    assert "Checking CrewAI Platform Enterprise Action Auth Token and Gmail integration" in output
+    assert "Checking CrewAI Platform Integration token and GitHub integration" in output
+    assert "Checking CrewAI Platform Integration token and Gmail integration" in output
 
 
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
