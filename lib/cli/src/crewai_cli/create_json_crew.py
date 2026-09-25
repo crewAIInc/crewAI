@@ -1021,7 +1021,7 @@ def _platform_app_name(app: str) -> str:
 
 
 def _prompt_platform_token() -> str:
-    """Explain how to securely prompt for an AMP Enterprise Action Auth Token."""
+    """Explain how to prompt for an AMP Enterprise Action Auth Token."""
     click.secho(
         "  To use CrewAI Platform tools, you need a CrewAI Platform Enterprise Action Auth Token.",
         fg="yellow",
@@ -1034,7 +1034,7 @@ def _prompt_platform_token() -> str:
     return str(
         click.prompt(
             click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
-            hide_input=True,
+            hide_input=False,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
     ).strip()
@@ -1176,7 +1176,7 @@ def _prompt_platform_revalidation_token() -> str:
             ),
             default="",
             show_default=False,
-            hide_input=True,
+            hide_input=False,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
     ).strip()

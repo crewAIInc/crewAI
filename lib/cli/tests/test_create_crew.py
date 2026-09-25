@@ -765,6 +765,20 @@ def test_platform_validation_deduplicates_actions_by_application() -> None:
     assert apps == ["github", "gmail"]
 
 
+def test_platform_token_prompts_show_entered_values(monkeypatch) -> None:
+    prompt_options: list[dict[str, object]] = []
+
+    def prompt(_label: str, **kwargs: object) -> str:
+        prompt_options.append(kwargs)
+        return "token"
+
+    monkeypatch.setattr(json_crew.click, "prompt", prompt)
+
+    assert json_crew._prompt_platform_token() == "token"
+    assert json_crew._prompt_platform_revalidation_token() == "token"
+    assert [options["hide_input"] for options in prompt_options] == [False, False]
+
+
 def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     monkeypatch, capsys
 ):
