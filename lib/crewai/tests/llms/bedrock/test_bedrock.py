@@ -551,6 +551,12 @@ def test_bedrock_context_window_size():
     context_size_titan = llm_titan.get_context_window_size()
     assert context_size_titan > 5000
 
+    llm_claude_21 = LLM(model="bedrock/anthropic.claude-v2:1")
+    assert llm_claude_21.get_context_window_size() == int(200000 * 0.85)
+
+    llm_claude_20 = LLM(model="bedrock/anthropic.claude-v2")
+    assert llm_claude_20.get_context_window_size() == int(100000 * 0.85)
+
 
 def test_bedrock_message_formatting():
     """

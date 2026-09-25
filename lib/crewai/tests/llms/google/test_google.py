@@ -500,6 +500,13 @@ def test_gemini_context_window_size():
     context_size_1_5 = llm_1_5.get_context_window_size()
     assert context_size_1_5 > 1000000
 
+    # Test Gemini 2.0 Flash Thinking
+    llm_thinking = LLM(model="google/gemini-2.0-flash-thinking-exp-01-21")
+    assert llm_thinking.get_context_window_size() == int(1048576 * 0.85)
+
+    llm_thinking_1219 = LLM(model="google/gemini-2.0-flash-thinking-exp-1219")
+    assert llm_thinking_1219.get_context_window_size() == int(32768 * 0.85)
+
 
 def test_gemini_message_formatting():
     """
