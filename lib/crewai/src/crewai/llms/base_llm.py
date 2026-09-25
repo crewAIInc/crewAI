@@ -58,6 +58,9 @@ try:
 except ImportError:
     HAS_CREWAI_FILES = False
 
+logger = logging.getLogger(__name__)
+
+
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -568,7 +571,7 @@ class BaseLLM(BaseModel, ABC):
         from_agent: BaseAgent | None = None,
         temperature: float | None = None,
         top_p: float | None = None,
-        max_tokens: int | float | None = None,
+        max_tokens: float | None = None,
         stream: bool | None = None,
         seed: int | None = None,
         stop_sequences: list[str] | None = None,
@@ -933,17 +936,17 @@ class BaseLLM(BaseModel, ABC):
 
     @staticmethod
     def _validate_structured_output(
-        response: str,
+        response: Any,
         response_format: type[BaseModel] | None,
-    ) -> str | BaseModel:
+    ) -> Any:
         """Validate and parse structured output.
 
         Args:
-            response: Raw response string
+            response: Raw response (string, dict, BaseModel, or None)
             response_format: Optional Pydantic model for structured output
 
         Returns:
-            Parsed response (BaseModel instance if response_format provided, otherwise string)
+            Parsed response (BaseModel instance if response_format provided, otherwise raw response)
 
         Raises:
             ValueError: If structured output validation fails
@@ -951,9 +954,44 @@ class BaseLLM(BaseModel, ABC):
         if response_format is None:
             return response
 
+        if response is None:
+            raise ValueError(
+                f"Failed to parse response into {response_format.__name__}: response is None"
+            )
+
+        if isinstance(response, BaseModel):
+            if isinstance(response, response_format):
+                return response
+            try:
+                return response_format.model_validate(response.model_dump())
+            except Exception as e:
+                logger.warning(f"Failed to parse structured output: {e}")
+                raise ValueError(
+                    f"Failed to parse response into {response_format.__name__}: {e}"
+                ) from e
+
+        if isinstance(response, (dict, list, tuple)):
+            try:
+                return response_format.model_validate(response)
+            except Exception as e:
+                logger.warning(f"Failed to parse structured output: {e}")
+                raise ValueError(
+                    f"Failed to parse response into {response_format.__name__}: {e}"
+                ) from e
+
+        if not isinstance(response, str):
+            try:
+                return response_format.model_validate(response)
+            except Exception as e:
+                logger.warning(f"Failed to parse structured output: {e}")
+                raise ValueError(
+                    f"Failed to parse response into {response_format.__name__}: {e}"
+                ) from e
+
         try:
-            if response.strip().startswith("{") or response.strip().startswith("["):
-                data = json.loads(response)
+            cleaned = response.strip()
+            if cleaned.startswith(("{", "[")):
+                data = json.loads(cleaned)
                 return response_format.model_validate(data)
 
             json_match = _JSON_EXTRACTION_PATTERN.search(response)
@@ -964,10 +1002,12 @@ class BaseLLM(BaseModel, ABC):
             raise ValueError("No JSON found in response")
 
         except (json.JSONDecodeError, ValueError) as e:
-            logging.warning(f"Failed to parse structured output: {e}")
+            logger.warning(f"Failed to parse structured output: {e}")
             raise ValueError(
                 f"Failed to parse response into {response_format.__name__}: {e}"
             ) from e
+
+
 
     @staticmethod
     def _extract_provider(model: str) -> str:
