@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -13,6 +14,20 @@ if TYPE_CHECKING:
 
 
 _persistence_registry: dict[str, type[FlowPersistence]] = {}
+
+
+def _json_default(obj: Any) -> Any:
+    """Serialize flow-state values that are not JSON-native."""
+    if isinstance(obj, BaseModel):
+        try:
+            return obj.model_dump(mode="json")
+        except Exception:
+            return obj.model_dump(mode="python")
+    if isinstance(obj, (set, tuple)):
+        return list(obj)
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
 
 
 class FlowPersistence(BaseModel, ABC):

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -15,25 +15,11 @@ from crewai_core.paths import db_storage_path
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
-from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.persistence.base import FlowPersistence, _json_default
 
 
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
-
-
-def _json_default(obj: Any) -> Any:
-    """Fallback serializer for non-primitive types in JSON dumps."""
-    if isinstance(obj, BaseModel):
-        try:
-            return obj.model_dump(mode="json")
-        except Exception:
-            return obj.model_dump(mode="python")
-    if isinstance(obj, (set, tuple)):
-        return list(obj)
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()
-    return str(obj)
 
 
 class SQLiteFlowPersistence(FlowPersistence):
