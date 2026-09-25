@@ -1,4 +1,12 @@
-"""Generated CrewAI Platform application catalog."""
+"""Generated CrewAI Platform application catalog.
+
+Maintenance instructions for agents:
+
+1. Fetch the latest Platform catalog YAML from ``crewai-plus/db/clipper``.
+2. Parse the YAML source instead of editing this generated catalog by hand.
+3. Regenerate ``PLATFORM_CATALOG`` with the parsed JSON-compatible data.
+4. Verify the generated catalog before committing the update.
+"""
 
 # ruff: noqa: RUF001
 
