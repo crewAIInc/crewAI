@@ -418,7 +418,7 @@ def test_id_restore_still_drops_unknown_keys(
 # ── TUI vs terminal (headless/deploy) routing ──────────────────────
 
 
-def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False):
+def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False, want_eval=False):
     """Replace CrewRunApp/EventListener/summary so _run_declarative_flow_tui is
     driven by a controllable fake app."""
 
@@ -430,6 +430,7 @@ def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False):
             self._crew_name = crew_name
             self._status = status
             self._want_deploy = want_deploy
+            self._want_eval = want_eval
             self._crew_result = "result"
 
         def run(self):
@@ -539,6 +540,19 @@ def test_run_declarative_flow_tui_no_deploy_when_not_requested(
     )
 
     assert deploy_calls == []
+
+
+def test_run_declarative_flow_tui_chains_eval(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A declarative flow has the button too, and the same tail runs it."""
+    _install_fake_flow_app(monkeypatch, status="completed", want_eval=True)
+    eval_calls: list[bool] = []
+    monkeypatch.setattr("crewai_cli.run_crew._chain_eval", lambda: eval_calls.append(True))
+
+    run_declarative_flow_module._run_declarative_flow_tui(
+        SimpleNamespace(name="Flow"), None
+    )
+
+    assert eval_calls == [True]
 
 
 def test_run_declarative_flow_tui_enables_flow_events(

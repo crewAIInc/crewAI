@@ -421,6 +421,19 @@ FooterKey .footer-key--key {
     color: #888888;
 }
 
+#btn-eval {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border: none;
+}
+#btn-eval:hover {
+    background: #3d3d3d;
+}
+#btn-eval:disabled {
+    background: #202020;
+    color: #888888;
+}
+
 #btn-deploy {
     background: #333333;
     color: #e0e0e0;
@@ -437,6 +450,7 @@ FooterKey .footer-key--key {
         Binding("s", "toggle_sidebar", "Sidebar"),
         Binding("l", "toggle_logs", "Logs"),
         Binding("t", "view_traces", "Traces", show=False),
+        Binding("e", "evaluate_crew", "Evaluate", show=False),
         Binding("d", "deploy_crew", "Deploy", show=False),
         Binding("down", "log_down", "Log ↓", show=False),
         Binding("up", "log_up", "Log ↑", show=False),
@@ -529,6 +543,7 @@ FooterKey .footer-key--key {
         self._current_method: str | None = None
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
+        self._want_eval: bool = False
         self._consent_screen: TraceConsentScreen | None = None
         self._trace_consent_pending: threading.Event | None = None
         self._discard_trace_on_exit = False
@@ -557,6 +572,7 @@ FooterKey .footer-key--key {
                 yield Static(id="sidebar-content")
                 with Vertical(id="sidebar-actions"):
                     yield Button("View Traces", id="btn-traces", classes="action-btn")
+                    yield Button("Evaluate", id="btn-eval", classes="action-btn")
                     yield Button("Deploy", id="btn-deploy", classes="action-btn")
             with Vertical(id="main-panel"):
                 yield Static(id="task-header")
@@ -1066,6 +1082,21 @@ FooterKey .footer-key--key {
         self._unsubscribe()
         self.exit(self._crew_result)
 
+    def action_evaluate_crew(self) -> None:
+        """Grade the run that just finished.
+
+        Like Deploy, this leaves the terminal UI first: `crewai eval` talks —
+        it prints the link to follow, waits for the verdict and prints it — and
+        that belongs in the terminal, not inside a full-screen app.
+        """
+        if self._status != "completed":
+            return
+
+        self._record_tui_button_click("evaluate")
+        self._want_eval = True
+        self._unsubscribe()
+        self.exit(self._crew_result)
+
     def _record_tui_button_click(self, button_name: str) -> None:
         try:
             if self._telemetry is None:
@@ -1078,6 +1109,8 @@ FooterKey .footer-key--key {
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-traces":
             self.action_view_traces()
+        elif event.button.id == "btn-eval":
+            self.action_evaluate_crew()
         elif event.button.id == "btn-deploy":
             self.action_deploy_crew()
 

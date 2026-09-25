@@ -137,6 +137,37 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
     assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
 
+def test_chain_eval_runs_the_command_itself(monkeypatch, capsys) -> None:
+    """The button must not reimplement `crewai eval`, or the two can disagree."""
+    called: list[bool] = []
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.eval_crew", lambda: called.append(True)
+    )
+
+    run_crew._chain_eval()
+
+    assert called == [True]
+    assert "Evaluating this run" in capsys.readouterr().out
+
+
+def test_chain_eval_lets_the_command_say_why_it_stopped(monkeypatch, capsys) -> None:
+    """`crewai eval` exits with its own words and its own code; a clean exit is
+    not an error, and a failure is the command's to report."""
+    def refuse() -> None:
+        raise SystemExit(0)
+
+    monkeypatch.setattr("crewai_cli.experimental.eval_crew.eval_crew", refuse)
+    run_crew._chain_eval()  # no traceback, nothing added
+
+    def blow_up() -> None:
+        raise RuntimeError("AMP said no")
+
+    monkeypatch.setattr("crewai_cli.experimental.eval_crew.eval_crew", blow_up)
+    run_crew._chain_eval()  # a failed evaluation never fails the run
+
+    assert "Evaluation failed: AMP said no" in capsys.readouterr().out
+
+
 def test_view_traces_button_click_records_telemetry(monkeypatch) -> None:
     app = CrewRunApp()
     app._status = "completed"
@@ -168,6 +199,35 @@ def test_deploy_button_click_records_telemetry() -> None:
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:deploy")
     assert app._want_deploy is True
     assert exits == [app._crew_result]
+
+
+def test_evaluate_button_leaves_the_tui_and_records_telemetry() -> None:
+    """Evaluate behaves like Deploy: the app exits and the command takes over,
+    because `crewai eval` prints a link, waits, and prints a verdict."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
+
+    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-eval")))
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
+    assert app._want_eval is True
+    assert exits == [app._crew_result]
+
+
+def test_evaluate_before_completion_records_nothing() -> None:
+    app = CrewRunApp()
+    app._status = "running"
+    app._telemetry = Mock()
+
+    app.action_evaluate_crew()
+
+    app._telemetry.feature_usage_span.assert_not_called()
+    assert app._want_eval is False
 
 
 def test_conversation_turn_done_records_assistant_message() -> None:

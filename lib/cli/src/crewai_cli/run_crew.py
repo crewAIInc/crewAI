@@ -370,6 +370,9 @@ def _run_json_crew(
     if getattr(app, "_want_deploy", False):
         _chain_deploy()
 
+    if getattr(app, "_want_eval", False):
+        _chain_eval()
+
     return app._crew_result
 
 
@@ -491,6 +494,29 @@ def _run_json_crew_in_project_env(
         raise SystemExit(1) from e
 
     return None
+
+
+def _chain_eval() -> None:
+    """Grade the run that just finished, in the terminal the TUI has left.
+
+    `crewai eval` is the whole command: it finds the run crewAI recorded, asks
+    AMP to evaluate it, prints the link to follow and then the verdict. Running
+    it here rather than reimplementing it means the button and the command can
+    never say different things.
+    """
+    from rich.console import Console
+
+    console = Console()
+    try:
+        from crewai_cli.experimental.eval_crew import eval_crew
+
+        console.print("\nEvaluating this run…\n", style="bold #FF5A50")
+        eval_crew()
+    except SystemExit as exc:  # the command says why and picks the code
+        if isinstance(exc.code, int) and exc.code not in (0, None):
+            raise
+    except Exception as error:  # noqa: BLE001 - a failed evaluation never fails the run
+        console.print(f"\nEvaluation failed: {error}\n", style="bold red")
 
 
 def _chain_deploy() -> None:
