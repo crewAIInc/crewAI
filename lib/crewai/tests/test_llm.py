@@ -345,6 +345,24 @@ def test_context_window_validation():
 
 
 @pytest.mark.parametrize(
+    "model,expected_size",
+    [
+        ("o1", 200000),
+        ("o1-pro", 200000),
+        ("o3", 200000),
+        ("o1-preview", 128000),
+        ("o1-mini", 128000),
+    ],
+)
+def test_o_series_context_window(model: str, expected_size: int) -> None:
+    """Test that O-series models use their official context windows.
+
+    Fixes https://github.com/crewAIInc/crewAI/issues/7303
+    """
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(expected_size * CONTEXT_WINDOW_USAGE_RATIO)
+
+@pytest.mark.parametrize(
     "model",
     ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
 )
