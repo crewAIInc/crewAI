@@ -34,6 +34,8 @@ class FakeAMP:
 
     def create_evaluation(self, execution_id):
         self.calls.append(("create", execution_id))
+        if isinstance(self.create, list):
+            return self.create.pop(0) if len(self.create) > 1 else self.create[0]
         return self.create
 
     def get_evaluation(self, evaluation_id):
@@ -626,6 +628,98 @@ def test_the_run_it_starts_hands_its_own_id_back(project, monkeypatch):
 
     # the run it just watched, not whatever the project last recorded
     assert amp.calls[0] == ("create", "run-it-just-did")
+
+
+def test_a_run_in_a_child_process_is_found_through_the_record_it_wrote(
+    project, monkeypatch
+):
+    """A project's crew runs through `uv run …`. Nothing in this process
+    reaches that app but the environment, and what it recorded is how its id
+    comes back."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+
+    def fake_run_crew() -> None:
+        # what the child is told, and all it is told
+        assert os.environ["CREWAI_EVAL_AWAITING_RUN"] == "1"
+        record_last_run(directory, "run-the-child-did")
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls[0] == ("create", "run-the-child-did")
+    # and the handshake does not outlive the command
+    assert "CREWAI_EVAL_AWAITING_RUN" not in os.environ
+
+
+def _seconds_ago(seconds: float) -> str:
+    from datetime import datetime, timedelta, timezone
+
+    return (datetime.now(timezone.utc) - timedelta(seconds=seconds)).isoformat()
+
+
+NOT_FOUND = httpx.Response(
+    404,
+    json={
+        "error": "trace_not_found",
+        "message": "No spans recorded for execution 6f31fe1a",
+    },
+)
+QUEUED = httpx.Response(202, json={"id": "ev-1", "url": URL, "status": "queued"})
+
+
+def test_a_run_that_just_finished_waits_for_its_spans_to_reach_amp(
+    project, monkeypatch, capsys
+):
+    """The exporter sends the spans as the run closes and AMP queues them, so a
+    command that just watched the run asks a moment too early. It waits."""
+    directory, _ = project
+    record_last_run(directory, recorded_at=_seconds_ago(5))
+    amp = install(monkeypatch, FakeAMP(create=[NOT_FOUND, QUEUED], statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert [call for call in amp.calls if call[0] == "create"] == [
+        ("create", EXECUTION_ID),
+        ("create", EXECUTION_ID),
+    ]
+    assert "has not reached CrewAI AMP yet" in capsys.readouterr().out
+
+
+def test_a_run_from_hours_ago_is_not_waited_for(project, monkeypatch, capsys):
+    """Nothing is in flight: AMP does not hold this run, and saying so at once
+    is the useful answer."""
+    directory, _ = project
+    record_last_run(directory, recorded_at=_seconds_ago(7200))
+    amp = install(monkeypatch, FakeAMP(create=[NOT_FOUND, QUEUED]))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    assert [call for call in amp.calls if call[0] == "create"] == [
+        ("create", EXECUTION_ID)
+    ]
+    assert "No spans recorded" in capsys.readouterr().out
+
+
+def test_an_id_somebody_typed_is_answered_at_once(project, monkeypatch):
+    """`--run <id>` is a question about a named run, not about this project's
+    last one, and a typo should not cost two minutes."""
+    directory, _ = project
+    record_last_run(directory, recorded_at=_seconds_ago(5))
+    amp = install(monkeypatch, FakeAMP(create=[NOT_FOUND, QUEUED]))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew(run_id="1d6b3f70-0000-4000-8000-000000000000")
+
+    assert [call for call in amp.calls if call[0] == "create"] == [
+        ("create", "1d6b3f70-0000-4000-8000-000000000000")
+    ]
 
 
 def test_declining_the_offer_exits_cleanly_with_the_steps(project, monkeypatch, capsys):

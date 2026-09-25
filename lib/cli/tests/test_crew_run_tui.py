@@ -291,6 +291,48 @@ def test_a_run_started_for_an_evaluation_closes_itself(monkeypatch) -> None:
     assert app._want_eval is False
 
 
+def test_a_child_process_run_reads_the_waiting_evaluation_off_its_environment(
+    monkeypatch,
+) -> None:
+    """A project's crew runs through `uv run …`, so the app is in another
+    process — the one thing that crosses is the environment the command passed
+    it, and the id travels back through the project's last-run record."""
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: True)
+    with crew_run_tui.evaluating_after_run():
+        passed = crew_run_tui.os.environ["CREWAI_EVAL_AWAITING_RUN"]
+
+    # the child's world: that variable, and nothing this process set
+    assert "CREWAI_EVAL_AWAITING_RUN" not in crew_run_tui.os.environ
+    monkeypatch.setenv("CREWAI_EVAL_AWAITING_RUN", passed)
+    app = CrewRunApp()
+    app._execution_uuid = "run-in-the-child"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+
+    app._leave_if_an_evaluation_is_waiting()
+
+    assert exits == [app._crew_result]
+    assert app._want_eval is False
+
+
+def test_a_run_that_failed_leaves_too(monkeypatch) -> None:
+    """The command behind the screen says there is nothing to grade; it cannot
+    say it while somebody has to quit a screen first."""
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    with crew_run_tui.evaluating_after_run() as watched:
+        app = CrewRunApp()
+        app._status = "failed"
+        app._unsubscribe = lambda: None  # type: ignore[method-assign]
+        exits: list[object] = []
+        app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+
+        app._leave_if_an_evaluation_is_waiting()
+
+    assert exits == [app._crew_result]
+    assert watched["execution_id"] is None
+
+
 def test_a_run_nobody_is_waiting_on_stays_open() -> None:
     app = CrewRunApp()
     app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]

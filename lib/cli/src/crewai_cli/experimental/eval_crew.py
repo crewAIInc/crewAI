@@ -15,6 +15,7 @@ traces. The command sends the saved `crewai login` when there is one.
 from __future__ import annotations
 
 import contextlib
+from datetime import datetime
 from ipaddress import ip_address
 import json
 import os
@@ -44,6 +45,16 @@ LAST_RUN_FILE = Path(".crewai") / "last_run.json"
 TRACING_ENV_VAR = "CREWAI_TRACING_ENABLED"
 POLL_SECONDS = 3.0
 POLL_RETRIES = 5  # consecutive unreachable / 5xx polls before giving up; the evaluation keeps running
+
+# A run's spans reach AMP a little after the run ends — the exporter sends them
+# as the process closes and AMP has its own queue behind that. A command that
+# just watched the run would otherwise ask for a trace that is still in flight
+# and be told, correctly and uselessly, that there is nothing there. So a run
+# we know is fresh gets a wait; an id somebody typed does not, and fails at
+# once as it always has.
+SPANS_WAIT_SECONDS = 120.0
+SPANS_POLL_SECONDS = 5.0
+RUN_IS_FRESH_SECONDS = 600.0
 FINISHED = {"done", "failed"}
 STATUSES = {"queued", "running"} | FINISHED
 
@@ -90,6 +101,7 @@ def eval_crew(run_id: str | None = None) -> None:
     _load_project_env()
     record = read_last_run() or {}
     execution_id = run_id or record.get("execution_id")
+    watched = execution_id is None
     if execution_id is None:
         execution_id = _run_now_or_explain()
         record = read_last_run() or {}
@@ -103,7 +115,11 @@ def eval_crew(run_id: str | None = None) -> None:
             ),
             style="yellow",
         )
-    started = _start_evaluation(client, execution_id)
+    started = _start_evaluation(
+        client,
+        execution_id,
+        wait_for_spans=watched or (run_id is None and _ran_just_now(record)),
+    )
     # After, not before: `cli_usage:eval` counts an evaluation, and a refused
     # request — a run AMP does not hold, a credential it will not take — is not
     # one. `_start_evaluation` raises rather than returning on those.
@@ -121,6 +137,26 @@ def eval_crew(run_id: str | None = None) -> None:
     _print_verdict(finished, url)
     if finished.get("status") != "done":
         raise SystemExit(1)
+
+
+def _ran_just_now(record: dict[str, Any]) -> bool:
+    """Did the project record this run in the last few minutes?
+
+    The one thing that tells a run still landing in AMP apart from a run AMP
+    does not hold: when it finished. A record without a readable stamp is not
+    assumed fresh — the wait is for the case we can name.
+    """
+    stamp = str(record.get("recorded_at") or record.get("finished_at") or "")
+    if not stamp:
+        return False
+
+    try:
+        when = datetime.fromisoformat(stamp)
+    except ValueError:
+        return False
+
+    now = datetime.now(when.tzinfo) if when.tzinfo else datetime.now()
+    return 0 <= (now - when).total_seconds() <= RUN_IS_FRESH_SECONDS
 
 
 def _trusted_amp_origins() -> set[str]:
@@ -293,11 +329,29 @@ def _enable_tracing() -> None:
     )
 
 
-def _start_evaluation(client: PlusAPI, execution_id: str) -> dict[str, Any]:
-    try:
-        response = client.create_evaluation(execution_id)
-    except httpx.HTTPError as error:
-        _fail(f"Could not reach AMP to start the evaluation: {error}")
+def _start_evaluation(
+    client: PlusAPI, execution_id: str, *, wait_for_spans: bool = False
+) -> dict[str, Any]:
+    deadline = time.monotonic() + SPANS_WAIT_SECONDS if wait_for_spans else 0.0
+    said = False
+    while True:
+        try:
+            response = client.create_evaluation(execution_id)
+        except httpx.HTTPError as error:
+            _fail(f"Could not reach AMP to start the evaluation: {error}")
+        # The run finished moments ago and its spans are still on their way:
+        # waiting is the answer, not a 404 the reader can do nothing with.
+        if response.status_code == 404 and time.monotonic() < deadline:
+            if not said:
+                console.print(
+                    "The run's trace has not reached CrewAI AMP yet — waiting up to "
+                    f"{int(SPANS_WAIT_SECONDS // 60)} minutes for it (Ctrl-C to stop)…",
+                    style="dim",
+                )
+                said = True
+            time.sleep(SPANS_POLL_SECONDS)
+            continue
+        break
     if response.status_code in (200, 202):
         payload = _payload(response)
         # The id is what every later call is made with, so a missing or

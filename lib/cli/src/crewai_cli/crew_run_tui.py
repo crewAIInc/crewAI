@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 import json as _json
+import os
 import re
 import threading
 import time
@@ -296,6 +297,14 @@ _AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
     "crewai_tui_auto_eval", default=None
 )
 
+# The same word, for the app that runs in a CHILD process. A project's crew and
+# flow are run through `uv run …` in the project's own environment, and nothing
+# in this process's memory reaches that app — the environment does, and it is
+# the only thing that does. Set and cleared by `evaluating_after_run()` alone:
+# an internal handshake between two parts of one command, never a setting for
+# anyone to turn on.
+_AWAITING_EVAL_ENV = "CREWAI_EVAL_AWAITING_RUN"
+
 
 @contextmanager
 def evaluating_after_run() -> Iterator[dict[str, str | None]]:
@@ -306,13 +315,38 @@ def evaluating_after_run() -> Iterator[dict[str, str | None]]:
     waiting behind — so inside this block the app closes itself when the run
     ends and leaves its execution id in the holder. It does NOT chain into an
     evaluation of its own: the command that opened it is the one evaluating.
+
+    A run in the same process leaves its id here; a run in a child process
+    leaves it in the project's last-run record, which the caller reads when the
+    holder comes back empty.
     """
     holder: dict[str, str | None] = {"execution_id": None}
     token = _AUTO_EVAL.set(holder)
+    before = os.environ.get(_AWAITING_EVAL_ENV)
+    os.environ[_AWAITING_EVAL_ENV] = "1"
     try:
         yield holder
     finally:
         _AUTO_EVAL.reset(token)
+        if before is None:
+            os.environ.pop(_AWAITING_EVAL_ENV, None)
+        else:
+            os.environ[_AWAITING_EVAL_ENV] = before
+
+
+def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
+    """The evaluation this run was started for, if there is one.
+
+    In this process the holder itself; in a child process the environment says
+    an evaluation is waiting and the holder is a local one — the id travels
+    back through the project's last-run record instead, which the child writes
+    when its trace is exported.
+    """
+    holder = _AUTO_EVAL.get()
+    if holder is not None:
+        return holder
+
+    return {"execution_id": None} if os.environ.get(_AWAITING_EVAL_ENV) else None
 
 
 def _trace_was_recorded(execution_uuid: str) -> bool:
@@ -594,8 +628,9 @@ FooterKey .footer-key--key {
         self._execution_uuid: str | None = None
         self._eval_execution_id: str | None = None
         # Read here, on the thread that built the app, because that is where
-        # `crewai eval` set it.
-        self._auto_eval: dict[str, str | None] | None = _AUTO_EVAL.get()
+        # `crewai eval` set it — or in the environment it passed to this
+        # process, when the run is a child of that command.
+        self._auto_eval: dict[str, str | None] | None = _an_evaluation_is_waiting()
         self._consent_screen: TraceConsentScreen | None = None
         self._trace_consent_pending: threading.Event | None = None
         self._discard_trace_on_exit = False
@@ -855,6 +890,10 @@ FooterKey .footer-key--key {
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
         self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+        # A run that failed still leaves: the command waiting behind this screen
+        # has its own way of saying there is nothing to grade, and it cannot say
+        # it while somebody has to quit a screen first.
+        self._leave_if_an_evaluation_is_waiting()
 
     # ── Conversational flow execution ───────────────────────
 
