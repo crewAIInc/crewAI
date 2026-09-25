@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
+import heapq
 import json
 import logging
 import os
@@ -31,6 +32,20 @@ DEFAULT_VECTOR_DIM = 3072
 # Prevents unbounded memory use when scanning large tables for scope info,
 # listing, or deletion. Internal only -- not user-configurable.
 _SCAN_ROWS_LIMIT = 50_000
+
+# Columns fetched for list_records; excludes the heavy 'vector' column to minimize I/O and RAM.
+_RECORD_METADATA_COLUMNS = [
+    "id",
+    "content",
+    "scope",
+    "categories_str",
+    "metadata_str",
+    "importance",
+    "created_at",
+    "last_accessed",
+    "source",
+    "private",
+]
 
 # Retry settings for LanceDB commit conflicts (optimistic concurrency).
 # Under heavy write load (many concurrent saves), the table version can
@@ -498,6 +513,23 @@ class LanceDBStorage:
     ) -> list[MemoryRecord]:
         """List records in a scope, newest first.
 
+        Note on LanceDB compatibility constraint:
+            CrewAI is pinned to ``lancedb>=0.29.2,<0.30.1``. In LanceDB <=0.30.x,
+            the query builder (``table.search()``) does not expose native ``order_by``
+            (native ordering was introduced in LanceDB 0.33+ via ``ColumnOrdering``).
+            To provide correct newest-first pagination without materializing heavy
+            embedding vectors or truncating large scopes with an arbitrary row cap:
+            1. Pushes the ``scope`` prefix filter down to LanceDB's query engine.
+            2. Projects only metadata columns (excluding the heavy ``vector`` column).
+            3. Streams Arrow record batches through a bounded min-heap of size
+               ``offset + limit``, keeping peak memory usage strictly bounded to
+               ``O(offset + limit)`` regardless of table size.
+            4. Deserializes only the sliced records into ``MemoryRecord`` instances.
+
+            If CrewAI upgrades to LanceDB >=0.33.0 in the future, this heap scan
+            can be simplified to native database query ordering:
+            ``q.order_by([ColumnOrdering(column_name="created_at", ascending=False)]).offset(offset).limit(limit)``.
+
         Args:
             scope_prefix: Optional scope path prefix to filter by.
             limit: Maximum number of records to return.
@@ -506,10 +538,52 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        rows = self._scan_rows(scope_prefix, limit=limit + offset)
-        records = [self._row_to_record(r) for r in rows]
-        records.sort(key=lambda r: r.created_at, reverse=True)
-        return records[offset : offset + limit]
+        if self._table is None or limit <= 0 or offset < 0:
+            return []
+
+        q = self._table.search()
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            if not prefix.startswith("/"):
+                prefix = "/" + prefix
+            q = q.where(f"scope LIKE '{prefix}%'")
+        q = q.select(_RECORD_METADATA_COLUMNS)
+
+        k = offset + limit
+        heap: list[tuple[datetime, int, dict[str, Any]]] = []
+        counter = 0
+
+        def _get_created_at(row: dict[str, Any]) -> datetime:
+            """Extract and parse created_at into a timezone-aware UTC datetime."""
+            val = row.get("created_at")
+            if val is None:
+                return datetime.min.replace(tzinfo=timezone.utc)
+            if isinstance(val, datetime):
+                dt = val
+            else:
+                try:
+                    dt = datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+                except Exception:
+                    return datetime.min.replace(tzinfo=timezone.utc)
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+
+        reader = q.to_batches(batch_size=8192)
+        for batch in reader:
+            for row in batch.to_pylist():
+                dt = _get_created_at(row)
+                counter += 1
+                if len(heap) < k:
+                    heapq.heappush(heap, (dt, counter, row))
+                elif dt > heap[0][0]:
+                    heapq.heapreplace(heap, (dt, counter, row))
+
+        if not heap or offset >= len(heap):
+            return []
+
+        heap.sort(key=lambda x: x[0], reverse=True)
+        return [self._row_to_record(item[2]) for item in heap[offset : offset + limit]]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
