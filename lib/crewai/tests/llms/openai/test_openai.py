@@ -213,6 +213,10 @@ def test_openai_completion_module_is_imported(monkeypatch):
     """
     module_name = "crewai.llms.providers.openai.completion"
 
+    # Restore both module references after the import test finishes.
+    monkeypatch.delattr(
+        sys.modules["crewai.llms.providers.openai"], "completion", raising=False
+    )
     monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="gpt-4o")

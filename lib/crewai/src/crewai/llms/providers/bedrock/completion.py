@@ -2147,6 +2147,7 @@ class BedrockCompletion(BaseLLM):
             "anthropic.claude-3-sonnet": 200000,
             "anthropic.claude-3-haiku": 200000,
             "anthropic.claude-3-7-sonnet": 200000,
+            "anthropic.claude-v2:1": 200000,
             "anthropic.claude-v2": 100000,
             "amazon.titan-text-express": 8000,
             "ai21.j2-ultra": 8192,
