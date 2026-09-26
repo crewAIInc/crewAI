@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import pytest
+
 from crewai.llms.cache import (
     CACHE_BREAKPOINT_KEY,
     mark_cache_breakpoint,
     strip_cache_breakpoint,
 )
-from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.llms.providers.openai.completion import OpenAICompletion
+
+try:
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    HAS_ANTHROPIC = True
+except ImportError:
+    HAS_ANTHROPIC = False
 
 
 class TestCacheMarkerHelpers:
@@ -51,6 +61,7 @@ class TestBaseFormatDoesNotMutate:
 
 
 class TestAnthropicCacheStamping:
+    @pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic provider not available")
     def test_stamps_system_with_cache_control(self) -> None:
         llm = AnthropicCompletion(model="claude-sonnet-4-5")
         messages = [
@@ -64,6 +75,7 @@ class TestAnthropicCacheStamping:
         last_block = formatted[0]["content"][-1]
         assert last_block["cache_control"] == {"type": "ephemeral"}
 
+    @pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic provider not available")
     def test_stamps_stable_user_not_tool_result(self) -> None:
         """Within a ReAct loop, tool results are flattened into a trailing
         user message. We must NOT stamp that volatile trailing block — we
@@ -116,6 +128,7 @@ class TestAnthropicCacheStamping:
         for block in tool_carrier["content"]:
             assert "cache_control" not in block
 
+    @pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic provider not available")
     def test_assistant_marker_is_ignored(self) -> None:
         """Markers on assistant messages have no stable stamp target after
         Anthropic's role coalescing, so they should be silently ignored
@@ -142,6 +155,7 @@ class TestAnthropicCacheStamping:
                     if isinstance(block, dict):
                         assert "cache_control" not in block
 
+    @pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic provider not available")
     def test_list_content_user_marker_matches(self) -> None:
         """A pre-formatted user message with a single text block should still
         match against the post-format user message.
@@ -162,6 +176,7 @@ class TestAnthropicCacheStamping:
         text_block = next(b for b in content if isinstance(b, dict) and b.get("type") == "text")
         assert text_block.get("cache_control") == {"type": "ephemeral"}
 
+    @pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic provider not available")
     def test_unmarked_messages_get_no_cache_control(self) -> None:
         llm = AnthropicCompletion(model="claude-sonnet-4-5")
         messages = [
@@ -189,3 +204,99 @@ class TestNonAnthropicStripsMarker:
         formatted = llm._format_messages(messages)
         for m in formatted:
             assert CACHE_BREAKPOINT_KEY not in m
+
+
+# Test-only LLM subclass for direct instantiation.
+# LLM.__new__ requires a model argument and routes to providers.
+# This minimal subclass allows model_construct() to bypass __new__
+# entirely, creating a bare instance for testing internal methods.
+from crewai.llm import LLM
+
+
+class _LLMForTest(LLM):
+    def __new__(cls, **kwargs: Any) -> "_LLMForTest":
+        # Bypass LLM.__new__ routing
+        return object.__new__(cls)
+
+
+class TestLiteLLMStripsMarker:
+    """LiteLLM path must strip cache_breakpoint to avoid rejection by
+    providers like Mistral that don't recognize the key.
+
+    These tests use LLM._format_messages_for_provider() directly to verify
+    the marker stripping logic without requiring LiteLLM installation or
+    network access. The method is used by LLM.call() in the LiteLLM path.
+    """
+
+    def test_mistral_format_strips_marker(self) -> None:
+        """Mistral models via LiteLLM must have cache_breakpoint stripped."""
+        llm = _LLMForTest.model_construct(
+            model="mistral/mistral-large-latest",
+            is_anthropic=False,
+        )
+
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable"}),
+            mark_cache_breakpoint({"role": "user", "content": "hi"}),
+        ]
+        formatted = llm._format_messages_for_provider(messages)
+        for m in formatted:
+            assert CACHE_BREAKPOINT_KEY not in m
+            assert "role" in m
+            assert "content" in m
+
+    def test_generic_litellm_format_strips_marker(self) -> None:
+        """Any LiteLLM model must have cache_breakpoint stripped."""
+        llm = _LLMForTest.model_construct(
+            model="gpt-4o-mini",
+            is_anthropic=False,
+        )
+
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable"}),
+            mark_cache_breakpoint({"role": "user", "content": "hi"}),
+        ]
+        formatted = llm._format_messages_for_provider(messages)
+        for m in formatted:
+            assert CACHE_BREAKPOINT_KEY not in m
+
+    def test_marker_stripping_does_not_mutate_original(self) -> None:
+        """Stripping markers must not modify the original messages list."""
+        llm = _LLMForTest.model_construct(
+            model="mistral/mistral-large-latest",
+            is_anthropic=False,
+        )
+
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable"}),
+            mark_cache_breakpoint({"role": "user", "content": "hi"}),
+        ]
+        llm._format_messages_for_provider(messages)
+        # Original messages should still have markers
+        assert messages[0][CACHE_BREAKPOINT_KEY] is True
+        assert messages[1][CACHE_BREAKPOINT_KEY] is True
+
+    def test_format_preserves_all_other_keys(self) -> None:
+        """Only cache_breakpoint should be stripped, all other keys preserved."""
+        llm = _LLMForTest.model_construct(
+            model="mistral/mistral-large-latest",
+            is_anthropic=False,
+        )
+
+        messages = [
+            mark_cache_breakpoint(
+                {
+                    "role": "system",
+                    "content": "stable",
+                    "name": "system_msg",
+                    "extra_field": "value",
+                }
+            ),
+        ]
+        formatted = llm._format_messages_for_provider(messages)
+        assert len(formatted) == 1
+        assert CACHE_BREAKPOINT_KEY not in formatted[0]
+        assert formatted[0]["role"] == "system"
+        assert formatted[0]["content"] == "stable"
+        assert formatted[0]["name"] == "system_msg"
+        assert formatted[0]["extra_field"] == "value"
