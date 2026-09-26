@@ -816,6 +816,29 @@ def test_openai_responses_api_prepare_params():
     assert params["input"] == [{"role": "user", "content": "Hello!"}]
 
 
+def test_openai_responses_system_multimodal_content_uses_text_parts():
+    """Responses instructions must not contain a Python repr of content parts."""
+    llm = OpenAICompletion(model="gpt-5", api="responses")
+    messages = [
+        {
+            "role": "system",
+            "content": [
+                {"type": "text", "text": "Follow the receipt policy."},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/policy.png"},
+                },
+            ],
+        },
+        {"role": "user", "content": "Can I get a refund?"},
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["instructions"] == "Follow the receipt policy."
+    assert "image_url" not in params["instructions"]
+
+
 def test_openai_responses_api_tool_format():
     """Test that tools are converted to Responses API format (internally-tagged)."""
     llm = OpenAICompletion(model="gpt-5", api="responses")
