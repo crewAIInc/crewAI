@@ -31,3 +31,14 @@ def test_trailing_closing_brace_is_ignored():
     result = _handle('{"name": "Ada"}}')
 
     assert result == {"name": "Ada"}
+
+
+def test_literal_control_characters_inside_strings():
+    """Decoding stays as lenient as the json.loads(..., strict=False) it replaced.
+
+    json.JSONDecoder() defaults to strict=True, which rejects a raw newline or
+    tab inside a JSON string - exactly what models emit.
+    """
+    text = '{"name": "Ada\nline2"}'   # a real newline inside the value
+
+    assert _handle(text) == {"name": "Ada\nline2"}

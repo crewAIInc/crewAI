@@ -36,7 +36,9 @@ def _extract_first_json_object(text: str) -> str | None:
     if start == -1:
         return None
     try:
-        _, end = json.JSONDecoder().raw_decode(text, start)
+        # strict=False to match the leniency this path had before: models emit
+        # literal control characters (raw newlines and tabs) inside strings.
+        _, end = json.JSONDecoder(strict=False).raw_decode(text, start)
     except json.JSONDecodeError:
         return None
     return text[start:end]
