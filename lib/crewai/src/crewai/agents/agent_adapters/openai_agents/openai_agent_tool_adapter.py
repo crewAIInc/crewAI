@@ -14,6 +14,11 @@ from crewai.agents.agent_adapters.openai_agents.protocols import (
     OpenAIFunctionTool,
     OpenAITool,
 )
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
+)
 from crewai.tools import BaseTool
 from crewai.utilities.import_utils import require
 from crewai.utilities.pydantic_schema_utils import force_additional_properties_false
@@ -114,12 +119,32 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                 else:
                     args_dict = {param_name: str(arguments)}
 
-                output: Any | Awaitable[Any] = tool._run(**args_dict)
-
-                if inspect.isawaitable(output):
-                    result: Any = await output
+                tool_name = sanitize_tool_name(tool.name)
+                before_hook_context = ToolCallHookContext(
+                    tool_name=tool_name,
+                    tool_input=args_dict,
+                    tool=tool,  # type: ignore[arg-type]
+                )
+                result: Any
+                if run_before_tool_call_hooks(before_hook_context):
+                    result = f"Tool execution blocked by hook. Tool: {tool_name}"
                 else:
-                    result = output
+                    output: Any | Awaitable[Any] = tool._run(**args_dict)
+                    if inspect.isawaitable(output):
+                        result = await output
+                    else:
+                        result = output
+
+                after_hook_context = ToolCallHookContext(
+                    tool_name=tool_name,
+                    tool_input=args_dict,
+                    tool=tool,  # type: ignore[arg-type]
+                    tool_result=result,
+                    raw_tool_result=result,
+                )
+                modified_result = run_after_tool_call_hooks(after_hook_context)
+                if modified_result is not None:
+                    result = modified_result
 
                 if isinstance(result, (dict, list, str, int, float, bool, type(None))):
                     return result
