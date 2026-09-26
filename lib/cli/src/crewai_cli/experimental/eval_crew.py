@@ -48,7 +48,7 @@ FINISHED = {"done", "failed"}
 STATUSES = {"queued", "running"} | FINISHED
 
 
-def eval_crew(run_id: str | None = None) -> None:
+def eval_crew(run_id: str | None = None, *, open_browser: bool = True) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
     get_or_create_project_id()
     # Read before the project's .env is loaded, so a project cannot add itself.
@@ -77,7 +77,8 @@ def eval_crew(run_id: str | None = None) -> None:
         # carrying `[link=…]` would print a trustworthy label over a hostile
         # target. The style belongs to the span, not to the string.
         console.print(Text("Follow it at ").append(url, style="cyan underline"))
-        _open(url)
+        if open_browser:
+            _open(url)
 
     finished = _wait(client, started["id"], url)
     _print_verdict(finished, url)
