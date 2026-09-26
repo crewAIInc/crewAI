@@ -190,6 +190,42 @@ def test_zip_output_in_nested_input_directory_is_not_archived(
     assert "payload.txt" in names
 
 
+@pytest.mark.parametrize("archive_format", ["zip", "tar", "tar.gz", "tar.bz2", "tar.xz"])
+@pytest.mark.parametrize("overwrite", [False, True])
+def test_output_through_symlinked_parent_is_not_an_input_alias(
+    tmp_path, monkeypatch, tool, archive_format, overwrite
+):
+    """Resolve parent aliases without treating the named archive as an input file."""
+    monkeypatch.chdir(tmp_path)
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "payload.txt").write_text("hello", encoding="utf-8")
+    try:
+        (tmp_path / "alias").symlink_to(source, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks are not available on this host")
+    output = source / f"bundle.{archive_format}"
+    if overwrite:
+        output.write_bytes(b"old archive")
+
+    result = tool._run(
+        input_path="source",
+        output_path=f"alias/{output.name}",
+        format=archive_format,
+        overwrite=overwrite,
+    )
+
+    assert "Successfully compressed" in result
+    if archive_format == "zip":
+        with ZipFile(output) as archive:
+            assert archive.namelist() == ["payload.txt"]
+            assert archive.read("payload.txt") == b"hello"
+    else:
+        with tarfile.open(output, "r:*") as archive:
+            assert archive.getnames() == ["source", "source/payload.txt"]
+            assert archive.extractfile("source/payload.txt").read() == b"hello"
+
+
 def test_zip_keeps_sibling_archives_in_input(tmp_path, monkeypatch, tool):
     """Only the archive being written is skipped — an unrelated .zip in the tree is still kept."""
     monkeypatch.chdir(tmp_path)

@@ -162,10 +162,12 @@ class FileCompressorTool(BaseTool):
         it. The exemption below has to use that: ``output_path`` is already canonical, so an output
         symlink pointing into the tree would otherwise look like the in-tree file itself.
         """
-        # Exempt the path the caller named as the output — lexically, not by ``realpath``. Anything
-        # else that resolves to the same file (an in-tree symlink, or a hard link) is a distinct
-        # source file, so exempting it would let opening the output truncate it.
-        requested_abs_path = os.path.normcase(os.path.abspath(requested_output_path))
+        # Resolve parent aliases to match the canonical input walk, but preserve the final name.
+        # Resolving that last component would exempt a symlink's target and allow source loss.
+        requested_parent, requested_name = os.path.split(requested_output_path)
+        requested_abs_path = os.path.normcase(
+            os.path.join(os.path.realpath(requested_parent), requested_name)
+        )
         output_stat = os.fstat(output_fd)
 
         def _aliases(candidate: str) -> bool:
