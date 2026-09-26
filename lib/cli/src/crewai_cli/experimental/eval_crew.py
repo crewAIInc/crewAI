@@ -124,19 +124,21 @@ def _encrypted(origin: str | None) -> bool:
 
 
 def _amp_client(trusted: set[str]) -> PlusAPI:
-    """The AMP to ask, and whether the saved login goes with it.
+    """The AMP to ask, and whether saved machine identity goes with it.
 
     A project's `.env` may point `crewai eval` at another AMP — that is how a
     self-hosted project is wired, and the run was traced there — so the request
-    follows it. The credential does not: it goes only to an AMP this machine is
-    logged in to, over a connection that encrypts it. Anywhere else the run is
-    read anonymously."""
+    follows it. The bearer token and saved organization id do not: they go only
+    to an AMP this machine is logged in to, over a connection that encrypts
+    them. Anywhere else the run is read anonymously."""
     client = PlusAPI(api_key=saved_login())
-    if client.api_key is None:
-        return client
-
     origin = _origin(client.base_url)
-    if origin in trusted and _encrypted(origin):
+    trusted_connection = origin in trusted and _encrypted(origin)
+    if client.api_key is None:
+        if not trusted_connection:
+            client.headers.pop("X-Crewai-Organization-Id", None)
+        return client
+    if trusted_connection:
         return client
 
     why = (
@@ -151,7 +153,9 @@ def _amp_client(trusted: set[str]) -> PlusAPI:
         ),
         style="yellow",
     )
-    return PlusAPI()
+    anonymous = PlusAPI()
+    anonymous.headers.pop("X-Crewai-Organization-Id", None)
+    return anonymous
 
 
 def _load_project_env() -> None:

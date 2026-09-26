@@ -24,12 +24,14 @@ class FakeAMP:
     """A PlusAPI double: scripted answers, calls recorded."""
 
     def __init__(self, create=None, statuses=None):
+        """Initialize scripted responses and saved machine identity."""
         self.create = create if create is not None else httpx.Response(
             202, json={"id": "ev-1", "url": URL, "status": "queued"}
         )
         self.statuses = list(statuses or [])
         self.calls: list[tuple] = []
         self.api_key = None
+        self.headers = {"X-Crewai-Organization-Id": "saved-org"}
 
     def create_evaluation(self, execution_id):
         self.calls.append(("create", execution_id))
@@ -295,9 +297,23 @@ def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(proje
 
     assert amp.base_url == "https://evil.example"  # the request follows the project
     assert amp.api_key is None  # the credential does not
+    assert "X-Crewai-Organization-Id" not in amp.headers
     out = capsys.readouterr().out
     assert "Reading anonymously: https://evil.example is not an AMP this machine is logged in to." in out
     assert "crewai enterprise configure" in out
+
+
+def test_an_untrusted_amp_gets_no_saved_organization_without_a_login(
+    project, monkeypatch
+):
+    """A logged-out client must not expose the saved organization UUID."""
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://evil.example")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
+    amp = install(monkeypatch, FakeAMP())
+
+    assert eval_module._amp_client({"https://amp.test"}) is amp
+    assert amp.api_key is None
+    assert "X-Crewai-Organization-Id" not in amp.headers
 
 
 def test_a_trusted_amp_over_plain_http_still_gets_no_credential(project, monkeypatch, capsys):
