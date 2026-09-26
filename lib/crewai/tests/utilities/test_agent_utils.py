@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -31,6 +32,7 @@ from crewai.utilities.agent_utils import (
     _split_text_by_token_limit,
     format_message_for_llm,
     convert_tools_to_openai_schema,
+    get_tool_names,
     handle_max_iterations_exceeded,
     execute_single_native_tool_call,
     extract_tool_call_info,
@@ -156,6 +158,19 @@ class TestConvertToolsToOpenaiSchema:
         assert "web_search" in functions
         assert callable(functions["calculator"])
         assert callable(functions["web_search"])
+
+    def test_non_ascii_tool_names_get_valid_distinct_names(self) -> None:
+        """Tools named without ASCII letters or digits still get provider-valid names."""
+        search = CalculatorTool(name="搜索工具")
+        scrape = CalculatorTool(name="抓取网页")
+        schemas, functions, _ = convert_tools_to_openai_schema([search, scrape])
+
+        names = [s["function"]["name"] for s in schemas]
+        assert len(set(names)) == 2
+        for name in names:
+            assert re.fullmatch(r"[a-z0-9_]{1,64}", name)
+        assert set(functions) == set(names)
+        assert get_tool_names([search, scrape]) == ", ".join(names)
 
     def test_function_can_be_called(self) -> None:
         """Test that the returned function can be called."""
