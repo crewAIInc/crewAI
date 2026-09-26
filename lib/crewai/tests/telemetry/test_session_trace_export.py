@@ -445,8 +445,32 @@ def test_grant_preserves_optional_viewer_url_without_exposing_it_in_repr(
     ],
 )
 def test_unusable_optional_viewer_url_does_not_break_grant(collector, value):
+    """Unsafe or malformed viewer URLs are ignored without rejecting the grant."""
     collector.grant_override = {"trace_url": value}
     assert TraceGrantClient("pat").create(str(uuid4())).trace_url is None
+
+
+def test_trace_link_rendering_failure_does_not_fail_execution(
+    collector, monkeypatch, caplog
+):
+    """A post-export console failure cannot replace a successful result."""
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    collector.grant_override = {
+        "trace_url": collector.url + "/crewai_plus/otel_traces/run"
+    }
+    with patch(
+        "crewai.telemetry.tracing.grants.Console.print",
+        side_effect=BrokenPipeError,
+    ):
+        token = begin_execution(tracing=True)
+        record(get_trace_session())
+        end_execution(token)
+
+    assert len(collector.batches) == 1
+    assert "Could not display execution trace link (BrokenPipeError)" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -463,6 +487,7 @@ def test_unusable_optional_viewer_url_does_not_break_grant(collector, value):
     ],
 )
 def test_invalid_grant_is_rejected_without_trace_upload(collector, override):
+    """Invalid grant fields prevent any trace payload from being uploaded."""
     collector.grant_override = override
     with pytest.raises(TraceGrantError):
         TraceGrantClient("credential").create(str(uuid4()))

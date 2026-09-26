@@ -312,12 +312,18 @@ class GrantSpanExporter(SpanExporter):
         """
         if not self._trace_url or should_suppress_tracing_messages() or is_tui_mode():
             return
-        line = Text("View traces: ", style="white")
-        line.append(
-            self._trace_url,
-            style=Style(color="cyan", underline=True, link=self._trace_url),
-        )
-        Console().print(line)
+        try:
+            line = Text("View traces: ", style="white")
+            line.append(
+                self._trace_url,
+                style=Style(color="cyan", underline=True, link=self._trace_url),
+            )
+            Console().print(line)
+        except Exception as error:
+            logger.warning(
+                "Could not display execution trace link (%s)",
+                type(error).__name__,
+            )
 
     def shutdown(self) -> None:
         with self._lock:
