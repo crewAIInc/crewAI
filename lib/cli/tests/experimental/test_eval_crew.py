@@ -12,6 +12,7 @@ import httpx
 import pytest
 from rich.console import Console
 
+from crewai_cli import run_crew as run_crew_module
 from crewai_cli.experimental import eval_crew as eval_module
 from crewai_cli.cli import eval_command
 
@@ -33,6 +34,8 @@ class FakeAMP:
 
     def create_evaluation(self, execution_id):
         self.calls.append(("create", execution_id))
+        if isinstance(self.create, list):
+            return self.create.pop(0) if len(self.create) > 1 else self.create[0]
         return self.create
 
     def get_evaluation(self, evaluation_id):
@@ -533,6 +536,7 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
     import crewai_cli.run_crew as run_crew_module
 
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     amp = install(monkeypatch, FakeAMP(statuses=[done()]))
 
@@ -540,10 +544,158 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
 
     assert ran == ["run"]
     text, kwargs = prompts[0]
-    assert "CREWAI_TRACING_ENABLED=true stays in .env" in text and kwargs == {"default": True}  # Enter is yes (João's call); the prompt names both effects
+    # the offer is about what happens, not about the variable that makes it happen
+    assert "Turn tracing on and run the crew now?" in text and kwargs == {"default": True}  # Enter is yes (João's call)
+    assert "sent to CrewAI AMP" in text  # what saying yes means, in the words that matter
+    assert "CREWAI_TRACING_ENABLED" not in text  # and not the variable that carries it
     assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
-    assert amp.calls[0] == ("create", "fresh-run")
+    # the app that ran the crew evaluates it on its own screen; the command that
+    # opened it does not ask AMP a second time
+    assert amp.calls == []
     assert "Tracing is on for this project" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("logged_in", [True, False])
+def test_the_command_counts_the_evaluation_and_what_it_can_be_joined_on(
+    project, monkeypatch, logged_in
+):
+    """`cli_usage:eval` is every evaluation; the TUI's own `cli_usage:evaluate`
+    is intent, and the difference is intent that never became one. The span
+    carries which run, whether the caller was logged in, and to which
+    organization — never anything about the run's content."""
+    directory, _ = project
+    record_last_run(directory, "counted-run")
+    spans: list[tuple[str, dict[str, str]]] = []
+
+    class FakeTelemetry:
+        def set_tracer(self) -> None:
+            pass
+
+        def feature_usage_span(self, feature, attributes=None) -> None:
+            spans.append((feature, attributes or {}))
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
+    monkeypatch.setattr(
+        "crewai_core.settings.Settings", lambda: SimpleNamespace(org_uuid="org-42")
+    )
+    monkeypatch.setattr(eval_module, "saved_login", lambda: "tok" if logged_in else None)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    feature, attributes = spans[0]
+    assert feature == "cli_usage:eval"
+    assert attributes["execution_id"] == "counted-run"
+    assert attributes["authenticated"] == ("true" if logged_in else "false")
+    # an anonymous caller has no organization to report, and is not asked for one
+    assert attributes["organization_id"] == ("org-42" if logged_in else "")
+
+
+def test_telemetry_never_breaks_the_command(project, monkeypatch):
+    directory, _ = project
+    record_last_run(directory, "counted-run")
+
+    def explode() -> None:
+        raise RuntimeError("no tracer here")
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", lambda: explode())
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls[0] == ("create", "counted-run")
+
+
+def _seconds_ago(seconds: float) -> str:
+    from datetime import datetime, timedelta, timezone
+
+    return (datetime.now(timezone.utc) - timedelta(seconds=seconds)).isoformat()
+
+
+NOT_FOUND = httpx.Response(
+    404,
+    json={
+        "error": "trace_not_found",
+        "message": "No spans recorded for execution 6f31fe1a",
+    },
+)
+QUEUED = httpx.Response(202, json={"id": "ev-1", "url": URL, "status": "queued"})
+
+
+def test_the_app_it_opens_is_told_an_evaluation_is_waiting(project, monkeypatch):
+    """With nothing traced, the command runs the crew — and the app it opens is
+    told to evaluate what it ran, so nobody quits a screen to reach it."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+
+    def fake_run_crew() -> None:
+        from crewai_cli.crew_run_tui import _AUTO_EVAL
+
+        assert _AUTO_EVAL.get() is not None, "the app must be told in this process"
+        # and in a child process, where a ContextVar cannot reach
+        assert os.environ["CREWAI_EVAL_AWAITING_RUN"] == "1"
+        record_last_run(directory, "run-it-just-did")
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls == []  # the app did it, on its own screen
+    assert "CREWAI_EVAL_AWAITING_RUN" not in os.environ
+
+
+def test_a_run_that_recorded_nothing_says_so(project, monkeypatch, capsys):
+    """Nothing was traced, so nothing was evaluated and the app had nothing to
+    show: this is the one thing the command still has to say."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(run_crew_module, "run_crew", lambda: None)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exit_code:
+        eval_module.eval_crew()
+
+    assert exit_code.value.code == 1
+    assert amp.calls == []
+    assert "no trace was recorded" in capsys.readouterr().out
+
+
+def test_a_run_from_hours_ago_is_not_waited_for(project, monkeypatch, capsys):
+    """Nothing is in flight: AMP does not hold this run, and saying so at once
+    is the useful answer."""
+    directory, _ = project
+    record_last_run(directory, recorded_at=_seconds_ago(7200))
+    amp = install(monkeypatch, FakeAMP(create=[NOT_FOUND, QUEUED]))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    assert [call for call in amp.calls if call[0] == "create"] == [
+        ("create", EXECUTION_ID)
+    ]
+    assert "No spans recorded" in capsys.readouterr().out
+
+
+def test_an_id_somebody_typed_is_answered_at_once(project, monkeypatch):
+    """`--run <id>` is a question about a named run, not about this project's
+    last one, and a typo should not cost two minutes."""
+    directory, _ = project
+    record_last_run(directory, recorded_at=_seconds_ago(5))
+    amp = install(monkeypatch, FakeAMP(create=[NOT_FOUND, QUEUED]))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew(run_id="1d6b3f70-0000-4000-8000-000000000000")
+
+    assert [call for call in amp.calls if call[0] == "create"] == [
+        ("create", "1d6b3f70-0000-4000-8000-000000000000")
+    ]
 
 
 def test_declining_the_offer_exits_cleanly_with_the_steps(project, monkeypatch, capsys):

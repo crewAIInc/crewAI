@@ -5,7 +5,12 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 """
 
 import asyncio
+from collections.abc import Iterator
+import contextlib
+from contextlib import contextmanager
+from contextvars import ContextVar
 import json as _json
+import os
 import re
 import threading
 import time
@@ -289,6 +294,79 @@ class TraceConsentScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+_AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
+    "crewai_tui_auto_eval", default=None
+)
+
+# The same word, for the app that runs in a CHILD process. A project's crew and
+# flow are run through `uv run …` in the project's own environment, and nothing
+# in this process's memory reaches that app — the environment does, and it is
+# the only thing that does. Set and cleared by `evaluating_after_run()` alone:
+# an internal handshake between two parts of one command, never a setting for
+# anyone to turn on.
+_AWAITING_EVAL_ENV = "CREWAI_EVAL_AWAITING_RUN"
+
+
+@contextmanager
+def evaluating_after_run() -> Iterator[dict[str, str | None]]:
+    """Run the crew for an evaluation that is already under way.
+
+    `crewai eval` with nothing traced offers to run the crew first. The app it
+    opens would otherwise sit there until somebody quits it, with the command
+    waiting behind — so inside this block the app closes itself when the run
+    ends and leaves its execution id in the holder. It does NOT chain into an
+    evaluation of its own: the command that opened it is the one evaluating.
+
+    A run in the same process leaves its id here; a run in a child process
+    leaves it in the project's last-run record, which the caller reads when the
+    holder comes back empty.
+    """
+    holder: dict[str, str | None] = {"execution_id": None}
+    token = _AUTO_EVAL.set(holder)
+    before = os.environ.get(_AWAITING_EVAL_ENV)
+    os.environ[_AWAITING_EVAL_ENV] = "1"
+    try:
+        yield holder
+    finally:
+        _AUTO_EVAL.reset(token)
+        if before is None:
+            os.environ.pop(_AWAITING_EVAL_ENV, None)
+        else:
+            os.environ[_AWAITING_EVAL_ENV] = before
+
+
+def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
+    """The evaluation this run was started for, if there is one.
+
+    In this process the holder itself; in a child process the environment says
+    an evaluation is waiting and the holder is a local one — the id travels
+    back through the project's last-run record instead, which the child writes
+    when its trace is exported.
+    """
+    holder = _AUTO_EVAL.get()
+    if holder is not None:
+        return holder
+
+    return {"execution_id": None} if os.environ.get(_AWAITING_EVAL_ENV) else None
+
+
+def _trace_was_recorded(execution_uuid: str) -> bool:
+    """Did this execution's trace actually reach AMP?
+
+    crewAI records a run when its trace is exported, so the record answers the
+    one question the uuid alone cannot: whether there is anything to grade. It
+    is matched by id rather than trusted as "the last run", which it is only
+    until another run in the project finishes.
+    """
+    try:
+        from crewai.telemetry.tracing.last_run import read_last_run
+
+        record = read_last_run() or {}
+        return str(record.get("execution_id") or "") == execution_uuid
+    except Exception:  # a missing or unreadable record simply means "not traced"
+        return False
+
+
 class CrewRunApp(App[Any]):
     TITLE = "CrewAI"
 
@@ -408,16 +486,25 @@ FooterKey .footer-key--key {
     text-style: bold;
 }
 
-#btn-traces {
+#btn-eval {
     background: #1F7982;
     color: #e0e0e0;
     border: none;
 }
-#btn-traces:hover {
+#btn-eval:hover {
     background: #28969f;
 }
+
+#btn-traces {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border: none;
+}
+#btn-traces:hover {
+    background: #3d3d3d;
+}
 #btn-traces:disabled {
-    background: #1a4a50;
+    background: #202020;
     color: #888888;
 }
 
@@ -437,6 +524,7 @@ FooterKey .footer-key--key {
         Binding("s", "toggle_sidebar", "Sidebar"),
         Binding("l", "toggle_logs", "Logs"),
         Binding("t", "view_traces", "Traces", show=False),
+        Binding("e", "evaluate_crew", "Evaluate", show=False),
         Binding("d", "deploy_crew", "Deploy", show=False),
         Binding("down", "log_down", "Log ↓", show=False),
         Binding("up", "log_up", "Log ↑", show=False),
@@ -529,6 +617,19 @@ FooterKey .footer-key--key {
         self._current_method: str | None = None
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
+        # This app's own execution, captured from the run while it runs. The
+        # project-wide record is the last run to FINISH anywhere, which another
+        # run in the same project can replace between this one ending and its
+        # button being pressed.
+        self._execution_uuid: str | None = None
+        # The evaluation of this run, while it happens and after: it runs from
+        # inside the app, on the app's own screen, rather than sending anybody
+        # back to a terminal to watch a link appear.
+        self._evaluation: dict[str, Any] | None = None
+        # Read here, on the thread that built the app, because that is where
+        # `crewai eval` set it — or in the environment it passed to this
+        # process, when the run is a child of that command.
+        self._auto_eval: dict[str, str | None] | None = _an_evaluation_is_waiting()
         self._consent_screen: TraceConsentScreen | None = None
         self._trace_consent_pending: threading.Event | None = None
         self._discard_trace_on_exit = False
@@ -556,6 +657,7 @@ FooterKey .footer-key--key {
             with VerticalScroll(id="sidebar"):
                 yield Static(id="sidebar-content")
                 with Vertical(id="sidebar-actions"):
+                    yield Button("Evaluate", id="btn-eval", classes="action-btn")
                     yield Button("View Traces", id="btn-traces", classes="action-btn")
                     yield Button("Deploy", id="btn-deploy", classes="action-btn")
             with Vertical(id="main-panel"):
@@ -746,6 +848,31 @@ FooterKey .footer-key--key {
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
         self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+        self._evaluate_if_one_is_waiting()
+
+    def _evaluate_if_one_is_waiting(self) -> None:
+        """Start the evaluation `crewai eval` opened this run for.
+
+        The evaluation is the errand; the run was the prerequisite. It begins
+        here, on this screen, rather than by closing the app and leaving
+        somebody in a bare terminal watching for a link: the app has the room
+        to show the link, the progress and the verdict, and the reader leaves
+        when they are done reading, not when the command is.
+        """
+        if self._auto_eval is None or self._evaluation is not None:
+            return
+
+        traced = self._traced_execution_id()
+        self._auto_eval["execution_id"] = traced
+        if traced is None:
+            self.notify(
+                "This run was not traced, so there is nothing to evaluate.",
+                title="Evaluate",
+                severity="warning",
+            )
+            return
+
+        self._start_evaluation(traced)
 
     def _on_crew_failed(self, error: str) -> None:
         with self._lock:
@@ -772,6 +899,10 @@ FooterKey .footer-key--key {
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
         self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+        # A run that failed is still a run to grade — where it went wrong is
+        # what somebody asking for an evaluation wants to know. If nothing was
+        # traced, the same notice says so and nothing is asked of AMP.
+        self._evaluate_if_one_is_waiting()
 
     # ── Conversational flow execution ───────────────────────
 
@@ -996,9 +1127,16 @@ FooterKey .footer-key--key {
         self.exit(self._crew_result)
 
     def _request_trace_consent(self) -> bool:
-        """Wait in the execution worker while the UI asks for upload consent."""
+        """Wait in the execution worker while the UI asks for upload consent.
+
+        Unless the user already answered: turning tracing on — in the project's
+        .env, or with ``tracing=True`` — is the yes, and a modal at the end of
+        the run would be the same question a second time.
+        """
         if self._discard_trace_on_exit:
             return False
+        if self._tracing_was_asked_for():
+            return True
         done = threading.Event()
         decision: list[bool] = []
         self._trace_consent_pending = done
@@ -1039,6 +1177,56 @@ FooterKey .footer-key--key {
             title="Execution traces",
         )
 
+    def _capture_execution_uuid(self) -> None:
+        """Remember which execution this app is watching.
+
+        Read as the run announces itself, from the run's own context, and kept:
+        the uuid is gone by the time the kickoff returns, and the project's
+        record cannot say which run was THIS one.
+        """
+        if self._execution_uuid is not None:
+            return
+        try:
+            from crewai.execution import get_execution_uuid
+
+            self._execution_uuid = get_execution_uuid()
+        except Exception:  # a run without tracing simply has no execution
+            self._execution_uuid = None
+
+    def _tracing_was_asked_for(self) -> bool:
+        """Did somebody turn tracing on for this run?
+
+        Read here rather than through `tracing_asked_for()`, because the
+        ContextVar that helper reads is set where the crew is CONSTRUCTED — not
+        this worker thread — and a flow never sets it at all. So the declaration
+        is read off the object itself.
+
+        Only ONE of the helper's guards is dropped: it refuses while tracing
+        messages are suppressed, which this app does deliberately to keep
+        crewAI's console out of its own layout, and that guard is about a prompt
+        nobody would see. The others hold. A suite under test, or a TUI with no
+        interactive user behind it — embedded, redirected — has nobody whose yes
+        this could be, and gets the modal's own fail-closed answer instead.
+        """
+        import os
+
+        from crewai.events.listeners.tracing.utils import (
+            _is_interactive_terminal,
+            _is_test_environment,
+        )
+
+        if _is_test_environment() or not _is_interactive_terminal():
+            return False
+
+        if os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1"):
+            return True
+
+        return any(
+            getattr(target, "tracing", None) is True
+            for target in (self._crew, self._flow)
+            if target is not None
+        )
+
     def _dismiss_consent_modal(self) -> None:
         try:
             screen = self._consent_screen
@@ -1057,6 +1245,193 @@ FooterKey .footer-key--key {
         self._unsubscribe()
         self.exit(self._crew_result)
 
+    def _traced_execution_id(self) -> str | None:
+        """This app's own execution, if it was traced.
+
+        Taken from the session the run itself opened, not from the project's
+        last-run record: that record is whichever run finished last anywhere in
+        the project, and a second TUI in the same project can replace it between
+        this run ending and its button being pressed. A run with no session was
+        not traced, and there is nothing to grade.
+        """
+        if self._execution_uuid is None:
+            return None
+
+        return (
+            self._execution_uuid if _trace_was_recorded(self._execution_uuid) else None
+        )
+
+    def action_evaluate_crew(self) -> None:
+        """Grade the run that just finished, here.
+
+        Unlike Deploy, this does not leave: the evaluation takes a few minutes,
+        it has a link worth showing and a verdict worth reading, and a person
+        sent back to a bare terminal to wait for them has been given the worst
+        of both. The report opens in the browser; the app keeps the link and
+        says what came back.
+        """
+        if self._status != "completed":
+            return
+
+        # An evaluation already in flight, or already answered: the button
+        # re-opens what it made rather than paying for a second one.
+        if self._evaluation is not None:
+            url = self._evaluation.get("url")
+            if url:
+                self._open_report(str(url))
+            return
+
+        self._record_tui_button_click("evaluate")
+        traced = self._traced_execution_id()
+        if traced is None:
+            self.notify(
+                "This run was not traced, so there is nothing to evaluate. "
+                "Turn tracing on and run it again.",
+                title="Evaluate",
+                severity="warning",
+            )
+            return
+
+        self._start_evaluation(traced)
+
+    def _start_evaluation(self, execution_id: str) -> None:
+        self._evaluation = {"state": "starting", "execution_id": execution_id}
+        # The run is over and the clock slowed to twice a second; something is
+        # moving again, so the screen moves with it.
+        self._set_tick_rate(1 / 8)
+        self._refresh_eval_button()
+        self._evaluate_worker(execution_id)
+
+    def _set_tick_rate(self, interval: float) -> None:
+        with contextlib.suppress(Exception):
+            self._tick_timer.stop()
+            self._tick_timer = self.set_interval(interval, self._tick)
+
+    @work(thread=True, exclusive=True, group="evaluation")
+    def _evaluate_worker(self, execution_id: str) -> None:
+        """AMP evaluates the run; this thread only carries the answers back."""
+        from crewai_cli.experimental.eval_crew import (
+            EvaluationStoppedError,
+            evaluate_run,
+        )
+
+        def back(handler, *args) -> None:
+            with contextlib.suppress(Exception):  # the app may be gone by now
+                self.call_from_thread(handler, *args)
+
+        try:
+            finished = evaluate_run(
+                execution_id,
+                on_started=lambda started: back(self._evaluation_started, started),
+                on_status=lambda payload: back(self._evaluation_progress, payload),
+                note=lambda text: back(self._evaluation_note, text),
+            )
+        except EvaluationStoppedError as stopped:
+            back(self._evaluation_failed, str(stopped))
+            return
+        except Exception as error:  # a client bug is still an answer to show
+            back(self._evaluation_failed, f"{type(error).__name__}: {error}")
+            return
+        back(self._evaluation_finished, finished)
+
+    def _evaluation_started(self, started: dict[str, Any]) -> None:
+        if self._evaluation is None:
+            return
+        url = started.get("url")
+        self._evaluation.update(
+            {"state": "running", "id": started.get("id"), "url": url, "note": None}
+        )
+        self._refresh_eval_button()
+        if isinstance(url, str) and url:
+            self._open_report(url)
+
+    def _evaluation_progress(self, payload: dict[str, Any]) -> None:
+        """What the service says it is doing, in its own counting.
+
+        The report page counts the same way — one event per subject judged —
+        so a person watching both sees one number, not two.
+        """
+        if self._evaluation is None:
+            return
+        judged = planned = None
+        with contextlib.suppress(Exception):
+            events = payload.get("events") or []
+            judged = sum(
+                1 for event in events if (event.get("data") or {}).get("subject")
+            )
+            planned = next(
+                (
+                    (event.get("data") or {}).get("planned")
+                    for event in reversed(events)
+                    if (event.get("data") or {}).get("planned")
+                ),
+                None,
+            )
+        self._evaluation["note"] = (
+            f"judged {judged} of {planned}"
+            if judged and planned
+            else (f"judged {judged}" if judged else None)
+        )
+
+    def _evaluation_note(self, text: str) -> None:
+        if self._evaluation is not None:
+            self._evaluation["note"] = text
+
+    def _evaluation_finished(self, finished: dict[str, Any]) -> None:
+        if self._evaluation is None:
+            return
+        if finished.get("status") == "done":
+            self._evaluation.update(
+                {
+                    "state": "done",
+                    "verdict": finished.get("verdict") or {},
+                    "note": None,
+                }
+            )
+        else:
+            self._evaluation.update(
+                {
+                    "state": "failed",
+                    "error": str(finished.get("error") or "no reason given"),
+                    "note": None,
+                }
+            )
+        self._set_tick_rate(1 / 2)
+        self._refresh_eval_button()
+
+    def _evaluation_failed(self, message: str) -> None:
+        if self._evaluation is None:
+            return
+        self._evaluation.update({"state": "failed", "error": message, "note": None})
+        self._set_tick_rate(1 / 2)
+        self._refresh_eval_button()
+
+    def _open_report(self, url: str) -> None:
+        import webbrowser
+
+        with contextlib.suppress(Exception):
+            webbrowser.open(url)
+
+    def _evaluating(self) -> bool:
+        return (self._evaluation or {}).get("state") in ("starting", "running")
+
+    def _refresh_eval_button(self) -> None:
+        """The button while the evaluation runs: still teal, still pressable —
+        the report page is where the progress is — and spinning, because a
+        label that never moves reads as a screen that has stopped."""
+        labels = {
+            "done": "Open eval report",
+            "failed": "Evaluate",
+        }
+        with contextlib.suppress(Exception):
+            button = self.query_one("#btn-eval", Button)
+            state = str((self._evaluation or {}).get("state"))
+            button.label = (
+                f"{self._spinner()} Evaluating…"
+                if self._evaluating()
+                else labels.get(state, "Evaluate")
+            )
+
     def _record_tui_button_click(self, button_name: str) -> None:
         try:
             if self._telemetry is None:
@@ -1069,6 +1444,8 @@ FooterKey .footer-key--key {
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-traces":
             self.action_view_traces()
+        elif event.button.id == "btn-eval":
+            self.action_evaluate_crew()
         elif event.button.id == "btn-deploy":
             self.action_deploy_crew()
 
@@ -1125,6 +1502,8 @@ FooterKey .footer-key--key {
 
         try:
             with self._lock:
+                if self._evaluating():
+                    self._refresh_eval_button()
                 self._render_sidebar()
                 self._render_task_header()
                 self._render_main_content()
@@ -1255,6 +1634,46 @@ FooterKey .footer-key--key {
 
     # ── Task header rendering ───────────────────────────────
 
+    def _append_evaluation(self, t: Text) -> None:
+        """The evaluation under the run's own line: what it is doing, where to
+        read it, and what it answered. Everything here came over the wire, so
+        it is appended to the Text and never parsed as markup."""
+        evaluation = self._evaluation
+        if not evaluation:
+            return
+
+        state = str(evaluation.get("state"))
+        url = str(evaluation.get("url") or "")
+        t.append("\n")
+        if state in ("starting", "running"):
+            t.append(f"{self._spinner()} ", style=_C_TEAL)
+            t.append("Evaluating this run", style=f"bold {_C_TEAL}")
+            note = evaluation.get("note")
+            if note:
+                t.append(f"  {note}", style=_C_DIM)
+        elif state == "done":
+            verdict = evaluation.get("verdict") or {}
+            gate = str(verdict.get("gate") or "").upper()
+            mark, style = {
+                "PASSED": ("✔ ", f"bold {_C_GREEN}"),
+                "FAILED": ("✘ ", f"bold {_C_RED}"),
+            }.get(gate, ("• ", f"bold {_C_TEAL}"))
+            t.append(mark, style=style)
+            t.append(f"Goal gate {gate or 'graded'}", style=style)
+            grades = verdict.get("grades")
+            if isinstance(grades, dict):
+                for area, grade in grades.items():
+                    t.append(f"  {area} ", style=_C_DIM)
+                    t.append(f"{grade if grade is not None else '—'}/5", style=_C_TEXT)
+        else:
+            t.append("✘ ", style=f"bold {_C_RED}")
+            t.append("Evaluation stopped", style=f"bold {_C_RED}")
+            t.append(f"  {evaluation.get('error') or ''}", style=_C_DIM)
+
+        if url:
+            t.append("\n")
+            t.append(url, style=f"{_C_TEAL} underline")
+
     def _render_task_header(self) -> None:
         widget = self.query_one("#task-header", Static)
         t = Text()
@@ -1289,11 +1708,13 @@ FooterKey .footer-key--key {
                     parts.append(f"↓{out:,}")
                 if parts:
                     t.append(f"  {' '.join(parts)} tokens", style=_C_DIM)
+                self._append_evaluation(t)
             elif self._status == "failed":
                 t.append("✘ ", style=f"bold {_C_RED}")
                 t.append("Failed", style=f"bold {_C_RED}")
                 if self._error:
                     t.append(f"\n{self._error[:120]}", style=_C_RED)
+                self._append_evaluation(t)
             elif self._current_method:
                 paused = any(
                     s["name"] == self._current_method and s["status"] == "paused"
@@ -1338,12 +1759,14 @@ FooterKey .footer-key--key {
                 parts.append(f"↓{out:,}")
             if parts:
                 t.append(f"  {' '.join(parts)} tokens", style=_C_DIM)
+            self._append_evaluation(t)
 
         elif self._status == "failed":
             t.append("✘ ", style=f"bold {_C_RED}")
             t.append("Failed", style=f"bold {_C_RED}")
             if self._error:
                 t.append(f"\n{self._error[:120]}", style=_C_RED)
+            self._append_evaluation(t)
 
         elif self._current_task_idx > 0:
             t.append(
@@ -1977,6 +2400,7 @@ FooterKey .footer-key--key {
 
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
+            self._capture_execution_uuid()
             with self._lock:
                 # In flow mode the app is named for the flow; a nested crew's
                 # kickoff (a `call: crew` step) must not rename it.
@@ -1990,6 +2414,7 @@ FooterKey .footer-key--key {
         # ── Declarative-flow method events → STEPS panel ────────
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
+            self._capture_execution_uuid()
             with self._lock:
                 self._status = "working"
 

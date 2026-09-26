@@ -118,6 +118,9 @@ def test_pause_resume_exports_traces_and_preserves_deferred_root(
         def finish(self, feedback):
             return feedback.feedback
 
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
     with patch(
         "crewai.telemetry.tracing.ephemeral.prompt_user_for_trace_viewing",
         return_value=True,
@@ -142,7 +145,8 @@ def test_pause_resume_exports_traces_and_preserves_deferred_root(
             assert all(
                 span.status.status_code != trace.StatusCode.ERROR for span in paused
             )
-        assert prompt.call_count == (0 if authenticated or deferred else 1)
+        # `tracing=True` IS the consent: nobody is asked again mid-flight
+        assert prompt.call_count == 0
         assert get_trace_session() is None and get_execution_uuid() is None
 
         resumed = (
@@ -159,7 +163,7 @@ def test_pause_resume_exports_traces_and_preserves_deferred_root(
 
         flow.finalize_session_traces()
         flow.finalize_session_traces()
-        assert prompt.call_count == (0 if authenticated else (1 if deferred else 2))
+        assert prompt.call_count == 0  # … nor when the deferred trace is finalised
 
     assert flow._deferred_execution_trace is None
     assert len(issued) == (1 if deferred else 2)

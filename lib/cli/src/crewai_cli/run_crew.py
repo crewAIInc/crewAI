@@ -600,6 +600,38 @@ def _print_post_tui_summary(app: CrewRunApp) -> None:
             )
         )
 
+    _print_evaluation_line(app, console, crewai_teal)
+
+
+def _print_evaluation_line(app: CrewRunApp, console: Any, teal: str) -> None:
+    """The evaluation's link, once the app that showed it has gone.
+
+    An evaluation started inside the app is read there; the terminal is what is
+    left afterwards, and a link that only ever existed on a screen that is now
+    closed is a link nobody can open again.
+    """
+    evaluation = getattr(app, "_evaluation", None) or {}
+    url = str(evaluation.get("url") or "")
+    if not url:
+        return
+
+    from rich.text import Text
+
+    state = str(evaluation.get("state"))
+    line = Text("\n  ")
+    if state == "done":
+        verdict = evaluation.get("verdict") or {}
+        line.append("Evaluated: ", style="dim")
+        line.append(
+            f"goal gate {str(verdict.get('gate') or '').upper()}  ", style="bold"
+        )
+    elif state == "failed":
+        line.append("Evaluation stopped — the report has what it got: ", style="dim")
+    else:
+        line.append("Evaluation still running at ", style="dim")
+    line.append(url, style=f"{teal} underline")
+    console.print(line)
+
 
 def run_crew(
     trained_agents_file: str | None = None,
