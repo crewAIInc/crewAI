@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -48,6 +50,51 @@ class TestExperimentResult:
                 agent_evaluations={"agent1": {"metrics": {"goal_alignment": {"score": 9}}}}
             )
         ]
+
+    def test_to_json_round_trips_non_ascii_as_utf8(self, tmp_path):
+        """Non-ASCII results persist as real UTF-8 and read back on any platform."""
+        results = [
+            ExperimentResult(
+                identifier="unicode-1",
+                inputs={"query": "Quelle est la capitale? 東京 ☕"},
+                score=9,
+                expected_score=7,
+                passed=True,
+            )
+        ]
+        filepath = tmp_path / "results.json"
+
+        ExperimentResults(results=results).to_json(str(filepath))
+
+        # Written as real UTF-8, not \\uXXXX-escaped ASCII, and it decodes cleanly.
+        raw = filepath.read_text(encoding="utf-8")
+        assert "東京" in raw
+        assert "☕" in raw
+        loaded = json.loads(raw)
+        assert loaded["results"][0]["inputs"]["query"].endswith("☕")
+
+    def test_compare_with_baseline_round_trips_non_ascii_as_utf8(self, tmp_path):
+        """A non-ASCII baseline is created, then read back and appended, as UTF-8."""
+        results = ExperimentResults(
+            results=[
+                ExperimentResult(
+                    identifier="unicode-1",
+                    inputs={"query": "Quelle est la capitale? 東京 ☕"},
+                    score=9,
+                    expected_score=7,
+                    passed=True,
+                )
+            ]
+        )
+        filepath = tmp_path / "baseline.json"
+
+        first = results.compare_with_baseline(str(filepath))
+        assert first["is_baseline"] is True
+        assert "東京" in filepath.read_text(encoding="utf-8")
+
+        second = results.compare_with_baseline(str(filepath))
+        assert "baseline_timestamp" in second
+        assert filepath.read_text(encoding="utf-8").count("東京") == 2
 
     @patch('os.path.exists', return_value=True)
     @patch('os.path.getsize', return_value=1)
