@@ -1410,7 +1410,7 @@ FooterKey .footer-key--key {
         labels = {
             "starting": "Evaluating…",
             "running": "Evaluating…",
-            "done": "Open report",
+            "done": "Open eval report",
             "failed": "Evaluate",
         }
         with contextlib.suppress(Exception):
