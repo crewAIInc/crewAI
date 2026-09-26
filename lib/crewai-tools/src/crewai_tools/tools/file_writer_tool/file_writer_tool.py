@@ -104,6 +104,13 @@ class FileWriterTool(BaseTool):
         """Write *content* to *filename*, confined to the tool's sandbox."""
         directory = directory or "./"
 
+        # Reject embedded null bytes up front: whether the underlying syscalls
+        # ever see them is platform-dependent (Path.resolve() only trips on
+        # them where it actually touches the filesystem), so the guards below
+        # cannot be relied on to catch them everywhere.
+        if "\x00" in filename or "\x00" in directory:
+            return "Error: Invalid file path: embedded null byte in path."
+
         try:
             overwrite_file = strtobool(overwrite)
         except ValueError as e:
