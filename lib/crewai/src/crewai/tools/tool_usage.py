@@ -801,11 +801,12 @@ class ToolUsage:
             return f"Tool '{tool_name}' has reached its usage limit of {tool.max_usage_count} times and cannot be used anymore."
         return None
 
-    def _select_tool(self, tool_name: str) -> Any:
+    def _select_tool_with_name(self, tool_name: str) -> tuple[str, Any]:
+        """Select a tool and retain the resolved name used to address it."""
         sanitized_input = sanitize_tool_name(tool_name)
         exact_tool = self._tools_by_resolved_name.get(sanitized_input)
         if exact_tool is not None:
-            return exact_tool
+            return sanitized_input, exact_tool
 
         ordered_names = sorted(
             self._tools_by_resolved_name,
@@ -814,7 +815,7 @@ class ToolUsage:
         )
         for resolved_name in ordered_names:
             if SequenceMatcher(None, resolved_name, sanitized_input).ratio() > 0.85:
-                return self._tools_by_resolved_name[resolved_name]
+                return resolved_name, self._tools_by_resolved_name[resolved_name]
         if self.task:
             self.task.increment_tools_errors()
         tool_selection_data: dict[str, Any] = {
@@ -844,10 +845,13 @@ class ToolUsage:
         )
         raise Exception(error)
 
+    def _select_tool(self, tool_name: str) -> Any:
+        """Select a tool while preserving the public object-returning contract."""
+        return self._select_tool_with_name(tool_name)[1]
+
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
-        descriptions = [tool.formatted_description for tool in self.tools]
-        return "\n--\n".join(descriptions)
+        return self.tools_description
 
     def _function_calling(
         self, tool_string: str
@@ -882,12 +886,7 @@ class ToolUsage:
         self, tool_string: str, raise_error: bool = False
     ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         tool_name = self.action.tool
-        tool = self._select_tool(tool_name)
-        resolved_tool_name = next(
-            name
-            for name, candidate in self._tools_by_resolved_name.items()
-            if candidate is tool
-        )
+        resolved_tool_name, _ = self._select_tool_with_name(tool_name)
         try:
             arguments = self._validate_tool_input(self.action.tool_input)
 

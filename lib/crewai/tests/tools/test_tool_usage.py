@@ -163,6 +163,7 @@ def test_colliding_tools_can_each_be_selected_and_dispatched():
     )
     assert isinstance(parsed, ToolCalling)
     assert parsed.tool_name == "web_search_2"
+    assert "Tool Name: web_search_2\n" in tool_usage._render()
 
     assert tool_usage._select_tool("web_search") is first
     assert tool_usage._select_tool("web_search_2") is second
@@ -175,6 +176,29 @@ def test_colliding_tools_can_each_be_selected_and_dispatched():
             tool_string='Action: web_search_2\nAction Input: {"query": "second"}',
         )
     ) == {"query": "second", "score": 0.7}
+
+
+def test_same_tool_object_keeps_the_selected_resolved_name():
+    shared = TypedSearchTool(name="WebSearch").to_structured_tool()
+    action = AgentAction(
+        thought="",
+        tool="web_search_2",
+        tool_input='{"query": "second"}',
+        text='Action: web_search_2\nAction Input: {"query": "second"}',
+    )
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[shared, shared],
+        task=None,
+        function_calling_llm=MagicMock(),
+        agent=None,
+        action=action,
+    )
+
+    parsed = tool_usage.parse_tool_calling(action.text)
+
+    assert isinstance(parsed, ToolCalling)
+    assert parsed.tool_name == "web_search_2"
 
 
 def test_tool_usage_returns_json_agent_text_for_typed_output():

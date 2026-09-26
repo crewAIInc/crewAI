@@ -120,10 +120,10 @@ class TestConvertToolsToOpenaiSchema:
     """Tests for convert_tools_to_openai_schema function."""
 
     def test_truncation_collisions_match_all_outputs(self) -> None:
-        prefix = "a" * 70
+        prefix = "a" * 64
         tools = [
-            SearchTool(name=f"{prefix}-first"),
-            SearchTool(name=f"{prefix}-second"),
+            SearchTool(name=prefix),
+            SearchTool(name=prefix.upper()),
         ]
         expected_names = resolve_tool_names([tool.name for tool in tools])
 
@@ -131,6 +131,7 @@ class TestConvertToolsToOpenaiSchema:
         schema_names = [schema["function"]["name"] for schema in schemas]
 
         assert schema_names == expected_names
+        assert expected_names[1].endswith("_2")
         assert get_tool_names(tools) == ", ".join(expected_names)
         assert list(functions) == expected_names
         assert list(mapping) == expected_names
