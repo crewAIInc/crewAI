@@ -1853,6 +1853,7 @@ def execute_single_native_tool_call(
                 plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
+                from_cache=from_cache,
                 failure=reportable_failure(
                     tool_failure,
                     tool=structured_tool,

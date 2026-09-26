@@ -1,15 +1,22 @@
 """A native function-calling tool call served from the cache says so on its event.
 
-`_execute_single_native_tool_call` reads the tools handler's cache and skips
-the tool body on a hit, but its `ToolUsageFinishedEvent` used to be emitted
-without `from_cache`, so every consumer of the bus (tracing included) saw a
-replayed call as a live one. The text-protocol path (`ToolUsage`) already
-carried the flag.
+Every native tool path reads the tools handler's cache and skips the tool body
+on a hit, but a `ToolUsageFinishedEvent` emitted without `from_cache` makes every
+consumer of the bus (tracing included) see a replayed call as a live one. The
+text-protocol path (`ToolUsage`) has always carried the flag.
+
+Three paths compute the flag and all three must report it:
+
+- `CrewAgentExecutor._execute_single_native_tool_call` (deprecated executor),
+- `AgentExecutor._execute_single_native_tool_call` (the default executor),
+- `agent_utils.execute_single_native_tool_call`, which `StepExecutor` uses for
+  the default executor's plan-and-execute steps.
 """
 
 from __future__ import annotations
 
 import json
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -19,8 +26,13 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
+from crewai.experimental.agent_executor import AgentExecutor
+from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool, to_langchain
-from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+from crewai.utilities.agent_utils import (
+    convert_tools_to_openai_schema,
+    execute_single_native_tool_call,
+)
 
 CALLS: list[str] = []
 
@@ -32,6 +44,42 @@ class LookupTool(BaseTool):
     def _run(self, term: str) -> str:
         CALLS.append(term)
         return f"value:{term}"
+
+
+class _NativeToolCall:
+    """An OpenAI-style native tool call, the format the executors receive."""
+
+    class _Function:
+        def __init__(self, name: str, arguments: str) -> None:
+            self.name = name
+            self.arguments = arguments
+
+    def __init__(self, call_id: str, name: str, args: dict[str, Any]) -> None:
+        self.id = call_id
+        self.function = self._Function(name, json.dumps(args))
+
+
+class _StubLLM(BaseLLM):
+    """Enough of an LLM to build an Agent; no tool call here reaches a model."""
+
+    def __init__(self) -> None:
+        super().__init__(model="stub")
+
+    def call(
+        self,
+        messages: str | list[Any],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: Any | None = None,
+        **kwargs: Any,
+    ) -> str:
+        raise AssertionError("the probe never asks the model for anything")
+
+    def supports_function_calling(self) -> bool:
+        return True
 
 
 def _executor(tool: BaseTool, cache: CacheHandler) -> CrewAgentExecutor:
@@ -96,5 +144,125 @@ def test_a_live_native_tool_call_reports_from_cache_false() -> None:
     result, events = _call(_executor(tool, CacheHandler()), tool, {"term": "y"})
 
     assert result["from_cache"] is False
+    assert CALLS == ["y"]
+    assert [event.from_cache for event in events] == [False]
+
+
+def _default_executor(tool: BaseTool, cache: CacheHandler) -> AgentExecutor:
+    """Build the executor `Agent.executor_class` actually defaults to."""
+    from crewai.agent.core import Agent
+
+    agent = Agent(
+        role="tester",
+        goal="Answer",
+        backstory="You answer.",
+        llm=_StubLLM(),
+        verbose=False,
+    )
+    executor = AgentExecutor(
+        agent=agent,
+        llm=agent.llm,
+        task=None,
+        tools=to_langchain([tool]),
+        original_tools=[tool],
+    )
+    executor.tools_handler = ToolsHandler(cache=cache)
+    executor._setup_native_tools()
+    return executor
+
+
+def _capture_finished_events(
+    run: Any,
+) -> tuple[Any, list[ToolUsageFinishedEvent]]:
+    events: list[ToolUsageFinishedEvent] = []
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def _capture(_source: object, event: ToolUsageFinishedEvent) -> None:
+            events.append(event)
+
+        result = run()
+        crewai_event_bus.flush()
+    return result, events
+
+
+def test_the_default_executor_reports_from_cache_on_a_replayed_native_call() -> None:
+    CALLS.clear()
+    tool = LookupTool()
+    cache = CacheHandler()
+    cache.add(tool="lookup", input=json.dumps({"term": "x"}), output="cached:x")
+    executor = _default_executor(tool, cache)
+
+    result, events = _capture_finished_events(
+        lambda: executor._execute_single_native_tool_call(
+            _NativeToolCall("call_1", "lookup", {"term": "x"})
+        )
+    )
+
+    assert result["from_cache"] is True
+    assert CALLS == []
+    assert [event.from_cache for event in events] == [True]
+    assert events[0].output == "cached:x"
+
+
+def test_the_default_executor_reports_from_cache_false_on_a_live_native_call() -> None:
+    CALLS.clear()
+    tool = LookupTool()
+    executor = _default_executor(tool, CacheHandler())
+
+    result, events = _capture_finished_events(
+        lambda: executor._execute_single_native_tool_call(
+            _NativeToolCall("call_1", "lookup", {"term": "y"})
+        )
+    )
+
+    assert result["from_cache"] is False
+    assert CALLS == ["y"]
+    assert [event.from_cache for event in events] == [False]
+
+
+def _run_step_tool_call(tool: BaseTool, cache: CacheHandler, term: str) -> Any:
+    """Run the helper `StepExecutor` uses for the default executor's steps."""
+    _, available_functions, _ = convert_tools_to_openai_schema([tool])
+    return execute_single_native_tool_call(
+        _NativeToolCall("call_1", "lookup", {"term": term}),
+        available_functions=available_functions,
+        original_tools=[tool],
+        structured_tools=None,
+        tools_handler=ToolsHandler(cache=cache),
+        agent=None,
+        task=None,
+        crew=None,
+        event_source=object(),
+    )
+
+
+def test_the_step_executor_helper_reports_from_cache_on_a_replayed_native_call() -> (
+    None
+):
+    CALLS.clear()
+    tool = LookupTool()
+    cache = CacheHandler()
+    cache.add(tool="lookup", input=json.dumps({"term": "x"}), output="cached:x")
+
+    result, events = _capture_finished_events(
+        lambda: _run_step_tool_call(tool, cache, "x")
+    )
+
+    assert result.from_cache is True
+    assert CALLS == []
+    assert [event.from_cache for event in events] == [True]
+    assert events[0].output == "cached:x"
+
+
+def test_the_step_executor_helper_reports_from_cache_false_on_a_live_call() -> None:
+    CALLS.clear()
+    tool = LookupTool()
+
+    result, events = _capture_finished_events(
+        lambda: _run_step_tool_call(tool, CacheHandler(), "y")
+    )
+
+    assert result.from_cache is False
     assert CALLS == ["y"]
     assert [event.from_cache for event in events] == [False]
