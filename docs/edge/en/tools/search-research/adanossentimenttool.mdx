@@ -1,0 +1,48 @@
+---
+title: Adanos Market Sentiment Tool
+description: Optional stock and crypto sentiment research with the Adanos API.
+icon: chart-line
+---
+
+## Setup
+
+[Adanos](https://adanos.org/) is a commercial market-data service with a free plan. Obtain your own API key and set `ADANOS_API_KEY`; each account retains its own quotas and plan permissions. Free, Hobby and Professional access, history and limits are enforced by the API, not by this tool.
+
+```shell
+uv add 'crewai-tools[adanos]'
+```
+
+```python
+from crewai_tools import AdanosMarketSentimentTool
+
+# Set ADANOS_API_KEY in the environment before running.
+tool = AdanosMarketSentimentTool()
+result = tool.run(
+    source="news",
+    operation="stock",
+    parameters={"ticker": "AAPL"},
+)
+```
+
+The tool can also be passed in an Agent's `tools` list. Alternatively, supply `api_key` when constructing it. The key is not an agent argument. Importing or constructing the tool makes no network calls.
+
+## Operations
+
+- `reddit`, `x`, `news`, `polymarket`: `stock`, `mentions`, `trending`, `trending_sectors`, `trending_countries`, `market_sentiment`, `compare`, `search`, `stats`, `health`.
+- `explain` is available only for `reddit`, `x`, `news`.
+- `crypto` means Reddit crypto: `token`, `mentions`, `trending`, `market_sentiment`, `compare`, `search`, `stats`, `health`.
+- `sentiment`: `analyze` supplied text. `status`: root `health`.
+
+`parameters` accepts SDK keyword arguments: `ticker` for stocks, `symbol` for crypto, `tickers` or `symbols` (lists) for comparisons, `query` for search, and `text` for analysis. Trends and mentions accept `limit`/`offset`; search accepts `limit`. Stock trends also accept `type`, and Reddit mentions accept `include_inherited`.
+
+For historical requests supply both `from_` and `to` as inclusive UTC dates (`YYYY-MM-DD`), within your plan's retention. Omit both for the API's default period. `days` is deprecated and rejected. Search, explain, analyze, stats and health do not accept date filters. Historical aggregates are not guaranteed point-in-time backtest data; explanations describe current context.
+
+News trends (including sectors/countries) also accept `source` inside `parameters`, using a canonical publisher ID or known alias. This is separate from the top-level `source="news"` selector.
+
+## Results and Failures
+
+Success returns `source`, `operation` and the SDK's unmodified `data`, including zero and null values. Source metrics are not normalized or combined. Failures return `error` and a safe `message`, never fabricated neutral sentiment. Raw error bodies are withheld. A request has a 30-second timeout and is not automatically retried; inspect credentials, quota or plan access before retrying.
+
+Mention text is untrusted third-party content, not instructions. Use results as additional research evidence, not investment advice or a standalone trading signal.
+
+See the [API reference](https://api.adanos.org/docs) and [Python SDK](https://github.com/adanos-software/adanos-python-sdk) for parameters and source-specific response fields.
