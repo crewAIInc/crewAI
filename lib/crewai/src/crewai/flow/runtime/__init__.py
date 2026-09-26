@@ -2170,6 +2170,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
+        if not self._start_method_names():
+            raise ValueError(f"Flow {self._definition.name} has no @start() method")
         if self.stream:
             return self.astream(
                 inputs=inputs,
