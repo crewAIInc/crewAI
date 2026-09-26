@@ -64,3 +64,32 @@ def test_create_flow_scaffolds_assistant_instructions(
     assert "@AGENTS.md" in claude_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_create_flow_writes_utf8_under_cp1252_locale(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    import builtins
+
+    real_open = builtins.open
+
+    def cp1252_default_open(file, mode="r", *args, **kwargs):
+        if "b" not in mode and "encoding" not in kwargs and not args:
+            kwargs["encoding"] = "cp1252"
+        return real_open(file, mode, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", cp1252_default_open)
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+
+    tasks_yaml = (
+        tmp_path
+        / "research_flow"
+        / "src"
+        / "research_flow"
+        / "crews"
+        / "content_crew"
+        / "config"
+        / "tasks.yaml"
+    ).read_text(encoding="utf-8")
+    assert "—" in tasks_yaml

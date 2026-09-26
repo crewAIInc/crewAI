@@ -119,6 +119,32 @@ def test_is_dmn_mode_enabled_for_falsey_values(monkeypatch, value):
     assert utils.is_dmn_mode_enabled() is False
 
 
+def test_copy_template_and_tree_find_and_replace_write_utf8(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import builtins
+
+    real_open = builtins.open
+
+    def cp1252_default_open(file, mode="r", *args, **kwargs):
+        if "b" not in mode and "encoding" not in kwargs and not args:
+            kwargs["encoding"] = "cp1252"
+        return real_open(file, mode, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", cp1252_default_open)
+
+    src = tmp_path / "template.yaml"
+    dst = tmp_path / "work" / "tasks.yaml"
+    dst.parent.mkdir()
+    src.write_text("description: Review {{name}} — draft\n", encoding="utf-8")
+
+    utils.copy_template(src, dst, "Demo", "DemoCrew", "demo")
+    assert dst.read_text(encoding="utf-8") == "description: Review Demo — draft\n"
+
+    utils.tree_find_and_replace(dst.parent, "draft", "final")
+    assert dst.read_text(encoding="utf-8") == "description: Review Demo — final\n"
+
+
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.
