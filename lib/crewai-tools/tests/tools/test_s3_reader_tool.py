@@ -45,12 +45,13 @@ def test_s3_reader_closes_response_body() -> None:
 
 
 @pytest.mark.parametrize("key", ["folder/file.txt", "backups/s3://source/file.txt"])
-def test_s3_tools_preserve_the_requested_object_key(key: str) -> None:
+@pytest.mark.parametrize("prefix", ["s3://", ""])
+def test_s3_tools_preserve_the_requested_object_key(key: str, prefix: str) -> None:
     body = Mock()
     body.read.return_value = b"hello"
     client = Mock()
     client.get_object.return_value = {"Body": body}
-    path = f"s3://bucket/{key}"
+    path = f"{prefix}bucket/{key}"
 
     with patch.dict(sys.modules, _boto_modules(client)):
         assert S3ReaderTool()._run(path) == "hello"
