@@ -164,7 +164,11 @@ class FileCompressorTool(BaseTool):
         """
         # Resolve parent aliases to match the canonical input walk, but preserve the final name.
         # Resolving that last component would exempt a symlink's target and allow source loss.
-        requested_parent, requested_name = os.path.split(requested_output_path)
+        # Path validation also strips trailing separators. Strip them before splitting so the
+        # final entry never becomes part of the parent passed to realpath (it may be a symlink).
+        requested_parent, requested_name = os.path.split(
+            requested_output_path.rstrip(os.sep + (os.altsep or ""))
+        )
         requested_abs_path = os.path.normcase(
             os.path.join(os.path.realpath(requested_parent), requested_name)
         )

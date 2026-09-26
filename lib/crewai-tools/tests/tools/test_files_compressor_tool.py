@@ -192,8 +192,9 @@ def test_zip_output_in_nested_input_directory_is_not_archived(
 
 @pytest.mark.parametrize("archive_format", ["zip", "tar", "tar.gz", "tar.bz2", "tar.xz"])
 @pytest.mark.parametrize("overwrite", [False, True])
+@pytest.mark.parametrize("trailing_separator", ["", os.sep])
 def test_output_through_symlinked_parent_is_not_an_input_alias(
-    tmp_path, monkeypatch, tool, archive_format, overwrite
+    tmp_path, monkeypatch, tool, archive_format, overwrite, trailing_separator
 ):
     """Resolve parent aliases without treating the named archive as an input file."""
     monkeypatch.chdir(tmp_path)
@@ -210,7 +211,7 @@ def test_output_through_symlinked_parent_is_not_an_input_alias(
 
     result = tool._run(
         input_path="source",
-        output_path=f"alias/{output.name}",
+        output_path=f"alias/{output.name}{trailing_separator}",
         format=archive_format,
         overwrite=overwrite,
     )
@@ -382,8 +383,9 @@ def test_tar_compression_reuses_validated_output_descriptor(
         assert "source/payload.txt" in archive.getnames()
 
 
+@pytest.mark.parametrize("trailing_separator", ["", os.sep])
 def test_zip_output_symlink_outside_input_pointing_into_it_is_rejected(
-    tmp_path, monkeypatch, tool
+    tmp_path, monkeypatch, tool, trailing_separator
 ):
     """An output symlink outside the tree can still point at an in-tree input file.
 
@@ -406,7 +408,7 @@ def test_zip_output_symlink_outside_input_pointing_into_it_is_rejected(
         pytest.skip("symlinks are not available on this host")
 
     result = tool._run(
-        input_path="source", output_path="outside/bundle.zip", overwrite=True
+        input_path="source", output_path=f"outside/bundle.zip{trailing_separator}", overwrite=True
     )
 
     assert "Successful" not in result
