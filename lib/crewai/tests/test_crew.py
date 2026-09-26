@@ -1566,6 +1566,85 @@ async def test_async_kickoff_for_each_async_empty_input():
     assert results == [], "Result should be an empty list when input is empty"
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("entrypoint", "executor_name"),
+    [
+        pytest.param(
+            "kickoff_for_each_async", "execute_sync", id="thread-backed"
+        ),
+        pytest.param("akickoff_for_each", "aexecute_sync", id="native-async"),
+    ],
+)
+async def test_async_for_each_persists_output_for_replay(
+    entrypoint: str, executor_name: str
+):
+    """Both async for-each entrypoints must retain replay data.
+
+    run_for_each_async backs kickoff_for_each_async and akickoff_for_each, and
+    used to unconditionally reset the shared replay store right after
+    gathering results, so every call left the store empty regardless of what
+    the copies had just persisted.
+
+    The copies execute concurrently on separate threads and share one SQLite
+    store, so which one's output ends up persisted is not deterministic (this
+    differs from the sequential kickoff_for_each, which is guaranteed to keep
+    the final input's run). This test only pins the actual regression: the
+    store must retain at least one copy's output instead of always ending up
+    empty.
+    """
+    import gc
+
+    agent = Agent(
+        role="Researcher",
+        goal="Research a topic.",
+        backstory="You are a careful researcher.",
+    )
+    task = Task(
+        description="Research {topic}.",
+        expected_output="A concise research note.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+
+    def fake_execute_sync(self: Task, *args: Any, **kwargs: Any) -> TaskOutput:
+        """Return a deterministic output while the real crew stores it."""
+        return TaskOutput(
+            description=self.description,
+            raw=f"{self.description} result",
+            agent="Researcher",
+        )
+
+    async def fake_aexecute_sync(
+        self: Task, *args: Any, **kwargs: Any
+    ) -> TaskOutput:
+        """Async counterpart used by the native execution entrypoint."""
+        return fake_execute_sync(self, *args, **kwargs)
+
+    execute = fake_execute_sync if executor_name == "execute_sync" else fake_aexecute_sync
+
+    try:
+        with patch.object(
+            Task, executor_name, side_effect=execute, autospec=True
+        ) as mock_execute_task:
+            results = await getattr(crew, entrypoint)(
+                inputs=[{"topic": "first"}, {"topic": "latest"}]
+            )
+
+            stored_outputs = crew._task_output_handler.load()
+            assert len(results) == 2
+            assert len(stored_outputs) > 0
+            for stored in stored_outputs:
+                topic = stored["inputs"]["topic"]
+                assert topic in {"first", "latest"}
+                assert stored["output"]["raw"] == f"Research {topic}. result"
+
+        assert mock_execute_task.call_count == 2
+    finally:
+        crew._task_output_handler.reset()
+        gc.collect()
+
+
 def test_set_agents_step_callback():
     researcher_agent = Agent(
         role="Researcher",
