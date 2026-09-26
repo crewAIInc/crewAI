@@ -289,6 +289,27 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     s2.close()
 
 
+def test_orphaned_shard_cleanup_skips_when_pid_probe_unsupported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On Windows, os.kill(pid, 0) raises OSError; cleanup must skip, not crash."""
+    from crewai.memory.storage import qdrant_edge_storage
+
+    base = tmp_path / "edge"
+    fake_pid = 99999999
+    orphan_path = base / f"worker-{fake_pid}"
+    orphan_path.mkdir(parents=True, exist_ok=True)
+
+    def fake_kill(pid: int, sig: int) -> None:
+        if sig == 0:
+            raise OSError("signal 0 not supported on this platform")
+        raise AssertionError(f"unexpected os.kill({pid}, {sig})")
+
+    monkeypatch.setattr(qdrant_edge_storage.os, "kill", fake_kill)
+
+    s = _make_storage(str(base))
+    assert orphan_path.exists()
+    s.close()
 
 
 def test_memory_with_qdrant_edge(tmp_path: Path) -> None:
