@@ -194,6 +194,37 @@ def test_evaluate_button_evaluates_here_and_does_not_leave(monkeypatch) -> None:
     assert app._evaluation == {"state": "starting", "execution_id": "run-this-app"}
 
 
+def test_the_button_spins_while_it_evaluates_and_still_opens_the_report(
+    monkeypatch,
+) -> None:
+    """A label that never moves reads as a screen that has stopped — and the
+    report page is where the progress is, so the button stays pressable."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    monkeypatch.setattr(CrewRunApp, "_evaluate_worker", lambda self, execution_id: None)
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: True)
+    labels: list[str] = []
+    button = SimpleNamespace(label="Evaluate", disabled=False)
+    monkeypatch.setattr(CrewRunApp, "query_one", lambda self, *a: button)
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: None)
+
+    app.action_evaluate_crew()
+    labels.append(str(button.label))
+    app._frame += 1
+    app._refresh_eval_button()
+    labels.append(str(button.label))
+
+    assert all(label.endswith("Evaluating…") for label in labels)
+    assert labels[0] != labels[1]  # it moves
+    assert button.disabled is False  # and it is not a dead button
+
+    app._evaluation_started({"id": "ev-1", "url": "https://optimize.example/e/1"})
+    app._evaluation_finished({"status": "done", "verdict": {"gate": "passed"}})
+    assert str(button.label) == "Open eval report"
+
+
 def test_pressing_evaluate_again_opens_the_report_it_already_made(monkeypatch) -> None:
     """One evaluation per run: the second press is somebody looking for the
     report, not asking to pay for another."""

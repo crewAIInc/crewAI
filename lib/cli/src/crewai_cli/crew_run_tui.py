@@ -494,10 +494,6 @@ FooterKey .footer-key--key {
 #btn-eval:hover {
     background: #28969f;
 }
-#btn-eval:disabled {
-    background: #1a4a50;
-    color: #888888;
-}
 
 #btn-traces {
     background: #2b2b2b;
@@ -1300,8 +1296,16 @@ FooterKey .footer-key--key {
 
     def _start_evaluation(self, execution_id: str) -> None:
         self._evaluation = {"state": "starting", "execution_id": execution_id}
+        # The run is over and the clock slowed to twice a second; something is
+        # moving again, so the screen moves with it.
+        self._set_tick_rate(1 / 8)
         self._refresh_eval_button()
         self._evaluate_worker(execution_id)
+
+    def _set_tick_rate(self, interval: float) -> None:
+        with contextlib.suppress(Exception):
+            self._tick_timer.stop()
+            self._tick_timer = self.set_interval(interval, self._tick)
 
     @work(thread=True, exclusive=True, group="evaluation")
     def _evaluate_worker(self, execution_id: str) -> None:
@@ -1392,12 +1396,14 @@ FooterKey .footer-key--key {
                     "note": None,
                 }
             )
+        self._set_tick_rate(1 / 2)
         self._refresh_eval_button()
 
     def _evaluation_failed(self, message: str) -> None:
         if self._evaluation is None:
             return
         self._evaluation.update({"state": "failed", "error": message, "note": None})
+        self._set_tick_rate(1 / 2)
         self._refresh_eval_button()
 
     def _open_report(self, url: str) -> None:
@@ -1406,18 +1412,25 @@ FooterKey .footer-key--key {
         with contextlib.suppress(Exception):
             webbrowser.open(url)
 
+    def _evaluating(self) -> bool:
+        return (self._evaluation or {}).get("state") in ("starting", "running")
+
     def _refresh_eval_button(self) -> None:
+        """The button while the evaluation runs: still teal, still pressable —
+        the report page is where the progress is — and spinning, because a
+        label that never moves reads as a screen that has stopped."""
         labels = {
-            "starting": "Evaluating…",
-            "running": "Evaluating…",
             "done": "Open eval report",
             "failed": "Evaluate",
         }
         with contextlib.suppress(Exception):
             button = self.query_one("#btn-eval", Button)
-            state = (self._evaluation or {}).get("state")
-            button.label = labels.get(str(state), "Evaluate")
-            button.disabled = state in ("starting", "running")
+            state = str((self._evaluation or {}).get("state"))
+            button.label = (
+                f"{self._spinner()} Evaluating…"
+                if self._evaluating()
+                else labels.get(state, "Evaluate")
+            )
 
     def _record_tui_button_click(self, button_name: str) -> None:
         try:
@@ -1489,6 +1502,8 @@ FooterKey .footer-key--key {
 
         try:
             with self._lock:
+                if self._evaluating():
+                    self._refresh_eval_button()
                 self._render_sidebar()
                 self._render_task_header()
                 self._render_main_content()
