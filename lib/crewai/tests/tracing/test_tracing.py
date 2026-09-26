@@ -570,6 +570,49 @@ class TestTraceListenerSetup:
         assert len({span.context.trace_id for span in spans}) == 1
         assert listener.batch_manager.current_batch is None
 
+    @pytest.mark.parametrize(
+        "tracing_enabled, sharing, shared",
+        [
+            (True, True, True),
+            (False, True, False),
+            (True, False, False),
+        ],
+        ids=[
+            "tracing was turned on: share it",
+            "tracing nobody asked for: still no",
+            "nothing to share: still no",
+        ],
+    )
+    def test_a_process_with_no_terminal_answers_with_the_tracing_switch(
+        self, monkeypatch, tracing_enabled, sharing, shared
+    ):
+        """CI, a container, an agent: nobody is there to answer the prompt.
+
+        Returning False there was a silent no, and for `sharing` it threw the
+        run away — the spans of a run whose tracing the user had explicitly
+        turned on were buffered and then dropped without a word. The switch is
+        the answer. Nothing changes where somebody can answer, and nothing
+        changes for the first-time collection, which leaves tracing off.
+        """
+        from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
+
+        monkeypatch.setattr(
+            "crewai.events.listeners.tracing.utils._is_test_environment", lambda: False
+        )
+        monkeypatch.setattr(
+            "crewai.events.listeners.tracing.utils.should_suppress_tracing_messages",
+            lambda: False,
+        )
+        monkeypatch.setattr(
+            "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: False
+        )
+        if tracing_enabled:
+            monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+        else:
+            monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+
+        assert prompt_user_for_trace_viewing(sharing=sharing) is shared
+
     def test_first_time_handler_timeout_behavior(self):
         """Test the timeout behavior of the first-time trace prompt"""
 

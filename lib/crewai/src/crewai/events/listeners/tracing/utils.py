@@ -500,10 +500,16 @@ def prompt_user_for_trace_viewing(
     if should_suppress_tracing_messages():
         return False
 
-    # Skip prompt in non-interactive contexts (CI, API servers, Docker, etc.)
-    # This avoids blocking for 20 seconds when no one can respond
+    # Nobody can answer in a non-interactive context (CI, a container, an agent),
+    # so do not block for twenty seconds on a question with no reader. Returning
+    # False was a silent no, and for `sharing` it threw the run away: the spans
+    # of a run whose tracing the user had explicitly turned on were buffered and
+    # then dropped without a word. That switch IS the answer — `should_enable_tracing`
+    # is True only when someone asked, by environment variable, by `tracing=True`,
+    # or by having said yes before — so share on it rather than invent a no. The
+    # first-time collection nobody asked for leaves tracing off here, and stays a no.
     if not _is_interactive_terminal():
-        return False
+        return sharing and should_enable_tracing()
 
     try:
         import threading
