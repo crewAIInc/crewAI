@@ -15,6 +15,7 @@ import logging
 import os
 from pathlib import Path
 import shutil
+import sys
 from typing import Any, Final
 import uuid
 
@@ -76,6 +77,44 @@ def _build_scope_ancestors(scope: str) -> list[str]:
             current = f"{current}/{part}"
             ancestors.append(current)
     return ancestors
+
+
+def _pid_is_alive(pid: int) -> bool:
+    """Check whether a process with the given PID is currently running.
+
+    ``os.kill(pid, 0)`` is the POSIX idiom for probing liveness without
+    sending a real signal, but Windows does not support signal ``0`` the
+    same way -- it raises a generic ``OSError`` instead of
+    ``ProcessLookupError``, so it can't be used there to tell "dead" apart
+    from any other failure.
+    """
+    if sys.platform == "win32":
+        import ctypes
+
+        error_invalid_parameter = 87
+        process_query_limited_information = 0x1000
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+        if handle:
+            kernel32.CloseHandle(handle)
+            return True
+
+        if ctypes.get_last_error() == error_invalid_parameter:
+            # No such process: this really is an orphaned shard.
+            return False
+        # ERROR_ACCESS_DENIED (and anything else we don't recognize) means
+        # we can't be sure the process is dead -- assume it's alive rather
+        # than risk deleting an active worker's shard out from under it.
+        return True
+
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 class QdrantEdgeStorage:
@@ -818,13 +857,9 @@ class QdrantEdgeStorage:
                 continue
             if pid == os.getpid():
                 continue
-            try:
-                os.kill(pid, 0)
+            if _pid_is_alive(pid):
                 continue
-            except ProcessLookupError:
-                _logger.debug("Worker %d is dead, shard is orphaned", pid)
-            except PermissionError:
-                continue
+            _logger.debug("Worker %d is dead, shard is orphaned", pid)
 
             _logger.info("Cleaning up orphaned shard for dead worker %d", pid)
             try:
