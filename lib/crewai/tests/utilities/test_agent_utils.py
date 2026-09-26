@@ -31,6 +31,8 @@ from crewai.utilities.agent_utils import (
     _split_text_by_token_limit,
     format_message_for_llm,
     convert_tools_to_openai_schema,
+    get_tool_names,
+    render_text_description_and_args,
     handle_max_iterations_exceeded,
     execute_single_native_tool_call,
     extract_tool_call_info,
@@ -40,6 +42,7 @@ from crewai.utilities.agent_utils import (
     summarize_messages,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.string_utils import resolve_tool_names
 
 
 def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
@@ -116,6 +119,25 @@ class NoSchemaTool(BaseTool):
 class TestConvertToolsToOpenaiSchema:
     """Tests for convert_tools_to_openai_schema function."""
 
+    def test_truncation_collisions_match_all_outputs(self) -> None:
+        prefix = "a" * 64
+        tools = [
+            SearchTool(name=prefix),
+            SearchTool(name=prefix.upper()),
+        ]
+        expected_names = resolve_tool_names([tool.name for tool in tools])
+
+        schemas, functions, mapping = convert_tools_to_openai_schema(tools)
+        schema_names = [schema["function"]["name"] for schema in schemas]
+
+        assert schema_names == expected_names
+        assert expected_names[1].endswith("_2")
+        assert get_tool_names(tools) == ", ".join(expected_names)
+        assert list(functions) == expected_names
+        assert list(mapping) == expected_names
+        assert len(set(expected_names)) == 2
+        assert all(len(name) <= 64 for name in expected_names)
+
     def test_converts_single_tool(self) -> None:
         """Test converting a single tool to OpenAI schema."""
         tools = [CalculatorTool()]
@@ -146,6 +168,43 @@ class TestConvertToolsToOpenaiSchema:
         assert search_schema["function"]["description"] == "Search the web for information"
         assert "query" in search_schema["function"]["parameters"]["properties"]
         assert "max_results" in search_schema["function"]["parameters"]["properties"]
+
+    def test_collision_names_match_advertised_schemas_and_dispatch_maps(self) -> None:
+        """Colliding names should resolve consistently across every output."""
+        first = SearchTool(name="WebSearch")
+        second = SearchTool(name="web_search")
+        tools = [first, second]
+
+        schemas, functions, mapping = convert_tools_to_openai_schema(tools)
+        schema_names = [schema["function"]["name"] for schema in schemas]
+
+        assert schema_names == ["web_search", "web_search_2"]
+        assert get_tool_names(tools) == "web_search, web_search_2"
+        rendered = render_text_description_and_args(tools)
+        assert "Tool Name: web_search\n" in rendered
+        assert "Tool Name: web_search_2\n" in rendered
+        assert list(functions) == schema_names
+        assert list(mapping) == schema_names
+        assert mapping["web_search"] is first
+        assert mapping["web_search_2"] is second
+        assert functions["web_search"](query="one") == "Search results for 'one' (max 10)"
+        assert functions["web_search_2"](query="two") == "Search results for 'two' (max 10)"
+
+    def test_collision_resolution_avoids_reserved_suffixes(self) -> None:
+        """Generated suffixes must not collide with another sanitized base name."""
+        tools = [
+            SearchTool(name="foo"),
+            SearchTool(name="foo_2"),
+            SearchTool(name="FOO"),
+        ]
+
+        schemas, functions, mapping = convert_tools_to_openai_schema(tools)
+        schema_names = [schema["function"]["name"] for schema in schemas]
+
+        assert schema_names == ["foo", "foo_2", "foo_3"]
+        assert get_tool_names(tools) == "foo, foo_2, foo_3"
+        assert list(functions) == schema_names
+        assert list(mapping) == schema_names
 
     def test_functions_dict_contains_callables(self) -> None:
         """Test that the functions dict maps names to callable run methods."""

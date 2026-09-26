@@ -29,6 +29,7 @@ from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
+    format_description_for_llm,
     strip_composite_description_prefix,
 )
 from crewai.tools.tool_failure import (
@@ -46,7 +47,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.pydantic_schema_utils import generate_model_description
-from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.string_utils import resolve_tool_names, sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
@@ -205,7 +206,7 @@ def get_tool_names(tools: Sequence[CrewStructuredTool | BaseTool]) -> str:
     Returns:
         Comma-separated string of sanitized tool names.
     """
-    return ", ".join([sanitize_tool_name(t.name) for t in tools])
+    return ", ".join(resolve_tool_names([tool.name for tool in tools]))
 
 
 def render_text_description_and_args(
@@ -223,14 +224,22 @@ def render_text_description_and_args(
     Returns:
         Plain text description of tools.
     """
-    # Fall back to the raw description for duck-typed tools (including test
-    # mocks) that don't provide a real formatted_description string.
-    tool_strings = [
-        formatted
-        if isinstance((formatted := getattr(tool, "formatted_description", None)), str)
-        else tool.description
-        for tool in tools
-    ]
+    resolved_names = resolve_tool_names([tool.name for tool in tools])
+    tool_strings: list[str] = []
+    for tool, resolved_name in zip(tools, resolved_names, strict=True):
+        formatted = getattr(tool, "formatted_description", None)
+        if isinstance(formatted, str):
+            tool_strings.append(
+                format_description_for_llm(
+                    resolved_name,
+                    getattr(tool, "args_schema", None),
+                    tool.description,
+                )
+            )
+        else:
+            # Duck-typed tools (including test mocks) may only provide a raw
+            # description and no schema-backed formatted_description.
+            tool_strings.append(tool.description)
     return "\n".join(tool_strings)
 
 
@@ -260,7 +269,9 @@ def convert_tools_to_openai_schema(
     available_functions: dict[str, Callable[..., Any]] = {}
     tool_name_mapping: dict[str, BaseTool | CrewStructuredTool] = {}
 
-    for tool in tools:
+    resolved_names = resolve_tool_names([tool.name for tool in tools])
+
+    for tool, resolved_name in zip(tools, resolved_names, strict=True):
         parameters: dict[str, Any] = {}
         if hasattr(tool, "args_schema") and tool.args_schema is not None:
             try:
@@ -278,28 +289,18 @@ def convert_tools_to_openai_schema(
         # into the description field; keep only the authored text here.
         description = strip_composite_description_prefix(tool.description)
 
-        sanitized_name = sanitize_tool_name(tool.name)
-
-        if sanitized_name in available_functions:
-            counter = 2
-            candidate = sanitize_tool_name(f"{sanitized_name}_{counter}")
-            while candidate in available_functions:
-                counter += 1
-                candidate = sanitize_tool_name(f"{sanitized_name}_{counter}")
-            sanitized_name = candidate
-
         schema: dict[str, Any] = {
             "type": "function",
             "function": {
-                "name": sanitized_name,
+                "name": resolved_name,
                 "description": description,
                 "parameters": parameters,
                 "strict": True,
             },
         }
         openai_tools.append(schema)
-        available_functions[sanitized_name] = tool.run  # type: ignore[union-attr]
-        tool_name_mapping[sanitized_name] = tool
+        available_functions[resolved_name] = tool.run  # type: ignore[union-attr]
+        tool_name_mapping[resolved_name] = tool
 
     return openai_tools, available_functions, tool_name_mapping
 
