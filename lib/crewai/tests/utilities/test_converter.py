@@ -208,6 +208,22 @@ def test_handle_partial_json_accepts_literal_control_chars_in_strings() -> None:
     assert output.age == 35
 
 
+def test_handle_partial_json_ignores_trailing_braces_after_valid_json() -> None:
+    """A clean, valid JSON object followed by trailing text that itself
+    contains a brace pair must still be extracted correctly, instead of
+    the match spanning greedily to the last '}' in the string.
+    """
+    result = (
+        '{"name": "Alice", "age": 30}\n\n'
+        'Note: if you need a different format, you could also express '
+        'it as {"name": "Alice"} alone.'
+    )
+    output = handle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Alice"
+    assert output.age == 30
+
+
 def test_handle_partial_json_falls_through_for_non_json_curly_blocks(
     mock_agent: Mock,
 ) -> None:

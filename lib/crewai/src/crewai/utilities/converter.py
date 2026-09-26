@@ -21,8 +21,33 @@ if TYPE_CHECKING:
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
 
-_JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_JSON_START_PATTERN: Final[re.Pattern[str]] = re.compile(r"{")
 _I18N = I18N_DEFAULT
+
+
+def _extract_first_json_object(result: str) -> Any | None:
+    """Parse the first well-formed JSON object found in ``result``.
+
+    Unlike a greedy ``{.*}`` regex, this stops at the end of the first
+    balanced JSON value starting at the first ``{``, so trailing text
+    (commentary, examples, other brace-delimited content) after a valid
+    JSON object no longer corrupts extraction.
+
+    Args:
+        result: The string to search for a JSON object.
+
+    Returns:
+        The parsed JSON value, or ``None`` if no valid JSON object starts
+        at any ``{`` in the string.
+    """
+    decoder = json.JSONDecoder(strict=False)
+    for match in _JSON_START_PATTERN.finditer(result):
+        try:
+            parsed, _end = decoder.raw_decode(result, match.start())
+        except json.JSONDecodeError:
+            continue
+        return parsed
+    return None
 
 
 class ConverterError(Exception):
@@ -312,19 +337,8 @@ def handle_partial_json(
     Returns:
         The converted result as a dict, BaseModel, or original string.
     """
-    match = _JSON_PATTERN.search(result)
-    if match:
-        try:
-            parsed = json.loads(match.group(), strict=False)
-        except json.JSONDecodeError:
-            return convert_with_instructions(
-                result=result,
-                model=model,
-                is_json_output=is_json_output,
-                agent=agent,
-                converter_cls=converter_cls,
-            )
-
+    parsed = _extract_first_json_object(result)
+    if parsed is not None:
         try:
             exported_result = model.model_validate(parsed)
             if is_json_output:
@@ -465,19 +479,8 @@ async def async_handle_partial_json(
     converter_cls: type[Converter] | None = None,
 ) -> dict[str, Any] | BaseModel | str:
     """Async equivalent of ``handle_partial_json`` — defers LLM fallback to ``acall``."""
-    match = _JSON_PATTERN.search(result)
-    if match:
-        try:
-            parsed = json.loads(match.group(), strict=False)
-        except json.JSONDecodeError:
-            return await async_convert_with_instructions(
-                result=result,
-                model=model,
-                is_json_output=is_json_output,
-                agent=agent,
-                converter_cls=converter_cls,
-            )
-
+    parsed = _extract_first_json_object(result)
+    if parsed is not None:
         try:
             exported_result = model.model_validate(parsed)
             if is_json_output:
