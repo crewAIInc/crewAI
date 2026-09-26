@@ -21,7 +21,27 @@ if TYPE_CHECKING:
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
 
-_JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+def _extract_first_json_object(text: str) -> str | None:
+    """Return the first complete JSON object in ``text``, ignoring trailing prose.
+
+    ``({.*})`` with re.DOTALL is greedy, so it matched from the first ``{`` to the
+    last ``}`` anywhere in the string. A valid object followed by any text that
+    itself contains a brace pair (a note, a schema reference, an example) was
+    therefore handed to ``json.loads`` as one blob, failed to parse, and sent the
+    caller down the conversion fallback even though the payload was right there.
+    ``raw_decode`` stops at the end of the first complete object and handles
+    nesting, which a non-greedy ``({.*?})`` would get wrong.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+    try:
+        # strict=False to match the leniency this path had before: models emit
+        # literal control characters (raw newlines and tabs) inside strings.
+        _, end = json.JSONDecoder(strict=False).raw_decode(text, start)
+    except json.JSONDecodeError:
+        return None
+    return text[start:end]
 _I18N = I18N_DEFAULT
 
 
@@ -312,10 +332,10 @@ def handle_partial_json(
     Returns:
         The converted result as a dict, BaseModel, or original string.
     """
-    match = _JSON_PATTERN.search(result)
-    if match:
+    payload = _extract_first_json_object(result)
+    if payload is not None:
         try:
-            parsed = json.loads(match.group(), strict=False)
+            parsed = json.loads(payload, strict=False)
         except json.JSONDecodeError:
             return convert_with_instructions(
                 result=result,
@@ -465,10 +485,10 @@ async def async_handle_partial_json(
     converter_cls: type[Converter] | None = None,
 ) -> dict[str, Any] | BaseModel | str:
     """Async equivalent of ``handle_partial_json`` — defers LLM fallback to ``acall``."""
-    match = _JSON_PATTERN.search(result)
-    if match:
+    payload = _extract_first_json_object(result)
+    if payload is not None:
         try:
-            parsed = json.loads(match.group(), strict=False)
+            parsed = json.loads(payload, strict=False)
         except json.JSONDecodeError:
             return await async_convert_with_instructions(
                 result=result,
