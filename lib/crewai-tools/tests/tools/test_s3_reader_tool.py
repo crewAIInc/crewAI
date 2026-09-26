@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from crewai_tools.aws.s3.reader_tool import S3ReaderTool
+from crewai_tools.aws.s3.writer_tool import S3WriterTool
 
 
 def _boto_modules(client: Mock) -> dict[str, ModuleType]:
@@ -41,6 +42,22 @@ def test_s3_reader_closes_response_body() -> None:
 
     assert result == "hello"
     body.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize("key", ["folder/file.txt", "backups/s3://source/file.txt"])
+def test_s3_tools_preserve_the_requested_object_key(key: str) -> None:
+    body = Mock()
+    body.read.return_value = b"hello"
+    client = Mock()
+    client.get_object.return_value = {"Body": body}
+    path = f"s3://bucket/{key}"
+
+    with patch.dict(sys.modules, _boto_modules(client)):
+        assert S3ReaderTool()._run(path) == "hello"
+        S3WriterTool()._run(path, "hello")
+
+    client.get_object.assert_called_once_with(Bucket="bucket", Key=key)
+    client.put_object.assert_called_once_with(Bucket="bucket", Key=key, Body=b"hello")
 
 
 def test_s3_reader_closes_response_body_after_decode_error() -> None:
