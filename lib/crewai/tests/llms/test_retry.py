@@ -2,6 +2,8 @@
 
 from typing import Any
 
+import httpx
+from openai import RateLimitError
 import pytest
 
 from crewai.llms.base_llm import BaseLLM
@@ -100,6 +102,37 @@ def test_run_with_rate_limit_retry_retries_with_backoff() -> None:
 
     assert result == "complete"
     assert delays == [pytest.approx(1, abs=0.2)]
+
+
+@pytest.mark.parametrize("asynchronous", [False, True])
+@pytest.mark.asyncio
+async def test_retry_honors_sdk_response_retry_after(asynchronous: bool) -> None:
+    response = httpx.Response(
+        429,
+        headers={"Retry-After": "7"},
+        request=httpx.Request("POST", "https://example.com/chat/completions"),
+    )
+    outcomes: list[str | Exception] = [
+        RateLimitError("rate limit exceeded", response=response, body=None),
+        "complete",
+    ]
+    delays: list[float] = []
+
+    async def record_delay(delay: float) -> None:
+        delays.append(delay)
+
+    async def operation() -> str:
+        return _pop_outcome(outcomes)
+
+    if asynchronous:
+        result = await arun_with_rate_limit_retry(operation, sleep=record_delay)
+    else:
+        result = run_with_rate_limit_retry(
+            lambda: _pop_outcome(outcomes), sleep=delays.append
+        )
+
+    assert result == "complete"
+    assert delays == [7]
 
 
 @pytest.mark.asyncio
