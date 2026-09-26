@@ -32,6 +32,7 @@ from crewai.utilities.agent_utils import (
     format_message_for_llm,
     convert_tools_to_openai_schema,
     get_tool_names,
+    render_text_description_and_args,
     handle_max_iterations_exceeded,
     execute_single_native_tool_call,
     extract_tool_call_info,
@@ -178,6 +179,9 @@ class TestConvertToolsToOpenaiSchema:
 
         assert schema_names == ["web_search", "web_search_2"]
         assert get_tool_names(tools) == "web_search, web_search_2"
+        rendered = render_text_description_and_args(tools)
+        assert "Tool Name: web_search\n" in rendered
+        assert "Tool Name: web_search_2\n" in rendered
         assert list(functions) == schema_names
         assert list(mapping) == schema_names
         assert mapping["web_search"] is first

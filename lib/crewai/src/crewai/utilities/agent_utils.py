@@ -29,6 +29,7 @@ from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
+    format_description_for_llm,
     strip_composite_description_prefix,
 )
 from crewai.tools.tool_failure import (
@@ -223,14 +224,22 @@ def render_text_description_and_args(
     Returns:
         Plain text description of tools.
     """
-    # Fall back to the raw description for duck-typed tools (including test
-    # mocks) that don't provide a real formatted_description string.
-    tool_strings = [
-        formatted
-        if isinstance((formatted := getattr(tool, "formatted_description", None)), str)
-        else tool.description
-        for tool in tools
-    ]
+    resolved_names = resolve_tool_names([tool.name for tool in tools])
+    tool_strings: list[str] = []
+    for tool, resolved_name in zip(tools, resolved_names, strict=True):
+        formatted = getattr(tool, "formatted_description", None)
+        if isinstance(formatted, str):
+            tool_strings.append(
+                format_description_for_llm(
+                    resolved_name,
+                    getattr(tool, "args_schema", None),
+                    tool.description,
+                )
+            )
+        else:
+            # Duck-typed tools (including test mocks) may only provide a raw
+            # description and no schema-backed formatted_description.
+            tool_strings.append(tool.description)
     return "\n".join(tool_strings)
 
 

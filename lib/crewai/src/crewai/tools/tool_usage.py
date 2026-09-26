@@ -883,6 +883,11 @@ class ToolUsage:
     ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
+        resolved_tool_name = next(
+            name
+            for name, candidate in self._tools_by_resolved_name.items()
+            if candidate is tool
+        )
         try:
             arguments = self._validate_tool_input(self.action.tool_input)
 
@@ -897,7 +902,7 @@ class ToolUsage:
             return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         return ToolCalling(
-            tool_name=sanitize_tool_name(tool.name),
+            tool_name=resolved_tool_name,
             arguments=arguments,
         )
 

@@ -150,8 +150,19 @@ def test_colliding_tools_can_each_be_selected_and_dispatched():
         task=None,
         function_calling_llm=MagicMock(),
         agent=None,
-        action=MagicMock(),
+        action=AgentAction(
+            thought="",
+            tool="web_search_2",
+            tool_input='{"query": "second"}',
+            text='Action: web_search_2\nAction Input: {"query": "second"}',
+        ),
     )
+
+    parsed = tool_usage.parse_tool_calling(
+        'Action: web_search_2\nAction Input: {"query": "second"}'
+    )
+    assert isinstance(parsed, ToolCalling)
+    assert parsed.tool_name == "web_search_2"
 
     assert tool_usage._select_tool("web_search") is first
     assert tool_usage._select_tool("web_search_2") is second
