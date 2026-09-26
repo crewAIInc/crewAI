@@ -2070,6 +2070,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             # The blocked message replaces any cached result, so a cached
             # failure must not be attributed to this call.
             tool_failure = None
+            # For the same reason the result did not come from the cache: the
+            # cached value was read and then dropped before the caller saw it.
+            from_cache = False
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:

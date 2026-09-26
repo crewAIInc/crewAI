@@ -11,6 +11,14 @@ Three paths compute the flag and all three must report it:
 - `AgentExecutor._execute_single_native_tool_call` (the default executor),
 - `agent_utils.execute_single_native_tool_call`, which `StepExecutor` uses for
   the default executor's plan-and-execute steps.
+
+All three read the cache *before* the `before_tool_call` hooks run, so a hook
+that blocks the call replaces the cached result with a blocked message. The flag
+has to be cleared there for the same reason the cached `ToolFailure` already is:
+nothing the caller receives came from the cache, and the consumers read the flag
+as a statement about the result they were handed -- the tracing handler labels
+the span's `tool_call_result`, and the CLI run view prints "cached" in place of
+the duration.
 """
 
 from __future__ import annotations
@@ -27,6 +35,10 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.experimental.agent_executor import AgentExecutor
+from crewai.hooks.tool_hooks import (
+    clear_before_tool_call_hooks,
+    register_before_tool_call_hook,
+)
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool, to_langchain
 from crewai.utilities.agent_utils import (
@@ -35,6 +47,7 @@ from crewai.utilities.agent_utils import (
 )
 
 CALLS: list[str] = []
+BLOCKED = "Tool execution blocked by hook. Tool: lookup"
 
 
 class LookupTool(BaseTool):
@@ -171,6 +184,15 @@ def _default_executor(tool: BaseTool, cache: CacheHandler) -> AgentExecutor:
     return executor
 
 
+def _with_a_blocking_before_tool_hook(run: Any) -> Any:
+    """Run `run` with a `before_tool_call` hook that blocks every tool."""
+    register_before_tool_call_hook(lambda _context: False)
+    try:
+        return run()
+    finally:
+        clear_before_tool_call_hooks()
+
+
 def _capture_finished_events(
     run: Any,
 ) -> tuple[Any, list[ToolUsageFinishedEvent]]:
@@ -221,6 +243,30 @@ def test_the_default_executor_reports_from_cache_false_on_a_live_native_call() -
     assert [event.from_cache for event in events] == [False]
 
 
+def test_the_default_executor_reports_no_cache_when_a_hook_blocks_a_cached_call() -> (
+    None
+):
+    CALLS.clear()
+    tool = LookupTool()
+    cache = CacheHandler()
+    cache.add(tool="lookup", input=json.dumps({"term": "x"}), output="cached:x")
+    executor = _default_executor(tool, cache)
+
+    result, events = _with_a_blocking_before_tool_hook(
+        lambda: _capture_finished_events(
+            lambda: executor._execute_single_native_tool_call(
+                _NativeToolCall("call_1", "lookup", {"term": "x"})
+            )
+        )
+    )
+
+    assert result["result"] == BLOCKED
+    assert result["from_cache"] is False
+    assert CALLS == []
+    assert [event.from_cache for event in events] == [False]
+    assert events[0].output == BLOCKED
+
+
 def _run_step_tool_call(tool: BaseTool, cache: CacheHandler, term: str) -> Any:
     """Run the helper `StepExecutor` uses for the default executor's steps."""
     _, available_functions, _ = convert_tools_to_openai_schema([tool])
@@ -266,3 +312,22 @@ def test_the_step_executor_helper_reports_from_cache_false_on_a_live_call() -> N
     assert result.from_cache is False
     assert CALLS == ["y"]
     assert [event.from_cache for event in events] == [False]
+
+
+def test_the_step_executor_helper_reports_no_cache_when_a_hook_blocks_a_cached_call() -> (
+    None
+):
+    CALLS.clear()
+    tool = LookupTool()
+    cache = CacheHandler()
+    cache.add(tool="lookup", input=json.dumps({"term": "x"}), output="cached:x")
+
+    result, events = _with_a_blocking_before_tool_hook(
+        lambda: _capture_finished_events(lambda: _run_step_tool_call(tool, cache, "x"))
+    )
+
+    assert result.result == BLOCKED
+    assert result.from_cache is False
+    assert CALLS == []
+    assert [event.from_cache for event in events] == [False]
+    assert events[0].output == BLOCKED

@@ -1776,6 +1776,9 @@ def execute_single_native_tool_call(
         # The blocked message replaces any cached result, so a cached failure
         # must not be attributed to this call.
         tool_failure = None
+        # For the same reason the result did not come from the cache: the cached
+        # value was read and then dropped before the caller saw it.
+        from_cache = False
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
