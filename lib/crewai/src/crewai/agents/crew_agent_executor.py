@@ -1027,22 +1027,43 @@ class CrewAgentExecutor(BaseAgentExecutor):
         original_tool: Any | None = None,
         should_execute: bool = True,
     ) -> dict[str, Any]:
-        """Execute a single native tool call synchronously."""
+        """Execute a single native tool call synchronously.
+
+        Stays fully synchronous: tools such as MCP wrappers drive their own
+        event loops via ``asyncio.run``, which fails inside an outer loop. The
+        sync tool runner is invoked inline and only parsing and result
+        processing are shared with the async path.
+        """
 
         def sync_tool_runner(tool: Any, kwargs: dict[str, Any]) -> Any:
             return available_functions[func_name](**kwargs)
 
-        return asyncio.run(
-            self._execute_single_native_tool_call_impl(
-                call_id=call_id,
-                func_name=func_name,
-                func_args=func_args,
-                available_functions=available_functions,
-                original_tool=original_tool,
-                should_execute=should_execute,
-                tool_runner=sync_tool_runner,
-            )
+        return self._run_single_native_tool_call(
+            call_id=call_id,
+            func_name=func_name,
+            func_args=func_args,
+            available_functions=available_functions,
+            original_tool=original_tool,
+            should_execute=should_execute,
+            tool_runner=sync_tool_runner,
         )
+
+    def _tool_supports_native_async(self, tool: Any) -> bool:
+        """Check whether a tool can execute natively in async mode.
+
+        ``BaseTool.arun`` is callable by inheritance even when only ``_run``
+        is implemented; awaiting it then raises ``NotImplementedError``. A
+        tool supports native async when its ``_arun`` is overridden or its
+        wrapped function returns awaitables.
+        """
+        from crewai.tools.base_tool import BaseTool
+
+        if isinstance(tool, BaseTool):
+            if type(tool)._arun is not BaseTool._arun:
+                return True
+            wrapped_func = getattr(tool, "func", None)
+            return inspect.iscoroutinefunction(wrapped_func)
+        return False
 
     async def _aexecute_single_native_tool_call(
         self,
@@ -1056,16 +1077,16 @@ class CrewAgentExecutor(BaseAgentExecutor):
     ) -> dict[str, Any]:
         """Async variant of ``_execute_single_native_tool_call``.
 
-        Uses ``await tool.arun()`` instead of ``tool.run()`` so that async tools
-        are properly awaited inside a running event loop, avoiding the
-        ``RuntimeError: asyncio.run() cannot be called from a running event loop``
-        crash.
+        Awaits tools that implement ``_arun`` and offloads sync-only tools to
+        a worker thread, so neither nested event loops (``asyncio.run`` inside
+        a running loop) nor ``NotImplementedError`` from the inherited
+        ``_arun`` can break execution.
         """
 
         async def async_tool_runner(tool: Any, kwargs: dict[str, Any]) -> Any:
-            if hasattr(tool, "arun") and callable(tool.arun):
+            if self._tool_supports_native_async(tool):
                 return await tool.arun(**kwargs)
-            return available_functions[func_name](**kwargs)
+            return await asyncio.to_thread(available_functions[func_name], **kwargs)
 
         return await self._execute_single_native_tool_call_impl(
             call_id=call_id,
@@ -1077,69 +1098,99 @@ class CrewAgentExecutor(BaseAgentExecutor):
             tool_runner=async_tool_runner,
         )
 
-    async def _execute_single_native_tool_call_impl(
+    def _prepare_single_native_tool_call(
         self,
         *,
-        call_id: str,
         func_name: str,
         func_args: str | dict[str, Any],
-        available_functions: dict[str, Callable[..., Any]],
+        call_id: str,
         original_tool: Any | None,
         should_execute: bool,
-        tool_runner: Callable[..., Any],
-    ) -> dict[str, Any]:
-        """Shared body for sync and async single-tool execution.
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None, Any | None]:
+        """Resolve and validate a native tool call before execution.
 
-        ``tool_runner`` is a callable ``(tool, kwargs) -> result`` that
-        executes the tool — sync for the sync path, async for the async path.
-        When ``tool_runner`` returns an awaitable, it is awaited.
+        Returns ``(args_dict, error_result, original_tool)``; ``error_result``
+        is a ready-to-return dict when arguments cannot be parsed or usage
+        limits are reached, and ``original_tool`` is resolved from the
+        executor's tools when missing.
         """
-        from datetime import datetime
-        import json
-
-        from crewai.events.types.tool_usage_events import (
-            ToolUsageErrorEvent,
-            ToolUsageFinishedEvent,
-            ToolUsageStartedEvent,
-        )
-
         args_dict, parse_error = parse_tool_call_args(
             func_args, func_name, call_id, original_tool
         )
         if parse_error is not None:
-            return parse_error
+            return None, parse_error, original_tool
 
-        if original_tool is None:
-            for tool in self.original_tools or []:
-                if sanitize_tool_name(tool.name) == func_name:
-                    original_tool = tool
-                    break
+        original_tool = self._resolve_native_tool(func_name, original_tool)
 
         max_usage_reached = False
         if not should_execute and original_tool:
             max_usage_reached = True
         elif (
-            should_execute
-            and original_tool
+            original_tool
             and (max_count := getattr(original_tool, "max_usage_count", None))
             is not None
             and getattr(original_tool, "current_usage_count", 0) >= max_count
         ):
             max_usage_reached = True
 
-        structured_tool: CrewStructuredTool | None = None
+        if max_usage_reached and original_tool:
+            return (
+                args_dict,
+                {
+                    "call_id": call_id,
+                    "func_name": func_name,
+                    "result": (
+                        f"Tool '{func_name}' has reached its usage limit of "
+                        f"{original_tool.max_usage_count} times and cannot be used anymore."
+                    ),
+                    "from_cache": False,
+                    "original_tool": original_tool,
+                },
+                original_tool,
+            )
+        return args_dict, None, original_tool
+
+    def _resolve_native_tool(
+        self,
+        func_name: str,
+        original_tool: Any | None,
+    ) -> Any | None:
+        """Fall back to a name match against the original tools if needed."""
+        if original_tool is not None:
+            return original_tool
+        for tool in self.original_tools or []:
+            if sanitize_tool_name(tool.name) == func_name:
+                return tool
+        return None
+
+    def _resolve_structured_tool(
+        self,
+        func_name: str,
+        original_tool: Any | None,
+    ) -> CrewStructuredTool | None:
+        """Find the structured tool matching the original tool or name."""
         if original_tool is not None:
             for structured in self.tools or []:
                 if getattr(structured, "_original_tool", None) is original_tool:
-                    structured_tool = structured
-                    break
-        if structured_tool is None:
-            for structured in self.tools or []:
-                if sanitize_tool_name(structured.name) == func_name:
-                    structured_tool = structured
-                    break
+                    return structured
+        for structured in self.tools or []:
+            if sanitize_tool_name(structured.name) == func_name:
+                return structured
+        return None
 
-        output_tool = original_tool or structured_tool
+    def _read_native_tool_cache(
+        self,
+        *,
+        func_name: str,
+        args_dict: dict[str, Any],
+        output_tool: Any,
+    ) -> tuple[bool, str, Any]:
+        """Read the tool cache.
+
+        Returns ``(from_cache, result, raw_tool_result)``; ``result`` stays
+        ``"Tool not found"`` when nothing is cached.
+        """
+        import json
 
         from_cache = False
         result: str = "Tool not found"
@@ -1153,83 +1204,27 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 raw_tool_result = cached_result
                 result = format_native_tool_output_for_agent(output_tool, cached_result)
                 from_cache = True
+        return from_cache, result, raw_tool_result
 
-        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
-        started_at = datetime.now()
-        crewai_event_bus.emit(
-            self,
-            event=ToolUsageStartedEvent(
-                tool_name=func_name,
-                tool_args=args_dict,
-                from_agent=self.agent,
-                from_task=self.task,
-                agent_key=agent_key,
-            ),
-        )
-        error_event_emitted = False
+    def _finalize_single_native_tool_call(
+        self,
+        *,
+        call_id: str,
+        func_name: str,
+        args_dict: dict[str, Any],
+        original_tool: Any | None,
+        structured_tool: CrewStructuredTool | None,
+        raw_tool_result: Any,
+        result: str,
+        from_cache: bool,
+        started_at: Any,
+        agent_key: str,
+        error_event_emitted: bool,
+    ) -> dict[str, Any]:
+        """Run after-hooks, emit the finished event and build the result dict."""
+        from datetime import datetime
 
-        track_delegation_if_needed(func_name, args_dict or {}, self.task)
-
-        before_hook_context = ToolCallHookContext(
-            tool_name=func_name,
-            tool_input=args_dict or {},
-            tool=structured_tool,
-            agent=self.agent,
-            task=self.task,
-            crew=self.crew,
-        )
-        hook_blocked = run_before_tool_call_hooks(before_hook_context)
-
-        if hook_blocked:
-            result = f"Tool execution blocked by hook. Tool: {func_name}"
-            raw_tool_result = result
-        elif max_usage_reached and original_tool:
-            result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
-            raw_tool_result = result
-        elif (
-            not from_cache
-            and func_name in available_functions
-            and output_tool is not None
-        ):
-            try:
-                raw_result = tool_runner(output_tool, args_dict or {})
-                if asyncio.iscoroutine(raw_result):
-                    raw_result = await raw_result
-                raw_tool_result = raw_result
-
-                if self.tools_handler and self.tools_handler.cache:
-                    should_cache = True
-                    if (
-                        original_tool
-                        and hasattr(original_tool, "cache_function")
-                        and callable(original_tool.cache_function)
-                    ):
-                        should_cache = original_tool.cache_function(
-                            args_dict or {}, raw_result
-                        )
-                    if should_cache:
-                        self.tools_handler.cache.add(
-                            tool=func_name, input=input_str, output=raw_result
-                        )
-
-                result = format_native_tool_output_for_agent(output_tool, raw_result)
-            except Exception as e:
-                result = f"Error executing tool: {e}"
-                raw_tool_result = result
-                if self.task:
-                    self.task.increment_tools_errors()
-                crewai_event_bus.emit(
-                    self,
-                    event=ToolUsageErrorEvent(
-                        tool_name=func_name,
-                        tool_args=args_dict,
-                        from_agent=self.agent,
-                        from_task=self.task,
-                        agent_key=agent_key,
-                        error=e,
-                    ),
-                )
-                error_event_emitted = True
+        from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
@@ -1268,6 +1263,275 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "from_cache": from_cache,
             "original_tool": original_tool,
         }
+
+    def _native_tool_cache_result(
+        self,
+        *,
+        func_name: str,
+        args_dict: dict[str, Any],
+        input_str: str,
+        original_tool: Any | None,
+        raw_result: Any,
+    ) -> None:
+        """Cache a tool result when the tool's cache policy allows it."""
+        if self.tools_handler and self.tools_handler.cache:
+            should_cache = True
+            if (
+                original_tool
+                and hasattr(original_tool, "cache_function")
+                and callable(original_tool.cache_function)
+            ):
+                should_cache = original_tool.cache_function(args_dict or {}, raw_result)
+            if should_cache:
+                self.tools_handler.cache.add(
+                    tool=func_name, input=input_str, output=raw_result
+                )
+
+    def _run_single_native_tool_call(
+        self,
+        *,
+        call_id: str,
+        func_name: str,
+        func_args: str | dict[str, Any],
+        available_functions: dict[str, Callable[..., Any]],
+        original_tool: Any | None,
+        should_execute: bool,
+        tool_runner: Callable[..., Any],
+    ) -> dict[str, Any]:
+        """Synchronously orchestrate a single native tool call.
+
+        Shares parsing, cache handling, hooks and event emission with the
+        async path, but executes ``tool_runner`` inline so tools that drive
+        their own event loops (e.g. MCP wrappers) keep working.
+        """
+        from datetime import datetime
+        import json
+
+        from crewai.events.types.tool_usage_events import (
+            ToolUsageErrorEvent,
+            ToolUsageStartedEvent,
+        )
+
+        args_dict, error_result, original_tool = self._prepare_single_native_tool_call(
+            func_name=func_name,
+            func_args=func_args,
+            call_id=call_id,
+            original_tool=original_tool,
+            should_execute=should_execute,
+        )
+        if error_result is not None:
+            return error_result
+
+        structured_tool = self._resolve_structured_tool(func_name, original_tool)
+        output_tool = original_tool or structured_tool
+
+        from_cache, result, raw_tool_result = self._read_native_tool_cache(
+            func_name=func_name, args_dict=args_dict or {}, output_tool=output_tool
+        )
+
+        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                agent_key=agent_key,
+            ),
+        )
+        error_event_emitted = False
+
+        track_delegation_if_needed(func_name, args_dict or {}, self.task)
+
+        before_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict or {},
+            tool=structured_tool,
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+        )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
+
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+            raw_tool_result = result
+        elif (
+            not from_cache
+            and func_name in available_functions
+            and output_tool is not None
+        ):
+            try:
+                raw_result = tool_runner(output_tool, args_dict or {})
+                raw_tool_result = raw_result
+
+                self._native_tool_cache_result(
+                    func_name=func_name,
+                    args_dict=args_dict or {},
+                    input_str=input_str,
+                    original_tool=original_tool,
+                    raw_result=raw_result,
+                )
+
+                result = format_native_tool_output_for_agent(output_tool, raw_result)
+            except Exception as e:
+                result = f"Error executing tool: {e}"
+                raw_tool_result = result
+                if self.task:
+                    self.task.increment_tools_errors()
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self.agent,
+                        from_task=self.task,
+                        agent_key=agent_key,
+                        error=e,
+                    ),
+                )
+                error_event_emitted = True
+
+        return self._finalize_single_native_tool_call(
+            call_id=call_id,
+            func_name=func_name,
+            args_dict=args_dict or {},
+            original_tool=original_tool,
+            structured_tool=structured_tool,
+            raw_tool_result=raw_tool_result,
+            result=result,
+            from_cache=from_cache,
+            started_at=started_at,
+            agent_key=agent_key,
+            error_event_emitted=error_event_emitted,
+        )
+
+    async def _execute_single_native_tool_call_impl(
+        self,
+        *,
+        call_id: str,
+        func_name: str,
+        func_args: str | dict[str, Any],
+        available_functions: dict[str, Callable[..., Any]],
+        original_tool: Any | None,
+        should_execute: bool,
+        tool_runner: Callable[..., Any],
+    ) -> dict[str, Any]:
+        """Shared orchestration for a single async native tool call.
+
+        Mirrors the sync flow but awaits ``tool_runner`` results, so async
+        tools run on the caller's event loop while everything else (parsing,
+        cache, hooks, events) stays shared.
+        """
+        from datetime import datetime
+        import json
+
+        from crewai.events.types.tool_usage_events import (
+            ToolUsageErrorEvent,
+            ToolUsageStartedEvent,
+        )
+
+        args_dict, error_result, original_tool = self._prepare_single_native_tool_call(
+            func_name=func_name,
+            func_args=func_args,
+            call_id=call_id,
+            original_tool=original_tool,
+            should_execute=should_execute,
+        )
+        if error_result is not None:
+            return error_result
+
+        structured_tool = self._resolve_structured_tool(func_name, original_tool)
+        output_tool = original_tool or structured_tool
+
+        from_cache, result, raw_tool_result = self._read_native_tool_cache(
+            func_name=func_name, args_dict=args_dict or {}, output_tool=output_tool
+        )
+
+        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                agent_key=agent_key,
+            ),
+        )
+        error_event_emitted = False
+
+        track_delegation_if_needed(func_name, args_dict or {}, self.task)
+
+        before_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict or {},
+            tool=structured_tool,
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+        )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
+
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+            raw_tool_result = result
+        elif (
+            not from_cache
+            and func_name in available_functions
+            and output_tool is not None
+        ):
+            try:
+                raw_result = tool_runner(output_tool, args_dict or {})
+                if asyncio.iscoroutine(raw_result):
+                    raw_result = await raw_result
+                raw_tool_result = raw_result
+
+                self._native_tool_cache_result(
+                    func_name=func_name,
+                    args_dict=args_dict or {},
+                    input_str=input_str,
+                    original_tool=original_tool,
+                    raw_result=raw_result,
+                )
+
+                result = format_native_tool_output_for_agent(output_tool, raw_result)
+            except Exception as e:
+                result = f"Error executing tool: {e}"
+                raw_tool_result = result
+                if self.task:
+                    self.task.increment_tools_errors()
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self.agent,
+                        from_task=self.task,
+                        agent_key=agent_key,
+                        error=e,
+                    ),
+                )
+                error_event_emitted = True
+
+        return self._finalize_single_native_tool_call(
+            call_id=call_id,
+            func_name=func_name,
+            args_dict=args_dict or {},
+            original_tool=original_tool,
+            structured_tool=structured_tool,
+            raw_tool_result=raw_tool_result,
+            result=result,
+            from_cache=from_cache,
+            started_at=started_at,
+            agent_key=agent_key,
+            error_event_emitted=error_event_emitted,
+        )
 
     def _append_tool_result_and_check_finality(
         self, execution_result: dict[str, Any]
