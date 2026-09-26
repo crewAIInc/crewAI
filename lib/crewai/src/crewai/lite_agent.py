@@ -783,7 +783,9 @@ class LiteAgent(FlowTrackable, BaseModel):
                     }
                 )
 
-                return self._execute_core(agent_info=agent_info)
+                return self._execute_core(
+                    agent_info=agent_info, response_format=response_format
+                )
 
             if guardrail_result.result is not None:
                 if isinstance(guardrail_result.result, str):

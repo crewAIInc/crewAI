@@ -597,6 +597,63 @@ def test_lite_agent_with_custom_llm_and_guardrails():
     assert result2.raw == "Modified by guardrail"
 
 
+def test_guardrail_retry_keeps_kickoff_response_format():
+    """Test that a guardrail retry still uses the response_format passed to kickoff."""
+
+    class Answer(BaseModel):
+        answer: str
+
+    class RecordingLLM(BaseLLM):
+        def __init__(self):
+            super().__init__(model="recording-model")
+            self.response_models: list[type[BaseModel] | None] = []
+
+        def call(
+            self,
+            messages,
+            tools=None,
+            callbacks=None,
+            available_functions=None,
+            from_task=None,
+            from_agent=None,
+            response_model=None,
+        ) -> str:
+            self.response_models.append(response_model)
+            return '{"answer": "second"}'
+
+        def supports_function_calling(self) -> bool:
+            return False
+
+        def supports_stop_words(self) -> bool:
+            return False
+
+        def get_context_window_size(self) -> int:
+            return 4096
+
+    llm = RecordingLLM()
+
+    guardrail_calls = {"n": 0}
+
+    def fail_then_pass_guardrail(output):
+        guardrail_calls["n"] += 1
+        if guardrail_calls["n"] == 1:
+            return (False, "Answer must be a JSON object with an 'answer' key")
+        return (True, None)
+
+    agent = LiteAgent(
+        role="Test Agent",
+        goal="Answer the question",
+        backstory="You answer questions concisely.",
+        llm=llm,
+        guardrail=fail_then_pass_guardrail,
+    )
+
+    result = agent.kickoff("What is the answer?", response_format=Answer)
+
+    assert llm.response_models == [Answer, Answer]
+    assert result.pydantic == Answer(answer="second")
+
+
 @pytest.mark.vcr()
 def test_lite_agent_with_invalid_llm():
     """Test that LiteAgent raises proper error when create_llm returns None."""
