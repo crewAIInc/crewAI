@@ -6,6 +6,7 @@ when the LLM supports it, across multiple providers.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Generator
 import json
 import os
@@ -1363,3 +1364,131 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+# Async Native Tool Execution Tests
+
+
+class TestAsyncNativeToolExecution:
+    """Regression tests for sync/async native tool execution.
+
+    Guards against two regressions: awaiting the inherited ``BaseTool._arun``
+    (which raises ``NotImplementedError``) for sync-only tools on the async
+    path, and wrapping sync tool execution in an outer event loop that
+    crashes tools driving their own loops (e.g. MCP wrappers).
+    """
+
+    def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
+        """Create a minimal CrewAgentExecutor with mocked dependencies."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.tools.base_tool import to_langchain
+
+        structured_tools = to_langchain(tools)
+        mock_agent = Mock()
+        mock_agent.key = "test_agent"
+        mock_agent.role = "tester"
+        mock_agent.verbose = False
+        mock_agent.fingerprint = None
+        mock_agent.tools_results = []
+
+        mock_task = Mock()
+        mock_task.name = "test"
+        mock_task.description = "test"
+        mock_task.id = "test-id"
+
+        executor = CrewAgentExecutor(
+            tools=structured_tools,
+            original_tools=tools,
+        )
+        executor.agent = mock_agent
+        executor.task = mock_task
+        return executor
+
+    @pytest.mark.asyncio
+    async def test_async_path_runs_sync_only_tool(self) -> None:
+        """Sync-only tools (no _arun) must work on the async native path."""
+
+        class SyncTool(BaseTool):
+            name: str = "sync_tool"
+            description: str = "A sync-only tool"
+
+            def _run(self, value: str) -> str:
+                return f"sync: {value}"
+
+        tool = SyncTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        result = await executor._aexecute_single_native_tool_call(
+            call_id="call_async_sync",
+            func_name="sync_tool",
+            func_args={"value": "hello"},
+            available_functions=available_functions,
+        )
+
+        assert result["result"] == "sync: hello"
+        assert "Error" not in result["result"]
+
+    @pytest.mark.asyncio
+    async def test_async_path_awaits_async_tool(self) -> None:
+        """Tools overriding _arun must be awaited, not run through a thread."""
+
+        class AsyncTool(BaseTool):
+            name: str = "async_tool"
+            description: str = "An async tool"
+
+            def _run(self, value: str) -> str:
+                return "wrong path"
+
+            async def _arun(self, value: str) -> str:
+                return f"async: {value}"
+
+        tool = AsyncTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        result = await executor._aexecute_single_native_tool_call(
+            call_id="call_async_async",
+            func_name="async_tool",
+            func_args={"value": "hello"},
+            available_functions=available_functions,
+        )
+
+        assert result["result"] == "async: hello"
+
+    def test_sync_path_allows_internal_event_loop(self) -> None:
+        """The sync path must not create an outer event loop around tools
+        that drive their own loop via asyncio.run (like MCP wrappers)."""
+
+        class SelfLoopTool(BaseTool):
+            name: str = "self_loop_tool"
+            description: str = "A tool that runs its own event loop"
+
+            def _run(self, value: str) -> str:
+                async def _inner() -> str:
+                    return f"loop: {value}"
+
+                return asyncio.run(_inner())
+
+        tool = SelfLoopTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_sync_loop",
+            func_name="self_loop_tool",
+            func_args={"value": "hello"},
+            available_functions=available_functions,
+        )
+
+        assert result["result"] == "loop: hello"
+        assert "Error" not in result["result"]
