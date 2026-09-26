@@ -17,13 +17,14 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-09-15T05:55:17.52834Z"
+exclude-newer = "2026-09-21T10:21:26.950152524Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
 msgpack = "2026-06-20T00:00:00Z"
 langsmith = "2026-06-20T00:00:00Z"
 pydantic-settings = "2026-06-20T00:00:00Z"
+feedmyagent = "2026-09-25T00:00:00Z"
 
 [manifest]
 members = [
@@ -1552,7 +1553,7 @@ requires-dist = [
     { name = "httpx-auth", marker = "extra == 'a2a'", specifier = "~=0.23.1" },
     { name = "httpx-sse", marker = "extra == 'a2a'", specifier = "~=0.4.0" },
     { name = "ibm-watsonx-ai", marker = "extra == 'watson'", specifier = "~=1.3.39" },
-    { name = "instructor", specifier = ">=1.3.3" },
+    { name = "instructor", specifier = ">=1.3.3,<1.16" },
     { name = "json-repair", specifier = "~=0.60.1" },
     { name = "json5", specifier = "~=0.10.0" },
     { name = "jsonref", specifier = "~=1.1.0" },
@@ -1765,6 +1766,9 @@ e2b = [
 exa-py = [
     { name = "exa-py" },
 ]
+feedmyagent = [
+    { name = "feedmyagent" },
+]
 firecrawl-py = [
     { name = "firecrawl-py" },
 ]
@@ -1868,6 +1872,7 @@ requires-dist = [
     { name = "e2b", marker = "extra == 'e2b'", specifier = "~=2.20.0" },
     { name = "e2b-code-interpreter", marker = "extra == 'e2b'", specifier = "~=2.6.0" },
     { name = "exa-py", marker = "extra == 'exa-py'", specifier = ">=1.8.7" },
+    { name = "feedmyagent", marker = "extra == 'feedmyagent'", specifier = ">=0.1.0" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
     { name = "gitpython", marker = "extra == 'github'", specifier = ">=3.1.59,<4" },
     { name = "hyperbrowser", marker = "extra == 'hyperbrowser'", specifier = ">=0.18.0" },
@@ -1911,7 +1916,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "feedmyagent", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -2719,6 +2724,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/17/354d04951ce114bf4afc78e27a18cfbd6ee319ab1829c2d5fb5e94063ac6/fastuuid-0.14.0-cp313-cp313-musllinux_1_1_x86_64.whl", hash = "sha256:1383fff584fa249b16329a059c68ad45d030d5a4b70fb7c73a08d98fd53bcdab", size = 450921, upload-time = "2025-10-19T22:31:02.151Z" },
     { url = "https://files.pythonhosted.org/packages/fb/be/d7be8670151d16d88f15bb121c5b66cdb5ea6a0c2a362d0dcf30276ade53/fastuuid-0.14.0-cp313-cp313-win32.whl", hash = "sha256:a0809f8cc5731c066c909047f9a314d5f536c871a7a22e815cc4967c110ac9ad", size = 154559, upload-time = "2025-10-19T22:36:36.011Z" },
     { url = "https://files.pythonhosted.org/packages/22/1d/5573ef3624ceb7abf4a46073d3554e37191c868abc3aecd5289a72f9810a/fastuuid-0.14.0-cp313-cp313-win_amd64.whl", hash = "sha256:0df14e92e7ad3276327631c9e7cec09e32572ce82089c55cb1bb8df71cf394ed", size = 156539, upload-time = "2025-10-19T22:33:35.898Z" },
+]
+
+[[package]]
+name = "feedmyagent"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/f5/e07e7518ec7b80fb78c8708cbaa20f4708d221f7787e7ae948c3b27fe90c/feedmyagent-0.1.0.tar.gz", hash = "sha256:be39933d5772d4d7c1a8d85f991616ace2c575c4e742db7900fc5b0eae474144", size = 7845, upload-time = "2026-09-24T10:07:47.603Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/3b/20ce714cd9e8469b81472fb8a09f1c653720d125fa629ffd2cafb3191b33/feedmyagent-0.1.0-py3-none-any.whl", hash = "sha256:04f2b4ba2d6911cbd78e8b412009f5169394ae5a7fb1c417da68d54588463eb9", size = 6331, upload-time = "2026-09-24T10:07:46.421Z" },
 ]
 
 [[package]]
