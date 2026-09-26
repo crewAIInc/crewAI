@@ -141,6 +141,31 @@ def test_tool_usage_render():
     assert '"description": "The maximum value of the range (inclusive)"' in rendered
 
 
+def test_colliding_tools_can_each_be_selected_and_dispatched():
+    first = TypedSearchTool(name="WebSearch").to_structured_tool()
+    second = TypedSearchTool(name="web_search").to_structured_tool()
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[first, second],
+        task=None,
+        function_calling_llm=MagicMock(),
+        agent=None,
+        action=MagicMock(),
+    )
+
+    assert tool_usage._select_tool("web_search") is first
+    assert tool_usage._select_tool("web_search_2") is second
+    assert json.loads(
+        tool_usage.use(
+            calling=ToolCalling(
+                tool_name="web_search_2",
+                arguments={"query": "second"},
+            ),
+            tool_string='Action: web_search_2\nAction Input: {"query": "second"}',
+        )
+    ) == {"query": "second", "score": 0.7}
+
+
 def test_tool_usage_returns_json_agent_text_for_typed_output():
     tool = TypedSearchTool().to_structured_tool()
     tool_usage = ToolUsage(

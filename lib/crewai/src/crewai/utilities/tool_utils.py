@@ -19,7 +19,7 @@ from crewai.tools.tool_failure import (
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.string_utils import resolve_tool_names, sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -66,7 +66,9 @@ async def aexecute_tool_and_check_finality(
         ToolResult containing the execution result and whether it should be
         treated as a final answer.
     """
-    tool_name_to_tool_map = {sanitize_tool_name(tool.name): tool for tool in tools}
+    tool_name_to_tool_map = dict(
+        zip(resolve_tool_names([tool.name for tool in tools]), tools, strict=True)
+    )
 
     if agent_key and agent_role and agent:
         fingerprint_context = fingerprint_context or {}
@@ -229,7 +231,9 @@ def execute_tool_and_check_finality(
     Returns:
         ToolResult containing the execution result and whether it should be treated as a final answer
     """
-    tool_name_to_tool_map = {sanitize_tool_name(tool.name): tool for tool in tools}
+    tool_name_to_tool_map = dict(
+        zip(resolve_tool_names([tool.name for tool in tools]), tools, strict=True)
+    )
 
     if agent_key and agent_role and agent:
         fingerprint_context = fingerprint_context or {}

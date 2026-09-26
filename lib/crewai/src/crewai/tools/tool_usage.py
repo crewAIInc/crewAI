@@ -37,7 +37,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.string_utils import resolve_tool_names, sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -112,6 +112,10 @@ class ToolUsage:
         self.agent = agent
         self.tools_description = render_text_description_and_args(tools)
         self.tools_names = get_tool_names(tools)
+        self._resolved_tool_names = resolve_tool_names([tool.name for tool in tools])
+        self._tools_by_resolved_name = dict(
+            zip(self._resolved_tool_names, tools, strict=True)
+        )
         self.tools_handler = tools_handler
         self.tools = tools
         self.task = task
@@ -311,15 +315,10 @@ class ToolUsage:
                 )  # type: ignore
                 from_cache = result is not None
 
-            available_tool = next(
-                (
-                    available_tool
-                    for available_tool in self.tools
-                    if sanitize_tool_name(available_tool.name)
-                    == sanitize_tool_name(tool.name)
-                ),
-                None,
-            )
+            # ``tool`` was selected from the collection-level resolved-name map;
+            # retain that exact object instead of re-matching by its colliding
+            # sanitized base name.
+            available_tool = tool
 
             usage_limit_error = self._check_usage_limit(
                 available_tool, sanitize_tool_name(tool.name)
@@ -568,15 +567,10 @@ class ToolUsage:
                 )  # type: ignore
                 from_cache = result is not None
 
-            available_tool = next(
-                (
-                    available_tool
-                    for available_tool in self.tools
-                    if sanitize_tool_name(available_tool.name)
-                    == sanitize_tool_name(tool.name)
-                ),
-                None,
-            )
+            # ``tool`` was selected from the collection-level resolved-name map;
+            # retain that exact object instead of re-matching by its colliding
+            # sanitized base name.
+            available_tool = tool
 
             usage_limit_error = self._check_usage_limit(
                 available_tool, sanitize_tool_name(tool.name)
@@ -809,20 +803,18 @@ class ToolUsage:
 
     def _select_tool(self, tool_name: str) -> Any:
         sanitized_input = sanitize_tool_name(tool_name)
-        order_tools = sorted(
-            self.tools,
-            key=lambda tool: SequenceMatcher(
-                None, sanitize_tool_name(tool.name), sanitized_input
-            ).ratio(),
+        exact_tool = self._tools_by_resolved_name.get(sanitized_input)
+        if exact_tool is not None:
+            return exact_tool
+
+        ordered_names = sorted(
+            self._tools_by_resolved_name,
+            key=lambda name: SequenceMatcher(None, name, sanitized_input).ratio(),
             reverse=True,
         )
-        for tool in order_tools:
-            sanitized_tool = sanitize_tool_name(tool.name)
-            if (
-                sanitized_tool == sanitized_input
-                or SequenceMatcher(None, sanitized_tool, sanitized_input).ratio() > 0.85
-            ):
-                return tool
+        for resolved_name in ordered_names:
+            if SequenceMatcher(None, resolved_name, sanitized_input).ratio() > 0.85:
+                return self._tools_by_resolved_name[resolved_name]
         if self.task:
             self.task.increment_tools_errors()
         tool_selection_data: dict[str, Any] = {
