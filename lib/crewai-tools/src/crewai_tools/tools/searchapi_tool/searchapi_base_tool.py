@@ -36,6 +36,11 @@ class SearchApiBaseTool(BaseTool):
             raise ValueError(
                 f"URL scheme must be HTTPS to prevent sending credentials in cleartext, got '{parsed.scheme}'."
             )
+        hostname = (parsed.hostname or "").lower()
+        if hostname not in {"searchapi.io", "www.searchapi.io"}:
+            raise ValueError(
+                f"URL host must be searchapi.io or www.searchapi.io to prevent sending credentials to unauthorized hosts, got '{hostname}'."
+            )
 
     def _omit_fields(
         self, data: dict[str, Any] | list[Any], omit_patterns: list[str]
