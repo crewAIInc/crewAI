@@ -13,14 +13,20 @@ Invariants Enforced:
 """
 
 import re
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
+
 try:
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, PrivateAttr
 except ImportError:
     class BaseModel:
         pass
     def Field(*args, **kwargs):
         return None
+    def PrivateAttr(*args, **kwargs):
+        default_factory = kwargs.get("default_factory")
+        if default_factory:
+            return default_factory()
+        return kwargs.get("default", None)
 
 try:
     from crewai.tools import BaseTool
@@ -49,20 +55,25 @@ class ZTDSSanitizerTool(BaseTool):
     )
     args_schema: Type[BaseModel] = ZTDSSanitizerSchema
 
-    PATTERNS: Dict[str, re.Pattern] = {
-        "EMAIL": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"),
+    PATTERNS: ClassVar[Dict[str, re.Pattern]] = {
+        "EMAIL": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}\b"),
         "IPV4": re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
         "IBAN": re.compile(r"\b[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}\b"),
-        "CREDIT_CARD": re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b"),
+        "CREDIT_CARD": re.compile(r"\b(?:\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}|\d{4}[-\s]?\d{6}[-\s]?\d{5})\b"),
         "SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
         "PHONE": re.compile(r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"),
-        "API_SECRET": re.compile(r"\b(?:sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,})\b"),
+        "API_SECRET": re.compile(r"\b(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,})\b"),
     }
+
+    _session_maps: Dict[str, Dict[str, str]] = PrivateAttr(default_factory=dict)
+    _entity_maps: Dict[str, Dict[str, str]] = PrivateAttr(default_factory=dict)
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._session_maps: Dict[str, Dict[str, str]] = {}
-        self._entity_maps: Dict[str, Dict[str, str]] = {}
+        if not hasattr(self, "_session_maps") or self._session_maps is None:
+            self._session_maps = {}
+        if not hasattr(self, "_entity_maps") or self._entity_maps is None:
+            self._entity_maps = {}
 
     def _run(self, text: str, session_id: str = "crew-default") -> str:
         if session_id not in self._session_maps:
@@ -75,16 +86,22 @@ class ZTDSSanitizerTool(BaseTool):
 
         for entity_type, pattern in self.PATTERNS.items():
             matches = list(pattern.finditer(sanitized))
-            for match in sorted(matches, key=lambda m: m.start(), reverse=True):
+            if not matches:
+                continue
+
+            # Pass 1: Assign deterministic surrogates in ascending document order (left-to-right)
+            for match in sorted(matches, key=lambda m: m.start()):
                 original = match.group(0)
-                if original in entity_map:
-                    token = entity_map[original]
-                else:
+                if original not in entity_map:
                     count = len([k for k in token_map if k.startswith(f"[{entity_type}_TOKEN_")]) + 1
                     token = f"[{entity_type}_TOKEN_{count}]"
                     token_map[token] = original
                     entity_map[original] = token
 
+            # Pass 2: Substitute surrogates in descending span offset order (right-to-left) to preserve indices
+            for match in sorted(matches, key=lambda m: m.start(), reverse=True):
+                original = match.group(0)
+                token = entity_map[original]
                 start, end = match.span()
                 sanitized = sanitized[:start] + token + sanitized[end:]
 
