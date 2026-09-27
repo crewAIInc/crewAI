@@ -32,6 +32,7 @@ class SearchApiGoogleSearchTool(SearchApiBaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
+        self._validate_url()
         api_key = os.getenv("SEARCHAPI_API_KEY")
         query = kwargs.get("search_query") or kwargs.get("q")
         params: dict[str, Any] = {

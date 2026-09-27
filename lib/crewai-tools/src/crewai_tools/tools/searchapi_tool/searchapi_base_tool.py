@@ -1,6 +1,7 @@
 import os
 import re
 from typing import Any
+from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import Field
@@ -26,6 +27,14 @@ class SearchApiBaseTool(BaseTool):
         if not api_key:
             raise ValueError(
                 "Missing API key, you can get the key from https://www.searchapi.io/"
+            )
+        self._validate_url()
+
+    def _validate_url(self) -> None:
+        parsed = urlparse(self.url)
+        if parsed.scheme.lower() != "https":
+            raise ValueError(
+                f"URL scheme must be HTTPS to prevent sending credentials in cleartext, got '{parsed.scheme}'."
             )
 
     def _omit_fields(
