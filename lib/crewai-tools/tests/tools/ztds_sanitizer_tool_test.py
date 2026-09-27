@@ -36,5 +36,14 @@ class TestCrewAIZTDSTool(unittest.TestCase):
         self.assertNotIn(session_id, self.tool._entity_maps)
 
 
+    def test_multitoken_ordering_safety(self):
+        session_id = "agent-task-02"
+        raw_task = " ".join([f"client{i}@corp.com" for i in range(1, 15)])
+        self.tool._run(raw_task, session_id=session_id)
+        output = "Processed: [EMAIL_TOKEN_10] and [EMAIL_TOKEN_1]"
+        restored = self.tool.restore(output, session_id=session_id)
+        self.assertIn("client10@corp.com", restored)
+        self.assertIn("client1@corp.com", restored)
+
 if __name__ == "__main__":
     unittest.main()
