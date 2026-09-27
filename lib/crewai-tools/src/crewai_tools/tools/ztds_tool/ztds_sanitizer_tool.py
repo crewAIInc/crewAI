@@ -94,8 +94,9 @@ class ZTDSSanitizerTool(BaseTool):
         """Restores bracketed surrogate tokens strictly in volatile RAM."""
         token_map = self._session_maps.get(session_id, {})
         restored = text
-        for token, original in token_map.items():
-            restored = restored.replace(token, original)
+        # Descending length sort ensures [TOKEN_1] never corrupts [TOKEN_10]
+        for token in sorted(token_map.keys(), key=len, reverse=True):
+            restored = restored.replace(token, token_map[token])
         return restored
 
     def zeroize(self, session_id: str = "crew-default") -> None:
