@@ -1382,40 +1382,25 @@ class GeminiCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        # Backwards-compat: validate against crewai.llm.LLM_CONTEXT_WINDOW_SIZES
+        # so existing tests using patch.dict("crewai.llm.LLM_CONTEXT_WINDOW_SIZES", ...) work.
+        from crewai.llm import LLM_CONTEXT_WINDOW_SIZES as _LLM_SIZES
+        from crewai.llms.context_window import (
+            GEMINI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
+        for _key, _value in _LLM_SIZES.items():
+            if _value < 1024 or _value > 2097152:
                 raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
+                    f"Context window for {_key} must be between 1024 and 2097152"
                 )
 
-        context_windows = {
-            "gemini-3.8-flash": 1048576,  # 1M tokens
-            "gemini-3-pro-preview": 1048576,  # 1M tokens
-            "gemini-2.0-flash": 1048576,  # 1M tokens
-            "gemini-2.0-flash-thinking": 32768,
-            "gemini-2.0-flash-lite": 1048576,
-            "gemini-2.5-flash": 1048576,
-            "gemini-2.5-pro": 1048576,
-            "gemini-1.5-pro": 2097152,  # 2M tokens
-            "gemini-1.5-flash": 1048576,
-            "gemini-1.5-flash-8b": 1048576,
-            "gemini-1.0-pro": 32768,
-            "gemma-3-1b": 32000,
-            "gemma-3-4b": 128000,
-            "gemma-3-12b": 128000,
-            "gemma-3-27b": 128000,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens default
+        return resolve_context_window_size(
+            self.model,
+            GEMINI_CONTEXT_WINDOWS,
+            default=1_048_576,
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Gemini caps generation via ``max_output_tokens``."""

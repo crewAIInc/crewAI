@@ -1308,36 +1308,29 @@ class AzureCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            AZURE_CONTEXT_WINDOWS,
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            OPENAI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
+        merged = {**OPENAI_CONTEXT_WINDOWS, **AZURE_CONTEXT_WINDOWS}
+        # Backwards-compat: validate against crewai.llm.LLM_CONTEXT_WINDOW_SIZES
+        # so existing tests using patch.dict("crewai.llm.LLM_CONTEXT_WINDOW_SIZES", ...) work.
+        from crewai.llm import LLM_CONTEXT_WINDOW_SIZES as _LLM_SIZES
 
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
+        for _key, _value in _LLM_SIZES.items():
+            if _value < 1024 or _value > 2097152:
                 raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
+                    f"Context window for {_key} must be between 1024 and 2097152"
                 )
 
-        # Longest prefix first. Always insert new keys in that order so
-        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
-        context_windows = {
-            "text-embedding": 8191,
-            "gpt-3.5-turbo": 16385,
-            "gpt-5.4-mini": 200000,
-            "gpt-35-turbo": 16385,
-            "gpt-4o-mini": 128000,
-            "gpt-4-turbo": 128000,
-            "gpt-5.6": 1050000,
-            "gpt-4o": 128000,
-            "gpt-4": 8192,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model,
+            merged,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""
