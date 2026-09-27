@@ -21809,6 +21809,208 @@
       }
     },
     {
+      "description": "A tool to perform a Google search with a search_query using SearchApi.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SearchApi searches",
+          "name": "SEARCHAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SearchApi Google Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "url": {
+            "default": "https://www.searchapi.io/api/v1/search",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "SearchApiGoogleSearchTool",
+        "type": "object"
+      },
+      "name": "SearchApiGoogleSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for SearchApi Google Search.",
+        "properties": {
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Location you want the search to be performed in.",
+            "title": "Location"
+          },
+          "search_query": {
+            "description": "Mandatory search query you want to use to Google search.",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "SearchApiGoogleSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool to perform a search on Google Shopping with a search_query using SearchApi.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SearchApi searches",
+          "name": "SEARCHAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SearchApi Google Shopping",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "url": {
+            "default": "https://www.searchapi.io/api/v1/search",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "SearchApiGoogleShoppingTool",
+        "type": "object"
+      },
+      "name": "SearchApiGoogleShoppingTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for SearchApi Google Shopping.",
+        "properties": {
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Location you want the search to be performed in.",
+            "title": "Location"
+          },
+          "search_query": {
+            "description": "Mandatory search query you want to use to Google shopping.",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "SearchApiGoogleShoppingToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to read a website content.",
       "env_vars": [],
       "humanized_name": "Read a website content",
