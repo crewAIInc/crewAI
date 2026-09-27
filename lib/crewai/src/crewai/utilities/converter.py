@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
-from typing import TYPE_CHECKING, Any, Final, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from crewai_core.printer import PRINTER
 from pydantic import BaseModel, ValidationError
