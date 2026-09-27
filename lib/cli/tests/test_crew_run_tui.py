@@ -300,28 +300,49 @@ def test_an_evaluation_that_stopped_can_be_tried_again(monkeypatch) -> None:
     assert started == ["run-this-app"]
 
 
-def test_a_login_that_exits_is_shown_on_screen_like_any_other_answer(
-    monkeypatch,
-) -> None:
-    """`crewai eval` says why and exits; inside a worker the exit is nobody's
-    and the reason would go with it."""
+def test_a_login_that_cannot_be_read_is_shown_on_screen(monkeypatch) -> None:
+    """A credential that exists but cannot be read stops the evaluation, and
+    the sentence has to reach the screen: printing it would land under the
+    layout, and exiting would take it away."""
+    from crewai_cli.experimental import eval_crew
+
     app = CrewRunApp()
     app._evaluation = {"state": "starting"}
     monkeypatch.setattr(
         CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
     )
 
-    def refuse(*args, **kwargs):
-        raise SystemExit("Could not read the saved login. Run `crewai login` again.")
+    def broken_store():
+        raise OSError("permission denied")
 
+    monkeypatch.setattr(eval_crew, "get_auth_token", broken_store)
+
+    app._evaluate_now("run-this-app")
+
+    assert app._evaluation["state"] == "failed"
+    assert "Could not read the saved login" in app._evaluation["error"]
+    assert "crewai login" in app._evaluation["error"]
+
+
+def test_an_exit_with_no_reason_says_that_rather_than_its_code(monkeypatch) -> None:
+    """Nothing on this path should exit any more, but an exit carries a code
+    and `1` on screen is not an answer."""
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
     monkeypatch.setattr(
-        "crewai_cli.experimental.eval_crew.evaluate_run", refuse, raising=True
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.evaluate_run",
+        Mock(side_effect=SystemExit(1)),
     )
 
     app._evaluate_now("run-this-app")
 
     assert app._evaluation["state"] == "failed"
-    assert "crewai login" in app._evaluation["error"]
+    assert app._evaluation["error"] == (
+        "The evaluation stopped without saying why (exit 1)."
+    )
 
 
 def test_the_evaluation_shows_its_link_its_progress_and_its_verdict() -> None:
@@ -461,6 +482,10 @@ def test_a_child_process_run_reads_the_waiting_evaluation_off_its_environment(
 
 def test_a_run_with_no_trace_says_so_instead_of_evaluating(monkeypatch) -> None:
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    marked: list[str | None] = []
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.record_evaluation_outcome", marked.append
+    )
     monkeypatch.setattr(
         CrewRunApp,
         "_evaluate_worker",
@@ -476,6 +501,8 @@ def test_a_run_with_no_trace_says_so_instead_of_evaluating(monkeypatch) -> None:
 
     assert watched["execution_id"] is None
     assert "not traced" in notices[0]
+    # and the command waiting behind the screen is told, since it cannot see it
+    assert marked == [None]
 
 
 def test_a_run_that_failed_is_still_evaluated(monkeypatch) -> None:

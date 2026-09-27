@@ -570,7 +570,7 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
         ran.append("run")
         assert eval_module.os.environ.get("CREWAI_TRACING_ENABLED") == "true"
         record_last_run(directory, "fresh-run")
-        eval_module.record_evaluation_started("fresh-run")  # what the app does
+        eval_module.record_evaluation_outcome("fresh-run")  # what the app does
 
     import crewai_cli.run_crew as run_crew_module
 
@@ -645,6 +645,13 @@ def test_telemetry_never_breaks_the_command(project, monkeypatch):
     assert amp.calls[0] == ("create", "counted-run")
 
 
+def _write_marker(directory: Path, execution_id: str | None, at: str) -> None:
+    (directory / ".crewai").mkdir(exist_ok=True)
+    (directory / ".crewai" / "last_eval.json").write_text(
+        json.dumps({"execution_id": execution_id, "at": at})
+    )
+
+
 def _seconds_ago(seconds: float) -> str:
     from datetime import datetime, timedelta, timezone
 
@@ -676,7 +683,7 @@ def test_the_app_it_opens_is_told_an_evaluation_is_waiting(project, monkeypatch)
         # and in a child process, where a ContextVar cannot reach
         assert os.environ["CREWAI_EVAL_AWAITING_RUN"] == "1"
         record_last_run(directory, "run-it-just-did")
-        eval_module.record_evaluation_started("run-it-just-did")
+        eval_module.record_evaluation_outcome("run-it-just-did")
 
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
@@ -711,13 +718,13 @@ def test_a_run_no_app_evaluated_is_graded_by_the_command(project, monkeypatch):
 
 
 def test_a_marker_from_an_earlier_run_never_counts_for_this_one(project, monkeypatch):
-    """The marker names the run it is about, so yesterday's evaluation does not
-    stand in for today's."""
+    """A project keeps one marker, and the one from an earlier `crewai eval` is
+    not about the run this command just watched — it is older than it."""
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
     monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
-    eval_module.record_evaluation_started("some-older-run")
+    _write_marker(directory, "some-older-run", _seconds_ago(3600))
 
     def fake_run_crew() -> None:
         record_last_run(directory, "the-new-run")
@@ -729,6 +736,56 @@ def test_a_marker_from_an_earlier_run_never_counts_for_this_one(project, monkeyp
     eval_module.eval_crew()
 
     assert amp.calls[0] == ("create", "the-new-run")
+
+
+def test_the_app_saying_it_had_nothing_to_grade_is_not_a_run_to_grade(
+    project, monkeypatch, capsys
+):
+    """An app that looked and found no trace has answered; the command says so
+    once — the screen that showed it is gone — and grades nothing."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+
+    def fake_run_crew() -> None:
+        # another run in the same project finishes while this app is open
+        record_last_run(directory, "somebody-elses-run")
+        eval_module.record_evaluation_outcome(None)  # what the app says
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exit_code:
+        eval_module.eval_crew()
+
+    assert exit_code.value.code == 1
+    assert amp.calls == []  # never somebody else's run
+    assert "no trace was recorded" in capsys.readouterr().out
+
+
+def test_a_concurrent_run_cannot_send_the_command_after_the_wrong_one(
+    project, monkeypatch
+):
+    """The record is the project's last finish, which another run can replace
+    while this app is open. The app's own marker is what settles it."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+
+    def fake_run_crew() -> None:
+        eval_module.record_evaluation_outcome("the-run-the-app-watched")
+        record_last_run(directory, "a-run-that-finished-later")
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls == []  # the app graded its own run; nothing is graded twice
 
 
 def test_a_run_that_recorded_nothing_says_so(project, monkeypatch, capsys):
@@ -832,13 +889,35 @@ def test_only_a_missing_login_reads_as_anonymous(monkeypatch, capsys):
     monkeypatch.setattr(eval_module, "get_auth_token", lambda: "login-token")
     assert eval_module.saved_login() == "login-token"
 
+    # It stops the evaluation as a VALUE, not as an exit: the same sentence has
+    # to reach a terminal and a screen, and only one of them is a terminal.
     for broken in (OSError(13, "Permission denied"), ValueError("Fernet key must be 32 url-safe base64-encoded bytes.")):
         monkeypatch.setattr(eval_module, "get_auth_token", lambda error=broken: (_ for _ in ()).throw(error))
-        with pytest.raises(SystemExit) as exit_:
+        with pytest.raises(eval_module.EvaluationStoppedError) as stopped:
             eval_module.saved_login()
-        assert exit_.value.code == 1
-        out = capsys.readouterr().out
-        assert "Could not read the saved login" in out and type(broken).__name__ in out and "crewai login" in out
+        said = str(stopped.value)
+        assert "Could not read the saved login" in said and type(broken).__name__ in said and "crewai login" in said
+
+
+def test_the_command_still_prints_that_sentence_and_exits(project, monkeypatch, capsys):
+    """What the app shows on its screen, the command says in the terminal."""
+    directory, _ = project
+    record_last_run(directory)
+    stopped = eval_module.EvaluationStoppedError(
+        "Could not read the saved login (OSError: Permission denied). "
+        "Run `crewai login` again, or `crewai eval` will not know who you are."
+    )
+    monkeypatch.setattr(
+        eval_module, "saved_login", lambda: (_ for _ in ()).throw(stopped)
+    )
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+
+    assert exit_.value.code == 1
+    assert amp.calls == []  # stopped before anything was asked of AMP
+    assert "Could not read the saved login" in capsys.readouterr().out
 
 
 def test_read_last_run_reads_the_record_crewai_writes(tmp_path):

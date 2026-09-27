@@ -870,6 +870,10 @@ FooterKey .footer-key--key {
         traced = self._traced_execution_id()
         self._auto_eval["execution_id"] = traced
         if traced is None:
+            # Said to the command waiting behind this screen as well: it cannot
+            # see this notice, and "no marker" is how it tells a run no app got
+            # to from a run an app looked at and found nothing to grade.
+            self._say_what_became_of_the_evaluation(None)
             self.notify(
                 "This run was not traced, so there is nothing to evaluate.",
                 title="Evaluate",
@@ -878,6 +882,12 @@ FooterKey .footer-key--key {
             return
 
         self._start_evaluation(traced)
+
+    def _say_what_became_of_the_evaluation(self, execution_id: str | None) -> None:
+        with contextlib.suppress(Exception):
+            from crewai_cli.experimental.eval_crew import record_evaluation_outcome
+
+            record_evaluation_outcome(execution_id)
 
     def _on_crew_failed(self, error: str) -> None:
         with self._lock:
@@ -1360,9 +1370,13 @@ FooterKey .footer-key--key {
             back(self._evaluation_failed, str(stopped))
             return
         except SystemExit as exit_:
-            # `crewai eval` says why and exits; in here the exit is nobody's
-            # and the reason would go with it, so it is shown instead.
-            back(self._evaluation_failed, str(exit_) or "the evaluation stopped")
+            # Nothing on this path should exit any more — a stop is a value
+            # now — but an exit carries a code, not a reason, and "1" on screen
+            # is worse than saying plainly that the reason did not survive.
+            back(
+                self._evaluation_failed,
+                f"The evaluation stopped without saying why (exit {exit_.code}).",
+            )
             return
         except Exception as error:  # a client bug is still an answer to show
             back(self._evaluation_failed, f"{type(error).__name__}: {error}")

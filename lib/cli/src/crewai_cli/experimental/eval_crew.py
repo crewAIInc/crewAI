@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import contextlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
 import json
 import os
@@ -94,6 +94,22 @@ def _record_usage(execution_id: str, *, logged_in: bool) -> None:
         pass
 
 
+NOT_TRACED = (
+    "The run finished but no trace was recorded: the run may have failed, sharing the "
+    "trace was declined, or this project's crewai is older than the version that records "
+    f"the last run ({LAST_RUN_FILE}). Run the crew again and accept when asked, then `crewai eval`."
+)
+
+
+class EvaluationStoppedError(RuntimeError):
+    """The evaluation cannot go on, in words meant for a reader.
+
+    Raised rather than printed-and-exited, because the same two functions serve
+    the terminal and the run app: one of them owns the screen, and a line
+    printed underneath it is a smear nobody asked for.
+    """
+
+
 def _note(text: str, style: str = "dim") -> None:
     console.print(Text(text), style=style)
 
@@ -116,7 +132,10 @@ def eval_crew(run_id: str | None = None) -> None:
             return
         record = read_last_run() or {}
 
-    client = _amp_client(trusted)
+    try:
+        client = _amp_client(trusted)
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
     recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
     if not run_id and recorded_amp and recorded_amp != client.base_url.rstrip("/"):
         console.print(
@@ -190,17 +209,18 @@ def _marker_path() -> Path:
     return project_dir() / LAST_RUN_DIR / EVAL_MARKER_FILE
 
 
-def record_evaluation_started(execution_id: str) -> None:
-    """Say that this run's evaluation has begun, for the command waiting behind
-    the app that began it.
+def record_evaluation_outcome(execution_id: str | None) -> None:
+    """What the run app did with the evaluation it was opened for.
 
     The app runs in a child process for most projects, so nothing in memory
-    reaches the command that opened it. What the command must not do is
-    evaluate the same run a second time — and what it must still do is evaluate
-    a run the app never got to, a conversational session or a flow that took
-    the terminal instead of the app. One line on disk answers both. Never
-    raises: a marker that cannot be written costs a duplicate evaluation, not
-    the run.
+    reaches the command waiting behind it. Two things that command must know
+    are both here: that this run has been evaluated already, and — when the app
+    had nothing to evaluate — that it was the app saying so rather than no app
+    at all. A conversational session and a flow that takes the terminal never
+    get here, leave no marker, and the command grades the run itself.
+
+    Never raises: a marker that cannot be written costs a second evaluation,
+    not the run.
     """
     with contextlib.suppress(Exception):
         path = _marker_path()
@@ -209,21 +229,32 @@ def record_evaluation_started(execution_id: str) -> None:
             json.dumps(
                 {
                     "execution_id": execution_id,
-                    "started_at": datetime.now(timezone.utc).isoformat(
-                        timespec="milliseconds"
-                    ),
+                    "at": datetime.now(timezone.utc).isoformat(),
                 }
             ),
             encoding="utf-8",
         )
 
 
-def evaluation_already_started(execution_id: str) -> bool:
-    """Did the app evaluate this very run?"""
+def evaluation_marker(after: datetime) -> dict[str, Any] | None:
+    """The app's word about the run this command just watched, if it left one.
+
+    AFTER is when the run was started, and the marker must be newer: a project
+    keeps one marker, and the one from an earlier `crewai eval` is not about
+    this run. Matched on time rather than on the project's last-run record,
+    which another run finishing in the same project can replace while this app
+    is still open.
+
+    A second of slack, because the two stamps are written by two processes and
+    the question being asked is "this run or an older one", which a second
+    cannot confuse.
+    """
     with contextlib.suppress(Exception):
         marker = json.loads(_marker_path().read_text(encoding="utf-8"))
-        return str(marker.get("execution_id") or "") == execution_id
-    return False
+        when = datetime.fromisoformat(str(marker.get("at")))
+        if isinstance(marker, dict) and when >= after - timedelta(seconds=1):
+            return dict(marker)
+    return None
 
 
 def evaluate_run(
@@ -250,7 +281,7 @@ def evaluate_run(
     # After the start, exactly as the command counts it: `cli_usage:eval` is the
     # count of evaluations that began, and an evaluation the app runs is one.
     _record_usage(execution_id, logged_in=client.api_key is not None)
-    record_evaluation_started(execution_id)
+    record_evaluation_outcome(execution_id)
     on_started(started)
     return _wait(client, started["id"], started.get("url"), on_status=on_status)
 
@@ -369,11 +400,13 @@ def saved_login() -> str | None:
     except AuthError:
         return None
     except Exception as error:
-        _fail(
+        # Raised, not printed-and-exited: the run app shows this on its own
+        # screen, where a print would land under the layout and an exit would
+        # take the sentence with it.
+        raise EvaluationStoppedError(
             f"Could not read the saved login ({type(error).__name__}: {error}). "
             "Run `crewai login` again, or `crewai eval` will not know who you are."
-        )
-        return None
+        ) from error
 
 
 def _run_and_let_the_app_evaluate() -> str | None:
@@ -413,21 +446,27 @@ def _run_and_let_the_app_evaluate() -> str | None:
     # ends. It runs in this process for some projects and in a child for others,
     # so what says a run was traced is either the holder's id or the record the
     # run wrote.
+    began = datetime.now(timezone.utc)
     with evaluating_after_run() as watched:
         run_crew()
+
+    # The app says what it did with the run it watched, and its word settles
+    # this: it evaluated it (nothing left to do), or it had nothing to evaluate
+    # (say so once, in the terminal the screen has left). Only when no app got
+    # here at all — a conversational session, a flow that took the terminal —
+    # is there a run for this command to grade.
+    marker = evaluation_marker(after=began)
+    if marker is not None:
+        if marker.get("execution_id"):
+            return None
+        console.print(NOT_TRACED, style="bold red")
+        raise SystemExit(1)
+
     traced = watched["execution_id"] or (read_last_run() or {}).get("execution_id")
     if traced:
-        # The app leaves a marker when it starts the evaluation. Without one no
-        # app got to this run, and the command grades it here rather than
-        # exiting as if somebody had.
-        return None if evaluation_already_started(str(traced)) else str(traced)
+        return str(traced)
 
-    console.print(
-        "The run finished but no trace was recorded: the run may have failed, sharing the "
-        "trace was declined, or this project's crewai is older than the version that records "
-        f"the last run ({LAST_RUN_FILE}). Run the crew again and accept when asked, then `crewai eval`.",
-        style="bold red",
-    )
+    console.print(NOT_TRACED, style="bold red")
     raise SystemExit(1)
 
 
@@ -441,15 +480,6 @@ def _enable_tracing() -> None:
         "Tracing is on for this project — its runs are traced to CrewAI AMP.",
         style="green",
     )
-
-
-class EvaluationStoppedError(RuntimeError):
-    """The evaluation cannot go on, in words meant for a reader.
-
-    Raised rather than printed-and-exited, because the same two functions serve
-    the terminal and the run app: one of them owns the screen, and a line
-    printed underneath it is a smear nobody asked for.
-    """
 
 
 def _start_evaluation(
