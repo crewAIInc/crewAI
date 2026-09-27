@@ -74,6 +74,21 @@ class TestCrewAIZTDSTool(unittest.TestCase):
         restored = self.tool.restore(sanitized, session_id=session_id)
         self.assertEqual(restored, raw)
 
+    def test_token_collision_avoidance(self):
+        session_id = "agent-task-collision"
+        # Input text already contains literal [EMAIL_TOKEN_1]
+        raw = "Contact alice@example.com but preserve [EMAIL_TOKEN_1] literal"
+        sanitized = self.tool._run(raw, session_id=session_id)
+
+        # alice@example.com must get [EMAIL_TOKEN_2] to avoid colliding with literal [EMAIL_TOKEN_1]
+        self.assertIn("[EMAIL_TOKEN_2]", sanitized)
+        self.assertIn("[EMAIL_TOKEN_1]", sanitized)
+        self.assertEqual(sanitized, "Contact [EMAIL_TOKEN_2] but preserve [EMAIL_TOKEN_1] literal")
+
+        # Restoring must only replace [EMAIL_TOKEN_2] back to alice@example.com, keeping [EMAIL_TOKEN_1]
+        restored = self.tool.restore(sanitized, session_id=session_id)
+        self.assertEqual(restored, raw)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -94,7 +94,12 @@ class ZTDSSanitizerTool(BaseTool):
                 original = match.group(0)
                 if original not in entity_map:
                     count = len([k for k in token_map if k.startswith(f"[{entity_type}_TOKEN_")]) + 1
-                    token = f"[{entity_type}_TOKEN_{count}]"
+                    while True:
+                        candidate = f"[{entity_type}_TOKEN_{count}]"
+                        if candidate not in text and candidate not in token_map:
+                            token = candidate
+                            break
+                        count += 1
                     token_map[token] = original
                     entity_map[original] = token
 
