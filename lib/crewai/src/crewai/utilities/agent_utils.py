@@ -795,9 +795,9 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
+    return LLMContextLengthExceededError(
         str(exception)
-    )
+    )._is_context_length_exceeded_error(exception)
 
 
 def handle_context_length(

@@ -49,7 +49,7 @@ def run_crew(*args: Any, **kwargs: Any) -> Any:
 
 
 def eval_crew(*args: Any, **kwargs: Any) -> Any:
-    from crewai_cli.eval_crew import eval_crew as _eval_crew
+    from crewai_cli.experimental.eval_crew import eval_crew as _eval_crew
 
     return _eval_crew(*args, **kwargs)
 
