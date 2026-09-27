@@ -138,21 +138,56 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
     assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
 
-def test_view_traces_button_click_records_telemetry(monkeypatch) -> None:
+def test_view_traces_opens_the_link_crewai_recorded_for_this_run(monkeypatch) -> None:
+    """crewAI prints that link after a run but never under a TUI, so the button
+    reads it off the record crewAI wrote — matched to THIS app's execution."""
     app = CrewRunApp()
     app._status = "completed"
     app._telemetry = Mock()
-    notice = Mock()
-    monkeypatch.setattr(app, "notify", notice)
+    app._execution_uuid = "run-this-app"
+    monkeypatch.setattr(
+        crew_run_tui,
+        "_recorded_run",
+        lambda uuid: {"execution_id": uuid, "trace_url": "https://amp.example/t/1"}
+        if uuid == "run-this-app"
+        else None,
+    )
+    opened: list[str] = []
+    monkeypatch.setattr(CrewRunApp, "_open_report", lambda self, url: opened.append(url))
+    monkeypatch.setattr(app, "notify", Mock())
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces")))
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
-    notice.assert_called_once_with(
-        "Trace sharing is requested when the execution finishes. "
-        "A trace link is not available for this run.",
-        title="Execution traces",
+    assert opened == ["https://amp.example/t/1"]
+
+
+@pytest.mark.parametrize(
+    ("record", "said"),
+    [
+        (None, "not traced"),
+        ({"execution_id": "run-this-app"}, "granted no link"),
+    ],
+)
+def test_view_traces_says_which_of_the_two_reasons_there_is_no_link(
+    monkeypatch, record, said
+) -> None:
+    """A run nobody traced and a traced run AMP gave no link for are different
+    problems, and only one of them is the reader's to fix."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    monkeypatch.setattr(crew_run_tui, "_recorded_run", lambda uuid: record)
+    monkeypatch.setattr(
+        CrewRunApp, "_open_report", lambda self, url: pytest.fail("nothing to open")
     )
+    notices: list[str] = []
+    monkeypatch.setattr(app, "notify", lambda message, **kwargs: notices.append(message))
+
+    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces")))
+
+    assert said in notices[0]
 
 
 def test_deploy_button_click_records_telemetry() -> None:

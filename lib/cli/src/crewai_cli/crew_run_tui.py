@@ -350,21 +350,26 @@ def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
     return {"execution_id": None} if os.environ.get(_AWAITING_EVAL_ENV) else None
 
 
-def _trace_was_recorded(execution_uuid: str) -> bool:
-    """Did this execution's trace actually reach AMP?
+def _recorded_run(execution_uuid: str) -> dict[str, Any] | None:
+    """This execution's own record, if its trace reached AMP.
 
-    crewAI records a run when its trace is exported, so the record answers the
-    one question the uuid alone cannot: whether there is anything to grade. It
-    is matched by id rather than trusted as "the last run", which it is only
-    until another run in the project finishes.
+    crewAI records a run when its spans are exported, so the record answers the
+    one question the uuid alone cannot: whether there is anything to grade, and
+    where AMP will show it. It is matched by id rather than trusted as "the
+    last run", which it is only until another run in the project finishes.
     """
-    try:
+    # a missing or unreadable record simply means "not traced"
+    with contextlib.suppress(Exception):
         from crewai.telemetry.tracing.last_run import read_last_run
 
         record = read_last_run() or {}
-        return str(record.get("execution_id") or "") == execution_uuid
-    except Exception:  # a missing or unreadable record simply means "not traced"
-        return False
+        if str(record.get("execution_id") or "") == execution_uuid:
+            return record
+    return None
+
+
+def _trace_was_recorded(execution_uuid: str) -> bool:
+    return _recorded_run(execution_uuid) is not None
 
 
 class CrewRunApp(App[Any]):
@@ -1166,15 +1171,34 @@ FooterKey .footer-key--key {
                 self.call_from_thread(self._dismiss_consent_modal)
 
     def action_view_traces(self) -> None:
+        """Open AMP's view of this run's traces.
+
+        crewAI prints that link after a run, but never under a TUI — its
+        console is kept out of this layout — so the link reaches here the way
+        everything else about the run does: through the record crewAI writes
+        when the spans are exported, matched to THIS app's execution.
+        """
         if self._status != "completed":
             return
         # Recorded here rather than in on_button_pressed so the `t` key binding
         # is counted too, and only once the action can actually do something.
         self._record_tui_button_click("view_traces")
+        record = (
+            _recorded_run(self._execution_uuid) if self._execution_uuid else None
+        ) or {}
+        url = str(record.get("trace_url") or "")
+        if url:
+            self._open_report(url)
+            self.notify(url, title="Execution traces")
+            return
+
         self.notify(
-            "Trace sharing is requested when the execution finishes. "
-            "A trace link is not available for this run.",
+            "This run was not traced, so there are no traces to view. "
+            "Turn tracing on and run it again."
+            if not record
+            else "This run was traced, but AMP granted no link to view it.",
             title="Execution traces",
+            severity="warning",
         )
 
     def _capture_execution_uuid(self) -> None:
