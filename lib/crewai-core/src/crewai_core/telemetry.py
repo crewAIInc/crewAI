@@ -50,6 +50,29 @@ TRACER_NAME: Final[str] = "crewai.telemetry"
 DeploySource = Literal["cli", "tui"]
 """Where a deployment was initiated from: a direct CLI command, or the run TUI."""
 
+DeployFailureReason = Literal[
+    "api_4xx",
+    "api_5xx",
+    "invalid_json",
+    "invalid_creation_response",
+    "network_error",
+    "zip_error",
+    "user_declined",
+    "unexpected",
+]
+"""Why ``crewai deploy create`` failed after the attempt was counted.
+
+A closed vocabulary, so the warehouse can group on it. ``api_4xx`` / ``api_5xx``
+classify the Enterprise API's response (the exact code rides separately as
+``status_code``); ``invalid_json`` is a 2xx whose body is not JSON, such as a
+proxy's HTML page; ``invalid_creation_response`` a 2xx JSON body that is not a
+creation payload (no ``uuid``), which is a broken API contract rather than a
+broken network; ``network_error`` a transport failure before any response;
+``zip_error`` a failure building the project archive; ``user_declined`` an
+abort at a confirmation prompt; ``unexpected`` anything else. Never the error
+message.
+"""
+
 
 def close_span(span: Span) -> None:
     """Set span status to OK and end it."""
@@ -67,15 +90,82 @@ def suppress_warnings() -> Any:
         yield
 
 
+class _ExportState(threading.local):
+    """Per-thread marker: True while CrewAI's own exporter runs on this thread."""
+
+    active: bool = False
+
+
+_export_state = _ExportState()
+
+
+class _OwnExportLogFilter(logging.Filter):
+    """Drop OTLP export logs emitted while CrewAI's own exporter is running.
+
+    ``OTLPSpanExporter`` retries an unreachable collector and logs a warning per
+    attempt plus a final error, all on the batch worker thread. That output
+    lands on the user's console although the failure is harmless. Scoping the
+    filter to that thread keeps the logs of any OTLP exporter the user runs in
+    the same process.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not _export_state.active
+
+
+_OWN_EXPORT_LOG_FILTER = _OwnExportLogFilter()
+
+
 class SafeOTLPSpanExporter(OTLPSpanExporter):
-    """OTLP exporter that swallows export failures so telemetry never crashes the app."""
+    """OTLP exporter that neither raises nor logs when the collector is unreachable."""
+
+    def __init__(self, endpoint: str, timeout: int) -> None:
+        super().__init__(endpoint=endpoint, timeout=timeout)
+        # Idempotent: a logger holds at most one reference to a given filter.
+        logging.getLogger(OTLPSpanExporter.__module__).addFilter(_OWN_EXPORT_LOG_FILTER)
 
     def export(self, spans: Any) -> SpanExportResult:
+        _export_state.active = True
         try:
             return super().export(spans)
         except Exception as e:
             logger.debug("Telemetry export failed: %s", e)
             return SpanExportResult.FAILURE
+        finally:
+            _export_state.active = False
+
+    def shutdown(self) -> None:
+        # flush_and_shutdown stops the exporter before the processor does, and
+        # the base class logs a warning for the repeat call.
+        _export_state.active = True
+        try:
+            super().shutdown()  # type: ignore[no-untyped-call]  # unannotated upstream
+        finally:
+            _export_state.active = False
+
+
+FINAL_FLUSH_SECONDS: Final[int] = 10
+
+
+def flush_and_shutdown(
+    provider: TracerProvider, exporter: SafeOTLPSpanExporter
+) -> None:
+    """Export what is still buffered, waiting at most ``FINAL_FLUSH_SECONDS``.
+
+    ``BatchSpanProcessor.force_flush`` ignores its timeout and runs the export,
+    retry loop included, on the calling thread
+    (open-telemetry/opentelemetry-python#4568). With the collector unreachable
+    that held process exit for the exporter's whole retry budget. Flushing on a
+    helper thread and then stopping the exporter ends the loop at the deadline;
+    when the export succeeds sooner, the join returns as soon as it is done.
+    """
+    flush = threading.Thread(
+        target=provider.force_flush, name="crewai-telemetry-flush", daemon=True
+    )
+    flush.start()
+    flush.join(FINAL_FLUSH_SECONDS)
+    exporter.shutdown()
+    provider.shutdown()
 
 
 class CommonAttributesSpanProcessor(SpanProcessor):
@@ -218,14 +308,11 @@ class Telemetry:
                 CommonAttributesSpanProcessor(common_span_attributes())
             )
 
-            processor = BatchSpanProcessor(
-                SafeOTLPSpanExporter(
-                    endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
-                    timeout=30,
-                )
+            self._exporter = SafeOTLPSpanExporter(
+                endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
+                timeout=30,
             )
-
-            self.provider.add_span_processor(processor)
+            self.provider.add_span_processor(BatchSpanProcessor(self._exporter))
             self._register_shutdown_handlers()
             self.ready = True
         except Exception as e:
@@ -282,8 +369,7 @@ class Telemetry:
         if not self.ready:
             return
         try:
-            self.provider.force_flush(timeout_millis=5000)
-            self.provider.shutdown()
+            flush_and_shutdown(self.provider, self._exporter)
             self.ready = False
         except Exception as e:
             logger.debug("Telemetry shutdown failed: %s", e)
@@ -413,6 +499,41 @@ class Telemetry:
             self._add_attribute(span, "crewai_version", get_crewai_version())
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
+            self._add_attribute(span, "source", source)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
+    def crew_deployment_failed_span(
+        self,
+        reason: DeployFailureReason,
+        source: DeploySource = "cli",
+        status_code: int | None = None,
+    ) -> None:
+        """Records that ``crewai deploy create`` failed after the attempt was counted.
+
+        :meth:`create_crew_deployment_span` counts attempts and
+        :meth:`crew_deployment_created_span` counts successes; the gap between
+        them was measurable but had no cause attached. This span carries the
+        cause from a closed vocabulary, plus the HTTP status when the API
+        answered. Emits no feature count, for the same reason as
+        :meth:`crew_deployment_created_span`.
+
+        Args:
+            reason: Why the create failed.
+            source: Where the deployment was initiated from.
+            status_code: HTTP status of the API response, when there was one.
+        """
+
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Crew Deployment Failed")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "reason", reason)
+            if status_code is not None:
+                self._add_attribute(span, "status_code", status_code)
             self._add_attribute(span, "source", source)
             close_span(span)
 

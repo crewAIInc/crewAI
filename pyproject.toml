@@ -258,9 +258,11 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # TLS hostnames are not verified, so a network attacker can impersonate the endpoint;
 # fixed in 4.7.1. Declared as crewai-tools[snowflake] "snowflake-connector-python>=3.12.4",
 # which the lock resolved to 4.6.0.
+# soupsieve <=2.8.4 has GHSA-j934-xhv5-fg8f and GHSA-gjv8-xp57-g29c; force 2.9.2+.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
+    "anyio>=4.14.2", # GHSA-82r6-8w77-94w6 / GHSA-5p39-cfhj-2xmp
     "openai>=2.30.0,<3",
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
@@ -292,6 +294,7 @@ override-dependencies = [
     "torch>=2.13.0",
     "snowflake-connector-python>=4.7.1",
     "snowflake-sqlalchemy>=1.11.0",
+    "soupsieve>=2.9.2",
 ]
 
 [tool.uv.workspace]

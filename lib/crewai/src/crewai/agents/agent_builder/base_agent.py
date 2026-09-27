@@ -720,7 +720,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "actions",
         }
 
-        existing_llm = shallow_copy(self.llm)
+        existing_llm = shallow_copy(self._llm_for_copy())
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
         existing_knowledge_sources = None
@@ -762,6 +762,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             knowledge=copied_knowledge,
             knowledge_storage=copied_knowledge_storage,
         )
+
+    def _llm_for_copy(self) -> Any:
+        """The llm a copy is built with; ``Agent`` overrides it for ``llm_overlay``."""
+        return self.llm
 
     def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""

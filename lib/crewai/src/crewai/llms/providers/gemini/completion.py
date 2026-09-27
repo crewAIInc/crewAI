@@ -599,6 +599,14 @@ class GeminiCompletion(BaseLLM):
                                     mime_type=inline["mimeType"],
                                 )
                             )
+                        elif "fileData" in item:
+                            file_data = item["fileData"]
+                            parts.append(
+                                types.Part.from_uri(
+                                    file_uri=file_data["fileUri"],
+                                    mime_type=file_data["mimeType"],
+                                )
+                            )
                     else:
                         parts.append(types.Part.from_text(text=str(item)))
             else:
@@ -1386,6 +1394,7 @@ class GeminiCompletion(BaseLLM):
                 )
 
         context_windows = {
+            "gemini-3.8-flash": 1048576,  # 1M tokens
             "gemini-3-pro-preview": 1048576,  # 1M tokens
             "gemini-2.0-flash": 1048576,  # 1M tokens
             "gemini-2.0-flash-thinking": 32768,

@@ -1,5 +1,7 @@
+import logging
 import os
-from unittest.mock import patch, MagicMock
+import threading
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from crewai.llm import LLM
@@ -208,6 +210,45 @@ def test_bedrock_completion_call():
 
         assert result == "Hello! I'm Claude on Bedrock, ready to help."
         mock_call.assert_called_once_with("Hello, how are you?")
+
+
+@pytest.mark.asyncio
+async def test_bedrock_acall_falls_back_to_sync_call_without_aiobotocore(caplog):
+    """Async Bedrock calls remain usable when only the sync SDK is installed."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    callbacks = [MagicMock()]
+    available_functions = {"lookup": MagicMock()}
+    call_thread_id: int | None = None
+
+    def sync_call(*args, **kwargs):
+        nonlocal call_thread_id
+        call_thread_id = threading.get_ident()
+        return "fallback response"
+
+    with caplog.at_level(logging.WARNING):
+        with (
+            patch.object(bedrock_completion, "AIOBOTOCORE_AVAILABLE", False),
+            patch.object(llm, "call", side_effect=sync_call) as mock_call,
+        ):
+            event_loop_thread_id = threading.get_ident()
+            result = await llm.acall(
+                "Hello, how are you?",
+                callbacks=callbacks,
+                available_functions=available_functions,
+            )
+
+    assert result == "fallback response"
+    assert call_thread_id != event_loop_thread_id
+    assert "falling back to synchronous AWS Bedrock calls" in caplog.text
+    mock_call.assert_called_once_with(
+        "Hello, how are you?",
+        tools=None,
+        callbacks=callbacks,
+        available_functions=available_functions,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    )
 
 
 def test_bedrock_completion_called_during_crew_execution():
@@ -729,12 +770,13 @@ def test_bedrock_handles_cohere_conversation_requirements():
     assert "continue" in formatted_messages[-1]["content"][0]["text"].lower()
 
 
-def test_bedrock_client_error_handling():
+def test_bedrock_client_error_handling(monkeypatch):
     """
     Test that Bedrock properly handles various AWS client errors
     """
     from botocore.exceptions import ClientError
 
+    monkeypatch.setattr('crewai.llms.retry.time.sleep', lambda _: None)
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     with patch.object(llm._client, 'converse') as mock_converse:
@@ -762,6 +804,88 @@ def test_bedrock_client_error_handling():
         with pytest.raises(RuntimeError) as exc_info:
             llm.call("Hello")
         assert "throttled" in str(exc_info.value).lower()
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        error_response = {
+            'Error': {
+                'Code': 'ServiceQuotaExceededException',
+                'Message': 'Quota increase required',
+            }
+        }
+        mock_converse.side_effect = ClientError(error_response, 'converse')
+
+        with pytest.raises(RuntimeError) as exc_info:
+            llm.call("Hello")
+
+        assert "quota" in str(exc_info.value).lower()
+        assert mock_converse.call_count == 1
+
+
+def test_bedrock_throttling_retries_without_context_recovery(monkeypatch):
+    """Bedrock token throttles retry instead of being treated as context overflow."""
+    from botocore.exceptions import ClientError
+
+    monkeypatch.setattr('crewai.llms.retry.time.sleep', lambda _: None)
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    throttle_response = {
+        'Error': {
+            'Code': 'ThrottlingException',
+            'Message': 'Too many tokens, please wait before trying again',
+        }
+    }
+    successful_response = {
+        'output': {
+            'message': {'role': 'assistant', 'content': [{'text': 'Recovered'}]}
+        },
+        'usage': {'inputTokens': 1, 'outputTokens': 1, 'totalTokens': 2},
+    }
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.side_effect = [
+            ClientError(throttle_response, 'converse'),
+            successful_response,
+        ]
+
+        assert llm.call("Hello") == "Recovered"
+
+    assert mock_converse.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_bedrock_async_throttling_retries_without_context_recovery(monkeypatch):
+    """Async Bedrock token throttles use the same client-level retry behavior."""
+    from botocore.exceptions import ClientError
+
+    async def no_sleep(_: float) -> None:
+        return None
+
+    monkeypatch.setattr('crewai.llms.retry.asyncio.sleep', no_sleep)
+    monkeypatch.setattr(bedrock_completion, 'AIOBOTOCORE_AVAILABLE', True)
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    throttle_response = {
+        'Error': {
+            'Code': 'ThrottlingException',
+            'Message': 'Too many tokens, please wait before trying again',
+        }
+    }
+    successful_response = {
+        'output': {
+            'message': {'role': 'assistant', 'content': [{'text': 'Recovered'}]}
+        },
+        'usage': {'inputTokens': 1, 'outputTokens': 1, 'totalTokens': 2},
+    }
+    async_client = MagicMock()
+    async_client.converse = AsyncMock(
+        side_effect=[
+            ClientError(throttle_response, 'converse'),
+            successful_response,
+        ]
+    )
+
+    with patch.object(llm, '_ensure_async_client', return_value=async_client):
+        assert await llm.acall("Hello") == "Recovered"
+
+    assert async_client.converse.await_count == 2
 
 
 def test_bedrock_stop_sequences_sync():

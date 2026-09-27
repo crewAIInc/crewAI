@@ -1370,13 +1370,8 @@ class TestConversationalFlow:
         assert len(route_events) == 1
         assert route_events[0].message_index is None
 
-    def test_finalize_session_traces_emits_finished_and_finalizes_batch(self) -> None:
-        """``finalize_session_traces()`` emits one ``FlowFinishedEvent`` + one ``finalize_batch``.
-
-        Pairs with the deferral above: after N turns with deferral on, a
-        single ``finalize_session_traces()`` closes the whole session as
-        one trace batch with one terminal event.
-        """
+    def test_finalize_session_traces_emits_finished_without_legacy_batch(self) -> None:
+        """Deferred finalization emits one terminal event without legacy upload."""
         from crewai.events.types.flow_events import FlowFinishedEvent
 
         @ConversationConfig()
@@ -1420,9 +1415,7 @@ class TestConversationalFlow:
                 assert len(finished_events) == 1, (
                     "finalize_session_traces must emit exactly one FlowFinishedEvent"
                 )
-                assert mock_finalize.call_count == 1, (
-                    "finalize_session_traces must finalize the trace batch once"
-                )
+                mock_finalize.assert_not_called()
 
     def test_deferred_resume_skips_per_resume_flow_finished_event(self) -> None:
         """Deferred sessions do not emit terminal events while resuming."""
@@ -2048,7 +2041,7 @@ class TestDeferredFlowLifecycleEvents:
                     listener.batch_manager.finalize_batch()
             mock_finalize.assert_not_called()
 
-    def test_deferred_flow_kickoff_marks_trace_manager_session_deferred(
+    def test_deferred_flow_kickoff_leaves_legacy_trace_manager_untouched(
         self,
     ) -> None:
         class DeferredTraceFlow(Flow[ChatState]):
@@ -2065,13 +2058,13 @@ class TestDeferredFlowLifecycleEvents:
         with patch.object(listener.batch_manager, "finalize_batch"):
             flow.kickoff()
 
-        assert listener.batch_manager.defer_session_finalization is True
+        assert listener.batch_manager.defer_session_finalization is False
 
         flow.finalize_session_traces()
 
         assert listener.batch_manager.defer_session_finalization is False
 
-    def test_non_deferred_flow_kickoff_clears_stale_trace_manager_flag(
+    def test_non_deferred_flow_kickoff_leaves_legacy_trace_manager_untouched(
         self,
     ) -> None:
         class PlainTraceFlow(Flow[ChatState]):
@@ -2084,7 +2077,7 @@ class TestDeferredFlowLifecycleEvents:
 
         PlainTraceFlow().kickoff()
 
-        assert listener.batch_manager.defer_session_finalization is False
+        assert listener.batch_manager.defer_session_finalization is True
 
 
 class TestNestedCrewTracing:
@@ -2191,6 +2184,10 @@ class TestNestedCrewTracing:
     ) -> None:
         from crewai import Agent, Crew, Task
         from crewai.llms.base_llm import BaseLLM
+        from crewai.telemetry.tracing.session import telemetry_session
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
 
         class StaticLLM(BaseLLM):
             def __init__(self) -> None:
@@ -2249,7 +2246,10 @@ class TestNestedCrewTracing:
 
         flow = NestedCrewFlow()
 
+        recorder = InMemorySpanExporter()
         with (
+            patch.dict("os.environ", {"OTEL_SDK_DISABLED": "false"}),
+            telemetry_session(str(uuid4()), "nested", [recorder]),
             patch.object(
                 listener.batch_manager,
                 "_initialize_backend_batch",
@@ -2266,6 +2266,10 @@ class TestNestedCrewTracing:
                 "nested AgentExecutor flows inside a deferred parent Flow must "
                 "not finalize the parent trace batch"
             )
+
+            flow.finalize_session_traces()
+
+        assert [span.name for span in recorder.get_finished_spans()].count("execute flow") == 1
 
 
 class TestConversationalOptIn:

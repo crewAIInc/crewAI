@@ -3,8 +3,6 @@ import time
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import pytest
-
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import CrewKickoffStartedEvent
 from crewai.events.types.flow_events import (
@@ -34,14 +32,17 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli import run_crew
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli.crew_run_tui import (
-    CrewRunApp,
     _LOG_ARGS_TEXT_LIMIT,
     _LOG_RESULT_TEXT_LIMIT,
     _LOG_TRUNCATION_SUFFIX,
+    CrewRunApp,
+    _format_json_in_text,
+    _try_parse_structured,
 )
+import pytest
 
 
 def _app_with_plan() -> CrewRunApp:
@@ -139,16 +140,18 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
 def test_view_traces_button_click_records_telemetry(monkeypatch) -> None:
     app = CrewRunApp()
     app._status = "completed"
-    app._trace_url = "https://app.crewai.com/traces/test"
     app._telemetry = Mock()
-    opened_urls: list[str] = []
-
-    monkeypatch.setattr("webbrowser.open", lambda url: opened_urls.append(url))
+    notice = Mock()
+    monkeypatch.setattr(app, "notify", notice)
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces")))
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
-    assert opened_urls == ["https://app.crewai.com/traces/test"]
+    notice.assert_called_once_with(
+        "Trace sharing is requested when the execution finishes. "
+        "A trace link is not available for this run.",
+        title="Execution traces",
+    )
 
 
 def test_deploy_button_click_records_telemetry() -> None:
@@ -1708,7 +1711,9 @@ async def test_declarative_flow_runs_on_tui() -> None:
     app._flow = FakeFlow()
     app._flow_inputs = {"topic": "AI"}
     # A step left active (no Finished event) must be swept to done by _on_crew_done.
-    app._flow_steps = [{"name": "compute", "call_type": "expression", "status": "active"}]
+    app._flow_steps = [
+        {"name": "compute", "call_type": "expression", "status": "active"}
+    ]
 
     async with app.run_test() as pilot:
         for _ in range(100):
@@ -1727,16 +1732,14 @@ def test_view_traces_keybinding_records_telemetry(monkeypatch) -> None:
     """The `t` binding reaches the action directly, never on_button_pressed."""
     app = CrewRunApp()
     app._status = "completed"
-    app._trace_url = "https://app.crewai.com/traces/test"
     app._telemetry = Mock()
-    opened_urls: list[str] = []
-
-    monkeypatch.setattr("webbrowser.open", lambda url: opened_urls.append(url))
+    notice = Mock()
+    monkeypatch.setattr(app, "notify", notice)
 
     app.action_view_traces()
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
-    assert opened_urls == ["https://app.crewai.com/traces/test"]
+    notice.assert_called_once()
 
 
 def test_deploy_keybinding_records_telemetry() -> None:
@@ -1782,25 +1785,45 @@ def test_button_press_records_exactly_once(monkeypatch) -> None:
     """Recording moved into the action; the button must not double-count."""
     app = CrewRunApp()
     app._status = "completed"
-    app._trace_url = "https://app.crewai.com/traces/test"
     app._telemetry = Mock()
-
-    monkeypatch.setattr("webbrowser.open", lambda url: None)
+    monkeypatch.setattr(app, "notify", Mock())
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces")))
 
     assert app._telemetry.feature_usage_span.call_count == 1
 
 
-def test_finished_traces_button_still_records(monkeypatch) -> None:
-    """The button's id is swapped to btn-traces-done once a trace URL exists."""
-    app = CrewRunApp()
-    app._status = "completed"
-    app._trace_url = "https://app.crewai.com/traces/test"
-    app._telemetry = Mock()
+def test_try_parse_structured_rejects_non_serializable_literals() -> None:
+    """ast.literal_eval("[...]") is a valid [Ellipsis] list but cannot be JSON-encoded."""
+    assert _try_parse_structured("[...]") is None
+    assert _try_parse_structured("{'a': ...}") is None
+    assert _try_parse_structured("[1+2j]") is None
 
-    monkeypatch.setattr("webbrowser.open", lambda url: None)
 
-    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces-done")))
+def test_try_parse_structured_still_accepts_serializable_values() -> None:
+    assert _try_parse_structured('{"a": 1}') == {"a": 1}
+    assert _try_parse_structured("['x', 'y']") == ["x", "y"]
+    assert _try_parse_structured("{'a': 1}") == {"a": 1}
 
-    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
+
+def test_format_json_in_text_survives_literal_ellipsis() -> None:
+    """A streamed [...] must render as-is instead of crashing the TUI (issue #7434)."""
+    assert _format_json_in_text("pandas,[...]") == "pandas,[...]"
+
+
+def test_try_parse_structured_rejects_deeply_nested_input() -> None:
+    """A nesting depth no JSON backend can walk must parse as nothing, not recurse."""
+    deep = "[" * 100_000 + "]" * 100_000
+    assert _try_parse_structured(deep) is None
+
+
+def test_format_json_in_text_survives_deep_nesting() -> None:
+    """The render path must contain the failure instead of losing the TUI update."""
+    deep = "data: " + "[" * 4000 + "]" * 4000
+    assert isinstance(_format_json_in_text(deep), str)
+
+
+def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
+    assert _format_json_in_text('data: {"a": 1} and [...]') == (
+        "data: " + '{\n  "a": 1\n}' + " and [...]"
+    )
