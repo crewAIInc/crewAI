@@ -30,10 +30,12 @@ class FakeAMP:
         )
         self.statuses = list(statuses or [])
         self.calls: list[tuple] = []
+        self.sent_config = None
         self.api_key = None
 
-    def create_evaluation(self, execution_id):
+    def create_evaluation(self, execution_id, *, eval_config=None):
         self.calls.append(("create", execution_id))
+        self.sent_config = eval_config
         if isinstance(self.create, list):
             return self.create.pop(0) if len(self.create) > 1 else self.create[0]
         return self.create
@@ -43,11 +45,14 @@ class FakeAMP:
         return self.statuses.pop(0) if self.statuses else httpx.Response(200, json={"id": evaluation_id, "status": "running"})
 
 
-def done(gate="passed", grades=None):
-    return httpx.Response(200, json={
+def done(gate="passed", grades=None, eval_config=None):
+    payload = {
         "id": "ev-1", "status": "done", "url": URL,
         "verdict": {"gate": gate, "grades": grades if grades is not None else {"goal": 5, "quality": 4, "process": 5, "cost": None}},
-    })
+    }
+    if eval_config is not None:
+        payload["eval_config"] = eval_config
+    return httpx.Response(200, json=payload)
 
 
 @pytest.fixture
@@ -446,7 +451,7 @@ def test_amp_unreachable_at_the_start_is_a_sentence_not_a_traceback(project, mon
     directory, _ = project
     record_last_run(directory)
     amp = install(monkeypatch, FakeAMP())
-    monkeypatch.setattr(amp, "create_evaluation", lambda execution_id: (_ for _ in ()).throw(httpx.ConnectError("connection refused")))
+    monkeypatch.setattr(amp, "create_evaluation", lambda execution_id, **_: (_ for _ in ()).throw(httpx.ConnectError("connection refused")))
 
     with pytest.raises(SystemExit) as exit_:
         eval_module.eval_crew()
@@ -643,6 +648,72 @@ def test_telemetry_never_breaks_the_command(project, monkeypatch):
     eval_module.eval_crew()
 
     assert amp.calls[0] == ("create", "counted-run")
+
+
+def test_a_project_that_says_what_good_means_is_graded_on_it(project, monkeypatch):
+    """The file travels as it was written — comments and all — because what a
+    criterion means is the grader's to read, not this command's."""
+    directory, _ = project
+    record_last_run(directory)
+    written = '// ours\n{"dataset": [{"id": "c1", "criteria": ["cites a source"]}]}\n'
+    (directory / "eval.jsonc").write_text(written)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.sent_config == written
+
+
+def test_a_project_with_nothing_to_say_sends_nothing(project, monkeypatch):
+    directory, _ = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.sent_config is None
+
+
+def test_a_config_too_large_to_be_criteria_is_left_behind(project, monkeypatch, capsys):
+    """A file that AMP would refuse is not uploaded, and the run is still graded."""
+    directory, _ = project
+    record_last_run(directory)
+    (directory / "eval.jsonc").write_text("// " + "x" * (64 * 1024))
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.sent_config is None
+    assert amp.calls[0][0] == "create"  # graded anyway
+    assert "was not sent" in capsys.readouterr().out
+
+
+def test_the_first_evaluation_leaves_the_criteria_behind_as_a_file(
+    project, monkeypatch, capsys
+):
+    """A project cannot say what good means until it has somewhere to say it."""
+    directory, _ = project
+    record_last_run(directory)
+    install(monkeypatch, FakeAMP(statuses=[done(eval_config='// yours\n{"dataset": []}\n')]))
+
+    eval_module.eval_crew()
+
+    assert (directory / "eval.jsonc").read_text() == '// yours\n{"dataset": []}\n'
+    assert "Wrote eval.jsonc" in capsys.readouterr().out
+
+
+def test_a_file_a_project_already_has_is_never_overwritten(project, monkeypatch, capsys):
+    """After the first one the file is theirs — the one thing worse than no
+    criteria is criteria that vanish every time somebody evaluates."""
+    directory, _ = project
+    record_last_run(directory)
+    (directory / "eval.jsonc").write_text("// mine, edited\n{\"dataset\": []}\n")
+    install(monkeypatch, FakeAMP(statuses=[done(eval_config='// theirs\n{}')]))
+
+    eval_module.eval_crew()
+
+    assert (directory / "eval.jsonc").read_text() == "// mine, edited\n{\"dataset\": []}\n"
+    assert "Wrote eval.jsonc" not in capsys.readouterr().out
 
 
 def _write_marker(directory: Path, execution_id: str | None, at: str) -> None:

@@ -176,6 +176,7 @@ def eval_crew(run_id: str | None = None) -> None:
         )
         raise SystemExit(130) from None
     _print_verdict(finished, url)
+    _say_where_the_criteria_live(write_eval_config(finished))
     if finished.get("status") != "done":
         raise SystemExit(1)
 
@@ -198,6 +199,63 @@ def _ran_just_now(record: dict[str, Any]) -> bool:
 
     now = datetime.now(when.tzinfo) if when.tzinfo else datetime.now()
     return 0 <= (now - when).total_seconds() <= RUN_IS_FRESH_SECONDS
+
+
+EVAL_CONFIG_FILE = "eval.jsonc"
+# A project's criteria are criteria, not a corpus — the same bound AMP holds
+# the field to, checked here so a file that will be refused is not uploaded.
+MAX_EVAL_CONFIG_BYTES = 64 * 1024
+
+
+def project_eval_config() -> str | None:
+    """What this project says good means, if it has said.
+
+    Read from the project's own directory, beside `pyproject.toml`, because
+    that is where the team keeps the things they argue about in review. Not
+    parsed here: what a criterion means is the grader's to say, and a document
+    this CLI could not read is one the grader will refuse with the line that
+    is wrong.
+    """
+    path = Path.cwd() / EVAL_CONFIG_FILE
+    try:
+        if not path.is_file():
+            return None
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    if len(text.encode("utf-8")) > MAX_EVAL_CONFIG_BYTES:
+        console.print(
+            Text(
+                f"{EVAL_CONFIG_FILE} is larger than "
+                f"{MAX_EVAL_CONFIG_BYTES // 1024}KB and was not sent; this run is graded on "
+                "the crew's own expectations."
+            ),
+            style="yellow",
+        )
+        return None
+    return text or None
+
+
+def write_eval_config(finished: dict[str, Any]) -> Path | None:
+    """Write the criteria this run was graded on, for the project to edit.
+
+    Only when the project has none: after that the file is theirs, and the one
+    thing worse than no criteria is criteria that get overwritten every time
+    somebody runs an evaluation.
+    """
+    text = finished.get("eval_config")
+    if not isinstance(text, str) or not text.strip():
+        return None
+
+    path = Path.cwd() / EVAL_CONFIG_FILE
+    try:
+        if path.exists() or not path.parent.is_dir():
+            return None
+        path.write_text(text, encoding="utf-8")
+    except OSError:
+        return None
+    return path
 
 
 EVAL_MARKER_FILE = "last_eval.json"
@@ -283,7 +341,25 @@ def evaluate_run(
     _record_usage(execution_id, logged_in=client.api_key is not None)
     record_evaluation_outcome(execution_id)
     on_started(started)
-    return _wait(client, started["id"], started.get("url"), on_status=on_status)
+    finished = _wait(client, started["id"], started.get("url"), on_status=on_status)
+    written = write_eval_config(finished)
+    if written is not None:
+        finished = {**finished, "wrote_eval_config": written.name}
+    return finished
+
+
+def _say_where_the_criteria_live(path: Path | None) -> None:
+    """One line, once: the file exists now, and editing it changes the next grade."""
+    if path is None:
+        return
+
+    console.print(
+        Text(
+            f"Wrote {path.name} — say what good means for this crew there, and the next "
+            "`crewai eval` is graded on it."
+        ),
+        style="green",
+    )
 
 
 def _trusted_amp_origins() -> set[str]:
@@ -493,7 +569,9 @@ def _start_evaluation(
     said = False
     while True:
         try:
-            response = client.create_evaluation(execution_id)
+            response = client.create_evaluation(
+                execution_id, eval_config=project_eval_config()
+            )
         except httpx.HTTPError as error:
             raise EvaluationStoppedError(
                 f"Could not reach AMP to start the evaluation: {error}"

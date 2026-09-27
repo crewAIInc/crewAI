@@ -632,6 +632,16 @@ def _print_evaluation_line(app: CrewRunApp, console: Any, teal: str) -> None:
     line.append(url, style=f"{teal} underline")
     console.print(line)
 
+    wrote = evaluation.get("wrote_config")
+    if wrote:
+        note = Text("  ")
+        note.append(f"Wrote {wrote}", style="bold")
+        note.append(
+            " — say what good means for this crew there, and the next evaluation is graded on it.",
+            style="dim",
+        )
+        console.print(note)
+
 
 def run_crew(
     trained_agents_file: str | None = None,
