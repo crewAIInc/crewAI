@@ -1396,8 +1396,9 @@ class GeminiCompletion(BaseLLM):
         context_windows = {
             "gemini-3.8-flash": 1048576,  # 1M tokens
             "gemini-3-pro-preview": 1048576,  # 1M tokens
+            "gemini-2.0-flash-thinking-exp-1219": 32768,
+            "gemini-2.0-flash-thinking": 1048576,
             "gemini-2.0-flash": 1048576,  # 1M tokens
-            "gemini-2.0-flash-thinking": 32768,
             "gemini-2.0-flash-lite": 1048576,
             "gemini-2.5-flash": 1048576,
             "gemini-2.5-pro": 1048576,
