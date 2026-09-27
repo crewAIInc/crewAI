@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import contextlib
-from datetime import datetime
+from datetime import datetime, timezone
 from ipaddress import ip_address
 import json
 import os
@@ -94,8 +94,8 @@ def _record_usage(execution_id: str, *, logged_in: bool) -> None:
         pass
 
 
-def _note(text: str) -> None:
-    console.print(text, style="dim")
+def _note(text: str, style: str = "dim") -> None:
+    console.print(Text(text), style=style)
 
 
 def eval_crew(run_id: str | None = None) -> None:
@@ -108,10 +108,13 @@ def eval_crew(run_id: str | None = None) -> None:
     execution_id = run_id or record.get("execution_id")
     if execution_id is None:
         # Nothing traced here: the crew runs first, and the app that runs it
-        # carries the evaluation on its own screen — link, progress, verdict —
-        # so this command has nothing left to say once it returns.
-        _run_and_let_the_app_evaluate()
-        return
+        # carries the evaluation on its own screen — link, progress, verdict.
+        # It comes back with the run to grade when the app did NOT get to it: a
+        # conversational session, or a flow that took the terminal instead.
+        execution_id = _run_and_let_the_app_evaluate()
+        if execution_id is None:
+            return
+        record = read_last_run() or {}
 
     client = _amp_client(trusted)
     recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
@@ -178,6 +181,51 @@ def _ran_just_now(record: dict[str, Any]) -> bool:
     return 0 <= (now - when).total_seconds() <= RUN_IS_FRESH_SECONDS
 
 
+EVAL_MARKER_FILE = "last_eval.json"
+
+
+def _marker_path() -> Path:
+    from crewai.telemetry.tracing.last_run import LAST_RUN_DIR, project_dir
+
+    return project_dir() / LAST_RUN_DIR / EVAL_MARKER_FILE
+
+
+def record_evaluation_started(execution_id: str) -> None:
+    """Say that this run's evaluation has begun, for the command waiting behind
+    the app that began it.
+
+    The app runs in a child process for most projects, so nothing in memory
+    reaches the command that opened it. What the command must not do is
+    evaluate the same run a second time — and what it must still do is evaluate
+    a run the app never got to, a conversational session or a flow that took
+    the terminal instead of the app. One line on disk answers both. Never
+    raises: a marker that cannot be written costs a duplicate evaluation, not
+    the run.
+    """
+    with contextlib.suppress(Exception):
+        path = _marker_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "execution_id": execution_id,
+                    "started_at": datetime.now(timezone.utc).isoformat(
+                        timespec="milliseconds"
+                    ),
+                }
+            ),
+            encoding="utf-8",
+        )
+
+
+def evaluation_already_started(execution_id: str) -> bool:
+    """Did the app evaluate this very run?"""
+    with contextlib.suppress(Exception):
+        marker = json.loads(_marker_path().read_text(encoding="utf-8"))
+        return str(marker.get("execution_id") or "") == execution_id
+    return False
+
+
 def evaluate_run(
     execution_id: str,
     *,
@@ -197,8 +245,12 @@ def evaluate_run(
     whole reason this is called from inside the app that ran it, so the wait
     for them is always on here.
     """
-    client = _amp_client(_trusted_amp_origins())
+    client = _amp_client(_machine_amp_origins(), note=note)
     started = _start_evaluation(client, execution_id, wait_for_spans=True, note=note)
+    # After the start, exactly as the command counts it: `cli_usage:eval` is the
+    # count of evaluations that began, and an evaluation the app runs is one.
+    _record_usage(execution_id, logged_in=client.api_key is not None)
+    record_evaluation_started(execution_id)
     on_started(started)
     return _wait(client, started["id"], started.get("url"), on_status=on_status)
 
@@ -212,6 +264,20 @@ def _trusted_amp_origins() -> set[str]:
         Settings().enterprise_base_url,
         DEFAULT_CREWAI_ENTERPRISE_URL,
     )
+    return {origin for origin in map(_origin, candidates) if origin}
+
+
+def _machine_amp_origins() -> set[str]:
+    """The same set, for a caller whose environment can no longer be trusted.
+
+    `crewai eval` reads `CREWAI_PLUS_URL` BEFORE the project's `.env` is loaded,
+    so a shell export counts there and a project cannot introduce one. Inside
+    the run app there is no such "before": the crew has already run and its
+    `.env` was loaded for it, so the variable is left out of the set entirely.
+    The request still follows it — that is how a self-hosted project is wired —
+    and the credential still does not.
+    """
+    candidates = (Settings().enterprise_base_url, DEFAULT_CREWAI_ENTERPRISE_URL)
     return {origin for origin in map(_origin, candidates) if origin}
 
 
@@ -241,7 +307,7 @@ def _encrypted(origin: str | None) -> bool:
         return False
 
 
-def _amp_client(trusted: set[str]) -> PlusAPI:
+def _amp_client(trusted: set[str], *, note: Callable[[str], None] = _note) -> PlusAPI:
     """The AMP to ask, and whether the saved login goes with it.
 
     A project's `.env` may point `crewai eval` at another AMP — that is how a
@@ -262,12 +328,9 @@ def _amp_client(trusted: set[str]) -> PlusAPI:
         if origin not in trusted
         else "would carry the login over plain HTTP"
     )
-    console.print(
-        Text(
-            f"Reading anonymously: {client.base_url} {why}. "
-            "Run `crewai enterprise configure <url>` to log in to it."
-        ),
-        style="yellow",
+    note(
+        f"Reading anonymously: {client.base_url} {why}. "
+        "Run `crewai enterprise configure <url>` to log in to it."
     )
     return PlusAPI()
 
@@ -313,12 +376,13 @@ def saved_login() -> str | None:
         return None
 
 
-def _run_and_let_the_app_evaluate() -> None:
+def _run_and_let_the_app_evaluate() -> str | None:
     """No traced run recorded here: offer to turn tracing on and run the crew.
 
-    The run app evaluates what it ran, on its own screen, so this returns when
-    the reader closes it — and says something only when there was nothing to
-    evaluate at all.
+    The run app evaluates what it ran, on its own screen, so this returns None
+    when it did — the reader has already seen the link and the verdict. It
+    returns the run to grade when no app got to it (a conversational session, a
+    flow that took the terminal), and says so itself when nothing was traced.
     """
     if not Path("pyproject.toml").is_file():
         _fail(
@@ -351,8 +415,12 @@ def _run_and_let_the_app_evaluate() -> None:
     # run wrote.
     with evaluating_after_run() as watched:
         run_crew()
-    if watched["execution_id"] or (read_last_run() or {}).get("execution_id"):
-        return
+    traced = watched["execution_id"] or (read_last_run() or {}).get("execution_id")
+    if traced:
+        # The app leaves a marker when it starts the evaluation. Without one no
+        # app got to this run, and the command grades it here rather than
+        # exiting as if somebody had.
+        return None if evaluation_already_started(str(traced)) else str(traced)
 
     console.print(
         "The run finished but no trace was recorded: the run may have failed, sharing the "

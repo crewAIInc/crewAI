@@ -5,7 +5,7 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 """
 
 import asyncio
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 import contextlib
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -1298,8 +1298,11 @@ FooterKey .footer-key--key {
             return
 
         # An evaluation already in flight, or already answered: the button
-        # re-opens what it made rather than paying for a second one.
-        if self._evaluation is not None:
+        # re-opens what it made rather than paying for a second one. One that
+        # STOPPED is a different matter — a timeout or a 502 is worth another
+        # press, and the run is still there to grade.
+        state = str((self._evaluation or {}).get("state"))
+        if self._evaluation is not None and state != "failed":
             url = self._evaluation.get("url")
             if url:
                 self._open_report(str(url))
@@ -1333,13 +1336,16 @@ FooterKey .footer-key--key {
 
     @work(thread=True, exclusive=True, group="evaluation")
     def _evaluate_worker(self, execution_id: str) -> None:
+        self._evaluate_now(execution_id)
+
+    def _evaluate_now(self, execution_id: str) -> None:
         """AMP evaluates the run; this thread only carries the answers back."""
         from crewai_cli.experimental.eval_crew import (
             EvaluationStoppedError,
             evaluate_run,
         )
 
-        def back(handler, *args) -> None:
+        def back(handler: Callable[..., Any], *args: Any) -> None:
             with contextlib.suppress(Exception):  # the app may be gone by now
                 self.call_from_thread(handler, *args)
 
@@ -1352,6 +1358,11 @@ FooterKey .footer-key--key {
             )
         except EvaluationStoppedError as stopped:
             back(self._evaluation_failed, str(stopped))
+            return
+        except SystemExit as exit_:
+            # `crewai eval` says why and exits; in here the exit is nobody's
+            # and the reason would go with it, so it is shown instead.
+            back(self._evaluation_failed, str(exit_) or "the evaluation stopped")
             return
         except Exception as error:  # a client bug is still an answer to show
             back(self._evaluation_failed, f"{type(error).__name__}: {error}")

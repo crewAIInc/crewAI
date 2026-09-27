@@ -303,6 +303,44 @@ def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(proje
     assert "crewai enterprise configure" in out
 
 
+def test_the_app_never_trusts_an_amp_the_project_env_introduced(project, monkeypatch):
+    """`crewai eval` reads CREWAI_PLUS_URL before the project's `.env` is
+    loaded, so a shell export is trusted there and a project cannot slip one
+    in. Inside the run app there is no such "before" — the crew has already run
+    and its `.env` was loaded for it — so an exported variable buys nothing and
+    the saved login stays home."""
+    directory, _ = project
+    # what a project's .env would leave behind, indistinguishable by then
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://evil.example")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+    notes: list[str] = []
+
+    eval_module.evaluate_run(
+        EXECUTION_ID, on_started=lambda started: None, note=notes.append
+    )
+
+    assert amp.base_url == "https://evil.example"  # the request still follows it
+    assert amp.api_key is None  # the credential does not
+    assert any("Reading anonymously" in note for note in notes)
+    # and it is said through the caller's own note, never printed over its screen
+    assert notes and all(isinstance(note, str) for note in notes)
+
+
+def test_the_command_still_trusts_an_amp_exported_in_the_shell(project, monkeypatch, capsys):
+    """The command's own reading is unchanged: a shell export is this machine
+    speaking, and the login goes with it."""
+    directory, _ = project
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://amp.exported")
+    record_last_run(directory, amp_base_url="https://amp.exported")
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.base_url == "https://amp.exported"
+    assert amp.api_key == "login-token"
+    assert "Reading anonymously" not in capsys.readouterr().out
+
+
 def test_a_trusted_amp_over_plain_http_still_gets_no_credential(project, monkeypatch, capsys):
     """A cleartext connection is not a place to put a bearer token, trusted or not."""
     directory, _ = project
@@ -532,6 +570,7 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
         ran.append("run")
         assert eval_module.os.environ.get("CREWAI_TRACING_ENABLED") == "true"
         record_last_run(directory, "fresh-run")
+        eval_module.record_evaluation_started("fresh-run")  # what the app does
 
     import crewai_cli.run_crew as run_crew_module
 
@@ -637,6 +676,7 @@ def test_the_app_it_opens_is_told_an_evaluation_is_waiting(project, monkeypatch)
         # and in a child process, where a ContextVar cannot reach
         assert os.environ["CREWAI_EVAL_AWAITING_RUN"] == "1"
         record_last_run(directory, "run-it-just-did")
+        eval_module.record_evaluation_started("run-it-just-did")
 
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
@@ -646,6 +686,49 @@ def test_the_app_it_opens_is_told_an_evaluation_is_waiting(project, monkeypatch)
 
     assert amp.calls == []  # the app did it, on its own screen
     assert "CREWAI_EVAL_AWAITING_RUN" not in os.environ
+
+
+def test_a_run_no_app_evaluated_is_graded_by_the_command(project, monkeypatch):
+    """Not every run goes through the app: a conversational session never ends
+    the way a crew does, and a flow with human feedback takes the terminal
+    instead. Nothing marked the run as evaluated, so the command grades it
+    rather than exiting as if somebody had."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(
+        run_crew_module,
+        "run_crew",
+        lambda: record_last_run(directory, "run-nobody-graded"),
+    )
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls[0] == ("create", "run-nobody-graded")
+
+
+def test_a_marker_from_an_earlier_run_never_counts_for_this_one(project, monkeypatch):
+    """The marker names the run it is about, so yesterday's evaluation does not
+    stand in for today's."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    eval_module.record_evaluation_started("some-older-run")
+
+    def fake_run_crew() -> None:
+        record_last_run(directory, "the-new-run")
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert amp.calls[0] == ("create", "the-new-run")
 
 
 def test_a_run_that_recorded_nothing_says_so(project, monkeypatch, capsys):

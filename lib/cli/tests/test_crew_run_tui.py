@@ -279,6 +279,51 @@ def test_pressing_evaluate_again_opens_the_report_it_already_made(monkeypatch) -
     app._telemetry.feature_usage_span.assert_not_called()
 
 
+def test_an_evaluation_that_stopped_can_be_tried_again(monkeypatch) -> None:
+    """A timeout or a 502 is worth another press, and the run is still there to
+    grade — only a finished one sends the reader to its report instead."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._evaluation = {"state": "failed", "error": "AMP answered 502."}
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: True)
+    started: list[str] = []
+    monkeypatch.setattr(
+        CrewRunApp,
+        "_evaluate_worker",
+        lambda self, execution_id: started.append(execution_id),
+    )
+
+    app.action_evaluate_crew()
+
+    assert started == ["run-this-app"]
+
+
+def test_a_login_that_exits_is_shown_on_screen_like_any_other_answer(
+    monkeypatch,
+) -> None:
+    """`crewai eval` says why and exits; inside a worker the exit is nobody's
+    and the reason would go with it."""
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+
+    def refuse(*args, **kwargs):
+        raise SystemExit("Could not read the saved login. Run `crewai login` again.")
+
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.evaluate_run", refuse, raising=True
+    )
+
+    app._evaluate_now("run-this-app")
+
+    assert app._evaluation["state"] == "failed"
+    assert "crewai login" in app._evaluation["error"]
+
+
 def test_the_evaluation_shows_its_link_its_progress_and_its_verdict() -> None:
     """Everything the reader came for is on the run's own screen."""
     app = CrewRunApp()
