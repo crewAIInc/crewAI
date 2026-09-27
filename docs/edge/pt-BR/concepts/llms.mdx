@@ -728,6 +728,39 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Cheaper Inference">
+    [Cheaper Inference](https://cheaperinference.com) é um gateway de LLM compatível com a OpenAI. Ele oferece modelos de vários laboratórios com uma única chave de API.
+    Cada modelo custa de 15–60% menos que o preço de tabela do seu laboratório.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    CHEAPER_INFERENCE_API_KEY=<your-api-key>
+    # Optional: override the default base URL
+    CHEAPER_INFERENCE_BASE_URL=https://api.cheaperinference.com/v1
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="cheaperinference/gpt-5.4-mini",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Modelos do Cheaper Inference (IDs de modelo sem prefixo):
+      - cheaperinference/gpt-5.4-mini
+      - cheaperinference/gpt-5.4
+      - cheaperinference/claude-sonnet-5
+      - cheaperinference/gemini-3.1-pro
+      - cheaperinference/deepseek-v4-flash
+    </Info>
+
+    Consulte a [lista de modelos do Cheaper Inference](https://cheaperinference.com/#models) para os IDs de modelo atuais.
+    Obtenha uma chave de API em [cheaperinference.com/signup](https://cheaperinference.com/signup).
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming

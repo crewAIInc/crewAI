@@ -1012,6 +1012,39 @@ mode: "wide"
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Cheaper Inference">
+    [Cheaper Inference](https://cheaperinference.com) هي بوابة LLM متوافقة مع OpenAI. توفر نماذج من عدة مختبرات عبر مفتاح API واحد.
+    كل نموذج أرخص بنسبة 15–60% من سعر القائمة لدى مختبره.
+
+    اضبط متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    CHEAPER_INFERENCE_API_KEY=<your-api-key>
+    # Optional: override the default base URL
+    CHEAPER_INFERENCE_BASE_URL=https://api.cheaperinference.com/v1
+    ```
+
+    مثال على الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="cheaperinference/gpt-5.4-mini",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      نماذج Cheaper Inference (معرّفات نماذج بدون بادئة):
+      - cheaperinference/gpt-5.4-mini
+      - cheaperinference/gpt-5.4
+      - cheaperinference/claude-sonnet-5
+      - cheaperinference/gemini-3.1-pro
+      - cheaperinference/deepseek-v4-flash
+    </Info>
+
+    راجع [قائمة نماذج Cheaper Inference](https://cheaperinference.com/#models) لمعرّفات النماذج الحالية.
+    احصل على مفتاح API من [cheaperinference.com/signup](https://cheaperinference.com/signup).
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات

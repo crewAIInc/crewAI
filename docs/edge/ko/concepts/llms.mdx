@@ -755,6 +755,39 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Cheaper Inference">
+    [Cheaper Inference](https://cheaperinference.com)는 OpenAI 호환 LLM 게이트웨이입니다. 하나의 API 키로 여러 연구소의 모델을 제공합니다.
+    각 모델은 해당 연구소의 정가보다 15–60% 저렴합니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    CHEAPER_INFERENCE_API_KEY=<your-api-key>
+    # Optional: override the default base URL
+    CHEAPER_INFERENCE_BASE_URL=https://api.cheaperinference.com/v1
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="cheaperinference/gpt-5.4-mini",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Cheaper Inference 모델 (접두사 없는 모델 ID):
+      - cheaperinference/gpt-5.4-mini
+      - cheaperinference/gpt-5.4
+      - cheaperinference/claude-sonnet-5
+      - cheaperinference/gemini-3.1-pro
+      - cheaperinference/deepseek-v4-flash
+    </Info>
+
+    현재 모델 ID는 [Cheaper Inference 모델 목록](https://cheaperinference.com/#models)을 참조하십시오.
+    API 키는 [cheaperinference.com/signup](https://cheaperinference.com/signup)에서 발급받을 수 있습니다.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
