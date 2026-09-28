@@ -374,14 +374,22 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
 
     texts_to_embed = [t for _, t in valid]
 
-    # Check if we're in an async context
-    result: Any
+    # Detect whether we're running inside an event loop *before* invoking the
+    # embedder, so an embedder RuntimeError can never be mistaken for
+    # "no running loop" and retried on the loop thread (which would both
+    # double-invoke the embedder and put blocking work back on the event loop).
+    in_async_context = True
     try:
         asyncio.get_running_loop()
-        # We're in an async context but this is a sync function.
-        # Offload to thread pool so the embedder doesn't run on the
-        # event loop thread. The .result() call blocks this thread
-        # (acceptable — callers like Memory.recall() are sync).
+    except RuntimeError:
+        in_async_context = False
+
+    result: Any
+    if in_async_context:
+        # Sync function called from an async context: offload to the thread
+        # pool so the embedder doesn't run on the event-loop thread. The
+        # .result() call blocks this thread, which is acceptable because the
+        # public callers (Memory.recall(), encoding flow) are synchronous.
         try:
             result = _EMBED_POOL.submit(embedder, texts_to_embed).result(timeout=30)
         except concurrent.futures.TimeoutError:
@@ -390,8 +398,8 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
                 "The worker thread may still be running."
             )
             return [[] for _ in texts]
-    except RuntimeError:
-        # Not in async context, run directly
+    else:
+        # Not in an async context: run directly on this thread.
         result = embedder(texts_to_embed)
 
     embeddings: list[list[float]] = [[] for _ in texts]
