@@ -170,3 +170,34 @@ class TestNonStringItemHandling:
     ) -> None:
         result = remember_tool._run(contents=[123, None])
         assert "Error" in result
+
+
+# --- args_schema validation (reviewer: schema must not pre-empt _run hardening) ---
+
+
+class TestSchemaAcceptsHardenedInputs:
+    """The args_schema must accept the inputs _run is written to handle
+    (empty lists, bare strings) so validation happens in _run and returns a
+    useful message, instead of raising a Pydantic error that ToolUsage retries.
+    """
+
+    def test_recall_schema_accepts_empty_list(self) -> None:
+        from crewai.tools.memory_tools import RecallMemorySchema
+
+        # Would raise with min_length=1; must validate cleanly now.
+        assert RecallMemorySchema(queries=[]).queries == []
+
+    def test_recall_schema_accepts_bare_string(self) -> None:
+        from crewai.tools.memory_tools import RecallMemorySchema
+
+        assert RecallMemorySchema(queries="AI trends").queries == "AI trends"
+
+    def test_remember_schema_accepts_empty_list(self) -> None:
+        from crewai.tools.memory_tools import RememberSchema
+
+        assert RememberSchema(contents=[]).contents == []
+
+    def test_remember_schema_accepts_bare_string(self) -> None:
+        from crewai.tools.memory_tools import RememberSchema
+
+        assert RememberSchema(contents="a fact").contents == "a fact"
