@@ -264,6 +264,41 @@ class ValkeyCache:
         result = await client.exists([key])
         return result > 0
 
+    async def clear(self, prefix: str = "") -> int:
+        """Delete all keys matching a prefix (server-side, not just local state).
+
+        Scans the keyspace so entries written by other processes or left from a
+        previous run are also removed.
+
+        Args:
+            prefix: Key prefix to match. Empty string matches all keys.
+
+        Returns:
+            Number of keys deleted.
+        """
+        client = await self._get_client()
+        match = f"{prefix}*" if prefix else "*"
+        deleted = 0
+        cursor: str | bytes = "0"
+        while True:
+            result = await client.scan(cursor, match=match, count=1000)
+            cursor = result[0]
+            keys = result[1]
+            if keys:
+                await client.delete(
+                    [
+                        k.decode("utf-8") if isinstance(k, bytes) else k
+                        for k in keys
+                    ]
+                )
+                deleted += len(keys)
+            cursor_str = (
+                cursor.decode("utf-8") if isinstance(cursor, bytes) else str(cursor)
+            )
+            if cursor_str == "0":
+                break
+        return deleted
+
     async def close(self) -> None:
         """Close Valkey client connection."""
         if self._client:
