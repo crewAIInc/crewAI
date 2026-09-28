@@ -4,7 +4,7 @@ import threading
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -550,6 +550,14 @@ def test_bedrock_context_window_size():
     llm_titan = LLM(model="bedrock/amazon.titan-text-express-v1")
     context_size_titan = llm_titan.get_context_window_size()
     assert context_size_titan > 5000
+
+
+def test_bedrock_claude_sonnet_46_uses_its_specific_context_window():
+    llm = LLM(model="bedrock/anthropic.claude-sonnet-4-6-v1:0")
+
+    assert llm.get_context_window_size() == int(
+        1_000_000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 def test_bedrock_message_formatting():

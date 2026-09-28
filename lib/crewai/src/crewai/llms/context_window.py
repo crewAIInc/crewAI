@@ -38,6 +38,11 @@ AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-35-turbo": 16_385,
 }
 
+AZURE_OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
+    **OPENAI_CONTEXT_WINDOWS,
+    **AZURE_CONTEXT_WINDOWS,
+}
+
 ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "claude-fable-5": 1_000_000,
     "claude-mythos-5": 1_000_000,
@@ -50,6 +55,9 @@ ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "claude-opus-4-5": 200_000,
     "claude-sonnet-4-5": 200_000,
     "claude-haiku-4-5": 200_000,
+    "claude-sonnet-4": 200_000,
+    "claude-opus-4": 200_000,
+    "claude-haiku-4": 200_000,
     "claude-3-7-sonnet": 200_000,
     "claude-3-5-sonnet": 200_000,
     "claude-3-5-haiku": 200_000,
@@ -100,6 +108,8 @@ _BEDROCK_BASE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "meta.llama3-2-3b-instruct-v1:0": 131_000,
     "meta.llama3-2-90b-instruct-v1:0": 128_000,
     "meta.llama3-2-1b-instruct-v1:0": 131_000,
+    "meta.llama2-13b-chat": 4096,
+    "meta.llama2-70b-chat": 4096,
     "deepseek.r1": 32_768,
 }
 
