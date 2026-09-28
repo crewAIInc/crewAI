@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, model_validator
 try:
     from sqlalchemy import create_engine, inspect, text
     from sqlalchemy.dialects.postgresql.base import PGInspector
+    from sqlalchemy.engine.reflection import Inspector
     from sqlalchemy.exc import CompileError, SQLAlchemyError
     from sqlalchemy.orm import sessionmaker
 
@@ -266,6 +267,7 @@ class NL2SQLTool(BaseTool):
         return self
 
     def model_post_init(self, __context: Any) -> None:
+        """Reflect the complete schema before publishing any metadata."""
         if not SQLALCHEMY_AVAILABLE:
             raise ImportError(
                 "sqlalchemy is not installed. Please install it with "
@@ -278,15 +280,32 @@ class NL2SQLTool(BaseTool):
                 "DELETE/DROP/…) are permitted. Use with caution."
             )
 
-        data: dict[str, list[dict[str, Any]] | str] = {}
-        result = self._fetch_available_tables()
-        if isinstance(result, str):
-            raise RuntimeError(f"Failed to fetch tables: {result}")
-        tables: list[dict[str, Any]] = result
+        try:
+            engine = create_engine(self.db_uri)
+        except SQLAlchemyError as e:
+            raise RuntimeError(
+                f"Failed to fetch tables: Failed to create engine: {e}"
+            ) from e
+        try:
+            try:
+                inspector = inspect(engine)
+                tables = self._reflect_tables(inspector)
+            except SQLAlchemyError as e:
+                raise RuntimeError(f"Failed to fetch tables: {e}") from e
 
-        for table in tables:
-            table_columns = self._fetch_all_available_columns(table["table_name"])
-            data[f"{table['table_name']}_columns"] = table_columns
+            data: dict[str, list[dict[str, Any]] | str] = {}
+            for table in tables:
+                table_name = table["table_name"]
+                try:
+                    data[f"{table_name}_columns"] = self._reflect_columns(
+                        inspector, table_name
+                    )
+                except SQLAlchemyError as e:
+                    raise RuntimeError(
+                        f"Failed to fetch columns for {table_name}: {e}"
+                    ) from e
+        finally:
+            engine.dispose()
 
         self.tables = tables
         self.columns = data
@@ -414,17 +433,21 @@ class NL2SQLTool(BaseTool):
         except SQLAlchemyError as e:
             return f"Failed to create engine: {e}"
         try:
-            inspector = inspect(engine)
-            schema = "public" if engine.dialect.name == "postgresql" else None
-            names = inspector.get_table_names(schema=schema)
-            names += inspector.get_view_names(schema=schema)
-            if isinstance(inspector, PGInspector):
-                names += inspector.get_foreign_table_names(schema=schema)
-            return [{"table_name": name} for name in names]
+            return self._reflect_tables(inspect(engine))
         except SQLAlchemyError as e:
             return f"Failed to fetch tables: {e}"
         finally:
             engine.dispose()
+
+    def _reflect_tables(self, inspector: Inspector) -> list[dict[str, Any]]:
+        """Discover schema objects using the caller's inspector."""
+        schema = "public" if inspector.dialect.name == "postgresql" else None
+        names = inspector.get_table_names(schema=schema) + inspector.get_view_names(
+            schema=schema
+        )
+        if isinstance(inspector, PGInspector):
+            names += inspector.get_foreign_table_names(schema=schema)
+        return [{"table_name": name} for name in names]
 
     def _fetch_all_available_columns(
         self, table_name: str
@@ -448,22 +471,27 @@ class NL2SQLTool(BaseTool):
         except SQLAlchemyError as e:
             return f"Failed to create engine: {e}"
         try:
-            inspector = inspect(engine)
-            schema = "public" if engine.dialect.name == "postgresql" else None
-            columns = []
-            for column in inspector.get_columns(table_name, schema=schema):
-                try:
-                    data_type = column["type"].compile(dialect=engine.dialect)
-                except CompileError:
-                    # Unknown types (including array elements) must not hide
-                    # the rest of the table's columns.
-                    data_type = "UNKNOWN"
-                columns.append({"column_name": column["name"], "data_type": data_type})
-            return columns
+            return self._reflect_columns(inspect(engine), table_name)
         except SQLAlchemyError as e:
             return f"Failed to fetch columns for {table_name}: {e}"
         finally:
             engine.dispose()
+
+    def _reflect_columns(
+        self, inspector: Inspector, table_name: str
+    ) -> list[dict[str, Any]]:
+        """Reflect columns, propagating lookup failures but tolerating unknown types."""
+        schema = "public" if inspector.dialect.name == "postgresql" else None
+        columns = []
+        for column in inspector.get_columns(table_name, schema=schema):
+            try:
+                data_type = column["type"].compile(dialect=inspector.dialect)
+            except CompileError:
+                # Unknown types (including array elements) must not hide
+                # the rest of the table's columns.
+                data_type = "UNKNOWN"
+            columns.append({"column_name": column["name"], "data_type": data_type})
+        return columns
 
     # Core execution
 

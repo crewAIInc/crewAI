@@ -11,7 +11,7 @@ from collections.abc import Iterator
 import os
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 from uuid import uuid4
 
 import pytest
@@ -28,6 +28,7 @@ from sqlalchemy import (
     Table,
     create_engine,
     event,
+    inspect,
     text,
 )
 from sqlalchemy.dialects import postgresql
@@ -182,6 +183,7 @@ def postgres_reflection() -> Iterator[tuple[NL2SQLTool, MagicMock, MagicMock]]:
     engine = MagicMock(spec=Engine)
     engine.dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
     inspector = MagicMock(spec=PGInspector)
+    inspector.dialect = engine.dialect
     inspector.get_table_names.return_value = []
     inspector.get_view_names.return_value = []
     inspector.get_foreign_table_names.return_value = []
@@ -286,6 +288,12 @@ def test_invalid_uri_returns_error(helper: str) -> None:
     assert result.startswith("Failed to create engine:")
 
 
+def test_invalid_uri_aborts_initialization() -> None:
+    """Engine creation failures prevent construction with a clear error."""
+    with pytest.raises(RuntimeError, match="Failed to create engine:"):
+        NL2SQLTool(db_uri="not-a-valid-scheme://x")
+
+
 @pytest.mark.parametrize(
     "failure",
     [
@@ -315,9 +323,55 @@ def test_reflection_failure_disposes_owned_engine(
     engine.dispose.assert_called_once_with()
 
 
+@pytest.mark.parametrize("successful_tables", [0, 1])
+def test_column_reflection_failure_aborts_initialization(
+    postgres_reflection: tuple[NL2SQLTool, MagicMock, MagicMock],
+    successful_tables: int,
+) -> None:
+    """A failed column lookup aborts construction and disposes the shared engine."""
+    tool, engine, inspector = postgres_reflection
+    table_names = ["accounts", "orders"]
+    inspector.get_table_names.return_value = table_names
+    inspector.get_columns.side_effect = [
+        [{"name": "id", "type": Integer()}]
+    ] * successful_tables + [SQLAlchemyError("reflection failure")]
+
+    with pytest.raises(
+        RuntimeError,
+        match=f"Failed to fetch columns for {table_names[successful_tables]}:",
+    ) as error:
+        NL2SQLTool(db_uri=tool.db_uri)
+
+    assert isinstance(error.value.__cause__, SQLAlchemyError)
+    assert inspector.get_columns.call_args_list == [
+        call(name, schema="public") for name in table_names[: successful_tables + 1]
+    ]
+    engine.dispose.assert_called_once_with()
+
+
+def test_failed_reflection_does_not_publish_partial_metadata(
+    postgres_reflection: tuple[NL2SQLTool, MagicMock, MagicMock],
+) -> None:
+    """Failure after one successful lookup leaves both metadata fields untouched."""
+    tool, engine, inspector = postgres_reflection
+    inspector.get_table_names.return_value = ["accounts", "orders"]
+    inspector.get_columns.side_effect = [
+        [{"name": "id", "type": Integer()}],
+        SQLAlchemyError("reflection failure"),
+    ]
+
+    with pytest.raises(RuntimeError, match="Failed to fetch columns for orders:"):
+        tool.model_post_init(None)
+
+    assert tool.tables == []
+    assert tool.columns == {}
+    engine.dispose.assert_called_once_with()
+
+
 def test_reflection_closes_connections_and_leaves_setup_engine_usable(
     sqlite_db: tuple[str, Engine],
 ) -> None:
+    """Initialization reflects every table through one inspector and owned engine."""
     uri, setup_engine = sqlite_db
     created: list[Engine] = []
     disposed: list[Engine] = []
@@ -335,9 +389,16 @@ def test_reflection_closes_connections_and_leaves_setup_engine_usable(
         return engine
 
     try:
-        with patch(f"{_MODULE}.create_engine", side_effect=tracking_create_engine):
-            NL2SQLTool(db_uri=uri)
-        assert created
+        with (
+            patch(f"{_MODULE}.create_engine", side_effect=tracking_create_engine),
+            patch(f"{_MODULE}.inspect", wraps=inspect) as inspect_mock,
+        ):
+            tool = NL2SQLTool(db_uri=uri)
+        assert len(created) == 1
+        inspect_mock.assert_called_once_with(created[0])
+        assert {table["table_name"] for table in tool.tables} == {"users", "orders"}
+        assert set(tool.columns) == {"users_columns", "orders_columns"}
+        assert all(tool.columns.values())
         assert disposed == created
         assert opened and opened == closed
         setup_disposed.assert_not_called()

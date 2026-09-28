@@ -26,8 +26,8 @@ def _make_tool(allow_dml: bool = False, **kwargs) -> NL2SQLTool:
     Schema introspection is patched out to isolate query validation and execution.
     """
     with (
-        patch.object(NL2SQLTool, "_fetch_available_tables", return_value=[]),
-        patch.object(NL2SQLTool, "_fetch_all_available_columns", return_value=[]),
+        patch.object(NL2SQLTool, "_reflect_tables", return_value=[]),
+        patch.object(NL2SQLTool, "_reflect_columns", return_value=[]),
     ):
         return NL2SQLTool(db_uri=SQLITE_URI, allow_dml=allow_dml, **kwargs)
 
@@ -135,7 +135,8 @@ class TestIntrospectionIdentifiers:
                 "crewai_tools.tools.nl2sql.nl2sql_tool.inspect", MagicMock()
             ) as mock_inspect,
         ):
-            create_engine_mock.return_value.dialect.name = "sqlite"
+            mock_inspect.return_value.dialect = create_engine_mock.return_value.dialect
+            mock_inspect.return_value.dialect.name = "sqlite"
             mock_inspect.return_value.get_columns.return_value = []
             result = tool._fetch_all_available_columns(injection)
 
