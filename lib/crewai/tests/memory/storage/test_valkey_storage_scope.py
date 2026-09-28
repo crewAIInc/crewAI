@@ -1033,29 +1033,25 @@ class TestValkeyStorageReset:
     async def test_reset_clears_all_records(
         self, valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
     ) -> None:
-        """Test reset delegates to adelete to clear all records."""
-        # Mock adelete to track if it was called
-        original_adelete = valkey_storage.adelete
-        adelete_called = False
-        adelete_args = None
+        """Full reset enumerates all record:* keys and deletes them by id.
+
+        adelete() with no filter intentionally deletes nothing, so _areset must
+        scan and pass explicit record_ids for a full reset to work.
+        """
+        # scan returns two record keys then terminates (cursor "0").
+        mock_glide_client.scan.return_value = ("0", [b"record:id-1", b"record:id-2"])
+
+        adelete_args: dict[str, object] = {}
 
         async def mock_adelete(*args: object, **kwargs: object) -> int:
-            nonlocal adelete_called, adelete_args
-            adelete_called = True
-            adelete_args = kwargs
-            return 0
+            adelete_args.update(kwargs)
+            return len(kwargs.get("record_ids", []))  # type: ignore[arg-type]
 
         valkey_storage.adelete = mock_adelete  # type: ignore[method-assign]
 
-        # Reset all records
         await valkey_storage._areset(scope_prefix=None)
 
-        # Verify adelete was called with correct arguments
-        assert adelete_called
-        assert adelete_args == {"scope_prefix": None}
-
-        # Restore original method
-        valkey_storage.adelete = original_adelete  # type: ignore[method-assign]
+        assert set(adelete_args.get("record_ids", [])) == {"id-1", "id-2"}
 
     @pytest.mark.asyncio
     async def test_reset_with_scope_clears_scope_records(
