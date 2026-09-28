@@ -68,8 +68,24 @@ def test_history_passes_the_window_through(tool):
     assert "announcements/usd/inflation" in captured["url"]
     assert "start_date=2024-01-01" in captured["url"]
     assert "limit=5" in captured["url"]
-    # end_date was not supplied, so it must not be sent at all.
+    # end_date and offset were not supplied, so they must not be sent at all.
     assert "end_date" not in captured["url"]
+    assert "offset" not in captured["url"]
+
+
+def test_history_passes_the_offset_through(tool):
+    captured = {}
+    with patch(SAFE_GET, side_effect=_mock_safe_get(captured)):
+        tool.run(
+            dataset="history",
+            currency="USD",
+            indicator="inflation",
+            limit=100,
+            offset=200,
+        )
+
+    assert "limit=100" in captured["url"]
+    assert "offset=200" in captured["url"]
 
 
 def test_history_without_an_indicator_points_at_the_catalogue(tool):

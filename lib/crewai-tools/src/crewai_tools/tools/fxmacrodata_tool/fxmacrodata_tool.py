@@ -84,6 +84,15 @@ class FXMacroDataToolInput(BaseModel):
         le=100,
         description="Maximum rows to return; the API caps this at 100.",
     )
+    offset: int = Field(
+        0,
+        ge=0,
+        description=(
+            "Rows to skip, newest first. To read further back, repeat the call with "
+            "the pagination.next_offset from the previous response while "
+            "pagination.has_more is true."
+        ),
+    )
 
 
 class FXMacroDataTool(BaseTool):
@@ -139,6 +148,7 @@ class FXMacroDataTool(BaseTool):
         start_date: str | None = None,
         end_date: str | None = None,
         limit: int = 20,
+        offset: int = 0,
     ) -> str:
         try:
             args = FXMacroDataToolInput(
@@ -150,6 +160,7 @@ class FXMacroDataTool(BaseTool):
                 start_date=start_date,
                 end_date=end_date,
                 limit=limit,
+                offset=offset,
             )
         except Exception as exc:
             return f"Invalid arguments for FXMacroData: {exc}"
@@ -169,7 +180,9 @@ class FXMacroDataTool(BaseTool):
     def _resolve(self, args: FXMacroDataToolInput) -> tuple[str, dict[str, Any]]:
         """Map the requested dataset onto an endpoint path and query parameters."""
         currency = self._segment(args.currency.lower())
-        paged = {"limit": args.limit}
+        paged: dict[str, Any] = {"limit": args.limit}
+        if args.offset:
+            paged["offset"] = args.offset
 
         if args.dataset == "catalogue":
             return f"data_catalogue/{currency}", {}

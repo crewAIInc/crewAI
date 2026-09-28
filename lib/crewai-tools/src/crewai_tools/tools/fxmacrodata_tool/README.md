@@ -47,12 +47,12 @@ agent = Agent(
 | --- | --- | --- |
 | `catalogue` | `currency` | Every indicator slug published for a currency, with units and coverage |
 | `latest` | `currency` | The newest print of every indicator, in one request |
-| `history` | `currency`, `indicator`, `start_date`, `end_date`, `limit` | One indicator's published history |
+| `history` | `currency`, `indicator`, `start_date`, `end_date`, `limit`, `offset` | One indicator's published history |
 | `calendar` | `currency`, `limit` | Upcoming scheduled releases with publication times |
-| `press_releases` | `currency`, `limit` | Official central-bank headlines |
-| `fx_rate` | `base`, `quote`, `limit` | Official reference exchange rates |
-| `rate_differential` | `base`, `quote`, `limit` | Policy rate differential, the first look at carry |
-| `cot` | `currency`, `limit` | CFTC Commitment of Traders positioning |
+| `press_releases` | `currency`, `limit`, `offset` | Official central-bank headlines |
+| `fx_rate` | `base`, `quote`, `limit`, `offset` | Official reference exchange rates |
+| `rate_differential` | `base`, `quote`, `limit`, `offset` | Policy rate differential, the first look at carry |
+| `cot` | `currency`, `limit`, `offset` | CFTC Commitment of Traders positioning |
 | `commodities` | — | Latest tracked commodity prices |
 | `market_sessions` | — | Which FX sessions are open now |
 | `risk_sentiment` | — | Cross-asset risk sentiment reading |
@@ -74,4 +74,6 @@ discovery step that makes the rest of the surface usable.
   from the catalogue; anything else is rejected before a request is built.
 - A `401` or `403` returns a message explaining that a key is required, rather than surfacing
   as an outage, so the agent can fall back to USD rather than retrying blindly.
-- `limit` is capped at 100 by the API.
+- `limit` is capped at 100 by the API and rows come back newest first. Each response carries
+  a `pagination` object; pass its `next_offset` as `offset` to read the next page while
+  `has_more` is true.

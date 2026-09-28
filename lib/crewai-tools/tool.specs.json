@@ -10831,6 +10831,13 @@
             "title": "Limit",
             "type": "integer"
           },
+          "offset": {
+            "default": 0,
+            "description": "Rows to skip, newest first. To read further back, repeat the call with the pagination.next_offset from the previous response while pagination.has_more is true.",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
           "quote": {
             "anyOf": [
               {
