@@ -324,9 +324,7 @@ class GrantSpanExporter(SpanExporter):
             if self._client._tier == "ephemeral"
             else "🔗 Execution Traces"
         )
-        Console().print(
-            Panel(line, title=title, border_style="green", padding=(1, 2))
-        )
+        Console().print(Panel(line, title=title, border_style="green", padding=(1, 2)))
 
     def shutdown(self) -> None:
         with self._lock:
