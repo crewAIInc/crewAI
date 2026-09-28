@@ -64,6 +64,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from crewai.execution import ExecutionTrace
     from crewai.llms.base_llm import BaseLLM
 
 
@@ -262,11 +263,13 @@ class _ConversationalMixin:
         # Instance attrs from ``Flow``.
         state: Any
         name: str | None
+        tracing: bool | None
         _completed_methods: set[Any]
         _method_outputs: list[Any]
         _pending_events: dict[Any, Any]
         _method_call_counts: dict[Any, int]
         _is_execution_resuming: bool
+        _deferred_execution_trace: ExecutionTrace | None
         _conversation_messages: list[LLMMessage]
         _pending_user_message: str | dict[str, Any] | None
         _pending_intents: Sequence[str] | None
@@ -1567,23 +1570,47 @@ class _ConversationalMixin:
         with call_stream_override(llm, True):
             yield
 
-    def finalize_session_traces(self) -> None:
-        """Emit a final ``FlowFinishedEvent`` and finalize the trace batch.
+    def finalize_session_traces(self, *, discard: bool = False) -> None:
+        """Emit a final ``FlowFinishedEvent`` and finish the execution trace.
 
         Pairs with ``flow.defer_trace_finalization = True`` (or
         ``ConversationConfig(defer_trace_finalization=True)``): per-turn
         ``handle_turn()`` skips the close, then a single call here at
-        session end emits one ``FlowFinishedEvent`` + ``finalize_batch()``
+        session end emits one ``FlowFinishedEvent`` and flushes its spans
         so the whole conversation lands as one trace.
 
-        Safe to call when not deferring — it's a no-op if the trace batch
+        Safe to call when not deferring — it's a no-op if the trace
         was already finalized per-turn or never started.
+
+        Set ``discard=True`` when cancelling a conversation to discard locally
+        buffered spans without requesting consent.
         """
+        from crewai.execution import begin_execution, end_execution
+
+        tracing = self._deferred_execution_trace
+        if discard:
+            self._deferred_execution_trace = None
+            object.__setattr__(self, "_deferred_flow_started_event_id", None)
+            if tracing is not None:
+                tracing.finish(GeneratorExit, GeneratorExit())
+            return
+        if tracing is None and not getattr(
+            self, "_deferred_flow_started_event_id", None
+        ):
+            return
+        token = begin_execution(
+            tracing=self.tracing if tracing is not None else False,
+            trace_session=tracing,
+        )
+        self._deferred_execution_trace = None
+        try:
+            self._finalize_session_trace_events()
+        finally:
+            end_execution(token)
+
+    def _finalize_session_trace_events(self) -> None:
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.event_context import restore_event_scope
-        from crewai.events.listeners.tracing.trace_listener import (
-            TraceCollectionListener,
-        )
         from crewai.events.types.flow_events import FlowFinishedEvent
 
         # Background memory saves must finish (and emit their completed/failed
@@ -1625,18 +1652,6 @@ class _ConversationalMixin:
             finally:
                 restore_event_scope(())
                 object.__setattr__(self, "_deferred_flow_started_event_id", None)
-
-        trace_listener = TraceCollectionListener()
-        batch_manager = trace_listener.batch_manager
-        try:
-            if batch_manager.batch_owner_type == "flow":
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    batch_manager.finalize_batch()
-        finally:
-            batch_manager.defer_session_finalization = False
 
 
 __all__ = ["_ConversationalMixin"]

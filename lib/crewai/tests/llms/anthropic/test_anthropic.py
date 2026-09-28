@@ -1955,3 +1955,72 @@ def test_tool_fallback_still_used_for_models_without_native_support():
     assert kwargs["tool_choice"] == {"type": "tool", "name": "structured_output"}
     assert "betas" not in kwargs
     mock_client.beta.messages.create.assert_not_called()
+
+
+def _final_answer_response(text: str):
+    from anthropic.types import TextBlock
+
+    mock_response = MagicMock()
+    mock_response.content = [TextBlock(type="text", text=text, citations=None)]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    mock_response.stop_reason = "end_turn"
+    mock_response.id = "msg_forced_answer"
+    return mock_response
+
+
+@pytest.mark.parametrize(
+    "history_tail",
+    [
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "toolu_1",
+                        "type": "function",
+                        "function": {"name": "get_data", "arguments": "{}"},
+                    }
+                ],
+            },
+            {"role": "tool", "tool_call_id": "toolu_1", "name": "get_data", "content": "partial"},
+            {"role": "user", "content": "Analyze the tool result."},
+        ],
+        [
+            {
+                "role": "assistant",
+                "content": "Thought: I need data\nAction: get_data\nAction Input: {}\nObservation: partial",
+            },
+        ],
+    ],
+    ids=["native-tools", "react"],
+)
+def test_max_iterations_request_ends_on_a_user_turn(history_tail):
+    """Claude 4.6+ rejects a request whose last message is an assistant turn (no prefill).
+
+    Regression for the max_iter path: the forced final-answer instruction must
+    reach the Anthropic API as the trailing user message, on both loop shapes.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.utilities.agent_utils import handle_max_iterations_exceeded
+    from crewai.utilities.i18n import I18N_DEFAULT
+
+    llm = AnthropicCompletion(model="claude-opus-5")
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = _final_answer_response("Final Answer: 42")
+    llm._client = mock_client
+
+    history = [
+        {"role": "system", "content": "You are an agent."},
+        {"role": "user", "content": "Collect all the data."},
+        *history_tail,
+    ]
+
+    result = handle_max_iterations_exceeded(
+        printer=MagicMock(), messages=history, llm=llm, callbacks=[], verbose=False
+    )
+
+    mock_client.messages.create.assert_called_once()
+    sent = mock_client.messages.create.call_args.kwargs["messages"]
+    assert sent[-1] == {"role": "user", "content": I18N_DEFAULT.errors("force_final_answer")}
+    assert result.output == "42"

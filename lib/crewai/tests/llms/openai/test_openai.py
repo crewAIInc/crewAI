@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import types
@@ -474,6 +475,23 @@ def test_openai_raises_error_when_model_not_supported():
         with pytest.raises(ValueError, match="Model.*not found"):
             llm.call("Hello")
 
+
+def _raw_create_double(content: str = "test response") -> MagicMock:
+    """Double for `chat.completions.with_raw_response.create`.
+
+    `text` has to be real JSON carrying `choices` so the gateway error-envelope
+    guard sees a well-formed completion and defers to `parse()`.
+    """
+    parsed = MagicMock(
+        choices=[MagicMock(message=MagicMock(content=content, tool_calls=None))],
+        usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30),
+    )
+    return MagicMock(
+        text=json.dumps({"choices": [{"index": 0}]}),
+        **{"parse.return_value": parsed},
+    )
+
+
 def test_openai_client_setup_with_extra_arguments():
     """
     Test that OpenAICompletion is initialized with correct parameters
@@ -494,11 +512,10 @@ def test_openai_client_setup_with_extra_arguments():
     assert llm._client.max_retries == 3
     assert llm._client.timeout == 30
 
-    with patch.object(llm._client.chat.completions, 'create') as mock_create:
-        mock_create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
-            usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
-        )
+    with patch.object(
+        llm._client.chat.completions.with_raw_response, 'create'
+    ) as mock_create:
+        mock_create.return_value = _raw_create_double()
 
         llm.call("Hello")
 
@@ -514,11 +531,10 @@ def test_extra_arguments_are_passed_to_openai_completion():
     """
     llm = LLM(model="gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
 
-    with patch.object(llm._client.chat.completions, 'create') as mock_create:
-        mock_create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
-            usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
-        )
+    with patch.object(
+        llm._client.chat.completions.with_raw_response, 'create'
+    ) as mock_create:
+        mock_create.return_value = _raw_create_double()
 
         llm.call("Hello, how are you?")
 
