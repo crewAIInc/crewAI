@@ -1639,7 +1639,7 @@ requires-dist = [
     { name = "tokenizers", specifier = ">=0.21,<1" },
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
-    { name = "valkey-glide", marker = "extra == 'valkey'", specifier = ">=2.0.0,<3" },
+    { name = "valkey-glide", marker = "extra == 'valkey'", specifier = ">=2.5.2,<3" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
 provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "spreadsheets", "tools", "valkey", "voyageai", "watson"]
