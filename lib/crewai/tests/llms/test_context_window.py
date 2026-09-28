@@ -2,6 +2,7 @@ import pytest
 
 from crewai.llms.context_window import (
     BEDROCK_CONTEXT_WINDOWS,
+    GEMINI_CONTEXT_WINDOWS,
     CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     MAX_CONTEXT,
@@ -90,7 +91,16 @@ def test_affected_model_ids_use_their_specific_context_windows(
         ("gpt-oss-120b", LLM_CONTEXT_WINDOW_SIZES, 131_072),
         ("gpt-5.4-nano", LLM_CONTEXT_WINDOW_SIZES, 400_000),
         ("gemini-3.7-flash", LLM_CONTEXT_WINDOW_SIZES, 1_048_576),
+        ("gemma-3-1b-it", GEMINI_CONTEXT_WINDOWS, 32_000),
+        ("gemma-3-27b-it", GEMINI_CONTEXT_WINDOWS, 128_000),
         ("amazon.nova-2-lite-v1:0", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        ("global.moonshotai.kimi-k3", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        (
+            "anthropic.claude-3-5-sonnet-20241022-v2:0",
+            BEDROCK_CONTEXT_WINDOWS,
+            200_000,
+        ),
+        ("us.anthropic.claude-opus-4-1-20250805-v1:0", BEDROCK_CONTEXT_WINDOWS, 200_000),
         (
             "meta.llama4-scout-17b-instruct-v1:0",
             BEDROCK_CONTEXT_WINDOWS,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime
 import json
 import logging
@@ -49,9 +49,13 @@ from crewai.llms.constants import (
     OPENAI_MODELS,
 )
 from crewai.llms.context_window import (
+    AZURE_OPENAI_CONTEXT_WINDOWS,
     CONTEXT_WINDOW_USAGE_RATIO,  # noqa: F401 - backwards-compatible re-export
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
+    MAX_CONTEXT,  # noqa: F401 - backwards-compatible re-export
+    MIN_CONTEXT,  # noqa: F401 - backwards-compatible re-export
+    OPENAI_CONTEXT_WINDOWS,
     resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
@@ -2384,6 +2388,22 @@ class LLM(BaseLLM):
             return remainder
         return self.model
 
+    def _context_window_sizes(self) -> Mapping[str, int]:
+        """Pick a provider catalog when the model id is provider-qualified.
+
+        The merged catalog lets Azure's ``gpt-4`` override OpenAI's. Qualified
+        LiteLLM ids must keep the provider that was named.
+        """
+        prefix, separator, _remainder = self.model.partition("/")
+        if not separator:
+            return LLM_CONTEXT_WINDOW_SIZES
+        provider = prefix.lower()
+        if provider == "openai":
+            return OPENAI_CONTEXT_WINDOWS
+        if provider in {"azure", "azure_openai"}:
+            return AZURE_OPENAI_CONTEXT_WINDOWS
+        return LLM_CONTEXT_WINDOW_SIZES
+
     def get_context_window_size(self) -> int:
         """
         Returns the context window size, using 75% of the maximum to avoid
@@ -2397,7 +2417,7 @@ class LLM(BaseLLM):
 
         self.context_window_size = resolve_context_window_size(
             self._context_window_model_name(),
-            LLM_CONTEXT_WINDOW_SIZES,
+            self._context_window_sizes(),
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
             extra_names=(self.model,),
         )

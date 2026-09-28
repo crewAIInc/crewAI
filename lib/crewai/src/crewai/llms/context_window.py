@@ -120,6 +120,10 @@ GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gemini-3.1-flash-lite": 1_048_576,
     "gemini-3.1-pro-preview": 1_048_576,
     "gemini-3-flash-preview": 1_048_576,
+    "gemma-3-27b": 128_000,
+    "gemma-3-12b": 128_000,
+    "gemma-3-4b": 128_000,
+    "gemma-3-1b": 32_000,
 }
 
 # Check Bedrock model IDs and each model's context window in Models at a glance.
@@ -204,6 +208,15 @@ _BEDROCK_BASE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "zai.glm-5": 200_000,
 }
 
+
+def _prefixed_context_windows(
+    sizes: Mapping[str, int], prefixes: Sequence[str]
+) -> dict[str, int]:
+    return {
+        f"{prefix}{model}": size for prefix in prefixes for model, size in sizes.items()
+    }
+
+
 # Bedrock's lifecycle is independent from Anthropic's direct API. Sonnet 4 is
 # Legacy (not EOL) on Bedrock, so keep its provider-specific limit until AWS
 # retires it: https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle-legacy.html
@@ -213,6 +226,20 @@ _BEDROCK_LEGACY_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "eu.anthropic.claude-sonnet-4": 200_000,
     "apac.anthropic.claude-sonnet-4": 200_000,
     "global.anthropic.claude-sonnet-4": 200_000,
+    **_prefixed_context_windows(
+        {
+            "anthropic.claude-opus-4-1": 200_000,
+            "anthropic.claude-opus-4": 200_000,
+            "anthropic.claude-haiku-4": 200_000,
+            "anthropic.claude-3-7-sonnet": 200_000,
+            "anthropic.claude-3-5-sonnet": 200_000,
+            "anthropic.claude-3-5-haiku": 200_000,
+            "anthropic.claude-3-opus": 200_000,
+            "anthropic.claude-3-sonnet": 200_000,
+            "anthropic.claude-3-haiku": 200_000,
+        },
+        ("", "us.", "eu.", "apac.", "global."),
+    ),
 }
 
 # LiteLLM maintains its provider-only model IDs and context windows here. Prefer
@@ -220,6 +247,7 @@ _BEDROCK_LEGACY_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 # https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json
 LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "deepseek-chat": 128_000,
+    "claude-3-5-sonnet": 200_000,
     "gemma2-9b-it": 8192,
     "gemma-7b-it": 8192,
     "llama3-groq-70b-8192-tool-use-preview": 8192,
@@ -265,14 +293,6 @@ LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 }
 
 
-def _prefixed_context_windows(
-    sizes: Mapping[str, int], prefixes: Sequence[str]
-) -> dict[str, int]:
-    return {
-        f"{prefix}{model}": size for prefix in prefixes for model, size in sizes.items()
-    }
-
-
 BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     **_BEDROCK_BASE_CONTEXT_WINDOWS,
     **_BEDROCK_LEGACY_CONTEXT_WINDOWS,
@@ -287,6 +307,8 @@ BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = {
             "global.anthropic.",
         ),
     ),
+    # Geo inference ID is not produced by the us/eu/apac expansion.
+    "global.moonshotai.kimi-k3": 1_000_000,
 }
 
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {

@@ -364,6 +364,16 @@ def test_gpt56_does_not_override_gpt54_mini_window() -> None:
     assert llm.get_context_window_size() == int(400000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+def test_qualified_litellm_gpt4_keeps_the_provider_context_window() -> None:
+    openai_llm = LLM(model="openai/gpt-4", is_litellm=True)
+    azure_llm = LLM(model="azure/gpt-4", is_litellm=True)
+
+    assert openai_llm.get_context_window_size() == int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert azure_llm.get_context_window_size() == int(
+        128_000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
 def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
     llm = LLM(model="gpt-5", is_litellm=True)
 
