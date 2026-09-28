@@ -42,6 +42,7 @@ class FakeAMP:
         self.calls: list[tuple] = []
         self.sent_config = None
         self.api_key = None
+        self.headers: dict[str, str] = {"X-Crewai-Organization-Id": "org-42"}
 
     def create_evaluation(self, execution_id, *, eval_config=None):
         self.calls.append(("create", execution_id))
@@ -161,13 +162,15 @@ def test_the_follow_link_cannot_be_retargeted_by_the_url_amp_sends(project, monk
     # command to let markup through.
     directory, _ = project
     record_last_run(directory)
-    hostile = "[link=http://attacker.test/]https://app.crewai.com/e/ev-1[/link]"
+    # A web address that carries markup inside it: printed as text, never
+    # interpreted (one that IS markup is not a web address, and is dropped).
+    hostile = "https://app.crewai.com/e/[link=http://attacker.test/]ev-1[/link]"
     created = httpx.Response(202, json={"id": "ev-1", "url": hostile, "status": "queued"})
     install(monkeypatch, FakeAMP(create=created, statuses=[done()]))
 
     eval_module.eval_crew()
 
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.replace("\n", "")
     assert "[link=http://attacker.test/]" in out  # printed, not followed
 
 
@@ -184,7 +187,7 @@ def test_a_url_that_is_not_a_string_costs_the_link_and_nothing_else(project, mon
     eval_module.eval_crew()
 
     out = capsys.readouterr().out
-    assert "report url that is not a string" in out  # said, not swallowed
+    assert "not a web address" in out  # said, not swallowed
     assert "Goal gate: PASSED" in out  # and the verdict still arrives
     assert opened == []  # nothing was handed to a browser
     assert "Follow it at" not in out
@@ -697,6 +700,58 @@ def test_the_fallback_grades_only_a_run_recorded_after_it_began(
     assert exited.value.code == 1
     assert amp.calls == []
     assert "no trace was recorded" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "url, opened",
+    [
+        ("https://optimize.crewai.test/e/ev-1", True),
+        ("http://localhost:3000/e/ev-1", True),
+        ("http://evil.test/e/ev-1", False),
+        ("file:///etc/passwd", False),
+        ("javascript:alert(1)", False),
+        ("https://user:pw@optimize.crewai.test/e/ev-1", False),
+        ("https://optimize.crewai.test/e/ev-1\x1b[31m", False),
+        ("/e/ev-1", False),
+    ],
+)
+def test_only_a_web_address_is_printed_and_opened(url, opened):
+    """The report link comes from whichever AMP answered — which a project's
+    `.env` may choose — and is opened without a click. Its host is not pinned
+    (the report lives on the evaluation service), but it must be a web address."""
+    assert (eval_module._report_url(url) == url) is opened
+
+
+def test_a_report_url_that_is_not_a_web_address_is_dropped_with_a_note(monkeypatch):
+    class Client:
+        def create_evaluation(self, execution_id, *, eval_config=None):
+            return httpx.Response(
+                202, json={"id": "ev-1", "url": "file:///etc/passwd", "status": "queued"}
+            )
+
+    notes: list[str] = []
+    started = eval_module._start_evaluation(Client(), "run-1", note=notes.append)
+
+    assert started["url"] is None
+    assert "link is unavailable" in notes[0]
+
+
+@pytest.mark.parametrize("login", [None, "tok"])
+def test_a_request_without_the_login_names_no_organization(project, monkeypatch, login):
+    """AMP reads the organization header only beside a credential, so without
+    one it says nothing — except, to an AMP this machine is not logged in to,
+    which organization is asking."""
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://not-logged-in.test")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: login)
+    monkeypatch.setattr(
+        "crewai_core.plus_api.Settings",
+        lambda: SimpleNamespace(org_uuid="org-42", enterprise_base_url=None),
+    )
+
+    client = eval_module._amp_client({"https://app.crewai.com"}, note=lambda _t: None)
+
+    assert client.api_key is None
+    assert "X-Crewai-Organization-Id" not in client.headers
 
 
 def test_telemetry_never_breaks_the_command(project, monkeypatch):

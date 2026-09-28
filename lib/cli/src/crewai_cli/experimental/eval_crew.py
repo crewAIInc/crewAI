@@ -414,7 +414,7 @@ def _amp_client(trusted: set[str], *, note: Callable[[str], None] = _note) -> Pl
     read anonymously."""
     client = PlusAPI(api_key=saved_login())
     if client.api_key is None:
-        return client
+        return _anonymous(client)
 
     origin = _origin(client.base_url)
     if origin in trusted and _encrypted(origin):
@@ -429,7 +429,19 @@ def _amp_client(trusted: set[str], *, note: Callable[[str], None] = _note) -> Pl
         f"Reading anonymously: {client.base_url} {why}. "
         "Run `crewai enterprise configure <url>` to log in to it."
     )
-    return PlusAPI()
+    return _anonymous(PlusAPI())
+
+
+def _anonymous(client: PlusAPI) -> PlusAPI:
+    """A client that says nothing about who is asking.
+
+    `PlusAPI` adds the saved organization to every request, and AMP reads it
+    only beside a credential — so without one it tells AMP nothing, and tells
+    an AMP this machine is not logged in to which organization is. Dropped, as
+    anonymous trace grants drop it.
+    """
+    client.headers.pop("X-Crewai-Organization-Id", None)
+    return client
 
 
 def _load_project_env() -> None:
@@ -606,18 +618,48 @@ def _start_evaluation(
         # costs the link and nothing else: the evaluation is already running
         # and its verdict is what the user came for.
         if payload and isinstance(payload.get("id"), str) and payload["id"]:
-            if not isinstance(payload.get("url"), str):
-                if payload.get("url") is not None:
-                    note(
-                        "AMP answered with a report url that is not a string; "
-                        "the link is unavailable for this run."
-                    )
-                payload["url"] = None
+            url = _report_url(payload.get("url"))
+            if url is None and payload.get("url") is not None:
+                note(
+                    "AMP answered with a report url that is not a web address this "
+                    "command will open; the link is unavailable for this run."
+                )
+            payload["url"] = url
             return payload
         raise EvaluationStoppedError(
             f"AMP answered without an evaluation id ({response.status_code})."
         )
     raise EvaluationStoppedError(_refusal_message(response, f"run {execution_id}"))
+
+
+def _report_url(value: Any) -> str | None:
+    """The report link, if it is one a browser may be sent to.
+
+    It is printed as a link and opened without a click, and it comes from
+    whichever AMP answered — which a project's `.env` may choose. So it must be
+    an absolute web address: HTTPS, or plain HTTP to this machine, with no
+    credentials in it and no control characters to restyle the terminal. The
+    host is not pinned: the report is served by the evaluation service, not by
+    AMP, and a self-hosted AMP names its own.
+    """
+    if (
+        not isinstance(value, str)
+        or not value
+        or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value)
+    ):
+        return None
+    try:
+        parsed = urlparse(value)
+        if (
+            parsed.hostname
+            and parsed.username is None
+            and parsed.password is None
+            and _encrypted(f"{parsed.scheme}://{parsed.netloc}")
+        ):
+            return value
+    except ValueError:
+        pass
+    return None
 
 
 def _wait(
