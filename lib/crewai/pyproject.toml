@@ -125,7 +125,8 @@ qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]
 valkey = [
-    "valkey-glide>=2.0.0,<3",
+    # >=2.5.2 required: client_info_tag (LIB-NAME attribution) shipped in 2.5.2.
+    "valkey-glide>=2.5.2,<3",
 ]
 
 
