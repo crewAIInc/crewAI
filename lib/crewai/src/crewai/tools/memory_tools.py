@@ -13,14 +13,13 @@ from crewai.utilities.i18n import I18N_DEFAULT
 class RecallMemorySchema(BaseModel):
     """Schema for the recall memory tool."""
 
-    queries: list[str] | None = Field(
+    queries: list[str] | str | None = Field(
         default=None,
         description=(
             "REQUIRED: A list of search query strings. "
             "Examples: ['AI trends'], ['Python', 'machine learning'], ['vector databases']. "
             "Pass a single item for a focused search, or multiple items to search for several things at once."
         ),
-        min_length=1,
     )
 
     model_config = {"extra": "forbid"}
@@ -78,14 +77,13 @@ class RecallMemoryTool(BaseTool):
 class RememberSchema(BaseModel):
     """Schema for the remember tool."""
 
-    contents: list[str] | None = Field(
+    contents: list[str] | str | None = Field(
         default=None,
         description=(
             "REQUIRED: A list of strings to save to memory. "
             "Examples: ['User prefers dark mode'], ['Project deadline is March 15', 'Budget is $50k']. "
             "Pass a single item or multiple items at once."
         ),
-        min_length=1,
     )
 
     model_config = {"extra": "forbid"}
