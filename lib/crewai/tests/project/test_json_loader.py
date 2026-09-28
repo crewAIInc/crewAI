@@ -68,6 +68,19 @@ class TestStripJsoncComments:
         result = strip_jsonc_comments(text)
         assert json.loads(result) == {"key": "value"}
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            '{"max_iter":1/* note */0}',
+            "[tr/* note */ue]",
+            "[1e/* note */2]",
+            "[-/* note */1]",
+        ],
+    )
+    def test_block_comments_do_not_join_json_tokens(self, text: str):
+        with pytest.raises(json.JSONDecodeError):
+            json.loads(strip_jsonc_comments(text))
+
 
 def test_find_json_project_file_prefers_jsonc(tmp_path: Path):
     (tmp_path / "agent.json").write_text("{}")
