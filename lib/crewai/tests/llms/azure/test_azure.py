@@ -644,13 +644,13 @@ def test_azure_context_window_size():
     """
     Test that Azure models return correct context window sizes
     """
+    usable = int(128_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
     llm_gpt4 = LLM(model="azure/gpt-4")
-    context_size_gpt4 = llm_gpt4.get_context_window_size()
-    assert context_size_gpt4 > 0
+    assert llm_gpt4.get_context_window_size() == usable
 
     llm_gpt4o = LLM(model="azure/gpt-4o")
-    context_size_gpt4o = llm_gpt4o.get_context_window_size()
-    assert context_size_gpt4o > context_size_gpt4  # GPT-4o has larger context
+    assert llm_gpt4o.get_context_window_size() == usable
 
 
 @pytest.mark.parametrize(
