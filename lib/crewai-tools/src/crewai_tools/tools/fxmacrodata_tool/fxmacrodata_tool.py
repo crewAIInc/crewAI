@@ -96,17 +96,17 @@ class FXMacroDataToolInput(BaseModel):
 
 
 class FXMacroDataTool(BaseTool):
-    """Official-source macroeconomic, FX and central-bank data for 18 currencies.
+    """Official-source macroeconomic, FX and central-bank data for 22 currencies.
 
     FXMacroData aggregates official publishers - statistical agencies, central
     banks and exchanges - behind one contract, so answering "what did US core
     inflation print at, and when is the next release" does not require knowing
-    which of eighteen publishers to call or how each formats its data. Every
+    which of twenty-two publishers to call or how each formats its data. Every
     observation carries the instant it was published, so an agent can reason
     about what was knowable at a point in time rather than only about now.
 
     USD works without an API key. A key widens the history window and unlocks
-    the other seventeen currencies plus FX rates, rate differentials, COT
+    the other twenty-one currencies plus FX rates, rate differentials, COT
     positioning and commodities.
     """
 
@@ -116,7 +116,7 @@ class FXMacroDataTool(BaseTool):
     name: str = "FXMacroData Macroeconomic and FX Data"
     description: str = (
         "Reads official macroeconomic releases, release calendars, FX reference rates, "
-        "rate differentials, COT positioning and commodity prices across 18 currencies. "
+        "rate differentials, COT positioning and commodity prices across 22 currencies. "
         "Use dataset='catalogue' first if you do not know an indicator slug."
     )
     args_schema: type[BaseModel] = FXMacroDataToolInput

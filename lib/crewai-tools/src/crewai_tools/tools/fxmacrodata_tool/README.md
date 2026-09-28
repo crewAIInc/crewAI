@@ -2,11 +2,11 @@
 
 ## Description
 
-Official-source macroeconomic, FX and central-bank data across 18 currencies, from
+Official-source macroeconomic, FX and central-bank data across 22 currencies, from
 [FXMacroData](https://fxmacrodata.com).
 
 The point of this tool is aggregation. Answering "what did US core inflation print at, and
-when is the next release" otherwise means knowing which of eighteen publishers to call and
+when is the next release" otherwise means knowing which of twenty-two publishers to call and
 how each one formats its data. One `dataset="latest"` call returns the most recent print of
 every indicator for an economy, and every observation carries the instant it was published,
 so an agent can reason about what was knowable at a point in time rather than only about now.
@@ -18,7 +18,7 @@ pip install 'crewai[tools]'
 ```
 
 No API key is required for USD data. A key widens the history window (anonymous access
-returns the most recent 90 days) and unlocks the other seventeen currencies plus FX rates,
+returns the most recent 90 days) and unlocks the other twenty-one currencies plus FX rates,
 rate differentials, COT positioning and commodities:
 
 ```shell
