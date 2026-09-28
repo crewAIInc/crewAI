@@ -120,6 +120,9 @@ GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gemini-3.1-flash-lite": 1_048_576,
     "gemini-3.1-pro-preview": 1_048_576,
     "gemini-3-flash-preview": 1_048_576,
+    # Kept so native Gemini and LiteLLM agree. The catalog page is gone;
+    # this snapshot previously resolved to the 1M Gemini default.
+    "gemini-2.0-flash-thinking-exp-01-21": 1_048_576,
 }
 
 # Check Bedrock model IDs and each model's context window in Models at a glance.
