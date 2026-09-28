@@ -15,7 +15,9 @@ from pydantic import BaseModel, Field, model_validator
 
 
 try:
-    from sqlalchemy import create_engine, text
+    from sqlalchemy import create_engine, inspect, text
+    from sqlalchemy.dialects.postgresql.base import PGInspector
+    from sqlalchemy.exc import CompileError, SQLAlchemyError
     from sqlalchemy.orm import sessionmaker
 
     SQLALCHEMY_AVAILABLE = True
@@ -221,7 +223,8 @@ class NL2SQLTool(BaseTool):
     ``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are
     blocked in read-only mode.
 
-    The ``_fetch_all_available_columns`` helper uses parameterised queries so
+    The ``_fetch_all_available_columns`` helper passes table names to
+    SQLAlchemy's inspection API as Python arguments (never as SQL text) so
     that table names coming from the database catalogue cannot be used as an
     injection vector.
     """
@@ -399,24 +402,68 @@ class NL2SQLTool(BaseTool):
     # Schema introspection helpers
 
     def _fetch_available_tables(self) -> list[dict[str, Any]] | str:
-        return self.execute_sql(
-            "SELECT table_name FROM information_schema.tables "
-            "WHERE table_schema = 'public';"
-        )
+        """Discover tables and views via SQLAlchemy's reflection API.
+
+        Preserve the PostgreSQL ``public`` schema scope, including views and
+        foreign tables. Other dialects use their default schema. Reflection
+        describes catalogue metadata; query access still depends on database
+        privileges, not membership in this list.
+        """
+        try:
+            engine = create_engine(self.db_uri)
+        except SQLAlchemyError as e:
+            return f"Failed to create engine: {e}"
+        try:
+            inspector = inspect(engine)
+            schema = "public" if engine.dialect.name == "postgresql" else None
+            names = inspector.get_table_names(schema=schema)
+            names += inspector.get_view_names(schema=schema)
+            if isinstance(inspector, PGInspector):
+                names += inspector.get_foreign_table_names(schema=schema)
+            return [{"table_name": name} for name in names]
+        except SQLAlchemyError as e:
+            return f"Failed to fetch tables: {e}"
+        finally:
+            engine.dispose()
 
     def _fetch_all_available_columns(
         self, table_name: str
     ) -> list[dict[str, Any]] | str:
-        """Fetch columns for *table_name* using a parameterised query.
+        """Fetch columns for *table_name* via SQLAlchemy reflection.
 
-        The table name is bound via SQLAlchemy's ``:param`` syntax to prevent
-        SQL injection from catalogue values.
+        The table name is passed to the inspection API as a Python argument,
+        never interpolated into SQL text, so catalogue-derived values cannot
+        act as an injection vector.
+
+        Note: ``data_type`` values are rendered by compiling the reflected
+        SQLAlchemy type against the connected dialect (e.g. ``VARCHAR(255)``,
+        ``TIMESTAMP WITH TIME ZONE``) rather than copied from
+        ``information_schema.columns.data_type`` (e.g. ``character varying``,
+        lowercase SQL-standard names without precision). Types SQLAlchemy
+        cannot reflect or compile, including untyped SQLite columns, are
+        ``UNKNOWN``.
         """
-        return self.execute_sql(
-            "SELECT column_name, data_type FROM information_schema.columns "
-            "WHERE table_name = :table_name",
-            params={"table_name": table_name},
-        )
+        try:
+            engine = create_engine(self.db_uri)
+        except SQLAlchemyError as e:
+            return f"Failed to create engine: {e}"
+        try:
+            inspector = inspect(engine)
+            schema = "public" if engine.dialect.name == "postgresql" else None
+            columns = []
+            for column in inspector.get_columns(table_name, schema=schema):
+                try:
+                    data_type = column["type"].compile(dialect=engine.dialect)
+                except CompileError:
+                    # Unknown types (including array elements) must not hide
+                    # the rest of the table's columns.
+                    data_type = "UNKNOWN"
+                columns.append({"column_name": column["name"], "data_type": data_type})
+            return columns
+        except SQLAlchemyError as e:
+            return f"Failed to fetch columns for {table_name}: {e}"
+        finally:
+            engine.dispose()
 
     # Core execution
 

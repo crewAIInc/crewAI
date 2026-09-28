@@ -1,8 +1,8 @@
 """Security tests for NL2SQLTool.
 
 Uses an in-memory SQLite database so no external service is needed.
-SQLite does not have information_schema, so we patch the schema-introspection
-helpers to avoid bootstrap failures and focus purely on the security logic.
+Schema-introspection helpers are patched out to keep these tests focused
+on the security logic with a known-empty schema.
 """
 import os
 from unittest.mock import MagicMock, patch
@@ -23,8 +23,7 @@ SQLITE_URI = "sqlite://"  # in-memory
 def _make_tool(allow_dml: bool = False, **kwargs) -> NL2SQLTool:
     """Return a NL2SQLTool wired to an in-memory SQLite DB.
 
-    Schema-introspection is patched out so we can create the tool without a
-    real PostgreSQL information_schema.
+    Schema introspection is patched out to isolate query validation and execution.
     """
     with (
         patch.object(NL2SQLTool, "_fetch_available_tables", return_value=[]),
@@ -119,48 +118,43 @@ class TestDMLEnabled:
             os.unlink(db_path)
 
 
-# Parameterised query — SQL injection prevention
+# Catalogue identifiers must be passed through SQLAlchemy reflection.
 
 
-class TestParameterisedQueries:
-    def test_table_name_is_parameterised(self):
-        """_fetch_all_available_columns must not interpolate table_name into SQL."""
+class TestIntrospectionIdentifiers:
+    def test_table_name_is_passed_to_inspector(self):
+        """SQLAlchemy handles identifier quoting in its internal queries."""
         tool = _make_tool()
-        captured_calls = []
+        injection = "users'; DROP TABLE users; --"
+        with (
+            patch.object(NL2SQLTool, "execute_sql") as execute_sql,
+            patch(
+                "crewai_tools.tools.nl2sql.nl2sql_tool.create_engine"
+            ) as create_engine_mock,
+            patch(
+                "crewai_tools.tools.nl2sql.nl2sql_tool.inspect", MagicMock()
+            ) as mock_inspect,
+        ):
+            create_engine_mock.return_value.dialect.name = "sqlite"
+            mock_inspect.return_value.get_columns.return_value = []
+            result = tool._fetch_all_available_columns(injection)
 
-        def recording_execute_sql(self_inner, sql_query, params=None):
-            captured_calls.append((sql_query, params))
-            return []
+        mock_inspect.return_value.get_columns.assert_called_once_with(
+            injection, schema=None
+        )
+        execute_sql.assert_not_called()
+        assert result == []
 
-        with patch.object(NL2SQLTool, "execute_sql", recording_execute_sql):
-            tool._fetch_all_available_columns("users'; DROP TABLE users; --")
-
-        assert len(captured_calls) == 1
-        sql, params = captured_calls[0]
-        # The raw SQL must NOT contain the injected string
-        assert "DROP" not in sql
-        # The table name must be passed as a parameter
-        assert params is not None
-        assert params.get("table_name") == "users'; DROP TABLE users; --"
-        # The SQL template must use the :param syntax
-        assert ":table_name" in sql
-
-    def test_injection_string_not_in_sql_template(self):
-        """The f-string vulnerability is gone — table name never lands in the SQL."""
+    def test_missing_hostile_identifier_returns_reflection_error(self):
         tool = _make_tool()
         injection = "'; DROP TABLE users; --"
-        captured = {}
 
-        def spy(self_inner, sql_query, params=None):
-            captured["sql"] = sql_query
-            captured["params"] = params
-            return []
+        with patch.object(NL2SQLTool, "execute_sql") as execute_sql:
+            result = tool._fetch_all_available_columns(injection)
 
-        with patch.object(NL2SQLTool, "execute_sql", spy):
-            tool._fetch_all_available_columns(injection)
-
-        assert injection not in captured["sql"]
-        assert captured["params"]["table_name"] == injection
+        execute_sql.assert_not_called()
+        assert isinstance(result, str)
+        assert result.startswith(f"Failed to fetch columns for {injection}:")
 
 
 class TestNoCommitForReadOnly:
