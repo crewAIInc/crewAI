@@ -1,10 +1,16 @@
 """Tests for async task execution."""
 
+import asyncio
+import threading
+from typing import Any
+
 import pytest
 from pydantic import BaseModel
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agent import Agent
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.task_events import TaskFailedEvent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.tasks.output_format import OutputFormat
@@ -455,3 +461,55 @@ class TestAsyncOutputConversion:
 
         assert result == sentinel
         mock_to_thread.assert_awaited_once_with(instructor.to_json)
+
+
+class TestCancelledTaskCleanup:
+    """A cancelled task must still report a terminal event.
+
+    ``asyncio.CancelledError`` derives from ``BaseException``, so the
+    ``except Exception`` in ``_aexecute_core`` never saw it: no terminal
+    event was emitted at all, and everything downstream -- tracing,
+    telemetry, the console formatter -- kept treating the task as running
+    after it was already gone.
+
+    The assertion is on the event rather than on
+    ``EventListener.execution_spans`` on purpose. Handlers run on a thread
+    pool with no ordering between them, so whether the started or the
+    terminal handler runs first is not deterministic; asserting on the
+    dict produced a test that failed roughly one run in five.
+    """
+
+    @pytest.mark.asyncio
+    async def test_cancelled_task_emits_terminal_event(
+        self, test_agent: Agent
+    ) -> None:
+        """Cancelling a task emits TaskFailedEvent instead of nothing."""
+        seen = threading.Event()
+        captured: dict[str, Any] = {}
+
+        @crewai_event_bus.on(TaskFailedEvent)
+        def on_failed(source: Task, event: TaskFailedEvent) -> None:
+            captured["source"] = source
+            captured["error_type"] = event.error_type
+            seen.set()
+
+        async def cancelled(self: Agent, *args: object, **kwargs: object) -> None:
+            raise asyncio.CancelledError()
+
+        task = Task(
+            description="Cancelled task",
+            expected_output="Never produced",
+            agent=test_agent,
+        )
+        try:
+            with patch.object(Agent, "aexecute_task", cancelled):
+                with pytest.raises(asyncio.CancelledError):
+                    await task.aexecute_sync()
+
+            assert seen.wait(timeout=5), (
+                "a cancelled task emitted no terminal event"
+            )
+            assert captured["source"] is task
+            assert captured["error_type"] is asyncio.CancelledError
+        finally:
+            crewai_event_bus.off(TaskFailedEvent, on_failed)
