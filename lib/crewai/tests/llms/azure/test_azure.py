@@ -654,6 +654,26 @@ def test_azure_context_window_size():
 
 
 @pytest.mark.parametrize(
+    ("model", "context_window"),
+    [
+        ("azure/gpt-6-astra", 1_050_000),
+        ("azure/gpt-chat-latest", 400_000),
+        ("azure/gpt-oss-120b", 131_072),
+        ("azure/codex-mini", 200_000),
+        ("azure/computer-use-preview", 8192),
+        ("azure/gpt-4", 128_000),
+    ],
+)
+def test_azure_specific_models_use_official_context_windows(
+    model: str, context_window: int
+) -> None:
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(
+        context_window * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
+@pytest.mark.parametrize(
     "model",
     [
         "azure/gpt-5.6",

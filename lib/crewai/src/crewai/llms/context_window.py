@@ -47,6 +47,29 @@ OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 # account and region. Remove or replace vendor-retired entries:
 # https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure
 AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
+    "gpt-6-astra": 1_050_000,
+    "gpt-5.6-sol": 1_050_000,
+    "gpt-5.6-terra": 1_050_000,
+    "gpt-5.6-luna": 1_050_000,
+    "gpt-chat-latest": 400_000,
+    "gpt-5.4-pro": 1_050_000,
+    "gpt-5.2-codex": 400_000,
+    "gpt-5.2": 400_000,
+    "gpt-5.1-codex-mini": 400_000,
+    "gpt-5.1-codex-max": 400_000,
+    "gpt-5.1-codex": 400_000,
+    "gpt-5.1": 400_000,
+    "gpt-5-codex": 400_000,
+    "gpt-5-pro": 400_000,
+    "gpt-oss-120b": 131_072,
+    "gpt-oss-20b": 131_072,
+    "codex-mini": 200_000,
+    "o3-pro": 200_000,
+    "computer-use-preview": 8192,
+    "gpt-4": 128_000,
+    "text-embedding-3-large": 8192,
+    "text-embedding-3-small": 8192,
+    "text-embedding-ada-002": 8192,
     "text-embedding": 8191,
 }
 
@@ -59,8 +82,11 @@ AZURE_OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 # removing legacy prefixes: https://docs.anthropic.com/en/docs/about-claude/models
 # https://docs.anthropic.com/en/docs/about-claude/model-deprecations
 ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = {
+    "claude-fable-5-1": 1_000_000,
     "claude-fable-5": 1_000_000,
+    "claude-mythos-5-1": 1_000_000,
     "claude-mythos-5": 1_000_000,
+    "claude-opus-5-5": 1_000_000,
     "claude-opus-5": 1_000_000,
     "claude-sonnet-5": 1_000_000,
     "claude-opus-4-8": 1_000_000,
