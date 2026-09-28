@@ -265,3 +265,17 @@ class TestRetryBehaviorIntegration:
         # Serialization error should not be retried
         with pytest.raises(ValueError, match="Failed to serialize"):
             valkey_storage._record_to_dict(record)
+
+
+def test_parse_created_at_round_trips_numeric_and_legacy_iso() -> None:
+    """created_at is stored as a numeric epoch (indexable NumericField).
+    _parse_created_at must read that back exactly, and still accept any
+    legacy ISO-formatted values written before the change.
+    """
+    from datetime import datetime
+
+    from crewai.memory.storage.valkey_storage import _parse_created_at
+
+    dt = datetime(2024, 1, 15, 10, 30, 45, 123456)
+    assert _parse_created_at(str(dt.timestamp())) == dt
+    assert _parse_created_at(dt.isoformat()) == dt
