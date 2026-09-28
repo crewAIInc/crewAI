@@ -67,8 +67,9 @@ def test_litellm_map_includes_the_openai_gpt5_family() -> None:
         ("o1", 200_000),
         ("o1-pro", 200_000),
         ("o3", 200_000),
-        ("gemini-2.0-flash-thinking", 32_768),
-        ("gemini-2.0-flash-thinking-exp-01-21", 1_048_576),
+        ("gemini-3.1-flash-lite", 1_048_576),
+        ("gemini-3.1-pro-preview", 1_048_576),
+        ("gemini-3-flash-preview", 1_048_576),
     ],
 )
 def test_affected_model_ids_use_their_specific_context_windows(
