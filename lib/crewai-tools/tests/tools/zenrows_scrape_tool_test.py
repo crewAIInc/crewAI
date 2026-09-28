@@ -185,12 +185,31 @@ def test_custom_config_is_merged_into_every_request(mock_get):
     tool._run(url="https://example.com")
 
     params = mock_get.call_args.kwargs["params"]
-    assert params["js_render"] is True
-    assert params["premium_proxy"] is True
+    # Booleans are normalized to lowercase strings -- see
+    # test_boolean_config_values_are_sent_as_lowercase_strings.
+    assert params["js_render"] == "true"
+    assert params["premium_proxy"] == "true"
     assert params["proxy_country"] == "us"
     # Adaptive Stealth's "mode" key is not force-added when the caller
     # supplies their own config.
     assert "mode" not in params
+
+
+@patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})
+@patch(f"{TOOL_MODULE}.requests.get")
+def test_boolean_config_values_are_sent_as_lowercase_strings(mock_get):
+    """`requests` serializes Python's True/False as "True"/"False" in the
+    query string; Zenrows' own examples consistently use lowercase
+    "true"/"false" for boolean flags.
+    """
+    mock_get.return_value = _mock_response()
+    tool = ZenRowsScrapeTool(config={"js_render": True, "premium_proxy": False})
+
+    tool._run(url="https://example.com")
+
+    params = mock_get.call_args.kwargs["params"]
+    assert params["js_render"] == "true"
+    assert params["premium_proxy"] == "false"
 
 
 @patch.dict("os.environ", {"ZENROWS_API_KEY": "test_api_key"})

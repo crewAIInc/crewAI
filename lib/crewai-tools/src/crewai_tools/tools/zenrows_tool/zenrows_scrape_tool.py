@@ -207,7 +207,16 @@ class ZenRowsScrapeTool(BaseTool):
         # Scrapfly, Bright Data) rather than protecting a direct fetch.
         validated_url = validate_url(url)
 
-        params: dict[str, Any] = dict(self.config)
+        # `requests` serializes Python's True/False as "True"/"False" in the
+        # query string; Zenrows' own examples consistently use lowercase
+        # "true"/"false" for boolean flags like js_render/premium_proxy.
+        # Normalize so a caller passing real booleans in `config` (the
+        # natural Python way to write `{"js_render": True}`) doesn't end up
+        # sending a value Zenrows may not recognize as boolean.
+        params: dict[str, Any] = {
+            key: ("true" if value is True else "false" if value is False else value)
+            for key, value in self.config.items()
+        }
         params["url"] = validated_url
         # Set last so nothing in `config` can shadow the resolved credential.
         params["apikey"] = self._resolved_api_key
