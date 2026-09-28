@@ -670,7 +670,7 @@ def test_azure_gpt56_family_uses_official_context_window(model: str) -> None:
 
 def test_azure_gpt54_mini_keeps_its_window() -> None:
     llm = LLM(model="azure/gpt-5.4-mini")
-    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_azure_message_formatting():

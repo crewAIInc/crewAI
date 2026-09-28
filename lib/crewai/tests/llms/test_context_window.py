@@ -4,6 +4,7 @@ from crewai.llms.context_window import (
     BEDROCK_CONTEXT_WINDOWS,
     CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
+    MAX_CONTEXT,
     LLM_CONTEXT_WINDOW_SIZES,
     resolve_context_window_size,
 )
@@ -28,7 +29,7 @@ def test_resolver_uses_default_for_an_unknown_model() -> None:
 
 
 def test_resolver_validates_all_declared_context_windows() -> None:
-    with pytest.raises(ValueError, match="must be between 1024 and 2097152"):
+    with pytest.raises(ValueError, match="must be between 1024 and 10000000"):
         resolve_context_window_size("test-model", {"test-model": 500}, default=8192)
 
 
@@ -57,4 +58,26 @@ def test_litellm_map_includes_the_openai_gpt5_family() -> None:
         "gpt-5", LLM_CONTEXT_WINDOW_SIZES, default=DEFAULT_CONTEXT_WINDOW_SIZE
     )
 
-    assert result == int(1_047_576 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert result == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    ("model", "sizes", "raw_context_window"),
+    [
+        ("gpt-6-astra", LLM_CONTEXT_WINDOW_SIZES, 1_050_000),
+        ("gpt-5.4-nano", LLM_CONTEXT_WINDOW_SIZES, 400_000),
+        ("gemini-3.7-flash", LLM_CONTEXT_WINDOW_SIZES, 1_048_576),
+        ("amazon.nova-2-lite-v1:0", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        (
+            "meta.llama4-scout-17b-instruct-v1:0",
+            BEDROCK_CONTEXT_WINDOWS,
+            MAX_CONTEXT,
+        ),
+    ],
+)
+def test_new_catalog_models_use_their_documented_context_windows(
+    model: str, sizes: dict[str, int], raw_context_window: int
+) -> None:
+    assert resolve_context_window_size(
+        model, sizes, default=DEFAULT_CONTEXT_WINDOW_SIZE
+    ) == int(raw_context_window * CONTEXT_WINDOW_USAGE_RATIO)

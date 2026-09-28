@@ -345,7 +345,7 @@ def test_context_window_validation():
         ):
             llm = LLM(model="test-model", is_litellm=True)
             llm.get_context_window_size()
-    assert "must be between 1024 and 2097152" in str(excinfo.value)
+    assert "must be between 1024 and 10000000" in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
@@ -361,14 +361,14 @@ def test_gpt56_family_uses_official_context_window(model: str) -> None:
 def test_gpt56_does_not_override_gpt54_mini_window() -> None:
     """A more specific older prefix must keep its own window."""
     llm = LLM(model="gpt-5.4-mini", is_litellm=True)
-    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(400000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
     llm = LLM(model="gpt-5", is_litellm=True)
 
     assert llm.get_context_window_size() == int(
-        1_047_576 * CONTEXT_WINDOW_USAGE_RATIO
+        400_000 * CONTEXT_WINDOW_USAGE_RATIO
     )
 
 
@@ -377,7 +377,7 @@ def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
     [
         ("openai/gpt-5", "gpt-5"),
         ("anthropic/claude-sonnet-4-6", "claude-sonnet-4-6"),
-        ("google/gemini-2.0-flash", "gemini-2.0-flash"),
+        ("google/gemini-2.5-flash", "gemini-2.5-flash"),
     ],
 )
 def test_native_and_litellm_context_windows_match(

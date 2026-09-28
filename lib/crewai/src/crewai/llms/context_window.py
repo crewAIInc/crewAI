@@ -7,35 +7,42 @@ from typing import Final
 
 
 MIN_CONTEXT: Final[int] = 1024
-MAX_CONTEXT: Final[int] = 2_097_152
+MAX_CONTEXT: Final[int] = 10_000_000
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 
 # Raw provider limits. ``resolve_context_window_size`` applies the usable
 # context ratio uniformly, so all call sites share one matching rule.
+# Keep active IDs and context windows in sync with OpenAI's model catalog;
+# remove or replace entries when the vendor marks them retired:
+# https://developers.openai.com/api/docs/models
 OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-4.1-mini-2025-04-14": 1_047_576,
     "gpt-4.1-nano-2025-04-14": 1_047_576,
-    "gpt-5.4-mini": 200_000,
+    "gpt-6": 1_050_000,
+    "gpt-5.5": 1_050_000,
+    "gpt-5.4": 1_050_000,
+    "gpt-5.4-mini": 400_000,
+    "gpt-5.4-nano": 400_000,
+    "gpt-5.3-codex": 400_000,
     "gpt-4-turbo": 128_000,
     "gpt-4o-mini": 128_000,
-    "gpt-5-mini": 1_047_576,
-    "gpt-5-nano": 1_047_576,
-    "o1-preview": 128_000,
+    "gpt-5-mini": 400_000,
+    "gpt-5-nano": 400_000,
     "gpt-5.6": 1_050_000,
-    "o1-mini": 128_000,
     "o3-mini": 200_000,
     "o4-mini": 200_000,
     "gpt-4.1": 1_047_576,
     "gpt-4o": 128_000,
-    "gpt-5": 1_047_576,
+    "gpt-5": 400_000,
     "gpt-4": 8192,
 }
 
+# Check Azure deployment IDs and context windows here; availability varies by
+# account and region. Remove or replace vendor-retired entries:
+# https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure
 AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "text-embedding": 8191,
-    "gpt-3.5-turbo": 16_385,
-    "gpt-35-turbo": 16_385,
 }
 
 AZURE_OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
@@ -43,6 +50,9 @@ AZURE_OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     **AZURE_CONTEXT_WINDOWS,
 }
 
+# Check active Claude IDs and context windows here; review retirements before
+# removing legacy prefixes: https://docs.anthropic.com/en/docs/about-claude/models
+# https://docs.anthropic.com/en/docs/about-claude/model-deprecations
 ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "claude-fable-5": 1_000_000,
     "claude-mythos-5": 1_000_000,
@@ -55,31 +65,20 @@ ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "claude-opus-4-5": 200_000,
     "claude-sonnet-4-5": 200_000,
     "claude-haiku-4-5": 200_000,
-    "claude-sonnet-4": 200_000,
-    "claude-opus-4": 200_000,
-    "claude-haiku-4": 200_000,
-    "claude-3-7-sonnet": 200_000,
-    "claude-3-5-sonnet": 200_000,
-    "claude-3-5-haiku": 200_000,
-    "claude-3-opus": 200_000,
-    "claude-3-sonnet": 200_000,
-    "claude-3-haiku": 200_000,
-    "claude-v2:1": 200_000,
-    "claude-v2": 100_000,
-    "claude-instant-v1": 100_000,
 }
 
+# Check Gemini model IDs and context windows here; remove or replace retired
+# entries listed in the catalog:
+# https://ai.google.dev/gemini-api/docs/models
 GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gemini-3.8-flash": 1_048_576,
-    "gemini-3-pro-preview": 1_048_576,
-    "gemini-2.0-flash-thinking": 32_768,
-    "gemini-2.0-flash-lite": 1_048_576,
-    "gemini-2.0-flash": 1_048_576,
+    "gemini-3.7-flash": 1_048_576,
+    "gemini-3.6-flash": 1_048_576,
+    "gemini-3.5-flash": 1_048_576,
+    "gemini-3.5-flash-lite": 1_048_576,
     "gemini-2.5-flash": 1_048_576,
+    "gemini-2.5-flash-lite": 1_048_576,
     "gemini-2.5-pro": 1_048_576,
-    "gemini-1.5-flash-8b": 1_048_576,
-    "gemini-1.5-pro": 2_097_152,
-    "gemini-1.5-flash": 1_048_576,
     "gemini-1.0-pro": 32_768,
     "gemma-3-27b": 128_000,
     "gemma-3-12b": 128_000,
@@ -87,7 +86,12 @@ GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gemma-3-1b": 32_000,
 }
 
+# Check Bedrock model IDs and each model's context window in Models at a glance.
+# Availability varies by account and region; remove or replace retired entries:
+# https://docs.aws.amazon.com/bedrock/latest/userguide/models.html
 _BEDROCK_BASE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
+    "amazon.nova-2-lite-v1:0": 1_000_000,
+    "amazon.nova-premier-v1:0": 1_000_000,
     "amazon.nova-pro-v1:0": 300_000,
     "amazon.nova-micro-v1:0": 128_000,
     "amazon.nova-lite-v1:0": 300_000,
@@ -109,11 +113,28 @@ _BEDROCK_BASE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "meta.llama3-2-3b-instruct-v1:0": 131_000,
     "meta.llama3-2-90b-instruct-v1:0": 128_000,
     "meta.llama3-2-1b-instruct-v1:0": 131_000,
+    "meta.llama4-scout-17b-instruct-v1:0": 10_000_000,
     "meta.llama2-13b-chat": 4096,
     "meta.llama2-70b-chat": 4096,
     "deepseek.r1": 32_768,
+    "openai.gpt-oss-20b-1:0": 128_000,
+    "openai.gpt-oss-120b-1:0": 128_000,
 }
 
+# Bedrock's lifecycle is independent from Anthropic's direct API. Sonnet 4 is
+# Legacy (not EOL) on Bedrock, so keep its provider-specific limit until AWS
+# retires it: https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle-legacy.html
+_BEDROCK_LEGACY_CONTEXT_WINDOWS: Final[dict[str, int]] = {
+    "anthropic.claude-sonnet-4": 200_000,
+    "us.anthropic.claude-sonnet-4": 200_000,
+    "eu.anthropic.claude-sonnet-4": 200_000,
+    "apac.anthropic.claude-sonnet-4": 200_000,
+    "global.anthropic.claude-sonnet-4": 200_000,
+}
+
+# LiteLLM maintains its provider-only model IDs and context windows here. Prefer
+# the vendor catalogs above when both sources define the same model:
+# https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json
 LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "deepseek-chat": 128_000,
     "gemma2-9b-it": 8192,
@@ -171,6 +192,7 @@ def _prefixed_context_windows(
 
 BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     **_BEDROCK_BASE_CONTEXT_WINDOWS,
+    **_BEDROCK_LEGACY_CONTEXT_WINDOWS,
     **_prefixed_context_windows(_BEDROCK_BASE_CONTEXT_WINDOWS, ("us.", "eu.", "apac.")),
     **_prefixed_context_windows(
         ANTHROPIC_CONTEXT_WINDOWS,

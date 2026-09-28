@@ -543,9 +543,9 @@ def test_bedrock_context_window_size():
     """
     Test that Bedrock models return correct context window sizes
     """
-    llm_claude = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
-    context_size_claude = llm_claude.get_context_window_size()
-    assert context_size_claude > 150000  # Should be substantial (200K tokens with ratio)
+    llm_nova = LLM(model="bedrock/amazon.nova-2-lite-v1:0")
+    context_size_nova = llm_nova.get_context_window_size()
+    assert context_size_nova == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
     llm_titan = LLM(model="bedrock/amazon.titan-text-express-v1")
     context_size_titan = llm_titan.get_context_window_size()

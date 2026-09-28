@@ -1877,8 +1877,8 @@ def test_openai_prefixed_gpt56_luna_uses_official_context_window() -> None:
 def test_openai_gpt5_and_gpt54_mini_keep_their_windows() -> None:
     gpt5 = OpenAICompletion(model="gpt-5")
     gpt54_mini = OpenAICompletion(model="gpt-5.4-mini")
-    assert gpt5.get_context_window_size() == int(1_047_576 * CONTEXT_WINDOW_USAGE_RATIO)
-    assert gpt54_mini.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt5.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt54_mini.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_openai_stop_words_still_applied_to_regular_responses():
