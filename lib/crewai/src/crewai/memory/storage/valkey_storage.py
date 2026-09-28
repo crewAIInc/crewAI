@@ -101,7 +101,7 @@ class ValkeyStorage:
         tls_ca_cert_path: str | None = None,
         tls_client_cert_path: str | None = None,
         tls_client_key_path: str | None = None,
-        vector_dim: int = 1536,
+        vector_dim: int | None = None,
         index_algorithm: str = "HNSW",
     ) -> None:
         """Initialize Valkey storage with connection parameters and vector index config.
@@ -132,7 +132,10 @@ class ValkeyStorage:
         self._db = db
         self._password = password
         self._use_tls = use_tls
-        self._vector_dim = vector_dim
+        # None = auto-detect the dimension from the first embedding at save
+        # time, mirroring LanceDBStorage. Avoids hardcoding a size that can
+        # mismatch the configured embedder (e.g. text-embedding-3-large=3072).
+        self._vector_dim: int | None = vector_dim
         self._index_algorithm = index_algorithm
         self._client: GlideClient | None = None
         self._index_created = False
@@ -182,6 +185,10 @@ class ValkeyStorage:
                         # Build configuration
                         config = GlideClientConfiguration(
                             addresses=[node],
+                            # Valkey library-name tag for CLIENT INFO attribution
+                            # (LIB-NAME suffix GlidePy(crewai)). Independent of any
+                            # client name; metadata only, no behavioural change.
+                            client_info_tag="crewai",
                             database_id=self._db,
                             use_tls=self._use_tls,
                             credentials=(
@@ -511,6 +518,11 @@ class ValkeyStorage:
         if self._index_created:
             return
 
+        if self._vector_dim is None:
+            # No embedding has been seen yet, so the dimension is unknown.
+            # Defer index creation until the first embedded record is saved.
+            return
+
         client = await self._get_client()
 
         try:
@@ -674,6 +686,14 @@ class ValkeyStorage:
             return
 
         client = await self._get_client()
+
+        # Auto-detect embedding dimension from the first record that carries an
+        # embedding, so the index is created at the embedder's actual size.
+        if self._vector_dim is None:
+            for record in records:
+                if record.embedding:
+                    self._vector_dim = len(record.embedding)
+                    break
 
         # Ensure vector index exists before saving
         await self._ensure_vector_index()
@@ -1253,6 +1273,11 @@ class ValkeyStorage:
         """
         client = await self._get_client()
 
+        # Detect the embedding dimension from the query vector so the index is
+        # created at the right size when search happens before any save.
+        if self._vector_dim is None and query_embedding:
+            self._vector_dim = len(query_embedding)
+
         # Ensure vector index exists
         await self._ensure_vector_index()
 
@@ -1285,8 +1310,12 @@ class ValkeyStorage:
         # Combine filters
         filter_query = " ".join(query_parts) if query_parts else "*"
 
-        # Over-fetch when metadata_filter is present to compensate for post-filtering
-        fetch_limit = limit * 3 if metadata_filter else limit
+        # Over-fetch to compensate for post-filtering that drops matches after
+        # the KNN window is chosen. Both metadata_filter and the scope-boundary
+        # post-filter (@scope:{prefix*} matches sibling scopes that are then
+        # dropped) can shrink the result set below `limit`.
+        scope_post_filter = bool(scope_prefix and scope_prefix != "/")
+        fetch_limit = limit * 3 if (metadata_filter or scope_post_filter) else limit
 
         # Build KNN query with filters
         # Format: (filter)=>[KNN limit @field $BLOB AS score]
@@ -1901,5 +1930,35 @@ class ValkeyStorage:
         Args:
             scope_prefix: Optional scope path (None = reset all).
         """
-        # Use delete with scope_prefix to remove all records
-        await self.adelete(scope_prefix=scope_prefix)
+        if scope_prefix is not None:
+            # Scoped reset: delegate to the scope-filtered delete path.
+            await self.adelete(scope_prefix=scope_prefix)
+            return
+
+        # Full reset: adelete() with no filter intentionally deletes nothing
+        # (guards against an accidental unfiltered wipe), so enumerate every
+        # record for this instance and delete by explicit id.
+        client = await self._get_client()
+        all_ids: list[str] = []
+        cursor: str | bytes = "0"
+        while True:
+            result = await client.scan(cursor, match="record:*", count=1000)
+            cursor = result[0]
+            for key_bytes in result[1]:
+                key_str = (
+                    key_bytes.decode("utf-8")
+                    if isinstance(key_bytes, bytes)
+                    else key_bytes
+                )
+                # key format is "record:<id>"
+                record_id = key_str.split(":", 1)[1] if ":" in key_str else ""
+                if record_id:
+                    all_ids.append(record_id)
+            cursor_str = (
+                cursor.decode("utf-8") if isinstance(cursor, bytes) else str(cursor)
+            )
+            if cursor_str == "0":
+                break
+
+        if all_ids:
+            await self.adelete(record_ids=all_ids)
