@@ -87,6 +87,11 @@ class ValkeyCache:
                         config = GlideClientConfiguration(
                             addresses=[NodeAddress(host, port)],
                             client_name="crewai_valkey",
+                            # Valkey library-name tag for CLIENT INFO attribution.
+                            # Independent of client_name (CLIENT SETNAME); this sets
+                            # the LIB-NAME suffix (GlidePy(crewai)) so operators can
+                            # attribute Valkey usage to CrewAI. Metadata only.
+                            client_info_tag="crewai",
                             database_id=db,
                             credentials=(
                                 ServerCredentials(password=self._password)
