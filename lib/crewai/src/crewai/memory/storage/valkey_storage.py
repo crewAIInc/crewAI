@@ -50,6 +50,19 @@ from crewai.memory.types import MemoryRecord, ScopeInfo
 _logger = logging.getLogger(__name__)
 
 
+def _parse_created_at(value: str) -> datetime:
+    """Parse a stored created_at value.
+
+    New records store created_at as a numeric epoch (so the FT NumericField can
+    index it). Fall back to ISO parsing for any records written before that
+    change.
+    """
+    try:
+        return datetime.fromtimestamp(float(value))
+    except (ValueError, OSError):
+        return datetime.fromisoformat(value)
+
+
 class ValkeyStorage:
     """Valkey-backed storage for the unified memory system.
 
@@ -393,7 +406,10 @@ class ValkeyStorage:
                 else "",  # TAG field format
                 "metadata": json.dumps(record.metadata),
                 "importance": str(record.importance),
-                "created_at": record.created_at.isoformat(),
+                # created_at is indexed as a NumericField, so it must be stored
+                # as a number (epoch seconds), not an ISO string which Valkey
+                # Search cannot parse numerically.
+                "created_at": str(record.created_at.timestamp()),
                 "last_accessed": record.last_accessed.isoformat(),
                 "source": record.source or "",
                 "private": "true" if record.private else "false",
@@ -478,7 +494,7 @@ class ValkeyStorage:
                 categories=categories,
                 metadata=json.loads(str_data["metadata"]),
                 importance=float(str_data["importance"]),
-                created_at=datetime.fromisoformat(str_data["created_at"]),
+                created_at=_parse_created_at(str_data["created_at"]),
                 last_accessed=datetime.fromisoformat(str_data["last_accessed"]),
                 embedding=embedding,
                 source=str_data.get("source") or None,
@@ -578,6 +594,12 @@ class ValkeyStorage:
 
         except Exception as e:
             error_msg = str(e).lower()
+            # Idempotent: a concurrent worker may have created the index between
+            # our FT.LIST check and FT.CREATE. Treat "already exists" as success
+            # rather than failing save/search.
+            if "already exists" in error_msg or "index already" in error_msg:
+                self._index_created = True
+                return
             if "unknown command" in error_msg or "ft.create" in error_msg:
                 raise RuntimeError(
                     "Valkey Search module is not available. "
@@ -823,7 +845,7 @@ class ValkeyStorage:
 
             # Preserve created_at from existing record
             try:
-                original_created_at = datetime.fromisoformat(str_data["created_at"])
+                original_created_at = _parse_created_at(str_data["created_at"])
                 record.created_at = original_created_at
             except (KeyError, ValueError) as e:
                 _logger.warning(
