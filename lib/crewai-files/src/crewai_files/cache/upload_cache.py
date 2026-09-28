@@ -109,6 +109,7 @@ class CacheBackend(Protocol):
     async def get(self, key: str) -> CachedUpload | None: ...
     async def set(self, key: str, value: CachedUpload, ttl: int) -> None: ...
     async def delete(self, key: str) -> bool: ...
+    async def clear(self) -> None: ...
 
 
 class AiocacheBackend:
@@ -129,6 +130,11 @@ class AiocacheBackend:
     async def delete(self, key: str) -> bool:
         result = await self._cache.delete(key)
         return bool(result > 0 if isinstance(result, int) else result)
+
+    async def clear(self) -> None:
+        # Flush the whole namespace, including entries written by other
+        # processes or left from a previous run.
+        await self._cache.clear()
 
 
 class ValkeyCacheBackend:
@@ -180,6 +186,12 @@ class ValkeyCacheBackend:
         if existed:
             await self._cache.delete(self._key(key))
         return existed
+
+    async def clear(self) -> None:
+        # Flush every key under this backend's namespace, including entries
+        # written by other processes/runs, not just locally-tracked keys.
+        prefix = f"{self._namespace}:" if self._namespace else ""
+        await self._cache.clear(prefix)
 
 
 class UploadCache:
@@ -470,10 +482,10 @@ class UploadCache:
             Number of entries cleared.
         """
         count = sum(len(keys) for keys in self._provider_keys.values())
-        # Delete all tracked keys individually (works for all backends)
-        for keys in self._provider_keys.values():
-            for key in keys:
-                await self._backend.delete(key)
+        # Flush the whole backend namespace so entries written by another
+        # process, or left from a previous run, are removed too -- not just the
+        # keys tracked in this instance's _provider_keys map.
+        await self._backend.clear()
         self._provider_keys.clear()
         self._key_access_order.clear()
         if count > 0:
