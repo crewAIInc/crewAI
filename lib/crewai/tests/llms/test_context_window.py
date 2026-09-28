@@ -62,6 +62,24 @@ def test_litellm_map_includes_the_openai_gpt5_family() -> None:
 
 
 @pytest.mark.parametrize(
+    ("model", "raw_context_window"),
+    [
+        ("o1", 200_000),
+        ("o1-pro", 200_000),
+        ("o3", 200_000),
+        ("gemini-2.0-flash-thinking", 32_768),
+        ("gemini-2.0-flash-thinking-exp-01-21", 1_048_576),
+    ],
+)
+def test_affected_model_ids_use_their_specific_context_windows(
+    model: str, raw_context_window: int
+) -> None:
+    assert resolve_context_window_size(
+        model, LLM_CONTEXT_WINDOW_SIZES, default=DEFAULT_CONTEXT_WINDOW_SIZE
+    ) == int(raw_context_window * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
     ("model", "sizes", "raw_context_window"),
     [
         ("gpt-6-astra", LLM_CONTEXT_WINDOW_SIZES, 1_050_000),

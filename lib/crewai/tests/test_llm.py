@@ -376,8 +376,13 @@ def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
     ("native_model", "litellm_model"),
     [
         ("openai/gpt-5", "gpt-5"),
+        ("openai/o1-pro", "o1-pro"),
         ("anthropic/claude-sonnet-4-6", "claude-sonnet-4-6"),
         ("google/gemini-2.5-flash", "gemini-2.5-flash"),
+        (
+            "google/gemini-2.0-flash-thinking-exp-01-21",
+            "gemini-2.0-flash-thinking-exp-01-21",
+        ),
     ],
 )
 def test_native_and_litellm_context_windows_match(
