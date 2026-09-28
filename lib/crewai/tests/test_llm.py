@@ -343,7 +343,7 @@ def test_context_window_validation():
             {"test-model": 500},
             clear=True,
         ):
-            llm = LLM(model="test-model")
+            llm = LLM(model="test-model", is_litellm=True)
             llm.get_context_window_size()
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
@@ -370,6 +370,23 @@ def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
     assert llm.get_context_window_size() == int(
         1_047_576 * CONTEXT_WINDOW_USAGE_RATIO
     )
+
+
+@pytest.mark.parametrize(
+    ("native_model", "litellm_model"),
+    [
+        ("openai/gpt-5", "gpt-5"),
+        ("anthropic/claude-sonnet-4-6", "claude-sonnet-4-6"),
+        ("google/gemini-2.0-flash", "gemini-2.0-flash"),
+    ],
+)
+def test_native_and_litellm_context_windows_match(
+    native_model: str, litellm_model: str
+) -> None:
+    native_llm = LLM(model=native_model)
+    litellm_llm = LLM(model=litellm_model, is_litellm=True)
+
+    assert native_llm.get_context_window_size() == litellm_llm.get_context_window_size()
 
 
 @pytest.mark.parametrize(
