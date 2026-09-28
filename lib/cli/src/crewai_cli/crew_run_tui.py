@@ -11,7 +11,9 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 import json as _json
 import os
+from pathlib import Path
 import re
+import secrets
 import threading
 import time
 from typing import Any, ClassVar
@@ -304,7 +306,21 @@ _AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
 # the only thing that does. Set and cleared by `evaluating_after_run()` alone:
 # an internal handshake between two parts of one command, never a setting for
 # anyone to turn on.
+#
+# The child loads the project's `.env` over its environment, so the variable
+# alone would be a switch any project could flip — an evaluation started, with
+# the machine's `crewai login`, on a plain `crewai run`. Its value is therefore a
+# random token, and it counts only while the file of that name exists in this
+# user's crewAI data directory: the command writes it before the run and removes
+# it after, and a `.env` cannot create a file.
 _AWAITING_EVAL_ENV = "CREWAI_EVAL_AWAITING_RUN"
+_AWAITING_TOKEN = re.compile(r"[0-9a-f]{32}")
+
+
+def _awaiting_dir() -> Path:
+    import appdirs
+
+    return Path(appdirs.user_data_dir("crewai", "CrewAI")) / "eval-awaiting"
 
 
 @contextmanager
@@ -324,11 +340,22 @@ def evaluating_after_run() -> Iterator[dict[str, str | None]]:
     holder: dict[str, str | None] = {"execution_id": None}
     token = _AUTO_EVAL.set(holder)
     before = os.environ.get(_AWAITING_EVAL_ENV)
-    os.environ[_AWAITING_EVAL_ENV] = "1"
+    # Without the file a child app cannot be told, and the command grades the
+    # run itself once the app closes — slower to the verdict, never wrong.
+    marker: Path | None = None
+    with contextlib.suppress(OSError):
+        nonce = secrets.token_hex(16)
+        _awaiting_dir().mkdir(parents=True, exist_ok=True)
+        (_awaiting_dir() / nonce).touch(exist_ok=False)
+        marker = _awaiting_dir() / nonce
+        os.environ[_AWAITING_EVAL_ENV] = nonce
     try:
         yield holder
     finally:
         _AUTO_EVAL.reset(token)
+        if marker is not None:
+            with contextlib.suppress(OSError):
+                marker.unlink()
         if before is None:
             os.environ.pop(_AWAITING_EVAL_ENV, None)
         else:
@@ -347,7 +374,14 @@ def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
     if holder is not None:
         return holder
 
-    return {"execution_id": None} if os.environ.get(_AWAITING_EVAL_ENV) else None
+    value = os.environ.get(_AWAITING_EVAL_ENV) or ""
+    if not _AWAITING_TOKEN.fullmatch(value):
+        return None
+    try:
+        waiting = (_awaiting_dir() / value).is_file()
+    except OSError:
+        return None
+    return {"execution_id": None} if waiting else None
 
 
 def _recorded_run(execution_uuid: str) -> dict[str, Any] | None:
@@ -1435,6 +1469,9 @@ FooterKey .footer-key--key {
                     "state": "done",
                     "verdict": finished.get("verdict") or {},
                     "note": None,
+                    # the file the evaluation wrote, for the line printed once
+                    # the app has gone (`_print_evaluation_line`)
+                    "wrote_config": finished.get("wrote_eval_config"),
                 }
             )
         else:

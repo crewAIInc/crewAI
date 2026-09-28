@@ -1,3 +1,4 @@
+import contextvars
 from datetime import datetime
 import time
 from types import SimpleNamespace
@@ -44,6 +45,16 @@ from crewai_cli.crew_run_tui import (
 )
 import pytest
 from rich.text import Text
+
+
+@pytest.fixture(autouse=True)
+def _awaiting_files_stay_in_tmp(tmp_path, monkeypatch):
+    """The waiting-evaluation token file belongs to the user's crewAI data
+    directory; a test keeps it in its own."""
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._awaiting_dir", lambda: tmp_path / "eval-awaiting"
+    )
+
 
 
 def _app_with_plan() -> CrewRunApp:
@@ -465,19 +476,37 @@ def test_a_child_process_run_reads_the_waiting_evaluation_off_its_environment(
         "_evaluate_worker",
         lambda self, execution_id: started.append(execution_id),
     )
+
+    def the_child() -> None:
+        # a fresh context: that variable, and nothing this process holds in memory
+        assert crew_run_tui._AUTO_EVAL.get() is None
+        app = CrewRunApp()
+        app._execution_uuid = "run-in-the-child"
+        app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]
+        app._evaluate_if_one_is_waiting()
+
+    with crew_run_tui.evaluating_after_run():
+        contextvars.Context().run(the_child)
+
+    assert started == ["run-in-the-child"]
+
+
+@pytest.mark.parametrize("value", ["1", "true", "0" * 32])
+def test_a_project_env_cannot_say_an_evaluation_is_waiting(monkeypatch, value) -> None:
+    """The child loads the project's `.env` over its environment. A value the
+    command did not mint — with no token file behind it — is no handshake, so
+    a plain `crewai run` never starts an evaluation on its own."""
+    monkeypatch.setenv("CREWAI_EVAL_AWAITING_RUN", value)
+
+    assert crew_run_tui._an_evaluation_is_waiting() is None
+
+
+def test_the_token_stops_counting_when_the_command_is_done(monkeypatch) -> None:
     with crew_run_tui.evaluating_after_run():
         passed = crew_run_tui.os.environ["CREWAI_EVAL_AWAITING_RUN"]
 
-    # the child's world: that variable, and nothing this process set
-    assert "CREWAI_EVAL_AWAITING_RUN" not in crew_run_tui.os.environ
     monkeypatch.setenv("CREWAI_EVAL_AWAITING_RUN", passed)
-    app = CrewRunApp()
-    app._execution_uuid = "run-in-the-child"
-    app.exit = lambda result=None: pytest.fail("the app must stay open")  # type: ignore[method-assign]
-
-    app._evaluate_if_one_is_waiting()
-
-    assert started == ["run-in-the-child"]
+    assert crew_run_tui._an_evaluation_is_waiting() is None
 
 
 def test_a_run_with_no_trace_says_so_instead_of_evaluating(monkeypatch) -> None:

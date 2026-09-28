@@ -17,6 +17,16 @@ from crewai_cli.experimental import eval_crew as eval_module
 from crewai_cli.cli import eval_command
 
 
+@pytest.fixture(autouse=True)
+def _awaiting_files_stay_in_tmp(tmp_path, monkeypatch):
+    """The waiting-evaluation token file belongs to the user's crewAI data
+    directory; a test keeps it in its own."""
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._awaiting_dir", lambda: tmp_path / "eval-awaiting"
+    )
+
+
+
 EXECUTION_ID = "6f31fe1a-20bd-4bfe-a011-25d6b9341f62"
 URL = "https://evolve.crewai.test/e/ev-1"
 
@@ -75,6 +85,12 @@ def record_last_run(directory: Path, execution_id: str = EXECUTION_ID, **fields)
     (directory / ".crewai").mkdir(exist_ok=True)
     record = {"execution_id": execution_id, "tier": "ephemeral", "amp_base_url": "https://amp.test", **fields}
     (directory / ".crewai" / "last_run.json").write_text(json.dumps(record))
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat()
 
 
 def install(monkeypatch, amp: FakeAMP, configured_amp: str = "https://amp.test") -> FakeAMP:
@@ -600,13 +616,13 @@ def test_without_a_traced_run_it_offers_to_turn_tracing_on_and_run_the_crew(proj
 
 
 @pytest.mark.parametrize("logged_in", [True, False])
-def test_the_command_counts_the_evaluation_and_what_it_can_be_joined_on(
+def test_the_command_counts_the_evaluation_and_nothing_that_names_it(
     project, monkeypatch, logged_in
 ):
     """`cli_usage:eval` is every evaluation; the TUI's own `cli_usage:evaluate`
-    is intent, and the difference is intent that never became one. The span
-    carries which run, whether the caller was logged in, and to which
-    organization — never anything about the run's content."""
+    is intent, and the difference is intent that never became one. Usage stats
+    are anonymous, so the span says whether the caller was logged in — never
+    which run, which organization, or anything about the run's content."""
     directory, _ = project
     record_last_run(directory, "counted-run")
     spans: list[tuple[str, dict[str, str]]] = []
@@ -619,20 +635,68 @@ def test_the_command_counts_the_evaluation_and_what_it_can_be_joined_on(
             spans.append((feature, attributes or {}))
 
     monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
-    monkeypatch.setattr(
-        "crewai_core.settings.Settings", lambda: SimpleNamespace(org_uuid="org-42")
-    )
     monkeypatch.setattr(eval_module, "saved_login", lambda: "tok" if logged_in else None)
     install(monkeypatch, FakeAMP(statuses=[done()]))
 
     eval_module.eval_crew()
 
-    feature, attributes = spans[0]
-    assert feature == "cli_usage:eval"
-    assert attributes["execution_id"] == "counted-run"
-    assert attributes["authenticated"] == ("true" if logged_in else "false")
-    # an anonymous caller has no organization to report, and is not asked for one
-    assert attributes["organization_id"] == ("org-42" if logged_in else "")
+    assert spans == [
+        ("cli_usage:eval", {"authenticated": "true" if logged_in else "false"})
+    ]
+
+
+def test_an_oversized_config_is_said_once_and_through_the_callers_note(
+    project, monkeypatch
+):
+    """The run app routes notes onto its own screen, and the spans of a fresh
+    run can take several 404s to land — the warning belongs there, once."""
+    directory, _ = project
+    (directory / "eval.jsonc").write_text("x" * (eval_module.MAX_EVAL_CONFIG_BYTES + 1))
+    sent: list[str | None] = []
+    answers = iter([httpx.Response(404, json={}), httpx.Response(404, json={}), QUEUED])
+
+    class Client:
+        def create_evaluation(self, execution_id, *, eval_config=None):
+            sent.append(eval_config)
+            return next(answers)
+
+    monkeypatch.setattr(eval_module.time, "sleep", lambda _s: None)
+    notes: list[str] = []
+
+    eval_module._start_evaluation(
+        Client(), "run-1", wait_for_spans=True, note=notes.append
+    )
+
+    assert sent == [None, None, None]
+    assert [n for n in notes if "larger than" in n] == [notes[0]]
+
+
+def test_the_fallback_grades_only_a_run_recorded_after_it_began(
+    project, monkeypatch, capsys
+):
+    """No app evaluated the run, so the command reads the project's record — but
+    that record is the project's LAST run, and one written before this run
+    began belongs to some other run."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(
+        run_crew_module,
+        "run_crew",
+        lambda: record_last_run(
+            directory, "somebody-elses-run", recorded_at="2020-01-01T00:00:00+00:00"
+        ),
+    )
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert amp.calls == []
+    assert "no trace was recorded" in capsys.readouterr().out
 
 
 def test_telemetry_never_breaks_the_command(project, monkeypatch):
@@ -751,8 +815,11 @@ def test_the_app_it_opens_is_told_an_evaluation_is_waiting(project, monkeypatch)
         from crewai_cli.crew_run_tui import _AUTO_EVAL
 
         assert _AUTO_EVAL.get() is not None, "the app must be told in this process"
-        # and in a child process, where a ContextVar cannot reach
-        assert os.environ["CREWAI_EVAL_AWAITING_RUN"] == "1"
+        # and in a child process, where a ContextVar cannot reach: a token, and
+        # the file of that name that makes it count
+        from crewai_cli.crew_run_tui import _awaiting_dir
+
+        assert (_awaiting_dir() / os.environ["CREWAI_EVAL_AWAITING_RUN"]).is_file()
         record_last_run(directory, "run-it-just-did")
         eval_module.record_evaluation_outcome("run-it-just-did")
 
@@ -764,6 +831,9 @@ def test_the_app_it_opens_is_told_an_evaluation_is_waiting(project, monkeypatch)
 
     assert amp.calls == []  # the app did it, on its own screen
     assert "CREWAI_EVAL_AWAITING_RUN" not in os.environ
+    from crewai_cli.crew_run_tui import _awaiting_dir
+
+    assert not any(_awaiting_dir().iterdir())  # and the token went with it
 
 
 def test_a_run_no_app_evaluated_is_graded_by_the_command(project, monkeypatch):
@@ -778,7 +848,7 @@ def test_a_run_no_app_evaluated_is_graded_by_the_command(project, monkeypatch):
     monkeypatch.setattr(
         run_crew_module,
         "run_crew",
-        lambda: record_last_run(directory, "run-nobody-graded"),
+        lambda: record_last_run(directory, "run-nobody-graded", recorded_at=_now()),
     )
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     amp = install(monkeypatch, FakeAMP(statuses=[done()]))
@@ -798,7 +868,7 @@ def test_a_marker_from_an_earlier_run_never_counts_for_this_one(project, monkeyp
     _write_marker(directory, "some-older-run", _seconds_ago(3600))
 
     def fake_run_crew() -> None:
-        record_last_run(directory, "the-new-run")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
 
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)

@@ -60,35 +60,26 @@ FINISHED = {"done", "failed"}
 STATUSES = {"queued", "running"} | FINISHED
 
 
-def _record_usage(execution_id: str, *, logged_in: bool) -> None:
-    """Count an evaluation that is actually starting, and what can be joined on.
+def _record_usage(*, logged_in: bool) -> None:
+    """Count an evaluation that is actually starting, and whether the caller was
+    logged in.
 
-    The project id, the runtime and the version ride every span already. What
-    only this command knows is WHICH run is being graded, whether the caller was
-    logged in, and — when they are — which organization they are logged in to.
-    Nothing about the run's content is recorded here: no inputs, no output, no
-    verdict. Those live in AMP, which the execution id joins to.
+    Usage stats are anonymous, so nothing that names the run or the account is
+    sent — no execution id, no organization, and nothing about the run's content.
+    Which runs were evaluated, and by whom, is AMP's record, not these stats'.
 
     The TUI's button counts `cli_usage:evaluate` when it is pressed, so the
     difference between that and `cli_usage:eval` is intent that never became an
     evaluation.
     """
     try:
-        from crewai_core.settings import Settings
         from crewai_core.telemetry import Telemetry
 
-        organization = (
-            str(getattr(Settings(), "org_uuid", "") or "") if logged_in else ""
-        )
         telemetry = Telemetry()
         telemetry.set_tracer()
         telemetry.feature_usage_span(
             "cli_usage:eval",
-            {
-                "execution_id": execution_id,
-                "authenticated": "true" if logged_in else "false",
-                "organization_id": organization,
-            },
+            {"authenticated": "true" if logged_in else "false"},
         )
     except Exception:  # noqa: S110 - telemetry must never break a command
         pass
@@ -155,7 +146,7 @@ def eval_crew(run_id: str | None = None) -> None:
     # After, not before: `cli_usage:eval` counts an evaluation, and a refused
     # request — a run AMP does not hold, a credential it will not take — is not
     # one. `_start_evaluation` raises rather than returning on those.
-    _record_usage(execution_id, logged_in=client.api_key is not None)
+    _record_usage(logged_in=client.api_key is not None)
     url = started.get("url")
     console.print(Text("Evaluating run ").append(execution_id, style="bold"))
     if url:
@@ -207,7 +198,7 @@ EVAL_CONFIG_FILE = "eval.jsonc"
 MAX_EVAL_CONFIG_BYTES = 64 * 1024
 
 
-def project_eval_config() -> str | None:
+def project_eval_config(*, note: Callable[[str], None] = _note) -> str | None:
     """What this project says good means, if it has said.
 
     Read from the project's own directory, beside `pyproject.toml`, because
@@ -225,13 +216,12 @@ def project_eval_config() -> str | None:
         return None
 
     if len(text.encode("utf-8")) > MAX_EVAL_CONFIG_BYTES:
-        console.print(
-            Text(
-                f"{EVAL_CONFIG_FILE} is larger than "
-                f"{MAX_EVAL_CONFIG_BYTES // 1024}KB and was not sent; this run is graded on "
-                "the crew's own expectations."
-            ),
-            style="yellow",
+        # Through NOTE, which the run app routes onto its own screen: a print
+        # would land under its layout.
+        note(
+            f"{EVAL_CONFIG_FILE} is larger than "
+            f"{MAX_EVAL_CONFIG_BYTES // 1024}KB and was not sent; this run is graded on "
+            "the crew's own expectations."
         )
         return None
     return text or None
@@ -338,7 +328,7 @@ def evaluate_run(
     started = _start_evaluation(client, execution_id, wait_for_spans=True, note=note)
     # After the start, exactly as the command counts it: `cli_usage:eval` is the
     # count of evaluations that began, and an evaluation the app runs is one.
-    _record_usage(execution_id, logged_in=client.api_key is not None)
+    _record_usage(logged_in=client.api_key is not None)
     record_evaluation_outcome(execution_id)
     on_started(started)
     finished = _wait(client, started["id"], started.get("url"), on_status=on_status)
@@ -538,12 +528,31 @@ def _run_and_let_the_app_evaluate() -> str | None:
         console.print(NOT_TRACED, style="bold red")
         raise SystemExit(1)
 
-    traced = watched["execution_id"] or (read_last_run() or {}).get("execution_id")
+    # The project's record, only when it was written after this run began: a
+    # record is the project's LAST run, and another run finishing in the same
+    # project would otherwise be graded in this one's place.
+    record = read_last_run() or {}
+    traced = watched["execution_id"] or (
+        record.get("execution_id") if _recorded_since(record, began) else None
+    )
     if traced:
         return str(traced)
 
     console.print(NOT_TRACED, style="bold red")
     raise SystemExit(1)
+
+
+def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
+    """Was RECORD written after BEGAN? A record without a readable, zoned stamp
+    is not assumed to be this run's."""
+    stamp = str(record.get("recorded_at") or record.get("finished_at") or "")
+    try:
+        when = datetime.fromisoformat(stamp)
+    except ValueError:
+        return False
+    if when.tzinfo is None:
+        return False
+    return when >= began - timedelta(seconds=1)
 
 
 def _enable_tracing() -> None:
@@ -567,11 +576,12 @@ def _start_evaluation(
 ) -> dict[str, Any]:
     deadline = time.monotonic() + SPANS_WAIT_SECONDS if wait_for_spans else 0.0
     said = False
+    # Read once: the file does not change while the spans are in flight, and a
+    # warning about it belongs on the screen once, not on every retry.
+    eval_config = project_eval_config(note=note)
     while True:
         try:
-            response = client.create_evaluation(
-                execution_id, eval_config=project_eval_config()
-            )
+            response = client.create_evaluation(execution_id, eval_config=eval_config)
         except httpx.HTTPError as error:
             raise EvaluationStoppedError(
                 f"Could not reach AMP to start the evaluation: {error}"
