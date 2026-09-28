@@ -364,6 +364,14 @@ def test_gpt56_does_not_override_gpt54_mini_window() -> None:
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
+    llm = LLM(model="gpt-5", is_litellm=True)
+
+    assert llm.get_context_window_size() == int(
+        1_047_576 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
 @pytest.mark.parametrize(
     "model",
     [
