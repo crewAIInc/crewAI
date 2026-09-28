@@ -185,3 +185,42 @@ def test_background_save_still_swallows_shutdown_runtime_error(tmp_path: Path) -
         )
         == []
     )
+
+
+def test_background_save_emits_failure_and_propagates_generic_runtime_error(
+    tmp_path: Path,
+) -> None:
+    """A non-shutdown RuntimeError (e.g. embedder/LLM init failure) must not be
+    silently dropped: it emits MemorySaveFailedEvent and propagates.
+    """
+    from unittest.mock import MagicMock
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.memory_events import MemorySaveFailedEvent
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+
+    def raise_generic(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("embedder failed to initialize")
+
+    mem._encode_batch = raise_generic  # type: ignore[method-assign]
+
+    failures: list[MemorySaveFailedEvent] = []
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def _capture(_source: object, event: MemorySaveFailedEvent) -> None:
+            failures.append(event)
+
+        with pytest.raises(RuntimeError, match="embedder failed to initialize"):
+            mem._background_encode_batch(
+                ["content"], None, None, None, None, None, False, None
+            )
+
+    assert len(failures) == 1
+    assert "embedder failed to initialize" in (failures[0].error or "")
