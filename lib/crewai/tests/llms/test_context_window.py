@@ -84,6 +84,10 @@ def test_affected_model_ids_use_their_specific_context_windows(
     ("model", "sizes", "raw_context_window"),
     [
         ("gpt-6-astra", LLM_CONTEXT_WINDOW_SIZES, 1_050_000),
+        ("gpt-5.6-cyber", LLM_CONTEXT_WINDOW_SIZES, 400_000),
+        ("gpt-3.5-turbo", LLM_CONTEXT_WINDOW_SIZES, 16_385),
+        ("chat-latest", LLM_CONTEXT_WINDOW_SIZES, 400_000),
+        ("gpt-oss-120b", LLM_CONTEXT_WINDOW_SIZES, 131_072),
         ("gpt-5.4-nano", LLM_CONTEXT_WINDOW_SIZES, 400_000),
         ("gemini-3.7-flash", LLM_CONTEXT_WINDOW_SIZES, 1_048_576),
         ("amazon.nova-2-lite-v1:0", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
