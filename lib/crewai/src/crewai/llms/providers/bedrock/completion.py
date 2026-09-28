@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
 import json
@@ -485,15 +486,25 @@ class BedrockCompletion(BaseLLM):
             Generated text response or structured output.
 
         Raises:
-            NotImplementedError: If aiobotocore is not installed.
             LLMContextLengthExceededError: If context window is exceeded.
         """
         effective_response_model = response_model or self.response_format
 
         if not AIOBOTOCORE_AVAILABLE:
-            raise NotImplementedError(
-                "Async support for AWS Bedrock requires aiobotocore. "
-                'Install with: uv add "crewai[bedrock]"'
+            logging.warning(
+                "aiobotocore is not installed; falling back to synchronous AWS "
+                "Bedrock calls in a worker thread. Install `crewai[bedrock]` "
+                "for native async support."
+            )
+            return await asyncio.to_thread(
+                self.call,
+                messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=effective_response_model,
             )
 
         with llm_call_context():

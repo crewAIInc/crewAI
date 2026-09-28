@@ -8,12 +8,14 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.15.21",
-    "crewai-cli==1.15.21",
+    "crewai-core==1.15.22",
+    "crewai-cli==1.15.22",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
-    "instructor>=1.3.3",
+    # instructor>=1.16 drops OpenAI Mode.TOOLS; remove this cap after
+    # InternalInstructor negotiates a supported mode via mode_registry.
+    "instructor>=1.3.3,<1.16",
     # Text Processing
     "pdfplumber~=0.11.4",
     "regex~=2026.1.15",
@@ -55,7 +57,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.15.21",
+    "crewai-tools==1.15.22",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"

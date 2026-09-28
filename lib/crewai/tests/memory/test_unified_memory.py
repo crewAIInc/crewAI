@@ -335,6 +335,65 @@ def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embed
     assert mem.list_records() == []
 
 
+def test_update_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """A read-only Memory leaves stored records untouched when update() is called."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db8"), llm=MagicMock(), embedder=mock_embedder)
+    record = mem.remember(
+        "original", scope="/a", categories=[], importance=0.5, metadata={}
+    )
+    assert record is not None
+
+    mem.read_only = True
+    returned = mem.update(record.id, content="rewritten", importance=0.9)
+
+    assert returned.content == "original"
+    assert returned.importance == 0.5
+    stored = mem.list_records()
+    assert [(r.content, r.importance) for r in stored] == [("original", 0.5)]
+
+
+def test_update_still_writes_when_not_read_only(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """The read-only guard does not change update() for a writable Memory."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db9"), llm=MagicMock(), embedder=mock_embedder)
+    record = mem.remember(
+        "original", scope="/a", categories=[], importance=0.5, metadata={}
+    )
+    assert record is not None
+
+    returned = mem.update(record.id, content="rewritten", importance=0.9)
+
+    assert returned.content == "rewritten"
+    assert returned.importance == 0.9
+    stored = mem.list_records()
+    assert [(r.content, r.importance) for r in stored] == [("rewritten", 0.9)]
+
+
+def test_recall_does_not_refresh_access_time_when_read_only(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Recall against a read-only Memory leaves last_accessed untouched."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db10"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember("alpha", scope="/a", categories=[], importance=0.5, metadata={})
+    before = mem.list_records()[0].last_accessed
+
+    mem.read_only = True
+    assert mem.recall("alpha", scope="/a", limit=5, depth="shallow")
+    assert mem.list_records()[0].last_accessed == before
+
+    # Positive control: a writable Memory still refreshes the access time.
+    mem.read_only = False
+    assert mem.recall("alpha", scope="/a", limit=5, depth="shallow")
+    assert mem.list_records()[0].last_accessed > before
+
+
 
 
 def test_flow_has_default_memory() -> None:

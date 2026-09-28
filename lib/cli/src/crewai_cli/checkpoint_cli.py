@@ -246,7 +246,7 @@ def _list_json(location: str) -> list[dict[str, Any]]:
     ):
         name = os.path.basename(path)
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 raw = f.read()
             meta = _parse_checkpoint_json(raw, source=name)
             meta["name"] = name
@@ -267,7 +267,7 @@ def _info_json_latest(location: str) -> dict[str, Any] | None:
     if not files:
         return None
     path = files[0]
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         raw = f.read()
     meta = _parse_checkpoint_json(raw, source=os.path.basename(path))
     meta["name"] = os.path.basename(path)
@@ -278,7 +278,7 @@ def _info_json_latest(location: str) -> dict[str, Any] | None:
 
 
 def _info_json_file(path: str) -> dict[str, Any]:
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         raw = f.read()
     meta = _parse_checkpoint_json(raw, source=os.path.basename(path))
     meta["name"] = os.path.basename(path)

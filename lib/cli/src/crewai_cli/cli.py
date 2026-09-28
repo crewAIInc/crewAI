@@ -48,6 +48,12 @@ def run_crew(*args: Any, **kwargs: Any) -> Any:
     return _run_crew(*args, **kwargs)
 
 
+def eval_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.experimental.eval_crew import eval_crew as _eval_crew
+
+    return _eval_crew(*args, **kwargs)
+
+
 if TYPE_CHECKING:
     # mypy sees the real classes; at runtime the shims below defer the
     # heavy imports until a command actually instantiates them.
@@ -672,6 +678,23 @@ def run(
         definition=definition,
         inputs=inputs,
     )
+
+
+@crewai.command(name="eval")
+@click.option(
+    "--run",
+    "run_id",
+    type=str,
+    default=None,
+    metavar="EXECUTION_ID",
+    help=(
+        "Evaluate this traced run instead of the last one. The execution id "
+        "crewAI recorded for the run."
+    ),
+)
+def eval_command(run_id: str | None) -> None:
+    """Evaluate the last traced run through CrewAI AMP."""
+    eval_crew(run_id=run_id)
 
 
 @crewai.command()

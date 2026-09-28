@@ -4,11 +4,12 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 (task header, plan checklist, activity timeline, streaming output).
 """
 
+import asyncio
 import json as _json
 import re
 import threading
 import time
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from crewai_core.telemetry import Telemetry
 from rich.text import Text
@@ -56,27 +57,6 @@ def _truncate_log_text(value: Any, limit: int) -> str | None:
     return f"{text[: max(0, limit - len(suffix))]}{suffix}"
 
 
-def _enable_tracing_in_dotenv() -> None:
-    """Append CREWAI_TRACING_ENABLED=true to .env if not already set."""
-    from pathlib import Path
-
-    env_file = Path.cwd() / ".env"
-    key = "CREWAI_TRACING_ENABLED"
-    try:
-        if env_file.exists():
-            content = env_file.read_text()
-            if key in content:
-                return
-            sep = "" if content.endswith("\n") or not content else "\n"
-            env_file.write_text(f"{content}{sep}{key}=true\n")
-        else:
-            env_file.write_text(f"{key}=true\n")
-    except OSError:
-        # Persisting the tracing flag is best-effort; an unwritable .env
-        # must not block the run (tracing stays enabled for this session).
-        pass
-
-
 def _unescape_text(s: str) -> str:
     """Replace literal backslash-n sequences with real newlines."""
     return s.replace("\\n", "\n").replace("\\t", "  ")
@@ -86,13 +66,19 @@ def _try_parse_structured(text: str) -> Any | None:
     """Try JSON first, then Python repr (single-quoted dicts/lists)."""
     try:
         return _json.loads(text)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         pass
     try:
         import ast
 
         obj = ast.literal_eval(text)
+        # literal_eval accepts values json.dumps cannot encode (e.g. [Ellipsis]
+        # from "[...]"), which would crash the renderer later; reject those.
+        # Validate with the exact kwargs the render path uses so a structure
+        # the C decoder accepts but the indent encoder cannot walk is also
+        # rejected here instead of raising inside _tick.
         if isinstance(obj, (dict, list)):
+            _json.dumps(obj, indent=2, ensure_ascii=False)
             return obj
     except Exception:  # noqa: S110
         pass
@@ -221,8 +207,10 @@ class TraceConsentScreen(ModalScreen[bool]):
     }
     #consent-dialog {
         width: 50;
+        max-width: 95%;
         height: auto;
-        max-height: 16;
+        max-height: 90%;
+        overflow-y: auto;
         background: #1c1c1c;
         border: tall #333333;
         padding: 1 2 2 2;
@@ -269,61 +257,35 @@ class TraceConsentScreen(ModalScreen[bool]):
         Binding("escape", "consent_no", "Cancel", show=False),
     ]
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._sending = False
-        self._frame = 0
-        self._spin_timer: Any = None
-
     def compose(self) -> ComposeResult:
         with Vertical(id="consent-dialog"):
             yield Static(self._build_content(), id="consent-text")
             with Horizontal(id="consent-buttons"):
-                yield Button("View Traces", id="btn-consent-yes", classes="consent-btn")
+                yield Button(
+                    "Share Trace",
+                    id="btn-consent-yes",
+                    classes="consent-btn",
+                )
                 yield Button("Cancel", id="btn-consent-no", classes="consent-btn")
 
     def _build_content(self) -> Text:
         t = Text()
-        t.append("  View execution traces on CrewAI AMP\n\n", style=f"bold {_C_TEXT}")
-        t.append("  Sends agent decisions, tool calls, and\n", style=_C_DIM)
-        t.append("  timing data. Link expires in 24h.\n\n", style=_C_DIM)
-        t.append("  Traces will be enabled for future runs.\n", style=_C_MUTED)
+        t.append(
+            "  Share this execution trace with CrewAI?\n\n", style=f"bold {_C_TEXT}"
+        )
+        t.append("  The trace is stored locally and may include\n", style=_C_DIM)
+        t.append("  prompts, inputs, outputs, and tool calls.\n\n", style=_C_DIM)
+        t.append("  Sharing uploads it. Cancel or wait 20 seconds\n", style=_C_MUTED)
+        t.append("  to discard it without uploading.\n", style=_C_MUTED)
         return t
 
-    def _start_sending(self) -> None:
-        self._sending = True
-        btn_yes = self.query_one("#btn-consent-yes", Button)
-        btn_no = self.query_one("#btn-consent-no", Button)
-        btn_yes.disabled = True
-        btn_yes.label = f"{_SPINNER[0]} Loading…"
-        btn_no.display = False
-        self._spin_timer = self.set_interval(1 / 8, self._spin_tick)
-        cast("CrewRunApp", self.app)._on_trace_consent_accepted()
-
-    def _spin_tick(self) -> None:
-        self._frame += 1
-        try:
-            btn = self.query_one("#btn-consent-yes", Button)
-            btn.label = f"{_SPINNER[self._frame % len(_SPINNER)]} Loading…"
-        except Exception:  # noqa: S110
-            pass
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if self._sending:
-            return
-        if event.button.id == "btn-consent-yes":
-            self._start_sending()
-        else:
-            self.dismiss(False)
+        self.dismiss(event.button.id == "btn-consent-yes")
 
     def action_consent_yes(self) -> None:
-        if self._sending:
-            return
-        self._start_sending()
+        self.dismiss(True)
 
     def action_consent_no(self) -> None:
-        if self._sending:
-            return
         self.dismiss(False)
 
 
@@ -468,15 +430,6 @@ FooterKey .footer-key--key {
     background: #444444;
 }
 
-#btn-traces-done {
-    background: #1a3a3a;
-    color: #1F7982;
-    border: none;
-}
-#btn-traces-done:hover {
-    background: #1F7982;
-    color: #e0e0e0;
-}
 """
 
     BINDINGS: ClassVar[list[BindingType]] = [
@@ -576,8 +529,9 @@ FooterKey .footer-key--key {
         self._current_method: str | None = None
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
-        self._trace_url: str | None = None
         self._consent_screen: TraceConsentScreen | None = None
+        self._trace_consent_pending: threading.Event | None = None
+        self._discard_trace_on_exit = False
         self._telemetry: Telemetry | None = None
 
     @property
@@ -695,13 +649,18 @@ FooterKey .footer-key--key {
         set_tui_mode(True)
         set_suppress_tracing_messages(True)
         try:
-            result = self._crew.kickoff(inputs=self._default_inputs)
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                result = self._crew.kickoff(inputs=self._default_inputs)
             output = result.raw if result and hasattr(result, "raw") else None
             with self._lock:
                 self._crew_result = result
-            self.call_from_thread(self._on_crew_done, output)
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_done, output)
         except Exception as e:
-            self.call_from_thread(self._on_crew_failed, str(e))
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_failed, str(e))
 
     @work(thread=True, exclusive=True, group="flow")
     def _run_flow_worker(self) -> None:
@@ -715,13 +674,18 @@ FooterKey .footer-key--key {
         try:
             # A declarative flow returns either a CrewOutput (has ``.raw``) or a
             # bare value (str/dict/pydantic); _stringify_output handles both.
-            result = self._flow.kickoff(inputs=self._flow_inputs)
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                result = self._flow.kickoff(inputs=self._flow_inputs)
             output = self._stringify_output(result)
             with self._lock:
                 self._crew_result = result
-            self.call_from_thread(self._on_crew_done, output)
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_done, output)
         except Exception as e:
-            self.call_from_thread(self._on_crew_failed, str(e))
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_failed, str(e))
 
     def _set_flow_step_status(self, name: str, status: str) -> None:
         """Update a flow method step's status. Caller must hold ``self._lock``."""
@@ -773,26 +737,7 @@ FooterKey .footer-key--key {
                     )
                     entry["duration"] = now - entry["start_time"]
         try:
-            from crewai.events.listeners.tracing.trace_listener import (
-                TraceCollectionListener,
-            )
-
-            listener: TraceCollectionListener | None = getattr(
-                TraceCollectionListener, "_instance", None
-            )
-            if listener and listener.batch_manager:
-                bm = listener.batch_manager
-                self._trace_url = (
-                    getattr(bm, "trace_url", None) or bm.ephemeral_trace_url
-                )
-        except Exception:  # noqa: S110
-            pass
-        try:
             self.query_one("#sidebar-actions").display = True
-            if self._trace_url:
-                btn = self.query_one("#btn-traces", Button)
-                btn.label = "✔ Open Traces"
-                btn.id = "btn-traces-done"
         except Exception:  # noqa: S110
             pass
         self._tick()
@@ -854,11 +799,17 @@ FooterKey .footer-key--key {
         except Exception:  # noqa: S110
             pass
 
-    def _finalize_conversational_session(self) -> None:
+    def _finalize_conversational_session(self, *, discard: bool = False) -> None:
         if not (self._is_conversational and self._flow):
             return
         try:
-            self._flow.finalize_session_traces()
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                if discard:
+                    self._flow.finalize_session_traces(discard=True)
+                else:
+                    self._flow.finalize_session_traces()
         except Exception:  # noqa: S110
             pass
         previous = self._conversation_previous_defer_trace_finalization
@@ -879,9 +830,7 @@ FooterKey .footer-key--key {
         if not message:
             return
         if message.lower() in self._conversation_exit_commands:
-            self._finalize_conversational_session()
-            self._unsubscribe()
-            self.exit(self._crew_result)
+            self.run_worker(self.action_quit())
             return
         if self._conversation_turn_in_progress:
             return
@@ -910,14 +859,24 @@ FooterKey .footer-key--key {
         set_tui_mode(True)
         set_suppress_tracing_messages(True)
         try:
-            result = self._flow.handle_turn(message)
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                result = self._flow.handle_turn(message)
             if hasattr(result, "get_full_text") and hasattr(result, "result"):
                 for _chunk in result:
                     pass
                 result = result.result
-            self.call_from_thread(self._on_conversation_turn_done, result)
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_conversation_turn_done, result)
         except Exception as e:
-            self.call_from_thread(self._on_conversation_turn_failed, str(e))
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_conversation_turn_failed, str(e))
+        finally:
+            if self._discard_trace_on_exit:
+                # A first turn only stores its deferred trace when it returns.
+                # Release it here even after the UI has already closed.
+                self._finalize_conversational_session(discard=True)
 
     def _on_conversation_turn_done(self, result: Any) -> None:
         with self._lock:
@@ -1020,9 +979,53 @@ FooterKey .footer-key--key {
             self._refresh_log_panel()
 
     async def action_quit(self) -> None:
-        self._finalize_conversational_session()
+        if (
+            not self._is_conversational
+            or self._conversation_turn_in_progress
+            or self._trace_consent_pending is not None
+        ):
+            self._discard_trace_on_exit = True
+        if self._trace_consent_pending is not None:
+            self._trace_consent_pending.set()
+        if not self._conversation_turn_in_progress:
+            await asyncio.to_thread(
+                self._finalize_conversational_session,
+                discard=self._discard_trace_on_exit,
+            )
         self._unsubscribe()
         self.exit(self._crew_result)
+
+    def _request_trace_consent(self) -> bool:
+        """Wait in the execution worker while the UI asks for upload consent."""
+        if self._discard_trace_on_exit:
+            return False
+        done = threading.Event()
+        decision: list[bool] = []
+        self._trace_consent_pending = done
+
+        def accepted(value: bool | None) -> None:
+            decision.append(value is True)
+            done.set()
+
+        def show() -> None:
+            if self._discard_trace_on_exit:
+                done.set()
+                return
+            self._consent_screen = TraceConsentScreen()
+            self.push_screen(self._consent_screen, accepted)
+
+        try:
+            self.call_from_thread(show)
+            return (
+                done.wait(timeout=20)
+                and not self._discard_trace_on_exit
+                and bool(decision)
+                and decision[0]
+            )
+        finally:
+            self._trace_consent_pending = None
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._dismiss_consent_modal)
 
     def action_view_traces(self) -> None:
         if self._status != "completed":
@@ -1030,82 +1033,11 @@ FooterKey .footer-key--key {
         # Recorded here rather than in on_button_pressed so the `t` key binding
         # is counted too, and only once the action can actually do something.
         self._record_tui_button_click("view_traces")
-        if self._trace_url:
-            import webbrowser
-
-            try:
-                webbrowser.open(self._trace_url)
-            except Exception:  # noqa: S110
-                pass
-            return
-        self._consent_screen = TraceConsentScreen()
-        self.push_screen(self._consent_screen)
-
-    def _on_trace_consent_accepted(self) -> None:
-        self._send_traces_worker()
-
-    @work(thread=True)
-    def _send_traces_worker(self) -> None:
-        import webbrowser
-
-        try:
-            from crewai.events.listeners.tracing.utils import (
-                set_suppress_tracing_messages,
-                set_tui_mode,
-            )
-
-            set_tui_mode(True)
-            set_suppress_tracing_messages(True)
-
-            from crewai.events.listeners.tracing.trace_listener import (
-                TraceCollectionListener,
-            )
-            from crewai.events.listeners.tracing.utils import (
-                mark_first_execution_completed,
-            )
-
-            listener: TraceCollectionListener | None = getattr(
-                TraceCollectionListener, "_instance", None
-            )
-            if not listener:
-                self.call_from_thread(self._dismiss_consent_modal)
-                return
-
-            bm = listener.batch_manager
-            url = getattr(bm, "trace_url", None) or bm.ephemeral_trace_url
-
-            if not url:
-                handler = listener.first_time_handler
-                handler.set_batch_manager(bm)
-                handler._initialize_backend_and_send_events()
-                url = handler.ephemeral_url or bm.ephemeral_trace_url
-
-                if listener.first_time_handler.is_first_time:
-                    mark_first_execution_completed(user_consented=True)
-
-            _enable_tracing_in_dotenv()
-
-            if url:
-                self._trace_url = url
-
-                def _done() -> None:
-                    self._dismiss_consent_modal()
-                    try:
-                        btn = self.query_one("#btn-traces", Button)
-                        btn.label = "✔ Open Traces"
-                        btn.id = "btn-traces-done"
-                    except Exception:  # noqa: S110
-                        pass
-
-                self.call_from_thread(_done)
-                try:
-                    webbrowser.open(url)
-                except Exception:  # noqa: S110
-                    pass
-            else:
-                self.call_from_thread(self._dismiss_consent_modal)
-        except Exception:
-            self.call_from_thread(self._dismiss_consent_modal)
+        self.notify(
+            "Trace sharing is requested when the execution finishes. "
+            "A trace link is not available for this run.",
+            title="Execution traces",
+        )
 
     def _dismiss_consent_modal(self) -> None:
         try:
@@ -1135,7 +1067,7 @@ FooterKey .footer-key--key {
             pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id in ("btn-traces", "btn-traces-done"):
+        if event.button.id == "btn-traces":
             self.action_view_traces()
         elif event.button.id == "btn-deploy":
             self.action_deploy_crew()
