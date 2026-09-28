@@ -28,6 +28,7 @@ def parse_cache_url() -> dict[str, Any] | None:
         "port": parsed.port or 6379,
         "db": _parse_db_from_path(parsed.path),
         "password": parsed.password,
+        "use_tls": parsed.scheme in ("rediss", "valkeys"),
     }
 
 
