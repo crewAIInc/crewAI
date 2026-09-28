@@ -396,6 +396,16 @@ class Memory(BaseModel):
                     len(pending),
                     timeout_per_save,
                 )
+                # Abandon it for real: cancel and untrack so later recall()s and
+                # close() don't wait on it again. cancel() is a no-op if the save
+                # is already running, but untracking prevents re-waiting the full
+                # timeout on every subsequent drain.
+                future.cancel()
+                with self._pending_lock:
+                    try:
+                        self._pending_saves.remove(future)
+                    except ValueError:
+                        pass
                 # Don't raise - just log and continue to avoid blocking crew completion
             except Exception as e:
                 failed_saves += 1
@@ -697,19 +707,9 @@ class Memory(BaseModel):
             # encode error) is a real save failure and must not disappear.
             if "cannot schedule new futures after shutdown" in str(e):
                 return []
-            try:
-                crewai_event_bus.emit(
-                    self,
-                    MemorySaveFailedEvent(
-                        value=f"{len(contents)} memories (background)",
-                        metadata=metadata or {},
-                        error=str(e),
-                        agent_role=agent_role,
-                        source_type="unified_memory",
-                    ),
-                )
-            except RuntimeError:
-                pass  # event bus shut down during process exit
+            # Re-raise so the future carries the exception. The failure event is
+            # emitted once by _on_save_done (the future's done-callback) from
+            # future.exception(); emitting here as well would double-report.
             raise
 
         try:

@@ -187,12 +187,15 @@ def test_background_save_still_swallows_shutdown_runtime_error(tmp_path: Path) -
     )
 
 
-def test_background_save_emits_failure_and_propagates_generic_runtime_error(
+def test_background_save_emits_single_failure_and_propagates_generic_runtime_error(
     tmp_path: Path,
 ) -> None:
-    """A non-shutdown RuntimeError (e.g. embedder/LLM init failure) must not be
-    silently dropped: it emits MemorySaveFailedEvent and propagates.
+    """A non-shutdown RuntimeError (embedder/LLM init failure) must not be
+    silently dropped. _background_encode_batch re-raises (no emit); the failure
+    event is emitted exactly once by the future's done-callback (_on_save_done),
+    so listeners see a single MemorySaveFailedEvent per failed save.
     """
+    from concurrent.futures import Future
     from unittest.mock import MagicMock
 
     from crewai.events.event_bus import crewai_event_bus
@@ -210,6 +213,13 @@ def test_background_save_emits_failure_and_propagates_generic_runtime_error(
 
     mem._encode_batch = raise_generic  # type: ignore[method-assign]
 
+    # 1) The background method re-raises rather than swallowing.
+    with pytest.raises(RuntimeError, match="embedder failed to initialize"):
+        mem._background_encode_batch(
+            ["content"], None, None, None, None, None, False, None
+        )
+
+    # 2) The done-callback emits exactly one failure event for a failed future.
     failures: list[MemorySaveFailedEvent] = []
     with crewai_event_bus.scoped_handlers():
 
@@ -217,10 +227,38 @@ def test_background_save_emits_failure_and_propagates_generic_runtime_error(
         def _capture(_source: object, event: MemorySaveFailedEvent) -> None:
             failures.append(event)
 
-        with pytest.raises(RuntimeError, match="embedder failed to initialize"):
-            mem._background_encode_batch(
-                ["content"], None, None, None, None, None, False, None
-            )
+        fut: Future[object] = Future()
+        with mem._pending_lock:
+            mem._pending_saves.append(fut)
+        fut.add_done_callback(mem._on_save_done)
+        fut.set_exception(RuntimeError("embedder failed to initialize"))
 
     assert len(failures) == 1
     assert "embedder failed to initialize" in (failures[0].error or "")
+
+
+def test_drain_writes_timeout_untracks_future(tmp_path: Path) -> None:
+    """A save that times out during drain must be cancelled and untracked so
+    later recall()/close() don't wait the full timeout on it again.
+    """
+    from concurrent.futures import Future
+    from unittest.mock import MagicMock
+
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+
+    # A future that never completes -> drain will time out on it.
+    never_done: Future[object] = Future()
+    with mem._pending_lock:
+        mem._pending_saves.append(never_done)
+
+    mem.drain_writes(timeout_per_save=0.05)
+
+    # After a timed-out drain the future is no longer tracked.
+    with mem._pending_lock:
+        assert never_done not in mem._pending_saves
