@@ -170,12 +170,24 @@ def cancellable(
         task_id = context.task_id
 
         async def poll_for_cancel_valkey() -> bool:
-            """Poll ValkeyCache for cancellation flag."""
+            """Poll ValkeyCache for cancellation flag.
+
+            A connection/client error must not complete the watcher, because the
+            decorator treats a finished watcher as a real cancellation. On error
+            we log and keep polling so a transient Valkey failure never aborts a
+            running task.
+            """
             while True:
-                if _task_cache is not None and await _task_cache.get(
-                    f"cancel:{task_id}"
-                ):
-                    return True
+                try:
+                    if _task_cache is not None and await _task_cache.get(
+                        f"cancel:{task_id}"
+                    ):
+                        return True
+                except Exception as e:  # noqa: BLE001
+                    logger.warning(
+                        "Cancel watcher Valkey error, continuing to poll",
+                        extra={"task_id": task_id, "error": str(e)},
+                    )
                 await asyncio.sleep(0.1)
 
         async def poll_for_cancel_aiocache() -> bool:
@@ -221,13 +233,34 @@ def cancellable(
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
+            # Only treat this as a cancellation if the watcher actually reported
+            # one (returned True). A watcher that finished by raising (e.g. an
+            # unexpected cache error) must not abort a running task.
+            watcher_signalled_cancel = False
             if cancel_watch in done:
+                if cancel_watch.exception() is None:
+                    watcher_signalled_cancel = bool(cancel_watch.result())
+                else:
+                    logger.warning(
+                        "Cancel watcher failed; not treating as cancellation",
+                        extra={
+                            "task_id": task_id,
+                            "error": str(cancel_watch.exception()),
+                        },
+                    )
+
+            if watcher_signalled_cancel:
                 execute_task.cancel()
                 try:
                     await execute_task
                 except asyncio.CancelledError:
                     pass
                 raise asyncio.CancelledError(f"Task {task_id} was cancelled")
+
+            # Watcher finished without a real cancel, or the task finished first.
+            if not execute_task.done():
+                cancel_watch.cancel()
+                return await execute_task
             cancel_watch.cancel()
             return execute_task.result()
         finally:
