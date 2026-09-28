@@ -176,10 +176,12 @@ class TestValkeyStorageVectorSearch:
             limit=10
         )
 
-        # Verify query contains scope filter
+        # Verify query contains scope filter. Scope queries over-fetch
+        # (limit * 3) so the scope-boundary post-filter that drops sibling
+        # matches doesn't shrink the result set below `limit`.
         call_args = mock_ft_search.call_args
         query = call_args[0][2]
-        assert "(@scope:{/agent*})=>[KNN 10 @embedding $BLOB AS score]" in query
+        assert "(@scope:{/agent*})=>[KNN 30 @embedding $BLOB AS score]" in query
 
         # Verify results
         assert len(results) == 1
