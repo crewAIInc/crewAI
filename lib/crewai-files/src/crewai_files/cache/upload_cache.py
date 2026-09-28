@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from aiocache import Cache  # type: ignore[import-untyped]
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
-from crewai.utilities.cache_config import parse_cache_url
 
 from crewai_files.core.constants import DEFAULT_MAX_CACHE_ENTRIES, DEFAULT_TTL_SECONDS
 from crewai_files.uploaders.factory import ProviderType
@@ -143,11 +142,17 @@ class ValkeyCacheBackend:
         password: str | None = None,
         default_ttl: int | None = None,
         namespace: str = "",
+        use_tls: bool = False,
     ) -> None:
         from crewai.memory.storage.valkey_cache import ValkeyCache
 
         self._cache = ValkeyCache(
-            host=host, port=port, db=db, password=password, default_ttl=default_ttl
+            host=host,
+            port=port,
+            db=db,
+            password=password,
+            default_ttl=default_ttl,
+            use_tls=use_tls,
         )
         self._namespace = namespace
 
@@ -222,6 +227,10 @@ class UploadCache:
     ) -> CacheBackend:
         """Create the appropriate cache backend."""
         if cache_type == "valkey":
+            # Imported lazily: crewai-files must not hard-import crewai at module
+            # load. parse_cache_url is only needed for the Valkey backend path.
+            from crewai.utilities.cache_config import parse_cache_url
+
             conn = parse_cache_url() or {}
             return ValkeyCacheBackend(
                 host=cache_kwargs.get("host", conn.get("host", "localhost")),
@@ -230,6 +239,7 @@ class UploadCache:
                 password=cache_kwargs.get("password", conn.get("password")),
                 default_ttl=ttl,
                 namespace=namespace,
+                use_tls=cache_kwargs.get("use_tls", conn.get("use_tls", False)),
             )
         if cache_type == "redis":
             return AiocacheBackend(
