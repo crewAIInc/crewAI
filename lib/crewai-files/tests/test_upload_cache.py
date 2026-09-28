@@ -207,3 +207,26 @@ class TestUploadCache:
 
         assert len(gemini_uploads) == 2
         assert len(anthropic_uploads) == 1
+
+
+class TestNoEagerCrewaiImport:
+    """crewai-files must not hard-import crewai at module load.
+
+    parse_cache_url is only needed for the Valkey backend path and must be
+    imported lazily there, so `import crewai_files` works without crewai
+    installed (preserving the crewai[file-processing] -> crewai-files direction).
+    """
+
+    def test_parse_cache_url_not_bound_at_module_level(self) -> None:
+        import crewai_files.cache.upload_cache as mod
+
+        # A module-level `from crewai... import parse_cache_url` would leave the
+        # name bound on the module. Lazy import inside _create_backend does not.
+        assert not hasattr(mod, "parse_cache_url")
+
+    def test_default_memory_backend_needs_no_crewai(self) -> None:
+        from crewai_files.cache.upload_cache import UploadCache
+
+        # Default (in-memory) cache path must not touch the Valkey helper.
+        cache = UploadCache()
+        assert cache is not None
