@@ -3075,7 +3075,8 @@ class OpenAICompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        OpenAI vision-enabled models include GPT-4o, GPT-4.1, GPT-5, and o-series.
+        OpenAI vision-enabled models include GPT-4o, GPT-4.1, GPT-5, GPT-6 Astra,
+        and o-series.
 
         Returns:
             True if the model supports images.
@@ -3086,6 +3087,7 @@ class OpenAICompletion(BaseLLM):
             "gpt-4-turbo",
             "gpt-4-vision",
             "gpt-5",
+            "gpt-6-astra",
             "o1",
             "o3",
             "o4",

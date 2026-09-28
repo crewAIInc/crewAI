@@ -27,6 +27,12 @@ try:
 except ImportError:
     HAS_BEDROCK = False
 
+try:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
 
 # Minimal valid PNG for testing
 MINIMAL_PNG = (
@@ -181,6 +187,37 @@ class TestOpenAIMultimodal:
         """Test GPT-3.5 does not support multimodal."""
         llm = LLM(model="openai/gpt-3.5-turbo")
         assert llm.supports_multimodal() is False
+
+    def test_supports_multimodal_gpt6_astra(self) -> None:
+        """GPT-6 Astra supports multimodal (file) inputs via the Responses API."""
+        llm = LLM(model="openai/gpt-6-astra")
+        assert llm.supports_multimodal() is True
+
+    def test_gpt6_astra_pdf_not_rejected_locally(self) -> None:
+        """Native OpenAI must not reject a PDF locally for GPT-6 Astra.
+
+        Before the fix, ``OpenAICompletion.supports_multimodal`` omitted
+        ``gpt-6-astra`` from its capability check, so ``_process_message_files``
+        raised ``ValueError: Model 'gpt-6-astra' does not support multimodal
+        input`` before any API call. See issue #7791.
+        """
+        llm = LLM(
+            model="openai/gpt-6-astra",
+            api="responses",
+            api_key="unused-local-reproducer",
+            base_url="https://example.invalid/v1",
+            prefer_upload=False,
+        )
+        assert isinstance(llm, OpenAICompletion)
+        files = {"sample.pdf": PDFFile(source=MINIMAL_PDF)}
+        # This raised ValueError before the fix.
+        result = llm._format_messages(
+            [{"role": "user", "content": "Inspect the file.", "files": files}]
+        )
+        assert result is not None
+        # The PDF is formatted into an input_file block (no API call is made).
+        content = result[0].get("content")
+        assert content is not None
 
     def test_format_multimodal_content_image(self) -> None:
         """Test OpenAI uses image_url format."""
