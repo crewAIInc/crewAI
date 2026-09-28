@@ -42,6 +42,16 @@ def test_bedrock_claude_aliases_use_the_anthropic_context_window() -> None:
     assert result == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+def test_bedrock_regional_aliases_preserve_the_base_model_context_window() -> None:
+    result = resolve_context_window_size(
+        "us.meta.llama3-3-70b-instruct-v1:0",
+        BEDROCK_CONTEXT_WINDOWS,
+        default=DEFAULT_CONTEXT_WINDOW_SIZE,
+    )
+
+    assert result == int(128_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_litellm_map_includes_the_openai_gpt5_family() -> None:
     result = resolve_context_window_size(
         "gpt-5", LLM_CONTEXT_WINDOW_SIZES, default=DEFAULT_CONTEXT_WINDOW_SIZE

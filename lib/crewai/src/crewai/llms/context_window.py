@@ -100,6 +100,7 @@ _BEDROCK_BASE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "mistral.mistral-7b-instruct-v0:2": 32_000,
     "mistral.mixtral-8x7b-instruct-v0:1": 32_000,
     "meta.llama3-1-405b-instruct-v1:0": 128_000,
+    "meta.llama3-3-70b-instruct-v1:0": 128_000,
     "meta.llama3-1-70b-instruct-v1:0": 128_000,
     "meta.llama3-1-8b-instruct-v1:0": 128_000,
     "meta.llama3-70b-instruct-v1:0": 8000,
