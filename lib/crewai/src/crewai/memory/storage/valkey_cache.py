@@ -38,6 +38,7 @@ class ValkeyCache:
         db: int = 0,
         password: str | None = None,
         default_ttl: int | None = None,
+        use_tls: bool = False,
     ) -> None:
         """Initialize Valkey cache.
 
@@ -47,12 +48,14 @@ class ValkeyCache:
             db: Database number to use.
             password: Optional password for authentication.
             default_ttl: Default TTL in seconds (None = no expiration).
+            use_tls: Enable TLS/SSL encryption for connections (rediss/valkeys).
         """
         self._host = host
         self._port = port
         self._db = db
         self._password = password
         self._default_ttl = default_ttl
+        self._use_tls = use_tls
         self._client: GlideClient | None = None
         self._client_lock: asyncio.Lock | None = None
 
@@ -92,6 +95,7 @@ class ValkeyCache:
                             # the LIB-NAME suffix (GlidePy(crewai)) so operators can
                             # attribute Valkey usage to CrewAI. Metadata only.
                             client_info_tag="crewai",
+                            use_tls=self._use_tls,
                             database_id=db,
                             credentials=(
                                 ServerCredentials(password=self._password)
