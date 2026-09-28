@@ -91,7 +91,7 @@ class Memory(BaseModel):
     memory_kind: Literal["memory"] = "memory"
 
     llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
-        default="gpt-4o-mini",
+        default="gpt-5.4-mini",
         description="LLM for analysis (model name or BaseLLM instance).",
     )
     storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
@@ -275,7 +275,7 @@ class Memory(BaseModel):
                 raise RuntimeError(
                     f"Memory requires an LLM for analysis but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    "  - Set OPENAI_API_KEY for the default model (gpt-4o-mini)\n"
+                    "  - Set OPENAI_API_KEY for the default model (gpt-5.4-mini)\n"
                     '  - Pass a different model: Memory(llm="anthropic/claude-3-haiku-20240307")\n'
                     '  - Pass any LLM instance: Memory(llm=LLM(model="your-model"))\n'
                     "  - To skip LLM analysis, pass all fields explicitly to remember()\n"
@@ -688,12 +688,29 @@ class Memory(BaseModel):
                 root_scope,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
-        except RuntimeError:
+        except RuntimeError as e:
             # The encoding pipeline uses asyncio.run() -> to_thread() internally.
             # If the process is shutting down, the default executor is closed and
             # to_thread raises "cannot schedule new futures after shutdown".
-            # Silently abandon the save -- the process is exiting anyway.
-            return []
+            # Only that specific case is safe to abandon silently -- the process
+            # is exiting anyway. Any other RuntimeError (embedder/LLM init failure,
+            # encode error) is a real save failure and must not disappear.
+            if "cannot schedule new futures after shutdown" in str(e):
+                return []
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    MemorySaveFailedEvent(
+                        value=f"{len(contents)} memories (background)",
+                        metadata=metadata or {},
+                        error=str(e),
+                        agent_role=agent_role,
+                        source_type="unified_memory",
+                    ),
+                )
+            except RuntimeError:
+                pass  # event bus shut down during process exit
+            raise
 
         try:
             crewai_event_bus.emit(
