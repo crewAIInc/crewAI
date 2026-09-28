@@ -215,9 +215,19 @@ class TestOpenAIMultimodal:
             [{"role": "user", "content": "Inspect the file.", "files": files}]
         )
         assert result is not None
-        # The PDF is formatted into an input_file block (no API call is made).
+        # The PDF is formatted into an input_file block (no API call is made),
+        # and its bytes survive intact — a dropped file must fail this test.
         content = result[0].get("content")
-        assert content is not None
+        assert isinstance(content, list)
+        file_blocks = [
+            block
+            for block in content
+            if isinstance(block, dict) and block.get("type") == "input_file"
+        ]
+        assert len(file_blocks) == 1
+        file_data = file_blocks[0]["file_data"]
+        assert file_data.startswith("data:application/pdf;base64,")
+        assert base64.b64decode(file_data.split(",", 1)[1]) == MINIMAL_PDF
 
     def test_format_multimodal_content_image(self) -> None:
         """Test OpenAI uses image_url format."""
