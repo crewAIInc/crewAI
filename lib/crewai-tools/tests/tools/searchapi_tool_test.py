@@ -25,26 +25,6 @@ def test_missing_api_key_raises_value_error():
             SearchApiGoogleShoppingTool()
 
 
-def test_non_https_url_raises_value_error():
-    with pytest.raises(ValueError, match="URL scheme must be HTTPS"):
-        SearchApiGoogleSearchTool(url="http://www.searchapi.io/api/v1/search")
-
-    tool = SearchApiGoogleSearchTool()
-    tool.url = "http://www.searchapi.io/api/v1/search"
-    with pytest.raises(ValueError, match="URL scheme must be HTTPS"):
-        tool.run(search_query="test")
-
-
-def test_invalid_host_url_raises_value_error():
-    with pytest.raises(ValueError, match="URL host must be searchapi.io or www.searchapi.io"):
-        SearchApiGoogleSearchTool(url="https://attacker.com/api/v1/search")
-
-    tool = SearchApiGoogleSearchTool()
-    tool.url = "https://evil.com/search"
-    with pytest.raises(ValueError, match="URL host must be searchapi.io or www.searchapi.io"):
-        tool.run(search_query="test")
-
-
 @patch("requests.get")
 def test_searchapi_google_search_tool_run(mock_get):
     mock_response = MagicMock()

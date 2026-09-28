@@ -4,7 +4,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 import requests
 
-from crewai_tools.tools.searchapi_tool.searchapi_base_tool import SearchApiBaseTool
+from crewai_tools.tools.searchapi_tool.searchapi_base_tool import (
+    SEARCHAPI_SEARCH_ENDPOINT,
+    SearchApiBaseTool,
+)
 
 
 class SearchApiGoogleShoppingToolSchema(BaseModel):
@@ -32,7 +35,6 @@ class SearchApiGoogleShoppingTool(SearchApiBaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
-        self._validate_url()
         api_key = os.getenv("SEARCHAPI_API_KEY")
         query = kwargs.get("search_query") or kwargs.get("q")
         params: dict[str, Any] = {
@@ -44,7 +46,7 @@ class SearchApiGoogleShoppingTool(SearchApiBaseTool):
 
         try:
             response = requests.get(
-                self.url,
+                SEARCHAPI_SEARCH_ENDPOINT,
                 headers={"Authorization": f"Bearer {api_key}"},
                 params=params,
                 timeout=30,

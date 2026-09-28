@@ -21867,13 +21867,7 @@
             "type": "string"
           }
         },
-        "properties": {
-          "url": {
-            "default": "https://www.searchapi.io/api/v1/search",
-            "title": "Url",
-            "type": "string"
-          }
-        },
+        "properties": {},
         "required": [],
         "title": "SearchApiGoogleSearchTool",
         "type": "object"
@@ -21968,13 +21962,7 @@
             "type": "string"
           }
         },
-        "properties": {
-          "url": {
-            "default": "https://www.searchapi.io/api/v1/search",
-            "title": "Url",
-            "type": "string"
-          }
-        },
+        "properties": {},
         "required": [],
         "title": "SearchApiGoogleShoppingTool",
         "type": "object"

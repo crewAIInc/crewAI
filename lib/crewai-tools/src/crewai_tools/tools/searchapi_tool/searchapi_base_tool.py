@@ -1,16 +1,17 @@
 import os
 import re
 from typing import Any
-from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import Field
 
 
+SEARCHAPI_SEARCH_ENDPOINT = "https://www.searchapi.io/api/v1/search"
+
+
 class SearchApiBaseTool(BaseTool):
     """Base class for SearchApi functionality with shared capabilities."""
 
-    url: str = "https://www.searchapi.io/api/v1/search"
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -27,19 +28,6 @@ class SearchApiBaseTool(BaseTool):
         if not api_key:
             raise ValueError(
                 "Missing API key, you can get the key from https://www.searchapi.io/"
-            )
-        self._validate_url()
-
-    def _validate_url(self) -> None:
-        parsed = urlparse(self.url)
-        if parsed.scheme.lower() != "https":
-            raise ValueError(
-                f"URL scheme must be HTTPS to prevent sending credentials in cleartext, got '{parsed.scheme}'."
-            )
-        hostname = (parsed.hostname or "").lower()
-        if hostname not in {"searchapi.io", "www.searchapi.io"}:
-            raise ValueError(
-                f"URL host must be searchapi.io or www.searchapi.io to prevent sending credentials to unauthorized hosts, got '{hostname}'."
             )
 
     def _omit_fields(
