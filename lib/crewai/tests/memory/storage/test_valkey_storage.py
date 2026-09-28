@@ -401,7 +401,9 @@ class TestValkeyStorageSave:
         hset_call = mock_glide_client.hset.call_args
         hset_dict = hset_call[0][1]  # field_value_map dict
         
-        assert hset_dict["created_at"] == created_at.isoformat()
+        # created_at is stored as a numeric epoch so the FT NumericField can
+        # index it; full float precision is preserved for round-trip.
+        assert hset_dict["created_at"] == str(created_at.timestamp())
         assert hset_dict["last_accessed"] == last_accessed.isoformat()
 
 
@@ -1005,8 +1007,8 @@ class TestValkeyStorageUpdate:
         assert hset_call[0][0] == "record:existing-record"  # key
         hset_dict = hset_call[0][1]  # field_value_map dict
         
-        # Verify created_at was preserved from original
-        assert hset_dict["created_at"] == original_created_at.isoformat()
+        # Verify created_at was preserved from original (stored as numeric epoch)
+        assert hset_dict["created_at"] == str(original_created_at.timestamp())
         
         # Verify other fields were updated
         assert hset_dict["content"] == "Updated content"
