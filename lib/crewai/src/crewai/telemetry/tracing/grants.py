@@ -298,6 +298,7 @@ class GrantSpanExporter(SpanExporter):
                 started_at_ns=self._first_start_ns,
                 finished_at_ns=self._last_end_ns,
                 amp_base_url=getattr(api, "base_url", None),
+                trace_url=self._trace_url,
             )
             logger.debug("Traces exported for execution %s", execution_uuid)
             self._show_trace_link()
