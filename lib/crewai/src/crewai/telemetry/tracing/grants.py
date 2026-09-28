@@ -17,6 +17,7 @@ from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult, SpanExporter
 from rich.console import Console
+from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
@@ -304,7 +305,7 @@ class GrantSpanExporter(SpanExporter):
             self._show_trace_link()
 
     def _show_trace_link(self) -> None:
-        """One line, once: where to see the run that was just exported.
+        """Show where to see the run that was just exported, once.
 
         The execution id stays out of it — `crewai eval` reads that from the
         record — but whoever wants to open the trace gets AMP's viewer link.
@@ -318,7 +319,12 @@ class GrantSpanExporter(SpanExporter):
             self._trace_url,
             style=Style(color="cyan", underline=True, link=self._trace_url),
         )
-        Console().print(line)
+        title = (
+            "🔗 Ephemeral Execution Traces"
+            if self._client._tier == "ephemeral"
+            else "🔗 Execution Traces"
+        )
+        Console().print(Panel(line, title=title, border_style="green", padding=(1, 2)))
 
     def shutdown(self) -> None:
         with self._lock:
