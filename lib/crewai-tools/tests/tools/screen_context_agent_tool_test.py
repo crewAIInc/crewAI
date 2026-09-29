@@ -1,9 +1,14 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 
+from crewai_tools import ScreenContextAgentTool as TopLevelScreenContextAgentTool
+from crewai_tools.generate_tool_specs import ToolSpecExtractor
+from crewai_tools.tools import ScreenContextAgentTool as ToolsScreenContextAgentTool
 from crewai_tools.tools.screen_context_agent_tool.screen_context_agent_tool import (
     ScreenContextAgentTool,
+    ScreenContextAgentToolSchema,
 )
 
 
@@ -20,6 +25,34 @@ def test_initialization_does_not_connect_to_screen_context():
         }
 
     adapter.assert_not_called()
+
+
+def test_tool_never_caches_history_results():
+    tool = ScreenContextAgentTool()
+
+    assert tool.cache_function({}, {"records": []}) is False
+
+
+def test_since_minutes_uses_upstream_ten_year_bound():
+    schema = ScreenContextAgentToolSchema(query="test", since_minutes=5_256_000)
+
+    assert schema.since_minutes == 5_256_000
+    assert "ten years" in ScreenContextAgentToolSchema.model_fields[
+        "since_minutes"
+    ].description
+    with pytest.raises(ValidationError):
+        ScreenContextAgentToolSchema(query="test", since_minutes=5_256_001)
+
+    with pytest.raises(ValueError, match="since_minutes must be between 1 and 5256000"):
+        ScreenContextAgentTool()._run(query="test", since_minutes=5_256_001)
+
+
+def test_tool_is_exported_and_included_in_tool_specs():
+    assert TopLevelScreenContextAgentTool is ScreenContextAgentTool
+    assert ToolsScreenContextAgentTool is ScreenContextAgentTool
+    names = {spec["name"] for spec in ToolSpecExtractor().extract_all_tools()}
+
+    assert "ScreenContextAgentTool" in names
 
 
 def test_run_queries_bounded_history_and_preserves_metadata():
