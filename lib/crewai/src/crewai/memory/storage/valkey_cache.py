@@ -58,6 +58,11 @@ class ValkeyCache:
         self._use_tls = use_tls
         self._client: GlideClient | None = None
         self._client_lock: asyncio.Lock | None = None
+        # Track the event loop the client/lock were bound to. UploadCache's sync
+        # methods each call asyncio.run(), which creates and closes a fresh loop;
+        # a GlideClient/Lock bound to a closed loop cannot be reused, so we
+        # rebind when the running loop differs from the one we cached on.
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def _get_lock(self) -> asyncio.Lock:
         """Get or create the client lock (lazy, avoids binding to a specific event loop at init)."""
@@ -78,6 +83,15 @@ class ValkeyCache:
             RuntimeError: If connection to Valkey fails.
             TimeoutError: If connection attempt times out (10 seconds).
         """
+        # If we're now on a different event loop than the client/lock were bound
+        # to (e.g. a previous asyncio.run() loop was closed), drop the stale
+        # instances so they are recreated on the current loop.
+        running_loop = asyncio.get_running_loop()
+        if self._loop is not None and self._loop is not running_loop:
+            self._client = None
+            self._client_lock = None
+        self._loop = running_loop
+
         if self._client is None:
             async with self._get_lock():
                 if self._client is None:
