@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Coroutine
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 import threading
@@ -51,17 +51,80 @@ from crewai.memory.types import MemoryRecord, ScopeInfo
 _logger = logging.getLogger(__name__)
 
 
+def _to_epoch(dt: datetime) -> float:
+    """Convert a datetime to a UTC epoch.
+
+    MemoryRecord timestamps are naive UTC (datetime.utcnow()). A naive
+    datetime.timestamp() is interpreted in local time, which shifts the value
+    by the host's timezone offset. Treat naive datetimes as UTC so stored
+    scores and age-filter thresholds compare correctly regardless of host TZ.
+    """
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.timestamp()
+
+
 def _parse_created_at(value: str) -> datetime:
     """Parse a stored created_at value.
 
-    New records store created_at as a numeric epoch (so the FT NumericField can
-    index it). Fall back to ISO parsing for any records written before that
-    change.
+    New records store created_at as a numeric UTC epoch (so the FT NumericField
+    can index it). Values are read back as naive UTC to match how MemoryRecord
+    produces them (datetime.utcnow()). Falls back to ISO parsing for any
+    records written before the numeric-epoch change.
     """
     try:
-        return datetime.fromtimestamp(float(value))
+        return datetime.fromtimestamp(float(value), tz=timezone.utc).replace(
+            tzinfo=None
+        )
     except (ValueError, OSError):
         return datetime.fromisoformat(value)
+
+
+def _decode(value: Any) -> Any:
+    """Recursively decode bytes to str in FT.INFO-style nested structures."""
+    if isinstance(value, (bytes, bytearray)):
+        return value.decode("utf-8", "replace")
+    if isinstance(value, list):
+        return [_decode(v) for v in value]
+    if isinstance(value, dict):
+        return {_decode(k): _decode(v) for k, v in value.items()}
+    return value
+
+
+def _extract_index_dimension(info: Any) -> int | None:
+    """Read the vector field's dimension from an FT.INFO response.
+
+    FT.INFO returns an ``attributes`` list where each entry is a flat
+    key/value list; the vector field has ``type == "VECTOR"`` and an ``index``
+    sub-list containing ``dimensions`` -> N. Returns None if it can't be found,
+    so callers can fall back to auto-detection rather than failing hard.
+    """
+    info = _decode(info)
+    if not isinstance(info, dict):
+        return None
+    attributes = info.get("attributes")
+    if not isinstance(attributes, list):
+        return None
+
+    def _flat_pairs(flat: list[Any]) -> dict[str, Any]:
+        return {flat[i]: flat[i + 1] for i in range(0, len(flat) - 1, 2)}
+
+    for attr in attributes:
+        if not isinstance(attr, list):
+            continue
+        pairs = _flat_pairs(attr)
+        if str(pairs.get("type", "")).upper() != "VECTOR":
+            continue
+        index_info = pairs.get("index")
+        if isinstance(index_info, list):
+            idx_pairs = _flat_pairs(index_info)
+            dim = idx_pairs.get("dimensions")
+            if dim is not None:
+                try:
+                    return int(dim)
+                except (TypeError, ValueError):
+                    return None
+    return None
 
 
 class ValkeyStorage:
@@ -412,7 +475,7 @@ class ValkeyStorage:
                 # created_at is indexed as a NumericField, so it must be stored
                 # as a number (epoch seconds), not an ISO string which Valkey
                 # Search cannot parse numerically.
-                "created_at": str(record.created_at.timestamp()),
+                "created_at": str(_to_epoch(record.created_at)),
                 "last_accessed": record.last_accessed.isoformat(),
                 "source": record.source or "",
                 "private": "true" if record.private else "false",
@@ -547,19 +610,44 @@ class ValkeyStorage:
 
         client = await self._get_client()
 
+        # Check if the index already exists (tolerate FT.LIST failure).
+        index_exists = False
         try:
-            # Check if index already exists
             existing = await ft.list(client)
             names = {
                 i.decode("utf-8") if isinstance(i, bytes) else str(i)
                 for i in (existing or [])
             }
-            if "memory_index" in names:
-                _logger.debug("Vector index 'memory_index' already exists")
-                self._index_created = True
-                return
-        except Exception as e:
+            index_exists = "memory_index" in names
+        except Exception as e:  # noqa: BLE001
             _logger.debug("Could not list indexes, will attempt create: %s", e)
+
+        if index_exists:
+            _logger.debug("Vector index 'memory_index' already exists")
+            # Read the existing index's vector dimension so an embedder change
+            # across a process restart is caught. Without this, _vector_dim
+            # starts None after restart, the first save/search adopts the new
+            # embedder size, and vectors are written/queried against an index
+            # built at the old size (silent recall misses). FT.INFO failure is
+            # tolerated (fall back to auto-detect), but a real dimension
+            # mismatch must propagate — so this is deliberately not inside the
+            # broad except above (EmbeddingDimensionMismatchError is a
+            # ValueError and would otherwise be swallowed).
+            try:
+                info = await ft.info(client, "memory_index")
+            except Exception as e:  # noqa: BLE001
+                info = None
+                _logger.debug("Could not read index info: %s", e)
+            existing_dim = _extract_index_dimension(info) if info else None
+            if existing_dim is not None:
+                if self._vector_dim is None:
+                    self._vector_dim = existing_dim
+                elif self._vector_dim != existing_dim:
+                    raise EmbeddingDimensionMismatchError(
+                        existing_dim, self._vector_dim
+                    )
+            self._index_created = True
+            return
 
         try:
             # Build vector field attributes using the concrete subclass
@@ -768,7 +856,7 @@ class ValkeyStorage:
             )
 
             # Update all index structures
-            timestamp = record.created_at.timestamp()
+            timestamp = _to_epoch(record.created_at)
             await self._update_indexes(
                 record.id,
                 record.scope,
@@ -928,7 +1016,7 @@ class ValkeyStorage:
         )
 
         # Add to new indexes
-        timestamp = record.created_at.timestamp()
+        timestamp = _to_epoch(record.created_at)
         await self._update_indexes(
             record.id, record.scope, record.categories, record.metadata, timestamp
         )
@@ -1154,7 +1242,7 @@ class ValkeyStorage:
         """
         client = await self._get_client()
         record_ids: set[str] = set()
-        threshold = older_than.timestamp()
+        threshold = _to_epoch(older_than)
 
         # Scan all scope keys and filter by timestamp
         cursor: str | bytes = "0"
