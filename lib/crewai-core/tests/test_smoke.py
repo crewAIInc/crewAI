@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from unittest.mock import Mock
@@ -175,6 +176,48 @@ def test_configured_project_definition_rejects_empty_definition(
         )
 
 
+@pytest.mark.parametrize("value", ["true", "TRUE", "1", "yes", "on", "  yes  "])
+def test_core_telemetry_disabled_by_conventional_yes_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is True
+
+
+@pytest.mark.parametrize("value", ["false", "0", "no", "off", ""])
+def test_core_telemetry_stays_enabled_for_conventional_no_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is False
+
+
+def test_core_telemetry_unrecognized_disable_value_warns_once(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "maybe")
+    Telemetry._warned_env_flags.clear()
+
+    with caplog.at_level(logging.WARNING, logger="crewai_core.telemetry"):
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "CREWAI_DISABLE_TELEMETRY" in warnings[0].getMessage()
+    assert "maybe" in warnings[0].getMessage()
+
+
 def test_core_telemetry_never_installs_a_global_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -224,6 +267,48 @@ def test_core_telemetry_records_feature_usage(
     tracer.start_span.assert_called_once_with("Feature Usage")
     span.set_attribute.assert_any_call("feature", "cli_usage:view_traces")
     span.end.assert_called_once()
+
+
+def test_core_feature_span_keeps_only_what_the_feature_may_send(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each feature names what it may add. A key off its list — an id, run
+    content, or a dimension every span already carries — is dropped, and a
+    feature with no list sends nothing extra."""
+    from crewai_core.telemetry import Telemetry
+
+    Telemetry._instance = None
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    monkeypatch.setattr(
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
+    )
+    offered = {
+        "authenticated": "true",
+        "execution_id": "run-1",
+        "organization_id": "org-1",
+        "feature": "someone_else",
+        "crewai_version": "0.0.0",
+    }
+
+    telemetry = Telemetry()
+    telemetry.feature_usage_span("cli_usage:eval", offered)
+    sent = {call.args[0]: call.args[1] for call in span.set_attribute.call_args_list}
+    assert sent["authenticated"] == "true"
+    assert sent["feature"] == "cli_usage:eval"
+    assert sent["crewai_version"] != "0.0.0"
+    assert "execution_id" not in sent and "organization_id" not in sent
+
+    span.set_attribute.reset_mock()
+    telemetry.feature_usage_span("cli_usage:deploy", offered)
+    sent = {call.args[0]: call.args[1] for call in span.set_attribute.call_args_list}
+    assert "authenticated" not in sent and sent["feature"] == "cli_usage:deploy"
 
 
 def test_core_telemetry_records_flow_creation_version(

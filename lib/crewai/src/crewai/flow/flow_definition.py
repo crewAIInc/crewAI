@@ -295,8 +295,12 @@ class FlowHumanFeedbackDefinition(BaseModel):
         examples=[["approved", "revise"]],
     )
     llm: Any = Field(
-        default="gpt-4o-mini",
-        description="LLM configuration used to assist or process human feedback.",
+        default=None,
+        description=(
+            "LLM used to collapse feedback to an emit outcome. "
+            "None resolves at runtime via create_llm (project MODEL env, "
+            "then DEFAULT_LLM_MODEL)."
+        ),
         examples=["gpt-4o-mini"],
     )
     default_outcome: str | None = Field(
@@ -1006,14 +1010,6 @@ def log_flow_definition_issues(definition: FlowDefinition) -> None:
             )
         if method.human_feedback:
             human_feedback_config = method.human_feedback
-            if human_feedback_config.emit and not human_feedback_config.llm:
-                _log_flow_definition_issue(
-                    definition.name,
-                    code="human_feedback_llm_required",
-                    severity="error",
-                    path=f"{path}.human_feedback.llm",
-                    message="llm is required when human_feedback.emit is set",
-                )
             if (
                 human_feedback_config.default_outcome is not None
                 and not human_feedback_config.emit

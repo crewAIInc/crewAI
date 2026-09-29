@@ -1,11 +1,14 @@
 import hashlib
 import os
 import tempfile
+from unittest.mock import Mock, patch
 
 from crewai_tools.rag.base_loader import LoaderResult
+from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.loaders.text_loader import TextFileLoader, TextLoader
 from crewai_tools.rag.source_content import SourceContent
 import pytest
+import requests
 
 
 def write_temp_file(content, suffix=".txt", encoding="utf-8"):
@@ -100,6 +103,59 @@ class TestTextFileLoader:
                 assert result.content == content
             finally:
                 cleanup_temp_file(path)
+
+
+class TestTextFileLoaderURLs:
+    @pytest.mark.parametrize(
+        "url", ["https://example.com/notes.txt", "http://example.com/notes.txt?v=2"]
+    )
+    @pytest.mark.parametrize("content", ["", "First line\nCafé 世界\n"])
+    def test_auto_detected_text_url(self, url: str, content: str) -> None:
+        source = SourceContent(url)
+        assert source.data_type == DataType.TEXT_FILE
+        response = requests.Response()
+        response.status_code = 200
+        response._content = content.encode("utf-8")
+        response.encoding = "utf-8"
+
+        with patch(
+            "crewai_tools.security.safe_requests._raw_get", return_value=response
+        ) as fetch:
+            result = source.data_type.get_loader().load(source)
+
+        assert result.content == content
+        assert result.source == url
+        assert result.doc_id == hashlib.sha256((url + content).encode()).hexdigest()
+        assert fetch.call_args.kwargs["headers"]["Accept"] == "text/plain"
+
+    def test_custom_headers(self) -> None:
+        response = Mock(status_code=200, text="Notes")
+        headers = {"Accept": "text/plain", "X-Document-Version": "2"}
+        with patch(
+            "crewai_tools.security.safe_requests._raw_get", return_value=response
+        ) as fetch:
+            TextFileLoader().load(
+                SourceContent("https://example.com/notes.txt"), headers=headers
+            )
+        assert fetch.call_args.kwargs["headers"] == headers
+
+    @pytest.mark.parametrize(
+        "error", [requests.HTTPError("404 Not Found"), requests.Timeout("timed out")]
+    )
+    def test_fetch_error(self, error: requests.RequestException) -> None:
+        with (
+            patch("crewai_tools.security.safe_requests._raw_get", side_effect=error),
+            pytest.raises(ValueError, match="Error fetching content from URL"),
+        ):
+            TextFileLoader().load(SourceContent("https://example.com/notes.txt"))
+
+    def test_private_address_is_rejected_before_fetch(self) -> None:
+        with (
+            patch("crewai_tools.security.safe_requests._raw_get") as fetch,
+            pytest.raises(ValueError, match="private/reserved IP"),
+        ):
+            TextFileLoader().load(SourceContent("http://127.0.0.1/notes.txt"))
+        fetch.assert_not_called()
 
 
 class TestTextLoader:

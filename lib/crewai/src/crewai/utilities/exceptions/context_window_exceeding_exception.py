@@ -1,5 +1,7 @@
 from typing import Final
 
+from crewai.llms.retry import _ThrottlingErrorClassifier
+
 
 CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
     "expected a string with maximum length",
@@ -30,15 +32,21 @@ class LLMContextLengthExceededError(Exception):
         super().__init__(self._get_error_message(error_message))
 
     @staticmethod
-    def _is_context_limit_error(error_message: str) -> bool:
-        """Check if the error message indicates a context length limit error.
+    def _is_context_length_exceeded_error(error: str | BaseException) -> bool:
+        """Check whether an error represents a context limit, not a throttle.
 
         Args:
-            error_message: The error message to check.
+            error: The provider exception or error message to check.
 
         Returns:
             True if the error message indicates a context length limit error, False otherwise.
         """
+        if isinstance(
+            error, BaseException
+        ) and _ThrottlingErrorClassifier.is_throttling_error(error):
+            return False
+
+        error_message = str(error)
         return any(
             phrase.lower() in error_message.lower() for phrase in CONTEXT_LIMIT_ERRORS
         )

@@ -81,6 +81,11 @@ def _default_max_tokens_for_model(model: str) -> int:
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
+        Literal["claude-fable-5"],
+        Literal["claude-opus-5"],
+        Literal["claude-sonnet-5"],
+        Literal["claude-opus-4-8"],
+        Literal["claude-opus-4.8"],
         Literal["claude-sonnet-4-5"],
         Literal["claude-sonnet-4.5"],
         Literal["claude-opus-4-5"],
@@ -89,6 +94,11 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
         Literal["claude-haiku-4.5"],
     ]
 ] = (
+    "claude-fable-5",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-opus-4-8",
+    "claude-opus-4.8",
     "claude-sonnet-4-5",
     "claude-sonnet-4.5",
     "claude-opus-4-5",
@@ -101,9 +111,9 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
 def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
-    Native structured outputs are only available for Claude 4.5 models
-    (Sonnet 4.5, Opus 4.5, Haiku 4.5).
-    Other models require the tool-based fallback approach.
+    Covers Claude Fable 5, Opus 5, Sonnet 5, Opus 4.8 and the 4.5-era models
+    (Sonnet 4.5, Opus 4.5, Haiku 4.5). Other models require the tool-based
+    fallback approach.
 
     Args:
         model: The model name/identifier.
@@ -1962,28 +1972,14 @@ class AnthropicCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+        from crewai.llms.context_window import (
+            ANTHROPIC_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        # Current offered models. Unknown and retired IDs fall back to 200k.
-        context_windows = {
-            "claude-fable-5": 1000000,
-            "claude-mythos-5": 1000000,
-            "claude-opus-5": 1000000,
-            "claude-sonnet-5": 1000000,
-            "claude-opus-4-8": 1000000,
-            "claude-opus-4-7": 1000000,
-            "claude-opus-4-6": 1000000,
-            "claude-sonnet-4-6": 1000000,
-            "claude-opus-4-5": 200000,
-            "claude-sonnet-4-5": 200000,
-            "claude-haiku-4-5": 200000,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model, ANTHROPIC_CONTEXT_WINDOWS, default=200_000
+        )
 
     @staticmethod
     def _extract_finish_reason_and_id(

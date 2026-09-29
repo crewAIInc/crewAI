@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 import inspect
 import logging
@@ -79,6 +79,7 @@ from crewai.events.types.flow_events import (
 )
 from crewai.events.types.llm_events import LLMCallCompletedEvent
 from crewai.execution import (
+    ExecutionTrace,
     begin_execution,
     end_execution,
     get_execution_uuid,
@@ -110,10 +111,12 @@ from crewai.flow.flow_wrappers import (
     StartMethod,
 )
 from crewai.flow.human_feedback import (
+    HumanFeedbackCollapseError,
     HumanFeedbackResult,
-    _deserialize_llm_from_context,
     _distill_and_store_lessons,
     _pre_review_with_lessons,
+    _require_collapse_outcome,
+    _resolve_llm_instance,
     _serialize_llm_for_context,
 )
 from crewai.flow.input_provider import InputProvider
@@ -132,6 +135,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.telemetry.tracing.context import get_trace_session
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_ref
 
 
@@ -504,6 +508,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """Whether this kickoff should defer final flow trace finalization."""
         return bool(getattr(self, "defer_trace_finalization", False))
 
+    def _begin_trace_execution(
+        self, execution_uuid: str | None = None
+    ) -> contextvars.Token[str | None] | None:
+        previous = self._deferred_execution_trace
+        token = begin_execution(
+            execution_uuid, tracing=self.tracing, trace_session=previous
+        )
+        if token is not None and get_trace_session() is not (
+            previous.session if previous else None
+        ):
+            # A tracing toggle starts a fresh lifecycle; the old opener belongs
+            # to the previous session (or to an untraced turn).
+            object.__setattr__(self, "_deferred_flow_started_event_id", None)
+        return token
+
+    def _end_trace_execution(self, token: contextvars.Token[str | None] | None) -> None:
+        if token is None:
+            return
+        owned_trace = get_trace_session() is not None
+        defer = self._should_defer_trace_finalization()
+        self._deferred_execution_trace = end_execution(token, defer=defer)
+        if owned_trace and defer and self._deferred_execution_trace is None:
+            object.__setattr__(self, "_deferred_flow_started_event_id", None)
+
     @classmethod
     def flow_definition(cls) -> FlowDefinition:
         """Return the static Flow Definition built from this Flow class."""
@@ -772,12 +800,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     # duration span emitted at the end does not need to hold a span open for
     # the life of the run.
     _telemetry_started_at: float | None = PrivateAttr(default=None)
+    _cel_now: datetime | None = PrivateAttr(default=None)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
     _deferred_flow_started_event_id: str | None = PrivateAttr(default=None)
+    _deferred_execution_trace: ExecutionTrace | None = PrivateAttr(default=None)
     _aggregated_usage_metrics: UsageMetrics = PrivateAttr(default_factory=UsageMetrics)
     _usage_metrics_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _flow_match_id: str | None = PrivateAttr(default=None)
@@ -1382,7 +1412,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
 
-        execution_token = begin_execution(self._pending_feedback_context.execution_uuid)
+        # A fresh instant, not the persisted kickoff one: a flow can pause on
+        # feedback for days, and expressions after resume must see today.
+        self._cel_now = datetime.now(timezone.utc)
+
+        execution_token = None
 
         # Force `current_flow_id` to this flow's match id for the
         # duration of the resume so the usage listener's filter passes
@@ -1396,8 +1430,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # paired EXECUTION_END (unless the body already dispatched it).
         hook_state = {"end_dispatched": False}
         try:
+            execution_token = self._begin_trace_execution(
+                self._pending_feedback_context.execution_uuid,
+            )
+            if execution_token is not None and (session := get_trace_session()):
+                session.context.parent_otel_context = (
+                    self._pending_feedback_context.trace_context
+                )
+                session.context.resume_feedback = feedback
             return await self._resume_async_body(feedback, hook_state)
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             if not hook_state["end_dispatched"]:
                 self._dispatch_execution_end_failure(e)
             await self._emit_flow_failed(e)
@@ -1410,41 +1456,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._detach_usage_aggregation_listener()
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
-            end_execution(execution_token)
+            self._end_trace_execution(execution_token)
 
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
     ) -> Any:
-        if get_current_parent_id() is None:
-            reset_emission_counter()
-            reset_last_event_id()
-
-        # Emitted unconditionally, matching both the kickoff path and the
-        # FlowFinishedEvent below. This used to sit behind suppress_flow_events,
-        # which produced an unpaired finish: the finish emit is not gated, so a
-        # resumed flow reported finishing without ever having started, breaking
-        # every started/finished pairing and duration built on it.
-        #
-        # suppress_flow_events is not the right gate for emission in any case. It
-        # asks for console quiet - see _flow_origin in events/event_listener.py,
-        # which says so and notes it "can legitimately be set on a caller's own
-        # flow" - and the listener already honours it where it prints. Suppressing
-        # the event instead removed the resumed leg from telemetry entirely.
-        future = crewai_event_bus.emit(
-            self,
-            FlowStartedEvent(
-                type="flow_started",
-                flow_name=self._definition.name,
-                inputs=None,
-            ),
-        )
-        if future and isinstance(future, Future):
-            try:
-                await asyncio.wrap_future(future)
-            except Exception:
-                logger.warning("FlowStartedEvent handler failed", exc_info=True)
-
-        get_env_context()
+        await self._open_flow_scope(None)
 
         context = self._pending_feedback_context
         if context is None:
@@ -1562,13 +1579,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     if isinstance(self._state, dict)
                     else self._state.model_dump()
                 )
-                self.persistence.save_pending_feedback(
-                    flow_uuid=e.context.flow_id,
-                    context=e.context,
-                    state_data=state_data,
-                )
-
-                crewai_event_bus.emit(
+                future = crewai_event_bus.emit(
                     self,
                     FlowPausedEvent(
                         type="flow_paused",
@@ -1579,6 +1590,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         message=e.context.message,
                         emit=e.context.emit,
                     ),
+                )
+                if future:
+                    await asyncio.wrap_future(future)
+                if session := get_trace_session():
+                    e.context.trace_context = session.context.otel_resume_context
+                self.persistence.save_pending_feedback(
+                    flow_uuid=e.context.flow_id,
+                    context=e.context,
+                    state_data=state_data,
                 )
                 return e
             raise
@@ -1647,19 +1667,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 except Exception:
                     logger.warning("FlowFinishedEvent handler failed", exc_info=True)
-
-            trace_listener = TraceCollectionListener()
-            if (
-                trace_listener.batch_manager.batch_owner_type == "flow"
-                and current_flow_id.get() == self.flow_id
-                and not trace_listener.batch_manager.defer_session_finalization
-                and not current_flow_defer_trace_finalization.get()
-            ):
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
 
         return final_result
 
@@ -2171,6 +2178,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 restore_from_state_id=restore_from_state_id,
             )
 
+        self._cel_now = datetime.now(timezone.utc)
+
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
         ctx = baggage.set_baggage("flow_input_files", input_files or {}, context=ctx)
         flow_token = attach(ctx)
@@ -2195,7 +2204,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if current_flow_request_id.get() is None:
             request_id_token = current_flow_request_id.set(self.flow_id)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
 
@@ -2220,6 +2229,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow_scope_open = False
 
         try:
+            execution_token = self._begin_trace_execution()
             from crewai.hooks.contexts import (
                 ExecutionEndContext,
                 ExecutionStartContext,
@@ -2404,12 +2414,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         if isinstance(self._state, dict)
                         else self._state.model_dump()
                     )
-                    self.persistence.save_pending_feedback(
-                        flow_uuid=e.context.flow_id,
-                        context=e.context,
-                        state_data=state_data,
-                    )
-
                     # Emit flow paused event
                     future = crewai_event_bus.emit(
                         self,
@@ -2436,6 +2440,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             ]
                         )
                         self._event_futures.clear()
+
+                    if session := get_trace_session():
+                        e.context.trace_context = session.context.otel_resume_context
+                    self.persistence.save_pending_feedback(
+                        flow_uuid=e.context.flow_id,
+                        context=e.context,
+                        state_data=state_data,
+                    )
 
                     # Return the pending exception instead of raising
                     # This allows the caller to handle the paused state gracefully
@@ -2509,19 +2521,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             "FlowFinishedEvent handler failed", exc_info=True
                         )
 
-                trace_listener = TraceCollectionListener()
-                if (
-                    trace_listener.batch_manager.batch_owner_type == "flow"
-                    and current_flow_id.get() == self.flow_id
-                    and not trace_listener.batch_manager.defer_session_finalization
-                    and not current_flow_defer_trace_finalization.get()
-                ):
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
-
             return final_output
         except Exception as e:
             # Pairing invariant: only fire the failure EXECUTION_END when this
@@ -2556,7 +2555,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_id.reset(flow_id_token)
             if flow_inputs_token is not None:
                 detach(flow_inputs_token)
-            end_execution(execution_token)
+            self._end_trace_execution(execution_token)
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
@@ -2633,11 +2632,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         should_emit_flow_started = not (
             defer_trace_finalization and deferred_started_event_id
         )
-        if current_flow_id.get() == self.flow_id:
-            TraceCollectionListener().batch_manager.defer_session_finalization = (
-                defer_trace_finalization
-            )
-
         flow_scope_open = False
         if (
             defer_trace_finalization
@@ -2718,18 +2712,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 except Exception:
                     logger.warning("FlowFailedEvent handler failed", exc_info=True)
 
-            trace_listener = TraceCollectionListener()
-            if (
-                trace_listener.batch_manager.batch_owner_type == "flow"
-                and current_flow_id.get() == self.flow_id
-                and not trace_listener.batch_manager.defer_session_finalization
-                and not current_flow_defer_trace_finalization.get()
-            ):
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
         except Exception:
             logger.warning("Failed to signal flow failure", exc_info=True)
 
@@ -3606,13 +3588,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         method_output: Any,
     ) -> Any:
         llm = feedback_definition.llm
-        llm_instance = (
-            _deserialize_llm_from_context(llm) if isinstance(llm, (str, dict)) else llm
-        )
         emit = feedback_definition.emit
         default_outcome = feedback_definition.default_outcome
         metadata = feedback_definition.metadata
         learn = feedback_definition.learn and self.memory is not None
+        llm_instance = _resolve_llm_instance(llm) if (emit or learn) else llm
 
         if learn:
             method_output = await asyncio.to_thread(
@@ -3705,22 +3685,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             elif emit:
                 collapsed_outcome = emit[0]
         elif emit:
-            collapse_llm = (
-                _deserialize_llm_from_context(llm)
-                if isinstance(llm, (str, dict))
-                else llm
-            )
-            if collapse_llm is not None:
-                collapsed_outcome = await asyncio.to_thread(
-                    self._collapse_to_outcome,
-                    feedback=raw_feedback,
-                    outcomes=emit,
-                    llm=collapse_llm,
+            collapse_llm = _resolve_llm_instance(llm)
+            if collapse_llm is None:
+                raise HumanFeedbackCollapseError(
+                    "Could not resolve an LLM to classify human feedback. "
+                    "Set llm= on @human_feedback or MODEL / MODEL_NAME / "
+                    "OPENAI_MODEL_NAME."
                 )
-            else:
-                collapsed_outcome = emit[0]
+            collapsed_outcome = await asyncio.to_thread(
+                self._collapse_to_outcome,
+                feedback=raw_feedback,
+                outcomes=emit,
+                llm=collapse_llm,
+            )
         if emit and collapsed_outcome is None:
-            collapsed_outcome = default_outcome or emit[0]
+            raise HumanFeedbackCollapseError(
+                f"Could not classify human feedback into one of {list(emit)}."
+            )
 
         result = HumanFeedbackResult(
             output=method_output,
@@ -3842,6 +3823,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Returns:
             One of the outcome strings that best matches the feedback intent.
+
+        Raises:
+            HumanFeedbackCollapseError: If the LLM cannot be called or its
+                response cannot be mapped to one of ``outcomes``.
         """
         from typing import Literal
 
@@ -3882,27 +3867,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 messages=[{"role": "user", "content": prompt}],
                 response_model=FeedbackOutcome,
             )
-
-            if isinstance(response, str):
-                import json
-
-                try:
-                    parsed = json.loads(response)
-                    return str(parsed.get("outcome", outcomes[0]))
-                except json.JSONDecodeError:
-                    response_clean = response.strip()
-                    for outcome in outcomes:
-                        if outcome.lower() == response_clean.lower():
-                            return outcome
-                    return outcomes[0]
-            elif isinstance(response, FeedbackOutcome):
-                return str(response.outcome)
-            elif hasattr(response, "outcome"):
-                return str(response.outcome)
-            else:
-                logger.warning(f"Unexpected response type: {type(response)}")
-                return outcomes[0]
-
         except HookAborted:
             raise
         except Exception as e:
@@ -3913,37 +3877,34 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 response = llm_instance.call(
                     messages=[{"role": "user", "content": prompt}],
                 )
-                response_clean = str(response).strip()
-
-                for outcome in outcomes:
-                    if outcome.lower() == response_clean.lower():
-                        return outcome
-
-                # Partial match (longest wins, first on length ties)
-                response_lower = response_clean.lower()
-                best_outcome: str | None = None
-                best_len = -1
-                for outcome in outcomes:
-                    if outcome.lower() in response_lower and len(outcome) > best_len:
-                        best_outcome = outcome
-                        best_len = len(outcome)
-                if best_outcome is not None:
-                    return best_outcome
-
-                logger.warning(
-                    f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
-                    f"Falling back to first outcome: {outcomes[0]}"
-                )
-                return outcomes[0]
-
             except HookAborted:
                 raise
             except Exception as fallback_err:
-                logger.warning(
-                    f"Simple prompting also failed: {fallback_err}. "
-                    f"Falling back to first outcome: {outcomes[0]}"
-                )
-                return outcomes[0]
+                raise HumanFeedbackCollapseError(
+                    f"Could not classify human feedback into {list(outcomes)}: "
+                    f"{fallback_err}"
+                ) from fallback_err
+            return _require_collapse_outcome(str(response), outcomes)
+
+        if isinstance(response, str):
+            import json
+
+            try:
+                parsed = json.loads(response)
+            except json.JSONDecodeError:
+                return _require_collapse_outcome(response, outcomes)
+            if isinstance(parsed, dict):
+                outcome = parsed.get("outcome")
+                if isinstance(outcome, str):
+                    return _require_collapse_outcome(outcome, outcomes)
+            return _require_collapse_outcome(response, outcomes)
+        if isinstance(response, FeedbackOutcome):
+            return str(response.outcome)
+        if hasattr(response, "outcome"):
+            return _require_collapse_outcome(str(response.outcome), outcomes)
+        raise HumanFeedbackCollapseError(
+            f"Unexpected collapse response type: {type(response)}"
+        )
 
     def _log_flow_event(
         self,

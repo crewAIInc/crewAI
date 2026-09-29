@@ -4,8 +4,7 @@ import subprocess
 import click
 from crewai_core.project import configured_project_definition, read_toml
 
-from crewai_cli.deploy.validate import normalize_package_name
-from crewai_cli.utils import build_env_with_all_tool_credentials
+from crewai_cli.utils import build_env_with_all_tool_credentials, normalize_package_name
 
 
 def _is_json_crew_project(project_root: Path | None = None) -> bool:

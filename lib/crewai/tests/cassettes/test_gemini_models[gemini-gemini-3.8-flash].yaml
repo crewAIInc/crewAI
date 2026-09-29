@@ -1,0 +1,77 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the capital of France?"}], "role":
+      "user"}], "generationConfig": {"thinkingConfig": {"include_thoughts": true}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '155'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.65.0 gl-python/3.13.15
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"**My Thought Process: Providing a
+        Direct Answer**\\n\\nOkay, so the user wants to know the capital of France.
+        Right, straightforward enough. My first step is to *immediately* identify
+        the central question: \\\"Capital of France?\\\" That's the core. No need
+        for fluff or ambiguity; clarity is key here, especially for someone who, presumably,
+        knows what they're looking for.\\n\\nNext, I need to retrieve the relevant
+        knowledge. Capital of France... Paris. Simple fact. Solidly established. No
+        debate.\\n\\nNow, how do I formulate the response? The user is likely very
+        well-versed in the specifics of cities and government, so I'll keep it concise
+        and accurate. A direct answer is all that's required. \\\"The capital of France
+        is Paris.\\\" That's it. Succinct, complete, and correct. Done.\\n\\n\\n\",\n
+        \           \"thought\": true\n          },\n          {\n            \"text\":
+        \"The capital of France is **Paris**.\",\n            \"thoughtSignature\":
+        \"EvUCCvICARFNMg8/4vvgyvFJnrzbczsj7uopma+hWpxZcfOjV0xuUc1aITo6NeNf3RNqb5f2TSPIbgZk4wempJOb2ZXI10ZGI9LmUi8uPKNHFKA0k4cbcUET6Y8eU18ymoOFAcBlIN7saWJm01yINKBkQSend2K9uoR1T94P8Q65JbGkcxKzOOoWe3c5Q66vonBxWmu++FxsWKmk2U8Spg1spMnZarzZJsl/mN0L3FY3fkejV5+i8EywJ8sU282s+Er6PnIfwV1Dmi08Ut3JsboqsiT4CFyp5uwBUqqo3soWa66tA0iV0I/S3nR2SSjWGb2XvLB1v/M1TxPWYkTuCSViRurPtT6MELSTYP+NwJ3UXqzj0amQhIPjXpXqozgSZZUDhPo4gMGr0b8sHp7uaqKOTt/PISw4211XDk4QLEcvZklozAoDggoqwXPUWsQUQqNUQxMP0rJZrNU7Zd04HKjVkFIM9BTvEaNhjMwrRCRrPMrXWYz1Pg==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        8,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\": 80,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 8\n      }\n
+        \   ],\n    \"thoughtsTokenCount\": 64,\n    \"serviceTier\": \"standard\"\n
+        \ },\n  \"modelVersion\": \"gemini-3.8-flash\",\n  \"responseId\": \"WK2mauioB9nbxs0PnK3_8AM\"\n}\n"
+    headers:
+      alt-svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      content-type:
+      - application/json; charset=UTF-8
+      date:
+      - Sun, 13 Sep 2026 14:04:11 GMT
+      server:
+      - scaffolding on HTTPServer2
+      server-timing:
+      - gfet4t7; dur=3461
+      transfer-encoding:
+      - chunked
+      vary:
+      - Origin
+      - X-Origin
+      - Referer
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-gemini-service-tier:
+      - standard
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

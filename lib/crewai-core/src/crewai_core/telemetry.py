@@ -50,6 +50,29 @@ TRACER_NAME: Final[str] = "crewai.telemetry"
 DeploySource = Literal["cli", "tui"]
 """Where a deployment was initiated from: a direct CLI command, or the run TUI."""
 
+DeployFailureReason = Literal[
+    "api_4xx",
+    "api_5xx",
+    "invalid_json",
+    "invalid_creation_response",
+    "network_error",
+    "zip_error",
+    "user_declined",
+    "unexpected",
+]
+"""Why ``crewai deploy create`` failed after the attempt was counted.
+
+A closed vocabulary, so the warehouse can group on it. ``api_4xx`` / ``api_5xx``
+classify the Enterprise API's response (the exact code rides separately as
+``status_code``); ``invalid_json`` is a 2xx whose body is not JSON, such as a
+proxy's HTML page; ``invalid_creation_response`` a 2xx JSON body that is not a
+creation payload (no ``uuid``), which is a broken API contract rather than a
+broken network; ``network_error`` a transport failure before any response;
+``zip_error`` a failure building the project archive; ``user_declined`` an
+abort at a confirmation prompt; ``unexpected`` anything else. Never the error
+message.
+"""
+
 
 def close_span(span: Span) -> None:
     """Set span status to OK and end it."""
@@ -67,15 +90,82 @@ def suppress_warnings() -> Any:
         yield
 
 
+class _ExportState(threading.local):
+    """Per-thread marker: True while CrewAI's own exporter runs on this thread."""
+
+    active: bool = False
+
+
+_export_state = _ExportState()
+
+
+class _OwnExportLogFilter(logging.Filter):
+    """Drop OTLP export logs emitted while CrewAI's own exporter is running.
+
+    ``OTLPSpanExporter`` retries an unreachable collector and logs a warning per
+    attempt plus a final error, all on the batch worker thread. That output
+    lands on the user's console although the failure is harmless. Scoping the
+    filter to that thread keeps the logs of any OTLP exporter the user runs in
+    the same process.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not _export_state.active
+
+
+_OWN_EXPORT_LOG_FILTER = _OwnExportLogFilter()
+
+
 class SafeOTLPSpanExporter(OTLPSpanExporter):
-    """OTLP exporter that swallows export failures so telemetry never crashes the app."""
+    """OTLP exporter that neither raises nor logs when the collector is unreachable."""
+
+    def __init__(self, endpoint: str, timeout: int) -> None:
+        super().__init__(endpoint=endpoint, timeout=timeout)
+        # Idempotent: a logger holds at most one reference to a given filter.
+        logging.getLogger(OTLPSpanExporter.__module__).addFilter(_OWN_EXPORT_LOG_FILTER)
 
     def export(self, spans: Any) -> SpanExportResult:
+        _export_state.active = True
         try:
             return super().export(spans)
         except Exception as e:
             logger.debug("Telemetry export failed: %s", e)
             return SpanExportResult.FAILURE
+        finally:
+            _export_state.active = False
+
+    def shutdown(self) -> None:
+        # flush_and_shutdown stops the exporter before the processor does, and
+        # the base class logs a warning for the repeat call.
+        _export_state.active = True
+        try:
+            super().shutdown()  # type: ignore[no-untyped-call]  # unannotated upstream
+        finally:
+            _export_state.active = False
+
+
+FINAL_FLUSH_SECONDS: Final[int] = 10
+
+
+def flush_and_shutdown(
+    provider: TracerProvider, exporter: SafeOTLPSpanExporter
+) -> None:
+    """Export what is still buffered, waiting at most ``FINAL_FLUSH_SECONDS``.
+
+    ``BatchSpanProcessor.force_flush`` ignores its timeout and runs the export,
+    retry loop included, on the calling thread
+    (open-telemetry/opentelemetry-python#4568). With the collector unreachable
+    that held process exit for the exporter's whole retry budget. Flushing on a
+    helper thread and then stopping the exporter ends the loop at the deadline;
+    when the export succeeds sooner, the join returns as soon as it is done.
+    """
+    flush = threading.Thread(
+        target=provider.force_flush, name="crewai-telemetry-flush", daemon=True
+    )
+    flush.start()
+    flush.join(FINAL_FLUSH_SECONDS)
+    exporter.shutdown()
+    provider.shutdown()
 
 
 class CommonAttributesSpanProcessor(SpanProcessor):
@@ -181,6 +271,9 @@ class Telemetry:
 
     _instance: ClassVar[Self | None] = None
     _lock: ClassVar[threading.Lock] = threading.Lock()
+    _TRUTHY_ENV: ClassVar[frozenset[str]] = frozenset({"1", "on", "true", "yes"})
+    _FALSY_ENV: ClassVar[frozenset[str]] = frozenset({"", "0", "false", "no", "off"})
+    _warned_env_flags: ClassVar[set[tuple[str, str]]] = set()
 
     def __new__(cls) -> Self:
         if cls._instance is None:
@@ -215,14 +308,11 @@ class Telemetry:
                 CommonAttributesSpanProcessor(common_span_attributes())
             )
 
-            processor = BatchSpanProcessor(
-                SafeOTLPSpanExporter(
-                    endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
-                    timeout=30,
-                )
+            self._exporter = SafeOTLPSpanExporter(
+                endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
+                timeout=30,
             )
-
-            self.provider.add_span_processor(processor)
+            self.provider.add_span_processor(BatchSpanProcessor(self._exporter))
             self._register_shutdown_handlers()
             self.ready = True
         except Exception as e:
@@ -234,11 +324,38 @@ class Telemetry:
             self.ready = False
 
     @classmethod
+    def _env_flag_enabled(cls, name: str, *, default: bool = False) -> bool:
+        """Return whether ``name`` is a conventional yes-value.
+
+        Yes: ``true``, ``1``, ``yes``, ``on``. No: unset, ``false``, ``0``,
+        ``no``, ``off``, empty. Anything else is treated as unset and logged
+        once per ``(name, raw)`` pair for the process.
+        """
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        value = raw.strip().lower()
+        if value in cls._TRUTHY_ENV:
+            return True
+        if value in cls._FALSY_ENV:
+            return False
+        warning_key = (name, raw)
+        if warning_key not in cls._warned_env_flags:
+            cls._warned_env_flags.add(warning_key)
+            logger.warning(
+                "Unrecognized value %r for %s; expected true/1/yes/on or "
+                "false/0/no/off. Treating as unset.",
+                raw,
+                name,
+            )
+        return default
+
+    @classmethod
     def _is_telemetry_disabled(cls) -> bool:
         return (
-            os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
+            cls._env_flag_enabled("OTEL_SDK_DISABLED")
+            or cls._env_flag_enabled("CREWAI_DISABLE_TELEMETRY")
+            or cls._env_flag_enabled("CREWAI_DISABLE_TRACKING")
         )
 
     def _should_execute_telemetry(self) -> bool:
@@ -252,8 +369,7 @@ class Telemetry:
         if not self.ready:
             return
         try:
-            self.provider.force_flush(timeout_millis=5000)
-            self.provider.shutdown()
+            flush_and_shutdown(self.provider, self._exporter)
             self.ready = False
         except Exception as e:
             logger.debug("Telemetry shutdown failed: %s", e)
@@ -388,6 +504,41 @@ class Telemetry:
 
         self._safe_telemetry_procedure(_operation)
 
+    def crew_deployment_failed_span(
+        self,
+        reason: DeployFailureReason,
+        source: DeploySource = "cli",
+        status_code: int | None = None,
+    ) -> None:
+        """Records that ``crewai deploy create`` failed after the attempt was counted.
+
+        :meth:`create_crew_deployment_span` counts attempts and
+        :meth:`crew_deployment_created_span` counts successes; the gap between
+        them was measurable but had no cause attached. This span carries the
+        cause from a closed vocabulary, plus the HTTP status when the API
+        answered. Emits no feature count, for the same reason as
+        :meth:`crew_deployment_created_span`.
+
+        Args:
+            reason: Why the create failed.
+            source: Where the deployment was initiated from.
+            status_code: HTTP status of the API response, when there was one.
+        """
+
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Crew Deployment Failed")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "reason", reason)
+            if status_code is not None:
+                self._add_attribute(span, "status_code", status_code)
+            self._add_attribute(span, "source", source)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
     def get_crew_logs_span(
         self, uuid: str | None, log_type: str = "deployment"
     ) -> None:
@@ -421,8 +572,29 @@ class Telemetry:
 
         self._safe_telemetry_procedure(_operation)
 
-    def feature_usage_span(self, feature: str) -> None:
-        """Records that a feature was used. One span = one count."""
+    # What a caller may add to a feature span, per feature. Anything else is
+    # dropped: the span counts a use, and a key nobody agreed on is how run
+    # content — a prompt, an output, a path — or an identifier reaches stats
+    # that promise to hold neither. The dimensions every span already carries
+    # are never on a list: a caller that could overwrite `feature` could file
+    # its use under somebody else's name.
+    FEATURE_ATTRIBUTES: ClassVar[dict[str, frozenset[str]]] = {
+        "cli_usage:eval": frozenset({"authenticated"}),
+    }
+
+    def feature_usage_span(
+        self, feature: str, attributes: dict[str, str] | None = None
+    ) -> None:
+        """Records that a feature was used. One span = one count.
+
+        Args:
+            feature: Feature identifier, e.g. ``"cli_usage:eval"``.
+            attributes: What a caller knows about THIS use that the common
+                attributes cannot know. Only the keys ``FEATURE_ATTRIBUTES`` lists
+                for this feature are kept; anything else is dropped, including
+                the dimensions every span already carries (the project id, the
+                runtime and the version).
+        """
         from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
@@ -430,6 +602,10 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "feature", feature)
+            allowed = self.FEATURE_ATTRIBUTES.get(feature, frozenset())
+            for key, value in (attributes or {}).items():
+                if key in allowed:
+                    self._add_attribute(span, key, str(value))
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)

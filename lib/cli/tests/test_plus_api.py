@@ -19,6 +19,33 @@ class TestPlusAPI(unittest.TestCase):
         self.assertTrue(self.api.headers["X-Crewai-Version"])
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.create_evaluation("6f31fe1a-20bd-4bfe-a011-25d6b9341f62")
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={"execution_id": "6f31fe1a-20bd-4bfe-a011-25d6b9341f62"},
+            timeout=120.0,  # AMP reads the run's spans inside this request
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_get_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.get_evaluation("ev-1")
+
+        mock_make_request.assert_called_once_with(
+            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_login_to_tool_repository(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response

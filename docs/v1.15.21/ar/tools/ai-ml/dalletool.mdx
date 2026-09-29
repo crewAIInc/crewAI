@@ -1,0 +1,52 @@
+---
+title: أداة DALL-E
+description: أداة `DallETool` هي أداة قوية مصممة لتوليد الصور من الأوصاف النصية.
+icon: image
+mode: "wide"
+---
+
+# `DallETool`
+
+## الوصف
+
+تُستخدم هذه الأداة لمنح الوكيل القدرة على توليد الصور باستخدام نموذج DALL-E. وهو نموذج قائم على المحولات يولّد الصور من الأوصاف النصية.
+تتيح هذه الأداة للوكيل توليد صور بناءً على النص المدخل من المستخدم.
+
+## التثبيت
+
+ثبّت حزمة crewai_tools
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+تذكر أنه عند استخدام هذه الأداة، يجب أن يُولَّد النص من قبل الوكيل نفسه. يجب أن يكون النص وصفاً للصورة التي تريد توليدها.
+
+```python Code
+from crewai_tools import DallETool
+
+Agent(
+    ...
+    tools=[DallETool()],
+)
+```
+
+إذا لزم الأمر، يمكنك أيضاً ضبط معاملات نموذج DALL-E عبر تمريرها كمعاملات لفئة `DallETool`. على سبيل المثال:
+
+```python Code
+from crewai_tools import DallETool
+
+dalle_tool = DallETool(model="dall-e-3",
+                       size="1024x1024",
+                       quality="standard",
+                       n=1)
+
+Agent(
+    ...
+    tools=[dalle_tool]
+)
+```
+
+المعاملات مبنية على طريقة `client.images.generate` من API الخاص بـ OpenAI. لمزيد من المعلومات حول المعاملات،
+يرجى الرجوع إلى [وثائق OpenAI API](https://platform.openai.com/docs/guides/images/introduction?lang=python).

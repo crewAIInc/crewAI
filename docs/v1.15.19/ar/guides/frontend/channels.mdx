@@ -1,0 +1,156 @@
+---
+title: القنوات
+description: شغّل نفس وكيل CrewAI كروبوت على Slack أو Teams باستخدام CopilotKit Channels SDK ومنصة Intelligence المُدارة.
+icon: messages
+mode: "wide"
+---
+
+## قابل مستخدميك حيث هم بالفعل
+
+وكيل CrewAI الذي بنيته في [النظرة العامة](/edge/ar/guides/frontend/overview) لا يجب أن يعيش خلف تطبيق ويب فقط. يمكن لنفس الـ Crew أو الـ Flow أن يعمل كروبوت داخل منصة مراسلة. لا حاجة لإعادة البناء ولا لنسخة ثانية من منطق وكيلك: يبقى الوكيل مكشوفًا عبر [بروتوكول AG-UI](https://docs.ag-ui.com)، وتقوم **قناة** بتشغيله من Slack أو Microsoft Teams.
+
+يوفّر [Channels SDK](https://docs.copilotkit.ai/slack) من CopilotKit تلك القناة. تُعرّف `createChannel` في وقت تشغيل صغير، وتوجّهه إلى وكيل CrewAI الخاص بك، وتتولى منصة **Intelligence** المُدارة من CopilotKit التوسّط في الاتصال مع مزوّد المراسلة.
+
+<Note>
+على خلاف بقية هذا القسم، فإن Channels **ليست ذاتية الاستضافة**. تعمل من خلال **CopilotKit Intelligence** — وهي سطح مطلوب لـ Channels، بحكم التصميم (تتوفر طبقة مجانية). تحتفظ Intelligence باتصال المنصة وبيانات الاعتماد، وتستقبل كل حدث من المنصة، وتسلّم الدور إلى عملية قناتك؛ تشغّل عمليتك الوكيل وتبثّ الرد مرة أخرى. تقوم بإعداد Slack مرة واحدة في لوحة تحكم Intelligence، ولا تدخل بيانات اعتماد المنصة عمليتك أبدًا. يبقى وكيلك وأدواتك وحالتك ملكًا لك.
+</Note>
+
+## كيف تتكامل الأجزاء معًا
+
+لا يتغير أي شيء بخصوص خادم وكيل CrewAI الخاص بك. يستمر في تقديم الـ Crew أو الـ Flow عبر AG-UI تمامًا كما في النظرة العامة. ما تضيفه هو عملية Node منفصلة طويلة الأمد مبنية باستخدام `@copilotkit/channels`: تسجّل قناة على `CopilotRuntime`، وتتصل بـ Intelligence، وتشغّل وكيلك كلما وصلت رسالة.
+
+```
+Slack / Teams  ──►  CopilotKit Intelligence  ──►  channel process (Node)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+تحتفظ عملية القناة باتصال دائم مع بوابة Intelligence، لذا فهي تحتاج إلى مضيف طويل الأمد — لا يمكن لمعالج طلبات بلا خادم (serverless) أن يملك ذلك الاتصال. يمكن لخادم CrewAI الخاص بك أن يستمر في تقديم واجهة الويب الأمامية من النظرة العامة في الوقت نفسه: تطبيق الويب والقناة ما هما إلا عميلان لنقطة نهاية AG-UI واحدة.
+
+## دليل التكامل
+
+<Steps>
+
+<Step title="ثبّت حزم Channels">
+
+يأتي Channels SDK مكتمل العناصر — كل منصة تُشحن في الحزمة الواحدة، بلا محوّل خاص بكل منصة لتثبيته. أضفه إلى جانب وقت التشغيل الذي يستضيف القناة وعميل CrewAI AG-UI:
+
+```bash
+npm install @copilotkit/channels @copilotkit/runtime @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="أنشئ قناة في Intelligence">
+
+في [لوحة تحكم CopilotKit](https://docs.copilotkit.ai/slack)، أنشئ قناة واربط Slack — ترشدك Intelligence خلال إنشاء تطبيق Slack وتحتفظ ببيانات اعتماده. يترك ذلك متغيّري بيئة لعمليتك، كلاهما من لوحة التحكم:
+
+```bash
+export INTELLIGENCE_API_KEY=...      # authenticates the runtime with Intelligence (free tier available)
+export INTELLIGENCE_CHANNEL_ID=...   # the Channel ID, matched by createChannel({ name })
+```
+
+</Step>
+
+<Step title="عرّف القناة">
+
+تُعرّف `createChannel` القناة وتربط وكيلك بها. ابنِ الوكيل كمصنع لكل خيط (thread) بحيث تحصل كل محادثة على جلستها الخاصة، مستخدمًا نفس `CrewAIAgent` الذي تستخدمه النظرة العامة في وقت تشغيل الويب، موجّهًا إلى نقطة نهاية AG-UI الخاصة بك. تتيح `identifyUser: "platform"` لـ Intelligence ربط كل مستخدم من المنصة بهوية ثابتة.
+
+```ts
+// channel.ts
+import { createChannel } from "@copilotkit/channels";
+import { CrewAIAgent } from "@ag-ui/crewai";
+
+const channel = createChannel({
+  name: process.env.INTELLIGENCE_CHANNEL_ID!, // must match the Channel ID in Intelligence
+  identifyUser: "platform",
+  // A fresh agent per conversation, pointed at your CrewAI AG-UI endpoint.
+  agent: (threadId) => {
+    const agent = new CrewAIAgent({ url: "http://localhost:8000/recipe" });
+    agent.threadId = threadId;
+    return agent;
+  },
+});
+
+// A mention subscribes the thread and runs the agent; afterwards every message
+// in a subscribed thread runs it without needing another mention.
+channel.onMention(async ({ thread }) => {
+  await thread.subscribe();
+  await thread.runAgent();
+});
+
+channel.onMessage(async ({ thread }) => {
+  if (await thread.isSubscribed()) await thread.runAgent();
+});
+
+export { channel };
+```
+
+</Step>
+
+<Step title="سجّل القناة على وقت التشغيل">
+
+أنشئ `CopilotRuntime` مع بوابة Intelligence وقناتك، ثم قدّمه باستخدام `createCopilotNodeListener`. تبقى خريطة `agents` فارغة — القناة توفّر وكيلها الخاص. انتظر حتى تكون القناة جاهزة كي يفشل بدء التشغيل بصوت عالٍ عند وجود إعداد معطوب.
+
+```ts
+// server.ts
+import { createServer } from "node:http";
+import { CopilotRuntime, CopilotKitIntelligence } from "@copilotkit/runtime/v2";
+import { createCopilotNodeListener } from "@copilotkit/runtime/v2/node";
+import { channel } from "./channel";
+
+const runtime = new CopilotRuntime({
+  agents: {}, // the channel supplies its own agent; no web-facing agents needed
+  intelligence: new CopilotKitIntelligence({
+    apiKey: process.env.INTELLIGENCE_API_KEY!, // free tier available
+  }),
+  channels: [channel],
+});
+
+const listener = createCopilotNodeListener({ runtime });
+await listener.channels?.ready({ timeoutMs: 15_000 });
+
+createServer(listener).listen(3123, () => {
+  console.log("Channels runtime listening on port 3123");
+});
+```
+
+</Step>
+
+<Step title="شغّل وقت تشغيل القناة">
+
+ابدأه إلى جانب خادم وكيل CrewAI الخاص بك:
+
+```bash
+uvicorn server:app --port 8000   # terminal 1 — CrewAI agent server
+npx tsx server.ts                 # terminal 2 — Channels runtime
+```
+
+اذكر الروبوت في Slack أو Teams فيشغّل الـ Crew أو الـ Flow الخاص بك، ويبثّ الرد مرة أخرى داخل الخيط. يبقى الخيط مشتركًا، لذا تعمل رسائل المتابعة دون الحاجة إلى ذكر آخر.
+
+</Step>
+
+</Steps>
+
+## نموذج الأحداث
+
+تتفاعل القناة مع أحداث المنصة عبر معالِجات، ويستقبل كل معالِج خيطًا (`thread`) تديره بعدد قليل من الدوال:
+
+- **`channel.onMention`** يُطلَق عندما يذكر مستخدم الروبوت بـ @. استدعِ `thread.subscribe()` للانضمام إلى الخيط، ثم `thread.runAgent()` لتشغيل وكيل CrewAI الخاص بك عند الذكر.
+- **`channel.onMessage`** يُطلَق عند كل رسالة في خيط يمكن للروبوت رؤيته. قيّده بـ `thread.isSubscribed()` كي لا يستجيب الوكيل إلا حيث انضمّ، ثم `thread.runAgent()`.
+- **`thread.runAgent()`** يشغّل وكيل CrewAI المرفق للدور الحالي ويبثّ مخرجاته مرة أخرى داخل القناة. مرّر `{ prompt }` لتجاوز النص الذي يعمل عليه الوكيل.
+
+يستقبل وكيلك `RunAgentInput` عاديًا من AG-UI ويصدر أحداث AG-UI عادية؛ تبقى آليات المنصة خلف القناة، لذا يعمل نفس الـ Crew أو الـ Flow دون تغيير عبر كل منصة. تكشف القناة أيضًا معالِجات للترحيبات والمقاطعات والأوامر والتفاعلات والنوافذ (modals) — راجع [مرجع `Channel`](https://docs.copilotkit.ai/reference/channels/classes/Channel) للاطلاع على السطح الكامل.
+
+## دعم المنصات
+
+يغطي مسار Intelligence المُدار **Slack** و**Microsoft Teams** اليوم — يعمل نفس كود القناة على أيٍّ منهما، وتفيد `message.platform` / `thread.platform` بالأصل الأصلي. تُبلَغ المنصات الأخرى (Discord وTelegram وWhatsApp) عبر **محوّلات مباشرة** يشغّلها المطوّر بدلًا من المسار المُدار — تملك عمليتك الخاصة بيانات اعتماد المنصة والنقل. راجع [توثيق CopilotKit Channels](https://docs.copilotkit.ai/slack) للاطلاع على قائمة المنصات الحالية والإعداد الخاص بكل منصة.
+
+## ذات صلة
+
+<CardGroup cols={2}>
+  <Card title="النظرة العامة على الواجهة الأمامية" icon="browser" href="/edge/ar/guides/frontend/overview">
+    قدّم الـ Crew أو الـ Flow الخاص بك عبر AG-UI — الأساس الذي تُبنى عليه كل قناة.
+  </Card>
+  <Card title="التدخل البشري (Human-in-the-Loop)" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    أوقف الوكيل مؤقتًا لجمع موافقة المستخدم أو مدخلاته في منتصف التشغيل.
+  </Card>
+</CardGroup>

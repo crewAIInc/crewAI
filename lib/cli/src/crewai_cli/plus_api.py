@@ -18,8 +18,41 @@ class PlusAPI(_CorePlusAPI):
 
     The ZIP deployment methods live here as well as in newer crewai-core
     versions so editable CLI installs still work when an older crewai-core is
-    present in the runtime environment.
+    present in the runtime environment. The evaluation methods live here
+    because only the CLI calls them.
     """
+
+    EVALUATIONS_RESOURCE = f"{_CorePlusAPI.TRACING_RESOURCE}/evaluations"
+    # AMP reads the run's spans from Wharf inside the POST; a large run takes a while.
+    EVALUATION_START_TIMEOUT = 120.0
+    EVALUATION_POLL_TIMEOUT = 30.0
+
+    def create_evaluation(
+        self, execution_id: str, *, eval_config: str | None = None
+    ) -> httpx.Response:
+        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval).
+
+        EVAL_CONFIG is the project's own `eval.jsonc` when it has one: what
+        good means for this crew, in its own words. Sent as it was written,
+        comments and all, and read by the grader rather than here.
+        """
+        body: dict[str, str] = {"execution_id": execution_id}
+        if eval_config:
+            body["eval_config"] = eval_config
+        return self._make_request(
+            "POST",
+            self.EVALUATIONS_RESOURCE,
+            json=body,
+            timeout=self.EVALUATION_START_TIMEOUT,
+        )
+
+    def get_evaluation(self, evaluation_id: str) -> httpx.Response:
+        """The evaluation's status and, once done, its verdict."""
+        return self._make_request(
+            "GET",
+            f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}",
+            timeout=self.EVALUATION_POLL_TIMEOUT,
+        )
 
     def _make_multipart_request(
         self,
