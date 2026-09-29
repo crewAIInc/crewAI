@@ -269,6 +269,48 @@ def test_core_telemetry_records_feature_usage(
     span.end.assert_called_once()
 
 
+def test_core_feature_span_keeps_only_what_the_feature_may_send(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each feature names what it may add. A key off its list — an id, run
+    content, or a dimension every span already carries — is dropped, and a
+    feature with no list sends nothing extra."""
+    from crewai_core.telemetry import Telemetry
+
+    Telemetry._instance = None
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    monkeypatch.setattr(
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
+    )
+    offered = {
+        "authenticated": "true",
+        "execution_id": "run-1",
+        "organization_id": "org-1",
+        "feature": "someone_else",
+        "crewai_version": "0.0.0",
+    }
+
+    telemetry = Telemetry()
+    telemetry.feature_usage_span("cli_usage:eval", offered)
+    sent = {call.args[0]: call.args[1] for call in span.set_attribute.call_args_list}
+    assert sent["authenticated"] == "true"
+    assert sent["feature"] == "cli_usage:eval"
+    assert sent["crewai_version"] != "0.0.0"
+    assert "execution_id" not in sent and "organization_id" not in sent
+
+    span.set_attribute.reset_mock()
+    telemetry.feature_usage_span("cli_usage:deploy", offered)
+    sent = {call.args[0]: call.args[1] for call in span.set_attribute.call_args_list}
+    assert "authenticated" not in sent and sent["feature"] == "cli_usage:deploy"
+
+
 def test_core_telemetry_records_flow_creation_version(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
