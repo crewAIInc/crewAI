@@ -10,9 +10,9 @@ from datetime import datetime
 import inspect
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Final, Literal
 
-from crewai_core.printer import PRINTER, ColoredText, Printer
+from crewai_core.printer import ColoredText, Printer
 from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
@@ -126,16 +126,6 @@ def resolve_plus_response(response: Any) -> Any:
             return pool.submit(ctx.run, asyncio.run, await_response()).result()
 
     return asyncio.run(await_response())
-
-
-class SummaryContent(TypedDict):
-    """Structure for summary content entries.
-
-    Attributes:
-        content: The summarized content.
-    """
-
-    content: str
 
 
 console = Console()
@@ -840,18 +830,6 @@ def handle_context_length(
         )
 
 
-def _estimate_token_count(text: str) -> int:
-    """Estimate token count using a conservative cross-provider heuristic.
-
-    Args:
-        text: The text to estimate tokens for.
-
-    Returns:
-        Estimated token count (roughly 1 token per 4 characters).
-    """
-    return len(text) // 4
-
-
 def _content_parts_text(content: list[dict[str, Any]]) -> str:
     """Text carried by a multimodal content-part list.
 
@@ -889,194 +867,6 @@ def message_content_text(msg: LLMMessage) -> str:
     return str(content)
 
 
-def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
-    """Split text into parts each estimated to fit within max_tokens."""
-    if not text:
-        return []
-    if _estimate_token_count(text) <= max_tokens:
-        return [text]
-
-    # Inverse of _estimate_token_count (len // 4): each slice is at most max_tokens.
-    max_chars = max(1, max_tokens * 4)
-    return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
-
-
-def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
-    """Split a message whose content alone exceeds max_tokens into sub-messages."""
-    msg_text = message_content_text(msg)
-    if _estimate_token_count(msg_text) <= max_tokens:
-        return [msg]
-
-    # Reserve budget for the [Part i/n] prefix added to each sub-message.
-    body_max_tokens = max(1, max_tokens - 5)
-    parts = _split_text_by_token_limit(msg_text, body_max_tokens)
-    total_parts = len(parts)
-    expanded: list[LLMMessage] = []
-
-    for index, part in enumerate(parts, start=1):
-        part_content = (
-            f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
-        )
-        expanded.append({**msg, "content": part_content})
-
-    return expanded
-
-
-def _normalize_messages_for_chunking(
-    messages: list[LLMMessage], max_tokens: int
-) -> list[LLMMessage]:
-    """Return non-system messages with oversized entries split to fit max_tokens."""
-    normalized: list[LLMMessage] = []
-    for msg in messages:
-        if msg.get("role") == "system":
-            continue
-        normalized.extend(_expand_oversized_message(msg, max_tokens))
-    return normalized
-
-
-def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
-    """Format messages with role labels for summarization.
-
-    Skips system messages. Handles None content, tool_calls, and
-    multimodal content blocks.
-
-    Args:
-        messages: List of messages to format.
-
-    Returns:
-        Role-labeled conversation text.
-    """
-    lines: list[str] = []
-    for msg in messages:
-        role = msg.get("role", "user")
-        if role == "system":
-            continue
-
-        content = msg.get("content")
-        if content is None:
-            tool_calls = msg.get("tool_calls")
-            if tool_calls:
-                tool_names = []
-                for tc in tool_calls:
-                    func = tc.get("function", {})
-                    name = (
-                        func.get("name", "unknown")
-                        if isinstance(func, dict)
-                        else "unknown"
-                    )
-                    tool_names.append(name)
-                content = f"[Called tools: {', '.join(tool_names)}]"
-            else:
-                content = ""
-        elif isinstance(content, list):
-            content = _content_parts_text(content)
-
-        if role == "assistant":
-            label = "[ASSISTANT]:"
-        elif role == "tool":
-            tool_name = msg.get("name", "unknown")
-            label = f"[TOOL_RESULT ({tool_name})]:"
-        else:
-            label = "[USER]:"
-
-        lines.append(f"{label} {content}")
-
-    return "\n\n".join(lines)
-
-
-def _split_messages_into_chunks(
-    messages: list[LLMMessage], max_tokens: int
-) -> list[list[LLMMessage]]:
-    """Split messages into chunks at message boundaries.
-
-    Excludes system messages and expands oversized single messages before
-    chunking. Each chunk stays under max_tokens based on estimated token count.
-
-    Args:
-        messages: List of messages to split.
-        max_tokens: Maximum estimated tokens per chunk.
-
-    Returns:
-        List of message chunks.
-    """
-    normalized = _normalize_messages_for_chunking(messages, max_tokens)
-    if not normalized:
-        return []
-
-    chunks: list[list[LLMMessage]] = []
-    current_chunk: list[LLMMessage] = []
-    current_tokens = 0
-
-    for msg in normalized:
-        msg_tokens = _estimate_token_count(message_content_text(msg))
-
-        if current_chunk and (current_tokens + msg_tokens) > max_tokens:
-            chunks.append(current_chunk)
-            current_chunk = []
-            current_tokens = 0
-
-        current_chunk.append(msg)
-        current_tokens += msg_tokens
-
-    if current_chunk:
-        chunks.append(current_chunk)
-
-    return chunks
-
-
-def _extract_summary_tags(text: str) -> str:
-    """Extract content between <summary></summary> tags.
-
-    Falls back to the full text if no tags are found.
-
-    Args:
-        text: Text potentially containing summary tags.
-
-    Returns:
-        Extracted summary content, or full text if no tags found.
-    """
-    match = re.search(r"<summary>(.*?)</summary>", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return text.strip()
-
-
-async def _asummarize_chunks(
-    chunks: list[list[LLMMessage]],
-    llm: LLM | BaseLLM,
-    callbacks: list[TokenCalcHandler],
-) -> list[SummaryContent]:
-    """Summarize multiple message chunks concurrently using asyncio.
-
-    Args:
-        chunks: List of message chunks to summarize.
-        llm: LLM instance (must support ``acall``).
-        callbacks: List of callbacks for the LLM.
-
-    Returns:
-        Ordered list of summary contents, one per chunk.
-    """
-
-    async def _summarize_one(chunk: list[LLMMessage]) -> SummaryContent:
-        conversation_text = _format_messages_for_summary(chunk)
-        summarization_messages = [
-            format_message_for_llm(
-                I18N_DEFAULT.slice("summarizer_system_message"), role="system"
-            ),
-            format_message_for_llm(
-                I18N_DEFAULT.slice("summarize_instruction").format(
-                    conversation=conversation_text
-                ),
-            ),
-        ]
-        summary = await llm.acall(summarization_messages, callbacks=callbacks)
-        extracted = _extract_summary_tags(str(summary))
-        return {"content": extracted}
-
-    results = await asyncio.gather(*[_summarize_one(chunk) for chunk in chunks])
-    return list(results)
-
-
 def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
@@ -1098,69 +888,11 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         verbose: Whether to print progress.
     """
-    preserved_files: dict[str, Any] = {}
-    for msg in messages:
-        if msg.get("role") == "user" and msg.get("files"):
-            preserved_files.update(msg["files"])
+    from crewai.utilities.summarize_messages import SummarizeMessages
 
-    system_messages = [m for m in messages if m.get("role") == "system"]
-    non_system_messages = [m for m in messages if m.get("role") != "system"]
-
-    if not non_system_messages:
-        return
-
-    max_tokens = llm.get_context_window_size()
-    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
-
-    total_chunks = len(chunks)
-
-    if total_chunks <= 1:
-        summarized_contents: list[SummaryContent] = []
-        for idx, chunk in enumerate(chunks, 1):
-            if verbose:
-                PRINTER.print(
-                    content=f"Summarizing {idx}/{total_chunks}...",
-                    color="yellow",
-                )
-            conversation_text = _format_messages_for_summary(chunk)
-            summarization_messages = [
-                format_message_for_llm(
-                    I18N_DEFAULT.slice("summarizer_system_message"), role="system"
-                ),
-                format_message_for_llm(
-                    I18N_DEFAULT.slice("summarize_instruction").format(
-                        conversation=conversation_text
-                    ),
-                ),
-            ]
-            summary = llm.call(summarization_messages, callbacks=callbacks)
-            extracted = _extract_summary_tags(str(summary))
-            summarized_contents.append({"content": extracted})
-    else:
-        if verbose:
-            PRINTER.print(
-                content=f"Summarizing {total_chunks} chunks in parallel...",
-                color="yellow",
-            )
-        coro = _asummarize_chunks(chunks=chunks, llm=llm, callbacks=callbacks)
-        if is_inside_event_loop():
-            ctx = contextvars.copy_context()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                summarized_contents = pool.submit(ctx.run, asyncio.run, coro).result()
-        else:
-            summarized_contents = asyncio.run(coro)
-
-    merged_summary = "\n\n".join(content["content"] for content in summarized_contents)
-
-    messages.clear()
-    messages.extend(system_messages)
-
-    summary_message = format_message_for_llm(
-        I18N_DEFAULT.slice("summary").format(merged_summary=merged_summary)
-    )
-    if preserved_files:
-        summary_message["files"] = preserved_files
-    messages.append(summary_message)
+    SummarizeMessages(
+        messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
+    ).summarize()
 
 
 def show_agent_logs(
