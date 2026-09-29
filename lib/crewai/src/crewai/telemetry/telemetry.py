@@ -1293,6 +1293,9 @@ class Telemetry:
     # its use under somebody else's name.
     FEATURE_ATTRIBUTES: ClassVar[dict[str, frozenset[str]]] = {
         "cli_usage:eval": frozenset({"authenticated"}),
+        # The models compared are provider/model names anyone can read off a
+        # price list, never a run, an output or an organization.
+        "cli_usage:eval_models": frozenset({"authenticated", "models", "models_count"}),
     }
 
     def feature_usage_span(
