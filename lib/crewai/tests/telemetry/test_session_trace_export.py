@@ -212,6 +212,8 @@ def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recor
     # a run that was exported whole, and not where tracing messages are suppressed.
     shown = recorded and suppression is None
     assert ("View traces:" in output) == shown
+    assert ("Execution Traces" in output and "╭" in output) == shown
+    assert ("Ephemeral Execution Traces" in output) == (shown and not authenticated)
     assert (url in output.replace("\n", "")) == shown
     assert len(collector.batches) == int(authenticated or approved)
     # A run whose spans reached Wharf is recorded for `crewai eval`, silently,
@@ -223,6 +225,10 @@ def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recor
         assert written["tier"] == ("authenticated" if authenticated else "ephemeral")
         assert written["started_at"] and written["finished_at"] and written["recorded_at"]
         assert written["amp_base_url"] == collector.url
+        # The link is recorded even where it is never printed: under a TUI the
+        # console line is silenced, and the run app's View Traces button has
+        # nowhere else to read it from.
+        assert written["trace_url"] == url
     else:
         assert written is None
 

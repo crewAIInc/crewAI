@@ -27,12 +27,22 @@ class PlusAPI(_CorePlusAPI):
     EVALUATION_START_TIMEOUT = 120.0
     EVALUATION_POLL_TIMEOUT = 30.0
 
-    def create_evaluation(self, execution_id: str) -> httpx.Response:
-        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval)."""
+    def create_evaluation(
+        self, execution_id: str, *, eval_config: str | None = None
+    ) -> httpx.Response:
+        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval).
+
+        EVAL_CONFIG is the project's own `eval.jsonc` when it has one: what
+        good means for this crew, in its own words. Sent as it was written,
+        comments and all, and read by the grader rather than here.
+        """
+        body: dict[str, str] = {"execution_id": execution_id}
+        if eval_config:
+            body["eval_config"] = eval_config
         return self._make_request(
             "POST",
             self.EVALUATIONS_RESOURCE,
-            json={"execution_id": execution_id},
+            json=body,
             timeout=self.EVALUATION_START_TIMEOUT,
         )
 
