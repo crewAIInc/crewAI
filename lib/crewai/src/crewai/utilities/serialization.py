@@ -51,11 +51,13 @@ def to_serializable(
         _ancestors = set()
 
     if isinstance(obj, enum.Enum):
+        # Unwrapping is not nesting: the value keeps the current depth so a
+        # member at the depth limit still serializes to its native form.
         return to_serializable(
             obj.value,
             exclude=exclude,
             max_depth=max_depth,
-            _current_depth=_current_depth + 1,
+            _current_depth=_current_depth,
             _ancestors=_ancestors,
         )
     if isinstance(obj, (str, int, float, bool, type(None))):
@@ -135,6 +137,11 @@ def _to_serializable_key(key: Any) -> str:
         return _to_serializable_key(key.value)
     if isinstance(key, (str, int)):
         return str(key)
+    if isinstance(key, (date, datetime)):
+        return key.isoformat()
+    if isinstance(key, (tuple, list)):
+        # Deterministic for value tuples: no object id, unlike opaque objects.
+        return repr(list(key))
     return f"key_{id(key)}_{key!r}"
 
 
