@@ -523,11 +523,14 @@ class TestValkeyCacheEventLoopRebind:
         cache = ValkeyCache(host="localhost", port=6379, db=0)
 
         created_on: list[int] = []
+        created: list[AsyncMock] = []
 
         async def fake_create(_config: object) -> AsyncMock:
             # Record the identity of the loop each client is created on.
             created_on.append(id(asyncio.get_running_loop()))
-            return AsyncMock()
+            client = AsyncMock()
+            created.append(client)
+            return client
 
         with patch(
             "crewai.memory.storage.valkey_cache.GlideClient.create",
@@ -543,3 +546,5 @@ class TestValkeyCacheEventLoopRebind:
         # rebound to the second loop rather than reusing the closed-loop client.
         assert len(created_on) == 2
         assert first_loop is not second_loop
+        # The stale first client was closed on rebind (no connection leak).
+        created[0].close.assert_awaited()

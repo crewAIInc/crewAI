@@ -57,15 +57,18 @@ def get_aiocache_config() -> dict[str, Any]:
     """
     conn = parse_cache_url()
     if conn is not None:
-        return {
-            "default": {
-                "cache": "aiocache.RedisCache",
-                "endpoint": conn["host"],
-                "port": conn["port"],
-                "db": conn.get("db", 0),
-                "password": conn.get("password"),
-            }
+        redis_config: dict[str, Any] = {
+            "cache": "aiocache.RedisCache",
+            "endpoint": conn["host"],
+            "port": conn["port"],
+            "db": conn.get("db", 0),
+            "password": conn.get("password"),
         }
+        # Forward TLS for rediss:// / valkeys:// so the aiocache Redis path
+        # opens an encrypted connection instead of plaintext.
+        if conn.get("use_tls"):
+            redis_config["ssl"] = True
+        return {"default": redis_config}
     return {
         "default": {
             "cache": "aiocache.SimpleMemoryCache",
