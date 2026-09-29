@@ -129,11 +129,18 @@ class PlusAPI(_CorePlusAPI):
         *,
         name: str | None = None,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Create a crew deployment from a local project ZIP archive."""
+        """Create a crew deployment from a local project ZIP archive.
+
+        PROJECT_ID is `[tool.crewai].project_id`, so AMP knows which project the
+        deployment runs; sent only when the project has one.
+        """
         data: dict[str, str] = {}
         if name:
             data["name"] = name
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(
@@ -150,9 +157,15 @@ class PlusAPI(_CorePlusAPI):
         zip_file_path: str | Path,
         *,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Update an existing crew deployment from a local project ZIP archive."""
+        """Update an existing crew deployment from a local project ZIP archive.
+
+        PROJECT_ID as for `create_crew_from_zip`.
+        """
         data: dict[str, str] = {}
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(

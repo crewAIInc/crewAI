@@ -1316,3 +1316,127 @@ class TestDeployCommand(unittest.TestCase):
         from crewai_cli.version import get_crewai_version
 
         assert isinstance(get_crewai_version(), str)
+
+
+PROJECT_ID = "1f0c6a3e-8d0b-4c4e-9a52-6a9f6d1d2b7e"
+
+
+class TestDeploySendsTheProjectId(unittest.TestCase):
+    """Every create and push carries `[tool.crewai].project_id` when the
+    project has one, so AMP knows which project a deployment runs."""
+
+    @patch("crewai_cli.command.get_auth_token", return_value="test_token")
+    @patch("crewai_cli.deploy.main.get_project_id", return_value=PROJECT_ID)
+    @patch("crewai_cli.deploy.main.get_project_name", return_value="test_project")
+    @patch("crewai_cli.command.PlusAPI")
+    def setUp(self, _plus_api, _name, _project_id, _token):
+        self.deploy_command = deploy_main.DeployCommand()
+        self.mock_client = self.deploy_command.plus_api_client
+        self.mock_client.base_url = "https://app.crewai.com"
+        browser = patch("crewai_cli.deploy.main.webbrowser.open")
+        browser.start()
+        self.addCleanup(browser.stop)
+
+    def _created(self, uuid: str = "new-uuid") -> MagicMock:
+        response = MagicMock()
+        response.status_code = 201
+        response.is_success = True
+        response.json.return_value = {"uuid": uuid, "status": "created"}
+        return response
+
+    def _status(self, zip_deployment: bool) -> MagicMock:
+        response = MagicMock()
+        response.is_success = True
+        response.json.return_value = {"uuid": "test-uuid", "zip_deployment": zip_deployment}
+        return response
+
+    def test_the_command_reads_the_project_id(self):
+        self.assertEqual(self.deploy_command.project_id, PROJECT_ID)
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file", return_value={})
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_from_git_sends_it(self, mock_repository, _env):
+        mock_repository.return_value.origin_url.return_value = "https://github.com/t/r.git"
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = False
+        self.mock_client.create_crew.return_value = self._created()
+
+        with patch("sys.stdout", new=StringIO()):
+            self.deploy_command.create_crew(confirm=True, skip_validate=True)
+
+        payload = self.mock_client.create_crew.call_args.args[0]
+        self.assertEqual(payload["deploy"]["project_id"], PROJECT_ID)
+        self.assertEqual(payload["project_id"], PROJECT_ID)
+
+    @patch("crewai_cli.deploy.main.create_project_zip", return_value=Path("/tmp/p.zip"))
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file", return_value={})
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_from_a_zip_sends_it(self, mock_repository, _env, _zip):
+        mock_repository.return_value.origin_url.return_value = None
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = False
+        self.mock_client.create_crew_from_zip.return_value = self._created()
+
+        with patch("sys.stdout", new=StringIO()):
+            self.deploy_command.create_crew(confirm=True, skip_validate=True)
+
+        self.mock_client.create_crew_from_zip.assert_called_once_with(
+            Path("/tmp/p.zip"), name="test_project", env={}, project_id=PROJECT_ID
+        )
+
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_a_push_from_git_sends_it(self, _display, mock_repository):
+        mock_repository.return_value.origin_url.return_value = "https://github.com/t/r.git"
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = False
+        self.mock_client.crew_status_by_uuid.return_value = self._status(False)
+        self.mock_client.crew_status_by_name.return_value = self._status(False)
+
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+        self.deploy_command.deploy(skip_validate=True)
+
+        self.mock_client.deploy_by_uuid.assert_called_once_with(
+            "test-uuid", project_id=PROJECT_ID
+        )
+        self.mock_client.deploy_by_name.assert_called_once_with(
+            "test_project", project_id=PROJECT_ID
+        )
+
+    @patch("crewai_cli.deploy.main.create_project_zip", return_value=Path("/tmp/p.zip"))
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file", return_value={})
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_a_push_from_a_zip_sends_it(self, _display, mock_repository, _env, _zip):
+        mock_repository.return_value.origin_url.return_value = None
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = False
+        self.mock_client.crew_status_by_uuid.return_value = self._status(True)
+
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+        self.mock_client.update_crew_from_zip.assert_called_once_with(
+            "test-uuid", Path("/tmp/p.zip"), env={}, project_id=PROJECT_ID
+        )
+
+
+def test_a_project_without_an_id_sends_none(monkeypatch, tmp_path: Path):
+    """Read, never minted: a deploy does not rewrite pyproject.toml."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", lambda: "t")
+    monkeypatch.setattr("crewai_cli.command.PlusAPI", MagicMock())
+    monkeypatch.setattr(deploy_main, "get_project_name", lambda require=False: "demo")
+
+    command = deploy_main.DeployCommand()
+
+    assert command.project_id is None and command._project() == {}
+    assert "project_id" not in (tmp_path / "pyproject.toml").read_text()
+
+
+def test_the_project_id_is_read_from_pyproject(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        f"[project]\nname = 'demo'\n\n[tool.crewai]\nproject_id = \"{PROJECT_ID}\"\n"
+    )
+    monkeypatch.setattr("crewai_cli.command.get_auth_token", lambda: "t")
+    monkeypatch.setattr("crewai_cli.command.PlusAPI", MagicMock())
+    monkeypatch.setattr(deploy_main, "get_project_name", lambda require=False: "demo")
+
+    assert deploy_main.DeployCommand()._project() == {"project_id": PROJECT_ID}

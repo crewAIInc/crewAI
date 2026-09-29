@@ -15,7 +15,11 @@ from crewai_cli.command import BaseCommand, PlusAPIMixin
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_cli.deploy.archive import ArchiveError, create_project_zip
 from crewai_cli.deploy.validate import DeployValidator, Severity, render_report
-from crewai_cli.utils import fetch_and_json_env_file, get_project_name
+from crewai_cli.utils import (
+    fetch_and_json_env_file,
+    get_project_id,
+    get_project_name,
+)
 
 
 console = Console()
@@ -232,6 +236,14 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
         self.project_name = get_project_name(require=True)
+        # Sent with every create and push, so AMP knows which project a
+        # deployment runs — `crewai eval --models` finds the deployment by it.
+        # Read, never minted: a deploy does not rewrite pyproject.toml.
+        self.project_id = get_project_id()
+
+    def _project(self) -> dict[str, str]:
+        """`project_id=` for a create or push request, when the project has one."""
+        return {"project_id": self.project_id} if self.project_id else {}
 
     def _standard_no_param_error_message(self) -> None:
         """
@@ -424,10 +436,10 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             env_vars = fetch_and_json_env_file()
             return self._update_crew_from_zip(deployment_uuid, repository, env_vars)
         if uuid:
-            return self.plus_api_client.deploy_by_uuid(uuid)
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._project())
         if not project_name:
             raise ValueError("project_name is required to deploy by name")
-        return self.plus_api_client.deploy_by_name(project_name)
+        return self.plus_api_client.deploy_by_name(project_name, **self._project())
 
     def _deploy_from_local_source(
         self,
@@ -438,9 +450,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
     ) -> Any | None:
         """Deploy using local origin, as before AMP zip_deployment existed."""
         if remote_repo_url and uuid:
-            return self.plus_api_client.deploy_by_uuid(uuid)
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._project())
         if remote_repo_url and project_name:
-            return self.plus_api_client.deploy_by_name(project_name)
+            return self.plus_api_client.deploy_by_name(project_name, **self._project())
         if uuid:
             _display_git_remote_help()
             env_vars = fetch_and_json_env_file()
@@ -627,6 +639,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 zip_file_path,
                 name=self.project_name,
                 env=env_vars,
+                **self._project(),
             )
         finally:
             zip_file_path.unlink(missing_ok=True)
@@ -649,6 +662,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 uuid,
                 zip_file_path,
                 env=env_vars,
+                **self._project(),
             )
         finally:
             zip_file_path.unlink(missing_ok=True)
@@ -692,13 +706,17 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         if not self.project_name:
             raise ValueError("project_name is required to create a deployment payload")
-        return {
+        payload: CreateCrewPayload = {
             "deploy": {
                 "name": self.project_name,
                 "repo_clone_url": remote_repo_url,
                 "env": env_vars,
             }
         }
+        if self.project_id:
+            payload["deploy"]["project_id"] = self.project_id
+            payload["project_id"] = self.project_id
+        return payload
 
     def _display_creation_success(self, json_response: dict[str, Any]) -> None:
         """

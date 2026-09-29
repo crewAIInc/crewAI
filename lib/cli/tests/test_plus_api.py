@@ -307,6 +307,42 @@ class TestPlusAPI(unittest.TestCase):
         )
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_deploy_sends_the_project_id_when_there_is_one(self, mock_make_request):
+        self.api.deploy_by_name("test_project", project_id="proj-1")
+        mock_make_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/by-name/test_project/deploy",
+            json={"project_id": "proj-1"},
+        )
+        self.api.deploy_by_uuid("test_uuid", project_id="proj-1")
+        mock_make_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/test_uuid/deploy",
+            json={"project_id": "proj-1"},
+        )
+
+    @patch("crewai_cli.plus_api.PlusAPI._make_multipart_request")
+    def test_zip_deploys_send_the_project_id_when_there_is_one(
+        self, mock_make_multipart_request
+    ):
+        self.api.create_crew_from_zip("/tmp/test.zip", name="c", project_id="proj-1")
+        mock_make_multipart_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/zip",
+            zip_file_path="/tmp/test.zip",
+            data={"name": "c", "project_id": "proj-1"},
+            timeout=300,
+        )
+        self.api.update_crew_from_zip("u", "/tmp/test.zip", project_id="proj-1")
+        mock_make_multipart_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/u/zip_update",
+            zip_file_path="/tmp/test.zip",
+            data={"project_id": "proj-1"},
+            timeout=300,
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_crew_status_by_name(self, mock_make_request):
         self.api.crew_status_by_name("test_project")
         mock_make_request.assert_called_once_with(

@@ -58,10 +58,14 @@ class CrewDeploymentSpec(TypedDict):
     name: str
     repo_clone_url: str
     env: dict[str, str]
+    project_id: NotRequired[str]
 
 
 class CreateCrewPayload(TypedDict):
     deploy: CrewDeploymentSpec
+    # ``[tool.crewai].project_id``, beside the deployment's own fields and at
+    # the top level as every other deploy request sends it; only when set.
+    project_id: NotRequired[str]
 
 
 class _WithUserIdentifier(TypedDict):
@@ -320,13 +324,23 @@ class PlusAPI:
             params=params or None,
         )
 
-    def deploy_by_name(self, project_name: str) -> httpx.Response:
-        return self._make_request(
-            "POST", f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
-        )
+    def deploy_by_name(
+        self, project_name: str, *, project_id: str | None = None
+    ) -> httpx.Response:
+        """Redeploy by name, with PROJECT_ID (`[tool.crewai].project_id`) when set."""
+        endpoint = f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
+        if project_id:
+            return self._make_request("POST", endpoint, json={"project_id": project_id})
+        return self._make_request("POST", endpoint)
 
-    def deploy_by_uuid(self, uuid: str) -> httpx.Response:
-        return self._make_request("POST", f"{self.CREWS_RESOURCE}/{uuid}/deploy")
+    def deploy_by_uuid(
+        self, uuid: str, *, project_id: str | None = None
+    ) -> httpx.Response:
+        """Redeploy by uuid, with PROJECT_ID as for `deploy_by_name`."""
+        endpoint = f"{self.CREWS_RESOURCE}/{uuid}/deploy"
+        if project_id:
+            return self._make_request("POST", endpoint, json={"project_id": project_id})
+        return self._make_request("POST", endpoint)
 
     def crew_status_by_name(self, project_name: str) -> httpx.Response:
         return self._make_request(
@@ -368,11 +382,18 @@ class PlusAPI:
         *,
         name: str | None = None,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Create a crew deployment from a local project ZIP archive."""
+        """Create a crew deployment from a local project ZIP archive.
+
+        PROJECT_ID is `[tool.crewai].project_id`, so AMP knows which project the
+        deployment runs; sent only when the project has one.
+        """
         data: dict[str, str] = {}
         if name:
             data["name"] = name
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(
@@ -389,9 +410,15 @@ class PlusAPI:
         zip_file_path: str | Path,
         *,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Update an existing crew deployment from a local project ZIP archive."""
+        """Update an existing crew deployment from a local project ZIP archive.
+
+        PROJECT_ID as for `create_crew_from_zip`.
+        """
         data: dict[str, str] = {}
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(
