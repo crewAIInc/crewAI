@@ -164,8 +164,10 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     else:
         from crewai.telemetry.tracing.grants import TraceGrantError
 
-        client = TraceGrantClient(amp_credential)
         try:
+            # The constructor refuses a blank credential with the same error, so
+            # it sits inside the same boundary as the grant request.
+            client = TraceGrantClient(amp_credential)
             grant = client.create(execution_uuid)
         except TraceGrantError as error:
             # A trace is a record of the run, not a condition of it: a login

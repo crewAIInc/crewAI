@@ -19,6 +19,8 @@ from crewai.telemetry.tracing.grants import (
     GrantSpanExporter,
     TraceGrantClient,
     TraceGrantError,
+    tracing_credential,
+    tracing_credential_source,
 )
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -363,10 +365,9 @@ def test_the_warning_names_the_credential_that_was_refused(
 ):
     """The fix named is for the credential that was sent: refreshing a login does
     nothing for a rejected CREWAI_USER_PAT or an integration token."""
-    import crewai.telemetry.tracing.grants as grants
-
-    monkeypatch.setattr(grants, "tracing_credential", lambda: "rejected")
-    monkeypatch.setattr(grants, "tracing_credential_source", lambda: source)
+    grants = "crewai.telemetry.tracing.grants"
+    monkeypatch.setattr(f"{grants}.tracing_credential", lambda: "rejected")
+    monkeypatch.setattr(f"{grants}.tracing_credential_source", lambda: source)
     monkeypatch.setattr(
         TraceGrantClient,
         "create",
@@ -381,15 +382,24 @@ def test_the_warning_names_the_credential_that_was_refused(
 
 
 def test_the_credential_source_follows_the_credential_order(monkeypatch):
-    import crewai.telemetry.tracing.grants as grants
-
+    grants = "crewai.telemetry.tracing.grants"
     monkeypatch.setenv("CREWAI_USER_PAT", "pat")
-    assert grants.tracing_credential_source() == "pat"
+    assert tracing_credential_source() == "pat"
     monkeypatch.delenv("CREWAI_USER_PAT")
-    monkeypatch.setattr(grants, "get_platform_integration_token", lambda: "integration")
-    assert grants.tracing_credential_source() == "integration"
-    monkeypatch.setattr(grants, "get_platform_integration_token", lambda: None)
-    monkeypatch.setattr(grants, "get_auth_token", lambda: "login")
-    assert grants.tracing_credential_source() == "login"
-    assert grants.tracing_credential() == "login"
+    monkeypatch.setattr(f"{grants}.get_platform_integration_token", lambda: "integration")
+    assert tracing_credential_source() == "integration"
+    monkeypatch.setattr(f"{grants}.get_platform_integration_token", lambda: None)
+    monkeypatch.setattr(f"{grants}.get_auth_token", lambda: "login")
+    assert tracing_credential_source() == "login"
+    assert tracing_credential() == "login"
+
+
+def test_a_blank_credential_runs_untraced_too(monkeypatch, caplog):
+    """The grant client refuses a blank credential in its constructor, with the
+    same error a refused grant raises — so it must not fail the run either."""
+    monkeypatch.setattr("crewai.telemetry.tracing.grants.tracing_credential", lambda: "   ")
+    with caplog.at_level("WARNING", logger="crewai.execution"):
+        assert ExampleFlow(tracing=True).kickoff() == "hello world"
+    assert get_trace_session() is None and get_execution_uuid() is None
+    assert any("not traced" in record.getMessage() for record in caplog.records)
 
