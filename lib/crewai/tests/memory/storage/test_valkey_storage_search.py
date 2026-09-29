@@ -191,6 +191,35 @@ class TestValkeyStorageVectorSearch:
     @pytest.mark.asyncio
     @patch("crewai.memory.storage.valkey_storage.ft.search")
     @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_search_scope_prefix_trailing_slash_normalized(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        """A trailing slash on scope_prefix must be normalized the same way
+        delete/list/count do, so recall doesn't miss records that other
+        operations still match (e.g. '/agent/' should match '/agent...').
+        """
+        record1 = MemoryRecord(
+            id="record-1",
+            content="Record in scope",
+            scope="/agent/task",
+            embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+        mock_ft_list.return_value = [b"memory_index"]
+        mock_ft_search.return_value = create_mock_ft_search_response([(record1, 0.9)])
+
+        await valkey_storage.asearch(
+            [0.1, 0.2, 0.3, 0.4], scope_prefix="/agent/", limit=10
+        )
+
+        query = mock_ft_search.call_args[0][2]
+        # Trailing slash stripped: same clause as the no-slash query.
+        assert "@scope:{/agent*}" in query
+        assert "@scope:{/agent/*}" not in query
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
     async def test_search_with_category_filter_only(
         self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
         valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
