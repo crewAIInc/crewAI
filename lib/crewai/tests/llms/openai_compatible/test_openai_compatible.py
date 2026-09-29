@@ -301,11 +301,12 @@ class TestLLMIntegration:
 
     def test_llm_creates_openai_compatible_for_llmman(self):
         """Test LLM factory creates OpenAICompatibleCompletion for llmman."""
-        llm = LLM(model="llmman/qwen3.8")
-        assert isinstance(llm, OpenAICompatibleCompletion)
-        assert llm.provider == "llmman"
-        assert llm.model == "qwen3.8"
-        assert llm.base_url == "http://localhost:17434/v1"
+        with patch.dict(os.environ, {"LLMMAN_HOST": ""}):
+            llm = LLM(model="llmman/qwen3.8")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "llmman"
+            assert llm.model == "qwen3.8"
+            assert llm.base_url == "http://localhost:17434/v1"
 
     def test_llm_creates_openai_compatible_for_explicit_llmman(self):
         """Test LLM factory routes an explicit llmman provider without a prefix."""

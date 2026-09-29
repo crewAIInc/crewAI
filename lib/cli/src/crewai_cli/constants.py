@@ -61,7 +61,7 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
     "llmman": [
         {
             "default": True,
-            "API_BASE": "http://localhost:17434",
+            "LLMMAN_HOST": "http://localhost:17434",
         }
     ],
     "bedrock": [
