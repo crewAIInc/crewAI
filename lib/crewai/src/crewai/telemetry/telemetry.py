@@ -1293,8 +1293,10 @@ class Telemetry:
     # its use under somebody else's name.
     FEATURE_ATTRIBUTES: ClassVar[dict[str, frozenset[str]]] = {
         "cli_usage:eval": frozenset({"authenticated"}),
-        # The models compared are provider/model names anyone can read off a
-        # price list, never a run, an output or an organization.
+        # The models compared: a model in crewAI's own catalog by name (anyone
+        # can read it off a price list), any other — a fine-tune, a deployment
+        # name, a self-hosted model — as `<provider>/other`; the CLI decides
+        # (`telemetry_model_name`). Never a run, an output or an organization.
         "cli_usage:eval_models": frozenset({"authenticated", "models", "models_count"}),
     }
 

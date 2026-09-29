@@ -893,12 +893,65 @@ def _deployment_id(value: str | None) -> str | None:
         ) from None
 
 
+# Model names that are the same for everyone who types them are public. What
+# else a `--models` item can carry is a customer's: a fine-tune id
+# (`openai/ft:gpt-4o-mini:acme-corp::abc`), an Azure deployment name, a
+# self-hosted model or host. Those are sent as `<provider>/other`.
+OTHER_MODEL = "other"
+# The vendor segment of an aggregator id (`openrouter/openai/gpt-4o-mini`)
+# that is itself public.
+_PUBLIC_VENDORS = frozenset(
+    {"openai", "anthropic", "google", "meta-llama", "mistralai", "deepseek", "qwen"}
+)
+
+
+def telemetry_model_name(model: str) -> str:
+    """MODEL as the usage stats may carry it: as typed when it is a model crewAI
+    knows, else `<provider>/other` — and `other/other` for a provider crewAI does
+    not know, since a provider string can name a host too.
+
+    Known means an exact entry of crewAI's model catalog (the context-window
+    tables every provider resolves against), never a prefix of one: a fine-tune
+    or a deployment named after a public model is still the customer's.
+    """
+    catalog, providers = _known_models_and_providers()
+    provider, _, name = model.partition("/")
+    if provider not in providers:
+        return f"{OTHER_MODEL}/{OTHER_MODEL}"
+    vendor, nested, tail = name.partition("/")
+    public = (
+        name in catalog
+        or model in catalog
+        or (nested and vendor in _PUBLIC_VENDORS and tail in catalog)
+    )
+    if not public or any(part.startswith("ft:") for part in model.split("/")):
+        return f"{provider}/{OTHER_MODEL}"
+    return model
+
+
+def _known_models_and_providers() -> tuple[frozenset[str], frozenset[str]]:
+    """crewAI's catalog of models and the providers it routes; empty when this
+    environment's crewai cannot say, so every model is then sent as "other"."""
+    from crewai_cli.constants import PROVIDERS
+
+    try:
+        from crewai.llm import SUPPORTED_NATIVE_PROVIDERS
+        from crewai.llms.context_window import LLM_CONTEXT_WINDOW_SIZES
+    except Exception:
+        return frozenset(), frozenset()
+    return (
+        frozenset(LLM_CONTEXT_WINDOW_SIZES),
+        frozenset(SUPPORTED_NATIVE_PROVIDERS) | frozenset(PROVIDERS),
+    )
+
+
 def _record_models_usage(models: list[str]) -> None:
     """Count a comparison that is actually starting, and which models it compares.
 
-    The models are provider/model names, the same for everyone who picks them;
-    nothing names the run, the deployment or the organization. Always logged in:
-    a comparison cannot start without the account.
+    The models go through `telemetry_model_name`: a public model by name, any
+    other as `<provider>/other`. Nothing names the run, the deployment or the
+    organization. Always logged in: a comparison cannot start without the
+    account.
     """
     try:
         from crewai_core.telemetry import Telemetry
@@ -909,7 +962,7 @@ def _record_models_usage(models: list[str]) -> None:
             "cli_usage:eval_models",
             {
                 "authenticated": "true",
-                "models": ",".join(models),
+                "models": ",".join(telemetry_model_name(m) for m in models),
                 "models_count": str(len(models)),
             },
         )

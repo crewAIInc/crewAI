@@ -1348,7 +1348,8 @@ def test_the_comparison_is_counted_with_the_models_and_nothing_that_names_it(dep
 
     assert spans == [("cli_usage:eval_models", {
         "authenticated": "true",
-        "models": "openai/gpt-4o-mini,openrouter/meta-llama/llama-4-maverick",
+        # A public model by name; one crewAI's catalog does not list, by provider.
+        "models": "openai/gpt-4o-mini,openrouter/other",
         "models_count": "2",
     })]
 
@@ -1573,3 +1574,29 @@ def test_a_comparison_never_overwrites_the_projects_criteria(deployed, monkeypat
 
     assert (directory / "eval.jsonc").read_text() == "// ours\n{}\n"
     assert "Wrote eval.jsonc" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("typed", "sent"),
+    [
+        ("openai/gpt-4o-mini", "openai/gpt-4o-mini"),
+        ("anthropic/claude-haiku-4-5", "anthropic/claude-haiku-4-5"),
+        ("openrouter/openai/gpt-4o-mini", "openrouter/openai/gpt-4o-mini"),
+        # A customer's own: a fine-tune, a deployment name, a model named after
+        # a public one, an unknown name — by provider only.
+        ("openai/ft:gpt-4o-mini:acme-corp::abc", "openai/other"),
+        ("azure/my-deployment", "azure/other"),
+        ("openai/gpt-4o-acme", "openai/other"),
+        ("ollama/acme-llama", "ollama/other"),
+        # A provider crewAI does not know can name a host.
+        ("llm.acme.internal/llama-3", "other/other"),
+    ],
+)
+def test_usage_stats_name_a_model_only_when_it_is_a_public_one(typed, sent):
+    assert eval_module.telemetry_model_name(typed) == sent
+
+
+def test_without_crewais_catalog_every_model_is_other(monkeypatch):
+    monkeypatch.setattr(eval_module, "_known_models_and_providers", lambda: (frozenset(), frozenset()))
+
+    assert eval_module.telemetry_model_name("openai/gpt-4o-mini") == "other/other"
