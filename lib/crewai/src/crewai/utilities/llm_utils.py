@@ -6,6 +6,12 @@ from pydantic import ValidationError
 
 from crewai.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
 from crewai.llm import LLM
+from crewai.llm_overlay import (
+    building_mapped_model,
+    mark_mapped,
+    overlay_model_for,
+    overlay_model_for_llm,
+)
 from crewai.llms.base_llm import BaseLLM
 
 
@@ -208,22 +214,83 @@ def create_llm_like(model: str, base: BaseLLM | None) -> BaseLLM:
     Returns:
         A new instance for ``model``; never ``base`` itself.
     """
-    if not isinstance(base, BaseLLM):
-        return LLM(model=model)
+    with building_mapped_model():
+        if not isinstance(base, BaseLLM):
+            return mark_mapped(LLM(model=model))
 
-    # The declared endpoint decides where an unknown ``openai/`` model routes (a
-    # custom OpenAI-compatible endpoint), so the same-provider question is asked
-    # with it: a self-hosted model mapped to another model on the same endpoint
-    # must keep that endpoint.
-    route = LLM._resolve_route(model, _configured_settings(base, _ENDPOINT_NAMES))
-    carried = _configured_settings(base, GENERATION_SETTINGS)
-    if _same_provider(base, route):
-        carried.update(_configured_settings(base, PROVIDER_SETTINGS))
-    target = LLM._resolve_route(model, carried).native_class or LLM
-    if type(base) is LLM and base.is_litellm:
+        # The declared endpoint decides where an unknown ``openai/`` model routes (a
+        # custom OpenAI-compatible endpoint), so the same-provider question is asked
+        # with it: a self-hosted model mapped to another model on the same endpoint
+        # must keep that endpoint.
+        route = LLM._resolve_route(model, _configured_settings(base, _ENDPOINT_NAMES))
+        carried = _configured_settings(base, GENERATION_SETTINGS)
+        if _same_provider(base, route):
+            carried.update(_configured_settings(base, PROVIDER_SETTINGS))
         # The declared llm runs through LiteLLM — by the caller's choice or
         # because no native class knew its model; either way that is the
         # environment its callbacks and extra kwargs were written for.
+        through_litellm = type(base) is LLM and base.is_litellm
+        return mark_mapped(_build_like(model, carried, type(base), through_litellm))
+
+
+def overlay_llm_for(role: str | None, declared: BaseLLM | None) -> BaseLLM | None:
+    """The llm an agent with ``role`` and ``declared`` llm runs on under ``llm_overlay``.
+
+    A role key wins; else a model key matching ``declared``'s model (one a
+    model key already mapped when it was built is not looked up again); else
+    ``declared`` itself. A mapped model is built like ``declared``
+    (:func:`create_llm_like`). Outside any block this is ``declared``.
+    """
+    model = overlay_model_for(role) or overlay_model_for_llm(declared)
+    return create_llm_like(model, declared) if model else declared
+
+
+def create_llm_from_kwargs_like(
+    model: str, declared_model: str, kwargs: dict[str, Any], is_litellm: bool
+) -> BaseLLM:
+    """Build ``model`` configured like ``LLM(declared_model, **kwargs)`` would be.
+
+    What ``llm_overlay``'s model keys build when ``LLM(model=...)`` is called
+    inside the block: the settings the caller passed are carried by the rule of
+    :func:`create_llm_like` — generation settings to any class that has them,
+    credentials and endpoints only to the same provider — without building the
+    declared model first (its provider's key may not be in this environment).
+    Everything the caller passed is theirs, so nothing counts as derived.
+    """
+    with building_mapped_model():
+        settings = {
+            k: v
+            for k, v in kwargs.items()
+            if v is not None and not (isinstance(v, (list, dict)) and not v)
+        }
+        if isinstance(settings.get("endpoint"), str):
+            settings["endpoint"] = settings["endpoint"].split(_AZURE_DEPLOYMENT_PATH)[0]
+        declared = LLM._resolve_route(declared_model, kwargs)
+        declared_class = (
+            LLM
+            if is_litellm or declared.native_class is None
+            else declared.native_class
+        )
+        endpoint = {k: settings[k] for k in _ENDPOINT_NAMES if k in settings}
+        route = LLM._resolve_route(model, endpoint)
+        carried = {k: settings[k] for k in GENERATION_SETTINGS if k in settings}
+        if _same_route_provider(declared_class, declared.provider, route):
+            carried.update({k: settings[k] for k in PROVIDER_SETTINGS if k in settings})
+        return mark_mapped(
+            _build_like(model, carried, declared_class, declared_class is LLM)
+        )
+
+
+def _build_like(
+    model: str,
+    carried: dict[str, Any],
+    base_class: type[BaseLLM],
+    through_litellm: bool,
+) -> BaseLLM:
+    """Build ``model`` with the ``carried`` settings its class accepts."""
+    route = LLM._resolve_route(model, carried)
+    target = route.native_class or LLM
+    if through_litellm:
         target = LLM
         carried["is_litellm"] = True
     accepted = {
@@ -231,12 +298,24 @@ def create_llm_like(model: str, base: BaseLLM | None) -> BaseLLM:
         for k, v in carried.items()
         if k in target.model_fields or k == "is_litellm"
     }
-    if type(base) is not target:
+    if base_class is not target:
         accepted.pop("additional_params", None)
     _carry_cap_under_the_targets_name(carried, accepted, target)
     if route.provider == "anthropic" and "temperature" in accepted:
         accepted.pop("top_p", None)
     return _build(model, accepted)
+
+
+def _same_route_provider(
+    declared_class: type[BaseLLM], declared_provider: str, route: Any
+) -> bool:
+    """:func:`_same_provider` for a declared llm known by its route, not an instance."""
+    if route.native_class is not None:
+        return declared_class is route.native_class and (
+            not _serves_several_providers(route.native_class)
+            or route.provider == declared_provider
+        )
+    return declared_class is LLM and route.provider == declared_provider
 
 
 def _same_provider(base: BaseLLM, route: Any) -> bool:
