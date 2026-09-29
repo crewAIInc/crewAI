@@ -135,7 +135,7 @@ class EncodingFlow(Flow[EncodingState]):
         """Embed all items in a single embedder call."""
         items = list(self.state.items)
         texts = [item.content for item in items]
-        embeddings = embed_texts(self._embedder, texts)
+        embeddings = embed_texts(self._embedder, texts, raise_on_timeout=True)
         for item, emb in zip(items, embeddings, strict=False):
             item.embedding = emb
 
@@ -438,7 +438,9 @@ class EncodingFlow(Flow[EncodingState]):
         update_embeddings: list[list[float]] = []
         if update_list:
             update_contents = [content for _, (_, content) in update_list]
-            update_embeddings = embed_texts(self._embedder, update_contents)
+            update_embeddings = embed_texts(
+                self._embedder, update_contents, raise_on_timeout=True
+            )
 
         update_emb_map: dict[str, list[float]] = {}
         for (rid, _), emb in zip(update_list, update_embeddings, strict=False):
