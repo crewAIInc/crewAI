@@ -149,3 +149,42 @@ def test_load_handles_null_output_and_inputs(tmp_path: Path) -> None:
     result = storage.load()[0]
     assert result["output"] is None
     assert result["inputs"] is None
+
+
+def test_update_json_encodes_non_dict_non_list_values(tmp_path: Path) -> None:
+    """``update`` must JSON-encode every value written to a JSON column
+    (``output``/``inputs``), not only ``dict``/``list``.
+
+    ``load()`` unconditionally ``json.loads()``s those columns. A plain
+    string like ``"done"`` previously went in unencoded (only dict/list were
+    encoded), so ``json.loads("done")`` raised ``json.JSONDecodeError`` --
+    round-tripping a scalar value through ``update``/``load`` crashed.
+    """
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    storage.update(0, output="just a string", inputs=42)
+
+    result = storage.load()[0]
+    assert result["output"] == "just a string"
+    assert result["inputs"] == 42
+
+
+def test_load_tolerates_legacy_unencoded_json_column(tmp_path: Path) -> None:
+    """``load`` must not crash on a row written by the pre-fix ``update``,
+    which left non-dict/non-list values (e.g. a bare string) unencoded.
+    """
+    import sqlite3
+
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    with sqlite3.connect(storage.db_path) as conn:
+        conn.execute(
+            "UPDATE latest_kickoff_task_outputs SET output = ? WHERE task_index = 0",
+            ("not valid json",),
+        )
+        conn.commit()
+
+    result = storage.load()[0]
+    assert result["output"] == "not valid json"

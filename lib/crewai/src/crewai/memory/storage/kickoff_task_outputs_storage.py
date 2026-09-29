@@ -22,6 +22,11 @@ class KickoffTaskOutputsSQLiteStorage:
     An updated SQLite storage class for kickoff task outputs storage.
     """
 
+    # Columns declared JSON in the schema; load() always json.loads() these,
+    # so update() must always json.dumps() a non-None value written to them,
+    # not just dict/list values.
+    _JSON_COLUMNS = frozenset({"output", "inputs"})
+
     def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
             db_path = str(Path(db_storage_path()) / "latest_kickoff_task_outputs.db")
@@ -136,7 +141,9 @@ class KickoffTaskOutputsSQLiteStorage:
         Args:
             task_index: Integer index of the task to update.
             **kwargs: Arbitrary keyword arguments representing fields to update.
-                     Values that are dictionaries will be JSON encoded.
+                     Values for the ``output``/``inputs`` JSON columns are always
+                     JSON encoded (matching how ``load()`` decodes them); ``None``
+                     is stored as SQL NULL.
 
         Raises:
             DatabaseOperationError: If updating the task output fails due to SQLite errors.
@@ -153,7 +160,7 @@ class KickoffTaskOutputsSQLiteStorage:
                         fields.append(f"{key} = ?")
                         values.append(
                             json.dumps(value, cls=CrewJSONEncoder)
-                            if isinstance(value, (dict, list))
+                            if key in self._JSON_COLUMNS and value is not None
                             else value
                         )
 
@@ -171,6 +178,20 @@ class KickoffTaskOutputsSQLiteStorage:
             error_msg = DatabaseError.format_error(DatabaseError.UPDATE_ERROR, e)
             logger.error(error_msg)
             raise DatabaseOperationError(error_msg, e) from e
+
+    def _decode_json_column(self, column_name: str, raw_value: Any) -> Any:
+        """Decode a JSON column value, tolerating rows written before this
+        column was consistently JSON-encoded (e.g. a bare, unencoded string)."""
+        if raw_value is None:
+            return None
+        try:
+            return json.loads(raw_value)
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(
+                f"Could not decode JSON for column '{column_name}': {e}. "
+                "Returning the raw stored value."
+            )
+            return raw_value
 
     def load(self) -> list[dict[str, Any]]:
         """Load all task output records from the database.
@@ -199,9 +220,9 @@ class KickoffTaskOutputsSQLiteStorage:
                         "task_id": row[0],
                         "task_key": row[1],
                         "expected_output": row[2],
-                        "output": json.loads(row[3]) if row[3] is not None else None,
+                        "output": self._decode_json_column("output", row[3]),
                         "task_index": row[4],
-                        "inputs": json.loads(row[5]) if row[5] is not None else None,
+                        "inputs": self._decode_json_column("inputs", row[5]),
                         "was_replayed": row[6],
                         "timestamp": row[7],
                     }
