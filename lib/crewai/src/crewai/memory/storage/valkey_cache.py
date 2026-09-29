@@ -85,9 +85,21 @@ class ValkeyCache:
         """
         # If we're now on a different event loop than the client/lock were bound
         # to (e.g. a previous asyncio.run() loop was closed), drop the stale
-        # instances so they are recreated on the current loop.
+        # instances so they are recreated on the current loop. Best-effort close
+        # the old client first so we don't leak its connection and reader task.
         running_loop = asyncio.get_running_loop()
         if self._loop is not None and self._loop is not running_loop:
+            stale_client = self._client
+            if stale_client is not None:
+                try:
+                    await stale_client.close()
+                except Exception as e:  # noqa: BLE001
+                    # The old loop is gone; closing may fail. Log and move on
+                    # rather than leaving the rebind half-done.
+                    _logger.debug(
+                        "Best-effort close of stale Valkey client failed: %s",
+                        type(e).__name__,
+                    )
             self._client = None
             self._client_lock = None
         self._loop = running_loop
