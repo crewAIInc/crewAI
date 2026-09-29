@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 import os
 from pathlib import Path
+import runpy
+import sys
 from typing import Any
 from unittest.mock import MagicMock, call, patch
 from uuid import uuid4
@@ -39,6 +41,15 @@ from sqlalchemy.types import NullType, TypeEngine
 
 
 _MODULE = "crewai_tools.tools.nl2sql.nl2sql_tool"
+
+
+def test_missing_sqlalchemy_preserves_optional_dependency_guard() -> None:
+    """The module imports without SQLAlchemy; construction explains how to install it."""
+    with patch.dict(sys.modules, {"sqlalchemy": None}):
+        module = runpy.run_path(sys.modules[_MODULE].__file__)
+        assert module["SQLALCHEMY_AVAILABLE"] is False
+        with pytest.raises(ImportError, match=r"pip install crewai-tools\[sqlalchemy\]"):
+            module["NL2SQLTool"](db_uri="sqlite://")
 
 
 @pytest.fixture
