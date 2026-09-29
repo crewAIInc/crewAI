@@ -19,7 +19,10 @@ from opentelemetry.sdk.trace.export import (
     SpanExporter,
 )
 
-from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
+from crewai.events.listeners.tracing.utils import (
+    prompt_user_for_trace_viewing,
+    tracing_asked_for,
+)
 from crewai.telemetry.tracing.grants import (
     GrantSpanExporter,
     TraceGrantClient,
@@ -122,10 +125,18 @@ class EphemeralSpanBuffer(SpanExporter):
                 )
             if not buffered:
                 return
+            # A host's consent callback stays authoritative — it is policy, and
+            # an embedder may answer no for reasons of its own. What it replaces
+            # is the PROMPT, and a prompt is what a user who turned tracing on
+            # has already answered: CREWAI_TRACING_ENABLED, or tracing=True, is
+            # the yes. (A callback that opens its own prompt — the TUI's modal —
+            # asks `tracing_asked_for()` for itself.)
             consent = self._consent or _trace_consent.get()
             approved = (
                 consent()
                 if consent is not None
+                else True
+                if tracing_asked_for()
                 else prompt_user_for_trace_viewing(sharing=True)
             )
             if first_time:

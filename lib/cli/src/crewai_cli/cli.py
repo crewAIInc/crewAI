@@ -693,7 +693,11 @@ def run(
     ),
 )
 def eval_command(run_id: str | None) -> None:
-    """Evaluate the last traced run through CrewAI AMP."""
+    """Evaluate the last traced run through CrewAI AMP.
+
+    Exits 0 only when the goal gate PASSED, and 1 otherwise — a failed gate, no
+    verdict, or an evaluation that could not run — so a CI job can gate on it.
+    """
     eval_crew(run_id=run_id)
 
 
