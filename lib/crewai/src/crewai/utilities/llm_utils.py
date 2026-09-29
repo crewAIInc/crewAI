@@ -8,6 +8,7 @@ from crewai.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
 from crewai.llm import LLM
 from crewai.llm_overlay import (
     building_mapped_model,
+    declared_before_overlay,
     mark_mapped,
     overlay_model_for,
     overlay_model_for_llm,
@@ -230,18 +231,34 @@ def create_llm_like(model: str, base: BaseLLM | None) -> BaseLLM:
         # because no native class knew its model; either way that is the
         # environment its callbacks and extra kwargs were written for.
         through_litellm = type(base) is LLM and base.is_litellm
-        return mark_mapped(_build_like(model, carried, type(base), through_litellm))
+        return mark_mapped(
+            _build_like(model, carried, type(base), through_litellm), base
+        )
 
 
 def overlay_llm_for(role: str | None, declared: BaseLLM | None) -> BaseLLM | None:
     """The llm an agent with ``role`` and ``declared`` llm runs on under ``llm_overlay``.
 
-    A role key wins; else a model key matching ``declared``'s model (one a
-    model key already mapped when it was built is not looked up again); else
-    ``declared`` itself. A mapped model is built like ``declared``
-    (:func:`create_llm_like`). Outside any block this is ``declared``.
+    A role key wins, and its model is built from the caller's declaration even
+    when a model key already mapped ``declared`` on its way in; else a model
+    key matching ``declared``'s model (one a model key already mapped when it
+    was built is not looked up again); else ``declared`` itself. A mapped model
+    is built like ``declared`` (:func:`create_llm_like`). Outside any block
+    this is ``declared``.
     """
-    model = overlay_model_for(role) or overlay_model_for_llm(declared)
+    role_model = overlay_model_for(role)
+    if role_model:
+        # The role wins, built from what the caller declared: when a model key
+        # already mapped the declared llm, its declaration, not the mapping.
+        before = declared_before_overlay(declared)
+        if isinstance(before, tuple):
+            declared_model, kwargs, is_litellm = before
+            return create_llm_from_kwargs_like(
+                role_model, declared_model, kwargs, is_litellm
+            )
+        base = before if isinstance(before, BaseLLM) else declared
+        return create_llm_like(role_model, base)
+    model = overlay_model_for_llm(declared)
     return create_llm_like(model, declared) if model else declared
 
 
@@ -257,6 +274,7 @@ def create_llm_from_kwargs_like(
     declared model first (its provider's key may not be in this environment).
     Everything the caller passed is theirs, so nothing counts as derived.
     """
+    declaration = (declared_model, dict(kwargs), is_litellm)
     with building_mapped_model():
         settings = {
             k: v
@@ -274,7 +292,7 @@ def create_llm_from_kwargs_like(
             # The declared model's SDK is not installed here. Nothing is built
             # on it, so that is no reason to fail; its credentials, though,
             # cannot be matched to the new provider, so none are carried.
-            return mark_mapped(_build_like(model, carried, None, False))
+            return mark_mapped(_build_like(model, carried, None, False), declaration)
         declared_class = (
             LLM
             if is_litellm or declared.native_class is None
@@ -283,7 +301,8 @@ def create_llm_from_kwargs_like(
         if _same_route_provider(declared_class, declared.provider, route):
             carried.update({k: settings[k] for k in PROVIDER_SETTINGS if k in settings})
         return mark_mapped(
-            _build_like(model, carried, declared_class, declared_class is LLM)
+            _build_like(model, carried, declared_class, declared_class is LLM),
+            declaration,
         )
 
 

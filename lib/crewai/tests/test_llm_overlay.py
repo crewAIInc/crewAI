@@ -788,3 +788,59 @@ def test_a_litellm_routed_llm_keeps_its_key_on_the_same_provider_only() -> None:
     assert same.api_key == "k" and same.base_url == "http://localhost:9999/v1"
     assert "claude-haiku-4-5" in other.model
     assert other.api_key != "k" and other.base_url != "http://localhost:9999/v1"
+
+
+@pytest.mark.parametrize(
+    ("built", "key"),
+    [
+        ("openrouter/openai/gpt-4o", "model:openai/gpt-4o"),
+        ("openrouter/openai/gpt-4o", "model:gpt-4o"),
+    ],
+)
+def test_an_aggregators_route_is_never_the_native_model_it_names(
+    built: str, key: str
+) -> None:
+    """`openrouter/openai/gpt-4o` is OpenRouter's model, not OpenAI's: a key
+    written for the native model leaves it alone."""
+    with llm_overlay({key: "openai/gpt-4.1"}):
+        llm = LLM(model=built)
+
+    assert type(llm).__name__ == "OpenAICompatibleCompletion"
+    assert llm.model == "openai/gpt-4o"
+
+
+def test_an_aggregators_route_is_matched_by_its_own_full_name() -> None:
+    declared = LLM(model="openrouter/openai/gpt-4o")
+    with llm_overlay({"model:openrouter/openai/gpt-4o": "openai/gpt-4.1"}):
+        built = LLM(model="openrouter/openai/gpt-4o")
+        agent = Agent(role="Writer", goal="g", backstory="b", llm=declared)
+    with llm_overlay({"model:openai/gpt-4o": "openai/gpt-4.1"}):
+        untouched = Agent(role="Writer", goal="g", backstory="b", llm=declared)
+
+    assert built.model == "gpt-4.1" and agent.llm.model == "gpt-4.1"
+    assert untouched.llm is declared
+
+
+def test_a_native_provider_prefix_is_still_its_own() -> None:
+    with llm_overlay({"model:llama3": "ollama/qwen3"}):
+        assert LLM(model="ollama/llama3").model == "qwen3"
+
+
+def test_a_role_key_is_built_from_the_declaration_a_model_key_mapped() -> None:
+    """Role wins, with the caller's declared settings: the llm a model key
+    swapped on the way in is not what the role's model is built like."""
+    overlay = {"Researcher": "openai/gpt-4o", "model:*": "anthropic/claude-haiku-4-5"}
+    with llm_overlay(overlay):
+        declared = _configured_llm()  # mapped to Anthropic, without the key
+        researcher = Agent(role="Researcher", goal="g", backstory="b", llm=declared)
+        by_string = Agent(
+            role="Researcher", goal="g", backstory="b", llm="openai/gpt-4o-mini"
+        )
+        writer = Agent(role="Writer", goal="g", backstory="b", llm=declared)
+
+    assert type(declared).__name__ == "AnthropicCompletion"
+    assert type(researcher.llm).__name__ == "OpenAICompletion"
+    assert researcher.llm.model == "gpt-4o"
+    assert _configuration_of(researcher.llm) == CONFIGURATION
+    assert by_string.llm.model == "gpt-4o"
+    assert writer.llm is declared

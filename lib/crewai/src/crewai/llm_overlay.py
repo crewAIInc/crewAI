@@ -20,10 +20,14 @@ it and without the provider prefix native providers strip, so
 ``"model:openai/gpt-4o"`` matches ``LLM(model="gpt-4o")`` and an instance
 whose ``model`` reads ``"gpt-4o"``, and ``"model:gpt-4o"`` matches
 ``LLM(model="openai/gpt-4o")``; an exact key wins over a stripped one, and
-both over ``"model:*"``. The mapped model is built once, never looked up
+both over ``"model:*"``. Only the model's own provider prefix is ever
+stripped: an aggregator's route such as ``openrouter/openai/gpt-4o`` is that
+aggregator's model and matches only a key naming it whole. The mapped model is built once, never looked up
 again: ``{"model:a": "b", "model:b": "c"}`` puts an ``a`` on ``b``. For an
 agent a role key wins over every model key, so ``{"Researcher": x,
-"model:*": y}`` runs the Researcher on ``x`` and everything else on ``y``.
+"model:*": y}`` runs the Researcher on ``x`` and everything else on ``y`` —
+and ``x`` is built like the llm the caller declared, even when a model key
+already mapped that llm as it was built inside the block.
 The settings the caller passed to ``LLM(...)`` are carried to the mapped model
 by the same rule as a declared ``llm``'s (below). Only ``LLM`` itself is
 mapped: a subclass of it, or a provider class built directly, is the caller's
@@ -113,6 +117,12 @@ _building_mapped: ContextVar[bool] = ContextVar(
 # ``llm`` skips one of these: its model is the mapped one, never a key again.
 _mapped_llms: weakref.WeakValueDictionary[int, Any] = weakref.WeakValueDictionary()
 
+# What the caller declared for an LLM the overlay built: the declared instance,
+# or ``LLM(model, **kwargs)``'s ``(model, kwargs, is_litellm)``. Dropped with
+# the LLM it describes.
+Declared = Any
+_declared_before: dict[int, Declared] = {}
+
 
 @contextmanager
 def llm_overlay(mapping: dict[str, str] | None) -> Iterator[None]:
@@ -164,9 +174,14 @@ def overlay_model_for_model(
 ) -> str | None:
     """The model the active overlay's model keys assign to an LLM on ``model``.
 
-    ``model`` is compared as written, then with its provider prefix put back
-    (``provider``, when ``model`` has none) or taken off (when it has one), so
-    a key matches whichever form a caller or a native provider left on it;
+    ``model`` is compared as written and, when a native provider strips its own
+    prefix, without it: ``openai/gpt-4o`` also as ``gpt-4o``, and ``gpt-4o``
+    routed to ``provider`` also as ``openai/gpt-4o``. A prefix is only ever the
+    model's OWN provider: in an aggregator's route (``openrouter/openai/gpt-4o``)
+    the rest is that aggregator's model id, never the model a key for
+    ``openai/gpt-4o`` or ``gpt-4o`` names, so it is compared whole. An existing
+    instance of such a route records ``model="openai/gpt-4o"`` under
+    ``provider="openrouter"``, and is compared as ``openrouter/openai/gpt-4o``.
     ``model:*`` matches every model. Nothing matches while the overlay is
     building a model it mapped.
 
@@ -182,18 +197,35 @@ def overlay_model_for_model(
     mapping = active.get()
     if not mapping or not model or _building_mapped.get():
         return None
-    model = model.strip()
-    _, separator, bare = model.partition("/")
-    forms = [model]
-    if separator:
-        forms.append(bare)
-    elif provider:
-        forms.append(f"{provider}/{model}")
-    for form in forms:
+    for form in _model_forms(model.strip(), provider):
         mapped = mapping.get(MODEL_KEY_PREFIX + form)
         if mapped is not None:
             return mapped
     return mapping.get(MODEL_KEY_PREFIX + ANY_MODEL)
+
+
+def _model_forms(model: str, provider: str | None) -> list[str]:
+    """``model`` in the forms a key may name it by, the one as written first."""
+    if provider and not model.startswith(f"{provider}/"):
+        routed = f"{provider}/{model}"
+        # A bare name is the native one with its prefix stripped; a name that
+        # still has a slash is the provider's own route id and only means
+        # something beside the provider.
+        forms = [routed] if "/" in model else [model, routed]
+    else:
+        forms = [model]
+    prefix, separator, rest = forms[-1].partition("/")
+    if separator and "/" not in rest and prefix in _native_prefixes():
+        if rest not in forms:
+            forms.append(rest)
+    return forms
+
+
+def _native_prefixes() -> frozenset[str]:
+    """The provider prefixes ``LLM`` strips from a model string it routes natively."""
+    from crewai.llm import SUPPORTED_NATIVE_PROVIDERS
+
+    return frozenset(SUPPORTED_NATIVE_PROVIDERS)
 
 
 def overlay_model_for_llm(llm: Any) -> str | None:
@@ -210,6 +242,13 @@ def overlay_model_for_llm(llm: Any) -> str | None:
     )
 
 
+def declared_before_overlay(llm: Any) -> Declared | None:
+    """What the caller declared for ``llm`` before the overlay mapped it, or None."""
+    if llm is None or _mapped_llms.get(id(llm)) is not llm:
+        return None
+    return _declared_before.get(id(llm))
+
+
 @contextmanager
 def building_mapped_model() -> Iterator[None]:
     """Build the model the overlay mapped to, without mapping it again."""
@@ -220,10 +259,19 @@ def building_mapped_model() -> Iterator[None]:
         _building_mapped.reset(token)
 
 
-def mark_mapped(llm: _T) -> _T:
-    """Record ``llm`` as built by a model key, so no model key maps it again."""
+def mark_mapped(llm: _T, declared: Declared | None = None) -> _T:
+    """Record ``llm`` as built by the overlay, so no model key maps it again.
+
+    ``declared`` is what the caller declared before the overlay mapped it —
+    the declared instance, or ``LLM(model, **kwargs)``'s arguments as
+    ``(model, kwargs, is_litellm)`` — so a role key can still be built from
+    the caller's own declaration (:func:`declared_before_overlay`).
+    """
     try:
         _mapped_llms[id(llm)] = llm
+        if declared is not None:
+            _declared_before[id(llm)] = declared
+            weakref.finalize(llm, _declared_before.pop, id(llm), None)
     except TypeError:
         # Only a weakly-referenceable object can be remembered (every
         # ``BaseLLM`` is). Anything else is returned as built: the one cost is
