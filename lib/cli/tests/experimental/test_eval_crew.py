@@ -241,11 +241,31 @@ def test_run_names_another_execution_and_an_anonymous_caller_sends_no_token(proj
     monkeypatch.setattr(eval_module, "saved_login", lambda: None)
     amp = install(monkeypatch, FakeAMP(statuses=[done("failed")]))
 
-    eval_module.eval_crew(run_id="other-run")
+    with pytest.raises(SystemExit):  # a failed gate is exit 1
+        eval_module.eval_crew(run_id="other-run")
 
     assert amp.api_key is None
     assert amp.calls[0] == ("create", "other-run")
     assert "Goal gate: FAILED" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "gate, code", [("passed", None), ("failed", 1), ("inconclusive", 1), ("unknown", 1)]
+)
+def test_the_exit_code_is_the_gates(project, monkeypatch, capsys, gate, code):
+    """A CI job reads the exit code. Only a gate that PASSED is 0: a failed one,
+    and one with no verdict, must stop the pipeline rather than wave it on."""
+    directory, _ = project
+    record_last_run(directory)
+    install(monkeypatch, FakeAMP(statuses=[done(gate)]))
+
+    if code is None:
+        eval_module.eval_crew()
+    else:
+        with pytest.raises(SystemExit) as exited:
+            eval_module.eval_crew()
+        assert exited.value.code == code
+    assert f"Goal gate: {gate.upper()}" in capsys.readouterr().out
 
 
 def test_a_failed_evaluation_exits_one_with_amps_reason(project, monkeypatch, capsys):
@@ -1126,3 +1146,64 @@ def test_read_last_run_reads_the_record_crewai_writes(tmp_path):
     record_last_run(tmp_path)
     record = eval_module.read_last_run(tmp_path)
     assert record is not None and record["execution_id"] == EXECUTION_ID and record["amp_base_url"] == "https://amp.test"
+
+
+@pytest.mark.parametrize(
+    "tracing, login, says_login",
+    [
+        ("true", None, True),  # tracing on, nobody logged in: log in
+        ("true", "tok", False),  # logged in: the ordinary steps
+        (None, None, False),  # tracing off: turn it on
+    ],
+)
+def test_an_unattended_run_with_nothing_traced_says_what_would_trace_it(
+    project, monkeypatch, capsys, tracing, login, says_login
+):
+    """With no terminal, an anonymous run's trace stays on the machine even with
+    tracing on. Telling that user to turn tracing on sends them round the same
+    loop; logging in is what makes an unattended run traced."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "saved_login", lambda: login)
+    if tracing:
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", tracing)
+    else:
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    out = capsys.readouterr().out.replace("\n", " ")
+    assert exited.value.code == 1
+    assert ("run `crewai login`" in out) is says_login
+    assert ("add CREWAI_TRACING_ENABLED=true" in out) is not says_login
+
+
+def test_an_unreadable_login_is_the_reason_given_when_nothing_was_traced(
+    project, monkeypatch, capsys
+):
+    """A login that exists and cannot be read is why an unattended run was not
+    traced, and its own sentence says what to do — not "turn tracing on"."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+
+    def unreadable() -> None:
+        raise eval_module.EvaluationStoppedError(
+            "Could not read the saved login (PermissionError: [Errno 13] "
+            "Permission denied: [/Users/me/.config/crewai]). Run `crewai login` again"
+        )
+
+    monkeypatch.setattr(eval_module, "saved_login", unreadable)
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    out = capsys.readouterr().out.replace("\n", " ")
+    assert "Could not read the saved login" in out
+    # printed as it is: `[/Users/…]` read as markup is a closing tag, and a crash
+    assert "[/Users/me/.config/crewai]" in out
+    assert "add CREWAI_TRACING_ENABLED=true" not in out
+
