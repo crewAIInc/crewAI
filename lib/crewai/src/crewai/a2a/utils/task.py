@@ -108,6 +108,7 @@ def _ensure_task_cache() -> None:
                 db=conn.get("db", 0),
                 password=conn.get("password"),
                 default_ttl=3600,
+                use_tls=conn.get("use_tls", False),
             )
 
         _cache_initialized = True
