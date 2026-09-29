@@ -1162,9 +1162,6 @@ class SummarizeMessages:
         return chunks
 
 
-_SUMMARIZER = SummarizeMessages()
-
-
 def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
@@ -1186,7 +1183,7 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         verbose: Whether to print progress.
     """
-    _SUMMARIZER.summarize(
+    SummarizeMessages().summarize(
         messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
     )
 
