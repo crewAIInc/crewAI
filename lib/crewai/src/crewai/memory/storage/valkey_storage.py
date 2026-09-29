@@ -589,6 +589,27 @@ class ValkeyStorage:
             _logger.error(f"Failed to deserialize record {record_id}: {e}")
             return None
 
+    async def _reconcile_existing_index_dim(self, client: Any) -> None:
+        """Read the existing memory_index vector dimension and reconcile it.
+
+        Adopts the dimension when unset (process-restart case) and raises
+        EmbeddingDimensionMismatchError when the current embedder differs.
+        FT.INFO failure is tolerated (fall back to auto-detect); a real
+        mismatch must propagate.
+        """
+        try:
+            info = await ft.info(client, "memory_index")
+        except Exception as e:  # noqa: BLE001
+            info = None
+            _logger.debug("Could not read index info: %s", e)
+        existing_dim = _extract_index_dimension(info) if info else None
+        if existing_dim is None:
+            return
+        if self._vector_dim is None:
+            self._vector_dim = existing_dim
+        elif self._vector_dim != existing_dim:
+            raise EmbeddingDimensionMismatchError(existing_dim, self._vector_dim)
+
     async def _ensure_vector_index(self) -> None:
         """Create Valkey Search vector index if it doesn't exist.
 
@@ -633,19 +654,7 @@ class ValkeyStorage:
             # mismatch must propagate — so this is deliberately not inside the
             # broad except above (EmbeddingDimensionMismatchError is a
             # ValueError and would otherwise be swallowed).
-            try:
-                info = await ft.info(client, "memory_index")
-            except Exception as e:  # noqa: BLE001
-                info = None
-                _logger.debug("Could not read index info: %s", e)
-            existing_dim = _extract_index_dimension(info) if info else None
-            if existing_dim is not None:
-                if self._vector_dim is None:
-                    self._vector_dim = existing_dim
-                elif self._vector_dim != existing_dim:
-                    raise EmbeddingDimensionMismatchError(
-                        existing_dim, self._vector_dim
-                    )
+            await self._reconcile_existing_index_dim(client)
             self._index_created = True
             return
 
@@ -692,6 +701,9 @@ class ValkeyStorage:
             # our FT.LIST check and FT.CREATE. Treat "already exists" as success
             # rather than failing save/search.
             if "already exists" in error_msg or "index already" in error_msg:
+                # A concurrent worker built the index; it may be at a different
+                # size, so validate its dimension too (not just assume success).
+                await self._reconcile_existing_index_dim(client)
                 self._index_created = True
                 return
             if "unknown command" in error_msg or "ft.create" in error_msg:
@@ -1431,8 +1443,22 @@ class ValkeyStorage:
         if self._vector_dim is None and query_embedding:
             self._vector_dim = len(query_embedding)
 
-        # Ensure vector index exists
+        # Ensure vector index exists (also reconciles _vector_dim with an
+        # existing index's dimension, e.g. after a process restart).
         await self._ensure_vector_index()
+
+        # Guard the query itself: after an embedder change, a wrong-sized query
+        # blob makes Valkey Search error opaquely or return empty/wrong hits, so
+        # recall looks like memory disappeared. Fail loudly instead, matching
+        # LanceDB and Qdrant.
+        if (
+            query_embedding
+            and self._vector_dim is not None
+            and len(query_embedding) != self._vector_dim
+        ):
+            raise EmbeddingDimensionMismatchError(
+                self._vector_dim, len(query_embedding)
+            )
 
         # Build query components
         query_parts: list[str] = []
