@@ -889,63 +889,28 @@ class SummarizeMessages:
         llm: LLM | BaseLLM,
         callbacks: list[TokenCalcHandler],
         verbose: bool = True,
-        char_level_index: int = 0,
-    ) -> str | None:
-        """Replace non-system messages with a single summary, in place.
-
-        When ``char_level_index`` is greater than zero, re-chunks and summarizes
-        ``messages`` at a tighter token estimate and returns the merged summary.
-        """
+    ) -> None:
+        """Replace non-system messages with a single summary, in place."""
         if llm is None:
             raise RuntimeError("SummarizeMessages.summarize() must set an LLM first.")
-        if char_level_index >= len(self._CHARS_PER_TOKEN_LEVELS):
-            raise LLMContextLengthExceededError(
-                "Summarization chunk still exceeds the context window after "
-                f"retries at {self._CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
-            ) from None
 
         self.llm = llm
         self.callbacks = callbacks
         self.verbose = verbose
-
-        if char_level_index == 0:
-            self.messages = messages
-            preserved_files = self._collect_attached_files()
-            system_messages = [m for m in self.messages if m.get("role") == "system"]
-            work_messages = [m for m in self.messages if m.get("role") != "system"]
-            if not work_messages:
-                return None
-        else:
-            preserved_files = {}
-            system_messages = []
-            work_messages = messages
-            if self.verbose:
-                chars_per_token = self._CHARS_PER_TOKEN_LEVELS[char_level_index]
-                PRINTER.print(
-                    content=(
-                        "Summarization chunk exceeded context window; retrying with "
-                        f"tighter token estimate (1 token per {chars_per_token} chars)."
-                    ),
-                    color="yellow",
-                )
+        self.messages = messages
+        preserved_files = self._collect_attached_files()
+        system_messages = [m for m in self.messages if m.get("role") == "system"]
+        work_messages = [m for m in self.messages if m.get("role") != "system"]
+        if not work_messages:
+            return
 
         chunks = self._chunk_messages(
             work_messages,
             llm.get_context_window_size(),
-            char_level_index=char_level_index,
+            char_level_index=0,
         )
-        if not chunks and char_level_index > 0:
-            raise LLMContextLengthExceededError(
-                "Summarization chunk could not be split further."
-            ) from None
-
-        summaries = self._get_summaries_for_chunks(chunks, char_level_index)
-        if char_level_index == 0:
-            self._replace_history_with_summary(
-                system_messages, summaries, preserved_files
-            )
-            return None
-        return "\n\n".join(summaries)
+        summaries = self._get_summaries_for_chunks(chunks, char_level_index=0)
+        self._replace_history_with_summary(system_messages, summaries, preserved_files)
 
     def _get_summaries_for_chunks(
         self, chunks: list[list[LLMMessage]], char_level_index: int
@@ -987,18 +952,43 @@ class SummarizeMessages:
                 return match.group(1).strip()
             return summary.strip()
 
-        retry_summary = self.summarize(
-            chunk,
-            llm,
-            self.callbacks,
-            self.verbose,
-            char_level_index + 1,
-        )
-        if retry_summary is None:
+        if char_level_index + 1 >= len(self._CHARS_PER_TOKEN_LEVELS):
             raise LLMContextLengthExceededError(
-                "Summarization retry produced no summary."
+                "Summarization chunk still exceeds the context window after "
+                f"retries at {self._CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
             ) from None
-        return retry_summary
+
+        next_level = char_level_index + 1
+        if self.verbose:
+            chars_per_token = self._CHARS_PER_TOKEN_LEVELS[next_level]
+            PRINTER.print(
+                content=(
+                    "Summarization chunk exceeded context window; retrying with "
+                    f"tighter token estimate (1 token per {chars_per_token} chars)."
+                ),
+                color="yellow",
+            )
+
+        sub_chunks = self._chunk_messages(
+            chunk,
+            llm.get_context_window_size(),
+            char_level_index=next_level,
+        )
+        if not sub_chunks:
+            raise LLMContextLengthExceededError(
+                "Summarization chunk could not be split further."
+            ) from None
+
+        if len(sub_chunks) == 1:
+            return await self._summarize_one(sub_chunks[0], char_level_index=next_level)
+
+        parts = await asyncio.gather(
+            *[
+                self._summarize_one(sub_chunk, char_level_index=next_level)
+                for sub_chunk in sub_chunks
+            ]
+        )
+        return "\n\n".join(parts)
 
     def _summarize_all(
         self, chunks: list[list[LLMMessage]], char_level_index: int
