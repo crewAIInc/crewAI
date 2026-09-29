@@ -154,3 +154,26 @@ class TestEmbedTextsTimeout:
         with patch.object(types_mod, "_EMBED_POOL", self._timing_out_pool()):
             with pytest.raises(TimeoutError):
                 asyncio.run(run())
+
+    def test_timeout_raises_on_sync_save_path_no_event_loop(self) -> None:
+        """EncodingFlow steps run via asyncio.to_thread, so embed_texts is
+        called with no running loop. raise_on_timeout must still fire there,
+        not just in the async-context branch.
+        """
+        import crewai.memory.types as types_mod
+
+        embedder = MagicMock(return_value=[[0.1, 0.2]])
+
+        # Called directly (no running event loop).
+        with patch.object(types_mod, "_EMBED_POOL", self._timing_out_pool()):
+            with pytest.raises(TimeoutError):
+                embed_texts(embedder, ["hello"], raise_on_timeout=True)
+
+    def test_no_timeout_sync_path_runs_directly(self) -> None:
+        """Without raise_on_timeout, the sync path runs the embedder directly
+        (no pool, no timeout) as before.
+        """
+        embedder = MagicMock(return_value=[[0.1, 0.2]])
+        result = embed_texts(embedder, ["hello"])
+        assert result == [[0.1, 0.2]]
+        embedder.assert_called_once()
