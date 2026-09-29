@@ -274,8 +274,27 @@ def test_parse_created_at_round_trips_numeric_and_legacy_iso() -> None:
     """
     from datetime import datetime
 
-    from crewai.memory.storage.valkey_storage import _parse_created_at
+    from crewai.memory.storage.valkey_storage import _parse_created_at, _to_epoch
 
     dt = datetime(2024, 1, 15, 10, 30, 45, 123456)
-    assert _parse_created_at(str(dt.timestamp())) == dt
+    # Stored as a UTC epoch (naive treated as UTC), read back as naive UTC.
+    assert _parse_created_at(str(_to_epoch(dt))) == dt
     assert _parse_created_at(dt.isoformat()) == dt
+
+
+def test_to_epoch_treats_naive_datetime_as_utc() -> None:
+    """MemoryRecord uses datetime.utcnow() (naive UTC). _to_epoch must treat
+    naive datetimes as UTC so stored scores and age-filter thresholds compare
+    correctly regardless of host timezone (a plain naive .timestamp() would
+    shift by the local offset).
+    """
+    from datetime import datetime, timezone
+
+    from crewai.memory.storage.valkey_storage import _to_epoch
+
+    dt = datetime(2024, 1, 15, 10, 30, 45)
+    expected = dt.replace(tzinfo=timezone.utc).timestamp()
+    assert _to_epoch(dt) == expected
+    # Already-aware datetimes are respected as-is.
+    aware = datetime(2024, 1, 15, 10, 30, 45, tzinfo=timezone.utc)
+    assert _to_epoch(aware) == expected
