@@ -10,7 +10,7 @@ from datetime import datetime
 import inspect
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from crewai_core.printer import PRINTER, ColoredText, Printer
 from crewai_core.settings import Settings
@@ -890,27 +890,67 @@ class SummarizeMessages:
         llm: LLM | BaseLLM,
         callbacks: list[TokenCalcHandler],
         verbose: bool = True,
-    ) -> None:
-        """Replace non-system messages with a single summary, in place."""
-        self.messages = messages
+        char_level_index: int = 0,
+    ) -> str | None:
+        """Replace non-system messages with a single summary, in place.
+
+        When ``char_level_index`` is greater than zero, re-chunks and summarizes
+        ``messages`` at a tighter token estimate and returns the merged summary.
+        """
+        if llm is None:
+            raise RuntimeError("SummarizeMessages.summarize() must set an LLM first.")
+        if char_level_index >= len(_CHARS_PER_TOKEN_LEVELS):
+            raise LLMContextLengthExceededError(
+                "Summarization chunk still exceeds the context window after "
+                f"retries at {_CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
+            ) from None
+
         self.llm = llm
         self.callbacks = callbacks
         self.verbose = verbose
-        preserved_files = self._collect_attached_files()
-        system_messages = [m for m in self.messages if m.get("role") == "system"]
-        non_system_messages = [m for m in self.messages if m.get("role") != "system"]
-        if not non_system_messages:
-            return
+
+        if char_level_index == 0:
+            self.messages = messages
+            preserved_files = self._collect_attached_files()
+            system_messages = [m for m in self.messages if m.get("role") == "system"]
+            work_messages = [m for m in self.messages if m.get("role") != "system"]
+            if not work_messages:
+                return None
+        else:
+            preserved_files = {}
+            system_messages = []
+            work_messages = messages
+            if self.verbose:
+                chars_per_token = _CHARS_PER_TOKEN_LEVELS[char_level_index]
+                PRINTER.print(
+                    content=(
+                        "Summarization chunk exceeded context window; retrying with "
+                        f"tighter token estimate (1 token per {chars_per_token} chars)."
+                    ),
+                    color="yellow",
+                )
 
         chunks = self._chunk_messages(
-            non_system_messages,
-            self.llm.get_context_window_size(),
-            chars_per_token=_CHARS_PER_TOKEN_LEVELS[0],
+            work_messages,
+            llm.get_context_window_size(),
+            char_level_index=char_level_index,
         )
-        summaries = self._get_summaries_for_chunks(chunks)
-        self._replace_history_with_summary(system_messages, summaries, preserved_files)
+        if not chunks and char_level_index > 0:
+            raise LLMContextLengthExceededError(
+                "Summarization chunk could not be split further."
+            ) from None
 
-    def _get_summaries_for_chunks(self, chunks: list[list[LLMMessage]]) -> list[str]:
+        summaries = self._get_summaries_for_chunks(chunks, char_level_index)
+        if char_level_index == 0:
+            self._replace_history_with_summary(
+                system_messages, summaries, preserved_files
+            )
+            return None
+        return "\n\n".join(summaries)
+
+    def _get_summaries_for_chunks(
+        self, chunks: list[list[LLMMessage]], char_level_index: int
+    ) -> list[str]:
         total = len(chunks)
         if self.verbose and total <= 1:
             for index in range(1, total + 1):
@@ -923,15 +963,13 @@ class SummarizeMessages:
                 content=f"Summarizing {total} chunks in parallel...",
                 color="yellow",
             )
-        return self._summarize_all(chunks)
+        return self._summarize_all(chunks, char_level_index)
 
     async def _summarize_one(
-        self, chunk: list[LLMMessage], level_index: int = 0
+        self, chunk: list[LLMMessage], char_level_index: int = 0
     ) -> str:
         """Summarize a single chunk, tightening token estimates on context overflow."""
-        llm = self.llm
-        if llm is None:
-            raise RuntimeError("SummarizeMessages.summarize() must set an LLM first.")
+        llm = cast("LLM | BaseLLM", self.llm)
 
         try:
             summary = str(
@@ -950,50 +988,29 @@ class SummarizeMessages:
                 return match.group(1).strip()
             return summary.strip()
 
-        if level_index + 1 >= len(_CHARS_PER_TOKEN_LEVELS):
-            raise LLMContextLengthExceededError(
-                "Summarization chunk still exceeds the context window after "
-                f"retries at {_CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
-            ) from None
-
-        next_level = level_index + 1
-        chars_per_token = _CHARS_PER_TOKEN_LEVELS[next_level]
-
-        if self.verbose:
-            PRINTER.print(
-                content=(
-                    "Summarization chunk exceeded context window; retrying with "
-                    f"tighter token estimate (1 token per {chars_per_token} chars)."
-                ),
-                color="yellow",
-            )
-
-        sub_chunks = self._chunk_messages(
+        retry_summary = self.summarize(
             chunk,
-            llm.get_context_window_size(),
-            chars_per_token=chars_per_token,
+            llm,
+            self.callbacks,
+            self.verbose,
+            char_level_index + 1,
         )
-        if not sub_chunks:
+        if retry_summary is None:
             raise LLMContextLengthExceededError(
-                "Summarization chunk could not be split further."
+                "Summarization retry produced no summary."
             ) from None
+        return retry_summary
 
-        if len(sub_chunks) == 1:
-            return await self._summarize_one(sub_chunks[0], level_index=next_level)
-
-        parts = await asyncio.gather(
-            *[
-                self._summarize_one(sub_chunk, level_index=next_level)
-                for sub_chunk in sub_chunks
-            ]
-        )
-        return "\n\n".join(parts)
-
-    def _summarize_all(self, chunks: list[list[LLMMessage]]) -> list[str]:
+    def _summarize_all(
+        self, chunks: list[list[LLMMessage]], char_level_index: int
+    ) -> list[str]:
         """Run one coroutine per chunk and return the summaries in order."""
 
         async def _gather() -> list[str]:
-            coroutines = [self._summarize_one(chunk) for chunk in chunks]
+            coroutines = [
+                self._summarize_one(chunk, char_level_index=char_level_index)
+                for chunk in chunks
+            ]
             return list(await asyncio.gather(*coroutines))
 
         coro = _gather()
@@ -1046,13 +1063,17 @@ class SummarizeMessages:
             return 0
         return int(len(text) / chars_per_token)
 
+    def _chars_per_token(self, char_level_index: int) -> float:
+        return _CHARS_PER_TOKEN_LEVELS[char_level_index]
+
     def _messages_ready_to_chunk(
         self,
         messages: list[LLMMessage],
         max_tokens: int,
-        chars_per_token: float = 4.0,
+        char_level_index: int = 0,
     ) -> list[LLMMessage]:
         """Drop system messages and split any entry that exceeds max_tokens."""
+        chars_per_token = self._chars_per_token(char_level_index)
         ready: list[LLMMessage] = []
         for msg in messages:
             if msg.get("role") == "system":
@@ -1113,11 +1134,12 @@ class SummarizeMessages:
         self,
         messages: list[LLMMessage],
         max_tokens: int,
-        chars_per_token: float = 4.0,
+        char_level_index: int = 0,
     ) -> list[list[LLMMessage]]:
         """Split messages into chunks that stay under max_tokens."""
+        chars_per_token = self._chars_per_token(char_level_index)
         normalized = self._messages_ready_to_chunk(
-            messages, max_tokens, chars_per_token=chars_per_token
+            messages, max_tokens, char_level_index=char_level_index
         )
         if not normalized:
             return []

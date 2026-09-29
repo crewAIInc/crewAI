@@ -1016,7 +1016,9 @@ class TestParallelSummarization:
         summarizer = SummarizeMessages()
         summarizer.llm = mock_llm
         summarizer.callbacks = []
-        results = summarizer._summarize_all(chunks=[chunk_a, chunk_b])
+        results = summarizer._summarize_all(
+            chunks=[chunk_a, chunk_b], char_level_index=0
+        )
 
         assert results == ["Result A", "Result B"]
 
