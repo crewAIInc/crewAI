@@ -1124,3 +1124,26 @@ class TestValkeyStorageVectorSearch:
         assert len(results) == 2
         assert results[0][0].id == "record-1"
         assert results[1][0].id == "record-2"
+
+class TestSearchDimensionMismatch:
+    """_vector_search must reject a query whose embedding dimension differs from
+    the established index, matching LanceDB/Qdrant, rather than sending a
+    wrong-sized blob to Valkey Search (opaque error or empty/wrong hits).
+    """
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_search_wrong_dim_query_raises(
+        self, mock_ft_list: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
+
+        mock_ft_list.return_value = [b"memory_index"]
+        valkey_storage._vector_dim = 1536
+        valkey_storage._index_created = True  # index already established
+
+        with pytest.raises(EmbeddingDimensionMismatchError) as exc:
+            await valkey_storage.asearch([0.1] * 3072, limit=5)
+        assert exc.value.stored_dim == 1536
+        assert exc.value.new_dim == 3072
