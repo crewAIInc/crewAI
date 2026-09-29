@@ -168,8 +168,17 @@ def eval_crew(run_id: str | None = None) -> None:
         raise SystemExit(130) from None
     _print_verdict(finished, url)
     _say_where_the_criteria_live(write_eval_config(finished))
-    if finished.get("status") != "done":
+    # The exit code is what a CI job reads, so it is the gate's: 0 only for a
+    # run that PASSED. A failed gate, one without a verdict, and an evaluation
+    # that stopped are all 1 — a pipeline that carried on past any of them would
+    # ship what the evaluation did not vouch for.
+    if not _gate_passed(finished):
         raise SystemExit(1)
+
+
+def _gate_passed(finished: dict[str, Any]) -> bool:
+    verdict = finished.get("verdict") if finished.get("status") == "done" else None
+    return isinstance(verdict, dict) and str(verdict.get("gate")).lower() == "passed"
 
 
 def _ran_just_now(record: dict[str, Any]) -> bool:
@@ -506,7 +515,7 @@ def _run_and_let_the_app_evaluate() -> str | None:
         f"  1. add {TRACING_ENV_VAR}=true to .env\n  2. crewai run\n  3. crewai eval"
     )
     if is_dmn_mode_enabled() or not sys.stdin.isatty():
-        console.print(steps, style="yellow")
+        console.print(_nothing_traced_unattended() or steps, style="yellow")
         raise SystemExit(1)
     if not click.confirm(
         "No traced run is recorded in this project. Turn tracing on and run the crew now? "
@@ -565,6 +574,29 @@ def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
     if when.tzinfo is None:
         return False
     return when >= began - timedelta(seconds=1)
+
+
+def _nothing_traced_unattended() -> str | None:
+    """Why a run with tracing on left nothing to evaluate, when nobody was there.
+
+    An anonymous run asks before its trace leaves the machine, and a process with
+    no terminal has nobody to ask — so its trace is kept local, tracing on or
+    not. Telling that user to turn tracing on sends them round the same loop;
+    logging in is what makes an unattended run traced. None when tracing is off
+    or there is a login: the ordinary steps are the right ones then.
+    """
+    if os.environ.get(TRACING_ENV_VAR, "").strip().lower() not in ("true", "1"):
+        return None
+    try:
+        if saved_login() is not None:
+            return None
+    except EvaluationStoppedError:
+        return None
+    return (
+        "No traced run is recorded in this project. Tracing is on, but a run nobody is "
+        "watching is only traced when you are logged in: run `crewai login`, then "
+        "`crewai run` and `crewai eval` again."
+    )
 
 
 def _enable_tracing() -> None:
