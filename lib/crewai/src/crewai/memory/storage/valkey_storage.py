@@ -418,11 +418,14 @@ class ValkeyStorage:
                 "private": "true" if record.private else "false",
             }
 
-            # Add embedding as binary vector field if present
+            # Add embedding as binary vector field only when present. Writing
+            # empty bytes for the fixed-size FLOAT32 vector field makes Valkey
+            # Search fail to index the hash (or mis-index it); omitting the
+            # field entirely simply leaves the record out of the vector index,
+            # which is the correct behavior for a record with no embedding
+            # (e.g. embed_texts returned nothing on its timeout).
             if record.embedding:
                 result["embedding"] = self._embedding_to_bytes(record.embedding)
-            else:
-                result["embedding"] = b""  # Empty bytes for no embedding
 
             return result
         except (TypeError, ValueError) as e:
@@ -1406,6 +1409,10 @@ class ValkeyStorage:
             return_fields=return_fields,
             params={"BLOB": embedding_blob},
             limit=FtSearchLimit(0, fetch_limit),
+            # Valkey Search only parses the `=>[KNN ...]` vector clause under
+            # query dialect 2; without it FT.SEARCH ignores/rejects the KNN
+            # query on a live module.
+            dialect=2,
         )
 
         try:

@@ -189,12 +189,13 @@ class TestValkeyStorageSave:
         # Verify record was saved
         mock_glide_client.hset.assert_called_once()
 
-        # Verify embedding field is empty bytes
+        # A record without an embedding must not write the fixed-size vector
+        # field at all (empty bytes would make Valkey Search fail to index the
+        # hash); the record is simply left out of the vector index.
         hset_call = mock_glide_client.hset.call_args
         hset_dict = hset_call[0][1]  # field_value_map dict
-        
-        assert "embedding" in hset_dict
-        assert hset_dict["embedding"] == b""
+
+        assert "embedding" not in hset_dict
 
     @pytest.mark.asyncio
     @patch("crewai.memory.storage.valkey_storage.ft.list")
