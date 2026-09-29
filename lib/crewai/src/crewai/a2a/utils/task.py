@@ -99,7 +99,19 @@ def _ensure_task_cache() -> None:
             return
 
         if use_valkey_cache():
-            from crewai.memory.storage.valkey_cache import ValkeyCache
+            try:
+                from crewai.memory.storage.valkey_cache import ValkeyCache
+            except ImportError as e:
+                # VALKEY_URL is set but the optional valkey extra (valkey-glide)
+                # is not installed. Fail with a clear, actionable message rather
+                # than letting the bare ImportError surface from every
+                # cancellable A2A task.
+                raise ImportError(
+                    "VALKEY_URL is set, which routes A2A task cancellation "
+                    "through Valkey, but the optional 'valkey' extra is not "
+                    "installed. Install it with `pip install 'crewai[valkey]'` "
+                    "(or unset VALKEY_URL to use the default in-memory cache)."
+                ) from e
 
             conn = parse_cache_url() or {}
             _task_cache = ValkeyCache(
