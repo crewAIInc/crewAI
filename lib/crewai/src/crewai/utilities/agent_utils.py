@@ -867,6 +867,9 @@ def message_content_text(msg: LLMMessage) -> str:
     return str(content)
 
 
+_CHARS_PER_TOKEN_LEVELS: Final[tuple[float, ...]] = (4.0, 3.0, 2.5)
+
+
 class SummarizeMessages:
     """Compact a message list so it fits the model context window.
 
@@ -900,7 +903,9 @@ class SummarizeMessages:
             return
 
         chunks = self._chunk_messages(
-            non_system_messages, self.llm.get_context_window_size()
+            non_system_messages,
+            self.llm.get_context_window_size(),
+            chars_per_token=_CHARS_PER_TOKEN_LEVELS[0],
         )
         summaries = self._get_summaries_for_chunks(chunks)
         self._replace_history_with_summary(system_messages, summaries, preserved_files)
@@ -920,18 +925,69 @@ class SummarizeMessages:
             )
         return self._summarize_all(chunks)
 
-    async def _summarize_one(self, chunk: list[LLMMessage]) -> str:
-        """Summarize a single chunk."""
+    async def _summarize_one(
+        self, chunk: list[LLMMessage], level_index: int = 0
+    ) -> str:
+        """Summarize a single chunk, tightening token estimates on context overflow."""
         llm = self.llm
         if llm is None:
             raise RuntimeError("SummarizeMessages.summarize() must set an LLM first.")
-        summary = str(
-            await llm.acall(self._build_summary_prompt(chunk), callbacks=self.callbacks)
+
+        try:
+            summary = str(
+                await llm.acall(
+                    self._build_summary_prompt(chunk), callbacks=self.callbacks
+                )
+            )
+        except LLMContextLengthExceededError:
+            pass
+        except Exception as error:
+            if not is_context_length_exceeded(error):
+                raise
+        else:
+            match = re.search(r"<summary>(.*?)</summary>", summary, re.DOTALL)
+            if match:
+                return match.group(1).strip()
+            return summary.strip()
+
+        if level_index + 1 >= len(_CHARS_PER_TOKEN_LEVELS):
+            raise LLMContextLengthExceededError(
+                "Summarization chunk still exceeds the context window after "
+                f"retries at {_CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
+            ) from None
+
+        next_level = level_index + 1
+        chars_per_token = _CHARS_PER_TOKEN_LEVELS[next_level]
+
+        if self.verbose:
+            PRINTER.print(
+                content=(
+                    "Summarization chunk exceeded context window; retrying with "
+                    f"tighter token estimate (1 token per {chars_per_token} chars)."
+                ),
+                color="yellow",
+            )
+
+        sub_chunks = self._chunk_messages(
+            chunk,
+            llm.get_context_window_size(),
+            chars_per_token=chars_per_token,
         )
-        match = re.search(r"<summary>(.*?)</summary>", summary, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-        return summary.strip()
+        if not sub_chunks:
+            raise LLMContextLengthExceededError(
+                "Summarization chunk could not be split further."
+            ) from None
+
+        if len(sub_chunks) == 1:
+            return await self._summarize_one(sub_chunks[0], level_index=next_level)
+
+        parts = await asyncio.gather(
+            *[
+                self._summarize_one(sub_chunk, level_index=next_level)
+                for sub_chunk in sub_chunks
+            ]
+        )
+        return "\n\n".join(parts)
 
     def _summarize_all(self, chunks: list[list[LLMMessage]]) -> list[str]:
         """Run one coroutine per chunk and return the summaries in order."""
@@ -984,12 +1040,17 @@ class SummarizeMessages:
         self.messages.extend(system_messages)
         self.messages.append(summary_message)
 
-    def _approx_tokens(self, text: str) -> int:
-        """Estimate token count using roughly 1 token per 4 characters."""
-        return len(text) // 4
+    def _approx_tokens(self, text: str, chars_per_token: float = 4.0) -> int:
+        """Estimate token count from character length and a chars-per-token heuristic."""
+        if not text:
+            return 0
+        return int(len(text) / chars_per_token)
 
     def _messages_ready_to_chunk(
-        self, messages: list[LLMMessage], max_tokens: int
+        self,
+        messages: list[LLMMessage],
+        max_tokens: int,
+        chars_per_token: float = 4.0,
     ) -> list[LLMMessage]:
         """Drop system messages and split any entry that exceeds max_tokens."""
         ready: list[LLMMessage] = []
@@ -998,13 +1059,13 @@ class SummarizeMessages:
                 continue
 
             text = message_content_text(msg)
-            if not text or self._approx_tokens(text) <= max_tokens:
+            if not text or self._approx_tokens(text, chars_per_token) <= max_tokens:
                 ready.append(msg)
                 continue
 
             part_prefix_tokens = 5
             body_max_tokens = max(1, max_tokens - part_prefix_tokens)
-            max_chars = max(1, body_max_tokens * 4)
+            max_chars = max(1, int(body_max_tokens * chars_per_token))
             parts = [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
             total_parts = len(parts)
             for index, part in enumerate(parts, start=1):
@@ -1049,10 +1110,15 @@ class SummarizeMessages:
         return "\n\n".join(lines)
 
     def _chunk_messages(
-        self, messages: list[LLMMessage], max_tokens: int
+        self,
+        messages: list[LLMMessage],
+        max_tokens: int,
+        chars_per_token: float = 4.0,
     ) -> list[list[LLMMessage]]:
         """Split messages into chunks that stay under max_tokens."""
-        normalized = self._messages_ready_to_chunk(messages, max_tokens)
+        normalized = self._messages_ready_to_chunk(
+            messages, max_tokens, chars_per_token=chars_per_token
+        )
         if not normalized:
             return []
 
@@ -1060,7 +1126,9 @@ class SummarizeMessages:
         current_chunk: list[LLMMessage] = []
         current_tokens = 0
         for msg in normalized:
-            msg_tokens = self._approx_tokens(message_content_text(msg))
+            msg_tokens = self._approx_tokens(
+                message_content_text(msg), chars_per_token=chars_per_token
+            )
             if current_chunk and (current_tokens + msg_tokens) > max_tokens:
                 chunks.append(current_chunk)
                 current_chunk = []

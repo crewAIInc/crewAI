@@ -22,6 +22,7 @@ from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     message_content_text,
     format_message_for_llm,
+    LLMContextLengthExceededError,
     convert_tools_to_openai_schema,
     handle_max_iterations_exceeded,
     execute_single_native_tool_call,
@@ -1018,6 +1019,29 @@ class TestParallelSummarization:
         results = summarizer._summarize_all(chunks=[chunk_a, chunk_b])
 
         assert results == ["Result A", "Result B"]
+
+    def test_summarize_one_retries_after_context_length_error(self) -> None:
+        """A chunk that overflows context is retried after tighter token estimation."""
+        chunk: list[dict[str, Any]] = [{"role": "user", "content": "x" * 800}]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 100_000
+        mock_llm.acall = AsyncMock(
+            side_effect=[
+                LLMContextLengthExceededError("context length exceeded"),
+                "<summary>Recovered summary</summary>",
+            ]
+        )
+
+        summarizer = SummarizeMessages()
+        summarizer.llm = mock_llm
+        summarizer.callbacks = []
+        summarizer.verbose = False
+
+        result = asyncio.run(summarizer._summarize_one(chunk))
+
+        assert result == "Recovered summary"
+        assert mock_llm.acall.await_count == 2
 
     @patch("crewai.utilities.agent_utils.is_inside_event_loop", return_value=True)
     def test_works_inside_existing_event_loop(self, _mock_loop: Any) -> None:
