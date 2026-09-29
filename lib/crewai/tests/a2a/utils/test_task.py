@@ -373,3 +373,35 @@ class TestExecuteAndCancelIntegration:
 
             with pytest.raises(asyncio.CancelledError):
                 await execute_task
+
+class TestValkeyExtraMissing:
+    """When VALKEY_URL is set but the optional valkey extra is not installed,
+    _ensure_task_cache must raise a clear, actionable ImportError instead of the
+    bare glide ImportError leaking from every cancellable A2A task.
+    """
+
+    def test_missing_valkey_extra_raises_clear_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import builtins
+
+        import crewai.a2a.utils.task as task_mod
+
+        monkeypatch.setenv("VALKEY_URL", "valkey://localhost:6379")
+        # Reset the one-time init guard so _ensure_task_cache runs its body.
+        monkeypatch.setattr(task_mod, "_cache_initialized", False)
+        monkeypatch.setattr(task_mod, "_task_cache", None)
+
+        real_import = builtins.__import__
+
+        def _blocked_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "crewai.memory.storage.valkey_cache" or name.endswith(
+                "valkey_cache"
+            ):
+                raise ImportError("No module named 'glide'")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _blocked_import)
+
+        with pytest.raises(ImportError, match=r"crewai\[valkey\]"):
+            task_mod._ensure_task_cache()
