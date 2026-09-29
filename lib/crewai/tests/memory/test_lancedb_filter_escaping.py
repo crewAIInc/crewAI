@@ -112,7 +112,8 @@ def test_crafted_scope_prefix_does_not_remove_other_tenant(
 
 
 def test_crafted_record_id_does_not_over_delete(storage: LanceDBStorage) -> None:
-    assert storage.delete(record_ids=["a1') OR id <> ('"]) == 0
+    deleted = storage.delete(record_ids=["a1') OR id <> ('"])
+    assert deleted == 0
     assert _all_ids(storage) == TENANT_A | TENANT_B
 
 
@@ -125,8 +126,10 @@ def test_record_ids_with_quotes_are_matched_literally(tmp_path: Path) -> None:
             _record("other", "/people/other", ["x"]),
         ],
     )
-    assert storage.delete(record_ids=["o'brien-1"]) == 1
-    assert storage.delete(scope_prefix="/people/o'brien", categories=["x"]) == 1
+    deleted_by_id = storage.delete(record_ids=["o'brien-1"])
+    assert deleted_by_id == 1
+    deleted_by_scope = storage.delete(scope_prefix="/people/o'brien", categories=["x"])
+    assert deleted_by_scope == 1
     assert _all_ids(storage) == {"other"}
 
 
@@ -165,7 +168,8 @@ def test_legitimate_scope_characters_still_match(tmp_path: Path) -> None:
     assert storage.list_scopes("/crew/research-crew") == ["/crew/research-crew/agent"]
     assert storage.list_categories("/crew/research-crew") == {"note": 2}
 
-    assert storage.delete(scope_prefix="/crew/research_crew") == 1
+    deleted = storage.delete(scope_prefix="/crew/research_crew")
+    assert deleted == 1
     assert _all_ids(storage) == {"senior", "junior", "lookalike"}
 
     storage.reset(scope_prefix="/crew/research-crew")
@@ -192,5 +196,6 @@ def test_percent_underscore_and_backslash_in_scope_names_match_literally(
     assert storage.count("/a_b") == 1
     assert _search_ids(storage, "/share\\") == {"backslash"}
 
-    assert storage.delete(scope_prefix="/a_b") == 1
+    deleted = storage.delete(scope_prefix="/a_b")
+    assert deleted == 1
     assert _all_ids(storage) == {"pct", "pct-child", "digits", "lookalike", "backslash"}
