@@ -44,6 +44,7 @@ from glide import (
 )
 import numpy as np
 
+from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
 
@@ -137,7 +138,9 @@ class ValkeyStorage:
             tls_ca_cert_path: Path to CA certificate (forward-compat, not yet wired).
             tls_client_cert_path: Path to client certificate (forward-compat, not yet wired).
             tls_client_key_path: Path to client key (forward-compat, not yet wired).
-            vector_dim: Dimension of embedding vectors (default 1536 for OpenAI).
+            vector_dim: Dimension of embedding vectors. None (default)
+                auto-detects the dimension from the first embedding seen at
+                save or query time, so the index matches the embedder in use.
             index_algorithm: Vector index algorithm ("HNSW" or "FLAT").
         """
         self._host = host
@@ -686,6 +689,37 @@ class ValkeyStorage:
             metadata_key = self._metadata_key(key, value_str)
             await client.srem(metadata_key, [record_id])
 
+    def _check_and_set_vector_dim(self, records: list[MemoryRecord]) -> None:
+        """Resolve the embedding dimension for a batch and guard mismatches.
+
+        - Batches with embeddings of differing lengths are rejected.
+        - If no dimension is established yet, adopt the batch's dimension so the
+          index is created at the embedder's actual size.
+        - If a dimension is already established (an index exists at that size)
+          and the batch differs, raise EmbeddingDimensionMismatchError rather
+          than writing vectors Valkey Search would silently drop or mis-index.
+
+        Records without an embedding are ignored here; they carry no vector to
+        index.
+        """
+        batch_dim: int | None = None
+        for record in records:
+            if not record.embedding:
+                continue
+            dim = len(record.embedding)
+            if batch_dim is None:
+                batch_dim = dim
+            elif dim != batch_dim:
+                raise EmbeddingDimensionMismatchError(batch_dim, dim)
+
+        if batch_dim is None:
+            return
+
+        if self._vector_dim is None:
+            self._vector_dim = batch_dim
+        elif batch_dim != self._vector_dim:
+            raise EmbeddingDimensionMismatchError(self._vector_dim, batch_dim)
+
     async def asave(self, records: list[MemoryRecord]) -> None:
         """Save multiple records as a batch.
 
@@ -709,13 +743,10 @@ class ValkeyStorage:
 
         client = await self._get_client()
 
-        # Auto-detect embedding dimension from the first record that carries an
-        # embedding, so the index is created at the embedder's actual size.
-        if self._vector_dim is None:
-            for record in records:
-                if record.embedding:
-                    self._vector_dim = len(record.embedding)
-                    break
+        # Determine the batch's embedding dimension, reject internally
+        # inconsistent batches, and guard against an embedder change that would
+        # silently mis-index vectors against an index built at another size.
+        self._check_and_set_vector_dim(records)
 
         # Ensure vector index exists before saving
         await self._ensure_vector_index()
@@ -879,6 +910,10 @@ class ValkeyStorage:
             await self._remove_from_indexes(
                 record.id, old_scope, old_categories, old_metadata
             )
+
+        # Guard against an embedder change writing a vector whose dimension no
+        # longer matches the index (Valkey Search would silently drop it).
+        self._check_and_set_vector_dim([record])
 
         # Convert record to hash fields
         record_dict = self._record_to_dict(record)
