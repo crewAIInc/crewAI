@@ -1549,3 +1549,27 @@ def test_the_cli_maps_models_and_deployment_to_the_comparison(monkeypatch):
     assert alone.exit_code == 2 and "add --models LIST" in alone.output
     assert len(calls) == 2
     assert "--models" in runner.invoke(eval_command, ["--help"]).output
+
+
+def test_a_comparison_leaves_its_criteria_behind_when_the_project_has_none(deployed, monkeypatch, capsys):
+    directory, _ = deployed
+    answer = compared()
+    body = {**answer.json(), "eval_config": '// the criteria\n{"dataset": []}\n'}
+    install(monkeypatch, FakeModelsAMP(statuses=[httpx.Response(200, json=body)]))
+
+    eval_module.eval_models(MODELS)
+
+    assert (directory / "eval.jsonc").read_text() == '// the criteria\n{"dataset": []}\n'
+    assert "Wrote eval.jsonc" in capsys.readouterr().out
+
+
+def test_a_comparison_never_overwrites_the_projects_criteria(deployed, monkeypatch, capsys):
+    directory, _ = deployed
+    (directory / "eval.jsonc").write_text("// ours\n{}\n")
+    body = {**compared().json(), "eval_config": "// theirs\n{}\n"}
+    install(monkeypatch, FakeModelsAMP(statuses=[httpx.Response(200, json=body)]))
+
+    eval_module.eval_models(MODELS)
+
+    assert (directory / "eval.jsonc").read_text() == "// ours\n{}\n"
+    assert "Wrote eval.jsonc" not in capsys.readouterr().out

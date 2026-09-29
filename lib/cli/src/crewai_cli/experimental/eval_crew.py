@@ -998,6 +998,9 @@ def eval_models(models_text: str, deployment_id: str | None = None) -> None:
         )
         raise SystemExit(130) from None
     _print_comparison(finished, url)
+    # The criteria the comparison was graded on, for the project to edit — only
+    # when it has none, exactly as after a Mode 1 evaluation.
+    _say_where_the_criteria_live(write_eval_config(finished))
     if finished.get("status") != "done":
         raise SystemExit(1)
 
