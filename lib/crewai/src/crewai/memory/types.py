@@ -415,8 +415,22 @@ def embed_texts(
             )
             return [[] for _ in texts]
     else:
-        # Not in an async context: run directly on this thread.
-        result = embedder(texts_to_embed)
+        # Not in an async context. Save paths still need the fail-loud timeout
+        # guarantee (EncodingFlow steps run via asyncio.to_thread, so they land
+        # here with no running loop). Enforce the 30s timeout via the pool when
+        # raise_on_timeout is set; otherwise run directly on this thread.
+        if raise_on_timeout:
+            try:
+                result = _EMBED_POOL.submit(embedder, texts_to_embed).result(
+                    timeout=30
+                )
+            except concurrent.futures.TimeoutError as e:
+                raise TimeoutError(
+                    "Embedder timed out after 30s; not persisting empty "
+                    "embeddings."
+                ) from e
+        else:
+            result = embedder(texts_to_embed)
 
     embeddings: list[list[float]] = [[] for _ in texts]
     for (orig_idx, _), emb in zip(valid, result, strict=False):
