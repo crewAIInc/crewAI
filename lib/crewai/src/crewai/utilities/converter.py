@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
 
+
 def _extract_first_json_object(text: str) -> str | None:
     """Return the first complete JSON object in ``text``, ignoring trailing prose.
 
@@ -41,6 +42,8 @@ def _extract_first_json_object(text: str) -> str | None:
     except json.JSONDecodeError:
         return None
     return text[start:end]
+
+
 _I18N = I18N_DEFAULT
 
 
