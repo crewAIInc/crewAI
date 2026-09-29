@@ -30,11 +30,11 @@ from crewai.utilities.agent_utils import (
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
+    SummarizeMessages,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.summarize_messages import SummarizeMessages
 
-_summarizer = SummarizeMessages(messages=[], llm=MagicMock(), callbacks=[])
+_summarizer = SummarizeMessages()
 _approx_tokens = _summarizer._approx_tokens
 _conversation_text = _summarizer._conversation_text
 _messages_ready_to_chunk = _summarizer._messages_ready_to_chunk
@@ -625,7 +625,9 @@ class TestExtractSummaryTags:
     """Summary tags are pulled out inside _summarize_one."""
 
     def _from_reply(self, reply: str) -> str:
-        summarizer = SummarizeMessages(messages=[], llm=MagicMock(), callbacks=[])
+        summarizer = SummarizeMessages()
+        summarizer.llm = MagicMock()
+        summarizer.callbacks = []
         summarizer.llm.acall = AsyncMock(return_value=reply)
         return asyncio.run(
             summarizer._summarize_one([{"role": "user", "content": "x"}])
@@ -1010,13 +1012,14 @@ class TestParallelSummarization:
             ]
         )
 
-        results = SummarizeMessages(
-            messages=[], llm=mock_llm, callbacks=[]
-        )._summarize_all(chunks=[chunk_a, chunk_b])
+        summarizer = SummarizeMessages()
+        summarizer.llm = mock_llm
+        summarizer.callbacks = []
+        results = summarizer._summarize_all(chunks=[chunk_a, chunk_b])
 
         assert results == ["Result A", "Result B"]
 
-    @patch("crewai.utilities.summarize_messages.is_inside_event_loop", return_value=True)
+    @patch("crewai.utilities.agent_utils.is_inside_event_loop", return_value=True)
     def test_works_inside_existing_event_loop(self, _mock_loop: Any) -> None:
         """When called from inside a running event loop (e.g. a Flow),
         the ThreadPoolExecutor fallback should still work."""
