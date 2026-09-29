@@ -1045,6 +1045,46 @@ class TestParallelSummarization:
         assert result == "Recovered summary"
         assert mock_llm.acall.await_count == 2
 
+    def test_summarize_messages_retries_each_char_per_token_level(self) -> None:
+        """Context errors step through chunk levels 0, 1, and 2 before succeeding."""
+        messages: list[dict[str, Any]] = [{"role": "user", "content": "x" * 800}]
+        recorded_levels: list[int] = []
+        original_chunk = SummarizeMessages._chunk_messages
+
+        def tracking_chunk(
+            self: SummarizeMessages,
+            chunk_messages: list[dict[str, Any]],
+            max_tokens: int,
+            char_level_index: int = 0,
+        ) -> list[list[dict[str, Any]]]:
+            recorded_levels.append(char_level_index)
+            return original_chunk(
+                self, chunk_messages, max_tokens, char_level_index=char_level_index
+            )
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 100_000
+        mock_llm.acall = AsyncMock(
+            side_effect=[
+                LLMContextLengthExceededError("context length exceeded"),
+                LLMContextLengthExceededError("context length exceeded"),
+                "<summary>Final summary</summary>",
+            ]
+        )
+
+        with patch.object(SummarizeMessages, "_chunk_messages", tracking_chunk):
+            summarize_messages(
+                messages=messages,
+                llm=mock_llm,
+                callbacks=[],
+                verbose=False,
+            )
+
+        assert len(messages) == 1
+        assert "Final summary" in messages[0]["content"]
+        assert recorded_levels == [0, 1, 2]
+        assert mock_llm.acall.await_count == 3
+
     @patch("crewai.utilities.agent_utils.is_inside_event_loop", return_value=True)
     def test_works_inside_existing_event_loop(self, _mock_loop: Any) -> None:
         """When called from inside a running event loop (e.g. a Flow),
