@@ -625,9 +625,6 @@ class ValkeyStorage:
         Raises:
             RuntimeError: If Valkey Search module is not available.
         """
-        if self._index_created:
-            return
-
         if self._vector_dim is None:
             # No embedding has been seen yet, so the dimension is unknown.
             # Defer index creation until the first embedded record is saved.
@@ -635,7 +632,12 @@ class ValkeyStorage:
 
         client = await self._get_client()
 
-        # Check if the index already exists (tolerate FT.LIST failure).
+        # Check whether the index actually exists on the server (tolerate
+        # FT.LIST failure). We intentionally do NOT trust a cached
+        # _index_created flag as a fast exit here: another worker's reset() can
+        # drop the shared memory_index, leaving this instance's flag stale —
+        # which would otherwise make save write unindexed hashes and search hit
+        # a missing index.
         index_exists = False
         try:
             existing = await ft.list(client)
@@ -648,19 +650,22 @@ class ValkeyStorage:
             _logger.debug("Could not list indexes, will attempt create: %s", e)
 
         if index_exists:
-            _logger.debug("Vector index 'memory_index' already exists")
-            # Read the existing index's vector dimension so an embedder change
-            # across a process restart is caught. Without this, _vector_dim
-            # starts None after restart, the first save/search adopts the new
-            # embedder size, and vectors are written/queried against an index
-            # built at the old size (silent recall misses). FT.INFO failure is
-            # tolerated (fall back to auto-detect), but a real dimension
-            # mismatch must propagate — so this is deliberately not inside the
-            # broad except above (EmbeddingDimensionMismatchError is a
-            # ValueError and would otherwise be swallowed).
-            await self._reconcile_existing_index_dim(client)
-            self._index_created = True
+            # Reconcile the dimension only the first time we observe the index
+            # this session (the expensive FT.INFO read); once validated, trust
+            # it for the rest of the process to keep the hot path cheap. FT.INFO
+            # failure is tolerated (fall back to auto-detect), but a real
+            # dimension mismatch must propagate — _reconcile_existing_index_dim
+            # is deliberately not wrapped in a broad except
+            # (EmbeddingDimensionMismatchError is a ValueError).
+            if not self._index_created:
+                _logger.debug("Vector index 'memory_index' already exists")
+                await self._reconcile_existing_index_dim(client)
+                self._index_created = True
             return
+
+        # Index is missing (never created, or dropped by another worker's
+        # reset). Clear any stale flag and fall through to (re)create it.
+        self._index_created = False
 
         try:
             # Build vector field attributes using the concrete subclass
