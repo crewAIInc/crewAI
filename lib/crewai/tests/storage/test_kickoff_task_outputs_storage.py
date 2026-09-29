@@ -116,3 +116,36 @@ def test_failed_write_rolls_back_and_closes_connection(
     with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
         opened[0].execute("SELECT 1")
     assert storage.load() == []
+
+
+def test_update_accepts_list_values(tmp_path: Path) -> None:
+    """``update`` must JSON-encode list values, not just dicts.
+
+    ``sqlite3`` cannot bind a Python ``list`` directly, so passing one through
+    unencoded raised ``sqlite3.ProgrammingError: Error binding parameter``.
+    """
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    storage.update(0, output=["first", "second"])
+
+    assert storage.load()[0]["output"] == ["first", "second"]
+
+
+def test_load_handles_null_output_and_inputs(tmp_path: Path) -> None:
+    """``load`` must not crash when ``output``/``inputs`` were set to ``NULL``.
+
+    Setting a field to ``None`` via ``update`` stores SQL ``NULL``. ``load``
+    unconditionally called ``json.loads`` on those columns, raising
+    ``TypeError: the JSON object must be str, bytes or bytearray, not
+    NoneType`` -- uncaught by the surrounding ``except sqlite3.Error``, so it
+    broke ``load()`` for the whole table.
+    """
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    storage.update(0, output=None, inputs=None)
+
+    result = storage.load()[0]
+    assert result["output"] is None
+    assert result["inputs"] is None

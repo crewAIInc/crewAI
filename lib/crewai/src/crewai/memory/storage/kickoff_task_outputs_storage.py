@@ -153,7 +153,7 @@ class KickoffTaskOutputsSQLiteStorage:
                         fields.append(f"{key} = ?")
                         values.append(
                             json.dumps(value, cls=CrewJSONEncoder)
-                            if isinstance(value, dict)
+                            if isinstance(value, (dict, list))
                             else value
                         )
 
@@ -199,9 +199,9 @@ class KickoffTaskOutputsSQLiteStorage:
                         "task_id": row[0],
                         "task_key": row[1],
                         "expected_output": row[2],
-                        "output": json.loads(row[3]),
+                        "output": json.loads(row[3]) if row[3] is not None else None,
                         "task_index": row[4],
-                        "inputs": json.loads(row[5]),
+                        "inputs": json.loads(row[5]) if row[5] is not None else None,
                         "was_replayed": row[6],
                         "timestamp": row[7],
                     }
