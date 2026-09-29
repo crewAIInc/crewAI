@@ -225,6 +225,10 @@ def mark_mapped(llm: _T) -> _T:
     try:
         _mapped_llms[id(llm)] = llm
     except TypeError:
+        # Only a weakly-referenceable object can be remembered (every
+        # ``BaseLLM`` is). Anything else is returned as built: the one cost is
+        # that an agent declared with it looks its model up again, as it would
+        # for an llm built outside the block — never a failed build.
         pass
     return llm
 
