@@ -47,12 +47,27 @@ class TraceGrantError(Exception):
 
 def tracing_credential() -> str | None:
     """Resolve an explicit PAT, integration credential, or saved CLI login."""
+    resolved = _resolve_tracing_credential()
+    return resolved[1] if resolved else None
+
+
+def tracing_credential_source() -> str | None:
+    """Which credential ``tracing_credential`` sends: ``"pat"``
+    (``CREWAI_USER_PAT``), ``"integration"`` (the platform integration token)
+    or ``"login"`` (the saved ``crewai login``) — so a refusal can name the one
+    that failed instead of sending somebody to refresh another."""
+    resolved = _resolve_tracing_credential()
+    return resolved[0] if resolved else None
+
+
+def _resolve_tracing_credential() -> tuple[str, str] | None:
+    """The one order both functions above follow."""
     if token := os.getenv("CREWAI_USER_PAT"):
-        return token
+        return "pat", token
     if token := get_platform_integration_token():
-        return token
+        return "integration", token
     try:
-        return get_auth_token()
+        return "login", get_auth_token()
     except AuthError:
         return None
 

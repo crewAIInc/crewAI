@@ -148,6 +148,7 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
         GrantSpanExporter,
         TraceGrantClient,
         tracing_credential,
+        tracing_credential_source,
     )
     from crewai.telemetry.tracing.session import TraceSession
 
@@ -171,7 +172,7 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
             # that expired or a token that was revoked must not take the run
             # down with it. The run goes on untraced and says so — never falls
             # back to an anonymous upload of a run whose owner is logged in.
-            logger.warning(_untraced_because(error))
+            logger.warning(_untraced_because(error, tracing_credential_source()))
             stack.close()
             return
         exporter = GrantSpanExporter(client, grant)
@@ -185,13 +186,31 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     _activate_tracing(ExecutionTrace(session, stack))
 
 
-def _untraced_because(error: Exception) -> str:
-    """The warning for a run AMP would not grant a trace to, naming the fix."""
+# What each credential is called, and what fixes it when AMP refuses it: the one
+# that was sent, never a different one — refreshing a login does nothing for a
+# rejected CREWAI_USER_PAT.
+_CREDENTIAL_FIX = {
+    "pat": (
+        "the CREWAI_USER_PAT token",
+        "Replace it with a valid personal access token",
+    ),
+    "integration": (
+        "the platform integration token",
+        "Check the integration token this environment is given",
+    ),
+    "login": ("the saved login", "Run `crewai login` again"),
+}
+
+
+def _untraced_because(error: Exception, source: str | None) -> str:
+    """The warning for a run AMP would not grant a trace to, naming the
+    credential it refused and the fix for that one."""
     status = getattr(error, "status_code", None)
     if status in (401, 403):
+        name, fix = _CREDENTIAL_FIX.get(source or "", ("the credential", "Check it"))
         return (
-            f"This run is not traced: CrewAI AMP refused the saved login (HTTP {status}). "
-            "Run `crewai login` again to trace your runs."
+            f"This run is not traced: CrewAI AMP refused {name} (HTTP {status}). "
+            f"{fix} to trace your runs."
         )
     return (
         f"This run is not traced: CrewAI AMP could not grant a trace "
