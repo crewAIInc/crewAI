@@ -3074,3 +3074,49 @@ class TestValkeyStorageIndexing:
 
         # Verify category and metadata keys match
         assert set(sadd_keys) == set(srem_keys)
+
+
+class TestValkeyStorageEmbeddingDimension:
+    """ValkeyStorage must reject embeddings whose dimension does not match the
+    established index, instead of silently writing vectors Valkey Search would
+    drop or mis-index after an embedder change.
+    """
+
+    def test_first_batch_sets_vector_dim(self) -> None:
+        storage = ValkeyStorage(host="localhost", port=6379, db=0)
+        assert storage._vector_dim is None
+        storage._check_and_set_vector_dim(
+            [MemoryRecord(content="a", embedding=[0.1, 0.2, 0.3])]
+        )
+        assert storage._vector_dim == 3
+
+    def test_mismatched_batch_within_call_raises(self) -> None:
+        from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
+
+        storage = ValkeyStorage(host="localhost", port=6379, db=0)
+        with pytest.raises(EmbeddingDimensionMismatchError):
+            storage._check_and_set_vector_dim(
+                [
+                    MemoryRecord(content="a", embedding=[0.1, 0.2]),
+                    MemoryRecord(content="b", embedding=[0.1, 0.2, 0.3]),
+                ]
+            )
+
+    def test_mismatch_against_established_dim_raises(self) -> None:
+        from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
+
+        storage = ValkeyStorage(host="localhost", port=6379, db=0)
+        storage._vector_dim = 1536  # index already built at 1536
+        with pytest.raises(EmbeddingDimensionMismatchError) as exc_info:
+            storage._check_and_set_vector_dim(
+                [MemoryRecord(content="a", embedding=[0.0] * 3072)]
+            )
+        assert exc_info.value.stored_dim == 1536
+        assert exc_info.value.new_dim == 3072
+
+    def test_records_without_embeddings_are_ignored(self) -> None:
+        storage = ValkeyStorage(host="localhost", port=6379, db=0)
+        storage._vector_dim = 1536
+        # No embedding -> no dimension to check, must not raise or change dim.
+        storage._check_and_set_vector_dim([MemoryRecord(content="a")])
+        assert storage._vector_dim == 1536
