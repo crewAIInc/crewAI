@@ -34,6 +34,60 @@ class TestPlusAPI(unittest.TestCase):
         self.assertEqual(response, mock_response)
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_evaluation_files_it_under_the_project(self, mock_make_request):
+        self.api.create_evaluation("run-1", eval_config="{}", project_id="proj-1")
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={"execution_id": "run-1", "eval_config": "{}", "project_id": "proj-1"},
+            timeout=120.0,
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_models_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.create_models_evaluation(
+            ["openai/gpt-4o-mini", "anthropic/claude-haiku-4-5"],
+            project_id="proj-1",
+            eval_config="// ours\n{}",
+            deployment_id="dep-1",
+        )
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={
+                "kind": "models",
+                "project_id": "proj-1",
+                "models": ["openai/gpt-4o-mini", "anthropic/claude-haiku-4-5"],
+                "eval_config": "// ours\n{}",
+                "deployment_id": "dep-1",
+            },
+            timeout=120.0,
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_models_evaluation_sends_only_what_it_was_given(
+        self, mock_make_request
+    ):
+        self.api.create_models_evaluation(["openai/gpt-4o-mini"], project_id="proj-1")
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={
+                "kind": "models",
+                "project_id": "proj-1",
+                "models": ["openai/gpt-4o-mini"],
+            },
+            timeout=120.0,
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_get_evaluation(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
