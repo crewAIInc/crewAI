@@ -193,6 +193,16 @@ class TestOpenAIMultimodal:
         llm = LLM(model="openai/gpt-6-astra")
         assert llm.supports_multimodal() is True
 
+    def test_supports_multimodal_gpt6_family_prefix(self) -> None:
+        """The capability check matches the gpt-6 family prefix, not one variant.
+
+        ``gpt-6`` covers ``gpt-6-astra`` and other GPT-6 variants through the
+        existing ``startswith`` matching, mirroring how ``gpt-4o``/``gpt-5``
+        already match their model families.
+        """
+        llm = LLM(model="openai/gpt-6")
+        assert llm.supports_multimodal() is True
+
     def test_gpt6_astra_pdf_not_rejected_locally(self) -> None:
         """Native OpenAI must not reject a PDF locally for GPT-6 Astra.
 
