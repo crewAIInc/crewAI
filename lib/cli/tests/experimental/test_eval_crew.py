@@ -1483,7 +1483,7 @@ def test_a_deployment_this_account_may_not_run_is_amps_sentence_alone(deployed, 
     install(monkeypatch, FakeModelsAMP(create=refused))
 
     with pytest.raises(SystemExit):
-        eval_models_out = eval_module.eval_models(MODELS)  # noqa: F841
+        eval_module.eval_models(MODELS)
 
     out = capsys.readouterr().out
     assert "You may not run poem_creator." in out and "crewai login" not in out
