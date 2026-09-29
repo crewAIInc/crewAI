@@ -409,6 +409,48 @@ By providing both unstructured and structured state management options, CrewAI F
 
 The @persist decorator enables automatic state persistence in CrewAI Flows, allowing you to maintain flow state across restarts or different workflow executions. This decorator can be applied at either the class level or method level, providing flexibility in how you manage state persistence.
 
+### Choosing a Persistence Backend
+
+SQLite is the default backend. Use `@persist` without an argument when local, file-based persistence is sufficient.
+
+```python
+@persist
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+To choose SQLite explicitly, for example to control the database file location, pass a `SQLiteFlowPersistence` instance to `@persist`:
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+persistence = SQLiteFlowPersistence("flows.db")
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+To use MongoDB, install the optional dependency, configure a connection string, and pass `MongoDbFlowPersistence` explicitly:
+
+```bash
+uv add 'crewai[mongodb]'
+# Or: pip install 'crewai[mongodb]'
+export MONGODB_CONNECTION_STRING='mongodb+srv://<user>:<password>@<cluster>/'
+```
+
+```python
+from crewai.flow.persistence import MongoDbFlowPersistence, persist
+
+persistence = MongoDbFlowPersistence()
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+`MongoDbFlowPersistence` uses the `flow_persistence` database by default. Set `MONGODB_DATABASE` or pass `database_name` to choose another database. MongoDB persistence uses transactions, so the deployment must be MongoDB Atlas, a replica set, or a sharded cluster; standalone MongoDB servers are not supported.
+
 ### Class-Level Persistence
 
 When applied at the class level, the @persist decorator automatically persists all flow method states:

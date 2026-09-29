@@ -406,6 +406,48 @@ flow.kickoff()
 
 يتيح مزخرف @persist الاستمرارية التلقائية للحالة في تدفقات CrewAI، مما يسمح لك بالحفاظ على حالة التدفق عبر عمليات إعادة التشغيل أو تنفيذات سير العمل المختلفة. يمكن تطبيق هذا المزخرف على مستوى الفئة أو مستوى الدالة، مما يوفر مرونة في كيفية إدارة استمرارية الحالة.
 
+### اختيار واجهة الاستمرارية
+
+SQLite هي واجهة التخزين الافتراضية. استخدم `@persist` بدون وسيطة عندما تكون الاستمرارية المحلية المعتمدة على ملف كافية.
+
+```python
+@persist
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+لاختيار SQLite صراحةً، مثل التحكم في موقع ملف قاعدة البيانات، مرّر نسخة من `SQLiteFlowPersistence` إلى `@persist`:
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+persistence = SQLiteFlowPersistence("flows.db")
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+لاستخدام MongoDB، ثبّت التبعية الاختيارية، واضبط سلسلة الاتصال، ثم مرّر `MongoDbFlowPersistence` صراحةً:
+
+```bash
+uv add 'crewai[mongodb]'
+# Or: pip install 'crewai[mongodb]'
+export MONGODB_CONNECTION_STRING='mongodb+srv://<user>:<password>@<cluster>/'
+```
+
+```python
+from crewai.flow.persistence import MongoDbFlowPersistence, persist
+
+persistence = MongoDbFlowPersistence()
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+يستخدم `MongoDbFlowPersistence` قاعدة بيانات `flow_persistence` افتراضيًا. اضبط `MONGODB_DATABASE` أو مرّر `database_name` لاختيار قاعدة بيانات أخرى. تستخدم استمرارية MongoDB المعاملات، لذا يجب أن يكون النشر MongoDB Atlas أو مجموعة متماثلة أو عنقودًا مجزأً؛ لا تدعم خوادم MongoDB المستقلة.
+
 ### الاستمرارية على مستوى الفئة
 
 عند التطبيق على مستوى الفئة، يقوم مزخرف @persist باستمرارية حالات جميع دوال التدفق تلقائيًا:

@@ -399,6 +399,48 @@ Ao oferecer as duas opções de gerenciamento de estado, o CrewAI Flows permite 
 
 O decorador @persist permite a persistência automática do estado nos flows do CrewAI, garantindo que você mantenha o estado do flow entre reinicializações ou execuções diferentes do workflow. Esse decorador pode ser aplicado tanto ao nível de classe, quanto ao nível de método, oferecendo flexibilidade sobre como gerenciar a persistência do estado.
 
+### Escolhendo um Backend de Persistência
+
+SQLite é o backend padrão. Use `@persist` sem argumento quando a persistência local baseada em arquivo for suficiente.
+
+```python
+@persist
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+Para escolher SQLite explicitamente, por exemplo para controlar o local do arquivo de banco de dados, passe uma instância de `SQLiteFlowPersistence` para `@persist`:
+
+```python
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+persistence = SQLiteFlowPersistence("flows.db")
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+Para usar MongoDB, instale a dependência opcional, configure uma string de conexão e passe `MongoDbFlowPersistence` explicitamente:
+
+```bash
+uv add 'crewai[mongodb]'
+# Or: pip install 'crewai[mongodb]'
+export MONGODB_CONNECTION_STRING='mongodb+srv://<user>:<password>@<cluster>/'
+```
+
+```python
+from crewai.flow.persistence import MongoDbFlowPersistence, persist
+
+persistence = MongoDbFlowPersistence()
+
+@persist(persistence)
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+`MongoDbFlowPersistence` usa o banco de dados `flow_persistence` por padrão. Defina `MONGODB_DATABASE` ou passe `database_name` para escolher outro banco de dados. A persistência MongoDB usa transações, portanto a implantação deve ser MongoDB Atlas, um conjunto de réplicas ou um cluster fragmentado; servidores MongoDB autônomos não são compatíveis.
+
 ### Persistência no Nível de Classe
 
 Quando aplicado no nível da classe, o decorador @persist garante a persistência automática de todos os estados dos métodos do flow:
