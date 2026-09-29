@@ -197,9 +197,20 @@ def overlay_model_for_model(
     mapping = active.get()
     if not mapping or not model or _building_mapped.get():
         return None
-    for form in _model_forms(model.strip(), provider):
+    forms = _model_forms(model.strip(), provider)
+    for form in forms:
         mapped = mapping.get(MODEL_KEY_PREFIX + form)
         if mapped is not None:
+            return mapped
+    # The same model under another of its provider's names: a key written
+    # `google/x` for an llm that routed `gemini/x`, or the other way round.
+    aliases = _aliases()
+    canonical = {_canonical(form, aliases) for form in forms}
+    for key, mapped in mapping.items():
+        named = (
+            key[len(MODEL_KEY_PREFIX) :] if key.startswith(MODEL_KEY_PREFIX) else None
+        )
+        if named and named != ANY_MODEL and _canonical(named, aliases) in canonical:
             return mapped
     return mapping.get(MODEL_KEY_PREFIX + ANY_MODEL)
 
@@ -215,17 +226,26 @@ def _model_forms(model: str, provider: str | None) -> list[str]:
     else:
         forms = [model]
     prefix, separator, rest = forms[-1].partition("/")
-    if separator and "/" not in rest and prefix in _native_prefixes():
+    if separator and "/" not in rest and prefix.lower() in _aliases():
         if rest not in forms:
             forms.append(rest)
     return forms
 
 
-def _native_prefixes() -> frozenset[str]:
-    """The provider prefixes ``LLM`` strips from a model string it routes natively."""
-    from crewai.llm import SUPPORTED_NATIVE_PROVIDERS
+def _aliases() -> dict[str, str]:
+    """The router's provider aliases (``crewai.llm.PROVIDER_ALIASES``): every
+    prefix ``LLM`` strips from a model string it routes natively, to the
+    provider it names."""
+    from crewai.llm import PROVIDER_ALIASES
 
-    return frozenset(SUPPORTED_NATIVE_PROVIDERS)
+    return PROVIDER_ALIASES
+
+
+def _canonical(form: str, aliases: dict[str, str]) -> str:
+    """``form`` with its provider prefix under the provider's one name."""
+    prefix, separator, rest = form.partition("/")
+    provider = aliases.get(prefix.lower()) if separator else None
+    return f"{provider}/{rest}" if provider else form
 
 
 def overlay_model_for_llm(llm: Any) -> str | None:

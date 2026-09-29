@@ -844,3 +844,47 @@ def test_a_role_key_is_built_from_the_declaration_a_model_key_mapped() -> None:
     assert _configuration_of(researcher.llm) == CONFIGURATION
     assert by_string.llm.model == "gpt-4o"
     assert writer.llm is declared
+
+
+def test_a_providers_other_name_is_the_same_model_on_both_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`google/x` routes as `gemini/x`, so a key written either way matches an
+    llm built in the block and one built before it, whichever name it used."""
+    pytest.importorskip("google.genai")
+    monkeypatch.setenv("GEMINI_API_KEY", "g")
+    outside = LLM(model="google/gemini-2.5-pro")  # records provider "gemini"
+    for key in ("model:google/gemini-2.5-pro", "model:gemini/gemini-2.5-pro"):
+        with llm_overlay({key: "openai/gpt-4o-mini"}):
+            built = [LLM(model="google/gemini-2.5-pro"), LLM(model="gemini/gemini-2.5-pro")]
+            agent = Agent(role="Writer", goal="g", backstory="b", llm=outside)
+
+        assert [b.model for b in built] == ["gpt-4o-mini", "gpt-4o-mini"], key
+        assert agent.llm.model == "gpt-4o-mini", key
+
+
+def test_an_aggregator_route_under_an_alias_still_is_not_the_native_model() -> None:
+    with llm_overlay({"model:google/gemini-2.5-pro": "openai/gpt-4o-mini"}):
+        llm = LLM(model="openrouter/google/gemini-2.5-pro")
+
+    assert llm.model == "google/gemini-2.5-pro"
+
+
+def test_a_caller_who_chose_litellm_keeps_it_when_the_declared_sdk_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("litellm")
+    native = LLM._get_native_provider.__func__  # type: ignore[attr-defined]
+
+    def without_anthropic(cls: type[LLM], provider: str) -> Any:
+        if provider in ("anthropic", "claude"):
+            raise ImportError("Anthropic native provider not available")
+        return native(cls, provider)
+
+    monkeypatch.setattr(LLM, "_get_native_provider", classmethod(without_anthropic))
+    with llm_overlay({"model:*": "openai/gpt-4o-mini"}):
+        chosen = LLM(model="anthropic/claude-haiku-4-5", is_litellm=True)
+        default = LLM(model="anthropic/claude-haiku-4-5")
+
+    assert type(chosen).__name__ == "LLM" and chosen.is_litellm
+    assert type(default).__name__ == "OpenAICompletion"

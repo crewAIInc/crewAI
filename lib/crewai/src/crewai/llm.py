@@ -200,6 +200,30 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
 ]
 
 
+# The provider a ``<prefix>/<model>`` string routes to, by prefix: the names
+# crewAI accepts for each native provider. ``llm_overlay`` compares model
+# names through the same table, so ``google/x`` and ``gemini/x`` are one model.
+PROVIDER_ALIASES: Final[dict[str, str]] = {
+    "openai": "openai",
+    "anthropic": "anthropic",
+    "claude": "anthropic",
+    "azure": "azure",
+    "azure_openai": "azure",
+    "google": "gemini",
+    "gemini": "gemini",
+    "bedrock": "bedrock",
+    "aws": "bedrock",
+    "openrouter": "openrouter",
+    "deepseek": "deepseek",
+    "ollama": "ollama",
+    "ollama_chat": "ollama_chat",
+    "hosted_vllm": "hosted_vllm",
+    "cerebras": "cerebras",
+    "dashscope": "dashscope",
+    "snowflake": "snowflake",
+}
+
+
 class Delta(TypedDict):
     content: str | None
     role: str | None
@@ -460,27 +484,7 @@ class LLM(BaseLLM):
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 
-            provider_mapping = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-                "openrouter": "openrouter",
-                "deepseek": "deepseek",
-                "ollama": "ollama",
-                "ollama_chat": "ollama_chat",
-                "hosted_vllm": "hosted_vllm",
-                "cerebras": "cerebras",
-                "dashscope": "dashscope",
-                "snowflake": "snowflake",
-            }
-
-            canonical_provider = provider_mapping.get(prefix.lower())
+            canonical_provider = PROVIDER_ALIASES.get(prefix.lower())
 
             valid_native_model = bool(
                 canonical_provider

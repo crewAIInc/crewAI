@@ -291,8 +291,11 @@ def create_llm_from_kwargs_like(
         except ImportError:
             # The declared model's SDK is not installed here. Nothing is built
             # on it, so that is no reason to fail; its credentials, though,
-            # cannot be matched to the new provider, so none are carried.
-            return mark_mapped(_build_like(model, carried, None, False), declaration)
+            # cannot be matched to the new provider, so none are carried. A
+            # caller who chose LiteLLM keeps it.
+            return mark_mapped(
+                _build_like(model, carried, None, is_litellm), declaration
+            )
         declared_class = (
             LLM
             if is_litellm or declared.native_class is None
