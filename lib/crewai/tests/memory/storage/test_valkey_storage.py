@@ -3198,3 +3198,29 @@ class TestExtractIndexDimension:
 
         assert _extract_index_dimension(None) is None
         assert _extract_index_dimension({}) is None
+
+
+class TestVectorIndexStaleFlag:
+    """A cached _index_created flag must not be trusted as a fast exit: another
+    worker's reset() can drop the shared index, so _ensure_vector_index must
+    verify existence and recreate a missing index.
+    """
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.create")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_missing_index_recreated_despite_stale_flag(
+        self, mock_ft_list, mock_ft_create,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        # This instance believes the index exists (set on a prior save)...
+        valkey_storage._index_created = True
+        valkey_storage._vector_dim = 8
+        # ...but the server no longer has it (dropped by another worker's reset).
+        mock_ft_list.return_value = []
+
+        await valkey_storage._ensure_vector_index()
+
+        # It must recreate the index rather than trusting the stale flag.
+        mock_ft_create.assert_awaited_once()
+        assert valkey_storage._index_created is True
