@@ -50,11 +50,8 @@ from crewai.llms.constants import (
 )
 from crewai.llms.context_window import (
     AZURE_OPENAI_CONTEXT_WINDOWS,
-    CONTEXT_WINDOW_USAGE_RATIO,  # noqa: F401 - backwards-compatible re-export
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
-    MAX_CONTEXT,  # noqa: F401 - backwards-compatible re-export
-    MIN_CONTEXT,  # noqa: F401 - backwards-compatible re-export
     OPENAI_CONTEXT_WINDOWS,
     resolve_context_window_size,
 )

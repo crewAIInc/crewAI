@@ -18,7 +18,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.agents.parser import AgentFinish
 from crewai.tools.base_tool import BaseTool
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
     _estimate_token_count,

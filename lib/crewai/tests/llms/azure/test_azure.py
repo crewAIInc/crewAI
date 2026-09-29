@@ -5,7 +5,8 @@ from unittest.mock import patch, MagicMock, Mock
 from urllib.parse import urlparse
 import pytest
 
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm import LLM
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
