@@ -1192,7 +1192,8 @@ def test_an_unreadable_login_is_the_reason_given_when_nothing_was_traced(
 
     def unreadable() -> None:
         raise eval_module.EvaluationStoppedError(
-            "Could not read the saved login (OSError: denied). Run `crewai login` again"
+            "Could not read the saved login (PermissionError: [Errno 13] "
+            "Permission denied: [/Users/me/.config/crewai]). Run `crewai login` again"
         )
 
     monkeypatch.setattr(eval_module, "saved_login", unreadable)
@@ -1202,5 +1203,7 @@ def test_an_unreadable_login_is_the_reason_given_when_nothing_was_traced(
 
     out = capsys.readouterr().out.replace("\n", " ")
     assert "Could not read the saved login" in out
+    # printed as it is: `[/Users/…]` read as markup is a closing tag, and a crash
+    assert "[/Users/me/.config/crewai]" in out
     assert "add CREWAI_TRACING_ENABLED=true" not in out
 

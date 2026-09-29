@@ -515,7 +515,9 @@ def _run_and_let_the_app_evaluate() -> str | None:
         f"  1. add {TRACING_ENV_VAR}=true to .env\n  2. crewai run\n  3. crewai eval"
     )
     if is_dmn_mode_enabled() or not sys.stdin.isatty():
-        console.print(_nothing_traced_unattended() or steps, style="yellow")
+        # `Text`, never markup: the reason may be an OS error's own words, and
+        # its `[Errno 13]` would be read as a style tag.
+        console.print(Text(_nothing_traced_unattended() or steps), style="yellow")
         raise SystemExit(1)
     if not click.confirm(
         "No traced run is recorded in this project. Turn tracing on and run the crew now? "
