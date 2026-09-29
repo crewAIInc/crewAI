@@ -623,16 +623,17 @@ class TestFormatMessagesForSummary:
 
 
 class TestExtractSummaryTags:
-    """Summary tags are pulled out inside _summarize_one."""
+    """Summary tags are pulled out inside _summarize_all."""
 
     def _from_reply(self, reply: str) -> str:
         summarizer = SummarizeMessages()
         summarizer.llm = MagicMock()
         summarizer.callbacks = []
         summarizer.llm.acall = AsyncMock(return_value=reply)
-        return asyncio.run(
-            summarizer._summarize_one([{"role": "user", "content": "x"}])
+        results = summarizer._summarize_all(
+            chunks=[[{"role": "user", "content": "x"}]], char_level_index=0
         )
+        return results[0]
 
     def test_extracts_content_from_tags(self) -> None:
         text = "Preamble\n<summary>The actual summary.</summary>\nPostamble"
@@ -946,7 +947,7 @@ class TestParallelSummarization:
         mock_llm.call.assert_not_called()
 
     def test_single_chunk_uses_one_coroutine(self) -> None:
-        """One chunk still goes through _summarize_one."""
+        """One chunk still goes through _summarize_all."""
         messages: list[dict[str, Any]] = [
             {"role": "user", "content": "Short message"},
             {"role": "assistant", "content": "Short reply"},
@@ -1022,7 +1023,7 @@ class TestParallelSummarization:
 
         assert results == ["Result A", "Result B"]
 
-    def test_summarize_one_retries_after_context_length_error(self) -> None:
+    def test_summarize_all_retries_after_context_length_error(self) -> None:
         """A chunk that overflows context is retried after tighter token estimation."""
         chunk: list[dict[str, Any]] = [{"role": "user", "content": "x" * 800}]
 
@@ -1040,9 +1041,9 @@ class TestParallelSummarization:
         summarizer.callbacks = []
         summarizer.verbose = False
 
-        result = asyncio.run(summarizer._summarize_one(chunk))
+        results = summarizer._summarize_all(chunks=[chunk], char_level_index=0)
 
-        assert result == "Recovered summary"
+        assert results == ["Recovered summary"]
         assert mock_llm.acall.await_count == 2
 
     def test_summarize_messages_retries_each_char_per_token_level(self) -> None:

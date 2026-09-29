@@ -929,77 +929,69 @@ class SummarizeMessages:
             )
         return self._summarize_all(chunks, char_level_index)
 
-    async def _summarize_one(
-        self, chunk: list[LLMMessage], char_level_index: int = 0
-    ) -> str:
-        """Summarize a single chunk, tightening token estimates on context overflow."""
-        llm = cast("LLM | BaseLLM", self.llm)
-
-        try:
-            summary = str(
-                await llm.acall(
-                    self._build_summary_prompt(chunk), callbacks=self.callbacks
-                )
-            )
-        except LLMContextLengthExceededError:
-            pass
-        except Exception as error:
-            if not is_context_length_exceeded(error):
-                raise
-        else:
-            match = re.search(r"<summary>(.*?)</summary>", summary, re.DOTALL)
-            if match:
-                return match.group(1).strip()
-            return summary.strip()
-
-        if char_level_index + 1 >= len(self._CHARS_PER_TOKEN_LEVELS):
-            raise LLMContextLengthExceededError(
-                "Summarization chunk still exceeds the context window after "
-                f"retries at {self._CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
-            ) from None
-
-        next_level = char_level_index + 1
-        if self.verbose:
-            chars_per_token = self._CHARS_PER_TOKEN_LEVELS[next_level]
-            PRINTER.print(
-                content=(
-                    "Summarization chunk exceeded context window; retrying with "
-                    f"tighter token estimate (1 token per {chars_per_token} chars)."
-                ),
-                color="yellow",
-            )
-
-        sub_chunks = self._chunk_messages(
-            chunk,
-            llm.get_context_window_size(),
-            char_level_index=next_level,
-        )
-        if not sub_chunks:
-            raise LLMContextLengthExceededError(
-                "Summarization chunk could not be split further."
-            ) from None
-
-        if len(sub_chunks) == 1:
-            return await self._summarize_one(sub_chunks[0], char_level_index=next_level)
-
-        parts = await asyncio.gather(
-            *[
-                self._summarize_one(sub_chunk, char_level_index=next_level)
-                for sub_chunk in sub_chunks
-            ]
-        )
-        return "\n\n".join(parts)
-
     def _summarize_all(
         self, chunks: list[list[LLMMessage]], char_level_index: int
     ) -> list[str]:
         """Run one coroutine per chunk and return the summaries in order."""
 
+        async def _summarize_one(chunk: list[LLMMessage], level_index: int) -> str:
+            """Summarize one chunk; only reachable from ``_summarize_all`` or itself."""
+            llm = cast("LLM | BaseLLM", self.llm)
+
+            try:
+                summary = str(
+                    await llm.acall(
+                        self._build_summary_prompt(chunk), callbacks=self.callbacks
+                    )
+                )
+            except LLMContextLengthExceededError:
+                pass
+            except Exception as error:
+                if not is_context_length_exceeded(error):
+                    raise
+            else:
+                match = re.search(r"<summary>(.*?)</summary>", summary, re.DOTALL)
+                if match:
+                    return match.group(1).strip()
+                return summary.strip()
+
+            if level_index + 1 >= len(self._CHARS_PER_TOKEN_LEVELS):
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk still exceeds the context window after "
+                    f"retries at {self._CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
+                ) from None
+
+            next_level = level_index + 1
+            if self.verbose:
+                chars_per_token = self._CHARS_PER_TOKEN_LEVELS[next_level]
+                PRINTER.print(
+                    content=(
+                        "Summarization chunk exceeded context window; retrying with "
+                        f"tighter token estimate (1 token per {chars_per_token} chars)."
+                    ),
+                    color="yellow",
+                )
+
+            sub_chunks = self._chunk_messages(
+                chunk,
+                llm.get_context_window_size(),
+                char_level_index=next_level,
+            )
+            if not sub_chunks:
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk could not be split further."
+                ) from None
+
+            if len(sub_chunks) == 1:
+                return await _summarize_one(sub_chunks[0], next_level)
+
+            parts = await asyncio.gather(
+                *[_summarize_one(sub_chunk, next_level) for sub_chunk in sub_chunks]
+            )
+            return "\n\n".join(parts)
+
         async def _gather() -> list[str]:
-            coroutines = [
-                self._summarize_one(chunk, char_level_index=char_level_index)
-                for chunk in chunks
-            ]
+            coroutines = [_summarize_one(chunk, char_level_index) for chunk in chunks]
             return list(await asyncio.gather(*coroutines))
 
         coro = _gather()
