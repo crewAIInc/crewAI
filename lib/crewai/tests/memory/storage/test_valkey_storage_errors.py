@@ -298,3 +298,15 @@ def test_to_epoch_treats_naive_datetime_as_utc() -> None:
     # Already-aware datetimes are respected as-is.
     aware = datetime(2024, 1, 15, 10, 30, 45, tzinfo=timezone.utc)
     assert _to_epoch(aware) == expected
+
+
+def test_escape_search_query_escapes_whitespace() -> None:
+    """Multi-word categories/scopes must stay a single TAG term: whitespace is
+    escaped, not left to split the query into separate terms.
+    """
+    from crewai.memory.storage.valkey_storage import ValkeyStorage
+
+    s = ValkeyStorage(host="localhost", port=6379, db=0)
+    escaped = s._escape_search_query("customer support")
+    assert " " not in escaped.replace("\\ ", "")  # only escaped spaces remain
+    assert "\\ " in escaped

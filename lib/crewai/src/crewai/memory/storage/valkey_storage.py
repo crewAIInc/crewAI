@@ -215,6 +215,10 @@ class ValkeyStorage:
         # time, mirroring LanceDBStorage. Avoids hardcoding a size that can
         # mismatch the configured embedder (e.g. text-embedding-3-large=3072).
         self._vector_dim: int | None = vector_dim
+        # Remember an explicitly-configured dimension so reset() restores it
+        # (rather than forcing re-detection) while a None default still resets
+        # to auto-detect.
+        self._configured_vector_dim: int | None = vector_dim
         self._index_algorithm = index_algorithm
         self._client: GlideClient | None = None
         self._index_created = False
@@ -1279,7 +1283,10 @@ class ValkeyStorage:
                     scope_key,
                     RangeByScore(
                         ScoreBoundary(0),
-                        ScoreBoundary(threshold),
+                        # Exclusive upper bound: "created before" older_than,
+                        # matching LanceDB's strict created_at < comparison, so
+                        # a record exactly at the cutoff is not deleted.
+                        ScoreBoundary(threshold, is_inclusive=False),
                     ),
                 )
                 # Convert bytes to strings
@@ -1676,6 +1683,11 @@ class ValkeyStorage:
         special_chars = r",.<>{}[]\"':;!@#$%^&*()-+=~|"
         for char in special_chars:
             text = text.replace(char, f"\\{char}")
+        # Whitespace also delimits terms inside a TAG clause (@categories:{tag}),
+        # so a multi-word category (common from LLM output) would otherwise be
+        # parsed as separate terms and mis-match. Escape each whitespace char.
+        for ws in (" ", "\t", "\n", "\r"):
+            text = text.replace(ws, f"\\{ws}")
         return text
 
     async def asearch(
@@ -2148,3 +2160,16 @@ class ValkeyStorage:
 
         if all_ids:
             await self.adelete(record_ids=all_ids)
+
+        # Drop the vector index and clear cached dimension state. Otherwise a
+        # later embedder change would still hit EmbeddingDimensionMismatchError
+        # because memory_index (and _vector_dim/_index_created) survive the
+        # reset, breaking the documented "reset then rebuild with a new
+        # embedder" recovery path.
+        try:
+            await ft.dropindex(client, "memory_index")
+        except Exception as e:  # noqa: BLE001
+            # Index may not exist (nothing was ever saved) — not an error.
+            _logger.debug("Could not drop index on reset: %s", e)
+        self._index_created = False
+        self._vector_dim = self._configured_vector_dim
