@@ -340,7 +340,9 @@ def embed_text(embedder: Any, text: str) -> list[float]:
 _EMBED_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
 
-def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
+def embed_texts(
+    embedder: Any, texts: list[str], *, raise_on_timeout: bool = False
+) -> list[list[float]]:
     """Embed multiple texts in a single API call.
 
     The embedder already accepts ``list[str]``, so this just calls it once
@@ -358,6 +360,10 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     Args:
         embedder: Callable that accepts a list of strings and returns embeddings.
         texts: List of texts to embed.
+        raise_on_timeout: When True, a 30s embedder timeout raises TimeoutError
+            instead of returning empty embeddings. Save paths set this so a
+            timed-out batch fails loudly rather than persisting unsearchable
+            (empty/zero-vector) memories.
 
     Returns:
         List of embeddings, one per input text. Empty texts produce empty lists.
@@ -392,7 +398,17 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
         # public callers (Memory.recall(), encoding flow) are synchronous.
         try:
             result = _EMBED_POOL.submit(embedder, texts_to_embed).result(timeout=30)
-        except concurrent.futures.TimeoutError:
+        except concurrent.futures.TimeoutError as e:
+            # On the save path, returning empty embeddings would persist
+            # unsearchable memories (a zero/missing vector) with no signal that
+            # encoding failed. Raise so the save fails loudly instead. Callers
+            # that can tolerate a miss (e.g. recall) keep the default and get
+            # empty embeddings back.
+            if raise_on_timeout:
+                raise TimeoutError(
+                    "Embedder timed out after 30s; not persisting empty "
+                    "embeddings."
+                ) from e
             _logger.warning(
                 "Embedder timed out after 30s, returning empty embeddings. "
                 "The worker thread may still be running."
