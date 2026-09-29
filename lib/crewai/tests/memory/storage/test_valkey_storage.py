@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from crewai.memory.storage.valkey_storage import ValkeyStorage
+from crewai.memory.storage.valkey_storage import ValkeyStorage, _to_epoch
 from crewai.memory.types import MemoryRecord
 
 
@@ -404,7 +404,7 @@ class TestValkeyStorageSave:
         
         # created_at is stored as a numeric epoch so the FT NumericField can
         # index it; full float precision is preserved for round-trip.
-        assert hset_dict["created_at"] == str(created_at.timestamp())
+        assert hset_dict["created_at"] == str(_to_epoch(created_at))
         assert hset_dict["last_accessed"] == last_accessed.isoformat()
 
 
@@ -1009,7 +1009,7 @@ class TestValkeyStorageUpdate:
         hset_dict = hset_call[0][1]  # field_value_map dict
         
         # Verify created_at was preserved from original (stored as numeric epoch)
-        assert hset_dict["created_at"] == str(original_created_at.timestamp())
+        assert hset_dict["created_at"] == str(_to_epoch(original_created_at))
         
         # Verify other fields were updated
         assert hset_dict["content"] == "Updated content"
@@ -3121,3 +3121,44 @@ class TestValkeyStorageEmbeddingDimension:
         # No embedding -> no dimension to check, must not raise or change dim.
         storage._check_and_set_vector_dim([MemoryRecord(content="a")])
         assert storage._vector_dim == 1536
+
+
+class TestExtractIndexDimension:
+    """_extract_index_dimension reads the vector size from an FT.INFO response
+    so an embedder change across a process restart is caught (the existing
+    index dimension would otherwise never be validated).
+    """
+
+    def test_extracts_dimension_str_form(self) -> None:
+        from crewai.memory.storage.valkey_storage import _extract_index_dimension
+
+        info = {
+            "attributes": [
+                [
+                    "identifier", "embedding", "type", "VECTOR", "index",
+                    ["dimensions", 3072, "distance_metric", "COSINE"],
+                ]
+            ]
+        }
+        assert _extract_index_dimension(info) == 3072
+
+    def test_extracts_dimension_bytes_form(self) -> None:
+        from crewai.memory.storage.valkey_storage import _extract_index_dimension
+
+        info = {
+            b"attributes": [
+                [b"type", b"VECTOR", b"index", [b"dimensions", 1536]]
+            ]
+        }
+        assert _extract_index_dimension(info) == 1536
+
+    def test_returns_none_without_vector_field(self) -> None:
+        from crewai.memory.storage.valkey_storage import _extract_index_dimension
+
+        assert _extract_index_dimension({"attributes": [["type", "TAG"]]}) is None
+
+    def test_returns_none_on_garbage(self) -> None:
+        from crewai.memory.storage.valkey_storage import _extract_index_dimension
+
+        assert _extract_index_dimension(None) is None
+        assert _extract_index_dimension({}) is None
