@@ -847,3 +847,142 @@ def test_invalid_buffer_limits_use_safe_defaults(monkeypatch, invalid):
     buffer = EphemeralSpanBuffer()
     assert buffer._max_spans == 1000 and buffer._max_bytes == 8388608
     buffer.shutdown()
+
+
+@pytest.fixture
+def sent_features(monkeypatch):
+    """The `tracing:*` Feature Usage names emitted, in order."""
+    from crewai.telemetry.telemetry import Telemetry
+
+    features = []
+    monkeypatch.setattr(
+        Telemetry,
+        "feature_usage_span",
+        lambda self, feature: features.append(feature)
+        if feature.startswith("tracing:")
+        else None,
+    )
+    return features
+
+
+@pytest.mark.parametrize(
+    ("authenticated", "approved", "grant_status", "export_status", "expected"),
+    [
+        (True, True, 200, 200, ["tracing:authenticated_sent"]),
+        (False, True, 200, 200, ["tracing:ephemeral_sent"]),
+        (False, False, 200, 200, []),
+        (True, True, 200, 401, []),
+        (False, True, 200, 401, []),
+        (False, True, 500, 200, []),
+    ],
+)
+def test_a_trace_that_reaches_amp_is_counted_once_by_tier(
+    collector,
+    sent_features,
+    monkeypatch,
+    authenticated,
+    approved,
+    grant_status,
+    export_status,
+    expected,
+):
+    """Declined consent, a refused grant, or a rejected export never counts."""
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    collector.grant_status = grant_status
+    collector.export_status = export_status
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    def run():
+        with trace_consent(lambda: approved):
+            token = begin_execution(tracing=True)
+            try:
+                record(get_trace_session())
+                nested = begin_execution(tracing=True)
+                end_execution(nested)
+            finally:
+                end_execution(token)
+
+    copy_context().run(run)
+    assert sent_features == expected
+
+
+def test_a_deferred_run_is_counted_once_when_it_finally_ends(
+    collector, sent_features, monkeypatch
+):
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    token = begin_execution(tracing=True)
+    try:
+        session = get_trace_session()
+        record(session)
+        session.flush()
+    finally:
+        lifetime = end_execution(token, defer=True)
+    assert sent_features == []  # spans reached AMP, but the run is not over
+
+    token = begin_execution(tracing=True, trace_session=lifetime)
+    try:
+        record(get_trace_session(), "second turn")
+    finally:
+        end_execution(token)
+    assert sent_features == ["tracing:authenticated_sent"]
+
+
+def test_recording_the_same_export_twice_counts_it_once(collector, sent_features):
+    client = TraceGrantClient(None)
+    grant = client.create(str(uuid4()))
+    exporter = GrantSpanExporter(client, grant)
+    session = TraceSession(grant.execution_uuid, [exporter])
+    try:
+        record(session)
+    finally:
+        session.shutdown()
+    exporter.record_export()
+    exporter.record_export()
+    assert sent_features == ["tracing:ephemeral_sent"]
+
+
+def test_a_truncated_ephemeral_trace_is_not_counted(
+    collector, sent_features, monkeypatch
+):
+    """It is uploaded, but like the `crewai eval` record it is not a whole run."""
+    monkeypatch.setenv("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", "1")
+    with trace_consent(lambda: True), ephemeral_tracing(str(uuid4())) as session:
+        record(session, "first")
+        record(session, "second")
+    assert len(collector.batches) == 1
+    assert sent_features == []
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+@pytest.mark.parametrize("use_async", [False, True])
+def test_a_flow_kickoff_counts_its_trace(
+    collector, sent_features, monkeypatch, authenticated, use_async
+):
+    from crewai.flow.flow import Flow, start
+
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    class Greeting(Flow):
+        @start()
+        def greet(self):
+            return "hello"
+
+    def run():
+        with trace_consent(lambda: True):
+            flow = Greeting(tracing=True)
+            if use_async:
+                return asyncio.run(flow.kickoff_async())
+            return flow.kickoff()
+
+    assert copy_context().run(run) == "hello"
+    assert collector.batches
+    assert sent_features == [
+        "tracing:authenticated_sent" if authenticated else "tracing:ephemeral_sent"
+    ]

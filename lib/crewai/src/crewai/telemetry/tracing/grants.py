@@ -27,6 +27,7 @@ from crewai.events.listeners.tracing.utils import (
     is_tui_mode,
     should_suppress_tracing_messages,
 )
+from crewai.telemetry.telemetry import Telemetry
 from crewai.telemetry.tracing import last_run
 from crewai.telemetry.tracing.session import MAX_EXPORT_BATCH_SIZE, otlp_exporter
 
@@ -293,15 +294,19 @@ class GrantSpanExporter(SpanExporter):
             self._recorded = True
             execution_uuid = self._grant.execution_uuid
             api = getattr(self._client, "_api", None)
+            tier = getattr(self._client, "_tier", None)
             last_run.record_last_run(
                 execution_id=execution_uuid,
-                tier=getattr(self._client, "_tier", None),
+                tier=tier,
                 started_at_ns=self._first_start_ns,
                 finished_at_ns=self._last_end_ns,
                 amp_base_url=getattr(api, "base_url", None),
                 trace_url=self._trace_url,
             )
             logger.debug("Traces exported for execution %s", execution_uuid)
+            # Counts that a trace reached AMP, never its contents. The legacy
+            # TraceBatchManager emits the same names for runs outside a kickoff.
+            Telemetry().feature_usage_span(f"tracing:{tier}_sent")
             self._show_trace_link()
 
     def _show_trace_link(self) -> None:
