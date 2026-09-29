@@ -51,3 +51,11 @@ def test_custom_description_is_preserved() -> None:
 
     assert tool.description.startswith("Use the reporting database.")
     assert "Generate SQLite-compatible SQL" in tool.description
+
+
+def test_dialect_guidance_is_not_duplicated_on_restore() -> None:
+    tool = _make_tool("sqlite:///example.db")
+
+    restored = _make_tool(**tool.model_dump())
+
+    assert restored.description.count("Generate SQLite-compatible SQL") == 1

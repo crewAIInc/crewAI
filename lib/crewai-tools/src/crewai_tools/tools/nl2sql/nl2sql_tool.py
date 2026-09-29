@@ -300,7 +300,8 @@ class NL2SQLTool(BaseTool):
             self.dialect,
             f"Generate SQL compatible with the {self.dialect} dialect.",
         )
-        self.description = f"{self.description.rstrip()} {guidance}"
+        if guidance not in self.description:
+            self.description = f"{self.description.rstrip()} {guidance}"
 
         if self.allow_dml:
             logger.warning(
