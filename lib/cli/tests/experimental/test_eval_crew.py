@@ -1178,3 +1178,29 @@ def test_an_unattended_run_with_nothing_traced_says_what_would_trace_it(
     assert exited.value.code == 1
     assert ("run `crewai login`" in out) is says_login
     assert ("add CREWAI_TRACING_ENABLED=true" in out) is not says_login
+
+
+def test_an_unreadable_login_is_the_reason_given_when_nothing_was_traced(
+    project, monkeypatch, capsys
+):
+    """A login that exists and cannot be read is why an unattended run was not
+    traced, and its own sentence says what to do — not "turn tracing on"."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+
+    def unreadable() -> None:
+        raise eval_module.EvaluationStoppedError(
+            "Could not read the saved login (OSError: denied). Run `crewai login` again"
+        )
+
+    monkeypatch.setattr(eval_module, "saved_login", unreadable)
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    out = capsys.readouterr().out.replace("\n", " ")
+    assert "Could not read the saved login" in out
+    assert "add CREWAI_TRACING_ENABLED=true" not in out
+

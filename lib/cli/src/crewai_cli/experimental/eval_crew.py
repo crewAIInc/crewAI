@@ -583,15 +583,18 @@ def _nothing_traced_unattended() -> str | None:
     no terminal has nobody to ask — so its trace is kept local, tracing on or
     not. Telling that user to turn tracing on sends them round the same loop;
     logging in is what makes an unattended run traced. None when tracing is off
-    or there is a login: the ordinary steps are the right ones then.
+    or there is a login: the ordinary steps are the right ones then. A login
+    that cannot be read says so instead.
     """
     if os.environ.get(TRACING_ENV_VAR, "").strip().lower() not in ("true", "1"):
         return None
     try:
         if saved_login() is not None:
             return None
-    except EvaluationStoppedError:
-        return None
+    except EvaluationStoppedError as unreadable:
+        # A login that exists and cannot be read is the reason, and its
+        # sentence says what to do about it.
+        return str(unreadable)
     return (
         "No traced run is recorded in this project. Tracing is on, but a run nobody is "
         "watching is only traced when you are logged in: run `crewai login`, then "
