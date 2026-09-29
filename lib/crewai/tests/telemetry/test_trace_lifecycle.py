@@ -322,15 +322,25 @@ def test_explicit_disable_prevents_first_time_collection(monkeypatch, disabled):
 
 
 @pytest.mark.parametrize("async_run", [False, True])
-def test_grant_failure_restores_execution_context(monkeypatch, async_run):
+@pytest.mark.parametrize(
+    ("status", "says"),
+    [(401, "Run `crewai login` again"), (403, "Run `crewai login` again"), (503, "unaffected")],
+)
+def test_a_refused_grant_runs_untraced_and_says_why(
+    monkeypatch, caplog, async_run, status, says
+):
+    """A trace is a record of the run, not a condition of it: an expired login
+    must not fail the crew. The run completes, nothing is uploaded, the context
+    is restored, and the warning names the fix."""
     monkeypatch.setenv("CREWAI_USER_PAT", "invalid")
-    monkeypatch.setattr(
-        TraceGrantClient,
-        "create",
-        Mock(side_effect=TraceGrantError("AMP rejected credential", 401)),
-    )
-    with pytest.raises(TraceGrantError) as error:
+    create = Mock(side_effect=TraceGrantError("AMP rejected credential", status))
+    monkeypatch.setattr(TraceGrantClient, "create", create)
+
+    with caplog.at_level("WARNING", logger="crewai.execution"):
         flow = ExampleFlow(tracing=True)
-        asyncio.run(flow.kickoff_async()) if async_run else flow.kickoff()
-    assert error.value.status_code == 401
+        result = asyncio.run(flow.kickoff_async()) if async_run else flow.kickoff()
+
+    assert result == "hello world"
+    create.assert_called_once()
     assert get_trace_session() is None and get_execution_uuid() is None
+    assert any(says in record.getMessage() for record in caplog.records)

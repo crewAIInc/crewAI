@@ -18,6 +18,7 @@ from __future__ import annotations
 from contextlib import ExitStack
 import contextvars
 from dataclasses import dataclass
+import logging
 import os
 import sys
 from types import TracebackType
@@ -27,6 +28,9 @@ from uuid import uuid4
 
 if TYPE_CHECKING:
     from crewai.telemetry.tracing.session import TraceSession
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -157,8 +161,19 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
             ephemeral_tracing(execution_uuid, first_time=not enabled)
         )
     else:
+        from crewai.telemetry.tracing.grants import TraceGrantError
+
         client = TraceGrantClient(amp_credential)
-        grant = client.create(execution_uuid)
+        try:
+            grant = client.create(execution_uuid)
+        except TraceGrantError as error:
+            # A trace is a record of the run, not a condition of it: a login
+            # that expired or a token that was revoked must not take the run
+            # down with it. The run goes on untraced and says so — never falls
+            # back to an anonymous upload of a run whose owner is logged in.
+            logger.warning(_untraced_because(error))
+            stack.close()
+            return
         exporter = GrantSpanExporter(client, grant)
         session = TraceSession(grant.execution_uuid, [exporter])
 
@@ -168,6 +183,20 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
 
         stack.callback(finish_authenticated_trace)
     _activate_tracing(ExecutionTrace(session, stack))
+
+
+def _untraced_because(error: Exception) -> str:
+    """The warning for a run AMP would not grant a trace to, naming the fix."""
+    status = getattr(error, "status_code", None)
+    if status in (401, 403):
+        return (
+            f"This run is not traced: CrewAI AMP refused the saved login (HTTP {status}). "
+            "Run `crewai login` again to trace your runs."
+        )
+    return (
+        f"This run is not traced: CrewAI AMP could not grant a trace "
+        f"({f'HTTP {status}' if status else error}). The run itself is unaffected."
+    )
 
 
 def _activate_tracing(tracing: ExecutionTrace) -> None:
