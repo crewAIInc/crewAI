@@ -329,6 +329,33 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
   </Accordion>
 </AccordionGroup>
 
+## Flow trace replay and step resume
+
+Flow execution records an ordered event trace, including method inputs and outputs and completed tool outputs. Export it for inspection or replay recorded events to registered handlers:
+
+```python
+flow = MyFlow()
+flow.kickoff()
+flow.export_trace("./flow-trace.json")
+
+# In an async context, dispatch stored tool outputs to event handlers.
+await flow.replay_trace({"tool_usage_finished"})
+```
+
+Event replay dispatches recorded events only; it does not call tools, LLMs, or flow methods. Event handlers that perform side effects should check `is_replaying()` and skip those effects.
+
+To re-run a method and all work triggered downstream from its recorded pre-method state, restore a checkpoint containing that method's start event:
+
+```python
+flow = MyFlow.from_checkpoint(
+    CheckpointConfig(restore_from="./flow-checkpoint.json"),
+    resume_from_method="step_two",
+)
+flow.kickoff()
+```
+
+The selected method must have a recorded start event for the flow in the checkpoint trace. If a method ran more than once (for example, in a loop), provide its zero-based occurrence with `resume_from_method_occurrence`; ambiguous traces without an occurrence are rejected. Re-running a step may repeat external side effects, so use approval or idempotency controls where needed.
+
 ## Reference
 
 ### `CheckpointConfig`

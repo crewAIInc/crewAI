@@ -48,7 +48,7 @@ from pydantic._internal._model_construction import ModelMetaclass
 from rich.console import Console
 from rich.panel import Panel
 
-from crewai.events.base_events import reset_emission_counter
+from crewai.events.base_events import reset_emission_counter, set_emission_counter
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_context import (
     get_current_parent_id,
@@ -135,6 +135,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.state.event_record import EventRecord
 from crewai.telemetry.tracing.context import get_trace_session
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_ref
 
@@ -653,6 +654,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         config: CheckpointConfig,
         *,
         definition: FlowDefinition | None = None,
+        resume_from_method: str | None = None,
+        resume_from_method_occurrence: int | None = None,
     ) -> Flow:  # type: ignore[type-arg]
         """Restore a Flow from a checkpoint.
 
@@ -663,6 +666,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 (one created via ``Flow.from_declaration``) from; its actions
                 are re-resolved since checkpoints carry no callables.
                 Subclasses carry their own definition and don't need this.
+            resume_from_method: Rewind to the state immediately before this
+                method and execute it and its downstream steps again.
+            resume_from_method_occurrence: Zero-based start-event occurrence
+                when the method appears more than once in the trace.
 
         Returns:
             A Flow instance ready to resume.
@@ -675,6 +682,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if definition is not None:
             context["flow_definition"] = definition
         state = RuntimeState.from_checkpoint(config, context=context)
+        if resume_from_method_occurrence is not None and resume_from_method is None:
+            raise ValueError(
+                "`resume_from_method_occurrence` requires `resume_from_method`."
+            )
         crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if not isinstance(entity, Flow):
@@ -683,6 +694,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 apply_execution_context(entity.execution_context)
             if isinstance(entity, cls):
                 entity._restore_from_checkpoint()
+                if resume_from_method is not None:
+                    entity.resume_from_method(
+                        resume_from_method, resume_from_method_occurrence
+                    )
                 return entity
             instance = (
                 cls.from_declaration(contents=definition)
@@ -694,6 +709,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             instance.checkpoint_method_counts = entity.checkpoint_method_counts
             instance.checkpoint_state = entity.checkpoint_state
             instance._restore_from_checkpoint()
+            if resume_from_method is not None:
+                instance.resume_from_method(
+                    resume_from_method, resume_from_method_occurrence
+                )
             return instance
         raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
 
@@ -735,9 +754,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)
     checkpoint_state: dict[str, Any] | None = Field(default=None)
+    _execution_trace: EventRecord | None = PrivateAttr(default=None)
 
     def _restore_from_checkpoint(self) -> None:
         """Restore private execution state from checkpoint fields."""
+        state = crewai_event_bus.runtime_state
+        if state is not None:
+            self._execution_trace = state.event_record
         if self.checkpoint_completed_methods is not None:
             self._completed_methods = {
                 FlowMethodName(m) for m in self.checkpoint_completed_methods
@@ -763,6 +786,140 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self.memory.bind(Memory())
         restore_event_scope(())
         reset_last_event_id()
+
+    def resume_from_method(
+        self, method_name: str, occurrence: int | None = None
+    ) -> None:
+        """Rewind a restored flow to immediately before a recorded method.
+
+        If the method ran more than once, *occurrence* selects a zero-based
+        start event. Events after that point are removed so a subsequent kickoff
+        re-executes this method and its downstream work against the recorded
+        pre-method state.
+        """
+        if method_name not in self._definition.methods:
+            raise ValueError(f"Unknown flow method: {method_name!r}")
+
+        state = crewai_event_bus.runtime_state
+        if state is None:
+            raise RuntimeError(
+                "Cannot resume from a method without a restored execution trace."
+            )
+
+        nodes = state.event_record.all_nodes()
+        starts = [
+            node.event
+            for node in nodes
+            if isinstance(node.event, MethodExecutionStartedEvent)
+            and node.event.flow_name == self._definition.name
+            and node.event.method_name == method_name
+        ]
+        if not starts:
+            raise ValueError(
+                f"No recorded start event for flow method {method_name!r}."
+            )
+        if occurrence is None and len(starts) > 1:
+            raise ValueError(
+                f"Flow method {method_name!r} has multiple recorded executions; "
+                "select an occurrence with `resume_from_method_occurrence`."
+            )
+        if occurrence is not None and not 0 <= occurrence < len(starts):
+            raise ValueError(
+                f"Occurrence {occurrence} is out of range for flow method "
+                f"{method_name!r} with {len(starts)} recorded execution(s)."
+            )
+
+        target = starts[occurrence if occurrence is not None else 0]
+        target_index = next(
+            index
+            for index, node in enumerate(nodes)
+            if node.event.event_id == target.event_id
+        )
+        if target.emission_sequence is None:
+            raise ValueError(
+                f"Recorded start event for {method_name!r} has no sequence number."
+            )
+        if isinstance(target.state, BaseModel):
+            method_state = target.state.model_dump(mode="python")
+        else:
+            method_state = target.state
+
+        preceding_nodes = nodes[:target_index]
+        preceding_finished = [
+            node.event
+            for node in preceding_nodes
+            if isinstance(node.event, MethodExecutionFinishedEvent)
+            and node.event.flow_name == self._definition.name
+        ]
+        self._restore_state(method_state)
+        self._completed_methods = {
+            FlowMethodName(event.method_name) for event in preceding_finished
+        }
+        self._method_outputs = [
+            {"method": event.method_name, "output": event.result}
+            for event in preceding_finished
+        ]
+        self._method_execution_counts = {}
+        for event in preceding_finished:
+            name = FlowMethodName(event.method_name)
+            self._method_execution_counts[name] = (
+                self._method_execution_counts.get(name, 0) + 1
+            )
+        self.checkpoint_completed_methods = {
+            str(name) for name in self._completed_methods
+        }
+        self.checkpoint_method_outputs = list(self._method_outputs)
+        self.checkpoint_method_counts = {
+            str(name): count
+            for name, count in self._method_execution_counts.items()
+        }
+        self.checkpoint_state = method_state
+        self._restored_from_checkpoint = True
+
+        truncated_record = EventRecord()
+        for node in preceding_nodes:
+            truncated_record.add(node.event)
+        state._event_record = truncated_record
+        self._execution_trace = truncated_record
+
+    def export_trace(self, path: str | Path) -> Path:
+        """Write this flow's recorded event trace as formatted JSON."""
+        trace = self._execution_trace
+        if trace is None:
+            state = crewai_event_bus.runtime_state
+            trace = state.event_record if state is not None else None
+        if trace is None:
+            raise RuntimeError(
+                "No execution trace is available. Run the flow or restore a checkpoint first."
+            )
+        destination = Path(path)
+        destination.write_text(trace.model_dump_json(indent=2), encoding="utf-8")
+        return destination
+
+    async def replay_trace(self, event_types: set[str] | None = None) -> int:
+        """Replay recorded events to event handlers without rerunning the flow.
+
+        This dispatches stored tool outputs as ``ToolUsageFinishedEvent`` events;
+        it does not invoke tools, LLMs, or flow methods.
+        """
+        trace = self._execution_trace
+        if trace is None:
+            state = crewai_event_bus.runtime_state
+            trace = state.event_record if state is not None else None
+        if trace is None:
+            raise RuntimeError(
+                "No execution trace is available. Run the flow or restore a checkpoint first."
+            )
+
+        replayed = 0
+        for node in trace.all_nodes():
+            if event_types is not None and node.event.type not in event_types:
+                continue
+            future = crewai_event_bus.replay(self, node.event)
+            if future is not None:
+                await asyncio.wrap_future(future)
+            replayed += 1
+        return replayed
 
     _methods: dict[FlowMethodName, Callable[..., Any]] = PrivateAttr(
         default_factory=dict
@@ -2543,6 +2700,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if owns_usage_aggregation:
                 crewai_event_bus.flush()
                 self._detach_usage_aggregation_listener()
+            runtime_state = crewai_event_bus.runtime_state
+            if runtime_state is not None:
+                self._execution_trace = runtime_state.event_record
             if request_id_token is not None:
                 current_flow_request_id.reset(request_id_token)
             if flow_defer_trace_finalization_token is not None:
@@ -2641,7 +2801,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             restore_event_scope(((deferred_started_event_id, "flow_started"),))
             flow_scope_open = True
         elif get_current_parent_id() is None:
-            reset_emission_counter()
+            if self._is_execution_resuming:
+                state = crewai_event_bus.runtime_state
+                last_sequence = (
+                    max(
+                        (
+                            node.event.emission_sequence or 0
+                            for node in state.event_record.all_nodes()
+                        ),
+                        default=0,
+                    )
+                    if state is not None
+                    else 0
+                )
+                set_emission_counter(last_sequence)
+            else:
+                reset_emission_counter()
             reset_last_event_id()
 
         if should_emit_flow_started:
@@ -2758,16 +2933,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             MethodExecutionFailedEvent,
         )
         flow_name = self._definition.name
-        nodes = sorted(
-            (
-                n
-                for n in record.all_nodes()
-                if isinstance(n.event, replayable)
-                and n.event.flow_name == flow_name
-                and n.event.method_name in self._completed_methods
-            ),
-            key=lambda n: n.event.emission_sequence or 0,
-        )
+        nodes = [
+            n
+            for n in record.all_nodes()
+            if isinstance(n.event, replayable)
+            and n.event.flow_name == flow_name
+            and n.event.method_name in self._completed_methods
+        ]
 
         for node in nodes:
             future = crewai_event_bus.replay(self, node.event)

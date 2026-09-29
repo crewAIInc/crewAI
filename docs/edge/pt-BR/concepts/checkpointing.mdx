@@ -329,6 +329,33 @@ Este passo a passo leva cerca de 5 minutos. Você executará uma crew de duas ta
   </Accordion>
 </AccordionGroup>
 
+## Reprodução de trace do Flow e retomada por etapa
+
+A execução de um Flow registra um trace ordenado de eventos, incluindo entradas e saídas dos métodos e saídas de ferramentas concluídas. Exporte o trace para inspeção ou reproduza os eventos registrados nos handlers inscritos:
+
+```python
+flow = MyFlow()
+flow.kickoff()
+flow.export_trace("./flow-trace.json")
+
+# In an async context, dispatch stored tool outputs to event handlers.
+await flow.replay_trace({"tool_usage_finished"})
+```
+
+A reprodução de eventos apenas despacha os eventos registrados; ela não chama ferramentas, LLMs ou métodos do Flow. Handlers de eventos que executam efeitos colaterais devem verificar `is_replaying()` e ignorar esses efeitos.
+
+Para executar novamente um método e todo o trabalho acionado por ele a partir do estado registrado antes do método, restaure um checkpoint que contenha o evento de início desse método:
+
+```python
+flow = MyFlow.from_checkpoint(
+    CheckpointConfig(restore_from="./flow-checkpoint.json"),
+    resume_from_method="step_two",
+)
+flow.kickoff()
+```
+
+O método selecionado deve ter um evento de início registrado para esse Flow no trace do checkpoint. Se o método foi executado mais de uma vez (por exemplo, em um loop), informe a ocorrência com índice começando em zero usando `resume_from_method_occurrence`; traces ambíguos sem uma ocorrência são rejeitados. Executar novamente uma etapa pode repetir efeitos colaterais externos, então use controles de aprovação ou de idempotência quando necessário.
+
 ## Referência
 
 ### `CheckpointConfig`
