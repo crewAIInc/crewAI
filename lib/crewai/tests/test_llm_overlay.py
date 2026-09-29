@@ -747,3 +747,23 @@ def test_a_subclass_of_llm_keeps_its_model() -> None:
         mine = Mine(model="groq/llama-3.1-8b-instant")
 
     assert type(mine) is Mine and mine.model == "groq/llama-3.1-8b-instant"
+
+
+def test_a_declared_model_whose_sdk_is_missing_still_maps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nothing is built on the declared model, so its SDK need not be here; its
+    key cannot be matched to the new provider, so it stays behind."""
+    native = LLM._get_native_provider.__func__  # type: ignore[attr-defined]
+
+    def without_anthropic(cls: type[LLM], provider: str) -> Any:
+        if provider in ("anthropic", "claude"):
+            raise ImportError("Anthropic native provider not available")
+        return native(cls, provider)
+
+    monkeypatch.setattr(LLM, "_get_native_provider", classmethod(without_anthropic))
+    with llm_overlay({"model:*": "openai/gpt-4o-mini"}):
+        built = LLM(model="anthropic/claude-haiku-4-5", api_key="k", temperature=0.2)
+
+    assert type(built).__name__ == "OpenAICompletion" and built.model == "gpt-4o-mini"
+    assert built.temperature == 0.2 and built.api_key != "k"

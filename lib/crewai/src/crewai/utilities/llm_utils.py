@@ -265,15 +265,21 @@ def create_llm_from_kwargs_like(
         }
         if isinstance(settings.get("endpoint"), str):
             settings["endpoint"] = settings["endpoint"].split(_AZURE_DEPLOYMENT_PATH)[0]
-        declared = LLM._resolve_route(declared_model, kwargs)
+        endpoint = {k: settings[k] for k in _ENDPOINT_NAMES if k in settings}
+        route = LLM._resolve_route(model, endpoint)
+        carried = {k: settings[k] for k in GENERATION_SETTINGS if k in settings}
+        try:
+            declared = LLM._resolve_route(declared_model, kwargs)
+        except ImportError:
+            # The declared model's SDK is not installed here. Nothing is built
+            # on it, so that is no reason to fail; its credentials, though,
+            # cannot be matched to the new provider, so none are carried.
+            return mark_mapped(_build_like(model, carried, None, False))
         declared_class = (
             LLM
             if is_litellm or declared.native_class is None
             else declared.native_class
         )
-        endpoint = {k: settings[k] for k in _ENDPOINT_NAMES if k in settings}
-        route = LLM._resolve_route(model, endpoint)
-        carried = {k: settings[k] for k in GENERATION_SETTINGS if k in settings}
         if _same_route_provider(declared_class, declared.provider, route):
             carried.update({k: settings[k] for k in PROVIDER_SETTINGS if k in settings})
         return mark_mapped(
@@ -284,10 +290,14 @@ def create_llm_from_kwargs_like(
 def _build_like(
     model: str,
     carried: dict[str, Any],
-    base_class: type[BaseLLM],
+    base_class: type[BaseLLM] | None,
     through_litellm: bool,
 ) -> BaseLLM:
-    """Build ``model`` with the ``carried`` settings its class accepts."""
+    """Build ``model`` with the ``carried`` settings its class accepts.
+
+    ``base_class`` is the declared llm's class, ``None`` when it is not known;
+    ``additional_params`` travel only within one class.
+    """
     route = LLM._resolve_route(model, carried)
     target = route.native_class or LLM
     if through_litellm:
