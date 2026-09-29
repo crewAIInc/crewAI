@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -1049,9 +1049,22 @@ class TestValkeyStorageReset:
 
         valkey_storage.adelete = mock_adelete  # type: ignore[method-assign]
 
-        await valkey_storage._areset(scope_prefix=None)
+        # Establish index state so we can assert it is cleared on reset.
+        valkey_storage._index_created = True
+        valkey_storage._vector_dim = 1536
+
+        with patch(
+            "crewai.memory.storage.valkey_storage.ft.dropindex",
+            new=AsyncMock(),
+        ) as mock_dropindex:
+            await valkey_storage._areset(scope_prefix=None)
 
         assert set(adelete_args.get("record_ids", [])) == {"id-1", "id-2"}
+        # Index dropped and dimension state cleared so a rebuild with a new
+        # embedder works after reset.
+        mock_dropindex.assert_awaited_once()
+        assert valkey_storage._index_created is False
+        assert valkey_storage._vector_dim is None
 
     @pytest.mark.asyncio
     async def test_reset_with_scope_clears_scope_records(
