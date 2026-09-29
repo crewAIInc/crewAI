@@ -1347,12 +1347,15 @@ class ValkeyStorage:
         # Scope prefix filter
         # Format: @scope:{prefix*}
         if scope_prefix:
-            # Escape special characters in scope prefix
-            escaped_scope = self._escape_search_query(scope_prefix)
             # For root scope "/", match everything
             if scope_prefix == "/":
                 query_parts.append("*")
             else:
+                # Normalize a trailing slash the same way delete/list/count and
+                # the boundary post-filter do (rstrip("/")), so a query for
+                # "/crew/" still matches a record stored as "/crew".
+                normalized_prefix = scope_prefix.rstrip("/") or "/"
+                escaped_scope = self._escape_search_query(normalized_prefix)
                 query_parts.append(f"@scope:{{{escaped_scope}*}}")
 
         # Category filter (OR logic)
