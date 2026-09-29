@@ -867,9 +867,6 @@ def message_content_text(msg: LLMMessage) -> str:
     return str(content)
 
 
-_CHARS_PER_TOKEN_LEVELS: Final[tuple[float, ...]] = (4.0, 3.0, 2.5)
-
-
 class SummarizeMessages:
     """Compact a message list so it fits the model context window.
 
@@ -877,6 +874,8 @@ class SummarizeMessages:
     role labels, and writes one structured summary back onto ``messages``.
     Files attached to user messages are merged onto that summary.
     """
+
+    _CHARS_PER_TOKEN_LEVELS: Final[tuple[float, ...]] = (4.0, 3.0, 2.5)
 
     def __init__(self) -> None:
         self.messages: list[LLMMessage] = []
@@ -899,10 +898,10 @@ class SummarizeMessages:
         """
         if llm is None:
             raise RuntimeError("SummarizeMessages.summarize() must set an LLM first.")
-        if char_level_index >= len(_CHARS_PER_TOKEN_LEVELS):
+        if char_level_index >= len(self._CHARS_PER_TOKEN_LEVELS):
             raise LLMContextLengthExceededError(
                 "Summarization chunk still exceeds the context window after "
-                f"retries at {_CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
+                f"retries at {self._CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
             ) from None
 
         self.llm = llm
@@ -921,7 +920,7 @@ class SummarizeMessages:
             system_messages = []
             work_messages = messages
             if self.verbose:
-                chars_per_token = _CHARS_PER_TOKEN_LEVELS[char_level_index]
+                chars_per_token = self._CHARS_PER_TOKEN_LEVELS[char_level_index]
                 PRINTER.print(
                     content=(
                         "Summarization chunk exceeded context window; retrying with "
@@ -1064,7 +1063,7 @@ class SummarizeMessages:
         return int(len(text) / chars_per_token)
 
     def _chars_per_token(self, char_level_index: int) -> float:
-        return _CHARS_PER_TOKEN_LEVELS[char_level_index]
+        return self._CHARS_PER_TOKEN_LEVELS[char_level_index]
 
     def _messages_ready_to_chunk(
         self,
