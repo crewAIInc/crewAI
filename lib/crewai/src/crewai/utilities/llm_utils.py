@@ -319,13 +319,29 @@ def _build_like(
 def _same_route_provider(
     declared_class: type[BaseLLM], declared_provider: str, route: Any
 ) -> bool:
-    """:func:`_same_provider` for a declared llm known by its route, not an instance."""
-    if route.native_class is not None:
-        return declared_class is route.native_class and (
-            not _serves_several_providers(route.native_class)
-            or route.provider == declared_provider
+    """:func:`_same_provider` for a declared llm known by its route, not an instance.
+
+    The same rule, case for case: a native declared class compares by class, a
+    LiteLLM-routed ``LLM`` by its provider — to a native route through the class
+    that provider names, so ``LLM(model="openai/gpt-4o", is_litellm=True)``
+    mapped to a native OpenAI model keeps its key and endpoint.
+    """
+    if route.native_class is None:
+        return declared_class is LLM and route.provider == declared_provider
+    if declared_class is route.native_class:
+        return not _serves_several_providers(route.native_class) or (
+            route.provider == declared_provider
         )
-    return declared_class is LLM and route.provider == declared_provider
+    if declared_class is not LLM:
+        return False
+    try:
+        named = LLM._get_native_provider(declared_provider or "")
+    except ImportError:
+        return False
+    return named is route.native_class and (
+        not _serves_several_providers(route.native_class)
+        or route.provider == declared_provider
+    )
 
 
 def _same_provider(base: BaseLLM, route: Any) -> bool:

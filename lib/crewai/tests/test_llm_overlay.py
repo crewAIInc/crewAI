@@ -22,7 +22,12 @@ from typing import Any
 from crewai import Agent, Crew, Task
 from crewai.lite_agent import LiteAgent
 from crewai.llm import LLM
-from crewai.llm_overlay import active, llm_overlay, overlay_model_for
+from crewai.llm_overlay import (
+    MODEL_KEY_PREFIX,
+    active,
+    llm_overlay,
+    overlay_model_for,
+)
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.llm_utils import create_llm
 import pytest
@@ -578,9 +583,7 @@ def test_re_validation_keeps_the_llm_a_kickoff_time_swap_set() -> None:
 
 def test_the_model_key_prefix_is_a_public_constant() -> None:
     """Another package feature-detects the model-for-model form on it."""
-    import crewai.llm_overlay as overlay
-
-    assert overlay.MODEL_KEY_PREFIX == "model:"
+    assert MODEL_KEY_PREFIX == "model:"
 
 
 def test_a_bare_llm_call_in_a_flow_step_runs_on_the_mapped_model(
@@ -767,3 +770,21 @@ def test_a_declared_model_whose_sdk_is_missing_still_maps(
 
     assert type(built).__name__ == "OpenAICompletion" and built.model == "gpt-4o-mini"
     assert built.temperature == 0.2 and built.api_key != "k"
+
+
+def test_a_litellm_routed_llm_keeps_its_key_on_the_same_provider_only() -> None:
+    """Same provider is a question about the provider, not the class: an
+    `LLM(...)` the caller routed through LiteLLM keeps its key and endpoint
+    when mapped to another model of that provider, and another provider's
+    model never gets them."""
+    pytest.importorskip("litellm")
+    declared = {"api_key": "k", "base_url": "http://localhost:9999/v1"}
+    with llm_overlay({"model:*": "openai/gpt-4o-mini"}):
+        same = LLM(model="openai/gpt-4o", is_litellm=True, **declared)
+    with llm_overlay({"model:*": "anthropic/claude-haiku-4-5"}):
+        other = LLM(model="openai/gpt-4o", is_litellm=True, **declared)
+
+    assert "gpt-4o-mini" in same.model
+    assert same.api_key == "k" and same.base_url == "http://localhost:9999/v1"
+    assert "claude-haiku-4-5" in other.model
+    assert other.api_key != "k" and other.base_url != "http://localhost:9999/v1"
