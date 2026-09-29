@@ -104,6 +104,20 @@ class TestGetAiocacheConfig:
             assert config["default"]["port"] == 6380
             assert config["default"]["db"] == 2
 
+    def test_forwards_tls_for_rediss_scheme(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "rediss://myhost:6380/2"}, clear=True
+        ):
+            config = get_aiocache_config()
+            assert config["default"]["ssl"] is True
+
+    def test_no_ssl_flag_for_plaintext_scheme(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "redis://myhost:6380/2"}, clear=True
+        ):
+            config = get_aiocache_config()
+            assert "ssl" not in config["default"]
+
 
 class TestUseValkeyCache:
     """Tests for use_valkey_cache()."""
