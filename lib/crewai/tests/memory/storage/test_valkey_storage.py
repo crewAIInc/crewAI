@@ -1851,6 +1851,12 @@ class TestValkeyStorageDelete:
         # Verify zrange was called for score-based range query
         mock_glide_client.zrange.assert_called_once()
 
+        # The upper score boundary must be exclusive so a record whose
+        # created_at equals older_than is NOT deleted ("created before").
+        # glide encodes an exclusive boundary with a "(" prefix.
+        range_arg = mock_glide_client.zrange.call_args[0][1]
+        assert str(range_arg.end).startswith("(")
+
         # Verify records were deleted
         assert mock_glide_client.delete.call_count == 2
 
