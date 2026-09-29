@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -113,3 +113,44 @@ class TestEmbedText:
         result = embed_text(embedder, "hello")
         assert isinstance(result, list)
         assert len(result) == 2
+
+
+class TestEmbedTextsTimeout:
+    """embed_texts timeout behavior: default returns empty (recall can tolerate
+    a miss), but save paths pass raise_on_timeout=True so a timed-out batch
+    fails loudly instead of persisting unsearchable empty-vector memories.
+    """
+
+    def _timing_out_pool(self):
+        import concurrent.futures
+        from unittest.mock import MagicMock
+
+        fut = MagicMock()
+        fut.result.side_effect = concurrent.futures.TimeoutError()
+        pool = MagicMock()
+        pool.submit.return_value = fut
+        return pool
+
+    def test_timeout_returns_empty_by_default(self) -> None:
+        import crewai.memory.types as types_mod
+
+        embedder = MagicMock(return_value=[[0.1, 0.2]])
+
+        async def run() -> list[list[float]]:
+            return embed_texts(embedder, ["hello", "world"])
+
+        with patch.object(types_mod, "_EMBED_POOL", self._timing_out_pool()):
+            result = asyncio.run(run())
+        assert result == [[], []]
+
+    def test_timeout_raises_when_requested(self) -> None:
+        import crewai.memory.types as types_mod
+
+        embedder = MagicMock(return_value=[[0.1, 0.2]])
+
+        async def run() -> list[list[float]]:
+            return embed_texts(embedder, ["hello"], raise_on_timeout=True)
+
+        with patch.object(types_mod, "_EMBED_POOL", self._timing_out_pool()):
+            with pytest.raises(TimeoutError):
+                asyncio.run(run())
