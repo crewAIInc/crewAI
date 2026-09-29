@@ -1021,6 +1021,36 @@ class TestValkeyStorageUpdate:
         assert last_accessed_dt > original_last_accessed
 
     @pytest.mark.asyncio
+    async def test_update_dimension_mismatch_does_not_orphan_record(
+        self, valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        """A dimension mismatch during update must be detected BEFORE any index
+        removal, so the record isn't left with its hash present but its
+        scope/category/metadata indexes cleared (orphaned).
+        """
+        from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
+
+        # Index already established at 1536.
+        valkey_storage._vector_dim = 1536
+
+        updated_record = MemoryRecord(
+            id="indexed-record",
+            content="Updated content",
+            scope="/original",
+            categories=["cat1"],
+            metadata={"key1": "value1"},
+            embedding=[0.0] * 3072,  # mismatched dimension
+        )
+
+        with pytest.raises(EmbeddingDimensionMismatchError):
+            await valkey_storage._aupdate(updated_record)
+
+        # No index mutation should have happened.
+        mock_glide_client.zrem.assert_not_called()
+        mock_glide_client.srem.assert_not_called()
+        mock_glide_client.hset.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_update_non_existent_record_creates_new_one(
         self, valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
     ) -> None:

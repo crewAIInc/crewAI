@@ -944,6 +944,15 @@ class ValkeyStorage:
         client = await self._get_client()
         record_key = self._record_key(record.id)
 
+        # Validate the embedding dimension BEFORE touching any indexes. If this
+        # raises EmbeddingDimensionMismatchError, we must not have already
+        # removed the record from its scope/category/metadata indexes, or the
+        # hash would be orphaned (invisible to list, count, scope, and filtered
+        # delete while still present). _ensure_vector_index also reconciles
+        # against an existing index's dimension (the process-restart case).
+        self._check_and_set_vector_dim([record])
+        await self._ensure_vector_index()
+
         # Fetch existing record to preserve created_at and get old index values
         existing_data = await client.hgetall(record_key)
 
@@ -1001,10 +1010,6 @@ class ValkeyStorage:
             await self._remove_from_indexes(
                 record.id, old_scope, old_categories, old_metadata
             )
-
-        # Guard against an embedder change writing a vector whose dimension no
-        # longer matches the index (Valkey Search would silently drop it).
-        self._check_and_set_vector_dim([record])
 
         # Convert record to hash fields
         record_dict = self._record_to_dict(record)
