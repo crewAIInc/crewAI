@@ -1,3 +1,5 @@
+import json
+import uuid
 from ube_foundation import TrustEngine, PqcKeyPair
 
 class NTIGuardrailMiddleware:
@@ -14,9 +16,8 @@ class NTIGuardrailMiddleware:
         self.engine.grant(self.agent_id, capability)
 
     def verify_tool_execution(self, tool_name: str, tool_input: dict) -> bool:
-        import json
         req = {
-            "id": f"req-{abs(hash(str(tool_input)))}",
+            "id": f"req-{uuid.uuid4()}", # Fixed: Using uuid instead of hash
             "actor": self.agent_id,
             "capability": tool_name,
             "action": tool_name,
