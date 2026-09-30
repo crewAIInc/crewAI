@@ -278,7 +278,7 @@ class ValkeyStorage:
                             use_tls=self._use_tls,
                             credentials=(
                                 ServerCredentials(
-                                    username=self._username,
+                                    username=self._username or None,
                                     password=self._password or "",
                                 )
                                 if (self._password or self._username)
@@ -1046,6 +1046,22 @@ class ValkeyStorage:
             record_dict,
         )
 
+        # HSET only writes the fields present in record_dict; it never removes
+        # fields left out. _record_to_dict omits "embedding" when the incoming
+        # record has none (e.g. a content-only consolidation update, since
+        # FT.SEARCH does not return embeddings). Without this, the old vector
+        # would linger in the hash and Valkey Search would keep ranking the
+        # record by a stale embedding that no longer matches its content.
+        # Explicitly drop the field so the record is removed from the vector
+        # index until it is re-embedded.
+        if "embedding" not in record_dict:
+            existing_had_embedding = any(
+                (k.decode("utf-8") if isinstance(k, bytes) else k) == "embedding"
+                for k in existing_data
+            )
+            if existing_had_embedding:
+                await client.hdel(record_key, ["embedding"])
+
         # Add to new indexes
         timestamp = _to_epoch(record.created_at)
         await self._update_indexes(
@@ -1461,6 +1477,13 @@ class ValkeyStorage:
         """
         client = await self._get_client()
 
+        # An empty query embedding cannot drive a KNN search: the blob would be
+        # zero-length and Valkey Search errors opaquely or returns nothing.
+        # Return no results explicitly rather than issuing a malformed query
+        # (e.g. the embedder returned nothing for the query text).
+        if not query_embedding:
+            return []
+
         # Detect the embedding dimension from the query vector so the index is
         # created at the right size when search happens before any save.
         if self._vector_dim is None and query_embedding:
@@ -1488,17 +1511,17 @@ class ValkeyStorage:
 
         # Scope prefix filter
         # Format: @scope:{prefix*}
-        if scope_prefix:
-            # For root scope "/", match everything
-            if scope_prefix == "/":
-                query_parts.append("*")
-            else:
-                # Normalize a trailing slash the same way delete/list/count and
-                # the boundary post-filter do (rstrip("/")), so a query for
-                # "/crew/" still matches a record stored as "/crew".
-                normalized_prefix = scope_prefix.rstrip("/") or "/"
-                escaped_scope = self._escape_search_query(normalized_prefix)
-                query_parts.append(f"@scope:{{{escaped_scope}*}}")
+        # Root scope "/" means "no scope restriction": we deliberately add no
+        # scope clause. Appending a standalone "*" here would corrupt a compound
+        # query (e.g. "(* @categories:{...})"), since Valkey Search only accepts
+        # "*" as a standalone match-all, not as a term alongside other filters.
+        if scope_prefix and scope_prefix != "/":
+            # Normalize a trailing slash the same way delete/list/count and
+            # the boundary post-filter do (rstrip("/")), so a query for
+            # "/crew/" still matches a record stored as "/crew".
+            normalized_prefix = scope_prefix.rstrip("/") or "/"
+            escaped_scope = self._escape_search_query(normalized_prefix)
+            query_parts.append(f"@scope:{{{escaped_scope}*}}")
 
         # Category filter (OR logic)
         # Format: @categories:{cat1|cat2|cat3}
