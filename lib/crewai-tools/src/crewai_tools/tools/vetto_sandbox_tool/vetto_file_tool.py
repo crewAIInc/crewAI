@@ -112,11 +112,10 @@ class VettoFileTool(VettoBaseTool):
             PermissionError: If path escapes sandbox workspace boundary.
         """
         root = Path(self.working_dir or os.getcwd()).resolve()
-        candidate = (root / target_path).resolve() if not os.path.isabs(target_path) else Path(target_path).resolve()
-
         try:
+            candidate = (root / target_path).resolve(strict=False) if not os.path.isabs(target_path) else Path(target_path).resolve(strict=False)
             candidate.relative_to(root)
-        except ValueError:
+        except (ValueError, RuntimeError):
             raise PermissionError(
                 f"Path {target_path} escapes sandbox workspace boundary {root}"
             )
@@ -230,14 +229,23 @@ class VettoFileTool(VettoBaseTool):
             if not pattern:
                 raise ValueError("action='find' requires 'pattern'")
             matches = []
-            if safe_path.is_dir():
+            if safe_path.is_file():
+                try:
+                    safe_path.resolve(strict=False).relative_to(root)
+                    with open(safe_path, "r", encoding="utf-8", errors="ignore") as f:
+                        for line_no, line in enumerate(f, 1):
+                            if pattern in line:
+                                matches.append({"file": str(safe_path), "line": line_no, "text": line.strip()})
+                except (ValueError, OSError, RuntimeError, UnicodeDecodeError):
+                    pass
+            elif safe_path.is_dir():
                 for root_dir, _, files in os.walk(safe_path):
                     for file in files:
                         fp = Path(root_dir) / file
                         # Defense-in-depth: skip files or symlinks resolving outside workspace boundary
                         try:
-                            fp.resolve().relative_to(root)
-                        except (ValueError, OSError):
+                            fp.resolve(strict=False).relative_to(root)
+                        except (ValueError, OSError, RuntimeError):
                             continue
                         try:
                             with open(fp, "r", encoding="utf-8", errors="ignore") as f:
@@ -259,8 +267,8 @@ class VettoFileTool(VettoBaseTool):
                         cand = Path(root_dir) / f
                         # Defense-in-depth: skip files or symlinks resolving outside workspace boundary
                         try:
-                            cand.resolve().relative_to(root)
-                        except (ValueError, OSError):
+                            cand.resolve(strict=False).relative_to(root)
+                        except (ValueError, OSError, RuntimeError):
                             continue
                         results.append(str(cand))
             return {"pattern": pattern, "results": results[:100]}

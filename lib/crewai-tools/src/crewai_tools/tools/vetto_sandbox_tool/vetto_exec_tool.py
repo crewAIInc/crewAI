@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import platform
 from builtins import type as type_
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -57,16 +59,18 @@ class VettoExecTool(VettoBaseTool):
         Returns:
             Dictionary containing exit_code, stdout, stderr, timed_out flag, and elapsed_seconds.
         """
-        if cwd and self.working_dir:
-            from pathlib import Path
-            resolved_cwd = Path(cwd).resolve()
-            resolved_root = Path(self.working_dir).resolve()
+        sandbox_root = Path(self.working_dir or os.getcwd()).resolve()
+        if cwd:
+            resolved_cwd = (sandbox_root / cwd).resolve() if not os.path.isabs(cwd) else Path(cwd).resolve()
             try:
-                resolved_cwd.relative_to(resolved_root)
+                resolved_cwd.relative_to(sandbox_root)
             except ValueError:
                 raise PermissionError(
-                    f"Execution cwd {cwd} escapes configured workspace boundary {self.working_dir}"
+                    f"Execution cwd {cwd} escapes configured workspace boundary {sandbox_root}"
                 )
+            effective_cwd = str(resolved_cwd)
+        else:
+            effective_cwd = str(sandbox_root)
 
         if platform.system() == "Windows":
             shell_cmd = ["cmd.exe", "/c", command]
@@ -75,7 +79,7 @@ class VettoExecTool(VettoBaseTool):
 
         return self._execute_subprocess(
             shell_cmd,
-            cwd=cwd,
+            cwd=effective_cwd,
             env=env,
             timeout=timeout,
         )

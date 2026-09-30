@@ -228,5 +228,54 @@ class TestVettoSandboxTools(unittest.TestCase):
             self.assertEqual(len(remaining), 0)
 
 
+    def test_exec_tool_cwd_defaults_to_sandbox_root_when_working_dir_none(self):
+        """Verify execution validates cwd against sandbox root even when working_dir is None."""
+        tool = VettoExecTool(working_dir=None, allow_fallback=True)
+        # Supplying an outside cwd must raise PermissionError
+        with self.assertRaises(PermissionError):
+            tool._run("ls", cwd="/nonexistent_outside_boundary_dir_xyz")
+
+    def test_file_tool_find_on_single_file(self):
+        """Verify find action works directly on individual file targets."""
+        tool = VettoFileTool(working_dir=str(self.workspace))
+        tool._run(action="write", path="single.txt", content="target_token = 42\nother = 1\n")
+
+        res = tool._run(action="find", path="single.txt", pattern="target_token")
+        self.assertEqual(len(res["matches"]), 1)
+        self.assertEqual(res["matches"][0]["file"], str(self.workspace / "single.txt"))
+        self.assertIn("target_token = 42", res["matches"][0]["text"])
+
+    def test_file_tool_cyclic_symlink_gracefully_handled(self):
+        """Verify cyclic symlinks do not crash find or search with RuntimeError."""
+        tool = VettoFileTool(working_dir=str(self.workspace))
+        cyclic_link = self.workspace / "cyclic_link"
+        try:
+            cyclic_link.symlink_to(cyclic_link)
+        except (OSError, NotImplementedError):
+            return
+
+        # find should skip cyclic symlink gracefully without raising RuntimeError
+        find_res = tool._run(action="find", path=".", pattern="something")
+        self.assertEqual(len(find_res["matches"]), 0)
+
+        # search should execute without raising RuntimeError
+        search_res = tool._run(action="search", path=".", pattern="*")
+        self.assertIsInstance(search_res["results"], list)
+
+        # Mock RuntimeError specifically on cyclic_link to verify Python 3.10-3.12 behavior
+        orig_resolve = Path.resolve
+        def resolve_with_symlink_loop(self_path, *args, **kwargs):
+            if "cyclic_link" in str(self_path):
+                raise RuntimeError("Symlink loop from path")
+            return orig_resolve(self_path, *args, **kwargs)
+
+        with patch.object(Path, "resolve", side_effect=resolve_with_symlink_loop, autospec=True):
+            find_mocked = tool._run(action="find", path=".", pattern="something")
+            self.assertEqual(len(find_mocked["matches"]), 0)
+
+            search_mocked = tool._run(action="search", path=".", pattern="*")
+            self.assertNotIn(str(cyclic_link), search_mocked["results"])
+
+
 if __name__ == "__main__":
     unittest.main()
