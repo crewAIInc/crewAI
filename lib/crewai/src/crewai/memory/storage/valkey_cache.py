@@ -93,7 +93,7 @@ class ValkeyCache:
             if stale_client is not None:
                 try:
                     await stale_client.close()
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     # The old loop is gone; closing may fail. Log and move on
                     # rather than leaving the rebind half-done.
                     _logger.debug(
