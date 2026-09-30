@@ -95,6 +95,14 @@ class TokenManager:
         storage_path = Path(base_path) / app_name
 
         storage_path.mkdir(parents=True, exist_ok=True)
+        # Enforce the documented 0o700 mode: mkdir is subject to umask and does
+        # not adjust the mode of a pre-existing directory, so chmod explicitly.
+        try:
+            storage_path.chmod(0o700)
+        except OSError:
+            # Best-effort permission hardening only: some platforms/filesystems
+            # may reject chmod here, and token operations should still proceed.
+            pass
 
         return storage_path
 

@@ -1,0 +1,142 @@
+---
+title: "Migrando de inputs.id para restore_from_state_id"
+description: "Mover fluxos @persist da hidratação obsoleta inputs.id para o campo suportado restore_from_state_id"
+icon: "arrow-right-arrow-left"
+---
+
+<Warning>
+  Passar `id` dentro de `inputs` para hidratar um fluxo `@persist` é **obsoleto** e
+  programado para remoção em uma versão futura. A substituição, `restore_from_state_id`,
+  está disponível no CrewAI **v1.14.5 e posterior** — os passos abaixo se aplicam uma vez que você
+  faça a atualização.
+</Warning>
+
+## Visão Geral
+
+A maneira documentada de hidratar um fluxo `@persist` de uma execução anterior é passar
+o UUID dessa execução como `inputs.id`. O CrewAI agora expõe um campo dedicado,
+`restore_from_state_id`, que realiza a mesma hidratação sem sobrecarregar a
+carga útil de `inputs` — e sem acoplar a chave de hidratação à identidade da nova execução.
+
+## Migração
+
+Se você atualmente inicia um fluxo `@persist` com `inputs={"id": ...}`:
+
+```python
+# Obsoleto
+flow = CounterFlow()
+flow.kickoff(inputs={"id": "abcd1234-5678-90ef-ghij-klmnopqrstuv"})
+```
+
+Mude para `restore_from_state_id`:
+
+```python
+# Suportado
+flow = CounterFlow()
+flow.kickoff(restore_from_state_id="abcd1234-5678-90ef-ghij-klmnopqrstuv")
+```
+
+Os dois modos têm semânticas de linhagem diferentes:
+
+- `inputs={"id": <uuid>}` (obsoleto) — **retomar**: as gravações são feitas sob o id fornecido,
+  estendendo a mesma história de `flow_uuid`.
+- `restore_from_state_id=<uuid>` — **dividir**: hidrata o estado a partir de um snapshot, então
+  grava sob um novo `state.id`. A história do fluxo de origem é preservada.
+
+Para a maioria dos cenários de produção — reexecutar um fluxo hidratado de um estado anterior — criar um fork
+é o que você deseja. Veja [Dominando o Estado do Fluxo](/pt-BR/guides/flows/mastering-flow-state)
+para o modelo mental completo.
+
+Se você iniciar seu fluxo pela API REST do CrewAI AMP, veja [AMP](#amp) abaixo para a
+migração equivalente da carga útil.
+
+## Por que estamos descontinuando `inputs.id` para `@persist`?
+
+`inputs.id` é atualmente a maneira documentada de retomar um fluxo `@persist` de uma
+execução anterior. O problema é que o mesmo UUID faz duas funções ao mesmo tempo:
+
+1. **Seleciona qual snapshot o `@persist` usa para hidratar** — carrega o estado salvo
+   sob aquele UUID.
+2. **Torna-se o ID de Execução do Fluxo da nova execução** (`state.id` no SDK;
+   apresentado como `flow_id` em alguns contextos) — cada gravação `@persist` a partir desta
+   inicialização também cai sob aquele mesmo UUID.
+
+Esse papel duplo é a causa raiz dos problemas que este guia descreve. Como o
+UUID fornecido também é o id da nova execução, duas inicializações que passam o mesmo
+`inputs.id` não são duas execuções distintas — elas compartilham um id, compartilham um registro
+de persistência e (no AMP) compartilham uma linha na lista de execuções. Não há como dizer
+"hidratar a partir deste snapshot, mas registrar esta execução separadamente" sem dividir as
+duas responsabilidades.
+
+`restore_from_state_id` é essa divisão. Ele informa ao `@persist` de qual snapshot hidratar,
+enquanto deixa a nova execução livre para receber um novo `state.id`. A
+fonte de hidratação e a execução registrada não são mais o mesmo UUID — que é o que
+a maioria dos cenários de produção realmente deseja.
+
+## Cronograma de remoção
+
+`inputs.id` para hidratação `@persist` está programado para remoção em uma versão futura do
+CrewAI. Não há um corte imediato — fluxos existentes continuam a funcionar — mas
+uma vez que você atualize para v1.14.5 ou posterior, novo código deve usar `restore_from_state_id`, e
+fluxos existentes devem migrar na próxima oportunidade conveniente.
+
+## AMP
+
+Se você implantar seu fluxo no CrewAI AMP, a migração se estende à carga útil de inicialização
+enviada para sua Crew implantada, e os sintomas visíveis de reutilização de `inputs.id` aparecem
+no painel de controle de implantação. As duas subseções abaixo cobrem ambos.
+
+### Migrando a carga útil de inicialização
+
+Se você atualmente inicia um fluxo implantado incorporando `id` em `inputs`:
+
+```bash
+# Obsoleto
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  -d '{"inputs": {"id": "abcd1234-5678-90ef-ghij-klmnopqrstuv", "topic": "AI Agent Frameworks"}}' \
+  https://your-crew-url.crewai.com/kickoff
+```
+
+Mova o UUID para o campo `restoreFromStateId` de nível superior:
+
+```bash
+# Suportado
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  -d '{
+        "inputs": {"topic": "AI Agent Frameworks"},
+        "restoreFromStateId": "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+      }' \
+  https://your-crew-url.crewai.com/kickoff
+```
+
+`restoreFromStateId` fica ao lado de `inputs` na carga útil de inicialização, não dentro dela. O
+objeto `inputs` agora carrega apenas valores que seu fluxo realmente consome.
+
+### O que acontece quando `inputs.id` é reutilizado
+
+Quando o AMP recebe um kickoff para um fluxo cujo `inputs.id` corresponde a uma execução
+existente, ele resolve para o registro existente em vez de criar um novo. A partir
+do painel de controle de implantação, você verá:
+
+- **Status da execução** — o status da nova execução sobrescreve o status da execução anterior. Uma
+  execução finalizada pode voltar para `running`, ou uma execução `completed` pode mudar para
+  `error` se a nova inicialização falhar — de qualquer forma, o painel não reflete mais
+  a execução original.
+- **Rastros** — Os OTel traces se acumulam entre as inicializações porque compartilham o mesmo
+  id de execução; os traces da execução anterior são substituídos ou misturados
+  com os da nova execução. Uma reprodução passo a passo não corresponde mais a uma única execução.
+- **Lista de execuções** — kickoffs que deveriam aparecer como linhas separadas colapsam em
+  uma única entrada, ocultando o histórico.
+
+Migrar para `restoreFromStateId` mantém cada kickoff como sua própria execução — com
+seu próprio status, traces e entrada na lista — enquanto ainda hidrata o estado de uma
+execução anterior.
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte se você não tiver certeza de qual modo seu fluxo precisa ou se encontrar problemas
+  durante a migração.
+</Card>

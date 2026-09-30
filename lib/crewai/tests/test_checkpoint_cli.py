@@ -13,6 +13,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from crewai_cli.checkpoint_cli import (
+    _info_json_file,
+    _info_json_latest,
+    _list_json,
     _parse_checkpoint_json,
     _parse_duration,
     _prune_json,
@@ -23,6 +26,7 @@ from crewai_cli.checkpoint_cli import (
     prune_checkpoints,
     resume_checkpoint,
 )
+from crewai.state.provider.json_provider import JsonProvider
 
 
 def _make_checkpoint_data(
@@ -196,6 +200,46 @@ class TestResolveCheckpoint:
 
     def test_nonexistent(self) -> None:
         assert _resolve_checkpoint("/nonexistent/path", None) is None
+
+
+class TestNonAsciiJsonCheckpoint:
+    """JSON checkpoints are UTF-8 on disk; the CLI readers must decode them as such.
+
+    ``JsonProvider`` writes checkpoints with ``encoding="utf-8"`` and the runtime
+    serialises non-ASCII text verbatim, so readers that rely on the platform
+    default encoding break on Windows (cp1252) for any non-ASCII checkpoint.
+    """
+
+    # "Đ" (U+0110) encodes to 0xC4 0x90; 0x90 is undefined in cp1252, so a
+    # locale-dependent read fails loudly instead of silently producing mojibake.
+    _NAME = "Đội ngũ phân tích"
+
+    def _write_checkpoint(self, base_dir: str) -> str:
+        """Write a UTF-8 checkpoint whose entity name is non-ASCII, as the runtime does."""
+        data = json.loads(_make_checkpoint_data(name=self._NAME))
+        raw = json.dumps(data, ensure_ascii=False)
+        return JsonProvider().checkpoint(raw, base_dir, branch="main")
+
+    def test_info_json_file_reads_utf8(self, tmp_path: Any) -> None:
+        """``_info_json_file`` decodes a non-ASCII checkpoint on any platform."""
+        path = self._write_checkpoint(str(tmp_path))
+        meta = _info_json_file(path)
+        assert meta["entities"][0]["name"] == self._NAME
+
+    def test_info_json_latest_reads_utf8(self, tmp_path: Any) -> None:
+        """``_info_json_latest`` decodes the newest non-ASCII checkpoint."""
+        self._write_checkpoint(str(tmp_path))
+        meta = _info_json_latest(str(tmp_path))
+        assert meta is not None
+        assert meta["entities"][0]["name"] == self._NAME
+
+    def test_list_json_reads_utf8(self, tmp_path: Any) -> None:
+        """``_list_json`` lists a non-ASCII checkpoint with its real size and entities."""
+        self._write_checkpoint(str(tmp_path))
+        results = _list_json(str(tmp_path))
+        assert len(results) == 1
+        assert results[0]["size"] > 0
+        assert results[0]["entities"][0]["name"] == self._NAME
 
 
 class TestTaskListFromMeta:

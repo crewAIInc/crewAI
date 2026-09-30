@@ -32,6 +32,8 @@ class ToolSpecExtractor:
             if name.endswith("Tool") and name not in self.processed_tools:
                 obj = getattr(tools, name, None)
                 if inspect.isclass(obj) and issubclass(obj, BaseTool):
+                    if getattr(obj, "is_deprecated_alias", False):
+                        continue
                     self.extract_tool_info(obj)
                     self.processed_tools.add(name)
         return self.tools_spec

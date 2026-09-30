@@ -8,3 +8,5 @@ from typing import Final
 
 CREWAI_TELEMETRY_BASE_URL: Final[str] = "https://telemetry.crewai.com:4319"
 CREWAI_TELEMETRY_SERVICE_NAME: Final[str] = "crewAI-telemetry"
+
+TRACER_NAME: Final[str] = "crewai.telemetry"

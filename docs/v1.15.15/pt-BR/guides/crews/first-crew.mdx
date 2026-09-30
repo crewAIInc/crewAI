@@ -1,0 +1,142 @@
+---
+title: Crie sua primeira Crew
+description: Tutorial passo a passo para criar uma equipe colaborativa de IA com configuração JSON-first.
+icon: users-gear
+mode: "wide"
+---
+
+## Crie uma Crew de Pesquisa
+
+Neste guia, você criará uma crew com dois agentes que pesquisa um tópico e escreve um relatório em markdown. Novos projetos de crew são JSON-first: agentes ficam em `agents/*.jsonc`, tarefas e configurações ficam em `crew.jsonc`, e `crewai run` carrega essa definição diretamente.
+
+### Pré-requisitos
+
+Antes de começar:
+
+1. Instale o CrewAI seguindo o [guia de instalação](/pt-BR/installation)
+2. Configure sua chave de LLM seguindo o [guia de LLMs](/pt-BR/concepts/llms#setting-up-your-llm)
+3. Tenha uma chave [Serper.dev](https://serper.dev/) se quiser usar busca web
+
+## Etapa 1: Criar uma nova Crew
+
+```bash
+crewai create crew research_crew
+cd research_crew
+```
+
+Estrutura criada:
+
+```text
+research_crew/
+├── .gitignore
+├── .env
+├── agents/
+│   └── researcher.jsonc
+├── crew.jsonc
+├── knowledge/
+├── pyproject.toml
+├── README.md
+├── skills/
+└── tools/
+```
+
+<Tip>
+Precisa do layout antigo com `crew.py`, `config/agents.yaml` e `config/tasks.yaml`? Use `crewai create crew research_crew --classic`.
+</Tip>
+
+## Etapa 2: Definir os agentes
+
+Substitua o arquivo gerado `agents/researcher.jsonc` e adicione `agents/analyst.jsonc`. Os nomes dos arquivos são os nomes referenciados em `crew.jsonc`.
+
+```jsonc agents/researcher.jsonc
+{
+  "role": "Senior Research Specialist for {topic}",
+  "goal": "Find comprehensive and accurate information about {topic}, with a focus on recent developments and key insights.",
+  "backstory": "You are an experienced research specialist who organizes complex information into clear, useful notes.",
+  // Substitua pelo seu modelo, por exemplo "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+```jsonc agents/analyst.jsonc
+{
+  "role": "Report Analyst for {topic}",
+  "goal": "Turn research findings into a clear, well-structured report.",
+  "backstory": "You are a careful analyst with strong technical writing skills and a talent for extracting useful insights.",
+  // Substitua pelo seu modelo, por exemplo "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+Substitua `provider/model-id` pelo modelo usado, como `openai/gpt-4o`, `anthropic/claude-sonnet-4-6` ou `gemini/gemini-2.0-flash-001`.
+
+## Etapa 3: Definir tarefas e configurações
+
+Substitua `crew.jsonc` por:
+
+```jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research on {topic}. Focus on key concepts, recent developments, major challenges, notable applications, and future outlook.",
+      "expected_output": "A comprehensive research document with organized sections, specific facts, and useful examples about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis_task",
+      "description": "Analyze the research findings and create a polished report on {topic}. Include an executive summary, key insights, trend analysis, and recommendations.",
+      "expected_output": "A professional markdown report with clear headings, a concise summary, main findings, and recommendations.",
+      "agent": "analyst",
+      "context": ["research_task"],
+      "output_file": "output/report.md",
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "Artificial Intelligence in Healthcare"
+  }
+}
+```
+
+`context` aponta para tarefas anteriores, então o analista recebe a saída da pesquisa. `inputs` define valores padrão para `{topic}`; se um valor faltar, `crewai run` perguntará no terminal.
+
+## Etapa 4: Variáveis de ambiente
+
+Edite `.env`:
+
+```sh
+SERPER_API_KEY=your_serper_api_key
+# Adicione também a chave do seu provedor de modelo.
+```
+
+## Etapa 5: Instalar e executar
+
+```bash
+crewai install
+crewai run
+```
+
+Quando a execução terminar, abra `output/report.md`.
+
+<Warning>
+Execute projetos JSON crew apenas de fontes confiáveis. Ferramentas `custom:<name>` e referências `{"python": "module.attribute"}` executam Python local ao carregar a crew.
+</Warning>
+
+<Check>
+Você criou uma crew JSON-first funcional que pesquisa um tópico e escreve um relatório.
+</Check>

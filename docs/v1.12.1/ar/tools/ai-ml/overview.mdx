@@ -1,0 +1,65 @@
+---
+title: "نظرة عامة"
+description: "استفد من خدمات الذكاء الاصطناعي وولّد الصور وعالج الرؤية وابنِ أنظمة ذكية"
+icon: "face-smile"
+mode: "wide"
+---
+
+تتكامل هذه الأدوات مع خدمات الذكاء الاصطناعي وتعلم الآلة لتعزيز وكلائك بقدرات متقدمة مثل توليد الصور ومعالجة الرؤية وتنفيذ الكود الذكي.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة DALL-E" icon="image" href="/ar/tools/ai-ml/dalletool">
+    توليد صور بالذكاء الاصطناعي باستخدام نموذج DALL-E من OpenAI.
+  </Card>
+
+  <Card title="أداة الرؤية" icon="eye" href="/ar/tools/ai-ml/visiontool">
+    معالجة وتحليل الصور بقدرات الرؤية الحاسوبية.
+  </Card>
+
+  <Card title="أداة AI Mind" icon="brain" href="/ar/tools/ai-ml/aimindtool">
+    قدرات متقدمة للتفكير واتخاذ القرار بالذكاء الاصطناعي.
+  </Card>
+
+  <Card title="أداة LlamaIndex" icon="llama" href="/ar/tools/ai-ml/llamaindextool">
+    بناء قواعد معرفية وأنظمة استرجاع مع LlamaIndex.
+  </Card>
+
+  <Card title="أداة LangChain" icon="link" href="/ar/tools/ai-ml/langchaintool">
+    التكامل مع LangChain لسير عمل ذكاء اصطناعي معقدة.
+  </Card>
+
+  <Card title="أداة RAG" icon="database" href="/ar/tools/ai-ml/ragtool">
+    تنفيذ أنظمة التوليد المعزز بالاسترجاع.
+  </Card>
+
+  <Card title="أداة مفسّر الكود" icon="code" href="/ar/tools/ai-ml/codeinterpretertool">
+    تنفيذ كود Python وإجراء تحليل البيانات.
+  </Card>
+
+
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **توليد المحتوى**: إنشاء صور ونصوص ومحتوى وسائط متعددة
+- **تحليل البيانات**: تنفيذ الكود وتحليل مجموعات بيانات معقدة
+- **أنظمة المعرفة**: بناء أنظمة RAG وقواعد بيانات ذكية
+- **الرؤية الحاسوبية**: معالجة وفهم المحتوى المرئي
+- **سلامة الذكاء الاصطناعي**: تنفيذ فحوصات الإشراف على المحتوى والسلامة
+
+```python
+from crewai_tools import DallETool, VisionTool, CodeInterpreterTool
+
+# Create AI tools
+image_generator = DallETool()
+vision_processor = VisionTool()
+code_executor = CodeInterpreterTool()
+
+# Add to your agent
+agent = Agent(
+    role="AI Specialist",
+    tools=[image_generator, vision_processor, code_executor],
+    goal="Create and analyze content using AI capabilities"
+)

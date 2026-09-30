@@ -1,0 +1,114 @@
+---
+title: المهارات
+description: حزم المهارات المبنية على نظام الملفات التي تحقن السياق في إرشادات الوكيل.
+icon: bolt
+mode: "wide"
+---
+
+## نظرة عامة
+
+المهارات هي مجلدات مستقلة توفر للوكلاء تعليمات ومراجع وموارد خاصة بالمجال. تُعرّف كل مهارة بملف `SKILL.md` يحتوي على بيانات وصفية YAML ومحتوى Markdown.
+
+تستخدم المهارات **الكشف التدريجي** — يتم تحميل البيانات الوصفية أولاً، ثم التعليمات الكاملة فقط عند التفعيل، وكتالوجات الموارد فقط عند الحاجة.
+
+## هيكل المجلد
+
+```
+my-skill/
+├── SKILL.md            # مطلوب — البيانات الوصفية + التعليمات
+├── scripts/            # اختياري — سكربتات قابلة للتنفيذ
+├── references/         # اختياري — مستندات مرجعية
+└── assets/             # اختياري — ملفات ثابتة (إعدادات، بيانات)
+```
+
+يجب أن يتطابق اسم المجلد مع حقل `name` في `SKILL.md`.
+
+## تنسيق SKILL.md
+
+```markdown
+---
+name: my-skill
+description: Short description of what this skill does and when to use it.
+license: Apache-2.0                    # optional
+compatibility: crewai>=0.1.0          # optional
+metadata:                              # optional
+  author: your-name
+  version: "1.0"
+allowed-tools: web-search file-read   # optional, space-delimited
+---
+
+Instructions for the agent go here. This markdown body is injected
+into the agent's prompt when the skill is activated.
+```
+
+### حقول البيانات الوصفية
+
+| الحقل           | مطلوب | القيود                                                              |
+| :-------------- | :------- | :----------------------------------------------------------------------- |
+| `name`          | نعم      | 1-64 حرف. أحرف صغيرة أبجدية رقمية وشرطات. بدون شرطات بادئة/لاحقة/متتالية. يجب أن يطابق اسم المجلد. |
+| `description`   | نعم      | 1-1024 حرف. يصف ما تفعله المهارة ومتى تُستخدم.          |
+| `license`       | لا       | اسم الترخيص أو مرجع لملف ترخيص مضمّن.                     |
+| `compatibility` | لا       | حد أقصى 500 حرف. متطلبات البيئة (منتجات، حزم، شبكة).   |
+| `metadata`      | لا       | تعيين مفتاح-قيمة نصي عشوائي.                                      |
+| `allowed-tools` | لا       | قائمة أدوات معتمدة مسبقًا مفصولة بمسافات. تجريبي.                |
+
+## الاستخدام
+
+### المهارات على مستوى الوكيل
+
+مرر مسارات مجلدات المهارات إلى وكيل:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant information",
+    backstory="An expert researcher.",
+    skills=["./skills"],  # يكتشف جميع المهارات في هذا المجلد
+)
+```
+
+### المهارات على مستوى الطاقم
+
+تُدمج مسارات المهارات في الطاقم مع كل وكيل:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    skills=["./skills"],
+)
+```
+
+### المهارات المحمّلة مسبقًا
+
+يمكنك أيضًا تمرير كائنات `Skill` مباشرة:
+
+```python
+from pathlib import Path
+from crewai.skills import discover_skills, activate_skill
+
+skills = discover_skills(Path("./skills"))
+activated = [activate_skill(s) for s in skills]
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant information",
+    backstory="An expert researcher.",
+    skills=activated,
+)
+```
+
+## كيف يتم تحميل المهارات
+
+يتم تحميل المهارات تدريجيًا — فقط البيانات المطلوبة في كل مرحلة يتم قراءتها:
+
+| المرحلة            | ما يتم تحميله                                     | متى               |
+| :--------------- | :------------------------------------------------ | :----------------- |
+| الاكتشاف        | الاسم، الوصف، حقول البيانات الوصفية             | `discover_skills()` |
+| التفعيل       | نص محتوى SKILL.md الكامل                           | `activate_skill()` |
+
+أثناء التنفيذ العادي للوكيل، يتم اكتشاف المهارات وتفعيلها تلقائيًا. مجلدات `scripts/` و `references/` و `assets/` متاحة في مسار المهارة `path` للوكلاء الذين يحتاجون للإشارة إلى الملفات مباشرة.

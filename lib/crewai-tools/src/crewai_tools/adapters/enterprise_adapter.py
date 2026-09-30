@@ -411,7 +411,7 @@ class EnterpriseActionKitToolAdapter:
     def _set_enterprise_action_token(self, enterprise_action_token: str | None) -> None:
         if enterprise_action_token and not enterprise_action_token.startswith("PK_"):
             warnings.warn(
-                "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs.crewai.com/en/enterprise/features/integrations.",
+                "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs-platform.crewai.com/platform/en/features/tools-and-integrations.",
                 DeprecationWarning,
                 stacklevel=2,
             )

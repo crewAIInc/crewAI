@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
+from contextlib import closing
 import json
 import os
 import sqlite3
 import tempfile
 import time
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -16,6 +19,7 @@ from pydantic import BaseModel
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
+from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
@@ -376,6 +380,25 @@ class TestJsonProviderFork:
             assert path.endswith(".json")
             assert os.path.isfile(path)
 
+    def test_checkpoint_uses_utf8_for_non_ascii_json(self) -> None:
+        provider = JsonProvider()
+        data = '{"message": "olá niño"}'
+        with tempfile.TemporaryDirectory() as d:
+            path = provider.checkpoint(data, d, branch="main")
+
+            assert Path(path).read_bytes() == data.encode("utf-8")
+            assert provider.from_checkpoint(path) == data
+
+    @pytest.mark.asyncio
+    async def test_acheckpoint_uses_utf8_for_non_ascii_json(self) -> None:
+        provider = JsonProvider()
+        data = '{"message": "olá niño"}'
+        with tempfile.TemporaryDirectory() as d:
+            path = await provider.acheckpoint(data, d, branch="main")
+
+            assert Path(path).read_bytes() == data.encode("utf-8")
+            assert await provider.afrom_checkpoint(path) == data
+
     def test_checkpoint_fork_branch_subdir(self) -> None:
         provider = JsonProvider()
         with tempfile.TemporaryDirectory() as d:
@@ -483,7 +506,7 @@ class TestSqliteProviderFork:
             loc = provider.checkpoint("{}", db, parent_id="p1", branch="exp")
             cid = provider.extract_id(loc)
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 row = conn.execute(
                     "SELECT parent_id, branch FROM checkpoints WHERE id = ?",
                     (cid,),
@@ -501,7 +524,7 @@ class TestSqliteProviderFork:
 
             provider.prune(db, max_keep=1, branch="main")
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 main_count = conn.execute(
                     "SELECT COUNT(*) FROM checkpoints WHERE branch = 'main'"
                 ).fetchone()[0]
@@ -527,7 +550,7 @@ class TestSqliteProviderFork:
             id2 = state._checkpoint_id
             assert id2 != id1
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 row = conn.execute(
                     "SELECT parent_id FROM checkpoints WHERE id = ?", (id2,)
                 ).fetchone()
@@ -615,6 +638,41 @@ class TestKickoffFromCheckpoint:
 
 
 
+class TestLegacyMethodOutputsRestore:
+    def test_restore_wraps_legacy_plain_value_outputs(self) -> None:
+        flow = Flow()
+        flow._method_outputs = ["first", "second"]
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+
+        assert restored.method_outputs == ["first", "second"]
+
+    def test_restore_legacy_outputs_evaluates_expressions(self) -> None:
+        from crewai.flow.expressions import Expression
+
+        flow = Flow()
+        flow._method_outputs = ["legacy"]
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+
+        context = Expression._flow_context(restored)
+        assert context["outputs"] == {"": "legacy"}
+
+    def test_raw_legacy_outputs_property_remains_readable(self) -> None:
+        flow = Flow()
+        flow._method_outputs = ["legacy"]
+
+        assert flow.method_outputs == ["legacy"]
+
+
 class TestAgentCheckpoint:
     def _make_agent_state(self) -> RuntimeState:
         agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
@@ -682,3 +740,85 @@ class TestAgentCheckpoint:
             cfg = CheckpointConfig(restore_from=loc)
             restored = Agent.from_checkpoint(cfg)
             assert restored._kickoff_event_id == "evt-456"
+
+
+class _FinalAnswerLLM(BaseLLM):
+    """Stub LLM that always returns a final answer without any API calls."""
+
+    def __init__(self) -> None:
+        super().__init__(model="stub")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ):
+        return "Final Answer: done."
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+    async def acall(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class TestCheckpointReusedExecutor:
+    """Checkpoint serialization stamps every live Flow's completed methods.
+
+    The agent executor is a Flow reused across a crew's tasks, so the stamp
+    must not be read back as a restore signal on the next task — otherwise the
+    second task replays as a resume and never reaches a final answer.
+    """
+
+    def test_second_task_runs_with_checkpointing_enabled(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task1 = Task(description="first", expected_output="x", agent=agent)
+        task2 = Task(description="second", expected_output="y", agent=agent)
+        with tempfile.TemporaryDirectory() as d:
+            crew = Crew(
+                agents=[agent],
+                tasks=[task1, task2],
+                verbose=False,
+                checkpoint=CheckpointConfig(
+                    provider=JsonProvider(location=d),
+                    on_events=["task_started", "task_completed"],
+                ),
+            )
+            result = crew.kickoff()
+
+        assert len(result.tasks_output) == 2
+        assert result.tasks_output[1].raw
+
+
+class TestCustomLLMCheckpointRestore:
+    """A custom BaseLLM subclass serializes with the inherited llm_type "base".
+
+    Restoring it must not try to instantiate the abstract BaseLLM; it is rebuilt
+    as a concrete LLM from the saved config instead.
+    """
+
+    def test_restore_does_not_instantiate_abstract_base_llm(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task = Task(description="d", expected_output="e", agent=agent)
+        crew = Crew(agents=[agent], tasks=[task], verbose=False)
+
+        raw = RuntimeState(root=[crew]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+
+        llm = restored.root[0].agents[0].llm
+        assert isinstance(llm, BaseLLM)
+        assert not inspect.isabstract(type(llm))
+        assert llm.model == "stub"

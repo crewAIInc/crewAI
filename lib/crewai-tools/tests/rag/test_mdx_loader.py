@@ -138,7 +138,7 @@ Final content.
         assert "Only JSX content" in result.content
         assert "No markdown here" in result.content
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_mdx_from_url(self, mock_get):
         mock_get.return_value = Mock(
             text="# MDX from URL\n\nContent here.\n\n<Component />",
@@ -149,7 +149,7 @@ Final content.
         assert "# MDX from URL" in result.content
         assert "<Component />" not in result.content
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_mdx_with_custom_headers(self, mock_get):
         mock_get.return_value = Mock(
             text="# Custom headers test", raise_for_status=lambda: None
@@ -161,7 +161,7 @@ Final content.
         )
         assert mock_get.call_args[1]["headers"] == {"Authorization": "Bearer token"}
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_mdx_url_fetch_error(self, mock_get):
         mock_get.side_effect = Exception("Network error")
         with pytest.raises(ValueError, match="Error fetching content from URL https://example.com: Network error"):

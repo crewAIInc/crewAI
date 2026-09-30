@@ -8,20 +8,21 @@ from crewai.events.types.env_events import (
     CursorEnvEvent,
     DefaultEnvEvent,
 )
-from crewai.utilities.constants import CC_ENV_VAR, CODEX_ENV_VARS, CURSOR_ENV_VARS
+from crewai.utilities.constants import CODING_AGENT_ENV_MARKERS
 
 
 _env_context_emitted: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "_env_context_emitted", default=False
 )
 
-
-def _is_codex_env() -> bool:
-    return any(os.environ.get(var) for var in CODEX_ENV_VARS)
-
-
-def _is_cursor_env() -> bool:
-    return any(os.environ.get(var) for var in CURSOR_ENV_VARS)
+# Assistants with an event of their own. Anything else in the shared table is
+# detected with the same precedence but reported as DefaultEnvEvent, so the two
+# detection paths can never disagree about which assistant is present.
+_AGENT_EVENTS = {
+    "claude_code": CCEnvEvent,
+    "codex": CodexEnvEvent,
+    "cursor": CursorEnvEvent,
+}
 
 
 def get_env_context() -> None:
@@ -29,11 +30,13 @@ def get_env_context() -> None:
         return
     _env_context_emitted.set(True)
 
-    if os.environ.get(CC_ENV_VAR):
-        crewai_event_bus.emit(None, CCEnvEvent())
-    elif _is_codex_env():
-        crewai_event_bus.emit(None, CodexEnvEvent())
-    elif _is_cursor_env():
-        crewai_event_bus.emit(None, CursorEnvEvent())
-    else:
-        crewai_event_bus.emit(None, DefaultEnvEvent())
+    # Walks the shared table rather than restating precedence: hard-coding the
+    # order here let the two paths drift, so a marker added for telemetry was
+    # invisible to this one.
+    for agent_name, env_vars in CODING_AGENT_ENV_MARKERS:
+        if any(os.environ.get(var) for var in env_vars):
+            event = _AGENT_EVENTS.get(agent_name, DefaultEnvEvent)
+            crewai_event_bus.emit(None, event())
+            return
+
+    crewai_event_bus.emit(None, DefaultEnvEvent())

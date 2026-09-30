@@ -74,6 +74,7 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
     from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
     from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+    from crewai.rag.embeddings.providers.openrouter.types import OpenRouterProviderSpec
     from crewai.rag.embeddings.providers.oracle.embedding_callable import (
         OracleEmbeddingFunction,
     )
@@ -106,6 +107,7 @@ PROVIDER_PATHS = {
     "onnx": "crewai.rag.embeddings.providers.onnx.onnx_provider.ONNXProvider",
     "openai": "crewai.rag.embeddings.providers.openai.openai_provider.OpenAIProvider",
     "openclip": "crewai.rag.embeddings.providers.openclip.openclip_provider.OpenCLIPProvider",
+    "openrouter": "crewai.rag.embeddings.providers.openrouter.openrouter_provider.OpenRouterProvider",
     "oracle": "crewai.rag.embeddings.providers.oracle.oracle_provider.OracleProvider",
     "roboflow": "crewai.rag.embeddings.providers.roboflow.roboflow_provider.RoboflowProvider",
     "sentence-transformer": "crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_provider.SentenceTransformerProvider",
@@ -213,6 +215,12 @@ def build_embedder_from_dict(
 def build_embedder_from_dict(
     spec: OpenCLIPProviderSpec,
 ) -> OpenCLIPEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: OpenRouterProviderSpec,
+) -> OpenAIEmbeddingFunction: ...
 
 
 @overload
@@ -348,6 +356,10 @@ def build_embedder(spec: RoboflowProviderSpec) -> RoboflowEmbeddingFunction: ...
 
 @overload
 def build_embedder(spec: OpenCLIPProviderSpec) -> OpenCLIPEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: OpenRouterProviderSpec) -> OpenAIEmbeddingFunction: ...
 
 
 @overload

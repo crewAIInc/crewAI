@@ -30,6 +30,14 @@ def test_valid_action_parsing_with_json_tool_input():
     assert result.tool_input == expected_tool_input
 
 
+def test_valid_action_parsing_preserves_markdown_like_plain_text():
+    text = "Thought: Let's search\nAction: search\nAction Input: ** plain text"
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert result.tool == "search"
+    assert result.tool_input == "** plain text"
+
+
 def test_valid_action_parsing_with_quotes():
     text = 'Thought: Let\'s find the temperature\nAction: search\nAction Input: "temperature in SF"'
     result = parser.parse(text)

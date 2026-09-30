@@ -66,7 +66,7 @@ class TestInternalCrewPlanner:
                 ),
             )
             result = crew_planner._handle_crew_planning()
-            assert crew_planner.planning_agent_llm == "gpt-4o-mini"
+            assert crew_planner.planning_agent_llm == "gpt-5.4-mini"
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(crew_planner.tasks)
             execute.assert_called_once()

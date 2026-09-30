@@ -15,6 +15,14 @@ current_flow_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "flow_id", default=None
 )
 
+current_flow_defer_trace_finalization: contextvars.ContextVar[bool] = (
+    contextvars.ContextVar("flow_defer_trace_finalization", default=False)
+)
+
 current_flow_method_name: contextvars.ContextVar[str] = contextvars.ContextVar(
     "flow_method_name", default="unknown"
+)
+
+current_flow_name: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "flow_name", default=None
 )

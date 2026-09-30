@@ -3,25 +3,62 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel, Field
 
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    clear_after_tool_call_hooks,
+    clear_before_tool_call_hooks,
+    register_after_tool_call_hook,
+)
+from crewai.agents.parser import AgentFinish
 from crewai.tools.base_tool import BaseTool
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
-    _asummarize_chunks,
-    _estimate_token_count,
-    _extract_summary_tags,
-    _format_messages_for_summary,
-    _split_messages_into_chunks,
+    message_content_text,
+    format_message_for_llm,
+    LLMContextLengthExceededError,
     convert_tools_to_openai_schema,
+    handle_max_iterations_exceeded,
     execute_single_native_tool_call,
+    extract_tool_call_info,
+    is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
+    SummarizeMessages,
 )
+from crewai.utilities.i18n import I18N_DEFAULT
+
+_summarizer = SummarizeMessages()
+_approx_tokens = _summarizer._approx_tokens
+_conversation_text = _summarizer._conversation_text
+_messages_ready_to_chunk = _summarizer._messages_ready_to_chunk
+_chunk_messages = _summarizer._chunk_messages
+
+
+def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
+    """Estimate tokens for the full summarization LLM request for one chunk."""
+    conversation_text = _conversation_text(chunk)
+    summarization_messages = [
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarizer_system_message"), role="system"
+        ),
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarize_instruction").format(
+                conversation=conversation_text
+            ),
+        ),
+    ]
+    return sum(
+        _approx_tokens(str(message.get("content", "")))
+        for message in summarization_messages
+    )
 
 
 class CalculatorInput(BaseModel):
@@ -312,7 +349,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "<summary>Summarized conversation about image analysis.</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>Summarized conversation about image analysis.</summary>")
 
         summarize_messages(
             messages=messages,
@@ -343,7 +380,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "<summary>Summarized conversation.</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>Summarized conversation.</summary>")
 
         summarize_messages(
             messages=messages,
@@ -369,7 +406,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "<summary>A greeting exchange.</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>A greeting exchange.</summary>")
 
         summarize_messages(
             messages=messages,
@@ -392,7 +429,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "<summary>Summary</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>Summary</summary>")
 
         summarize_messages(
             messages=messages,
@@ -414,7 +451,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "<summary>User asked about AI, assistant found resources.</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>User asked about AI, assistant found resources.</summary>")
 
         summarize_messages(
             messages=messages,
@@ -438,7 +475,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "<summary>Greeting exchange.</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>Greeting exchange.</summary>")
 
         summarize_messages(
             messages=messages,
@@ -447,7 +484,7 @@ class TestSummarizeMessages:
 
         )
 
-        call_args = mock_llm.call.call_args[0][0]
+        call_args = mock_llm.acall.call_args[0][0]
         user_msg_content = call_args[1]["content"]
         assert "[USER]:" in user_msg_content
         assert "[ASSISTANT]:" in user_msg_content
@@ -463,7 +500,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "Here is the summary:\n<summary>The extracted summary content.</summary>\nExtra text."
+        mock_llm.acall = AsyncMock(return_value="Here is the summary:\n<summary>The extracted summary content.</summary>\nExtra text.")
 
         summarize_messages(
             messages=messages,
@@ -487,7 +524,7 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "<summary>User searched for Python info.</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>User searched for Python info.</summary>")
 
         summarize_messages(
             messages=messages,
@@ -496,7 +533,7 @@ class TestSummarizeMessages:
 
         )
 
-        call_args = mock_llm.call.call_args[0][0]
+        call_args = mock_llm.acall.call_args[0][0]
         user_msg_content = call_args[1]["content"]
         assert "[TOOL_RESULT (web_search)]:" in user_msg_content
 
@@ -518,7 +555,7 @@ class TestSummarizeMessages:
         )
 
         # No LLM call should have been made
-        mock_llm.call.assert_not_called()
+        mock_llm.acall.assert_not_called()
         # System messages should remain untouched
         assert len(messages) == 2
         assert messages[0]["content"] == "You are a helpful assistant."
@@ -526,14 +563,14 @@ class TestSummarizeMessages:
 
 
 class TestFormatMessagesForSummary:
-    """Tests for _format_messages_for_summary helper."""
+    """Tests for _conversation_text helper."""
 
     def test_skips_system_messages(self) -> None:
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": "System prompt"},
             {"role": "user", "content": "Hello"},
         ]
-        result = _format_messages_for_summary(messages)
+        result = _conversation_text(messages)
         assert "System prompt" not in result
         assert "[USER]: Hello" in result
 
@@ -542,7 +579,7 @@ class TestFormatMessagesForSummary:
             {"role": "user", "content": "Question"},
             {"role": "assistant", "content": "Answer"},
         ]
-        result = _format_messages_for_summary(messages)
+        result = _conversation_text(messages)
         assert "[USER]: Question" in result
         assert "[ASSISTANT]: Answer" in result
 
@@ -550,7 +587,7 @@ class TestFormatMessagesForSummary:
         messages: list[dict[str, Any]] = [
             {"role": "tool", "content": "Result data", "name": "search_tool"},
         ]
-        result = _format_messages_for_summary(messages)
+        result = _conversation_text(messages)
         assert "[TOOL_RESULT (search_tool)]:" in result
         assert "Result data" in result
 
@@ -560,14 +597,14 @@ class TestFormatMessagesForSummary:
                 {"function": {"name": "calculator", "arguments": "{}"}}
             ]},
         ]
-        result = _format_messages_for_summary(messages)
+        result = _conversation_text(messages)
         assert "[Called tools: calculator]" in result
 
     def test_handles_none_content_without_tool_calls(self) -> None:
         messages: list[dict[str, Any]] = [
             {"role": "assistant", "content": None},
         ]
-        result = _format_messages_for_summary(messages)
+        result = _conversation_text(messages)
         assert "[ASSISTANT]:" in result
 
     def test_handles_multimodal_content(self) -> None:
@@ -577,49 +614,59 @@ class TestFormatMessagesForSummary:
                 {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}
             ]},
         ]
-        result = _format_messages_for_summary(messages)
+        result = _conversation_text(messages)
         assert "[USER]: Describe this image" in result
 
     def test_empty_messages(self) -> None:
-        result = _format_messages_for_summary([])
+        result = _conversation_text([])
         assert result == ""
 
 
 class TestExtractSummaryTags:
-    """Tests for _extract_summary_tags helper."""
+    """Summary tags are pulled out inside _summarize_all."""
+
+    def _from_reply(self, reply: str) -> str:
+        summarizer = SummarizeMessages()
+        summarizer.llm = MagicMock()
+        summarizer.callbacks = []
+        summarizer.llm.acall = AsyncMock(return_value=reply)
+        results = summarizer._summarize_all(
+            chunks=[[{"role": "user", "content": "x"}]], char_level_index=0
+        )
+        return results[0]
 
     def test_extracts_content_from_tags(self) -> None:
         text = "Preamble\n<summary>The actual summary.</summary>\nPostamble"
-        assert _extract_summary_tags(text) == "The actual summary."
+        assert self._from_reply(text) == "The actual summary."
 
     def test_handles_multiline_content(self) -> None:
         text = "<summary>\nLine 1\nLine 2\nLine 3\n</summary>"
-        result = _extract_summary_tags(text)
+        result = self._from_reply(text)
         assert "Line 1" in result
         assert "Line 2" in result
         assert "Line 3" in result
 
     def test_falls_back_when_no_tags(self) -> None:
         text = "Just a plain summary without tags."
-        assert _extract_summary_tags(text) == text
+        assert self._from_reply(text) == text
 
     def test_handles_empty_string(self) -> None:
-        assert _extract_summary_tags("") == ""
+        assert self._from_reply("") == ""
 
     def test_extracts_first_match(self) -> None:
         text = "<summary>First</summary> text <summary>Second</summary>"
-        assert _extract_summary_tags(text) == "First"
+        assert self._from_reply(text) == "First"
 
 
 class TestSplitMessagesIntoChunks:
-    """Tests for _split_messages_into_chunks helper."""
+    """Tests for _chunk_messages helper."""
 
     def test_single_chunk_when_under_limit(self) -> None:
         messages: list[dict[str, Any]] = [
             {"role": "user", "content": "Hello"},
             {"role": "assistant", "content": "Hi"},
         ]
-        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        chunks = _chunk_messages(messages, max_tokens=1000)
         assert len(chunks) == 1
         assert len(chunks[0]) == 2
 
@@ -630,7 +677,7 @@ class TestSplitMessagesIntoChunks:
             {"role": "user", "content": "C" * 100},
         ]
         # max_tokens=30 should cause splits
-        chunks = _split_messages_into_chunks(messages, max_tokens=30)
+        chunks = _chunk_messages(messages, max_tokens=30)
         assert len(chunks) == 3
 
     def test_excludes_system_messages(self) -> None:
@@ -638,21 +685,21 @@ class TestSplitMessagesIntoChunks:
             {"role": "system", "content": "System prompt"},
             {"role": "user", "content": "Hello"},
         ]
-        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        chunks = _chunk_messages(messages, max_tokens=1000)
         assert len(chunks) == 1
         for chunk in chunks:
             for msg in chunk:
                 assert msg.get("role") != "system"
 
     def test_empty_messages(self) -> None:
-        chunks = _split_messages_into_chunks([], max_tokens=1000)
+        chunks = _chunk_messages([], max_tokens=1000)
         assert chunks == []
 
     def test_only_system_messages(self) -> None:
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": "System prompt"},
         ]
-        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        chunks = _chunk_messages(messages, max_tokens=1000)
         assert chunks == []
 
     def test_handles_none_content(self) -> None:
@@ -660,27 +707,199 @@ class TestSplitMessagesIntoChunks:
             {"role": "assistant", "content": None},
             {"role": "user", "content": "Follow up"},
         ]
-        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        chunks = _chunk_messages(messages, max_tokens=1000)
         assert len(chunks) == 1
         assert len(chunks[0]) == 2
 
+    def test_splits_oversized_single_message(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "tool", "content": "X" * 1200, "name": "web_scraper"},
+        ]
+        max_tokens = 100
+        chunks = _chunk_messages(messages, max_tokens=max_tokens)
+        assert len(chunks) > 1
+        for chunk in chunks:
+            chunk_tokens = sum(
+                _approx_tokens(message_content_text(msg)) for msg in chunk
+            )
+            assert chunk_tokens <= max_tokens
+
+    def test_oversized_tool_in_conversation(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Search"},
+            {"role": "tool", "content": "Y" * 1200, "name": "search"},
+            {"role": "assistant", "content": "Done"},
+        ]
+        max_tokens = 100
+        chunks = _chunk_messages(messages, max_tokens=max_tokens)
+        assert len(chunks) > 1
+        for chunk in chunks:
+            chunk_tokens = sum(
+                _approx_tokens(message_content_text(msg)) for msg in chunk
+            )
+            assert chunk_tokens <= max_tokens
+
+    def test_rendered_summarization_request_within_raw_context_window(self) -> None:
+        """Chunked payloads plus summarization prompt fit in the raw model limit.
+
+        get_context_window_size() already applies CONTEXT_WINDOW_USAGE_RATIO (85%).
+        The remaining 15% headroom should absorb summarizer system/instruction overhead.
+        """
+        chunk_budget = 50_000
+        raw_context_limit = int(chunk_budget / CONTEXT_WINDOW_USAGE_RATIO)
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Fetch CRM data for the attendee."},
+            {"role": "tool", "content": "Z" * 200_000, "name": "hubspot_search"},
+            {"role": "assistant", "content": "Collected HubSpot results."},
+        ]
+
+        chunks = _chunk_messages(messages, max_tokens=chunk_budget)
+        assert len(chunks) > 1
+
+        for chunk in chunks:
+            request_tokens = _estimate_summarization_request_tokens(chunk)
+            assert request_tokens <= raw_context_limit
+
+
+class TestMessageContentText:
+    """Tests for message_content_text helper."""
+
+    def test_string_content(self) -> None:
+        msg: dict[str, Any] = {"role": "user", "content": "hello"}
+        assert message_content_text(msg) == "hello"
+
+    def test_none_content(self) -> None:
+        msg: dict[str, Any] = {"role": "assistant", "content": None}
+        assert message_content_text(msg) == ""
+
+    def test_list_content_yields_its_text(self) -> None:
+        """A parts list used to collapse to its Python repr."""
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "text", "text": "first"}, {"type": "text", "text": "second"}],
+        }
+        assert message_content_text(msg) == "first second"
+
+    @pytest.mark.parametrize(
+        "bad_text", [123, None, {"nested": "x"}, ["a"]], ids=str
+    )
+    def test_a_non_string_text_block_does_not_raise(self, bad_text: Any) -> None:
+        """Blocks are `dict[str, Any]` from a model, so `text` may be anything."""
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "text", "text": bad_text}],
+        }
+
+        assert message_content_text(msg) == "[multimodal content]"
+
+    def test_a_usable_text_block_survives_a_malformed_sibling(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": {"nested": "x"}},
+                {"type": "text", "text": "real text"},
+            ],
+        }
+
+        assert message_content_text(msg) == "real text"
+
+    def test_list_content_without_text_is_named_not_repr(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "image_url", "image_url": {"url": "https://x/y.png"}}],
+        }
+
+        text = message_content_text(msg)
+
+        assert text == "[multimodal content]"
+        assert "image_url" not in text
+
+
+class TestMessagesReadyToChunk:
+    """Tests for _messages_ready_to_chunk."""
+
+    def test_keeps_short_message(self) -> None:
+        messages: list[dict[str, Any]] = [{"role": "user", "content": "hello"}]
+        assert _messages_ready_to_chunk(messages, max_tokens=100) == messages
+
+    def test_splits_long_text_and_keeps_each_part_under_limit(self) -> None:
+        messages: list[dict[str, Any]] = [{"role": "user", "content": "b" * 1200}]
+        max_tokens = 100
+        ready = _messages_ready_to_chunk(messages, max_tokens=max_tokens)
+        assert len(ready) > 1
+        assert ready[0]["content"].startswith("[Part 1/")
+        assert all(
+            _approx_tokens(message_content_text(msg)) <= max_tokens for msg in ready
+        )
+
+    def test_splits_tool_output_with_metadata(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "tool",
+                "content": "Z" * 1200,
+                "name": "fetch_page",
+                "tool_call_id": "call_123",
+            }
+        ]
+        ready = _messages_ready_to_chunk(messages, max_tokens=100)
+        assert len(ready) > 1
+        assert all(part["role"] == "tool" for part in ready)
+        assert all(part["name"] == "fetch_page" for part in ready)
+        assert all(part["tool_call_id"] == "call_123" for part in ready)
+
+    def test_preserves_non_content_fields(self) -> None:
+        mock_file = MagicMock()
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "user",
+                "content": "X" * 1200,
+                "files": {"report.pdf": mock_file},
+            }
+        ]
+        ready = _messages_ready_to_chunk(messages, max_tokens=100)
+        assert len(ready) > 1
+        assert all(part["files"] == {"report.pdf": mock_file} for part in ready)
+
+    def test_excludes_system_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "System prompt"},
+            {"role": "user", "content": "Hello"},
+        ]
+        ready = _messages_ready_to_chunk(messages, max_tokens=1000)
+        assert ready == [{"role": "user", "content": "Hello"}]
+
+    def test_expands_oversized_and_preserves_small_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Short"},
+            {"role": "tool", "content": "X" * 1200, "name": "search"},
+            {"role": "assistant", "content": "Done"},
+        ]
+        max_tokens = 100
+        ready = _messages_ready_to_chunk(messages, max_tokens=max_tokens)
+        assert ready[0]["content"] == "Short"
+        assert ready[-1]["content"] == "Done"
+        assert len(ready) > 3
+        assert all(
+            _approx_tokens(message_content_text(msg)) <= max_tokens for msg in ready
+        )
+
 
 class TestEstimateTokenCount:
-    """Tests for _estimate_token_count helper."""
+    """Tests for _approx_tokens helper."""
 
     def test_empty_string(self) -> None:
-        assert _estimate_token_count("") == 0
+        assert _approx_tokens("") == 0
 
     def test_short_string(self) -> None:
-        assert _estimate_token_count("hello") == 1  # 5 // 4 = 1
+        assert _approx_tokens("hello") == 1  # 5 // 4 = 1
 
     def test_longer_string(self) -> None:
-        assert _estimate_token_count("a" * 100) == 25  # 100 // 4 = 25
+        assert _approx_tokens("a" * 100) == 25  # 100 // 4 = 25
 
     def test_approximation_is_conservative(self) -> None:
         # For English text, actual token count is typically lower than char/4
         text = "The quick brown fox jumps over the lazy dog."
-        estimated = _estimate_token_count(text)
+        estimated = _approx_tokens(text)
         assert estimated > 0
         assert estimated == len(text) // 4
 
@@ -696,7 +915,9 @@ class TestParallelSummarization:
         """
         msgs: list[dict[str, Any]] = []
         for i in range(n):
-            msgs.append({"role": "user", "content": f"msg-{i} " + "x" * 400})
+            prefix = f"msg-{i} "
+            padding = "x" * max(0, 400 - len(prefix))
+            msgs.append({"role": "user", "content": prefix + padding})
         return msgs
 
     def test_multiple_chunks_use_acall(self) -> None:
@@ -723,12 +944,10 @@ class TestParallelSummarization:
 
         # acall should have been awaited once per chunk
         assert mock_llm.acall.await_count == 3
-        # sync call should NOT have been used for chunk summarization
         mock_llm.call.assert_not_called()
 
-    def test_single_chunk_uses_sync_call(self) -> None:
-        """When there is only one chunk, summarize_messages should use
-        the sync llm.call path (no async overhead)."""
+    def test_single_chunk_uses_one_coroutine(self) -> None:
+        """One chunk still goes through _summarize_all."""
         messages: list[dict[str, Any]] = [
             {"role": "user", "content": "Short message"},
             {"role": "assistant", "content": "Short reply"},
@@ -736,7 +955,7 @@ class TestParallelSummarization:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 100_000
-        mock_llm.call.return_value = "<summary>Short summary</summary>"
+        mock_llm.acall = AsyncMock(return_value="<summary>Short summary</summary>")
 
         summarize_messages(
             messages=messages,
@@ -745,7 +964,7 @@ class TestParallelSummarization:
 
         )
 
-        mock_llm.call.assert_called_once()
+        mock_llm.acall.assert_awaited_once()
 
     def test_parallel_results_preserve_order(self) -> None:
         """Summaries must appear in the same order as the original chunks,
@@ -782,8 +1001,8 @@ class TestParallelSummarization:
         pos_c = summary_content.index("Summary-C")
         assert pos_a < pos_b < pos_c
 
-    def test_asummarize_chunks_returns_ordered_results(self) -> None:
-        """Direct test of the async helper _asummarize_chunks."""
+    def test_summarize_all_returns_ordered_results(self) -> None:
+        """Direct test of _summarize_all."""
         chunk_a: list[dict[str, Any]] = [{"role": "user", "content": "Chunk A"}]
         chunk_b: list[dict[str, Any]] = [{"role": "user", "content": "Chunk B"}]
 
@@ -795,18 +1014,77 @@ class TestParallelSummarization:
             ]
         )
 
-        results = asyncio.run(
-            _asummarize_chunks(
-                chunks=[chunk_a, chunk_b],
-                llm=mock_llm,
-                callbacks=[],
-    
-            )
+        summarizer = SummarizeMessages()
+        summarizer.llm = mock_llm
+        summarizer.callbacks = []
+        results = summarizer._summarize_all(
+            chunks=[chunk_a, chunk_b], char_level_index=0
         )
 
-        assert len(results) == 2
-        assert results[0]["content"] == "Result A"
-        assert results[1]["content"] == "Result B"
+        assert results == ["Result A", "Result B"]
+
+    def test_summarize_all_retries_after_context_length_error(self) -> None:
+        """A chunk that overflows context is retried after tighter token estimation."""
+        chunk: list[dict[str, Any]] = [{"role": "user", "content": "x" * 800}]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 100_000
+        mock_llm.acall = AsyncMock(
+            side_effect=[
+                LLMContextLengthExceededError("context length exceeded"),
+                "<summary>Recovered summary</summary>",
+            ]
+        )
+
+        summarizer = SummarizeMessages()
+        summarizer.llm = mock_llm
+        summarizer.callbacks = []
+        summarizer.verbose = False
+
+        results = summarizer._summarize_all(chunks=[chunk], char_level_index=0)
+
+        assert results == ["Recovered summary"]
+        assert mock_llm.acall.await_count == 2
+
+    def test_summarize_messages_retries_each_char_per_token_level(self) -> None:
+        """Context errors step through chunk levels 0, 1, and 2 before succeeding."""
+        messages: list[dict[str, Any]] = [{"role": "user", "content": "x" * 800}]
+        recorded_levels: list[int] = []
+        original_chunk = SummarizeMessages._chunk_messages
+
+        def tracking_chunk(
+            self: SummarizeMessages,
+            chunk_messages: list[dict[str, Any]],
+            max_tokens: int,
+            char_level_index: int = 0,
+        ) -> list[list[dict[str, Any]]]:
+            recorded_levels.append(char_level_index)
+            return original_chunk(
+                self, chunk_messages, max_tokens, char_level_index=char_level_index
+            )
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 100_000
+        mock_llm.acall = AsyncMock(
+            side_effect=[
+                LLMContextLengthExceededError("context length exceeded"),
+                LLMContextLengthExceededError("context length exceeded"),
+                "<summary>Final summary</summary>",
+            ]
+        )
+
+        with patch.object(SummarizeMessages, "_chunk_messages", tracking_chunk):
+            summarize_messages(
+                messages=messages,
+                llm=mock_llm,
+                callbacks=[],
+                verbose=False,
+            )
+
+        assert len(messages) == 1
+        assert "Final summary" in messages[0]["content"]
+        assert recorded_levels == [0, 1, 2]
+        assert mock_llm.acall.await_count == 3
 
     @patch("crewai.utilities.agent_utils.is_inside_event_loop", return_value=True)
     def test_works_inside_existing_event_loop(self, _mock_loop: Any) -> None:
@@ -932,7 +1210,7 @@ class TestParallelSummarizationVCR:
         # Patch get_context_window_size to return 200 — forces multiple chunks
         with patch.object(type(llm), "get_context_window_size", return_value=200):
             non_system = [m for m in messages if m.get("role") != "system"]
-            chunks = _split_messages_into_chunks(non_system, max_tokens=200)
+            chunks = _chunk_messages(non_system, max_tokens=200)
             assert len(chunks) > 1, f"Expected multiple chunks, got {len(chunks)}"
 
             summarize_messages(
@@ -972,6 +1250,88 @@ class TestParallelSummarizationVCR:
         assert summary_msg["role"] == "user"
         assert "files" in summary_msg
         assert "report.pdf" in summary_msg["files"]
+
+
+class TestIsToolCallListResponsesApiShape:
+    """Regression tests: OpenAI Responses API tool-call dicts must be recognized.
+
+    Responses API function_call output items are flat dicts shaped
+    {"id", "name", "arguments"} - no nested "function" key, and "arguments"
+    instead of Anthropic/Bedrock-style "input".
+    """
+
+    def test_responses_api_dict_is_recognized_as_tool_call(self) -> None:
+        response = [
+            {
+                "id": "call_abc123",
+                "name": "fetch_page",
+                "arguments": '{"url": "https://example.com"}',
+            }
+        ]
+        assert is_tool_call_list(response) is True
+
+    def test_plain_text_answer_not_misclassified(self) -> None:
+        assert is_tool_call_list(["just a string, not a tool call"]) is False
+
+    def test_empty_list_returns_false(self) -> None:
+        assert is_tool_call_list([]) is False
+
+    def test_chat_completions_style_still_recognized(self) -> None:
+        response = [{"function": {"name": "fetch_page", "arguments": "{}"}}]
+        assert is_tool_call_list(response) is True
+
+    def test_bedrock_anthropic_style_still_recognized(self) -> None:
+        response = [{"name": "fetch_page", "input": {"url": "https://example.com"}}]
+        assert is_tool_call_list(response) is True
+
+
+class TestExtractToolCallInfoResponsesApiShape:
+    """Regression tests: extract_tool_call_info must parse Responses API dicts."""
+
+    def test_responses_api_dict_extracts_real_arguments(self) -> None:
+        tool_call = {
+            "id": "call_abc123",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_abc123"
+        assert func_name == "fetch_page"
+        assert func_args == '{"url": "https://example.com"}'
+
+    def test_responses_api_dict_does_not_return_empty_args(self) -> None:
+        tool_call = {
+            "id": "call_xyz",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        _, _, func_args = extract_tool_call_info(tool_call)
+        assert func_args != {}
+
+    def test_bedrock_anthropic_style_still_uses_input(self) -> None:
+        tool_call = {"name": "fetch_page", "input": {"url": "https://example.com"}}
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == {"url": "https://example.com"}
+
+    def test_chat_completions_style_still_uses_nested_function(self) -> None:
+        tool_call = {
+            "id": "call_1",
+            "function": {"name": "fetch_page", "arguments": "{}"},
+        }
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == "{}"
+
+    def test_non_dict_unrecognized_shape_returns_none(self) -> None:
+        assert extract_tool_call_info("just a string") is None
+
+    def test_unrecognized_dict_shape_returns_empty_name_and_args(self) -> None:
+        call_id, func_name, func_args = extract_tool_call_info({"unrelated": "data"})
+        assert func_name == ""
+        assert func_args == {}
 
 
 class TestParseToolCallArgs:
@@ -1024,11 +1384,154 @@ class TestParseToolCallArgs:
     def test_error_result_has_correct_keys(self) -> None:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
-        assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+        assert set(error.keys()) == {
+            "call_id",
+            "func_name",
+            "result",
+            "from_cache",
+            "original_tool",
+            "tool_failure",
+        }
 
 
 class TestExecuteSingleNativeToolCall:
     """Tests for execute_single_native_tool_call."""
+
+    def test_typed_tool_output_is_json_agent_text(self) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"typed_search": tool._run},
+            original_tools=[tool],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert json.loads(result.tool_message["content"]) == {
+            "query": "crew",
+            "score": 0.9,
+        }
+
+    def test_custom_agent_output_formatter_is_used_from_structured_tool(
+        self,
+    ) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class MarkdownSearchTool(BaseTool):
+            name: str = "markdown_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+            def format_output_for_agent(self, raw_result: Any) -> str:
+                result = self.result_schema.model_validate(raw_result)
+                return f"### {result.query}\n\nScore: **{result.score}**"
+
+        tool = MarkdownSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "markdown_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"markdown_search": tool._run},
+            original_tools=[],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert result.result == "### crew\n\nScore: **0.9**"
+        assert result.tool_message["content"] == "### crew\n\nScore: **0.9**"
+
+    def test_after_hook_includes_raw_tool_result_for_typed_output(self) -> None:
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        seen_results: list[tuple[str | None, object]] = []
+
+        def after_hook(context: ToolCallHookContext) -> None:
+            seen_results.append((context.tool_result, context.raw_tool_result))
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        register_after_tool_call_hook(after_hook)
+        try:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"typed_search": tool._run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+                printer=None,
+                verbose=False,
+            )
+        finally:
+            clear_after_tool_call_hooks()
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert seen_results == [
+            ('{"query":"crew","score":0.9}', SearchOutput(query="crew", score=0.9))
+        ]
 
     def test_result_as_answer_false_on_tool_error(self) -> None:
         """When a tool with result_as_answer=True raises, result_as_answer must be False.
@@ -1113,3 +1616,185 @@ class TestExecuteSingleNativeToolCall:
         assert isinstance(result, NativeToolCallResult)
         assert result.result_as_answer is False
         assert "blocked by hook" in result.result
+
+
+class TestResolvePlusClient:
+    def test_builds_the_default_when_no_client_is_installed(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_client
+
+        default = MagicMock()
+
+        assert resolve_plus_client(lambda: default) is default
+
+    def test_prefers_an_installed_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A hosted runtime installs a client; the default must not be built,
+        since looking up a user credential raises when there isn't one."""
+        from crewai.utilities import agent_utils
+
+        installed = MagicMock()
+        monkeypatch.setattr(agent_utils, "_create_plus_client_hook", lambda: installed)
+        default = MagicMock(side_effect=AssertionError("must not be called"))
+
+        assert agent_utils.resolve_plus_client(default) is installed
+        default.assert_not_called()
+
+
+class TestResolvePlusResponse:
+    def test_passes_through_a_sync_response(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        assert resolve_plus_response(response) is response
+
+    @pytest.mark.parametrize("inside_loop", [False, True])
+    def test_awaits_an_async_response(self, inside_loop: bool) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        async def call() -> Any:
+            return response
+
+        if not inside_loop:
+            assert resolve_plus_response(call()) is response
+            return
+
+        async def main() -> Any:
+            return resolve_plus_response(call())
+
+        assert asyncio.run(main()) is response
+
+    def test_carries_context_vars_into_the_worker_thread(self) -> None:
+        """Inside a running loop the coroutine runs on another thread; a client
+        reading runtime state (the platform token, flow context) must still see
+        the caller's values rather than defaults."""
+        from crewai.context import get_platform_integration_token, platform_context
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def call() -> Any:
+            return get_platform_integration_token()
+
+        async def main() -> Any:
+            with platform_context("token-from-caller"):
+                return resolve_plus_response(call())
+
+        assert asyncio.run(main()) == "token-from-caller"
+
+    def test_rejects_an_awaitable_bound_to_a_loop(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def main() -> None:
+            future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+            future.set_result(MagicMock())
+
+            with pytest.raises(TypeError, match="must return a coroutine"):
+                resolve_plus_response(future)
+
+        asyncio.run(main())
+
+
+_FORCE_FINAL_ANSWER = I18N_DEFAULT.errors("force_final_answer")
+
+
+def _native_tool_history() -> list[dict[str, Any]]:
+    """History as the native tool-calling loop leaves it: ends on a user prompt."""
+    return [
+        {"role": "system", "content": "You are an agent."},
+        {"role": "user", "content": "Collect all the data."},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {"name": "get_data", "arguments": "{}"},
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_1", "name": "get_data", "content": "partial"},
+        {"role": "user", "content": I18N_DEFAULT.slice("post_tool_reasoning")},
+    ]
+
+
+def _react_history() -> list[dict[str, Any]]:
+    """History as the ReAct loop leaves it: ends on the assistant turn with the observation."""
+    return [
+        {"role": "system", "content": "You are an agent."},
+        {"role": "user", "content": "Collect all the data."},
+        {
+            "role": "assistant",
+            "content": "Thought: I need data\nAction: get_data\nAction Input: {}\nObservation: partial",
+        },
+    ]
+
+
+class TestHandleMaxIterationsExceeded:
+    """The forced final answer is requested with a user turn, never assistant prefill.
+
+    Current Claude models reject a request whose last message is an assistant
+    turn ("This model does not support assistant message prefill"), so the
+    nudge must go out as the user's instruction on every loop shape.
+    """
+
+    @pytest.mark.parametrize(
+        "make_history", [_native_tool_history, _react_history], ids=["native-tools", "react"]
+    )
+    def test_appends_the_instruction_as_a_user_turn(self, make_history) -> None:
+        history = make_history()
+        before = [dict(message) for message in history]
+        llm = MagicMock()
+        llm.call.return_value = "Final Answer: 42"
+
+        result = handle_max_iterations_exceeded(
+            printer=MagicMock(), messages=history, llm=llm, callbacks=[], verbose=False
+        )
+
+        assert history[:-1] == before
+        assert history[-1] == {"role": "user", "content": _FORCE_FINAL_ANSWER}
+        llm.call.assert_called_once_with(history, callbacks=[])
+        assert isinstance(result, AgentFinish)
+        assert result.output == "42"
+
+    def test_action_shaped_reply_still_becomes_a_final_answer(self) -> None:
+        reply = "Thought: one more\nAction: get_data\nAction Input: {}"
+        llm = MagicMock()
+        llm.call.return_value = reply
+
+        result = handle_max_iterations_exceeded(
+            printer=MagicMock(), messages=_react_history(), llm=llm, callbacks=[], verbose=False
+        )
+
+        assert isinstance(result, AgentFinish)
+        assert result.text == reply
+        assert result.output == reply
+
+    @pytest.mark.parametrize("reply", [None, ""], ids=["none", "empty"])
+    def test_empty_reply_raises(self, reply: str | None) -> None:
+        llm = MagicMock()
+        llm.call.return_value = reply
+
+        with pytest.raises(ValueError, match="Invalid response from LLM call - None or empty."):
+            handle_max_iterations_exceeded(
+                printer=MagicMock(), messages=_native_tool_history(), llm=llm, callbacks=[], verbose=False
+            )
+
+    @pytest.mark.parametrize("verbose", [True, False])
+    def test_notice_is_printed_only_when_verbose(self, verbose: bool) -> None:
+        printer = MagicMock()
+        llm = MagicMock()
+        llm.call.return_value = "Final Answer: 42"
+
+        handle_max_iterations_exceeded(
+            printer=printer, messages=_native_tool_history(), llm=llm, callbacks=[], verbose=verbose
+        )
+
+        if verbose:
+            printer.print.assert_called_once_with(
+                content="Maximum iterations reached. Requesting final answer.", color="yellow"
+            )
+        else:
+            printer.print.assert_not_called()

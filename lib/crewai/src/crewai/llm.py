@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime
 import json
 import logging
@@ -11,6 +11,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NamedTuple,
     TypedDict,
     cast,
 )
@@ -23,7 +24,6 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
-    LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
 )
@@ -32,9 +32,12 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
+    LLMCallBlockedError,
     get_current_call_id,
     llm_call_context,
 )
@@ -44,6 +47,13 @@ from crewai.llms.constants import (
     BEDROCK_MODELS,
     GEMINI_MODELS,
     OPENAI_MODELS,
+)
+from crewai.llms.context_window import (
+    AZURE_OPENAI_CONTEXT_WINDOWS,
+    DEFAULT_CONTEXT_WINDOW_SIZE,
+    LLM_CONTEXT_WINDOW_SIZES,
+    OPENAI_CONTEXT_WINDOWS,
+    resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -68,7 +78,17 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
-try:
+load_dotenv()
+logger = logging.getLogger(__name__)
+
+# litellm is lazy-loaded to avoid its module-level dotenv.load_dotenv()
+# from polluting env vars (e.g. MODEL= overriding embedder model_name).
+# The TYPE_CHECKING imports give mypy the real types; at runtime the names
+# stay None until _ensure_litellm() rebinds them.
+_litellm_loaded = False
+LITELLM_AVAILABLE = False
+
+if TYPE_CHECKING:
     import litellm
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
@@ -85,192 +105,74 @@ try:
         StreamingChoices as LiteLLMStreamingChoices,
     )
     from litellm.utils import supports_response_schema
-
-    LITELLM_AVAILABLE = True
-except ImportError:
-    LITELLM_AVAILABLE = False
-    litellm = None  # type: ignore[assignment]
-    Choices = None  # type: ignore[assignment, misc]
-    LiteLLMDelta = None  # type: ignore[assignment, misc]
-    Message = None  # type: ignore[assignment, misc]
-    ModelResponseBase = None  # type: ignore[assignment, misc]
-    ModelResponseStream = None  # type: ignore[assignment, misc]
-    LiteLLMStreamingChoices = None  # type: ignore[assignment, misc]
-    get_supported_openai_params = None  # type: ignore[assignment]
-    ChatCompletionDeltaToolCall = None  # type: ignore[assignment, misc]
-    Function = None  # type: ignore[assignment, misc]
-    ModelResponse = None  # type: ignore[assignment, misc]
-    supports_response_schema = None  # type: ignore[assignment]
+else:
+    litellm = None
+    Choices = None
+    LiteLLMDelta = None
+    Message = None
+    ModelResponseBase = None
+    ModelResponseStream = None
+    LiteLLMStreamingChoices = None
+    get_supported_openai_params = None
+    ChatCompletionDeltaToolCall = None
+    Function = None
+    ModelResponse = None
+    supports_response_schema = None
 
 
-load_dotenv()
-logger = logging.getLogger(__name__)
-if LITELLM_AVAILABLE:
-    litellm.suppress_debug_info = True
+def _ensure_litellm() -> bool:
+    """Lazy-load litellm on first use. Returns True if available."""
+    global _litellm_loaded, LITELLM_AVAILABLE
+    global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
+    global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
+    global ChatCompletionDeltaToolCall, Function
+    global ModelResponse, supports_response_schema
+
+    if _litellm_loaded:
+        return LITELLM_AVAILABLE
+    _litellm_loaded = True
+
+    try:
+        import litellm as _litellm
+        from litellm.litellm_core_utils.get_supported_openai_params import (
+            get_supported_openai_params as _get_supported_openai_params,
+        )
+        from litellm.types.utils import (
+            ChatCompletionDeltaToolCall as _ChatCompletionDeltaToolCall,
+            Choices as _Choices,
+            Delta as _LiteLLMDelta,
+            Function as _Function,
+            Message as _Message,
+            ModelResponse as _ModelResponse,
+            ModelResponseBase as _ModelResponseBase,
+            ModelResponseStream as _ModelResponseStream,
+            StreamingChoices as _LiteLLMStreamingChoices,
+        )
+        from litellm.utils import supports_response_schema as _supports_response_schema
+
+        litellm = _litellm
+        Choices = _Choices  # type: ignore[misc]
+        LiteLLMDelta = _LiteLLMDelta  # type: ignore[misc]
+        Message = _Message  # type: ignore[misc]
+        ModelResponseBase = _ModelResponseBase  # type: ignore[misc]
+        ModelResponseStream = _ModelResponseStream  # type: ignore[misc]
+        LiteLLMStreamingChoices = _LiteLLMStreamingChoices  # type: ignore[misc]
+        get_supported_openai_params = _get_supported_openai_params
+        ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall  # type: ignore[misc]
+        Function = _Function  # type: ignore[misc]
+        ModelResponse = _ModelResponse  # type: ignore[misc]
+        supports_response_schema = _supports_response_schema
+
+        _litellm.suppress_debug_info = True
+        LITELLM_AVAILABLE = True
+    except ImportError:
+        LITELLM_AVAILABLE = False
+
+    return LITELLM_AVAILABLE
 
 
-MIN_CONTEXT: Final[int] = 1024
-MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
 ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
 
-LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
-    "gpt-4": 8192,
-    "gpt-4o": 128000,
-    "gpt-4o-mini": 200000,
-    "gpt-4-turbo": 128000,
-    "gpt-4.1": 1047576,  # Based on official docs
-    "gpt-4.1-mini-2025-04-14": 1047576,
-    "gpt-4.1-nano-2025-04-14": 1047576,
-    "o1-preview": 128000,
-    "o1-mini": 128000,
-    "o3-mini": 200000,
-    "o4-mini": 200000,
-    "gemini-3-pro-preview": 1048576,
-    "gemini-2.0-flash": 1048576,
-    "gemini-2.0-flash-thinking-exp-01-21": 32768,
-    "gemini-2.0-flash-lite-001": 1048576,
-    "gemini-2.0-flash-001": 1048576,
-    "gemini-2.5-flash-preview-04-17": 1048576,
-    "gemini-2.5-pro-exp-03-25": 1048576,
-    "gemini-1.5-pro": 2097152,
-    "gemini-1.5-flash": 1048576,
-    "gemini-1.5-flash-8b": 1048576,
-    "gemini/gemma-3-1b-it": 32000,
-    "gemini/gemma-3-4b-it": 128000,
-    "gemini/gemma-3-12b-it": 128000,
-    "gemini/gemma-3-27b-it": 128000,
-    "deepseek-chat": 128000,
-    "gemma2-9b-it": 8192,
-    "gemma-7b-it": 8192,
-    "llama3-groq-70b-8192-tool-use-preview": 8192,
-    "llama3-groq-8b-8192-tool-use-preview": 8192,
-    "llama-3.1-70b-versatile": 131072,
-    "llama-3.1-8b-instant": 131072,
-    "llama-3.2-1b-preview": 8192,
-    "llama-3.2-3b-preview": 8192,
-    "llama-3.2-11b-text-preview": 8192,
-    "llama-3.2-90b-text-preview": 8192,
-    "llama3-70b-8192": 8192,
-    "llama3-8b-8192": 8192,
-    "mixtral-8x7b-32768": 32768,
-    "llama-3.3-70b-versatile": 128000,
-    "llama-3.3-70b-instruct": 128000,
-    "Meta-Llama-3.3-70B-Instruct": 131072,
-    "QwQ-32B-Preview": 8192,
-    "Qwen2.5-72B-Instruct": 8192,
-    "Qwen2.5-Coder-32B-Instruct": 8192,
-    "Meta-Llama-3.1-405B-Instruct": 8192,
-    "Meta-Llama-3.1-70B-Instruct": 131072,
-    "Meta-Llama-3.1-8B-Instruct": 131072,
-    "Llama-3.2-90B-Vision-Instruct": 16384,
-    "Llama-3.2-11B-Vision-Instruct": 16384,
-    "Meta-Llama-3.2-3B-Instruct": 4096,
-    "Meta-Llama-3.2-1B-Instruct": 16384,
-    "us.amazon.nova-pro-v1:0": 300000,
-    "us.amazon.nova-micro-v1:0": 128000,
-    "us.amazon.nova-lite-v1:0": 300000,
-    "us.anthropic.claude-opus-4-7": 1000000,
-    "us.anthropic.claude-sonnet-4-6": 1000000,
-    "us.anthropic.claude-opus-4-6-v1": 1000000,
-    "us.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "us.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "us.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "us.anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "us.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
-    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
-    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,
-    "us.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "us.meta.llama3-2-11b-instruct-v1:0": 128000,
-    "us.meta.llama3-2-3b-instruct-v1:0": 131000,
-    "us.meta.llama3-2-90b-instruct-v1:0": 128000,
-    "us.meta.llama3-2-1b-instruct-v1:0": 131000,
-    "us.meta.llama3-1-8b-instruct-v1:0": 128000,
-    "us.meta.llama3-1-70b-instruct-v1:0": 128000,
-    "us.meta.llama3-3-70b-instruct-v1:0": 128000,
-    "us.meta.llama3-1-405b-instruct-v1:0": 128000,
-    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "eu.anthropic.claude-opus-4-7": 1000000,
-    "eu.anthropic.claude-sonnet-4-6": 1000000,
-    "eu.anthropic.claude-opus-4-6-v1": 1000000,
-    "eu.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "eu.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "eu.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "eu.anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "eu.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
-    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
-    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "apac.anthropic.claude-opus-4-7": 1000000,
-    "apac.anthropic.claude-sonnet-4-6": 1000000,
-    "apac.anthropic.claude-opus-4-6-v1": 1000000,
-    "apac.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "apac.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "apac.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "apac.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "apac.anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "apac.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "amazon.nova-pro-v1:0": 300000,
-    "amazon.nova-micro-v1:0": 128000,
-    "amazon.nova-lite-v1:0": 300000,
-    "anthropic.claude-opus-4-7": 1000000,
-    "anthropic.claude-sonnet-4-6": 1000000,
-    "anthropic.claude-opus-4-6-v1": 1000000,
-    "anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
-    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
-    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "anthropic.claude-3-opus-20240229-v1:0": 200000,
-    "anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "anthropic.claude-v2:1": 200000,
-    "anthropic.claude-v2": 100000,
-    "anthropic.claude-instant-v1": 100000,
-    "meta.llama3-1-405b-instruct-v1:0": 128000,
-    "meta.llama3-1-70b-instruct-v1:0": 128000,
-    "meta.llama3-1-8b-instruct-v1:0": 128000,
-    "meta.llama3-70b-instruct-v1:0": 8000,
-    "meta.llama3-8b-instruct-v1:0": 8000,
-    "amazon.titan-text-lite-v1": 4000,
-    "amazon.titan-text-express-v1": 8000,
-    "cohere.command-text-v14": 4000,
-    "ai21.j2-mid-v1": 8191,
-    "ai21.j2-ultra-v1": 8191,
-    "ai21.jamba-instruct-v1:0": 256000,
-    "mistral.mistral-7b-instruct-v0:2": 32000,
-    "mistral.mixtral-8x7b-instruct-v0:1": 32000,
-    "mistral-tiny": 32768,
-    "mistral-small-latest": 32768,
-    "mistral-medium-latest": 32768,
-    "mistral-large-latest": 32768,
-    "mistral-large-2407": 32768,
-    "mistral-large-2402": 32768,
-    "mistral/mistral-tiny": 32768,
-    "mistral/mistral-small-latest": 32768,
-    "mistral/mistral-medium-latest": 32768,
-    "mistral/mistral-large-latest": 32768,
-    "mistral/mistral-large-2407": 32768,
-    "mistral/mistral-large-2402": 32768,
-}
-
-DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
-CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "openai",
     "anthropic",
@@ -312,6 +214,15 @@ class AccumulatedToolArgs(BaseModel):
     function: FunctionArgs = Field(default_factory=FunctionArgs)
 
 
+class _Route(NamedTuple):
+    """Where ``LLM(model, **kwargs)`` goes; see :meth:`LLM._resolve_route`."""
+
+    provider: str
+    model: str
+    native_class: type[BaseLLM] | None
+    custom_openai: bool
+
+
 class LLM(BaseLLM):
     llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
@@ -330,7 +241,9 @@ class LLM(BaseLLM):
     api_base: str | None = None
     api_version: str | None = None
     callbacks: list[Any] | None = None
-    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    reasoning_effort: (
+        Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None
+    ) = None
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
@@ -341,77 +254,43 @@ class LLM(BaseLLM):
         """Factory method that routes to native SDK or falls back to LiteLLM.
 
         Routing priority:
-            1. If 'provider' kwarg is present, use that provider with constants
-            2. If only 'model' kwarg, use constants to infer provider
-            3. If "/" in model name:
+            1. If ``custom_openai=True``, force the native OpenAI provider,
+               overriding any explicit provider. A custom endpoint is required.
+            2. If ``provider`` is present, use that provider.
+            3. If "/" is in the model name:
                - Check if prefix is a native provider (openai/anthropic/azure/bedrock/gemini)
                - If yes, validate model against constants
                - If valid, route to native SDK; otherwise route to LiteLLM
+            4. Otherwise, infer the provider from the model name.
         """
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
-        explicit_provider = kwargs.get("provider")
-
-        if explicit_provider:
-            provider = explicit_provider
-            use_native = True
-            model_string = model
-        elif "/" in model:
-            prefix, _, model_part = model.partition("/")
-
-            provider_mapping = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-                "openrouter": "openrouter",
-                "deepseek": "deepseek",
-                "ollama": "ollama",
-                "ollama_chat": "ollama_chat",
-                "hosted_vllm": "hosted_vllm",
-                "cerebras": "cerebras",
-                "dashscope": "dashscope",
-                "snowflake": "snowflake",
-            }
-
-            canonical_provider = provider_mapping.get(prefix.lower())
-
-            if canonical_provider and cls._validate_model_in_constants(
-                model_part, canonical_provider
-            ):
-                provider = canonical_provider
-                use_native = True
-                model_string = model_part
-            else:
-                provider = prefix
-                use_native = False
-                model_string = model_part
-        else:
-            provider = cls._infer_provider_from_model(model)
-            use_native = True
-            model_string = model
-
-        native_class = cls._get_native_provider(provider) if use_native else None
-        if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
+        route = cls._resolve_route(model, kwargs)
+        if route.native_class is not None and not is_litellm:
             try:
-                # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
-                kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
+                # The route decided 'provider' and 'custom_openai'; the caller's
+                # values must not reach the native class a second time.
+                kwargs_copy = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in ("provider", "custom_openai")
+                }
+                if route.custom_openai:
+                    kwargs_copy["custom_openai"] = True
                 return cast(
                     Self,
-                    native_class(model=model_string, provider=provider, **kwargs_copy),
+                    route.native_class(
+                        model=route.model, provider=route.provider, **kwargs_copy
+                    ),
                 )
             except NotImplementedError:
                 raise
             except Exception as e:
                 raise ImportError(f"Error importing native provider: {e}") from e
 
-        if not LITELLM_AVAILABLE:
+        # FALLBACK to LiteLLM — lazy-load on first use
+        if not _ensure_litellm():
             native_list = ", ".join(SUPPORTED_NATIVE_PROVIDERS)
             error_msg = (
                 f"Unable to initialize LLM with model '{model}'. "
@@ -490,7 +369,8 @@ class LLM(BaseLLM):
             return True
 
         if provider == "dashscope":
-            return model_lower.startswith("qwen")
+            # DashScope's OpenAI-compatible endpoint serves Qwen plus DeepSeek/Kimi/GLM/etc.
+            return True
 
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything
@@ -500,6 +380,91 @@ class LLM(BaseLLM):
             return True
 
         return False
+
+    @classmethod
+    def _resolve_route(cls, model: str, kwargs: dict[str, Any]) -> _Route:
+        """Decide which class ``LLM(model, **kwargs)`` constructs, without building it.
+
+        The routing ``__new__`` applies, in its priority order: ``custom_openai``
+        forces the native OpenAI provider; an explicit ``provider`` names one;
+        a ``<prefix>/<model>`` string goes native when the prefix is a native
+        provider and the model is one it knows (or, for ``openai/``, when a
+        custom endpoint is configured); a bare model name infers its provider.
+        ``native_class`` is ``None`` when the call falls back to LiteLLM.
+        ``kwargs`` is read, never mutated.
+        """
+        custom_openai = bool(kwargs.get("custom_openai", False))
+        custom_openai_route = custom_openai
+        explicit_provider = kwargs.get("provider")
+
+        if custom_openai:
+            if not cls._has_custom_openai_endpoint(kwargs):
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            provider = "openai"
+            use_native = True
+            prefix, separator, model_part = model.partition("/")
+            model_string = (
+                model_part if separator and prefix.lower() == "openai" else model
+            )
+        elif explicit_provider:
+            provider = explicit_provider
+            use_native = True
+            model_string = model
+        elif "/" in model:
+            prefix, _, model_part = model.partition("/")
+
+            provider_mapping = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "claude": "anthropic",
+                "azure": "azure",
+                "azure_openai": "azure",
+                "google": "gemini",
+                "gemini": "gemini",
+                "bedrock": "bedrock",
+                "aws": "bedrock",
+                "openrouter": "openrouter",
+                "deepseek": "deepseek",
+                "ollama": "ollama",
+                "ollama_chat": "ollama_chat",
+                "hosted_vllm": "hosted_vllm",
+                "cerebras": "cerebras",
+                "dashscope": "dashscope",
+                "snowflake": "snowflake",
+            }
+
+            canonical_provider = provider_mapping.get(prefix.lower())
+
+            valid_native_model = bool(
+                canonical_provider
+                and cls._validate_model_in_constants(model_part, canonical_provider)
+            )
+            custom_openai_route = bool(
+                canonical_provider == "openai"
+                and not valid_native_model
+                and cls._has_custom_openai_base_url(kwargs)
+            )
+
+            if canonical_provider and (valid_native_model or custom_openai_route):
+                provider = canonical_provider
+                use_native = True
+                model_string = model_part
+            else:
+                provider = prefix
+                use_native = False
+                model_string = model_part
+        else:
+            provider = cls._infer_provider_from_model(model)
+            use_native = True
+            model_string = model
+
+        native_class = cls._get_native_provider(provider) if use_native else None
+        if provider not in SUPPORTED_NATIVE_PROVIDERS:
+            native_class = None
+        return _Route(provider, model_string, native_class, custom_openai_route)
 
     @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
@@ -536,6 +501,20 @@ class LLM(BaseLLM):
 
         return cls._matches_provider_pattern(model, provider)
 
+    @staticmethod
+    def _has_custom_openai_base_url(kwargs: dict[str, Any]) -> bool:
+        """Return whether this call explicitly configures a custom endpoint."""
+        return bool(kwargs.get("base_url") or kwargs.get("api_base"))
+
+    @classmethod
+    def _has_custom_openai_endpoint(cls, kwargs: dict[str, Any]) -> bool:
+        """Return whether a custom endpoint is configured explicitly or by env."""
+        return bool(
+            cls._has_custom_openai_base_url(kwargs)
+            or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
+        )
+
     @classmethod
     def _infer_provider_from_model(cls, model: str) -> str:
         """Infer the provider from the model name.
@@ -565,10 +544,23 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        # Bedrock namespaces Anthropic models as "anthropic.claude-*", optionally
+        # region-prefixed ("us.anthropic.claude-*"). That form also satisfies the
+        # anthropic pattern below, so it has to be settled first.
+        if "anthropic." in model.lower():
+            return "bedrock"
+
+        # Only anthropic and gemini have prefixes unambiguous enough to infer from.
+        # Bedrock matches any model containing a dot (so "gpt-3.5-turbo") and Azure
+        # matches every OpenAI prefix, so both would steal models from openai here.
+        for provider in ("anthropic", "gemini"):
+            if cls._matches_provider_pattern(model, provider):
+                return provider
+
         return "openai"
 
     @classmethod
-    def _get_native_provider(cls, provider: str) -> type | None:
+    def _get_native_provider(cls, provider: str) -> type[BaseLLM] | None:
         """Get native provider class if available."""
         if provider == "openai":
             from crewai.llms.providers.openai.completion import OpenAICompletion
@@ -632,7 +624,7 @@ class LLM(BaseLLM):
     @model_validator(mode="after")
     def _init_litellm(self) -> LLM:
         self.is_litellm = True
-        if LITELLM_AVAILABLE:
+        if _ensure_litellm():
             litellm.drop_params = True
             self.set_callbacks(self.callbacks or [])
             self.set_env_callbacks()
@@ -695,7 +687,7 @@ class LLM(BaseLLM):
             "base_url": self.base_url,
             "api_version": self.api_version,
             "api_key": self.api_key,
-            "stream": self.stream,
+            "stream": self._effective_stream(),
             "tools": tools,
             "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
@@ -732,6 +724,11 @@ class LLM(BaseLLM):
         last_chunk = None
         chunk_count = 0
         usage_info = None
+        # Tracked across the loop: LiteLLM with include_usage emits a final
+        # usage-only chunk with empty choices, so the post-loop last_chunk has
+        # no finish_reason. Capture both incrementally instead.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
             AccumulatedToolArgs
@@ -750,6 +747,16 @@ class LLM(BaseLLM):
 
                 if isinstance(chunk, ModelResponseBase):
                     response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
+
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -922,14 +929,22 @@ class LLM(BaseLLM):
                 if tool_calls_list:
                     return tool_calls_list
 
+            finish_reason, response_id_last = (
+                stream_finish_reason,
+                stream_response_id,
+            )
+
             if not tool_calls or not available_functions:
                 if response_model and self.is_litellm:
+                    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
                     instructor_instance = InternalInstructor(
                         content=full_response,
                         model=response_model,
                         llm=self,
                     )
-                    result = instructor_instance.to_pydantic()
+                    with model_call_hooks_dispatched():
+                        result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
@@ -939,6 +954,8 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage_dict,
+                        finish_reason=finish_reason,
+                        response_id=response_id_last,
                     )
                     return structured_response
 
@@ -950,6 +967,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_dict,
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
 
@@ -965,6 +984,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
             )
             return full_response
 
@@ -972,12 +993,16 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
 
             logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {e!s}")
+                finish_reason, response_id_last = (
+                    stream_finish_reason,
+                    stream_response_id,
+                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -985,6 +1010,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=self._usage_to_dict(usage_info),
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
 
@@ -1114,6 +1141,8 @@ class LLM(BaseLLM):
             str: The response text
         """
         if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1121,7 +1150,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
@@ -1129,7 +1159,8 @@ class LLM(BaseLLM):
                 model=response_model,
                 llm=self,
             )
-            result = instructor_instance.to_pydantic()
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
             structured_response = result.model_dump_json()
             self._handle_emit_call_events(
                 response=structured_response,
@@ -1159,7 +1190,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
@@ -1167,6 +1198,10 @@ class LLM(BaseLLM):
             response.model_extra.get("usage")
             if isinstance(response, ModelResponseBase) and response.model_extra
             else None
+        )
+
+        finish_reason, response_id = self._extract_finish_reason_and_response_id(
+            response
         )
 
         if response_model is not None:
@@ -1180,6 +1215,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_response
 
@@ -1216,6 +1253,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return text_response
 
@@ -1233,6 +1272,8 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
         return text_response
 
@@ -1259,6 +1300,8 @@ class LLM(BaseLLM):
             str: The response text
         """
         if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1266,7 +1309,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
@@ -1274,7 +1318,8 @@ class LLM(BaseLLM):
                 model=response_model,
                 llm=self,
             )
-            result = instructor_instance.to_pydantic()
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
             structured_response = result.model_dump_json()
             self._handle_emit_call_events(
                 response=structured_response,
@@ -1300,7 +1345,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
@@ -1308,6 +1353,10 @@ class LLM(BaseLLM):
             response.model_extra.get("usage")
             if isinstance(response, ModelResponseBase) and response.model_extra
             else None
+        )
+
+        finish_reason, response_id = self._extract_finish_reason_and_response_id(
+            response
         )
 
         if response_model is not None:
@@ -1320,6 +1369,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_response
 
@@ -1358,6 +1409,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return text_response
 
@@ -1375,6 +1428,8 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
         return text_response
 
@@ -1412,12 +1467,29 @@ class LLM(BaseLLM):
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
         response_id = None
+        # See sync sibling: incrementally track finish_reason/response_id so the
+        # usage-only final chunk doesn't wipe them.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         try:
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
-                response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
+                if isinstance(chunk, ModelResponseBase):
+                    response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
+                else:
+                    response_id = None
+
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -1525,6 +1597,10 @@ class LLM(BaseLLM):
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
+            finish_reason, response_id_last = (
+                stream_finish_reason,
+                stream_response_id,
+            )
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1532,6 +1608,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("messages"),
                 usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
             )
             return full_response
 
@@ -1539,12 +1617,16 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
 
             if chunk_count == 0:
                 raise
             if full_response:
+                finish_reason, response_id_last = (
+                    stream_finish_reason,
+                    stream_response_id,
+                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -1552,6 +1634,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("messages"),
                     usage=self._usage_to_dict(usage_info),
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
             raise
@@ -1678,19 +1762,14 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
             self._validate_call_params()
@@ -1703,15 +1782,18 @@ class LLM(BaseLLM):
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
 
-            if not self._invoke_before_llm_call_hooks(messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+            try:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
 
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
                     self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(messages, tools)
-                    if self.stream:
+                    if self._effective_stream():
                         result = self._handle_streaming_response(
                             params=params,
                             callbacks=callbacks,
@@ -1822,19 +1904,14 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
             self._validate_call_params()
@@ -1850,6 +1927,12 @@ class LLM(BaseLLM):
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
 
+            try:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
+
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
                     self.set_callbacks(callbacks)
@@ -1858,7 +1941,7 @@ class LLM(BaseLLM):
                         messages, tools, skip_file_processing=True
                     )
 
-                    if self.stream:
+                    if self._effective_stream():
                         return await self._ahandle_streaming_response(
                             params=params,
                             callbacks=callbacks,
@@ -1925,16 +2008,62 @@ class LLM(BaseLLM):
 
     @staticmethod
     def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        """Convert a provider usage object to a plain dict and flatten the
+        cache/reasoning sub-counts that LiteLLM nests under provider-specific
+        shapes into the top-level keys the rest of the pipeline expects.
+
+        LiteLLM hands back provider usage as-is, so cache-read, cache-creation
+        and reasoning tokens may live in nested objects (e.g.
+        ``prompt_tokens_details.cached_tokens``) or under Anthropic-style keys
+        (``cache_read_input_tokens``). Downstream span mapping only reads the
+        flat ``cached_prompt_tokens`` / ``reasoning_tokens`` /
+        ``cache_creation_tokens`` keys, so we surface them here.
+
+        Only those derived buckets are populated; ``prompt_tokens`` /
+        ``completion_tokens`` / ``total_tokens`` are left untouched. Extraction
+        precedence mirrors ``BaseLLM._track_token_usage_internal``.
+        """
         if usage is None:
             return None
         if isinstance(usage, dict):
-            return usage
-        if isinstance(usage, BaseModel):
-            result: dict[str, Any] = usage.model_dump()
-            return result
-        if hasattr(usage, "__dict__"):
-            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
-        return None
+            data: dict[str, Any] = dict(usage)
+        elif isinstance(usage, BaseModel):
+            data = usage.model_dump()
+        elif hasattr(usage, "__dict__"):
+            data = {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        else:
+            return None
+
+        def _nested(container: Any, key: str) -> Any:
+            if isinstance(container, dict):
+                return container.get(key)
+            return getattr(container, key, None)
+
+        prompt_details = data.get("prompt_tokens_details")
+        completion_details = data.get("completion_tokens_details")
+
+        cached_prompt_tokens = (
+            data.get("cached_tokens")
+            or data.get("cached_prompt_tokens")
+            or data.get("cache_read_input_tokens")
+            or _nested(prompt_details, "cached_tokens")
+        )
+        if cached_prompt_tokens is not None:
+            data["cached_prompt_tokens"] = cached_prompt_tokens
+
+        reasoning_tokens = data.get("reasoning_tokens") or _nested(
+            completion_details, "reasoning_tokens"
+        )
+        if reasoning_tokens is not None:
+            data["reasoning_tokens"] = reasoning_tokens
+
+        cache_creation_tokens = data.get("cache_creation_tokens") or data.get(
+            "cache_creation_input_tokens"
+        )
+        if cache_creation_tokens is not None:
+            data["cache_creation_tokens"] = cache_creation_tokens
+
+        return data
 
     def _handle_emit_call_events(
         self,
@@ -1944,6 +2073,8 @@ class LLM(BaseLLM):
         from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -1954,6 +2085,10 @@ class LLM(BaseLLM):
             from_agent: Optional agent object
             messages: Optional messages object
             usage: Optional token usage data
+            finish_reason: Raw provider finish reason (e.g. "stop", "length",
+                "tool_calls"). Optional; downstream telemetry coerces to the
+                OTel GenAI enum.
+            response_id: Raw provider response identifier. Optional.
         """
         crewai_event_bus.emit(
             self,
@@ -1966,8 +2101,23 @@ class LLM(BaseLLM):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             ),
         )
+
+    def _effective_max_tokens(self) -> int | float | None:
+        """LiteLLM sends ``max_tokens or max_completion_tokens`` as the cap."""
+        return self.max_tokens or self.max_completion_tokens
+
+    @staticmethod
+    def _extract_finish_reason_and_response_id(
+        response_or_chunk: Any,
+    ) -> tuple[str | None, str | None]:
+        """LiteLLM responses/chunks share the choices-shape with OpenAI/Azure;
+        delegate to the shared extractor.
+        """
+        return extract_choices_finish_reason_and_id(response_or_chunk)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.
@@ -1993,14 +2143,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = format_multimodal_content(files, provider)
+            content_blocks = format_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
@@ -2017,6 +2167,13 @@ class LLM(BaseLLM):
             msg.pop("files", None)
 
         return messages
+
+    def _multimodal_formatter_name(self) -> str:
+        # Identity (`self.provider`) stays e.g. anthropic. LiteLLM's completion()
+        # API is OpenAI-shaped and translates blocks to the vendor on the wire.
+        if self.is_litellm:
+            return "openai"
+        return self.provider or self.model
 
     async def _aprocess_message_files(
         self, messages: list[LLMMessage]
@@ -2044,14 +2201,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = await aformat_multimodal_content(files, provider)
+            content_blocks = await aformat_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
@@ -2120,6 +2277,14 @@ class LLM(BaseLLM):
         ):
             return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
 
+        # Handle Gemini models - they require the last message to not be 'assistant'
+        if (
+            ("gemini" in self.model.lower() or "google" in self.model.lower())
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
+            return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
+
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]
 
@@ -2152,7 +2317,8 @@ class LLM(BaseLLM):
         Note: This validation only applies to the litellm fallback path.
         Native providers have their own validation.
         """
-        if not LITELLM_AVAILABLE or supports_response_schema is None:
+        if not _ensure_litellm() or supports_response_schema is None:
+            # When litellm is not available, skip validation
             # (this path should only be reached for litellm fallback models)
             return
 
@@ -2172,7 +2338,7 @@ class LLM(BaseLLM):
         Note: This method is only used by the litellm fallback path.
         Native providers override this method with their own implementation.
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
             # When litellm is not available, assume function calling is supported
             # (all modern models support it)
             return True
@@ -2196,7 +2362,7 @@ class LLM(BaseLLM):
         if "gpt-5" in model_lower:
             return False
 
-        if not LITELLM_AVAILABLE or get_supported_openai_params is None:
+        if not _ensure_litellm() or get_supported_openai_params is None:
             # When litellm is not available, assume stop words are supported
             return True
 
@@ -2206,6 +2372,34 @@ class LLM(BaseLLM):
         except Exception as e:
             logging.error(f"Failed to get supported params: {e!s}")
             return True  # Default to True
+
+    def _context_window_model_name(self) -> str:
+        """Return the model id used for context-window lookup.
+
+        LiteLLM keeps provider-qualified names such as ``openai/gpt-5.6-luna``.
+        Strip a recognized provider prefix so those resolve through the same
+        mapping as the bare model id. Unrecognized prefixes are left intact.
+        """
+        prefix, separator, remainder = self.model.partition("/")
+        if separator and remainder and prefix.lower() in SUPPORTED_NATIVE_PROVIDERS:
+            return remainder
+        return self.model
+
+    def _context_window_sizes(self) -> Mapping[str, int]:
+        """Pick a provider catalog when the model id is provider-qualified.
+
+        The merged catalog lets Azure's ``gpt-4`` override OpenAI's. Qualified
+        LiteLLM ids must keep the provider that was named.
+        """
+        prefix, separator, _remainder = self.model.partition("/")
+        if not separator:
+            return LLM_CONTEXT_WINDOW_SIZES
+        provider = prefix.lower()
+        if provider == "openai":
+            return OPENAI_CONTEXT_WINDOWS
+        if provider in {"azure", "azure_openai"}:
+            return AZURE_OPENAI_CONTEXT_WINDOWS
+        return LLM_CONTEXT_WINDOW_SIZES
 
     def get_context_window_size(self) -> int:
         """
@@ -2218,21 +2412,12 @@ class LLM(BaseLLM):
         if self.context_window_size != 0:
             return self.context_window_size
 
-        min_context = 1024
-        max_context = 2097152  # Current max from gemini-1.5-pro
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        self.context_window_size = int(
-            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+        self.context_window_size = resolve_context_window_size(
+            self._context_window_model_name(),
+            self._context_window_sizes(),
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            extra_names=(self.model,),
         )
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if self.model.startswith(key):
-                self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
     @staticmethod
@@ -2244,7 +2429,8 @@ class LLM(BaseLLM):
         Note: This only affects the litellm fallback path. Native providers
         don't use litellm callbacks - they emit events via base_llm.py.
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
+            # When litellm is not available, callbacks are still stored
             # but not registered with litellm globals
             return
 
@@ -2282,7 +2468,8 @@ class LLM(BaseLLM):
         This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
         `litellm.failure_callback` to ["langfuse"].
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
+            # When litellm is not available, env callbacks have no effect
             return
 
         with suppress_warnings():

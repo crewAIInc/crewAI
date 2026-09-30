@@ -1,0 +1,236 @@
+---
+title: "مستمعو الأحداث"
+description: "الاستفادة من أحداث CrewAI لبناء تكاملات مخصصة ومراقبة"
+icon: spinner
+mode: "wide"
+---
+
+## نظرة عامة
+
+يوفر CrewAI نظام أحداث قوي يتيح لك الاستماع والتفاعل مع الأحداث المختلفة التي تحدث أثناء تنفيذ طاقمك. تُمكّنك هذه الميزة من بناء تكاملات مخصصة وحلول مراقبة وأنظمة تسجيل أو أي وظائف أخرى تحتاج للتشغيل بناءً على أحداث CrewAI الداخلية.
+
+## كيف يعمل
+
+يستخدم CrewAI بنية ناقل أحداث لإرسال الأحداث طوال دورة حياة التنفيذ. يُبنى نظام الأحداث على المكونات التالية:
+
+1. **CrewAIEventsBus**: ناقل أحداث فريد يدير تسجيل الأحداث وإرسالها
+2. **BaseEvent**: الفئة الأساسية لجميع الأحداث في النظام
+3. **BaseEventListener**: فئة أساسية مجردة لإنشاء مستمعي أحداث مخصصين
+
+عندما تحدث إجراءات محددة في CrewAI (مثل بدء تنفيذ طاقم، أو إكمال وكيل لمهمة، أو استخدام أداة)، يرسل النظام أحداثًا مقابلة. يمكنك تسجيل معالجات لهذه الأحداث لتنفيذ كود مخصص عند حدوثها.
+
+<Note type="info" title="تحسين المؤسسات: تتبع الأوامر">
+يوفر CrewAI AMP ميزة تتبع أوامر مدمجة تستفيد من نظام الأحداث لتتبع وتخزين وتصور جميع الأوامر والاستكمالات والبيانات الوصفية المرتبطة.
+
+![Prompt Tracing Dashboard](/images/enterprise/traces-overview.png)
+
+مع تتبع الأوامر يمكنك:
+
+- عرض السجل الكامل لجميع الأوامر المرسلة إلى LLM
+- تتبع استخدام الرموز والتكاليف
+- تصحيح إخفاقات استدلال الوكيل
+- مشاركة تسلسلات الأوامر مع فريقك
+- مقارنة استراتيجيات الأوامر المختلفة
+- تصدير التتبعات للامتثال والتدقيق
+</Note>
+
+## إنشاء مستمع أحداث مخصص
+
+لإنشاء مستمع أحداث مخصص، تحتاج إلى:
+
+1. إنشاء فئة ترث من `BaseEventListener`
+2. تنفيذ طريقة `setup_listeners`
+3. تسجيل معالجات للأحداث التي تهمك
+4. إنشاء مثيل من مستمعك في الملف المناسب
+
+إليك مثالًا بسيطًا:
+
+```python
+from crewai.events import (
+    CrewKickoffStartedEvent,
+    CrewKickoffCompletedEvent,
+    AgentExecutionCompletedEvent,
+)
+from crewai.events import BaseEventListener
+
+class MyCustomListener(BaseEventListener):
+    def __init__(self):
+        super().__init__()
+
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_started(source, event):
+            print(f"Crew '{event.crew_name}' has started execution!")
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_crew_completed(source, event):
+            print(f"Crew '{event.crew_name}' has completed execution!")
+            print(f"Output: {event.output}")
+
+        @crewai_event_bus.on(AgentExecutionCompletedEvent)
+        def on_agent_execution_completed(source, event):
+            print(f"Agent '{event.agent.role}' completed task")
+            print(f"Output: {event.output}")
+```
+
+## تسجيل المستمع بشكل صحيح
+
+مجرد تعريف فئة المستمع ليس كافيًا. تحتاج لإنشاء مثيل منه والتأكد من استيراده في تطبيقك.
+
+```python
+# في ملف crew.py
+from crewai import Agent, Crew, Task
+from my_listeners import MyCustomListener
+
+# إنشاء مثيل من المستمع
+my_listener = MyCustomListener()
+
+class MyCustomCrew:
+    def crew(self):
+        return Crew(
+            agents=[...],
+            tasks=[...],
+        )
+```
+
+## أنواع الأحداث المتاحة
+
+يوفر CrewAI مجموعة واسعة من الأحداث يمكنك الاستماع إليها:
+
+### أحداث الطاقم
+
+- **CrewKickoffStartedEvent**: يُرسل عند بدء تنفيذ الطاقم
+- **CrewKickoffCompletedEvent**: يُرسل عند اكتمال تنفيذ الطاقم
+- **CrewKickoffFailedEvent**: يُرسل عند فشل تنفيذ الطاقم
+- **CrewTestStartedEvent**: يُرسل عند بدء اختبار الطاقم
+- **CrewTestCompletedEvent**: يُرسل عند اكتمال اختبار الطاقم
+- **CrewTestFailedEvent**: يُرسل عند فشل اختبار الطاقم
+- **CrewTrainStartedEvent**: يُرسل عند بدء تدريب الطاقم
+- **CrewTrainCompletedEvent**: يُرسل عند اكتمال تدريب الطاقم
+- **CrewTrainFailedEvent**: يُرسل عند فشل تدريب الطاقم
+
+### أحداث الوكيل
+
+- **AgentExecutionStartedEvent**: يُرسل عند بدء تنفيذ وكيل لمهمة
+- **AgentExecutionCompletedEvent**: يُرسل عند اكتمال تنفيذ وكيل لمهمة
+- **AgentExecutionErrorEvent**: يُرسل عند مواجهة وكيل لخطأ أثناء التنفيذ
+- **LiteAgentExecutionStartedEvent**: يُرسل عند بدء تنفيذ LiteAgent
+- **LiteAgentExecutionCompletedEvent**: يُرسل عند اكتمال تنفيذ LiteAgent
+
+### أحداث المهام
+
+- **TaskStartedEvent**: يُرسل عند بدء تنفيذ مهمة
+- **TaskCompletedEvent**: يُرسل عند اكتمال تنفيذ مهمة
+- **TaskFailedEvent**: يُرسل عند فشل تنفيذ مهمة
+
+### أحداث استخدام الأدوات
+
+- **ToolUsageStartedEvent**: يُرسل عند بدء تنفيذ أداة
+- **ToolUsageFinishedEvent**: يُرسل عند اكتمال تنفيذ أداة
+- **ToolUsageErrorEvent**: يُرسل عند مواجهة خطأ في تنفيذ أداة
+
+### أحداث MCP
+
+- **MCPConnectionStartedEvent**: يُرسل عند بدء الاتصال بخادم MCP
+- **MCPConnectionCompletedEvent**: يُرسل عند اكتمال الاتصال بخادم MCP
+- **MCPConnectionFailedEvent**: يُرسل عند فشل الاتصال بخادم MCP
+- **MCPToolExecutionStartedEvent**: يُرسل عند بدء تنفيذ أداة MCP
+- **MCPToolExecutionCompletedEvent**: يُرسل عند اكتمال تنفيذ أداة MCP
+- **MCPToolExecutionFailedEvent**: يُرسل عند فشل تنفيذ أداة MCP
+
+### أحداث المعرفة
+
+- **KnowledgeRetrievalStartedEvent**: يُرسل عند بدء استرجاع المعرفة
+- **KnowledgeRetrievalCompletedEvent**: يُرسل عند اكتمال استرجاع المعرفة
+- **KnowledgeQueryStartedEvent**: يُرسل عند بدء استعلام المعرفة
+- **KnowledgeQueryCompletedEvent**: يُرسل عند اكتمال استعلام المعرفة
+- **KnowledgeQueryFailedEvent**: يُرسل عند فشل استعلام المعرفة
+
+### أحداث حواجز LLM
+
+- **LLMGuardrailStartedEvent**: يُرسل عند بدء التحقق من الحاجز
+- **LLMGuardrailCompletedEvent**: يُرسل عند اكتمال التحقق من الحاجز
+- **LLMGuardrailFailedEvent**: يُرسل عند فشل التحقق من الحاجز
+
+### أحداث التدفق
+
+- **FlowCreatedEvent**: يُرسل عند إنشاء تدفق
+- **FlowStartedEvent**: يُرسل عند بدء تنفيذ تدفق
+- **FlowFinishedEvent**: يُرسل عند اكتمال تنفيذ تدفق
+- **FlowPausedEvent**: يُرسل عند إيقاف تدفق مؤقتًا بانتظار ملاحظات بشرية
+
+### أحداث LLM
+
+- **LLMCallStartedEvent**: يُرسل عند بدء استدعاء LLM
+- **LLMCallCompletedEvent**: يُرسل عند اكتمال استدعاء LLM
+- **LLMCallFailedEvent**: يُرسل عند فشل استدعاء LLM
+- **LLMStreamChunkEvent**: يُرسل لكل جزء مستلم أثناء بث استجابات LLM
+
+### أحداث الذاكرة
+
+- **MemoryQueryStartedEvent**: يُرسل عند بدء استعلام الذاكرة
+- **MemoryQueryCompletedEvent**: يُرسل عند اكتمال استعلام الذاكرة
+- **MemorySaveStartedEvent**: يُرسل عند بدء حفظ الذاكرة
+- **MemorySaveCompletedEvent**: يُرسل عند اكتمال حفظ الذاكرة
+
+### أحداث الاستدلال
+
+- **AgentReasoningStartedEvent**: يُرسل عند بدء وكيل الاستدلال حول مهمة
+- **AgentReasoningCompletedEvent**: يُرسل عند انتهاء عملية الاستدلال
+- **AgentReasoningFailedEvent**: يُرسل عند فشل عملية الاستدلال
+
+### أحداث A2A (وكيل إلى وكيل)
+
+- **A2ADelegationStartedEvent**: يُرسل عند بدء تفويض A2A
+- **A2ADelegationCompletedEvent**: يُرسل عند اكتمال تفويض A2A
+- **A2AConversationStartedEvent**: يُرسل عند بدء محادثة A2A متعددة الأدوار
+- **A2AConversationCompletedEvent**: يُرسل عند انتهاء محادثة A2A
+
+## هيكل معالج الأحداث
+
+يستقبل كل معالج حدث معاملين:
+
+1. **source**: الكائن الذي أرسل الحدث
+2. **event**: مثيل الحدث، يحتوي على بيانات خاصة بالحدث
+
+هيكل كائن الحدث يعتمد على نوع الحدث، لكن جميع الأحداث ترث من `BaseEvent` وتتضمن:
+
+- **timestamp**: الوقت الذي أُرسل فيه الحدث
+- **type**: معرّف نصي لنوع الحدث
+
+## الاستخدام المتقدم: المعالجات المحددة النطاق
+
+لمعالجة الأحداث المؤقتة، يمكنك استخدام مدير سياق `scoped_handlers`:
+
+```python
+from crewai.events import crewai_event_bus, CrewKickoffStartedEvent
+
+with crewai_event_bus.scoped_handlers():
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def temp_handler(source, event):
+        print("This handler only exists within this context")
+
+    # قم بشيء يرسل أحداثًا
+
+# خارج السياق، يتم إزالة المعالج المؤقت
+```
+
+## حالات الاستخدام
+
+يمكن استخدام مستمعي الأحداث لأغراض متنوعة:
+
+1. **التسجيل والمراقبة**: تتبع تنفيذ طاقمك وتسجيل الأحداث المهمة
+2. **التحليلات**: جمع بيانات عن أداء وسلوك طاقمك
+3. **التصحيح**: إعداد مستمعين مؤقتين لتصحيح مشاكل محددة
+4. **التكامل**: ربط CrewAI بأنظمة خارجية مثل منصات المراقبة وقواعد البيانات أو خدمات الإشعارات
+5. **السلوك المخصص**: تشغيل إجراءات مخصصة بناءً على أحداث محددة
+
+## أفضل الممارسات
+
+1. **اجعل المعالجات خفيفة**: يجب أن تكون معالجات الأحداث خفيفة وتتجنب العمليات الحاجبة
+2. **معالجة الأخطاء**: أدرج معالجة أخطاء مناسبة في معالجات الأحداث لمنع الاستثناءات من التأثير على التنفيذ الرئيسي
+3. **التنظيف**: إذا خصص مستمعك موارد، تأكد من تنظيفها بشكل صحيح
+4. **الاستماع الانتقائي**: استمع فقط للأحداث التي تحتاج فعلاً لمعالجتها
+5. **الاختبار**: اختبر مستمعي الأحداث بمعزل لضمان سلوكهم كما هو متوقع
+
+بالاستفادة من نظام أحداث CrewAI، يمكنك توسيع وظائفه ودمجه بسلاسة مع بنيتك التحتية الحالية.

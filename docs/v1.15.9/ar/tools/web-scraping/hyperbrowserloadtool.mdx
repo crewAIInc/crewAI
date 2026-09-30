@@ -1,0 +1,87 @@
+---
+title: أداة تحميل Hyperbrowser
+description: أداة `HyperbrowserLoadTool` تتيح استخراج البيانات من الويب والزحف باستخدام Hyperbrowser.
+icon: globe
+mode: "wide"
+---
+
+# `HyperbrowserLoadTool`
+
+## الوصف
+
+تتيح أداة `HyperbrowserLoadTool` استخراج البيانات من الويب والزحف باستخدام [Hyperbrowser](https://hyperbrowser.ai)، وهي منصة لتشغيل وتوسيع المتصفحات بدون واجهة. تسمح لك هذه الأداة باستخراج صفحة واحدة أو زحف موقع كامل، مع إرجاع المحتوى بتنسيق markdown أو HTML منسّق بشكل صحيح.
+
+الميزات الرئيسية:
+- قابلية توسع فورية - تشغيل مئات جلسات المتصفح في ثوانٍ دون متاعب البنية التحتية
+- تكامل بسيط - يعمل بسلاسة مع الأدوات الشائعة مثل Puppeteer و Playwright
+- واجهات API قوية - واجهات سهلة الاستخدام لاستخراج/زحف أي موقع
+- تجاوز إجراءات مكافحة الروبوتات - وضع التخفي المدمج وحظر الإعلانات وحل CAPTCHA التلقائي والبروكسيات الدوّارة
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت Hyperbrowser SDK:
+
+```shell
+uv add hyperbrowser
+```
+
+## خطوات البدء
+
+لاستخدام `HyperbrowserLoadTool` بفعالية، اتبع هذه الخطوات:
+
+1. **التسجيل**: توجه إلى [Hyperbrowser](https://app.hyperbrowser.ai/) للتسجيل وتوليد مفتاح API.
+2. **مفتاح API**: عيّن متغير البيئة `HYPERBROWSER_API_KEY` أو مرّره مباشرة إلى مُنشئ الأداة.
+3. **تثبيت SDK**: ثبّت Hyperbrowser SDK باستخدام الأمر أعلاه.
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة واستخدامها لاستخراج بيانات من موقع:
+
+```python Code
+from crewai_tools import HyperbrowserLoadTool
+from crewai import Agent
+
+# Initialize the tool with your API key
+tool = HyperbrowserLoadTool(api_key="your_api_key")  # Or use environment variable
+
+# Define an agent that uses the tool
+@agent
+def web_researcher(self) -> Agent:
+    '''
+    This agent uses the HyperbrowserLoadTool to scrape websites
+    and extract information.
+    '''
+    return Agent(
+        config=self.agents_config["web_researcher"],
+        tools=[tool]
+    )
+```
+
+## المعاملات
+
+تقبل أداة `HyperbrowserLoadTool` المعاملات التالية:
+
+### معاملات المُنشئ
+- **api_key**: اختياري. مفتاح Hyperbrowser API الخاص بك. إذا لم يتم تقديمه، سيتم قراءته من متغير البيئة `HYPERBROWSER_API_KEY`.
+
+### معاملات التشغيل
+- **url**: مطلوب. عنوان URL للموقع المراد استخراجه أو زحفه.
+- **operation**: اختياري. العملية المراد تنفيذها على الموقع. إما 'scrape' أو 'crawl'. الافتراضي هو 'scrape'.
+- **params**: اختياري. معاملات إضافية لعملية الاستخراج أو الزحف.
+
+## المعاملات المدعومة
+
+للحصول على معلومات مفصلة حول جميع المعاملات المدعومة، قم بزيارة:
+- [معاملات الاستخراج](https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait)
+- [معاملات الزحف](https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait)
+
+## تنسيق الإرجاع
+
+تُرجع الأداة المحتوى بالتنسيق التالي:
+
+- لعمليات **الاستخراج**: محتوى الصفحة بتنسيق markdown أو HTML.
+- لعمليات **الزحف**: محتوى كل صفحة مفصولاً بفواصل، مع تضمين عنوان URL لكل صفحة.
+
+## الخلاصة
+
+توفر أداة `HyperbrowserLoadTool` طريقة قوية لاستخراج البيانات من المواقع وزحفها، مع التعامل مع السيناريوهات المعقدة مثل إجراءات مكافحة الروبوتات و CAPTCHA وغيرها. من خلال الاستفادة من منصة Hyperbrowser، تتيح هذه الأداة للوكلاء الوصول إلى محتوى الويب واستخراجه بكفاءة.

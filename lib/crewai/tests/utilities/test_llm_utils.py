@@ -23,6 +23,49 @@ def test_create_llm_with_valid_model_string() -> None:
         assert llm.model == "gpt-4o"
 
 
+def test_create_llm_with_config_dict() -> None:
+    with patch.dict(os.environ, {}, clear=True):
+        llm = create_llm(
+            llm_value={
+                "model": "llama3",
+                "provider": "ollama",
+                "temperature": 0.2,
+                "base_url": "http://localhost:11434",
+            }
+        )
+
+    assert isinstance(llm, BaseLLM)
+    assert llm.model == "llama3"
+    assert llm.provider == "ollama"
+    assert llm.temperature == 0.2
+    assert llm.base_url == "http://localhost:11434/v1"
+
+
+@pytest.mark.parametrize(
+    ("model_key", "model_value"),
+    [
+        ("model_name", "llama3"),
+        ("deployment_name", "custom-deployment"),
+    ],
+)
+def test_create_llm_with_config_dict_model_aliases(
+    model_key: str,
+    model_value: str,
+) -> None:
+    with patch.dict(os.environ, {}, clear=True):
+        llm = create_llm(
+            llm_value={
+                model_key: model_value,
+                "provider": "ollama",
+                "base_url": "http://localhost:11434",
+            }
+        )
+
+    assert isinstance(llm, BaseLLM)
+    assert llm.model == model_value
+    assert llm.provider == "ollama"
+
+
 def test_create_llm_with_invalid_model_string() -> None:
     with patch.dict(os.environ, {"OPENAI_API_KEY": "fake-key"}, clear=True):
         # For invalid model strings, create_llm succeeds but call() fails with API error

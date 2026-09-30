@@ -23,6 +23,10 @@ class CacheHandler(BaseModel):
     def add(self, tool: str, input: str, output: Any) -> None:
         """Add a tool result to the cache.
 
+        Declared failures are never stored: replaying one would make a
+        transient error permanent for the rest of the run, and every later hit
+        would re-report a call that did not run.
+
         Args:
             tool: Name of the tool.
             input: Input string used for the tool.
@@ -31,6 +35,11 @@ class CacheHandler(BaseModel):
         Notes:
             - TODO: Rename 'input' parameter to avoid shadowing builtin.
         """
+        from crewai.tools.tool_failure import ToolFailure
+
+        if isinstance(output, ToolFailure):
+            return
+
         with self._lock.w_locked():
             self._cache[f"{tool}-{input}"] = output
 

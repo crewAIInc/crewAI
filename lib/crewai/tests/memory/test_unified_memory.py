@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
+import threading
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,6 +19,39 @@ from crewai.memory.types import (
 )
 
 
+def test_memory_analysis_llm_is_isolated_from_streaming_agent_llm(
+    tmp_path: Path,
+) -> None:
+    """Memory analysis should not share a mutable streaming LLM with the agent UI."""
+    from crewai.llms.base_llm import BaseLLM
+    from crewai.memory.unified_memory import Memory
+    from crewai.utilities.types import LLMMessage
+
+    class FakeStreamingLLM(BaseLLM):
+        def call(
+            self,
+            messages: str | list[LLMMessage],
+            tools: list[dict] | None = None,
+            callbacks: list | None = None,
+            available_functions: dict | None = None,
+            from_task: object | None = None,
+            from_agent: object | None = None,
+            response_model: type | None = None,
+        ) -> str:
+            return ""
+
+    agent_llm = FakeStreamingLLM(model="fake-model", stream=True)
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=agent_llm,
+        embedder=lambda texts: [[0.1] for _ in texts],
+    )
+
+    assert mem._llm is not agent_llm
+    assert mem._llm.stream is False
+
+    agent_llm.stream = True
+    assert mem._llm.stream is False
 
 
 def test_memory_record_defaults() -> None:
@@ -206,6 +240,50 @@ def test_memory_scope_slice(tmp_path: Path, mock_embedder: MagicMock) -> None:
     assert "/a" in sl.scopes and "/b" in sl.scopes
 
 
+def test_memory_scope_config_can_be_reused() -> None:
+    """Constructing a scope must not remove the memory from caller-owned config."""
+    from crewai.memory.memory_scope import MemoryScope
+
+    memory = MagicMock()
+    config = {"memory": memory, "root_path": "/agent/1"}
+
+    first = MemoryScope.model_validate(config)
+    second = MemoryScope.model_validate(config)
+
+    assert config == {"memory": memory, "root_path": "/agent/1"}
+    assert first._require_memory() is memory
+    assert second._require_memory() is memory
+
+
+def test_memory_slice_config_can_be_reused_without_normalizing_it_in_place() -> None:
+    """Constructing a slice must preserve caller-owned dependencies and paths."""
+    from crewai.memory.memory_scope import MemorySlice
+
+    memory = MagicMock()
+    config = {"memory": memory, "scopes": ["/team/", "/"]}
+
+    first = MemorySlice.model_validate(config)
+    second = MemorySlice.model_validate(config)
+
+    assert config == {"memory": memory, "scopes": ["/team/", "/"]}
+    assert first.scopes == ["/team", "/"]
+    assert second.scopes == ["/team", "/"]
+    assert first._require_memory() is memory
+    assert second._require_memory() is memory
+
+
+def test_memory_kind_inference_preserves_input() -> None:
+    """Inferring a legacy config's discriminator must not mutate that config."""
+    from crewai.memory.memory_scope import _ensure_memory_kind
+
+    config = {"root_path": "/agent/1"}
+
+    normalized = _ensure_memory_kind(config)
+
+    assert config == {"root_path": "/agent/1"}
+    assert normalized == {"root_path": "/agent/1", "memory_kind": "scope"}
+
+
 def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
 
@@ -255,6 +333,65 @@ def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embed
     result = sl.remember("x", scope="/a")
     assert result is None
     assert mem.list_records() == []
+
+
+def test_update_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """A read-only Memory leaves stored records untouched when update() is called."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db8"), llm=MagicMock(), embedder=mock_embedder)
+    record = mem.remember(
+        "original", scope="/a", categories=[], importance=0.5, metadata={}
+    )
+    assert record is not None
+
+    mem.read_only = True
+    returned = mem.update(record.id, content="rewritten", importance=0.9)
+
+    assert returned.content == "original"
+    assert returned.importance == 0.5
+    stored = mem.list_records()
+    assert [(r.content, r.importance) for r in stored] == [("original", 0.5)]
+
+
+def test_update_still_writes_when_not_read_only(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """The read-only guard does not change update() for a writable Memory."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db9"), llm=MagicMock(), embedder=mock_embedder)
+    record = mem.remember(
+        "original", scope="/a", categories=[], importance=0.5, metadata={}
+    )
+    assert record is not None
+
+    returned = mem.update(record.id, content="rewritten", importance=0.9)
+
+    assert returned.content == "rewritten"
+    assert returned.importance == 0.9
+    stored = mem.list_records()
+    assert [(r.content, r.importance) for r in stored] == [("rewritten", 0.9)]
+
+
+def test_recall_does_not_refresh_access_time_when_read_only(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Recall against a read-only Memory leaves last_accessed untouched."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db10"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember("alpha", scope="/a", categories=[], importance=0.5, metadata={})
+    before = mem.list_records()[0].last_accessed
+
+    mem.read_only = True
+    assert mem.recall("alpha", scope="/a", limit=5, depth="shallow")
+    assert mem.list_records()[0].last_accessed == before
+
+    # Positive control: a writable Memory still refreshes the access time.
+    mem.read_only = False
+    assert mem.recall("alpha", scope="/a", limit=5, depth="shallow")
+    assert mem.list_records()[0].last_accessed > before
 
 
 
@@ -489,8 +626,8 @@ def test_composite_score_reranks_results(
     """Same semantic score: high-importance recent memory ranks first."""
     from crewai.memory.unified_memory import Memory
 
-    # Use same dim as default LanceDB (1536) so storage does not overwrite embedding
-    emb = [0.1] * 1536
+    # Use same dim as default LanceDB (3072) so storage does not overwrite embedding
+    emb = [0.1] * 3072
     mem = Memory(
         storage=str(tmp_path / "rerank_db"),
         llm=MagicMock(),
@@ -953,6 +1090,54 @@ def test_remember_many_returns_immediately(tmp_path: Path) -> None:
     assert mem._storage.count() == 2
 
 
+def test_reset_all_blocks_new_save_submission_until_reset_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A save cannot be submitted between draining writes and resetting storage."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+    reset_started = threading.Event()
+    release_reset = threading.Event()
+    submission_returned = threading.Event()
+    order: list[str] = []
+    original_reset = mem._storage.reset
+
+    def blocking_reset(scope_prefix: str | None = None) -> None:
+        order.append("reset-start")
+        reset_started.set()
+        assert release_reset.wait(timeout=2)
+        original_reset(scope_prefix=scope_prefix)
+        order.append("reset-end")
+
+    def submit_save() -> None:
+        mem._submit_save(lambda: order.append("save"))
+        order.append("submit-returned")
+        submission_returned.set()
+
+    monkeypatch.setattr(mem._storage, "reset", blocking_reset)
+
+    reset_thread = threading.Thread(target=mem.reset_all)
+    reset_thread.start()
+    assert reset_started.wait(timeout=2)
+
+    submit_thread = threading.Thread(target=submit_save)
+    submit_thread.start()
+    assert not submission_returned.wait(timeout=0.1)
+
+    release_reset.set()
+    reset_thread.join(timeout=2)
+    submit_thread.join(timeout=2)
+
+    assert not reset_thread.is_alive()
+    assert not submit_thread.is_alive()
+    assert order.index("reset-end") < order.index("submit-returned")
+
+
 def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) -> None:
     """recall() should automatically wait for pending background saves."""
     from crewai.memory.unified_memory import Memory
@@ -972,6 +1157,42 @@ def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) 
     matches = mem.recall("Python", scope="/test", limit=5, depth="shallow")
     assert len(matches) >= 1
     assert "Python" in matches[0].record.content
+
+
+def test_drain_writes_reports_background_save_failure_without_raising(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Background memory failures should be reported without failing cleanup."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.memory_events import MemorySaveFailedEvent
+    from crewai.memory.unified_memory import Memory
+
+    failure_seen = threading.Event()
+    failures: list[MemorySaveFailedEvent] = []
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=mock_embedder,
+    )
+
+    def fail_save() -> None:
+        raise ValueError("invalid model ID")
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def on_memory_save_failed(_source, event):
+            failures.append(event)
+            failure_seen.set()
+
+        mem._submit_save(fail_save)
+        mem.drain_writes()
+
+        assert failure_seen.wait(timeout=2)
+
+    assert failures
+    assert failures[0].value == "background save"
+    assert failures[0].error == "invalid model ID"
 
 
 def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -> None:

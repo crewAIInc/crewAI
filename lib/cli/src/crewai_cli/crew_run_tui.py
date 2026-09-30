@@ -1,0 +1,3271 @@
+"""Full-screen Textual TUI for crew execution.
+
+Two-column layout: left sidebar (tasks/agents/tokens) + main content
+(task header, plan checklist, activity timeline, streaming output).
+"""
+
+import asyncio
+from collections.abc import Callable, Iterator
+import contextlib
+from contextlib import contextmanager
+from contextvars import ContextVar
+import json as _json
+import os
+from pathlib import Path
+import re
+import secrets
+import threading
+import time
+from typing import Any, ClassVar
+
+from crewai_core.telemetry import Telemetry
+from rich.text import Text
+from textual import work
+from textual.app import App, ComposeResult
+from textual.binding import Binding, BindingType
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.css.query import NoMatches
+from textual.screen import ModalScreen
+from textual.widgets import Button, Footer, Header, Input, Static
+
+
+_SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+# CrewAI brand palette
+_C_PRIMARY = "#FF5A50"  # crewai.primary (coral red)
+_C_TEAL = "#1F7982"  # crewai.secondary / tertiary
+_C_GREEN = "#4aba6a"  # success green (warm, not neon)
+_C_RED = "#FF5A50"  # error (same as primary)
+_C_TEXT = "#e0e0e0"  # light text on dark bg
+_C_DIM = "#AAAAAA"  # crewai.background-grey
+_C_MUTED = "#666666"  # dimmer than _C_DIM for past timeline
+
+_STEP_NUMBER_RE = re.compile(r"\bstep\s+(\d+)\b", re.IGNORECASE)
+_REFINEMENT_RE = re.compile(r"^\s*step\s+(\d+)\s*:\s*(.+)\s*$", re.IGNORECASE)
+_INTERNAL_TOOL_NAMES = {"create_reasoning_plan"}
+_LOG_ARGS_TEXT_LIMIT = 3_000
+_LOG_RESULT_TEXT_LIMIT = 5_000
+_LOG_TRUNCATION_SUFFIX = "... [truncated]"
+# Background memory saves can emit their start event just after kickoff returns.
+_MEMORY_SAVE_DRAIN_GRACE_SECONDS = 2.0
+
+
+def _is_save_to_memory_tool(tool_name: str | None) -> bool:
+    return (tool_name or "").replace(" ", "_").lower() == "save_to_memory"
+
+
+def _truncate_log_text(value: Any, limit: int) -> str | None:
+    if value is None:
+        return None
+    text = str(value)
+    if len(text) <= limit:
+        return text
+    suffix = _LOG_TRUNCATION_SUFFIX
+    return f"{text[: max(0, limit - len(suffix))]}{suffix}"
+
+
+def _unescape_text(s: str) -> str:
+    """Replace literal backslash-n sequences with real newlines."""
+    return s.replace("\\n", "\n").replace("\\t", "  ")
+
+
+def _try_parse_structured(text: str) -> Any | None:
+    """Try JSON first, then Python repr (single-quoted dicts/lists)."""
+    try:
+        return _json.loads(text)
+    except (ValueError, TypeError, RecursionError):
+        pass
+    try:
+        import ast
+
+        obj = ast.literal_eval(text)
+        # literal_eval accepts values json.dumps cannot encode (e.g. [Ellipsis]
+        # from "[...]"), which would crash the renderer later; reject those.
+        # Validate with the exact kwargs the render path uses so a structure
+        # the C decoder accepts but the indent encoder cannot walk is also
+        # rejected here instead of raising inside _tick.
+        if isinstance(obj, (dict, list)):
+            _json.dumps(obj, indent=2, ensure_ascii=False)
+            return obj
+    except Exception:  # noqa: S110
+        pass
+    return None
+
+
+def _format_json_in_text(text: str) -> str:
+    """Find JSON objects/arrays in text and pretty-print them."""
+    if not text or ("{" not in text and "[" not in text):
+        return text
+
+    result: list[str] = []
+    i = 0
+    while i < len(text):
+        if text[i] in ("{", "["):
+            close = "}" if text[i] == "{" else "]"
+            depth = 0
+            for j in range(i, len(text)):
+                if text[j] == text[i]:
+                    depth += 1
+                elif text[j] == close:
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[i : j + 1]
+                        parsed = _try_parse_structured(candidate)
+                        if parsed is not None:
+                            formatted = _json.dumps(
+                                parsed, indent=2, ensure_ascii=False
+                            )
+                            result.append(formatted)
+                            i = j + 1
+                        else:
+                            result.append(text[i])
+                            i += 1
+                        break
+            else:
+                remaining = text[i:]
+                parsed = _try_parse_structured(remaining)
+                if parsed is not None:
+                    result.append(_json.dumps(parsed, indent=2, ensure_ascii=False))
+                else:
+                    result.append(remaining)
+                break
+        else:
+            result.append(text[i])
+            i += 1
+
+    return "".join(result)
+
+
+def _colorize_json_line(t: Text, line: str) -> None:
+    """Append a single line with soft JSON syntax highlighting."""
+    stripped = line.lstrip()
+    leading = line[: len(line) - len(stripped)]
+    t.append(leading, style=_C_MUTED)
+    if not stripped:
+        return
+    s = stripped
+    i = 0
+    while i < len(s):
+        ch = s[i]
+        if ch == '"':
+            j = i + 1
+            while j < len(s):
+                if s[j] == "\\":
+                    j += 2
+                    continue
+                if s[j] == '"':
+                    j += 1
+                    break
+                j += 1
+            token = s[i:j]
+            rest = s[j:].lstrip()
+            if rest.startswith(":"):
+                t.append(token, style=_C_TEAL)
+            else:
+                t.append(token, style=_C_DIM)
+            i = j
+        elif ch in "{}[],":
+            t.append(ch, style=_C_MUTED)
+            i += 1
+        elif ch == ":":
+            t.append(": ", style=_C_MUTED)
+            i += 1
+            if i < len(s) and s[i] == " ":
+                i += 1
+        elif ch in "-0123456789":
+            j = i + 1
+            while j < len(s) and s[j] in "0123456789.eE+-":
+                j += 1
+            t.append(s[i:j], style=_C_PRIMARY)
+            i = j
+        elif s[i : i + 4] == "true":
+            t.append("true", style=_C_GREEN)
+            i += 4
+        elif s[i : i + 5] == "false":
+            t.append("false", style=_C_GREEN)
+            i += 5
+        elif s[i : i + 4] == "null":
+            t.append("null", style=f"italic {_C_MUTED}")
+            i += 4
+        else:
+            t.append(ch, style=_C_DIM)
+            i += 1
+
+
+def _append_highlighted(t: Text, content: str, indent: str, max_lines: int = 50) -> int:
+    """Append text with JSON highlighting if it looks like JSON, else plain."""
+    lines = content.split("\n")
+    total = len(lines)
+    is_json = content.lstrip()[:1] in ("{", "[", '"')
+    for line in lines[:max_lines]:
+        t.append(f"{indent}  ", style="")
+        if is_json:
+            _colorize_json_line(t, line)
+        else:
+            t.append(line, style=_C_DIM)
+        t.append("\n")
+    return total
+
+
+class TraceConsentScreen(ModalScreen[bool]):
+    CSS = """
+    TraceConsentScreen {
+        align: center middle;
+    }
+    #consent-dialog {
+        width: 50;
+        max-width: 95%;
+        height: auto;
+        max-height: 90%;
+        overflow-y: auto;
+        background: #1c1c1c;
+        border: tall #333333;
+        padding: 1 2 2 2;
+    }
+    #consent-buttons {
+        height: 3;
+        margin-top: 1;
+        width: 100%;
+        layout: horizontal;
+    }
+    .consent-btn {
+        width: 1fr;
+        height: 3;
+        margin: 0 1;
+    }
+    #btn-consent-yes {
+        background: #1F7982;
+        color: #e0e0e0;
+        border: none;
+        text-style: bold;
+    }
+    #btn-consent-yes:hover {
+        background: #28969f;
+    }
+    #btn-consent-yes:disabled {
+        background: #1F7982;
+        color: #e0e0e0;
+        text-opacity: 100%;
+        opacity: 100%;
+    }
+    #btn-consent-no {
+        background: #333333;
+        color: #AAAAAA;
+        border: none;
+    }
+    #btn-consent-no:hover {
+        background: #444444;
+    }
+    """
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("y", "consent_yes", "Yes", show=False),
+        Binding("n", "consent_no", "No", show=False),
+        Binding("escape", "consent_no", "Cancel", show=False),
+    ]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="consent-dialog"):
+            yield Static(self._build_content(), id="consent-text")
+            with Horizontal(id="consent-buttons"):
+                yield Button(
+                    "Share Trace",
+                    id="btn-consent-yes",
+                    classes="consent-btn",
+                )
+                yield Button("Cancel", id="btn-consent-no", classes="consent-btn")
+
+    def _build_content(self) -> Text:
+        t = Text()
+        t.append(
+            "  Share this execution trace with CrewAI?\n\n", style=f"bold {_C_TEXT}"
+        )
+        t.append("  The trace is stored locally and may include\n", style=_C_DIM)
+        t.append("  prompts, inputs, outputs, and tool calls.\n\n", style=_C_DIM)
+        t.append("  Sharing uploads it. Cancel or wait 20 seconds\n", style=_C_MUTED)
+        t.append("  to discard it without uploading.\n", style=_C_MUTED)
+        return t
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "btn-consent-yes")
+
+    def action_consent_yes(self) -> None:
+        self.dismiss(True)
+
+    def action_consent_no(self) -> None:
+        self.dismiss(False)
+
+
+_AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
+    "crewai_tui_auto_eval", default=None
+)
+
+# The same word, for the app that runs in a CHILD process. A project's crew and
+# flow are run through `uv run …` in the project's own environment, and nothing
+# in this process's memory reaches that app — the environment does, and it is
+# the only thing that does. Set and cleared by `evaluating_after_run()` alone:
+# an internal handshake between two parts of one command, never a setting for
+# anyone to turn on.
+#
+# The child loads the project's `.env` over its environment, so the variable
+# alone would be a switch any project could flip — an evaluation started, with
+# the machine's `crewai login`, on a plain `crewai run`. Its value is therefore a
+# random token, and it counts only while the file of that name exists in this
+# user's crewAI data directory: the command writes it before the run and removes
+# it after, and a `.env` cannot create a file.
+_AWAITING_EVAL_ENV = "CREWAI_EVAL_AWAITING_RUN"
+_AWAITING_TOKEN = re.compile(r"[0-9a-f]{32}")
+
+
+def _awaiting_dir() -> Path:
+    import appdirs
+
+    return Path(appdirs.user_data_dir("crewai", "CrewAI")) / "eval-awaiting"
+
+
+@contextmanager
+def evaluating_after_run() -> Iterator[dict[str, str | None]]:
+    """Run the crew for an evaluation that is already under way.
+
+    `crewai eval` with nothing traced offers to run the crew first. The app it
+    opens would otherwise sit there until somebody quits it, with the command
+    waiting behind — so inside this block the app closes itself when the run
+    ends and leaves its execution id in the holder. It does NOT chain into an
+    evaluation of its own: the command that opened it is the one evaluating.
+
+    A run in the same process leaves its id here; a run in a child process
+    leaves it in the project's last-run record, which the caller reads when the
+    holder comes back empty.
+    """
+    holder: dict[str, str | None] = {"execution_id": None}
+    token = _AUTO_EVAL.set(holder)
+    before = os.environ.get(_AWAITING_EVAL_ENV)
+    # Without the file a child app cannot be told, and the command grades the
+    # run itself once the app closes — slower to the verdict, never wrong.
+    marker: Path | None = None
+    with contextlib.suppress(OSError):
+        nonce = secrets.token_hex(16)
+        _awaiting_dir().mkdir(parents=True, exist_ok=True)
+        (_awaiting_dir() / nonce).touch(exist_ok=False)
+        marker = _awaiting_dir() / nonce
+        os.environ[_AWAITING_EVAL_ENV] = nonce
+    try:
+        yield holder
+    finally:
+        _AUTO_EVAL.reset(token)
+        if marker is not None:
+            with contextlib.suppress(OSError):
+                marker.unlink()
+        if before is None:
+            os.environ.pop(_AWAITING_EVAL_ENV, None)
+        else:
+            os.environ[_AWAITING_EVAL_ENV] = before
+
+
+def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
+    """The evaluation this run was started for, if there is one.
+
+    In this process the holder itself; in a child process the environment says
+    an evaluation is waiting and the holder is a local one — the id travels
+    back through the project's last-run record instead, which the child writes
+    when its trace is exported.
+    """
+    holder = _AUTO_EVAL.get()
+    if holder is not None:
+        return holder
+
+    value = os.environ.get(_AWAITING_EVAL_ENV) or ""
+    if not _AWAITING_TOKEN.fullmatch(value):
+        return None
+    try:
+        waiting = (_awaiting_dir() / value).is_file()
+    except OSError:
+        return None
+    return {"execution_id": None} if waiting else None
+
+
+def _recorded_run(execution_uuid: str) -> dict[str, Any] | None:
+    """This execution's own record, if its trace reached AMP.
+
+    crewAI records a run when its spans are exported, so the record answers the
+    one question the uuid alone cannot: whether there is anything to grade, and
+    where AMP will show it. It is matched by id rather than trusted as "the
+    last run", which it is only until another run in the project finishes.
+    """
+    # a missing or unreadable record simply means "not traced"
+    with contextlib.suppress(Exception):
+        from crewai.telemetry.tracing.last_run import read_last_run
+
+        record = read_last_run() or {}
+        if str(record.get("execution_id") or "") == execution_uuid:
+            return record
+    return None
+
+
+def _trace_was_recorded(execution_uuid: str) -> bool:
+    return _recorded_run(execution_uuid) is not None
+
+
+class CrewRunApp(App[Any]):
+    TITLE = "CrewAI"
+
+    CSS = """
+Screen {
+    background: #131313;
+}
+
+#body {
+    height: 1fr;
+}
+
+#sidebar {
+    width: 34;
+    background: #1c1c1c;
+    border-right: vkey #333333;
+    scrollbar-size-vertical: 1;
+    scrollbar-color: #666666;
+    scrollbar-color-hover: #FF5A50;
+    scrollbar-background: #1c1c1c;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#sidebar-content {
+    width: 100%;
+    height: auto;
+    padding: 1 0;
+}
+
+#main-panel {
+    width: 1fr;
+}
+
+#task-header {
+    height: auto;
+    max-height: 6;
+    padding: 1 2;
+    background: #1c1c1c;
+    border-bottom: hkey #333333;
+}
+
+#scroll-area {
+    height: 3fr;
+    min-height: 6;
+    scrollbar-size-vertical: 1;
+    scrollbar-color: #666666;
+    scrollbar-color-hover: #FF5A50;
+    scrollbar-background: #131313;
+}
+
+#main-content {
+    padding: 1 2;
+    height: auto;
+}
+
+#conversation-input {
+    display: none;
+    height: 3;
+    border-top: hkey #333333;
+    background: #1c1c1c;
+    color: #e0e0e0;
+}
+
+#conversation-input:focus {
+    border-top: hkey #1F7982;
+}
+
+Header {
+    background: #1c1c1c;
+    color: #FF5A50;
+}
+
+Footer {
+    background: #1c1c1c;
+}
+
+FooterKey {
+    background: #1c1c1c;
+    color: #AAAAAA;
+}
+
+FooterKey .footer-key--key {
+    background: #262626;
+    color: #FF5A50;
+}
+
+#log-panel {
+    height: 2fr;
+    min-height: 6;
+    background: #1c1c1c;
+    border-top: hkey #333333;
+    scrollbar-size-vertical: 1;
+    scrollbar-color: #666666;
+    scrollbar-color-hover: #FF5A50;
+    scrollbar-background: #1c1c1c;
+}
+
+#log-content {
+    padding: 1 2;
+    height: auto;
+}
+
+#sidebar-actions {
+    display: none;
+    height: auto;
+    padding: 0 1;
+    margin-top: 1;
+    border-top: hkey #333333;
+}
+
+.action-btn {
+    width: 100%;
+    min-width: 20;
+    height: 3;
+    margin: 1 1 0 1;
+    text-style: bold;
+}
+
+#btn-eval {
+    background: #1F7982;
+    color: #e0e0e0;
+    border: none;
+}
+#btn-eval:hover {
+    background: #28969f;
+}
+
+#btn-traces {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border: none;
+}
+#btn-traces:hover {
+    background: #3d3d3d;
+}
+#btn-traces:disabled {
+    background: #202020;
+    color: #888888;
+}
+
+#btn-deploy {
+    background: #333333;
+    color: #e0e0e0;
+    border: none;
+}
+#btn-deploy:hover {
+    background: #444444;
+}
+
+"""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("q", "quit", "Quit"),
+        Binding("s", "toggle_sidebar", "Sidebar"),
+        Binding("l", "toggle_logs", "Logs"),
+        Binding("t", "view_traces", "Traces", show=False),
+        Binding("e", "evaluate_crew", "Evaluate", show=False),
+        Binding("d", "deploy_crew", "Deploy", show=False),
+        Binding("down", "log_down", "Log ↓", show=False),
+        Binding("up", "log_up", "Log ↑", show=False),
+        Binding("enter", "log_toggle", "Expand", show=False),
+    ]
+
+    def __init__(
+        self,
+        crew_name: str = "Crew",
+        total_tasks: int = 0,
+        agent_names: list[str] | None = None,
+        task_names: list[str] | None = None,
+        conversational: bool = False,
+    ):
+        super().__init__()
+        self.title = f"CrewAI — {crew_name}"
+        self.sub_title = "0:00"
+        self._crew_name = crew_name
+        self._lock = threading.RLock()
+
+        self._total_tasks = total_tasks
+        self._current_task_idx = 0
+        self._current_task_desc = ""
+        self._current_agent = ""
+        self._task_names = task_names or []
+        self._agent_names = agent_names or []
+        self._task_statuses: dict[int, str] = {
+            i: "pending" for i in range(1, total_tasks + 1)
+        }
+        # Maps a task's identity to state captured when it started (sidebar
+        # index, description, agent, start time) so completion/failure events
+        # build their log entry from the right task even when tasks run
+        # async/overlapping.
+        self._task_state_by_key: dict[str, dict[str, Any]] = {}
+
+        self._timeline: list[tuple[str, str, str]] = []
+        self._current_step: tuple[str, str, str] | None = None
+
+        self._input_tokens = 0
+        self._output_tokens = 0
+        self._live_out_tokens = 0
+        self._pending_input_estimate = 0
+        self._llm_calls = 0
+
+        self._streaming_text = ""
+        self._is_streaming = False
+        self._current_llm_text = ""
+        self._task_full_output = ""
+
+        self._plan: dict[str, Any] | None = None
+        self._plan_step_status: dict[int, str] = {}
+        self._awaiting_replan = False
+
+        self._status = "starting"
+        self._start_time = time.time()
+        self._task_start_time = time.time()
+        self._final_output: str | None = None
+        self._error: str | None = None
+        self._frame = 0
+
+        self._task_logs: list[dict[str, Any]] = []
+        self._current_task_steps: list[dict[str, Any]] = []
+
+        self._log_entries: list[dict[str, Any]] = []
+        self._log_cursor: int = 0
+        self._log_expanded: set[int] = set()
+        self._log_scroll_needed: bool = False
+        self._log_line_map: list[tuple[int, int, int]] = []
+        self._suppressed_memory_save_event_ids: set[str] = set()
+        self._memory_save_drain_timer: Any = None
+
+        self._event_handlers: list[tuple[type, Any]] = []
+
+        self._crew: Any = None
+        self._flow: Any = None
+        self._is_conversational = conversational
+        self._conversation_messages: list[tuple[str, str]] = []
+        self._conversation_turns = 0
+        self._conversation_turn_in_progress = False
+        self._conversation_previous_defer_trace_finalization: bool | None = None
+        self._conversation_exit_commands = {"exit", "quit"}
+        self._default_inputs: dict[str, Any] | None = None
+        self._crew_result: Any = None
+        self._crew_json_path: Any = None
+        # Declarative-flow execution state. A flow renders per-method "STEPS"
+        # (built from flow method events) instead of the crew task list.
+        self._flow_inputs: dict[str, Any] | None = None
+        self._flow_method_types: dict[str, str] = {}
+        self._flow_steps: list[dict[str, Any]] = []
+        self._current_method: str | None = None
+        self._elapsed_frozen: float | None = None
+        self._want_deploy: bool = False
+        # This app's own execution, captured from the run while it runs. The
+        # project-wide record is the last run to FINISH anywhere, which another
+        # run in the same project can replace between this one ending and its
+        # button being pressed.
+        self._execution_uuid: str | None = None
+        # The evaluation of this run, while it happens and after: it runs from
+        # inside the app, on the app's own screen, rather than sending anybody
+        # back to a terminal to watch a link appear.
+        self._evaluation: dict[str, Any] | None = None
+        # Read here, on the thread that built the app, because that is where
+        # `crewai eval` set it — or in the environment it passed to this
+        # process, when the run is a child of that command.
+        self._auto_eval: dict[str, str | None] | None = _an_evaluation_is_waiting()
+        self._consent_screen: TraceConsentScreen | None = None
+        self._trace_consent_pending: threading.Event | None = None
+        self._discard_trace_on_exit = False
+        self._telemetry: Telemetry | None = None
+
+    @property
+    def _is_flow_run(self) -> bool:
+        """True for a non-conversational declarative flow (the STEPS view).
+
+        Gates every flow-specific rendering branch so crew and conversational
+        paths stay byte-identical.
+        """
+        return self._flow is not None and not self._is_conversational
+
+    @property
+    def _run_noun(self) -> str:
+        """User-facing noun for the run — 'flow' for a declarative flow, else 'crew'."""
+        return "flow" if self._is_flow_run else "crew"
+
+    # ── Layout ──────────────────────────────────────────────
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=False)
+        with Horizontal(id="body"):
+            with VerticalScroll(id="sidebar"):
+                yield Static(id="sidebar-content")
+                with Vertical(id="sidebar-actions"):
+                    yield Button("Evaluate", id="btn-eval", classes="action-btn")
+                    yield Button("View Traces", id="btn-traces", classes="action-btn")
+                    yield Button("Deploy", id="btn-deploy", classes="action-btn")
+            with Vertical(id="main-panel"):
+                yield Static(id="task-header")
+                with VerticalScroll(id="scroll-area"):
+                    yield Static(id="main-content")
+                yield Input(
+                    placeholder="Message the flow...",
+                    id="conversation-input",
+                )
+                with VerticalScroll(id="log-panel"):
+                    yield Static(id="log-content")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._start_time = time.time()
+        self._subscribe()
+        self._tick_timer = self.set_interval(1 / 8, self._tick)
+        if self._is_conversational and self._flow:
+            self._start_conversational_session()
+        elif self._flow:
+            self._run_flow_worker()
+        elif self._crew:
+            self._run_crew_worker()
+        elif self._crew_json_path:
+            self._load_and_run_worker()
+
+    # ── Crew execution ──────────────────────────────────────
+
+    @work(thread=True, exclusive=True, group="crew")
+    def _load_and_run_worker(self) -> None:
+        from crewai.events.listeners.tracing.utils import (
+            set_suppress_tracing_messages,
+            set_tui_mode,
+        )
+
+        set_tui_mode(True)
+        set_suppress_tracing_messages(True)
+        try:
+            from crewai.project.crew_loader import load_crew
+
+            crew, default_inputs = load_crew(self._crew_json_path)
+            crew.verbose = False
+            for agent in crew.agents:
+                agent.verbose = False
+                if hasattr(agent, "llm") and hasattr(agent.llm, "stream"):
+                    agent.llm.stream = True
+
+            task_names = []
+            for task in crew.tasks:
+                name = getattr(task, "name", "") or ""
+                if not name:
+                    desc = getattr(task, "description", "") or "Task"
+                    name = desc[:40]
+                task_names.append(name)
+
+            agent_names = []
+            for agent in crew.agents:
+                name = (
+                    getattr(agent, "role", "") or getattr(agent, "name", "") or "Agent"
+                )
+                agent_names.append(name)
+
+            self._crew = crew
+            self._default_inputs = default_inputs
+
+            def _apply_crew_info() -> None:
+                with self._lock:
+                    self._total_tasks = len(crew.tasks)
+                    self._task_names = task_names
+                    self._agent_names = agent_names
+                    self._task_statuses = {
+                        i: "pending" for i in range(1, len(crew.tasks) + 1)
+                    }
+                    self.title = f"CrewAI — {crew.name or 'Crew'}"
+                    self._crew_name = crew.name or "Crew"
+                self._start_time = time.time()
+                self._run_crew_worker()
+
+            self.call_from_thread(_apply_crew_info)
+        except Exception as e:
+            self.call_from_thread(self._on_crew_failed, str(e))
+
+    @work(thread=True, exclusive=True, group="crew")
+    def _run_crew_worker(self) -> None:
+        from crewai.events.listeners.tracing.utils import (
+            set_suppress_tracing_messages,
+            set_tui_mode,
+        )
+
+        set_tui_mode(True)
+        set_suppress_tracing_messages(True)
+        try:
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                result = self._crew.kickoff(inputs=self._default_inputs)
+            output = result.raw if result and hasattr(result, "raw") else None
+            with self._lock:
+                self._crew_result = result
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_done, output)
+        except Exception as e:
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_failed, str(e))
+
+    @work(thread=True, exclusive=True, group="flow")
+    def _run_flow_worker(self) -> None:
+        from crewai.events.listeners.tracing.utils import (
+            set_suppress_tracing_messages,
+            set_tui_mode,
+        )
+
+        set_tui_mode(True)
+        set_suppress_tracing_messages(True)
+        try:
+            # A declarative flow returns either a CrewOutput (has ``.raw``) or a
+            # bare value (str/dict/pydantic); _stringify_output handles both.
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                result = self._flow.kickoff(inputs=self._flow_inputs)
+            output = self._stringify_output(result)
+            with self._lock:
+                self._crew_result = result
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_done, output)
+        except Exception as e:
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_crew_failed, str(e))
+
+    def _set_flow_step_status(self, name: str, status: str) -> None:
+        """Update a flow method step's status. Caller must hold ``self._lock``."""
+        for step in self._flow_steps:
+            if step["name"] == name:
+                step["status"] = status
+                return
+
+    def _clear_current_method(self, finished_name: str) -> None:
+        """Drop the header's active method once it ends. Caller holds the lock.
+
+        Falls back to another still-active step (methods can overlap) so the
+        header never keeps spinning a method the STEPS list already shows as
+        done or failed.
+        """
+        if self._current_method != finished_name:
+            return
+        self._current_method = next(
+            (s["name"] for s in self._flow_steps if s["status"] == "active"), None
+        )
+        # The active method changed; drop its agent so the header doesn't show a
+        # stale agent until the next method's agent event arrives.
+        self._current_agent = ""
+
+    def _on_crew_done(self, output: str | None) -> None:
+        with self._lock:
+            self._status = "completed"
+            self._final_output = output
+            self._is_streaming = False
+            self._streaming_text = ""
+            self._current_step = None
+            self._timeline = []
+            self._elapsed_frozen = time.time() - self._start_time
+            self._collapse_plan_on_task_done()
+            for k in self._task_statuses:
+                if self._task_statuses[k] == "active":
+                    self._task_statuses[k] = "done"
+            for step in self._flow_steps:
+                if step["status"] == "active":
+                    step["status"] = "done"
+            now = time.time()
+            for entry in self._log_entries:
+                if entry["status"] == "running":
+                    if entry["tool_name"] == "memory_save":
+                        continue
+                    entry["status"] = "timeout"
+                    entry["error"] = (
+                        f"No result received before {self._run_noun} completed"
+                    )
+                    entry["duration"] = now - entry["start_time"]
+        try:
+            self.query_one("#sidebar-actions").display = True
+        except Exception:  # noqa: S110
+            pass
+        self._tick()
+        self._scroll_to_result()
+        self.call_later(self._focus_activity_log)
+        self._tick_timer.stop()
+        self._tick_timer = self.set_interval(1 / 2, self._tick)
+        self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+        self._evaluate_if_one_is_waiting()
+
+    def _evaluate_if_one_is_waiting(self) -> None:
+        """Start the evaluation `crewai eval` opened this run for.
+
+        The evaluation is the errand; the run was the prerequisite. It begins
+        here, on this screen, rather than by closing the app and leaving
+        somebody in a bare terminal watching for a link: the app has the room
+        to show the link, the progress and the verdict, and the reader leaves
+        when they are done reading, not when the command is.
+        """
+        if self._auto_eval is None or self._evaluation is not None:
+            return
+
+        traced = self._traced_execution_id()
+        self._auto_eval["execution_id"] = traced
+        if traced is None:
+            # Said to the command waiting behind this screen as well: it cannot
+            # see this notice, and "no marker" is how it tells a run no app got
+            # to from a run an app looked at and found nothing to grade.
+            self._say_what_became_of_the_evaluation(None)
+            self.notify(
+                "This run was not traced, so there is nothing to evaluate.",
+                title="Evaluate",
+                severity="warning",
+            )
+            return
+
+        self._start_evaluation(traced)
+
+    def _say_what_became_of_the_evaluation(self, execution_id: str | None) -> None:
+        with contextlib.suppress(Exception):
+            from crewai_cli.experimental.eval_crew import record_evaluation_outcome
+
+            record_evaluation_outcome(execution_id)
+
+    def _on_crew_failed(self, error: str) -> None:
+        with self._lock:
+            self._status = "failed"
+            self._error = error
+            self._is_streaming = False
+            self._current_step = None
+            self._elapsed_frozen = time.time() - self._start_time
+            for step in self._flow_steps:
+                if step["status"] == "active":
+                    step["status"] = "failed"
+            now = time.time()
+            for entry in self._log_entries:
+                if entry["status"] == "running":
+                    if entry["tool_name"] == "memory_save":
+                        continue
+                    entry["status"] = "error"
+                    entry["error"] = (
+                        f"No result received before {self._run_noun} failed"
+                    )
+                    entry["duration"] = now - entry["start_time"]
+        self._tick()
+        self.call_later(self._focus_activity_log)
+        self._tick_timer.stop()
+        self._tick_timer = self.set_interval(1 / 2, self._tick)
+        self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+        # A run that failed is still a run to grade — where it went wrong is
+        # what somebody asking for an evaluation wants to know. If nothing was
+        # traced, the same notice says so and nothing is asked of AMP.
+        self._evaluate_if_one_is_waiting()
+
+    # ── Conversational flow execution ───────────────────────
+
+    def _start_conversational_session(self) -> None:
+        from crewai.events.listeners.tracing.utils import (
+            set_suppress_tracing_messages,
+            set_tui_mode,
+        )
+
+        set_tui_mode(True)
+        set_suppress_tracing_messages(True)
+        with self._lock:
+            self._status = "chatting"
+            self._current_step = None
+            self._elapsed_frozen = None
+            self._conversation_previous_defer_trace_finalization = getattr(
+                self._flow, "defer_trace_finalization", False
+            )
+            self._flow.defer_trace_finalization = True
+
+        try:
+            input_widget = self.query_one("#conversation-input", Input)
+            input_widget.display = True
+            input_widget.focus()
+        except Exception:  # noqa: S110
+            pass
+
+    def _finalize_conversational_session(self, *, discard: bool = False) -> None:
+        if not (self._is_conversational and self._flow):
+            return
+        try:
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                if discard:
+                    self._flow.finalize_session_traces(discard=True)
+                else:
+                    self._flow.finalize_session_traces()
+        except Exception:  # noqa: S110
+            pass
+        previous = self._conversation_previous_defer_trace_finalization
+        if previous is not None:
+            try:
+                self._flow.defer_trace_finalization = previous
+            except Exception:  # noqa: S110
+                pass
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id != "conversation-input":
+            return
+        if not self._is_conversational:
+            return
+
+        message = event.value.strip()
+        event.input.value = ""
+        if not message:
+            return
+        if message.lower() in self._conversation_exit_commands:
+            self.run_worker(self.action_quit())
+            return
+        if self._conversation_turn_in_progress:
+            return
+
+        with self._lock:
+            self._conversation_messages.append(("user", message))
+            self._conversation_turn_in_progress = True
+            self._conversation_turns += 1
+            self._status = "working"
+            self._current_step = ("yellow", "Thinking…", "")
+            self._is_streaming = False
+            self._streaming_text = ""
+            self._task_full_output = ""
+            self._current_llm_text = ""
+
+        event.input.disabled = True
+        self._run_conversation_turn_worker(message)
+
+    @work(thread=True, exclusive=True, group="conversation")
+    def _run_conversation_turn_worker(self, message: str) -> None:
+        from crewai.events.listeners.tracing.utils import (
+            set_suppress_tracing_messages,
+            set_tui_mode,
+        )
+
+        set_tui_mode(True)
+        set_suppress_tracing_messages(True)
+        try:
+            from crewai.telemetry.tracing.ephemeral import trace_consent
+
+            with trace_consent(self._request_trace_consent):
+                result = self._flow.handle_turn(message)
+            if hasattr(result, "get_full_text") and hasattr(result, "result"):
+                for _chunk in result:
+                    pass
+                result = result.result
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_conversation_turn_done, result)
+        except Exception as e:
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._on_conversation_turn_failed, str(e))
+        finally:
+            if self._discard_trace_on_exit:
+                # A first turn only stores its deferred trace when it returns.
+                # Release it here even after the UI has already closed.
+                self._finalize_conversational_session(discard=True)
+
+    def _on_conversation_turn_done(self, result: Any) -> None:
+        with self._lock:
+            output = self._stringify_output(result)
+            self._conversation_messages.append(("assistant", output))
+            self._crew_result = result
+            self._conversation_turn_in_progress = False
+            self._status = "chatting"
+            self._is_streaming = False
+            self._streaming_text = ""
+            self._current_step = None
+        self._enable_conversation_input()
+        self._tick()
+        self._scroll_to_result()
+
+    def _on_conversation_turn_failed(self, error: str) -> None:
+        with self._lock:
+            self._status = "failed"
+            self._error = error
+            self._conversation_turn_in_progress = False
+            self._is_streaming = False
+            self._current_step = None
+        self._enable_conversation_input()
+        self._tick()
+
+    def _enable_conversation_input(self) -> None:
+        try:
+            input_widget = self.query_one("#conversation-input", Input)
+            input_widget.disabled = False
+            input_widget.focus()
+        except Exception:  # noqa: S110
+            pass
+
+    def _stringify_output(self, result: Any) -> str:
+        raw_result = getattr(result, "raw", result)
+        if raw_result is None:
+            return ""
+        if isinstance(raw_result, str):
+            return raw_result
+        try:
+            return _json.dumps(raw_result, default=str, ensure_ascii=False)
+        except TypeError:
+            return str(raw_result)
+
+    # ── Actions ─────────────────────────────────────────────
+
+    def action_toggle_sidebar(self) -> None:
+        sidebar = self.query_one("#sidebar")
+        sidebar.display = not sidebar.display
+
+    def action_toggle_logs(self) -> None:
+        panel = self.query_one("#log-panel")
+        panel.display = not panel.display
+
+    def action_log_down(self) -> None:
+        try:
+            if not self.query_one("#log-panel").display:
+                return
+        except Exception:
+            return
+        should_refresh = False
+        with self._lock:
+            if self._log_entries:
+                self._log_cursor = min(self._log_cursor + 1, len(self._log_entries) - 1)
+                self._log_scroll_needed = True
+                should_refresh = True
+        if should_refresh:
+            self._refresh_log_panel()
+
+    def action_log_up(self) -> None:
+        try:
+            if not self.query_one("#log-panel").display:
+                return
+        except Exception:
+            return
+        should_refresh = False
+        with self._lock:
+            if self._log_entries:
+                self._log_cursor = max(self._log_cursor - 1, 0)
+                self._log_scroll_needed = True
+                should_refresh = True
+        if should_refresh:
+            self._refresh_log_panel()
+
+    def action_log_toggle(self) -> None:
+        try:
+            if not self.query_one("#log-panel").display:
+                return
+        except Exception:
+            return
+        should_refresh = False
+        with self._lock:
+            if self._log_entries:
+                if self._log_cursor in self._log_expanded:
+                    self._log_expanded.discard(self._log_cursor)
+                else:
+                    self._log_expanded.add(self._log_cursor)
+                should_refresh = True
+        if should_refresh:
+            self._refresh_log_panel()
+
+    async def action_quit(self) -> None:
+        if (
+            not self._is_conversational
+            or self._conversation_turn_in_progress
+            or self._trace_consent_pending is not None
+        ):
+            self._discard_trace_on_exit = True
+        if self._trace_consent_pending is not None:
+            self._trace_consent_pending.set()
+        if not self._conversation_turn_in_progress:
+            await asyncio.to_thread(
+                self._finalize_conversational_session,
+                discard=self._discard_trace_on_exit,
+            )
+        self._unsubscribe()
+        self.exit(self._crew_result)
+
+    def _request_trace_consent(self) -> bool:
+        """Wait in the execution worker while the UI asks for upload consent.
+
+        Unless the user already answered: turning tracing on — in the project's
+        .env, or with ``tracing=True`` — is the yes, and a modal at the end of
+        the run would be the same question a second time.
+        """
+        if self._discard_trace_on_exit:
+            return False
+        if self._tracing_was_asked_for():
+            return True
+        done = threading.Event()
+        decision: list[bool] = []
+        self._trace_consent_pending = done
+
+        def accepted(value: bool | None) -> None:
+            decision.append(value is True)
+            done.set()
+
+        def show() -> None:
+            if self._discard_trace_on_exit:
+                done.set()
+                return
+            self._consent_screen = TraceConsentScreen()
+            self.push_screen(self._consent_screen, accepted)
+
+        try:
+            self.call_from_thread(show)
+            return (
+                done.wait(timeout=20)
+                and not self._discard_trace_on_exit
+                and bool(decision)
+                and decision[0]
+            )
+        finally:
+            self._trace_consent_pending = None
+            if not self._discard_trace_on_exit:
+                self.call_from_thread(self._dismiss_consent_modal)
+
+    def action_view_traces(self) -> None:
+        """Open AMP's view of this run's traces.
+
+        crewAI prints that link after a run, but never under a TUI — its
+        console is kept out of this layout — so the link reaches here the way
+        everything else about the run does: through the record crewAI writes
+        when the spans are exported, matched to THIS app's execution.
+        """
+        if self._status != "completed":
+            return
+        # Recorded here rather than in on_button_pressed so the `t` key binding
+        # is counted too, and only once the action can actually do something.
+        self._record_tui_button_click("view_traces")
+        record = (
+            _recorded_run(self._execution_uuid) if self._execution_uuid else None
+        ) or {}
+        url = str(record.get("trace_url") or "")
+        if url:
+            self._open_report(url)
+            self.notify(url, title="Execution traces")
+            return
+
+        self.notify(
+            "This run was not traced, so there are no traces to view. "
+            "Turn tracing on and run it again."
+            if not record
+            else "This run was traced, but AMP granted no link to view it.",
+            title="Execution traces",
+            severity="warning",
+        )
+
+    def _capture_execution_uuid(self) -> None:
+        """Remember which execution this app is watching.
+
+        Read as the run announces itself, from the run's own context, and kept:
+        the uuid is gone by the time the kickoff returns, and the project's
+        record cannot say which run was THIS one.
+        """
+        if self._execution_uuid is not None:
+            return
+        try:
+            from crewai.execution import get_execution_uuid
+
+            self._execution_uuid = get_execution_uuid()
+        except Exception:  # a run without tracing simply has no execution
+            self._execution_uuid = None
+
+    def _tracing_was_asked_for(self) -> bool:
+        """Did somebody turn tracing on for this run?
+
+        Read here rather than through `tracing_asked_for()`, because the
+        ContextVar that helper reads is set where the crew is CONSTRUCTED — not
+        this worker thread — and a flow never sets it at all. So the declaration
+        is read off the object itself.
+
+        Only ONE of the helper's guards is dropped: it refuses while tracing
+        messages are suppressed, which this app does deliberately to keep
+        crewAI's console out of its own layout, and that guard is about a prompt
+        nobody would see. The others hold. A suite under test, or a TUI with no
+        interactive user behind it — embedded, redirected — has nobody whose yes
+        this could be, and gets the modal's own fail-closed answer instead.
+        """
+        import os
+
+        from crewai.events.listeners.tracing.utils import (
+            _is_interactive_terminal,
+            _is_test_environment,
+        )
+
+        if _is_test_environment() or not _is_interactive_terminal():
+            return False
+
+        if os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1"):
+            return True
+
+        return any(
+            getattr(target, "tracing", None) is True
+            for target in (self._crew, self._flow)
+            if target is not None
+        )
+
+    def _dismiss_consent_modal(self) -> None:
+        try:
+            screen = self._consent_screen
+            if screen and screen.is_attached:
+                screen.dismiss(False)
+        except Exception:  # noqa: S110
+            pass
+
+    def action_deploy_crew(self) -> None:
+        if self._status != "completed":
+            return
+        # Recorded here rather than in on_button_pressed so the `d` key binding
+        # is counted too, and only once the action can actually do something.
+        self._record_tui_button_click("deploy")
+        self._want_deploy = True
+        self._unsubscribe()
+        self.exit(self._crew_result)
+
+    def _traced_execution_id(self) -> str | None:
+        """This app's own execution, if it was traced.
+
+        Taken from the session the run itself opened, not from the project's
+        last-run record: that record is whichever run finished last anywhere in
+        the project, and a second TUI in the same project can replace it between
+        this run ending and its button being pressed. A run with no session was
+        not traced, and there is nothing to grade.
+        """
+        if self._execution_uuid is None:
+            return None
+
+        return (
+            self._execution_uuid if _trace_was_recorded(self._execution_uuid) else None
+        )
+
+    def action_evaluate_crew(self) -> None:
+        """Grade the run that just finished, here.
+
+        Unlike Deploy, this does not leave: the evaluation takes a few minutes,
+        it has a link worth showing and a verdict worth reading, and a person
+        sent back to a bare terminal to wait for them has been given the worst
+        of both. The report opens in the browser; the app keeps the link and
+        says what came back.
+        """
+        if self._status != "completed":
+            return
+
+        # An evaluation already in flight, or already answered: the button
+        # re-opens what it made rather than paying for a second one. One that
+        # STOPPED is a different matter — a timeout or a 502 is worth another
+        # press, and the run is still there to grade.
+        state = str((self._evaluation or {}).get("state"))
+        if self._evaluation is not None and state != "failed":
+            url = self._evaluation.get("url")
+            if url:
+                self._open_report(str(url))
+            return
+
+        self._record_tui_button_click("evaluate")
+        traced = self._traced_execution_id()
+        if traced is None:
+            self.notify(
+                "This run was not traced, so there is nothing to evaluate. "
+                "Turn tracing on and run it again.",
+                title="Evaluate",
+                severity="warning",
+            )
+            return
+
+        self._start_evaluation(traced)
+
+    def _start_evaluation(self, execution_id: str) -> None:
+        self._evaluation = {"state": "starting", "execution_id": execution_id}
+        # The run is over and the clock slowed to twice a second; something is
+        # moving again, so the screen moves with it.
+        self._set_tick_rate(1 / 8)
+        self._refresh_eval_button()
+        self._evaluate_worker(execution_id)
+
+    def _set_tick_rate(self, interval: float) -> None:
+        with contextlib.suppress(Exception):
+            self._tick_timer.stop()
+            self._tick_timer = self.set_interval(interval, self._tick)
+
+    @work(thread=True, exclusive=True, group="evaluation")
+    def _evaluate_worker(self, execution_id: str) -> None:
+        self._evaluate_now(execution_id)
+
+    def _evaluate_now(self, execution_id: str) -> None:
+        """AMP evaluates the run; this thread only carries the answers back."""
+        from crewai_cli.experimental.eval_crew import (
+            EvaluationStoppedError,
+            evaluate_run,
+        )
+
+        def back(handler: Callable[..., Any], *args: Any) -> None:
+            with contextlib.suppress(Exception):  # the app may be gone by now
+                self.call_from_thread(handler, *args)
+
+        try:
+            finished = evaluate_run(
+                execution_id,
+                on_started=lambda started: back(self._evaluation_started, started),
+                on_status=lambda payload: back(self._evaluation_progress, payload),
+                note=lambda text: back(self._evaluation_note, text),
+            )
+        except EvaluationStoppedError as stopped:
+            back(self._evaluation_failed, str(stopped))
+            return
+        except SystemExit as exit_:
+            # Nothing on this path should exit any more — a stop is a value
+            # now — but an exit carries a code, not a reason, and "1" on screen
+            # is worse than saying plainly that the reason did not survive.
+            back(
+                self._evaluation_failed,
+                f"The evaluation stopped without saying why (exit {exit_.code}).",
+            )
+            return
+        except Exception as error:  # a client bug is still an answer to show
+            back(self._evaluation_failed, f"{type(error).__name__}: {error}")
+            return
+        back(self._evaluation_finished, finished)
+
+    def _evaluation_started(self, started: dict[str, Any]) -> None:
+        if self._evaluation is None:
+            return
+        url = started.get("url")
+        self._evaluation.update(
+            {"state": "running", "id": started.get("id"), "url": url, "note": None}
+        )
+        self._refresh_eval_button()
+        if isinstance(url, str) and url:
+            self._open_report(url)
+
+    def _evaluation_progress(self, payload: dict[str, Any]) -> None:
+        """What the service says it is doing, in its own counting.
+
+        The report page counts the same way — one event per subject judged —
+        so a person watching both sees one number, not two.
+        """
+        if self._evaluation is None:
+            return
+        judged = planned = None
+        with contextlib.suppress(Exception):
+            events = payload.get("events") or []
+            judged = sum(
+                1 for event in events if (event.get("data") or {}).get("subject")
+            )
+            planned = next(
+                (
+                    (event.get("data") or {}).get("planned")
+                    for event in reversed(events)
+                    if (event.get("data") or {}).get("planned")
+                ),
+                None,
+            )
+        self._evaluation["note"] = (
+            f"judged {judged} of {planned}"
+            if judged and planned
+            else (f"judged {judged}" if judged else None)
+        )
+
+    def _evaluation_note(self, text: str) -> None:
+        if self._evaluation is not None:
+            self._evaluation["note"] = text
+
+    def _evaluation_finished(self, finished: dict[str, Any]) -> None:
+        if self._evaluation is None:
+            return
+        if finished.get("status") == "done":
+            self._evaluation.update(
+                {
+                    "state": "done",
+                    "verdict": finished.get("verdict") or {},
+                    "note": None,
+                    # the file the evaluation wrote, for the line printed once
+                    # the app has gone (`_print_evaluation_line`)
+                    "wrote_config": finished.get("wrote_eval_config"),
+                }
+            )
+        else:
+            self._evaluation.update(
+                {
+                    "state": "failed",
+                    "error": str(finished.get("error") or "no reason given"),
+                    "note": None,
+                }
+            )
+        self._set_tick_rate(1 / 2)
+        self._refresh_eval_button()
+
+    def _evaluation_failed(self, message: str) -> None:
+        if self._evaluation is None:
+            return
+        self._evaluation.update({"state": "failed", "error": message, "note": None})
+        self._set_tick_rate(1 / 2)
+        self._refresh_eval_button()
+
+    def _open_report(self, url: str) -> None:
+        import webbrowser
+
+        with contextlib.suppress(Exception):
+            webbrowser.open(url)
+
+    def _evaluating(self) -> bool:
+        return (self._evaluation or {}).get("state") in ("starting", "running")
+
+    def _refresh_eval_button(self) -> None:
+        """The button while the evaluation runs: still teal, still pressable —
+        the report page is where the progress is — and spinning, because a
+        label that never moves reads as a screen that has stopped."""
+        labels = {
+            "done": "Open eval report",
+            "failed": "Evaluate",
+        }
+        with contextlib.suppress(Exception):
+            button = self.query_one("#btn-eval", Button)
+            state = str((self._evaluation or {}).get("state"))
+            button.label = (
+                f"{self._spinner()} Evaluating…"
+                if self._evaluating()
+                else labels.get(state, "Evaluate")
+            )
+
+    def _record_tui_button_click(self, button_name: str) -> None:
+        try:
+            if self._telemetry is None:
+                self._telemetry = Telemetry()
+                self._telemetry.set_tracer()
+            self._telemetry.feature_usage_span(f"cli_usage:{button_name}")
+        except Exception:  # noqa: S110
+            pass
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-traces":
+            self.action_view_traces()
+        elif event.button.id == "btn-eval":
+            self.action_evaluate_crew()
+        elif event.button.id == "btn-deploy":
+            self.action_deploy_crew()
+
+    def _scroll_to_result(self) -> None:
+        try:
+            scroll = self.query_one("#scroll-area", VerticalScroll)
+            self.call_later(lambda: scroll.scroll_end(animate=False))
+        except Exception:  # noqa: S110
+            pass
+
+    def _focus_activity_log(self) -> None:
+        if not self._is_mounted:
+            return
+        log_panel = self.query_one("#log-panel", VerticalScroll)
+        if log_panel.display:
+            log_panel.focus()
+
+    def _refresh_log_panel(self) -> None:
+        if not self._is_mounted:
+            return
+        with self._lock:
+            if self.query_one("#log-panel").display:
+                self._render_log_panel()
+
+    def on_click(self, event: Any) -> None:
+        try:
+            widget = self.query_one("#log-content", Static)
+        except Exception:
+            return
+        if not widget.region.contains(event.screen_x, event.screen_y):
+            return
+        scroll = self.query_one("#log-panel", VerticalScroll)
+        clicked_line = event.screen_y - widget.region.y + int(scroll.scroll_y)
+        with self._lock:
+            for idx, start, end in self._log_line_map:
+                if start <= clicked_line < end:
+                    self._log_cursor = idx
+                    if idx in self._log_expanded:
+                        self._log_expanded.discard(idx)
+                    else:
+                        self._log_expanded.add(idx)
+                    break
+        self._refresh_log_panel()
+
+    # ── Tick (8 fps) ────────────────────────────────────────
+
+    def _tick(self) -> None:
+        self._frame += 1
+        elapsed = getattr(self, "_elapsed_frozen", None) or (
+            time.time() - self._start_time
+        )
+        mins, secs = divmod(int(elapsed), 60)
+        self.sub_title = f"{mins}:{secs:02d}"
+
+        try:
+            with self._lock:
+                if self._evaluating():
+                    self._refresh_eval_button()
+                self._render_sidebar()
+                self._render_task_header()
+                self._render_main_content()
+                if self.query_one("#log-panel").display:
+                    self._render_log_panel()
+        except NoMatches:
+            return
+
+    def _spinner(self) -> str:
+        return _SPINNER[self._frame % len(_SPINNER)]
+
+    # ── Sidebar rendering ───────────────────────────────────
+
+    def _render_sidebar(self) -> None:
+        widget = self.query_one("#sidebar-content", Static)
+        t = Text()
+        sidebar_width = 30
+
+        if self._is_conversational:
+            t.append("  CONVERSATION\n", style=f"bold {_C_PRIMARY}")
+            t.append("\n")
+            if self._conversation_turn_in_progress:
+                t.append(f"  {self._spinner()} ", style=_C_PRIMARY)
+                t.append("Working\n", style=f"bold {_C_TEXT}")
+            elif self._status == "failed":
+                t.append("  ✘ Failed\n", style=_C_RED)
+            else:
+                t.append("  ● Ready\n", style=_C_GREEN)
+            t.append(f"  Turns {self._conversation_turns}\n", style=_C_DIM)
+            t.append("\n")
+            t.append("  TOKENS\n", style=f"bold {_C_PRIMARY}")
+            t.append("\n")
+            out = self._output_tokens + self._live_out_tokens
+            t.append(f"  ↑ {self._input_tokens:,}\n", style=_C_DIM)
+            t.append(f"  ↓ {out:,}\n", style=_C_DIM)
+            t.append("\n")
+            t.append("  COMMANDS\n", style=f"bold {_C_PRIMARY}")
+            t.append("\n")
+            t.append("  quit / exit\n", style=_C_DIM)
+            widget.update(t)
+            return
+
+        if self._is_flow_run:
+            t.append("  STEPS\n", style=f"bold {_C_PRIMARY}")
+            t.append("\n")
+            if not self._flow_steps:
+                t.append("  ○ waiting…\n", style=_C_DIM)
+            for step in self._flow_steps:
+                name = step["name"]
+                max_name = sidebar_width - 6
+                if len(name) > max_name:
+                    name = name[: max_name - 1] + "…"
+                status = step.get("status", "pending")
+                if status == "done":
+                    t.append("  ✔ ", style=_C_GREEN)
+                    t.append(name, style=_C_DIM)
+                elif status == "active":
+                    t.append(f"  {self._spinner()} ", style=_C_PRIMARY)
+                    t.append(name, style=f"bold {_C_TEXT}")
+                elif status == "failed":
+                    t.append("  ✘ ", style=_C_RED)
+                    t.append(name, style=_C_RED)
+                elif status == "paused":
+                    t.append("  ⏸ ", style=_C_TEAL)
+                    t.append(name, style=_C_TEAL)
+                else:
+                    t.append("  ○ ", style=_C_DIM)
+                    t.append(name, style=_C_DIM)
+                if step.get("call_type"):
+                    t.append(f"  ({step['call_type']})", style=_C_DIM)
+                t.append("\n")
+
+            t.append("\n")
+            t.append("  TOKENS\n", style=f"bold {_C_PRIMARY}")
+            t.append("\n")
+            out = self._output_tokens + self._live_out_tokens
+            t.append(f"  ↑ {self._input_tokens:,}\n", style=_C_DIM)
+            t.append(f"  ↓ {out:,}\n", style=_C_DIM)
+            widget.update(t)
+            return
+
+        t.append("  TASKS\n", style=f"bold {_C_PRIMARY}")
+        t.append("\n")
+
+        for i in range(1, self._total_tasks + 1):
+            status = self._task_statuses.get(i, "pending")
+            name = (
+                self._task_names[i - 1] if i <= len(self._task_names) else f"Task {i}"
+            )
+            max_name = sidebar_width - 6
+            if len(name) > max_name:
+                name = name[: max_name - 1] + "…"
+
+            if status == "done":
+                t.append("  ✔ ", style=_C_GREEN)
+                t.append(f"{name}\n", style=_C_DIM)
+            elif status == "active":
+                t.append(f"  {self._spinner()} ", style=_C_PRIMARY)
+                t.append(f"{name}\n", style=f"bold {_C_TEXT}")
+            elif status == "failed":
+                t.append("  ✘ ", style=_C_RED)
+                t.append(f"{name}\n", style=_C_RED)
+            else:
+                t.append("  ○ ", style=_C_DIM)
+                t.append(f"{name}\n", style=_C_DIM)
+
+        t.append("\n")
+        t.append("  AGENTS\n", style=f"bold {_C_PRIMARY}")
+        t.append("\n")
+
+        for name in self._agent_names:
+            max_name = sidebar_width - 6
+            disp = name[: max_name - 1] + "…" if len(name) > max_name else name
+            if name == self._current_agent:
+                t.append(f"  ● {disp}\n", style=f"bold {_C_PRIMARY}")
+            else:
+                t.append(f"    {disp}\n", style=_C_DIM)
+
+        t.append("\n")
+        t.append("  TOKENS\n", style=f"bold {_C_PRIMARY}")
+        t.append("\n")
+
+        out = self._output_tokens + self._live_out_tokens
+        t.append(f"  ↑ {self._input_tokens:,}\n", style=_C_DIM)
+        t.append(f"  ↓ {out:,}\n", style=_C_DIM)
+
+        widget.update(t)
+
+    # ── Task header rendering ───────────────────────────────
+
+    def _append_evaluation(self, t: Text) -> None:
+        """The evaluation under the run's own line: what it is doing, where to
+        read it, and what it answered. Everything here came over the wire, so
+        it is appended to the Text and never parsed as markup."""
+        evaluation = self._evaluation
+        if not evaluation:
+            return
+
+        state = str(evaluation.get("state"))
+        url = str(evaluation.get("url") or "")
+        t.append("\n")
+        if state in ("starting", "running"):
+            t.append(f"{self._spinner()} ", style=_C_TEAL)
+            t.append("Evaluating this run", style=f"bold {_C_TEAL}")
+            note = evaluation.get("note")
+            if note:
+                t.append(f"  {note}", style=_C_DIM)
+        elif state == "done":
+            verdict = evaluation.get("verdict") or {}
+            gate = str(verdict.get("gate") or "").upper()
+            mark, style = {
+                "PASSED": ("✔ ", f"bold {_C_GREEN}"),
+                "FAILED": ("✘ ", f"bold {_C_RED}"),
+            }.get(gate, ("• ", f"bold {_C_TEAL}"))
+            t.append(mark, style=style)
+            t.append(f"Goal gate {gate or 'graded'}", style=style)
+            grades = verdict.get("grades")
+            if isinstance(grades, dict):
+                for area, grade in grades.items():
+                    t.append(f"  {area} ", style=_C_DIM)
+                    t.append(f"{grade if grade is not None else '—'}/5", style=_C_TEXT)
+        else:
+            t.append("✘ ", style=f"bold {_C_RED}")
+            t.append("Evaluation stopped", style=f"bold {_C_RED}")
+            t.append(f"  {evaluation.get('error') or ''}", style=_C_DIM)
+
+        if url:
+            t.append("\n")
+            t.append(url, style=f"{_C_TEAL} underline")
+
+    def _render_task_header(self) -> None:
+        widget = self.query_one("#task-header", Static)
+        t = Text()
+
+        if self._is_conversational:
+            if self._status == "failed":
+                t.append("✘ ", style=f"bold {_C_RED}")
+                t.append("Failed", style=f"bold {_C_RED}")
+                if self._error:
+                    t.append(f"\n{self._error[:120]}", style=_C_RED)
+            elif self._conversation_turn_in_progress:
+                t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+                t.append("Flow is responding", style=f"bold {_C_PRIMARY}")
+            else:
+                t.append("● ", style=f"bold {_C_GREEN}")
+                t.append("Conversational flow ready", style=f"bold {_C_GREEN}")
+                t.append("  Type a message below", style=_C_DIM)
+            widget.update(t)
+            return
+
+        if self._is_flow_run:
+            if self._status == "completed":
+                elapsed = self._elapsed_frozen or (time.time() - self._start_time)
+                t.append("✔ ", style=f"bold {_C_GREEN}")
+                t.append("Flow complete", style=f"bold {_C_GREEN}")
+                t.append(f"  {elapsed:.1f}s", style=_C_DIM)
+                out = self._output_tokens + self._live_out_tokens
+                parts = []
+                if self._input_tokens:
+                    parts.append(f"↑{self._input_tokens:,}")
+                if out:
+                    parts.append(f"↓{out:,}")
+                if parts:
+                    t.append(f"  {' '.join(parts)} tokens", style=_C_DIM)
+                self._append_evaluation(t)
+            elif self._status == "failed":
+                t.append("✘ ", style=f"bold {_C_RED}")
+                t.append("Failed", style=f"bold {_C_RED}")
+                if self._error:
+                    t.append(f"\n{self._error[:120]}", style=_C_RED)
+                self._append_evaluation(t)
+            elif self._current_method:
+                paused = any(
+                    s["name"] == self._current_method and s["status"] == "paused"
+                    for s in self._flow_steps
+                )
+                if paused:
+                    t.append("⏸ ", style=_C_TEAL)
+                    t.append(self._current_method, style=f"bold {_C_TEAL}")
+                else:
+                    t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+                    t.append(self._current_method, style=f"bold {_C_PRIMARY}")
+                call_type = self._flow_method_types.get(self._current_method)
+                if call_type:
+                    t.append(f"  ({call_type})", style=_C_DIM)
+                if paused:
+                    t.append("  waiting for feedback", style=_C_DIM)
+                elif self._current_agent:
+                    t.append("\nAgent: ", style=_C_DIM)
+                    t.append(self._current_agent, style=f"bold {_C_TEXT}")
+            else:
+                t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+                # "Working…" once a step has run (between/after methods);
+                # "Starting flow…" only before the first method.
+                t.append(
+                    "Working…" if self._flow_steps else "Starting flow…",
+                    style=_C_DIM,
+                )
+            widget.update(t)
+            return
+
+        if self._status == "completed":
+            elapsed = self._elapsed_frozen or (time.time() - self._start_time)
+            t.append("✔ ", style=f"bold {_C_GREEN}")
+            t.append(f"Completed {self._total_tasks} tasks", style=f"bold {_C_GREEN}")
+            t.append(f"  {elapsed:.1f}s", style=_C_DIM)
+
+            out = self._output_tokens + self._live_out_tokens
+            parts = []
+            if self._input_tokens:
+                parts.append(f"↑{self._input_tokens:,}")
+            if out:
+                parts.append(f"↓{out:,}")
+            if parts:
+                t.append(f"  {' '.join(parts)} tokens", style=_C_DIM)
+            self._append_evaluation(t)
+
+        elif self._status == "failed":
+            t.append("✘ ", style=f"bold {_C_RED}")
+            t.append("Failed", style=f"bold {_C_RED}")
+            if self._error:
+                t.append(f"\n{self._error[:120]}", style=_C_RED)
+            self._append_evaluation(t)
+
+        elif self._current_task_idx > 0:
+            t.append(
+                f"Task {self._current_task_idx}/{self._total_tasks}",
+                style=f"bold {_C_PRIMARY}",
+            )
+            if self._current_task_desc:
+                desc = self._current_task_desc
+                if len(desc) > 80:
+                    desc = desc[:79] + "…"
+                t.append(f"  —  {desc}", style=_C_TEXT)
+            if self._current_agent:
+                t.append("\nAgent: ", style=_C_DIM)
+                t.append(self._current_agent, style=f"bold {_C_TEXT}")
+
+        else:
+            t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+            if not self._crew:
+                t.append("Loading crew…", style=_C_DIM)
+            else:
+                t.append("Starting crew…", style=_C_DIM)
+
+        widget.update(t)
+
+    # ── Main content rendering ──────────────────────────────
+
+    def _render_main_content(self) -> None:
+        widget = self.query_one("#main-content", Static)
+        t = Text()
+        should_scroll = False
+
+        if self._is_conversational:
+            if not self._conversation_messages and not self._is_streaming:
+                t.append("  Start the conversation below.\n", style=_C_MUTED)
+            for role, content in self._conversation_messages:
+                if role == "user":
+                    t.append("\n  You\n", style=f"bold {_C_TEAL}")
+                else:
+                    t.append("\n  Assistant\n", style=f"bold {_C_PRIMARY}")
+                rendered = _format_json_in_text(_unescape_text(content))
+                for line in rendered.split("\n"):
+                    style = _C_TEXT if role == "assistant" else _C_DIM
+                    t.append(f"  {line}\n", style=style)
+
+            if self._is_streaming and self._streaming_text:
+                text = _unescape_text(self._filtered_streaming_text())
+                if text.strip():
+                    t.append("\n  Assistant\n", style=f"bold {_C_PRIMARY}")
+                    for line in text.rstrip().split("\n")[-40:]:
+                        t.append(f"  {line}\n", style=_C_TEXT)
+                    should_scroll = True
+
+            if self._status == "failed" and self._error:
+                t.append("\n  Error\n", style=f"bold {_C_RED}")
+                t.append(f"  {self._error}\n", style=_C_RED)
+
+            widget.update(t)
+            if should_scroll:
+                try:
+                    self.query_one("#scroll-area", VerticalScroll).scroll_end(
+                        animate=False
+                    )
+                except Exception:  # noqa: S110
+                    pass
+            return
+
+        # Plan section
+        if self._plan and self._plan.get("steps"):
+            plan_title = self._plan.get("plan", "Plan")
+            completed = self._status == "completed" and all(
+                self._plan_step_status.get(step.get("step_number")) == "done"
+                for step in self._plan["steps"]
+            )
+            if completed:
+                total = len(self._plan["steps"])
+                t.append("  PLAN  ", style=f"bold {_C_MUTED}")
+                t.append(f"✔ {total} steps completed\n\n", style=_C_MUTED)
+            else:
+                t.append("  PLAN\n", style=f"bold {_C_MUTED}")
+                t.append("  ▸ ", style=f"bold {_C_TEAL}")
+                t.append(f"{plan_title[:80]}\n", style=f"bold {_C_TEAL}")
+                t.append("\n")
+
+                for step in self._plan["steps"]:
+                    sn = step.get("step_number", 0)
+                    desc = step.get("description", "")
+                    short = desc[:90]
+                    if len(desc) > 90:
+                        short += "…"
+
+                    st = self._plan_step_status.get(sn, "pending")
+                    if st == "done":
+                        t.append("  ✔ ", style=_C_GREEN)
+                        t.append(f"{sn}. {short}\n", style=_C_MUTED)
+                    elif st == "failed":
+                        t.append("  ✘ ", style=_C_RED)
+                        t.append(f"{sn}. {short}\n", style=_C_RED)
+                    elif st == "active":
+                        t.append(f"  {self._spinner()} ", style=_C_PRIMARY)
+                        t.append(f"{sn}. {short}\n", style=_C_TEXT)
+                    else:
+                        t.append("  ○ ", style=_C_MUTED)
+                        t.append(f"{sn}. {short}\n", style=_C_MUTED)
+                t.append("\n")
+
+        # Current activity indicator
+        if self._current_step:
+            sty, msg, _detail = self._current_step
+            if sty == "yellow":
+                t.append(f"  {self._spinner()} ", style=_C_PRIMARY)
+                t.append(f"{msg}\n\n", style=_C_DIM)
+            elif sty == "teal":
+                t.append(f"  {self._spinner()} ", style=_C_TEAL)
+                t.append(f"{msg}\n\n", style=_C_TEAL)
+
+        # Streaming output
+        if self._is_streaming and self._streaming_text:
+            text = self._filtered_streaming_text()
+            text = _unescape_text(text)
+            if text.strip():
+                lines = text.rstrip().split("\n")
+                for line in lines[-40:]:
+                    t.append(f"  {line}\n", style=_C_TEXT)
+            should_scroll = True
+
+        # Final output
+        if self._status == "completed" and self._final_output:
+            t.append("\n")
+            t.append("  ━━━ Result ━━━\n\n", style=f"bold {_C_TEAL}")
+            output = _unescape_text(self._final_output)
+            output = _format_json_in_text(output)
+            is_json = output.lstrip()[:1] in ("{", "[", '"')
+            for line in output.split("\n"):
+                t.append("  ")
+                if is_json:
+                    _colorize_json_line(t, line)
+                else:
+                    t.append(line, style=_C_TEXT)
+                t.append("\n")
+
+        widget.update(t)
+
+        if should_scroll:
+            try:
+                scroll = self.query_one("#scroll-area", VerticalScroll)
+                if (
+                    scroll.max_scroll_y <= 0
+                    or scroll.scroll_y >= scroll.max_scroll_y - 50
+                ):
+                    scroll.scroll_end(animate=False)
+            except Exception:  # noqa: S110
+                pass
+
+    # ── Log panel rendering ──────────────────────────────────
+
+    def _render_log_panel(self) -> None:
+        widget = self.query_one("#log-content", Static)
+        t = Text()
+        t.append("  ACTIVITY LOG", style=f"bold {_C_PRIMARY}")
+        t.append("  ↑↓ navigate  enter expand/collapse\n", style=_C_MUTED)
+
+        if not self._log_entries:
+            t.append("\n  No activity yet.\n", style=_C_MUTED)
+            widget.update(t)
+            return
+
+        if self._log_cursor >= len(self._log_entries):
+            self._log_cursor = len(self._log_entries) - 1
+
+        cursor_line = 0
+        line_map: list[tuple[int, int, int]] = []
+        now = time.time()
+        for i, entry in enumerate(self._log_entries):
+            entry_start_line = t.plain.count("\n")
+            name = entry["tool_name"]
+            status = entry["status"]
+            focused = i == self._log_cursor
+            expanded = i in self._log_expanded
+            if focused:
+                cursor_line = entry_start_line
+
+            if status == "running" and (now - entry["start_time"]) > 120:
+                entry["status"] = "timeout"
+                entry["error"] = "No response received (timeout)"
+                entry["duration"] = now - entry["start_time"]
+                status = "timeout"
+                self._log_expanded.add(i)
+
+            arrow = "▾" if expanded else "▸"
+
+            if focused:
+                t.append("\n")
+                t.append(" > ", style=_C_PRIMARY)
+            else:
+                t.append("\n   ", style="")
+
+            if status == "running":
+                elapsed = now - entry["start_time"]
+                t.append(f"{arrow} ", style=_C_MUTED)
+                t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+                t.append(f"{name}", style=f"bold {_C_TEXT}" if focused else _C_TEXT)
+                t.append(f"  {elapsed:.0f}s\n", style=_C_MUTED)
+            elif status == "success":
+                t.append(f"{arrow} ", style=_C_MUTED)
+                t.append("✔ ", style=_C_GREEN)
+                t.append(f"{name}", style=f"bold {_C_TEXT}" if focused else _C_DIM)
+                if entry.get("from_cache"):
+                    t.append("  cached\n", style=_C_TEAL)
+                else:
+                    t.append(f"  {entry['duration']:.1f}s\n", style=_C_MUTED)
+            elif status in ("error", "timeout"):
+                t.append(f"{arrow} ", style=_C_MUTED)
+                t.append("✘ ", style=_C_RED)
+                t.append(f"{name}", style=f"bold {_C_RED}")
+                dur = f"  {entry['duration']:.1f}s" if entry.get("duration") else ""
+                t.append(f"{dur}\n", style=_C_MUTED)
+
+            if not expanded:
+                continue
+
+            indent = "       "
+            if entry.get("args"):
+                t.append(f"{indent}Args:\n", style=_C_MUTED)
+                try:
+                    parsed = _json.loads(entry["args"])
+                    formatted = _json.dumps(parsed, indent=2, ensure_ascii=False)
+                except (ValueError, TypeError):
+                    formatted = entry["args"]
+                _append_highlighted(t, formatted, indent)
+
+            if status in ("error", "timeout") and entry.get("error"):
+                t.append(f"{indent}Error:\n", style=_C_RED)
+                for line in str(entry["error"]).split("\n"):
+                    if line.strip():
+                        t.append(f"{indent}  {line}\n", style=_C_RED)
+
+            if status == "success" and entry.get("result"):
+                t.append(f"{indent}Result:\n", style=_C_TEAL)
+                result_text = _unescape_text(str(entry["result"]))
+                result_text = _format_json_in_text(result_text)
+                total = _append_highlighted(t, result_text, indent)
+                if total > 50:
+                    t.append(f"{indent}  … ({total} lines total)\n", style=_C_MUTED)
+
+            line_map.append((i, entry_start_line, t.plain.count("\n")))
+
+        self._log_line_map = line_map
+        widget.update(t)
+
+        if self._log_scroll_needed:
+            self._log_scroll_needed = False
+            try:
+                log_scroll = self.query_one("#log-panel", VerticalScroll)
+                panel_h = log_scroll.size.height
+                cursor_top = cursor_line
+                cursor_bottom = cursor_line + 2
+                for _idx, _start, _end in self._log_line_map:
+                    if _idx == self._log_cursor:
+                        cursor_bottom = _end
+                        break
+                visible_top = int(log_scroll.scroll_y)
+                visible_bottom = visible_top + panel_h
+                if cursor_top < visible_top + 1:
+                    log_scroll.scroll_to(y=max(0, cursor_top - 1), animate=False)
+                elif cursor_bottom > visible_bottom - 1:
+                    log_scroll.scroll_to(
+                        y=max(0, cursor_bottom - panel_h + 1), animate=False
+                    )
+            except Exception:  # noqa: S110
+                pass
+
+    def _filtered_streaming_text(self) -> str:
+        if not self._streaming_text:
+            return ""
+        text = self._streaming_text
+
+        # Strip plan JSON — both complete (already parsed) and in-progress
+        plan_start = text.find('{"plan"')
+        if plan_start >= 0:
+            depth = 0
+            for i in range(plan_start, len(text)):
+                if text[i] == "{":
+                    depth += 1
+                elif text[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        text = (text[:plan_start] + text[i + 1 :]).strip()
+                        break
+            else:
+                # Incomplete JSON — hide the partial blob
+                text = text[:plan_start].strip()
+
+        text = self._strip_step_observation_json(text)
+        return _format_json_in_text(text)
+
+    def _strip_step_observation_json(self, text: str) -> str:
+        """Hide structured step-observation JSON from the live transcript."""
+        if "step_completed_successfully" not in text:
+            return text
+
+        result: list[str] = []
+        decoder = _json.JSONDecoder()
+        i = 0
+        while i < len(text):
+            start = text.find("{", i)
+            if start < 0:
+                result.append(text[i:])
+                break
+
+            result.append(text[i:start])
+            try:
+                parsed, offset = decoder.raw_decode(text[start:])
+            except ValueError:
+                if "step_completed_successfully" in text[start:]:
+                    break
+                result.append(text[start])
+                i = start + 1
+                continue
+
+            end = start + offset
+            if self._is_step_observation_payload(parsed):
+                i = end
+                continue
+
+            result.append(text[start:end])
+            i = end
+
+        return "".join(result).strip()
+
+    @staticmethod
+    def _is_step_observation_payload(payload: Any) -> bool:
+        return (
+            isinstance(payload, dict)
+            and "step_completed_successfully" in payload
+            and "key_information_learned" in payload
+        )
+
+    # ── Event helpers ───────────────────────────────────────
+
+    def _complete_step(self, style: str, message: str, detail: str = "") -> None:
+        with self._lock:
+            if self._current_step:
+                prev_style, prev_msg, prev_detail = self._current_step
+                skip = prev_msg in (
+                    "Thinking…",
+                    "Generating response…",
+                ) or prev_msg.startswith("⚡")
+                if not skip:
+                    self._timeline.append((prev_style, prev_msg, prev_detail))
+            self._current_step = (style, message, detail)
+            if len(self._timeline) > 20:
+                self._timeline = self._timeline[-20:]
+
+    def _replace_step(self, style: str, message: str, detail: str = "") -> None:
+        """Replace current step in-place (no archive). Used for tool results."""
+        with self._lock:
+            self._current_step = (style, message, detail)
+
+    def _set_step(self, style: str, message: str) -> None:
+        with self._lock:
+            self._current_step = (style, message, "")
+
+    # ── Plan detection ──────────────────────────────────────
+
+    def _try_parse_plan(self, text: str) -> None:
+        stripped = text.strip()
+        start = stripped.find('{"plan"')
+        if start < 0:
+            return
+        depth = 0
+        for i in range(start, len(stripped)):
+            if stripped[i] == "{":
+                depth += 1
+            elif stripped[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        data = _json.loads(stripped[start : i + 1])
+                        if "steps" in data and isinstance(data["steps"], list):
+                            self._plan = data
+                            self._plan_step_status = {
+                                s["step_number"]: "pending"
+                                for s in data["steps"]
+                                if "step_number" in s
+                            }
+                            self._awaiting_replan = False
+                    except (ValueError, KeyError):
+                        # Best-effort parse of streamed planner output:
+                        # partial or non-plan JSON is expected and ignored.
+                        pass
+                    return
+
+    def _set_plan_step_status(self, step_number: int, status: str) -> None:
+        """Set status for an explicit plan step reported by the planner."""
+        if not self._plan or step_number not in self._plan_step_status:
+            return
+
+        self._plan_step_status[step_number] = status
+
+    def _mark_plan_goal_achieved(self, step_number: int | None = None) -> None:
+        """Collapse early-goal/skipped plan steps into completed UI state."""
+        if not self._plan:
+            return
+
+        if step_number is not None:
+            self._set_plan_step_status(step_number, "done")
+
+        for sn, current in list(self._plan_step_status.items()):
+            if current in ("pending", "active"):
+                self._plan_step_status[sn] = "done"
+
+    def _collapse_plan_on_task_done(self) -> None:
+        """Collapse unfinished display-only plan steps once the task succeeds."""
+        if not self._plan:
+            return
+
+        for sn, current in list(self._plan_step_status.items()):
+            if current in ("pending", "active"):
+                self._plan_step_status[sn] = "done"
+
+    def _pop_task_state(self, event: Any) -> dict[str, Any]:
+        """Return the start-time state for a completion/failure event's task.
+
+        Tasks can run async/overlapping, so the event's task identity is
+        matched against the state registered when the task started rather
+        than assuming the most recently started task. Falls back to the
+        current shared state for unmatched events. Caller must hold
+        ``self._lock``.
+        """
+        task = getattr(event, "task", None)
+        candidates: list[str] = []
+        if task is not None:
+            task_id = str(getattr(task, "id", "") or "")
+            if task_id:
+                candidates.append(task_id)
+            desc = getattr(task, "name", "") or getattr(task, "description", "") or ""
+            if desc:
+                candidates.append(desc)
+        event_task_name = getattr(event, "task_name", "") or ""
+        if event_task_name:
+            candidates.append(event_task_name)
+        for key in candidates:
+            state = self._task_state_by_key.pop(key, None)
+            if state is not None:
+                return state
+        return {
+            "idx": self._current_task_idx,
+            "desc": self._current_task_desc,
+            "agent": self._current_agent,
+            "start_time": self._task_start_time,
+        }
+
+    def _prepare_for_replan(self) -> None:
+        """Keep current statuses visible while allowing the next plan to replace it."""
+        self._awaiting_replan = True
+
+    def _apply_plan_refinements(self, refinements: list[str] | None) -> None:
+        """Apply refined descriptions while leaving statuses as pending/done/failed."""
+        if not self._plan or not refinements:
+            return
+
+        steps = self._plan.get("steps")
+        if not isinstance(steps, list):
+            return
+
+        steps_by_number = {
+            step.get("step_number"): step for step in steps if isinstance(step, dict)
+        }
+        for refinement in refinements:
+            match = _REFINEMENT_RE.match(refinement)
+            if not match:
+                continue
+            step_number = int(match.group(1))
+            description = match.group(2).strip()
+            step = steps_by_number.get(step_number)
+            if step is not None and description:
+                step["description"] = description
+
+    def _try_parse_step_observation(self, text: str) -> bool:
+        """Parse streamed observation JSON and update the exact step it names."""
+        if "step_completed_successfully" not in text:
+            return False
+
+        decoder = _json.JSONDecoder()
+        updated = False
+        i = 0
+        while i < len(text):
+            start = text.find("{", i)
+            if start < 0:
+                break
+            try:
+                payload, offset = decoder.raw_decode(text[start:])
+            except ValueError:
+                i = start + 1
+                continue
+
+            if self._is_step_observation_payload(payload):
+                step_number = self._observation_step_number(payload)
+                if step_number is not None:
+                    status = (
+                        "done"
+                        if payload.get("step_completed_successfully") is True
+                        else "failed"
+                    )
+                    self._set_plan_step_status(step_number, status)
+                    if payload.get("goal_already_achieved") is True:
+                        self._mark_plan_goal_achieved(step_number)
+                    updated = True
+            i = start + max(offset, 1)
+
+        return updated
+
+    def _observation_step_number(self, payload: dict[str, Any]) -> int | None:
+        raw_step_number = payload.get("step_number")
+        if isinstance(raw_step_number, int):
+            return raw_step_number
+
+        searchable = " ".join(
+            str(payload.get(field) or "")
+            for field in ("key_information_learned", "replan_reason")
+        )
+        match = _STEP_NUMBER_RE.search(searchable)
+        if not match:
+            return None
+
+        return int(match.group(1))
+
+    # ── Event subscription ──────────────────────────────────
+
+    def _register_handler(self, event_type: type, handler: Any) -> None:
+        self._event_handlers.append((event_type, handler))
+
+    def _unsubscribe(self) -> None:
+        if not self._event_handlers:
+            return
+        try:
+            from crewai.events.event_bus import crewai_event_bus
+
+            for event_type, handler in self._event_handlers:
+                crewai_event_bus.off(event_type, handler)
+        except Exception:  # noqa: S110
+            pass
+        self._event_handlers.clear()
+
+    def _has_running_memory_save_locked(self) -> bool:
+        return any(
+            entry["tool_name"] == "memory_save" and entry["status"] == "running"
+            for entry in self._log_entries
+        )
+
+    def _on_memory_save_drain_elapsed(self) -> None:
+        self._memory_save_drain_timer = None
+        self._unsubscribe_if_no_running_memory_save()
+
+    def _schedule_memory_save_drain_unsubscribe(self) -> bool:
+        loop = getattr(self, "_loop", None)
+        if loop is None:
+            return False
+        if getattr(self, "_thread_id", None) != threading.get_ident():
+            try:
+                loop.call_soon_threadsafe(self._schedule_memory_save_drain_unsubscribe)
+            except RuntimeError:
+                return False
+            return True
+        if self._memory_save_drain_timer is not None:
+            self._memory_save_drain_timer.stop()
+        self._memory_save_drain_timer = self.set_timer(
+            _MEMORY_SAVE_DRAIN_GRACE_SECONDS,
+            self._on_memory_save_drain_elapsed,
+            name="memory-save-drain",
+        )
+        return True
+
+    def _unsubscribe_if_no_running_memory_save(
+        self, *, wait_for_queued: bool = False
+    ) -> None:
+        with self._lock:
+            should_unsubscribe = (
+                self._status
+                in {
+                    "completed",
+                    "failed",
+                }
+                and not self._has_running_memory_save_locked()
+            )
+
+        if should_unsubscribe:
+            if wait_for_queued and self._schedule_memory_save_drain_unsubscribe():
+                return
+            self._unsubscribe()
+
+    def _subscribe(self) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.crew_events import CrewKickoffStartedEvent
+        from crewai.events.types.flow_events import (
+            FlowStartedEvent,
+            MethodExecutionFailedEvent,
+            MethodExecutionFinishedEvent,
+            MethodExecutionPausedEvent,
+            MethodExecutionStartedEvent,
+        )
+        from crewai.events.types.llm_events import (
+            LLMCallCompletedEvent,
+            LLMCallStartedEvent,
+            LLMStreamChunkEvent,
+        )
+        from crewai.events.types.logging_events import (
+            AgentLogsExecutionEvent,
+            AgentLogsStartedEvent,
+        )
+        from crewai.events.types.observation_events import (
+            GoalAchievedEarlyEvent,
+            PlanRefinementEvent,
+            PlanReplanTriggeredEvent,
+            PlanStepCompletedEvent,
+            PlanStepStartedEvent,
+            StepObservationCompletedEvent,
+            StepObservationFailedEvent,
+            StepObservationStartedEvent,
+        )
+        from crewai.events.types.task_events import (
+            TaskCompletedEvent,
+            TaskFailedEvent,
+            TaskStartedEvent,
+        )
+        from crewai.events.types.tool_usage_events import (
+            ToolUsageErrorEvent,
+            ToolUsageFinishedEvent,
+            ToolUsageStartedEvent,
+        )
+
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
+            self._capture_execution_uuid()
+            with self._lock:
+                # In flow mode the app is named for the flow; a nested crew's
+                # kickoff (a `call: crew` step) must not rename it.
+                if event.crew_name and not self._is_flow_run:
+                    self._crew_name = event.crew_name
+                    self.title = f"CrewAI — {event.crew_name}"
+                self._status = "working"
+
+        self._register_handler(CrewKickoffStartedEvent, on_crew_started)
+
+        # ── Declarative-flow method events → STEPS panel ────────
+        @crewai_event_bus.on(FlowStartedEvent)
+        def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
+            self._capture_execution_uuid()
+            with self._lock:
+                self._status = "working"
+
+        self._register_handler(FlowStartedEvent, on_flow_started)
+
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def on_method_started(source: Any, event: MethodExecutionStartedEvent) -> None:
+            with self._lock:
+                name = event.method_name
+                self._current_method = name
+                # Agent is per-method; clear it so the header doesn't show the
+                # previous method's agent until a new agent event arrives.
+                self._current_agent = ""
+                for step in self._flow_steps:
+                    if step["name"] == name:
+                        step["status"] = "active"
+                        break
+                else:
+                    self._flow_steps.append(
+                        {
+                            "name": name,
+                            "call_type": self._flow_method_types.get(name),
+                            "status": "active",
+                        }
+                    )
+
+        self._register_handler(MethodExecutionStartedEvent, on_method_started)
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def on_method_finished(
+            source: Any, event: MethodExecutionFinishedEvent
+        ) -> None:
+            with self._lock:
+                self._set_flow_step_status(event.method_name, "done")
+                self._clear_current_method(event.method_name)
+
+        self._register_handler(MethodExecutionFinishedEvent, on_method_finished)
+
+        @crewai_event_bus.on(MethodExecutionFailedEvent)
+        def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
+            with self._lock:
+                self._set_flow_step_status(event.method_name, "failed")
+                self._clear_current_method(event.method_name)
+
+        self._register_handler(MethodExecutionFailedEvent, on_method_failed)
+
+        @crewai_event_bus.on(MethodExecutionPausedEvent)
+        def on_method_paused(source: Any, event: MethodExecutionPausedEvent) -> None:
+            # A @human_feedback method paused; flow status panels are suppressed
+            # in TUI mode, so surface the wait in STEPS/header instead of leaving
+            # a spinner. _current_method stays pointed at it.
+            with self._lock:
+                self._set_flow_step_status(event.method_name, "paused")
+
+        self._register_handler(MethodExecutionPausedEvent, on_method_paused)
+
+        @crewai_event_bus.on(TaskStartedEvent)
+        def on_task_started(source: Any, event: TaskStartedEvent) -> None:
+            with self._lock:
+                self._current_task_idx += 1
+                idx = self._current_task_idx
+                self._task_start_time = time.time()
+                self._streaming_text = ""
+                self._task_full_output = ""
+                self._is_streaming = False
+                self._plan = None
+                self._plan_step_status = {}
+                self._awaiting_replan = False
+
+                # Tasks may run async/overlapping, so earlier active rows are
+                # only marked done by their own completion events (with a
+                # final sweep in _on_crew_done).
+                if idx in self._task_statuses:
+                    self._task_statuses[idx] = "active"
+
+                desc = ""
+                if event.task:
+                    desc = getattr(event.task, "name", "") or ""
+                    if not desc:
+                        desc = getattr(event.task, "description", "") or ""
+                if not desc and event.task_name:
+                    desc = event.task_name
+                self._current_task_desc = desc
+
+                agent = getattr(source, "agent", None) if source else None
+                agent_role = (getattr(agent, "role", "") or "") if agent else ""
+                if agent_role:
+                    self._current_agent = agent_role
+
+                key = str(getattr(event.task, "id", "") or "") or desc
+                if key:
+                    self._task_state_by_key[key] = {
+                        "idx": idx,
+                        "desc": desc,
+                        "agent": agent_role,
+                        "start_time": self._task_start_time,
+                    }
+
+                self._timeline = []
+                self._current_step = None
+            self._set_step("yellow", "Thinking…")
+
+        self._register_handler(TaskStartedEvent, on_task_started)
+
+        @crewai_event_bus.on(AgentLogsStartedEvent)
+        def on_agent_started(source: Any, event: AgentLogsStartedEvent) -> None:
+            with self._lock:
+                role = event.agent_role.split("\n")[0] if event.agent_role else ""
+                if role:
+                    self._current_agent = role
+
+        self._register_handler(AgentLogsStartedEvent, on_agent_started)
+
+        @crewai_event_bus.on(LLMCallStartedEvent)
+        def on_llm_started(source: Any, event: LLMCallStartedEvent) -> None:
+            with self._lock:
+                self._is_streaming = False
+                self._streaming_text = ""
+                self._live_out_tokens = 0
+                self._current_llm_text = ""
+                if event.messages:
+                    estimate = len(str(event.messages)) // 4
+                    self._input_tokens += estimate
+                    self._pending_input_estimate = estimate
+            self._complete_step("yellow", "Thinking…")
+
+        self._register_handler(LLMCallStartedEvent, on_llm_started)
+
+        @crewai_event_bus.on(LLMCallCompletedEvent)
+        def on_llm_completed(source: Any, event: LLMCallCompletedEvent) -> None:
+            with self._lock:
+                self._llm_calls += 1
+                self._is_streaming = False
+                self._streaming_text = ""
+                self._live_out_tokens = 0
+                self._input_tokens -= self._pending_input_estimate
+                self._pending_input_estimate = 0
+                if event.usage:
+                    u = event.usage
+                    inp = next(
+                        (
+                            u[k]
+                            for k in (
+                                "prompt_tokens",
+                                "input_tokens",
+                                "prompt_token_count",
+                            )
+                            if u.get(k)
+                        ),
+                        0,
+                    )
+                    out = next(
+                        (
+                            u[k]
+                            for k in (
+                                "completion_tokens",
+                                "output_tokens",
+                                "candidates_token_count",
+                            )
+                            if u.get(k)
+                        ),
+                        0,
+                    )
+                    self._input_tokens += inp
+                    self._output_tokens += out
+                if self._current_llm_text.strip():
+                    self._current_task_steps.append(
+                        {
+                            "type": "llm",
+                            "summary": f"LLM response (call {self._llm_calls})",
+                            "detail": self._current_llm_text.strip(),
+                            "style": "dim",
+                        }
+                    )
+                    self._current_llm_text = ""
+
+        self._register_handler(LLMCallCompletedEvent, on_llm_completed)
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def on_stream_chunk(source: Any, event: LLMStreamChunkEvent) -> None:
+            with self._lock:
+                if not self._is_streaming:
+                    self._current_step = ("yellow", "Generating response…", "")
+                self._is_streaming = True
+                self._streaming_text += event.chunk
+                self._task_full_output += event.chunk
+                self._current_llm_text += event.chunk
+                self._live_out_tokens += 1
+                if (
+                    not self._plan or self._awaiting_replan
+                ) and '{"plan"' in self._streaming_text:
+                    self._try_parse_plan(self._streaming_text)
+                if self._plan and "step_completed_successfully" in self._streaming_text:
+                    self._try_parse_step_observation(self._streaming_text)
+
+        self._register_handler(LLMStreamChunkEvent, on_stream_chunk)
+
+        @crewai_event_bus.on(StepObservationStartedEvent)
+        def on_step_observation_started(
+            source: Any, event: StepObservationStartedEvent
+        ) -> None:
+            with self._lock:
+                self._set_plan_step_status(event.step_number, "active")
+
+        self._register_handler(StepObservationStartedEvent, on_step_observation_started)
+
+        @crewai_event_bus.on(StepObservationCompletedEvent)
+        def on_step_observation_completed(
+            source: Any, event: StepObservationCompletedEvent
+        ) -> None:
+            with self._lock:
+                status = "done" if event.step_completed_successfully else "failed"
+                self._set_plan_step_status(event.step_number, status)
+
+        self._register_handler(
+            StepObservationCompletedEvent, on_step_observation_completed
+        )
+
+        @crewai_event_bus.on(StepObservationFailedEvent)
+        def on_step_observation_failed(
+            source: Any, event: StepObservationFailedEvent
+        ) -> None:
+            with self._lock:
+                # Intentionally "done", not "failed": this event means the
+                # step OBSERVER failed (e.g. timeout), not the step itself,
+                # and the executor continues past it. A red ✘ would wrongly
+                # suggest the plan step failed.
+                self._set_plan_step_status(event.step_number, "done")
+
+        self._register_handler(StepObservationFailedEvent, on_step_observation_failed)
+
+        @crewai_event_bus.on(PlanRefinementEvent)
+        def on_plan_refinement(source: Any, event: PlanRefinementEvent) -> None:
+            with self._lock:
+                if event.step_number:
+                    self._set_plan_step_status(event.step_number, "done")
+                self._apply_plan_refinements(event.refinements)
+
+        self._register_handler(PlanRefinementEvent, on_plan_refinement)
+
+        @crewai_event_bus.on(PlanStepStartedEvent)
+        def on_plan_step_started(source: Any, event: PlanStepStartedEvent) -> None:
+            with self._lock:
+                self._set_plan_step_status(event.step_number, "active")
+
+        self._register_handler(PlanStepStartedEvent, on_plan_step_started)
+
+        @crewai_event_bus.on(PlanStepCompletedEvent)
+        def on_plan_step_completed(source: Any, event: PlanStepCompletedEvent) -> None:
+            with self._lock:
+                self._set_plan_step_status(
+                    event.step_number,
+                    "done" if event.success else "failed",
+                )
+
+        self._register_handler(PlanStepCompletedEvent, on_plan_step_completed)
+
+        @crewai_event_bus.on(PlanReplanTriggeredEvent)
+        def on_plan_replan_triggered(
+            source: Any, event: PlanReplanTriggeredEvent
+        ) -> None:
+            with self._lock:
+                self._prepare_for_replan()
+                self._current_step = ("yellow", "Replanning…", event.replan_reason)
+
+        self._register_handler(PlanReplanTriggeredEvent, on_plan_replan_triggered)
+
+        @crewai_event_bus.on(GoalAchievedEarlyEvent)
+        def on_goal_achieved_early(source: Any, event: GoalAchievedEarlyEvent) -> None:
+            with self._lock:
+                self._mark_plan_goal_achieved(event.step_number or None)
+
+        self._register_handler(GoalAchievedEarlyEvent, on_goal_achieved_early)
+
+        @crewai_event_bus.on(ToolUsageStartedEvent)
+        def on_tool_started(source: Any, event: ToolUsageStartedEvent) -> None:
+            if event.tool_name in _INTERNAL_TOOL_NAMES:
+                return
+
+            with self._lock:
+                self._is_streaming = False
+                self._streaming_text = ""
+                now = time.time()
+                args_str = ""
+                if event.tool_args:
+                    try:
+                        args_str = _json.dumps(event.tool_args, indent=2, default=str)
+                    except Exception:
+                        args_str = str(event.tool_args)
+                for entry in self._log_entries:
+                    if (
+                        entry["status"] == "running"
+                        and entry["tool_name"] == event.tool_name
+                        and entry["args"] == (args_str or None)
+                    ):
+                        return
+                for entry in self._log_entries:
+                    if (
+                        entry["status"] == "running"
+                        and entry["tool_name"] != event.tool_name
+                    ):
+                        if entry["tool_name"] == "memory_save":
+                            continue
+                        entry["status"] = "timeout"
+                        entry["error"] = (
+                            "No result received before the next tool started"
+                        )
+                        entry["duration"] = now - entry["start_time"]
+                plan_step_number = getattr(event, "plan_step_number", None)
+                if not isinstance(plan_step_number, int):
+                    plan_step_number = None
+                self._current_task_steps.append(
+                    {
+                        "type": "tool",
+                        "summary": f"Using {event.tool_name}…",
+                        "detail": f"Args:\n{args_str}" if args_str else None,
+                        "style": "yellow",
+                        "_tool_name": event.tool_name,
+                    }
+                )
+                self._log_entries.append(
+                    {
+                        "tool_name": event.tool_name,
+                        "status": "running",
+                        "args": args_str or None,
+                        "result": None,
+                        "error": None,
+                        "start_time": time.time(),
+                        "duration": None,
+                        "task_idx": self._current_task_idx,
+                        "plan_step_number": plan_step_number,
+                        "event_id": event.event_id,
+                    }
+                )
+            self._complete_step("teal", f"⚡ {event.tool_name}…")
+
+        self._register_handler(ToolUsageStartedEvent, on_tool_started)
+
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def on_tool_finished(source: Any, event: ToolUsageFinishedEvent) -> None:
+            if event.tool_name in _INTERNAL_TOOL_NAMES:
+                return
+
+            with self._lock:
+                if event.output is not None:
+                    out = event.output
+                    if isinstance(out, (dict, list)):
+                        try:
+                            result_str = _json.dumps(out, indent=2, ensure_ascii=False)[
+                                :5000
+                            ]
+                        except (TypeError, ValueError):
+                            result_str = str(out)[:5000]
+                    else:
+                        result_str = str(out)[:5000]
+                else:
+                    result_str = "No output"
+                for step in reversed(self._current_task_steps):
+                    if (
+                        step.get("_tool_name") == event.tool_name
+                        and step["type"] == "tool"
+                    ):
+                        existing = step.get("detail") or ""
+                        step["detail"] = (
+                            f"{existing}\n\nResult:\n{result_str}"
+                            if existing
+                            else f"Result:\n{result_str}"
+                        )
+                        step["summary"] = f"✔ {event.tool_name}"
+                        step["style"] = "green"
+                        break
+                from_cache = getattr(event, "from_cache", False)
+                for entry in reversed(self._log_entries):
+                    if entry["tool_name"] == event.tool_name and (
+                        entry["status"] == "running"
+                        or (entry["status"] == "success" and entry["result"] is None)
+                    ):
+                        entry["status"] = "success"
+                        entry["result"] = result_str
+                        entry["duration"] = time.time() - entry["start_time"]
+                        entry["from_cache"] = from_cache
+                        break
+            self._replace_step("green", f"✔ {event.tool_name}")
+
+        self._register_handler(ToolUsageFinishedEvent, on_tool_finished)
+
+        @crewai_event_bus.on(ToolUsageErrorEvent)
+        def on_tool_error(source: Any, event: ToolUsageErrorEvent) -> None:
+            if event.tool_name in _INTERNAL_TOOL_NAMES:
+                return
+
+            error_text = str(event.error)[:200] if event.error else ""
+            with self._lock:
+                for step in reversed(self._current_task_steps):
+                    if (
+                        step.get("_tool_name") == event.tool_name
+                        and step["type"] == "tool"
+                    ):
+                        existing = step.get("detail") or ""
+                        step["detail"] = (
+                            f"{existing}\n\nError:\n{event.error}"
+                            if existing
+                            else f"Error:\n{event.error}"
+                        )
+                        step["summary"] = f"✘ {event.tool_name}"
+                        step["style"] = "red"
+                        break
+                for idx, entry in reversed(list(enumerate(self._log_entries))):
+                    if entry["tool_name"] == event.tool_name and (
+                        entry["status"] == "running"
+                        or (entry["status"] == "success" and entry["result"] is None)
+                    ):
+                        entry["status"] = "error"
+                        entry["error"] = str(event.error) if event.error else None
+                        entry["duration"] = time.time() - entry["start_time"]
+                        self._log_expanded.add(idx)
+                        break
+            self._replace_step("red", f"✘ {event.tool_name}", error_text)
+
+        self._register_handler(ToolUsageErrorEvent, on_tool_error)
+
+        from crewai.events.types.memory_events import (
+            MemoryRetrievalCompletedEvent,
+            MemoryRetrievalFailedEvent,
+            MemoryRetrievalStartedEvent,
+            MemorySaveCompletedEvent,
+            MemorySaveFailedEvent,
+            MemorySaveStartedEvent,
+        )
+
+        def is_nested_save_to_memory_event(event: Any) -> bool:
+            if event.parent_event_id is None:
+                return False
+            state = crewai_event_bus.runtime_state
+            if state is None:
+                return False
+            parent_node = state.event_record.nodes.get(event.parent_event_id)
+            parent_event = getattr(parent_node, "event", None)
+            return getattr(
+                parent_event, "type", None
+            ) == "tool_usage_started" and _is_save_to_memory_tool(
+                getattr(parent_event, "tool_name", None)
+            )
+
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def on_memory_save_started(source: Any, event: MemorySaveStartedEvent) -> None:
+            with self._lock:
+                if is_nested_save_to_memory_event(event):
+                    self._suppressed_memory_save_event_ids.add(event.event_id)
+                    return
+                for entry in reversed(self._log_entries):
+                    if (
+                        _is_save_to_memory_tool(entry["tool_name"])
+                        and entry.get("event_id") == event.parent_event_id
+                    ):
+                        self._suppressed_memory_save_event_ids.add(event.event_id)
+                        return
+                for entry in reversed(self._log_entries):
+                    if (
+                        entry["tool_name"] == "memory_save"
+                        and entry.get("started_event_id") == event.event_id
+                    ):
+                        entry["args"] = _truncate_log_text(
+                            event.value, _LOG_ARGS_TEXT_LIMIT
+                        )
+                        return
+                self._log_entries.append(
+                    {
+                        "tool_name": "memory_save",
+                        "status": "running",
+                        "args": _truncate_log_text(event.value, _LOG_ARGS_TEXT_LIMIT),
+                        "result": None,
+                        "error": None,
+                        "start_time": time.time(),
+                        "duration": None,
+                        "task_idx": self._current_task_idx,
+                        "event_id": event.event_id,
+                    }
+                )
+
+        self._register_handler(MemorySaveStartedEvent, on_memory_save_started)
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def on_memory_save_completed(
+            source: Any, event: MemorySaveCompletedEvent
+        ) -> None:
+            with self._lock:
+                if (
+                    event.started_event_id in self._suppressed_memory_save_event_ids
+                    or is_nested_save_to_memory_event(event)
+                ):
+                    if event.started_event_id is not None:
+                        self._suppressed_memory_save_event_ids.discard(
+                            event.started_event_id
+                        )
+                else:
+                    for entry in reversed(self._log_entries):
+                        has_started_event_match = (
+                            event.started_event_id is not None
+                            and (
+                                entry.get("event_id") == event.started_event_id
+                                or entry.get("started_event_id")
+                                == event.started_event_id
+                            )
+                        )
+                        has_running_event_without_id = (
+                            event.started_event_id is None
+                            and entry["status"] == "running"
+                        )
+                        if entry["tool_name"] == "memory_save" and (
+                            has_running_event_without_id or has_started_event_match
+                        ):
+                            entry["status"] = "success"
+                            entry["duration"] = event.save_time_ms / 1000
+                            entry["result"] = _truncate_log_text(
+                                event.value, _LOG_RESULT_TEXT_LIMIT
+                            )
+                            entry["error"] = None
+                            entry["started_event_id"] = event.started_event_id
+                            break
+                    else:
+                        self._log_entries.append(
+                            {
+                                "tool_name": "memory_save",
+                                "status": "success",
+                                "args": None,
+                                "result": _truncate_log_text(
+                                    event.value, _LOG_RESULT_TEXT_LIMIT
+                                ),
+                                "error": None,
+                                "start_time": time.time(),
+                                "duration": event.save_time_ms / 1000,
+                                "task_idx": self._current_task_idx,
+                                "started_event_id": event.started_event_id,
+                            }
+                        )
+
+            self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+
+        self._register_handler(MemorySaveCompletedEvent, on_memory_save_completed)
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def on_memory_save_failed(source: Any, event: MemorySaveFailedEvent) -> None:
+            with self._lock:
+                if (
+                    event.started_event_id in self._suppressed_memory_save_event_ids
+                    or is_nested_save_to_memory_event(event)
+                ):
+                    if event.started_event_id is not None:
+                        self._suppressed_memory_save_event_ids.discard(
+                            event.started_event_id
+                        )
+                else:
+                    for idx, entry in reversed(list(enumerate(self._log_entries))):
+                        has_started_event_match = (
+                            event.started_event_id is not None
+                            and (
+                                entry.get("event_id") == event.started_event_id
+                                or entry.get("started_event_id")
+                                == event.started_event_id
+                            )
+                        )
+                        has_running_event_without_id = (
+                            event.started_event_id is None
+                            and entry["status"] == "running"
+                        )
+                        if entry["tool_name"] == "memory_save" and (
+                            has_running_event_without_id or has_started_event_match
+                        ):
+                            entry["status"] = "error"
+                            entry["error"] = event.error
+                            entry["duration"] = time.time() - entry["start_time"]
+                            entry["started_event_id"] = event.started_event_id
+                            self._log_expanded.add(idx)
+                            break
+                    else:
+                        self._log_entries.append(
+                            {
+                                "tool_name": "memory_save",
+                                "status": "error",
+                                "args": _truncate_log_text(
+                                    event.value, _LOG_ARGS_TEXT_LIMIT
+                                ),
+                                "result": None,
+                                "error": event.error,
+                                "start_time": time.time(),
+                                "duration": 0,
+                                "task_idx": self._current_task_idx,
+                                "started_event_id": event.started_event_id,
+                            }
+                        )
+                        self._log_expanded.add(len(self._log_entries) - 1)
+
+            self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
+
+        self._register_handler(MemorySaveFailedEvent, on_memory_save_failed)
+
+        @crewai_event_bus.on(MemoryRetrievalStartedEvent)
+        def on_memory_retrieval_started(
+            source: Any, event: MemoryRetrievalStartedEvent
+        ) -> None:
+            with self._lock:
+                self._log_entries.append(
+                    {
+                        "tool_name": "memory_recall",
+                        "status": "running",
+                        "args": None,
+                        "result": None,
+                        "error": None,
+                        "start_time": time.time(),
+                        "duration": None,
+                        "task_idx": self._current_task_idx,
+                    }
+                )
+
+        self._register_handler(MemoryRetrievalStartedEvent, on_memory_retrieval_started)
+
+        @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+        def on_memory_retrieval_completed(
+            source: Any, event: MemoryRetrievalCompletedEvent
+        ) -> None:
+            with self._lock:
+                for entry in reversed(self._log_entries):
+                    if (
+                        entry["tool_name"] == "memory_recall"
+                        and entry["status"] == "running"
+                    ):
+                        entry["status"] = "success"
+                        entry["duration"] = event.retrieval_time_ms / 1000
+                        content = event.memory_content or ""
+                        if content:
+                            entry["result"] = content[:3000]
+                        break
+
+        self._register_handler(
+            MemoryRetrievalCompletedEvent, on_memory_retrieval_completed
+        )
+
+        @crewai_event_bus.on(MemoryRetrievalFailedEvent)
+        def on_memory_retrieval_failed(
+            source: Any, event: MemoryRetrievalFailedEvent
+        ) -> None:
+            with self._lock:
+                for idx, entry in enumerate(self._log_entries):
+                    if (
+                        entry["tool_name"] == "memory_recall"
+                        and entry["status"] == "running"
+                    ):
+                        entry["status"] = "error"
+                        entry["error"] = event.error
+                        entry["duration"] = 0
+                        self._log_expanded.add(idx)
+                        break
+
+        self._register_handler(MemoryRetrievalFailedEvent, on_memory_retrieval_failed)
+
+        @crewai_event_bus.on(AgentLogsExecutionEvent)
+        def on_agent_execution(source: Any, event: AgentLogsExecutionEvent) -> None:
+            from crewai.agents.parser import AgentAction, AgentFinish
+
+            if isinstance(event.formatted_answer, AgentAction):
+                self._complete_step("cyan", f"→ {event.formatted_answer.tool}")
+            elif isinstance(event.formatted_answer, AgentFinish):
+                self._complete_step("green", "✔ Agent finished")
+
+        self._register_handler(AgentLogsExecutionEvent, on_agent_execution)
+
+        @crewai_event_bus.on(TaskCompletedEvent)
+        def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
+            now = time.time()
+            with self._lock:
+                state = self._pop_task_state(event)
+                idx = state["idx"]
+                self._task_statuses[idx] = "done"
+                elapsed = now - state["start_time"]
+                # The shared stream fields (steps, timeline, streamed output)
+                # belong to the most recently started task. Only consume and
+                # reset them when that is the task completing — an earlier
+                # task finishing out of order must not steal or clear the
+                # current task's stream.
+                is_current = idx == self._current_task_idx
+                output = getattr(event.output, "raw", "") or ""
+
+                if is_current:
+                    self._collapse_plan_on_task_done()
+
+                    if self._current_llm_text.strip():
+                        self._current_task_steps.append(
+                            {
+                                "type": "llm",
+                                "summary": "Final response",
+                                "detail": self._current_llm_text.strip(),
+                                "style": "green",
+                            }
+                        )
+                        self._current_llm_text = ""
+
+                    steps = list(self._current_task_steps)
+                    self._current_task_steps = []
+                    timeline = list(self._timeline)
+                    output = self._task_full_output or output
+
+                    self._is_streaming = False
+                    self._streaming_text = ""
+                    self._task_full_output = ""
+                    self._timeline = []
+                    self._current_step = None
+                else:
+                    steps = []
+                    timeline = []
+
+                self._task_logs.append(
+                    {
+                        "idx": idx,
+                        "desc": state["desc"] or "Task",
+                        "agent": state["agent"],
+                        "elapsed": elapsed,
+                        "timeline": timeline,
+                        "steps": steps,
+                        "output": output,
+                    }
+                )
+
+        self._register_handler(TaskCompletedEvent, on_task_completed)
+
+        @crewai_event_bus.on(TaskFailedEvent)
+        def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
+            now = time.time()
+            with self._lock:
+                state = self._pop_task_state(event)
+                idx = state["idx"]
+                self._task_statuses[idx] = "failed"
+                is_current = idx == self._current_task_idx
+
+                error_step = {
+                    "type": "error",
+                    "summary": f"✘ Failed: {event.error[:100]}",
+                    "detail": event.error,
+                    "style": "red",
+                }
+                if is_current:
+                    self._current_task_steps.append(error_step)
+                    steps = list(self._current_task_steps)
+                    self._current_task_steps = []
+                    timeline = list(self._timeline)
+                    output = self._task_full_output
+                else:
+                    steps = [error_step]
+                    timeline = []
+                    output = ""
+
+                self._task_logs.append(
+                    {
+                        "idx": idx,
+                        "desc": state["desc"] or "Task",
+                        "agent": state["agent"],
+                        "elapsed": now - state["start_time"],
+                        "timeline": timeline,
+                        "steps": steps,
+                        "output": output,
+                        "error": event.error,
+                    }
+                )
+            self._complete_step(
+                "red", f"✘ Failed: {event.error[:50]}", event.error[:200]
+            )
+
+        self._register_handler(TaskFailedEvent, on_task_failed)

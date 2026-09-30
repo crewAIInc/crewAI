@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 
 from crewai.events.base_events import BaseEvent
 
@@ -57,6 +57,10 @@ class MethodExecutionFailedEvent(FlowEvent):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
+
 
 class MethodExecutionPausedEvent(FlowEvent):
     """Event emitted when a flow method is paused waiting for human feedback.
@@ -88,6 +92,24 @@ class FlowFinishedEvent(FlowEvent):
     result: Any | None = None
     type: Literal["flow_finished"] = "flow_finished"
     state: dict[str, Any] | BaseModel
+
+
+class FlowFailedEvent(FlowEvent):
+    """Event emitted when a flow execution fails.
+
+    Attributes:
+        flow_name: Name of the flow that failed.
+        error: The exception that ended the execution.
+    """
+
+    error: Exception
+    type: Literal["flow_failed"] = "flow_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
 
 
 class FlowPausedEvent(FlowEvent):
@@ -164,6 +186,59 @@ class FlowInputReceivedEvent(FlowEvent):
     metadata: dict[str, Any] | None = None
     response_metadata: dict[str, Any] | None = None
     type: Literal["flow_input_received"] = "flow_input_received"
+
+
+class ConversationMessageAddedEvent(FlowEvent):
+    """Event emitted when a conversational Flow records a message.
+
+    This gives trace consumers a first-class transcript signal instead of
+    requiring them to inspect the full method state payload.
+    """
+
+    session_id: str
+    role: Literal["user", "assistant", "system", "tool"]
+    content: Any
+    message_index: int
+    type: Literal["conversation_message_added"] = "conversation_message_added"
+
+
+class ConversationTurnStartedEvent(FlowEvent):
+    """Event emitted when a conversational Flow starts a user turn."""
+
+    session_id: str
+    type: Literal["conversation_turn_started"] = "conversation_turn_started"
+
+
+class ConversationTurnCompletedEvent(FlowEvent):
+    """Event emitted when a conversational Flow completes a user turn."""
+
+    session_id: str
+    type: Literal["conversation_turn_completed"] = "conversation_turn_completed"
+
+
+class ConversationTurnFailedEvent(FlowEvent):
+    """Event emitted when a conversational Flow turn fails."""
+
+    session_id: str
+    error: Exception
+    type: Literal["conversation_turn_failed"] = "conversation_turn_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
+
+
+class ConversationRouteSelectedEvent(FlowEvent):
+    """Event emitted when a conversational Flow selects a route for a turn."""
+
+    session_id: str
+    route: str
+    user_message: str | None = None
+    message_index: int | None = None
+    previous_intent: str | None = None
+    type: Literal["conversation_route_selected"] = "conversation_route_selected"
 
 
 class HumanFeedbackRequestedEvent(FlowEvent):

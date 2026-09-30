@@ -5,7 +5,9 @@ file access and server-side request forgery (SSRF) when tools accept
 user-controlled or LLM-controlled inputs at runtime.
 
 Set CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true to bypass validation (not
-recommended for production).
+recommended for production). Managed workers should set
+CREWAI_TOOLS_FORCE_SAFE_PATHS=true so a tenant cannot disable these
+checks by exporting the escape hatch on their own deployment.
 """
 
 from __future__ import annotations
@@ -20,11 +22,71 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
+_FORCE_SAFE_PATHS_ENV = "CREWAI_TOOLS_FORCE_SAFE_PATHS"
+_BYPASS_HINT = f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
+
+
+def format_path_for_display(path: str, base_dir: str | None = None) -> str:
+    """Return a path label that does not expose absolute directory prefixes."""
+    if base_dir is None:
+        base_dir = os.getcwd()
+
+    try:
+        resolved_base = os.path.realpath(base_dir)
+        resolved_path = os.path.realpath(
+            os.path.join(resolved_base, path) if not os.path.isabs(path) else path
+        )
+        if os.path.commonpath([resolved_base, resolved_path]) == resolved_base:
+            return os.path.relpath(resolved_path, resolved_base)
+    except (OSError, ValueError) as exc:
+        logger.debug("Falling back to basename for display path formatting: %s", exc)
+
+    return os.path.basename(os.path.realpath(path)) or "[redacted path]"
+
+
+def format_error_for_display(error: Exception) -> str:
+    """Return exception details without OS-added absolute path context."""
+    if isinstance(error, OSError):
+        return error.strerror or error.__class__.__name__
+    return str(error)
+
+
+def format_sandbox_error(error: Exception, remedy: str) -> str:
+    """Restate a containment rejection with a tool-specific remedy.
+
+    Rejections from :func:`validate_file_path` end by advertising the
+    process-wide escape hatch, which also disables the SSRF checks on
+    URL-fetching tools. Tools that accept a narrower ``base_dir`` should point
+    at that instead, so callers reach for the blunt instrument last.
+
+    Args:
+        error: The rejection raised by path validation.
+        remedy: Guidance to offer in place of the escape-hatch advice.
+
+    Returns:
+        The rejection text with *remedy* substituted for the bypass advice.
+    """
+    text = str(error)
+    if text.endswith(_BYPASS_HINT):
+        text = text[: -len(_BYPASS_HINT)].rstrip()
+    return f"{text} {remedy}".strip()
+
+
+def _env_flag_enabled(name: str) -> bool:
+    return os.environ.get(name, "").lower() in ("true", "1", "yes")
 
 
 def _is_escape_hatch_enabled() -> bool:
-    """Check if the unsafe paths escape hatch is enabled."""
-    return os.environ.get(_UNSAFE_PATHS_ENV, "").lower() in ("true", "1", "yes")
+    """True when ``ALLOW_UNSAFE_PATHS`` is set and ``FORCE_SAFE_PATHS`` is not."""
+    if _env_flag_enabled(_FORCE_SAFE_PATHS_ENV):
+        if _env_flag_enabled(_UNSAFE_PATHS_ENV):
+            logger.warning(
+                "%s is set; ignoring %s",
+                _FORCE_SAFE_PATHS_ENV,
+                _UNSAFE_PATHS_ENV,
+            )
+        return False
+    return _env_flag_enabled(_UNSAFE_PATHS_ENV)
 
 
 def validate_file_path(path: str, base_dir: str | None = None) -> str:
@@ -66,8 +128,8 @@ def validate_file_path(path: str, base_dir: str | None = None) -> str:
     prefix = resolved_base if resolved_base.endswith(os.sep) else resolved_base + os.sep
     if not resolved_path.startswith(prefix) and resolved_path != resolved_base:
         raise ValueError(
-            f"Path '{path}' resolves to '{resolved_path}' which is outside "
-            f"the allowed directory '{resolved_base}'. "
+            f"Path '{format_path_for_display(resolved_path, resolved_base)}' is "
+            f"outside the allowed directory. "
             f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
         )
 
@@ -114,8 +176,8 @@ _BLOCKED_IPV6_NETWORKS = [
 ]
 
 
-def _is_private_or_reserved(ip_str: str) -> bool:
-    """Check if an IP address is private, reserved, or otherwise unsafe."""
+def is_blocked_ip(ip_str: str) -> bool:
+    """Return True if *ip_str* is private, reserved, or otherwise unsafe to fetch."""
     try:
         addr = ipaddress.ip_address(ip_str)
         # Unwrap IPv4-mapped IPv6 addresses (e.g., ::ffff:127.0.0.1) to IPv4
@@ -139,6 +201,9 @@ def validate_url(url: str) -> str:
     Blocks ``file://`` scheme entirely. For ``http``/``https``, resolves
     DNS and checks that the target IP is not private or reserved (prevents
     SSRF to internal services and cloud metadata endpoints).
+
+    This checks the URL string only. Fetch with ``safe_get`` so the
+    connection is pinned to an authorised IP.
 
     Args:
         url: The URL to validate.
@@ -185,7 +250,7 @@ def validate_url(url: str) -> str:
 
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
-        if _is_private_or_reserved(ip_str):
+        if is_blocked_ip(ip_str):
             raise ValueError(
                 f"URL '{url}' resolves to private/reserved IP {ip_str}. "
                 f"Access to internal networks is not allowed. "

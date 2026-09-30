@@ -410,3 +410,30 @@ class TestRuntimeStateIntegration:
         )
         assert len(restored.root) == 1
         assert len(restored.event_record) == 0
+
+    def test_reset_runtime_state_clears_state_and_registry(self):
+        from crewai import Agent, Crew, RuntimeState
+        from crewai.events.event_bus import crewai_event_bus
+
+        if RuntimeState is None:
+            pytest.skip("RuntimeState unavailable (model_rebuild failed)")
+
+        agent = Agent(role="test", goal="test", backstory="test", llm="gpt-4o-mini")
+        crew = Crew(agents=[agent], tasks=[], verbose=False)
+
+        previous_state = crewai_event_bus._runtime_state
+        previous_ids = crewai_event_bus._registered_entity_ids
+        crewai_event_bus._runtime_state = None
+        crewai_event_bus._registered_entity_ids = set()
+        try:
+            crewai_event_bus.register_entity(crew)
+            assert crewai_event_bus.runtime_state is not None
+            assert crewai_event_bus._registered_entity_ids
+
+            crewai_event_bus.reset_runtime_state()
+
+            assert crewai_event_bus.runtime_state is None
+            assert crewai_event_bus._registered_entity_ids == set()
+        finally:
+            crewai_event_bus._runtime_state = previous_state
+            crewai_event_bus._registered_entity_ids = previous_ids

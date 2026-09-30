@@ -4,6 +4,7 @@ from collections.abc import Mapping
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -20,8 +21,14 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
 import tomlkit
+import yaml
 
 from crewai_devtools.docs_check import docs_check
+from crewai_devtools.docs_versioning import (
+    InvalidVersionError,
+    MissingEdgeSourcesError,
+    freeze as freeze_docs,
+)
 from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
 
 
@@ -390,56 +397,39 @@ def update_pyproject_dependencies(
 
 
 def add_docs_version(docs_json_path: Path, version: str) -> bool:
-    """Add a new version to the Mintlify docs.json versioning config.
+    """Freeze Edge into a new snapshot and register the version in docs.json.
 
-    Copies the current default version's tabs into a new version entry,
-    sets the new version as default, and marks the previous default as
-    non-default. Operates on all languages.
+    Thin compatibility wrapper around :func:`crewai_devtools.docs_versioning.freeze`.
+    Materialises ``docs/v<version>/`` from ``docs/edge/`` (copies files, rewrites
+    ``openapi:`` refs inside the snapshot), inserts a new ``vX.Y.Z`` entry into
+    every language's ``versions[]`` block just after Edge, marks it
+    default + ``Latest`` (demoting the prior default), and updates the wildcard
+    ``/<lang>/:slug*`` redirects to point at the new version.
+
+    Skipped (returns False) for pre-release versions like ``1.10.1b1`` since
+    those don't get their own snapshot — pre-release docs stay on Edge.
 
     Args:
         docs_json_path: Path to docs/docs.json.
-        version: Version string (e.g., "1.10.1b1").
+        version: Version string (e.g., ``"1.10.1"``). Pre-releases are skipped.
 
     Returns:
-        True if docs.json was updated, False otherwise.
+        True if docs.json was updated, False otherwise (missing file, missing
+        Edge sources, pre-release, or snapshot already up to date).
     """
-    import json
-
     if not docs_json_path.exists():
         return False
-
-    data = json.loads(docs_json_path.read_text())
-    version_label = f"v{version}"
-    updated = False
-
-    for lang in data.get("navigation", {}).get("languages", []):
-        versions = lang.get("versions", [])
-        if not versions:
-            continue
-
-        if any(v.get("version") == version_label for v in versions):
-            continue
-
-        default_version = next(
-            (v for v in versions if v.get("default")),
-            versions[0],
-        )
-
-        new_version = {
-            "version": version_label,
-            "default": True,
-            "tabs": default_version.get("tabs", []),
-        }
-
-        default_version.pop("default", None)
-        versions.insert(0, new_version)
-        updated = True
-
-    if not updated:
+    if _is_prerelease(version):
         return False
 
-    docs_json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    return True
+    docs_root = docs_json_path.parent
+    try:
+        result = freeze_docs(version, docs_root)
+    except (InvalidVersionError, MissingEdgeSourcesError) as e:
+        console.print(f"[yellow]Warning:[/yellow] {e}")
+        return False
+
+    return result.docsjson_entries_inserted > 0 or result.redirects_upserted > 0
 
 
 ChangelogLang = Literal["en", "pt-BR", "ko", "ar"]
@@ -1104,97 +1094,127 @@ def _update_docs_and_create_pr(
     is_prerelease: bool,
     dry_run: bool,
 ) -> str | None:
-    """Update changelogs and docs version switcher, create PR if needed.
+    """Update Edge changelogs, freeze a snapshot, and open the docs PR.
+
+    For a stable release this freezes ``docs/edge/`` into ``docs/v<version>/``
+    (after the Edge changelogs have been updated so the snapshot contains the
+    new entry), updates ``docs/docs.json`` to register the new version and
+    canonical-URL redirects, and opens a ``[docs-freeze]`` PR. The
+    ``docs-snapshots`` CI guard recognises that title prefix and allows the
+    snapshot directory to land.
+
+    For a pre-release, only the Edge changelogs are touched (pre-releases don't
+    get a frozen snapshot — they ride Edge), and the PR title omits the
+    ``[docs-freeze]`` prefix.
 
     Returns:
         The docs branch name if a PR was created, None otherwise.
     """
     docs_json_path = cwd / "docs" / "docs.json"
+    edge_root = cwd / "docs" / "edge"
+    snapshot_path = cwd / "docs" / f"v{version}"
     changelog_langs: list[ChangelogLang] = ["en", "pt-BR", "ko", "ar"]
 
-    if not dry_run:
-        docs_files_staged: list[str] = []
-
+    if dry_run:
         for lang in changelog_langs:
-            cl_path = cwd / "docs" / lang / "changelog.mdx"
-            if lang == "en":
-                notes_for_lang = release_notes
-            else:
-                console.print(f"[dim]Translating release notes to {lang}...[/dim]")
-                notes_for_lang = translate_release_notes(
-                    release_notes, lang, openai_client
-                )
-            if update_changelog(cl_path, version, notes_for_lang, lang=lang):
-                console.print(f"[green]✓[/green] Updated {cl_path.relative_to(cwd)}")
-                docs_files_staged.append(str(cl_path))
-            else:
-                console.print(
-                    f"[yellow]Warning:[/yellow] Changelog not found at {cl_path.relative_to(cwd)}"
-                )
-
+            cl_path = edge_root / lang / "changelog.mdx"
+            translated = " (translated)" if lang != "en" else ""
+            console.print(
+                f"[dim][DRY RUN][/dim] Would update "
+                f"{cl_path.relative_to(cwd)}{translated}"
+            )
         if not is_prerelease:
-            if add_docs_version(docs_json_path, version):
-                console.print(
-                    f"[green]✓[/green] Added v{version} to docs version switcher"
-                )
-                docs_files_staged.append(str(docs_json_path))
-            else:
-                console.print(
-                    f"[yellow]Warning:[/yellow] docs.json not found at {docs_json_path.relative_to(cwd)}"
-                )
-
-        if docs_files_staged:
-            docs_branch = f"docs/changelog-v{version}"
-            create_or_reset_branch(docs_branch)
-            for f in docs_files_staged:
-                run_command(["git", "add", f])
-            run_command(
-                [
-                    "git",
-                    "commit",
-                    "-m",
-                    f"docs: update changelog and version for v{version}",
-                ]
+            console.print(
+                f"[dim][DRY RUN][/dim] Would freeze docs/edge -> "
+                f"{snapshot_path.relative_to(cwd)} and update docs.json + redirects"
             )
-            console.print("[green]✓[/green] Committed docs updates")
-
-            run_command(["git", "push", "-u", "origin", docs_branch])
-            console.print(f"[green]✓[/green] Pushed branch {docs_branch}")
-
-            pr_url = run_command(
-                [
-                    "gh",
-                    "pr",
-                    "create",
-                    "--base",
-                    "main",
-                    "--title",
-                    f"docs: update changelog and version for v{version}",
-                    "--body",
-                    "",
-                ]
+        else:
+            console.print(
+                "[dim][DRY RUN][/dim] Skipping snapshot freeze (pre-release stays on Edge)"
             )
-            console.print("[green]✓[/green] Created docs PR")
-            console.print(f"[cyan]PR URL:[/cyan] {pr_url}")
-            return docs_branch
-
+        prefix = "" if is_prerelease else "[docs-freeze] "
+        console.print(
+            f"[dim][DRY RUN][/dim] Would create branch docs/freeze-v{version}, "
+            f"open PR titled '{prefix}docs: snapshot and changelog for v{version}', "
+            "and wait for merge"
+        )
         return None
+
+    docs_paths_staged: list[str] = []
+
+    # Step 1: update Edge changelogs first so the snapshot we freeze afterwards
+    # contains the new release's entry.
     for lang in changelog_langs:
-        cl_path = cwd / "docs" / lang / "changelog.mdx"
-        translated = " (translated)" if lang != "en" else ""
-        console.print(
-            f"[dim][DRY RUN][/dim] Would update {cl_path.relative_to(cwd)}{translated}"
-        )
+        cl_path = edge_root / lang / "changelog.mdx"
+        if lang == "en":
+            notes_for_lang = release_notes
+        else:
+            console.print(f"[dim]Translating release notes to {lang}...[/dim]")
+            notes_for_lang = translate_release_notes(release_notes, lang, openai_client)
+        if update_changelog(cl_path, version, notes_for_lang, lang=lang):
+            console.print(f"[green]✓[/green] Updated {cl_path.relative_to(cwd)}")
+            docs_paths_staged.append(str(cl_path))
+        else:
+            console.print(
+                f"[yellow]Warning:[/yellow] Changelog not found at "
+                f"{cl_path.relative_to(cwd)}"
+            )
+
+    # Step 2: stable releases get a frozen snapshot + docs.json updates;
+    # pre-releases ride Edge so we only need the changelog edits.
+    is_freeze = False
     if not is_prerelease:
-        console.print(
-            f"[dim][DRY RUN][/dim] Would add v{version} to docs version switcher"
-        )
-    else:
-        console.print("[dim][DRY RUN][/dim] Skipping docs version (pre-release)")
-    console.print(
-        f"[dim][DRY RUN][/dim] Would create branch docs/changelog-v{version}, PR, and wait for merge"
+        if add_docs_version(docs_json_path, version):
+            console.print(
+                f"[green]✓[/green] Froze docs/edge -> "
+                f"{snapshot_path.relative_to(cwd)} and updated docs.json + redirects"
+            )
+            docs_paths_staged.append(str(docs_json_path))
+            docs_paths_staged.append(str(snapshot_path))
+            is_freeze = True
+        else:
+            console.print(
+                f"[yellow]Warning:[/yellow] docs freeze did not modify "
+                f"{docs_json_path.relative_to(cwd)} "
+                "(missing file, missing Edge sources, or snapshot already current)"
+            )
+
+    if not docs_paths_staged:
+        return None
+
+    docs_branch = f"docs/freeze-v{version}"
+    create_or_reset_branch(docs_branch)
+    for path in docs_paths_staged:
+        run_command(["git", "add", path])
+
+    # The [docs-freeze] title prefix is what the docs-snapshots CI guard reads
+    # to allow writes under docs/v*/ and image deletions. Omit it for
+    # pre-releases since they don't touch frozen snapshots.
+    title_prefix = "[docs-freeze] " if is_freeze else ""
+    pr_title = f"{title_prefix}docs: snapshot and changelog for v{version}"
+
+    run_command(["git", "commit", "-m", pr_title])
+    console.print("[green]✓[/green] Committed docs updates")
+
+    run_command(["git", "push", "-u", "origin", docs_branch])
+    console.print(f"[green]✓[/green] Pushed branch {docs_branch}")
+
+    pr_url = run_command(
+        [
+            "gh",
+            "pr",
+            "create",
+            "--base",
+            "main",
+            "--title",
+            pr_title,
+            "--body",
+            "",
+        ]
     )
-    return None
+    console.print("[green]✓[/green] Created docs PR")
+    console.print(f"[cyan]PR URL:[/cyan] {pr_url}")
+    return docs_branch
 
 
 def _create_tag_and_release(
@@ -1403,7 +1423,10 @@ def _repin_crewai_install(run_value: str, version: str) -> str:
     return "".join(result)
 
 
-_DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
+_DEPLOYMENT_TEST_REPOS: Final[tuple[str, ...]] = (
+    "crewAIInc/crew_deployment_test",
+    "crewAIInc/flow_deployment_test",
+)
 
 _PUBLISHED_WORKSPACE_PACKAGES: Final[tuple[str, ...]] = (
     "crewai",
@@ -1417,26 +1440,164 @@ _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
 
 
-def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
-    """Update the deployment test repo to pin the new crewai version.
+_CREWAI_REQUIREMENT_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^crewai(?:\s*\[[^\]]+\])?(?![\w-])"
+    r"\s*(?:(?P<operator>===|==|~=|!=|>=|<=|>|<)\s*"
+    r"(?P<version>[^\s;]+))?",
+    re.IGNORECASE,
+)
 
-    Clones the repo, updates the crewai[tools] pin in pyproject.toml
+
+def _crewai_requirement_pin(requirement: str) -> str | None:
+    """Return an exact CrewAI pin, or an empty string for a non-exact pin."""
+    match = _CREWAI_REQUIREMENT_PATTERN.match(requirement.strip())
+    if not match:
+        return None
+    if match.group("operator") != "==":
+        return ""
+    return match.group("version") or ""
+
+
+def _pyproject_crewai_requirements(content: str) -> list[tuple[str, str]]:
+    """Collect active CrewAI dependency requirements from pyproject content."""
+    requirements: list[tuple[str, str]] = []
+    doc = tomlkit.parse(content)
+    for key in ("dependencies", "optional-dependencies"):
+        deps = doc.get("project", {}).get(key)
+        if deps is None:
+            continue
+        dep_lists = deps.values() if isinstance(deps, Mapping) else [deps]
+        for dep_list in dep_lists:
+            for dep in dep_list:
+                spec = str(dep)
+                pin = _crewai_requirement_pin(spec)
+                if pin is not None:
+                    requirements.append((spec, pin))
+    return requirements
+
+
+def _workflow_run_commands(content: str) -> list[str]:
+    """Extract shell commands from workflow ``run`` values."""
+    commands: list[str] = []
+
+    def collect_run_commands(node: object) -> None:
+        if isinstance(node, Mapping):
+            for key, value in node.items():
+                if key == "run" and isinstance(value, str):
+                    commands.append(value)
+                collect_run_commands(value)
+        elif isinstance(node, list):
+            for value in node:
+                collect_run_commands(value)
+
+    collect_run_commands(yaml.safe_load(content))
+    return commands
+
+
+def _workflow_crewai_requirements(content: str) -> list[tuple[str, str]]:
+    """Collect CrewAI requirements from executable workflow install commands."""
+    requirements: list[tuple[str, str]] = []
+    for command in _workflow_run_commands(content):
+        normalized = command.replace("\\\n", " ")
+        lexer = shlex.shlex(normalized, posix=True, punctuation_chars=";&|\n")
+        lexer.whitespace = " \t\r"
+        lexer.whitespace_split = True
+        lexer.commenters = "#"
+        try:
+            tokens = list(lexer)
+        except ValueError:
+            continue
+
+        index = 0
+        while index < len(tokens):
+            command_lengths = (
+                (tokens[index : index + 3] == ["uv", "pip", "install"], 3),
+                (tokens[index : index + 2] == ["uv", "add"], 2),
+                (
+                    tokens[index : index + 2]
+                    in (["pip", "install"], ["pip3", "install"]),
+                    2,
+                ),
+                (
+                    tokens[index : index + 4]
+                    in (
+                        ["python", "-m", "pip", "install"],
+                        ["python3", "-m", "pip", "install"],
+                    ),
+                    4,
+                ),
+            )
+            install_length = next(
+                (length for matched, length in command_lengths if matched),
+                0,
+            )
+            if not install_length:
+                index += 1
+                continue
+
+            index += install_length
+            while index < len(tokens) and tokens[index] not in {
+                ";",
+                "&&",
+                "||",
+                "|",
+                "\n",
+            }:
+                argument = tokens[index]
+                pin = _crewai_requirement_pin(argument)
+                if pin is not None:
+                    requirements.append((argument, pin))
+                index += 1
+    return requirements
+
+
+def _validate_deployment_repo_crewai_pin(
+    repo_dir: Path,
+    pyproject_content: str,
+    version: str,
+) -> None:
+    """Fail unless every effective canary CrewAI requirement has the exact pin."""
+    requirements = _pyproject_crewai_requirements(pyproject_content)
+
+    workflows_dir = repo_dir / ".github" / "workflows"
+    if workflows_dir.exists():
+        for workflow in workflows_dir.iterdir():
+            if workflow.is_file() and workflow.suffix in (".yml", ".yaml"):
+                requirements.extend(
+                    _workflow_crewai_requirements(workflow.read_text(encoding="utf-8"))
+                )
+
+    if not requirements:
+        raise RuntimeError(f"No effective CrewAI dependency found in {repo_dir.name}")
+
+    mismatches = [spec for spec, pin in requirements if pin != version]
+    if mismatches:
+        found = ", ".join(repr(spec) for spec in mismatches)
+        raise RuntimeError(
+            f"CrewAI dependencies in {repo_dir.name} must all pin {version}; "
+            f"found {found}"
+        )
+
+
+def _update_deployment_test_repo(repo: str, version: str, is_prerelease: bool) -> None:
+    """Update a deployment test repo to pin the new crewai version.
+
+    Clones the repo, updates the CrewAI pin in pyproject.toml
     and any crewai[extras] pins in .github/workflows, regenerates the
     lockfile, commits to a branch, pushes, opens a PR against main,
     then polls until the PR is merged (or closed).
 
     Args:
+        repo: GitHub repository containing the deployment canary.
         version: New crewai version string.
         is_prerelease: Whether this is a pre-release version.
     """
-    console.print(
-        f"\n[bold cyan]Updating {_DEPLOYMENT_TEST_REPO} to {version}[/bold cyan]"
-    )
+    console.print(f"\n[bold cyan]Updating {repo} to {version}[/bold cyan]")
 
     with tempfile.TemporaryDirectory() as tmp:
-        repo_dir = Path(tmp) / "crew_deployment_test"
-        run_command(["gh", "repo", "clone", _DEPLOYMENT_TEST_REPO, str(repo_dir)])
-        console.print(f"[green]✓[/green] Cloned {_DEPLOYMENT_TEST_REPO}")
+        repo_dir = Path(tmp) / repo.rsplit("/", 1)[-1]
+        run_command(["gh", "repo", "clone", repo, str(repo_dir)])
+        console.print(f"[green]✓[/green] Cloned {repo}")
 
         pyproject = repo_dir / "pyproject.toml"
         content = pyproject.read_text()
@@ -1444,17 +1605,17 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
         pyproject_changed = new_content != content
         if pyproject_changed:
             pyproject.write_text(new_content)
-            console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+            console.print(f"[green]✓[/green] Updated crewai pin to {version}")
         else:
-            console.print(
-                "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
-            )
+            console.print("[yellow]Warning:[/yellow] No crewai pin found to update")
 
         updated_workflows = _update_repo_workflows_crewai_pins(repo_dir, version)
         for wf in updated_workflows:
             console.print(
                 f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
             )
+
+        _validate_deployment_repo_crewai_pin(repo_dir, new_content, version)
 
         if not pyproject_changed and not updated_workflows:
             console.print("[yellow]Nothing to update; skipping commit and PR.[/yellow]")
@@ -1517,10 +1678,16 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
             ],
             cwd=repo_dir,
         )
-        console.print(f"[green]✓[/green] Opened PR on {_DEPLOYMENT_TEST_REPO}")
+        console.print(f"[green]✓[/green] Opened PR on {repo}")
         console.print(f"[cyan]PR URL:[/cyan] {pr_url.strip()}")
 
         _wait_for_pr_merged(branch, repo_dir)
+
+
+def _update_deployment_test_repos(version: str, is_prerelease: bool) -> None:
+    """Pin and merge the release version in every deployment canary repo."""
+    for repo in _DEPLOYMENT_TEST_REPOS:
+        _update_deployment_test_repo(repo, version, is_prerelease)
 
 
 def _wait_for_pypi(package: str, version: str) -> None:
@@ -2334,13 +2501,13 @@ def release(
 
     try:
         if not dry_run:
-            _update_deployment_test_repo(version, is_prerelease)
+            _update_deployment_test_repos(version, is_prerelease)
     except BaseException as e:
         _print_release_error(e)
         _resume_hint(
-            f"Phase 2 failed updating deployment test repo. "
+            f"Phase 2 failed updating deployment test repos. "
             f"Tag, release, and PyPI are done.\n"
-            f"Fix the issue and update {_DEPLOYMENT_TEST_REPO} manually."
+            "Fix the issue and update the Crew and Flow canary repos manually."
             f"{enterprise_hint}"
         )
         sys.exit(1)

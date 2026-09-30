@@ -89,7 +89,7 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
     lock_file = "poetry.lock"
     lock_backup = "poetry-old.lock"
     if os.path.exists(lock_file):
-        os.rename(lock_file, lock_backup)
+        os.replace(lock_file, lock_backup)
     else:
         pass
 

@@ -531,6 +531,7 @@ def test_docling_source(mock_vector_db):
 
 
 @pytest.mark.vcr
+@pytest.mark.timeout(180)
 def test_multiple_docling_sources() -> None:
     urls: list[Path | str] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",

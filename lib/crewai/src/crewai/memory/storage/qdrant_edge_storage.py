@@ -36,6 +36,7 @@ from qdrant_edge import (
     UpdateOperation,
 )
 
+from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
 
@@ -43,7 +44,7 @@ _logger = logging.getLogger(__name__)
 
 VECTOR_NAME: Final[str] = "memory"
 
-DEFAULT_VECTOR_DIM: Final[int] = 1536
+DEFAULT_VECTOR_DIM: Final[int] = 3072
 
 _SCROLL_BATCH: Final[int] = 256
 
@@ -183,6 +184,10 @@ class QdrantEdgeStorage:
         except Exception:
             _logger.debug("Index creation failed (may already exist)", exc_info=True)
 
+    def _has_existing_data(self) -> bool:
+        """True when either shard already holds persisted records."""
+        return self._local_has_data or self._central_path.exists()
+
     def _record_to_point(self, record: MemoryRecord) -> Point:
         """Convert a MemoryRecord to a Qdrant Point."""
         return Point(
@@ -277,11 +282,19 @@ class QdrantEdgeStorage:
         if not records:
             return
 
+        # Validate the batch is internally consistent before touching the
+        # store-level dimension.
+        batch_dim = 0
+        for r in records:
+            if r.embedding and len(r.embedding) > 0:
+                if batch_dim == 0:
+                    batch_dim = len(r.embedding)
+                elif len(r.embedding) != batch_dim:
+                    raise EmbeddingDimensionMismatchError(batch_dim, len(r.embedding))
         if self._vector_dim == 0:
-            for r in records:
-                if r.embedding and len(r.embedding) > 0:
-                    self._vector_dim = len(r.embedding)
-                    break
+            self._vector_dim = batch_dim
+        elif batch_dim and batch_dim != self._vector_dim and self._has_existing_data():
+            raise EmbeddingDimensionMismatchError(self._vector_dim, batch_dim)
         if self._config is None and self._vector_dim > 0:
             self._config = self._build_config(self._vector_dim)
         if self._config is None:
@@ -308,6 +321,14 @@ class QdrantEdgeStorage:
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
         """Search both central and local shards, merge results."""
+        if (
+            self._vector_dim
+            and len(query_embedding) != self._vector_dim
+            and self._has_existing_data()
+        ):
+            raise EmbeddingDimensionMismatchError(
+                self._vector_dim, len(query_embedding)
+            )
         filt = self._build_scope_filter(scope_prefix)
         fetch_limit = limit * 3 if (categories or metadata_filter) else limit
         all_scored: list[tuple[dict[str, Any], float, bool]] = []
@@ -466,6 +487,16 @@ class QdrantEdgeStorage:
 
     def update(self, record: MemoryRecord) -> None:
         """Update a record by upserting with the same point ID."""
+        if (
+            self._config is not None
+            and record.embedding
+            and self._vector_dim
+            and len(record.embedding) != self._vector_dim
+            and self._has_existing_data()
+        ):
+            raise EmbeddingDimensionMismatchError(
+                self._vector_dim, len(record.embedding)
+            )
         if self._config is None:
             if record.embedding and len(record.embedding) > 0:
                 self._vector_dim = len(record.embedding)

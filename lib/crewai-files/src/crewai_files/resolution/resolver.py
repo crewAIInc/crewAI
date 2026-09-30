@@ -129,6 +129,20 @@ class FileResolver:
         """
         return constraints is not None and constraints.supports_url_references
 
+    @classmethod
+    def _should_resolve_as_url_reference(
+        cls,
+        file: FileInput,
+        provider: ProviderType,
+        constraints: ProviderConstraints | None,
+    ) -> bool:
+        """Check if the provider can accept the current URL source directly."""
+        if not cls._is_url_source(file) or not cls._supports_url(constraints):
+            return False
+
+        provider_lower = provider.lower()
+        return "bedrock" not in provider_lower and "aws" not in provider_lower
+
     @staticmethod
     def _resolve_as_url(file: FileInput) -> UrlReference:
         """Resolve a URL source as UrlReference.
@@ -159,7 +173,7 @@ class FileResolver:
         """
         constraints = get_constraints_for_provider(provider)
 
-        if self._is_url_source(file) and self._supports_url(constraints):
+        if self._should_resolve_as_url_reference(file, provider, constraints):
             return self._resolve_as_url(file)
 
         context = self._build_file_context(file)
@@ -293,10 +307,6 @@ class FileResolver:
                 )
 
         uploader = self._get_uploader(provider)
-        if uploader is None:
-            logger.debug(f"No uploader available for {provider}")
-            return None
-
         result = self._upload_with_retry(uploader, file, provider, context.size)
         if result is None:
             return None
@@ -424,7 +434,7 @@ class FileResolver:
         """
         constraints = get_constraints_for_provider(provider)
 
-        if self._is_url_source(file) and self._supports_url(constraints):
+        if self._should_resolve_as_url_reference(file, provider, constraints):
             return self._resolve_as_url(file)
 
         context = self._build_file_context(file)
@@ -467,8 +477,16 @@ class FileResolver:
         tasks = [resolve_single(n, f) for n, f in files.items()]
         gather_results = await asyncio.gather(*tasks, return_exceptions=True)
 
+        from crewai_files.processing.exceptions import UploaderConfigurationError
+
         output: dict[str, ResolvedFile] = {}
         for item in gather_results:
+            # An uploader configuration failure (unknown provider, unconfigured
+            # Bedrock, or a missing provider SDK) applies to every file in the
+            # batch, since they share one provider, so surface it. Ordinary
+            # per-file failures stay best-effort: log and skip that one file.
+            if isinstance(item, UploaderConfigurationError):
+                raise item
             if isinstance(item, BaseException):
                 logger.error(f"Resolution failed: {item}")
                 continue
@@ -510,10 +528,6 @@ class FileResolver:
                 )
 
         uploader = self._get_uploader(provider)
-        if uploader is None:
-            logger.debug(f"No uploader available for {provider}")
-            return None
-
         result = await self._aupload_with_retry(uploader, file, provider, context.size)
         if result is None:
             return None
@@ -598,23 +612,29 @@ class FileResolver:
         )
         return None
 
-    def _get_uploader(self, provider: ProviderType) -> FileUploader | None:
+    def _get_uploader(self, provider: ProviderType) -> FileUploader:
         """Get or create an uploader for a provider.
 
         Args:
             provider: Provider name.
 
         Returns:
-            FileUploader instance or None if not available.
-        """
-        if provider not in self._uploaders:
-            uploader = get_uploader(provider)
-            if uploader is not None:
-                self._uploaders[provider] = uploader
-            else:
-                return None
+            FileUploader instance for the provider.
 
-        return self._uploaders.get(provider)
+        Raises:
+            UploaderConfigurationError: If no uploader can be built for the
+                provider (unknown provider, missing configuration, or missing
+                provider SDK).
+        """
+        from crewai_files.processing.exceptions import UploaderConfigurationError
+
+        if provider not in self._uploaders:
+            try:
+                self._uploaders[provider] = get_uploader(provider)
+            except (ValueError, ImportError) as e:
+                raise UploaderConfigurationError(str(e)) from e
+
+        return self._uploaders[provider]
 
     def get_cached_uploads(self, provider: ProviderType) -> list[CachedUpload]:
         """Get all cached uploads for a provider.

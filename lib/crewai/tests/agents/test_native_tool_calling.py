@@ -7,6 +7,7 @@ when the LLM supports it, across multiple providers.
 from __future__ import annotations
 
 from collections.abc import Generator
+import json
 import os
 import threading
 import time
@@ -17,9 +18,10 @@ import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Crew, Task
+from crewai.agents.parser import AgentFinish
 from crewai.events import crewai_event_bus
 from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
-from crewai.hooks.tool_hooks import ToolCallHookContext
+from crewai.hooks.tool_hooks import ToolCallHookContext, clear_after_tool_call_hooks
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 
@@ -1195,6 +1197,120 @@ class TestNativeToolCallingJsonParseError:
         )
 
         assert result["result"] == "ran: print(1)"
+
+    def test_typed_output_is_json_agent_text(self) -> None:
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for information"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.8)
+
+        tool = TypedSearchTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_typed",
+            func_name="typed_search",
+            func_args='{"query": "crew"}',
+            available_functions=available_functions,
+        )
+
+        assert json.loads(result["result"]) == {"query": "crew", "score": 0.8}
+
+    def test_typed_output_after_hook_includes_raw_tool_result(self) -> None:
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for information"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.8)
+
+        seen_results: list[tuple[str | None, object]] = []
+
+        def after_hook(context: ToolCallHookContext) -> None:
+            seen_results.append((context.tool_result, context.raw_tool_result))
+
+        tool = TypedSearchTool()
+        executor = self._make_executor([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        clear_after_tool_call_hooks()
+        register_after_tool_call_hook(after_hook)
+        try:
+            result = executor._execute_single_native_tool_call(
+                call_id="call_typed",
+                func_name="typed_search",
+                func_args='{"query": "crew"}',
+                available_functions=available_functions,
+            )
+        finally:
+            clear_after_tool_call_hooks()
+
+        assert json.loads(result["result"]) == {"query": "crew", "score": 0.8}
+        assert seen_results == [
+            ('{"query":"crew","score":0.8}', SearchOutput(query="crew", score=0.8))
+        ]
+
+    def test_native_tool_loop_falls_back_when_provider_rejects_tools(self) -> None:
+        """Unsupported native tools errors should continue through ReAct."""
+
+        class SearchTool(BaseTool):
+            name: str = "search"
+            description: str = "Search for information"
+
+            def _run(self, query: str) -> str:
+                return f"result for {query}"
+
+        executor = self._make_executor([SearchTool()])
+        executor.llm = Mock()
+        executor.messages = [{"role": "user", "content": "Search for CrewAI"}]
+        executor.callbacks = []
+        executor.iterations = 0
+        executor.max_iter = 3
+        executor.request_within_rpm_limit = None
+        executor.respect_context_window = False
+
+        fallback_finish = AgentFinish(
+            thought="done",
+            output="final",
+            text="Final Answer: final",
+        )
+        with (
+            patch(
+                "crewai.agents.crew_agent_executor.get_llm_response",
+                side_effect=RuntimeError(
+                    "registry.ollama.ai/library/mariner:latest does not support tools"
+                ),
+            ),
+            patch.object(
+                executor,
+                "_invoke_loop_react",
+                return_value=fallback_finish,
+            ) as react_loop,
+        ):
+            result = executor._invoke_loop_native_tools()
+
+        assert result is fallback_finish
+        react_loop.assert_called_once()
+        assert "Native tool calling is unavailable" in executor.messages[-1]["content"]
+        assert "Action Input" in executor.messages[-1]["content"]
 
     def test_dict_args_bypass_json_parsing(self) -> None:
         """When func_args is already a dict, no JSON parsing occurs."""

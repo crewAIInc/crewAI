@@ -10,7 +10,7 @@ from datetime import datetime
 import inspect
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from crewai_core.printer import PRINTER, ColoredText, Printer
 from crewai_core.settings import Settings
@@ -24,10 +24,21 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.llms.base_llm import BaseLLM, call_stop_override
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
-from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.structured_tool import (
+    CrewStructuredTool,
+    strip_composite_description_prefix,
+)
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+    reportable_failure,
+)
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -52,19 +63,83 @@ if TYPE_CHECKING:
 _create_plus_client_hook: Callable[[], Any] | None = None
 
 
-class SummaryContent(TypedDict):
-    """Structure for summary content entries.
+def resolve_plus_client(default: Callable[[], Any]) -> Any:
+    """Return the CrewAI AMP client to use, or build ``default``.
 
-    Attributes:
-        content: The summarized content.
+    Hosted runtimes install a client of their own through
+    ``_create_plus_client_hook``, authenticated for the environment they run in.
+    Every registry lookup resolves through here so they all share that client.
+
+    Args:
+        default: Builds the client to use when no hook is installed. A callable
+            rather than a value so credential lookups that raise when absent are
+            only evaluated when they're actually needed.
+
+    Returns:
+        A CrewAI AMP client.
     """
+    if callable(_create_plus_client_hook):
+        return _create_plus_client_hook()
+    return default()
 
-    content: str
+
+def resolve_plus_response(response: Any) -> Any:
+    """Return ``response``, awaiting it first when the client is async.
+
+    Args:
+        response: A response, or an awaitable resolving to one.
+
+    Returns:
+        The resolved response.
+
+    Raises:
+        TypeError: If the awaitable is already bound to a loop (a Task or
+            Future), which can't be resolved synchronously.
+    """
+    if not inspect.isawaitable(response):
+        return response
+
+    if isinstance(response, asyncio.Future):
+        raise TypeError(
+            "CrewAI AMP clients must return a coroutine, not a Task or Future "
+            "already bound to a running loop."
+        )
+
+    # asyncio.run() takes a coroutine specifically, while isawaitable() also
+    # covers custom __await__ objects, so wrap rather than passing it through.
+    async def await_response() -> Any:
+        return await response
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    # asyncio.run() refuses to nest inside a running loop, so hand the coroutine
+    # to a worker thread with a loop of its own — carrying a copy of the caller's
+    # context, since a fresh thread would otherwise start with empty ContextVars
+    # and a client reading runtime state (the platform token, flow context) would
+    # see defaults.
+    if loop and loop.is_running():
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, await_response()).result()
+
+    return asyncio.run(await_response())
 
 
 console = Console()
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
+_NATIVE_TOOL_UNSUPPORTED_PATTERNS: Final[tuple[str, ...]] = (
+    "does not support tools",
+    "doesn't support tools",
+    "tools are not supported",
+    "tool calling is not supported",
+    "tool calls are not supported",
+    "function calling is not supported",
+    "does not support function calling",
+)
 
 
 def is_inside_event_loop() -> bool:
@@ -138,7 +213,14 @@ def render_text_description_and_args(
     Returns:
         Plain text description of tools.
     """
-    tool_strings = [tool.description for tool in tools]
+    # Fall back to the raw description for duck-typed tools (including test
+    # mocks) that don't provide a real formatted_description string.
+    tool_strings = [
+        formatted
+        if isinstance((formatted := getattr(tool, "formatted_description", None)), str)
+        else tool.description
+        for tool in tools
+    ]
     return "\n".join(tool_strings)
 
 
@@ -181,10 +263,10 @@ def convert_tools_to_openai_schema(
             except Exception:
                 parameters = {}
 
-        # BaseTool formats description as "Tool Name: ...\nTool Arguments: ...\nTool Description: {original}"
-        description = tool.description
-        if "Tool Description:" in description:
-            description = description.split("Tool Description:")[-1].strip()
+        # Old checkpoints and some adapters bake the composed LLM block
+        # ("Tool Name: ...\nTool Arguments: ...\nTool Description: {authored}")
+        # into the description field; keep only the authored text here.
+        description = strip_composite_description_prefix(tool.description)
 
         sanitized_name = sanitize_tool_name(tool.name)
 
@@ -282,7 +364,6 @@ def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
 
 
 def handle_max_iterations_exceeded(
-    formatted_answer: AgentAction | AgentFinish | None,
     printer: Printer,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
@@ -292,9 +373,9 @@ def handle_max_iterations_exceeded(
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
     Args:
-        formatted_answer: The last formatted answer from the agent.
         printer: Printer instance for output.
-        messages: List of messages to send to the LLM.
+        messages: Conversation so far; the forced-answer instruction is appended
+            to it as a user turn.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
         verbose: Whether to print output.
@@ -308,14 +389,11 @@ def handle_max_iterations_exceeded(
             color="yellow",
         )
 
-    if formatted_answer and hasattr(formatted_answer, "text"):
-        assistant_message = (
-            formatted_answer.text + f"\n{I18N_DEFAULT.errors('force_final_answer')}"
-        )
-    else:
-        assistant_message = I18N_DEFAULT.errors("force_final_answer")
-
-    messages.append(format_message_for_llm(assistant_message, role="assistant"))
+    # A trailing assistant turn is a prefill request, which current Claude
+    # models reject with a 400; every provider accepts a trailing user turn.
+    messages.append(
+        format_message_for_llm(I18N_DEFAULT.errors("force_final_answer"), role="user")
+    )
 
     answer = llm.call(
         messages,
@@ -389,13 +467,17 @@ def enforce_rpm_limit(
         request_within_rpm_limit()
 
 
+@contextlib.contextmanager
 def _prepare_llm_call(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     messages: list[LLMMessage],
     printer: Printer,
     verbose: bool = True,
-) -> list[LLMMessage]:
+) -> Iterator[list[LLMMessage]]:
     """Shared pre-call logic: run before hooks and resolve messages.
+
+    Yields for the duration of the LLM call so the LLM layer knows the hooks
+    already ran with this executor's context and does not dispatch them twice.
 
     Args:
         executor_context: Optional executor context for hook invocation.
@@ -403,17 +485,23 @@ def _prepare_llm_call(
         printer: Printer instance for output.
         verbose: Whether to print output.
 
-    Returns:
+    Yields:
         The resolved messages list (may come from executor_context).
 
     Raises:
         ValueError: If a before hook blocks the call.
     """
-    if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-            raise ValueError("LLM call blocked by before_llm_call hook")
-        messages = executor_context.messages
-    return messages
+    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+    if executor_context is None:
+        yield messages
+        return
+
+    if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
+        raise LLMCallBlockedError("LLM call blocked by before_llm_call hook")
+
+    with model_call_hooks_dispatched():
+        yield executor_context.messages
 
 
 def _validate_and_finalize_llm_response(
@@ -485,17 +573,18 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = llm.call(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = llm.call(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -538,17 +627,18 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = await llm.acall(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = await llm.acall(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -695,9 +785,9 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
+    return LLMContextLengthExceededError(
         str(exception)
-    )
+    )._is_context_length_exceeded_error(exception)
 
 
 def handle_context_length(
@@ -740,172 +830,318 @@ def handle_context_length(
         )
 
 
-def _estimate_token_count(text: str) -> int:
-    """Estimate token count using a conservative cross-provider heuristic.
+def _content_parts_text(content: list[dict[str, Any]]) -> str:
+    """Text carried by a multimodal content-part list.
 
-    Args:
-        text: The text to estimate tokens for.
+    Non-text blocks (images, audio) have no text to give, so a list with
+    none of them is named rather than rendered -- ``str()`` on the list
+    would put a Python repr in front of the model.
 
-    Returns:
-        Estimated token count (roughly 1 token per 4 characters).
+    Blocks are ``dict[str, Any]`` and arrive from a model, so a ``text``
+    key that is not a string is possible; such a block carries no usable
+    text and is skipped rather than joined, which would raise.
     """
-    return len(text) // 4
+    text_parts = [
+        block["text"]
+        for block in content
+        if isinstance(block, dict)
+        and block.get("type") == "text"
+        and isinstance(block.get("text"), str)
+    ]
+    return " ".join(text_parts) if text_parts else "[multimodal content]"
 
 
-def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
-    """Format messages with role labels for summarization.
+def message_content_text(msg: LLMMessage) -> str:
+    """Return the message content as text.
 
-    Skips system messages. Handles None content, tool_calls, and
-    multimodal content blocks.
-
-    Args:
-        messages: List of messages to format.
-
-    Returns:
-        Role-labeled conversation text.
+    Used wherever a message has to collapse to a string -- token
+    estimation, memory, and the one turn promoted into the executor
+    prompt. Content is ``str | list[dict] | None``, and the list form is
+    the multimodal one.
     """
-    lines: list[str] = []
-    for msg in messages:
-        role = msg.get("role", "user")
-        if role == "system":
-            continue
+    content = msg.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        return _content_parts_text(content)
+    return str(content)
 
-        content = msg.get("content")
-        if content is None:
-            tool_calls = msg.get("tool_calls")
-            if tool_calls:
-                tool_names = []
-                for tc in tool_calls:
-                    func = tc.get("function", {})
-                    name = (
-                        func.get("name", "unknown")
-                        if isinstance(func, dict)
-                        else "unknown"
+
+class SummarizeMessages:
+    """Compact a message list so it fits the model context window.
+
+    Preserves system messages, splits at message boundaries, formats with
+    role labels, and writes one structured summary back onto ``messages``.
+    Files attached to user messages are merged onto that summary.
+    """
+
+    _CHARS_PER_TOKEN_LEVELS: Final[tuple[float, ...]] = (4.0, 3.0, 2.5)
+
+    def __init__(self) -> None:
+        self.messages: list[LLMMessage] = []
+        self.llm: LLM | BaseLLM | None = None
+        self.callbacks: list[TokenCalcHandler] = []
+        self.verbose = True
+
+    def summarize(
+        self,
+        messages: list[LLMMessage],
+        llm: LLM | BaseLLM,
+        callbacks: list[TokenCalcHandler],
+        verbose: bool = True,
+    ) -> None:
+        """Replace non-system messages with a single summary, in place."""
+        if llm is None:
+            raise RuntimeError("SummarizeMessages.summarize() must set an LLM first.")
+
+        self.llm = llm
+        self.callbacks = callbacks
+        self.verbose = verbose
+        self.messages = messages
+        preserved_files = self._collect_attached_files()
+        system_messages = [m for m in self.messages if m.get("role") == "system"]
+        work_messages = [m for m in self.messages if m.get("role") != "system"]
+        if not work_messages:
+            return
+
+        chunks = self._chunk_messages(
+            work_messages,
+            llm.get_context_window_size(),
+            char_level_index=0,
+        )
+        summaries = self._get_summaries_for_chunks(chunks, char_level_index=0)
+        self._replace_history_with_summary(system_messages, summaries, preserved_files)
+
+    def _get_summaries_for_chunks(
+        self, chunks: list[list[LLMMessage]], char_level_index: int
+    ) -> list[str]:
+        total = len(chunks)
+        if self.verbose and total <= 1:
+            for index in range(1, total + 1):
+                PRINTER.print(
+                    content=f"Summarizing {index}/{total}...",
+                    color="yellow",
+                )
+        if self.verbose and total > 1:
+            PRINTER.print(
+                content=f"Summarizing {total} chunks in parallel...",
+                color="yellow",
+            )
+        return self._summarize_all(chunks, char_level_index)
+
+    def _summarize_all(
+        self, chunks: list[list[LLMMessage]], char_level_index: int
+    ) -> list[str]:
+        """Run one coroutine per chunk and return the summaries in order."""
+
+        async def _summarize_one(chunk: list[LLMMessage], level_index: int) -> str:
+            """Summarize one chunk; only reachable from ``_summarize_all`` or itself."""
+            llm = cast("LLM | BaseLLM", self.llm)
+
+            try:
+                summary = str(
+                    await llm.acall(
+                        self._build_summary_prompt(chunk), callbacks=self.callbacks
                     )
-                    tool_names.append(name)
-                content = f"[Called tools: {', '.join(tool_names)}]"
+                )
+            except LLMContextLengthExceededError:
+                pass
+            except Exception as error:
+                if not is_context_length_exceeded(error):
+                    raise
             else:
-                content = ""
-        elif isinstance(content, list):
-            text_parts = [
-                block.get("text", "")
-                for block in content
-                if isinstance(block, dict) and block.get("type") == "text"
-            ]
-            content = " ".join(text_parts) if text_parts else "[multimodal content]"
+                match = re.search(r"<summary>(.*?)</summary>", summary, re.DOTALL)
+                if match:
+                    return match.group(1).strip()
+                return summary.strip()
 
-        if role == "assistant":
-            label = "[ASSISTANT]:"
-        elif role == "tool":
-            tool_name = msg.get("name", "unknown")
-            label = f"[TOOL_RESULT ({tool_name})]:"
-        else:
-            label = "[USER]:"
+            if level_index + 1 >= len(self._CHARS_PER_TOKEN_LEVELS):
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk still exceeds the context window after "
+                    f"retries at {self._CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
+                ) from None
 
-        lines.append(f"{label} {content}")
+            next_level = level_index + 1
+            if self.verbose:
+                chars_per_token = self._CHARS_PER_TOKEN_LEVELS[next_level]
+                PRINTER.print(
+                    content=(
+                        "Summarization chunk exceeded context window; retrying with "
+                        f"tighter token estimate (1 token per {chars_per_token} chars)."
+                    ),
+                    color="yellow",
+                )
 
-    return "\n\n".join(lines)
+            sub_chunks = self._chunk_messages(
+                chunk,
+                llm.get_context_window_size(),
+                char_level_index=next_level,
+            )
+            if not sub_chunks:
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk could not be split further."
+                ) from None
 
+            if len(sub_chunks) == 1:
+                return await _summarize_one(sub_chunks[0], next_level)
 
-def _split_messages_into_chunks(
-    messages: list[LLMMessage], max_tokens: int
-) -> list[list[LLMMessage]]:
-    """Split messages into chunks at message boundaries.
+            parts = await asyncio.gather(
+                *[_summarize_one(sub_chunk, next_level) for sub_chunk in sub_chunks]
+            )
+            return "\n\n".join(parts)
 
-    Excludes system messages from chunks. Each chunk stays under
-    max_tokens based on estimated token count.
+        async def _gather() -> list[str]:
+            coroutines = [_summarize_one(chunk, char_level_index) for chunk in chunks]
+            return list(await asyncio.gather(*coroutines))
 
-    Args:
-        messages: List of messages to split.
-        max_tokens: Maximum estimated tokens per chunk.
+        coro = _gather()
+        if is_inside_event_loop():
+            ctx = contextvars.copy_context()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(ctx.run, asyncio.run, coro).result()
+        return asyncio.run(coro)
 
-    Returns:
-        List of message chunks.
-    """
-    non_system = [m for m in messages if m.get("role") != "system"]
-    if not non_system:
-        return []
-
-    chunks: list[list[LLMMessage]] = []
-    current_chunk: list[LLMMessage] = []
-    current_tokens = 0
-
-    for msg in non_system:
-        content = msg.get("content")
-        if content is None:
-            msg_text = ""
-        elif isinstance(content, list):
-            msg_text = str(content)
-        else:
-            msg_text = str(content)
-
-        msg_tokens = _estimate_token_count(msg_text)
-
-        if current_chunk and (current_tokens + msg_tokens) > max_tokens:
-            chunks.append(current_chunk)
-            current_chunk = []
-            current_tokens = 0
-
-        current_chunk.append(msg)
-        current_tokens += msg_tokens
-
-    if current_chunk:
-        chunks.append(current_chunk)
-
-    return chunks
-
-
-def _extract_summary_tags(text: str) -> str:
-    """Extract content between <summary></summary> tags.
-
-    Falls back to the full text if no tags are found.
-
-    Args:
-        text: Text potentially containing summary tags.
-
-    Returns:
-        Extracted summary content, or full text if no tags found.
-    """
-    match = re.search(r"<summary>(.*?)</summary>", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return text.strip()
-
-
-async def _asummarize_chunks(
-    chunks: list[list[LLMMessage]],
-    llm: LLM | BaseLLM,
-    callbacks: list[TokenCalcHandler],
-) -> list[SummaryContent]:
-    """Summarize multiple message chunks concurrently using asyncio.
-
-    Args:
-        chunks: List of message chunks to summarize.
-        llm: LLM instance (must support ``acall``).
-        callbacks: List of callbacks for the LLM.
-
-    Returns:
-        Ordered list of summary contents, one per chunk.
-    """
-
-    async def _summarize_one(chunk: list[LLMMessage]) -> SummaryContent:
-        conversation_text = _format_messages_for_summary(chunk)
-        summarization_messages = [
+    def _build_summary_prompt(self, chunk: list[LLMMessage]) -> list[LLMMessage]:
+        conversation = self._conversation_text(chunk)
+        return [
             format_message_for_llm(
                 I18N_DEFAULT.slice("summarizer_system_message"), role="system"
             ),
             format_message_for_llm(
                 I18N_DEFAULT.slice("summarize_instruction").format(
-                    conversation=conversation_text
+                    conversation=conversation
                 ),
             ),
         ]
-        summary = await llm.acall(summarization_messages, callbacks=callbacks)
-        extracted = _extract_summary_tags(str(summary))
-        return {"content": extracted}
 
-    results = await asyncio.gather(*[_summarize_one(chunk) for chunk in chunks])
-    return list(results)
+    def _collect_attached_files(self) -> dict[str, Any]:
+        preserved: dict[str, Any] = {}
+        for msg in self.messages:
+            if msg.get("role") == "user" and msg.get("files"):
+                preserved.update(msg["files"])
+        return preserved
+
+    def _replace_history_with_summary(
+        self,
+        system_messages: list[LLMMessage],
+        summaries: list[str],
+        preserved_files: dict[str, Any],
+    ) -> None:
+        merged = "\n\n".join(summaries)
+        summary_message = format_message_for_llm(
+            I18N_DEFAULT.slice("summary").format(merged_summary=merged)
+        )
+        if preserved_files:
+            summary_message["files"] = preserved_files
+
+        self.messages.clear()
+        self.messages.extend(system_messages)
+        self.messages.append(summary_message)
+
+    def _approx_tokens(self, text: str, chars_per_token: float = 4.0) -> int:
+        """Estimate token count from character length and a chars-per-token heuristic."""
+        if not text:
+            return 0
+        return int(len(text) / chars_per_token)
+
+    def _chars_per_token(self, char_level_index: int) -> float:
+        return self._CHARS_PER_TOKEN_LEVELS[char_level_index]
+
+    def _messages_ready_to_chunk(
+        self,
+        messages: list[LLMMessage],
+        max_tokens: int,
+        char_level_index: int = 0,
+    ) -> list[LLMMessage]:
+        """Drop system messages and split any entry that exceeds max_tokens."""
+        chars_per_token = self._chars_per_token(char_level_index)
+        ready: list[LLMMessage] = []
+        for msg in messages:
+            if msg.get("role") == "system":
+                continue
+
+            text = message_content_text(msg)
+            if not text or self._approx_tokens(text, chars_per_token) <= max_tokens:
+                ready.append(msg)
+                continue
+
+            part_prefix_tokens = 5
+            body_max_tokens = max(1, max_tokens - part_prefix_tokens)
+            max_chars = max(1, int(body_max_tokens * chars_per_token))
+            parts = [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+            total_parts = len(parts)
+            for index, part in enumerate(parts, start=1):
+                ready.append(
+                    {**msg, "content": f"[Part {index}/{total_parts}]\n{part}"}
+                )
+        return ready
+
+    def _conversation_text(self, messages: list[LLMMessage]) -> str:
+        """Format messages with role labels, skipping system messages."""
+        lines: list[str] = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            if role == "system":
+                continue
+
+            if role == "assistant":
+                prefix = "[ASSISTANT]:"
+            elif role == "tool":
+                prefix = f"[TOOL_RESULT ({msg.get('name', 'unknown')})]:"
+            else:
+                prefix = "[USER]:"
+
+            content = msg.get("content")
+            if content is None:
+                tool_calls = msg.get("tool_calls") or []
+                names = []
+                for tool_call in tool_calls:
+                    func = tool_call.get("function", {})
+                    names.append(
+                        func.get("name", "unknown")
+                        if isinstance(func, dict)
+                        else "unknown"
+                    )
+                body = f"[Called tools: {', '.join(names)}]" if names else ""
+            elif isinstance(content, list):
+                body = _content_parts_text(content)
+            else:
+                body = str(content)
+
+            lines.append(f"{prefix} {body}")
+        return "\n\n".join(lines)
+
+    def _chunk_messages(
+        self,
+        messages: list[LLMMessage],
+        max_tokens: int,
+        char_level_index: int = 0,
+    ) -> list[list[LLMMessage]]:
+        """Split messages into chunks that stay under max_tokens."""
+        chars_per_token = self._chars_per_token(char_level_index)
+        normalized = self._messages_ready_to_chunk(
+            messages, max_tokens, char_level_index=char_level_index
+        )
+        if not normalized:
+            return []
+
+        chunks: list[list[LLMMessage]] = []
+        current_chunk: list[LLMMessage] = []
+        current_tokens = 0
+        for msg in normalized:
+            msg_tokens = self._approx_tokens(
+                message_content_text(msg), chars_per_token=chars_per_token
+            )
+            if current_chunk and (current_tokens + msg_tokens) > max_tokens:
+                chunks.append(current_chunk)
+                current_chunk = []
+                current_tokens = 0
+            current_chunk.append(msg)
+            current_tokens += msg_tokens
+
+        if current_chunk:
+            chunks.append(current_chunk)
+        return chunks
 
 
 def summarize_messages(
@@ -929,69 +1165,9 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         verbose: Whether to print progress.
     """
-    preserved_files: dict[str, Any] = {}
-    for msg in messages:
-        if msg.get("role") == "user" and msg.get("files"):
-            preserved_files.update(msg["files"])
-
-    system_messages = [m for m in messages if m.get("role") == "system"]
-    non_system_messages = [m for m in messages if m.get("role") != "system"]
-
-    if not non_system_messages:
-        return
-
-    max_tokens = llm.get_context_window_size()
-    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
-
-    total_chunks = len(chunks)
-
-    if total_chunks <= 1:
-        summarized_contents: list[SummaryContent] = []
-        for idx, chunk in enumerate(chunks, 1):
-            if verbose:
-                PRINTER.print(
-                    content=f"Summarizing {idx}/{total_chunks}...",
-                    color="yellow",
-                )
-            conversation_text = _format_messages_for_summary(chunk)
-            summarization_messages = [
-                format_message_for_llm(
-                    I18N_DEFAULT.slice("summarizer_system_message"), role="system"
-                ),
-                format_message_for_llm(
-                    I18N_DEFAULT.slice("summarize_instruction").format(
-                        conversation=conversation_text
-                    ),
-                ),
-            ]
-            summary = llm.call(summarization_messages, callbacks=callbacks)
-            extracted = _extract_summary_tags(str(summary))
-            summarized_contents.append({"content": extracted})
-    else:
-        if verbose:
-            PRINTER.print(
-                content=f"Summarizing {total_chunks} chunks in parallel...",
-                color="yellow",
-            )
-        coro = _asummarize_chunks(chunks=chunks, llm=llm, callbacks=callbacks)
-        if is_inside_event_loop():
-            ctx = contextvars.copy_context()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                summarized_contents = pool.submit(ctx.run, asyncio.run, coro).result()
-        else:
-            summarized_contents = asyncio.run(coro)
-
-    merged_summary = "\n\n".join(content["content"] for content in summarized_contents)
-
-    messages.clear()
-    messages.extend(system_messages)
-
-    summary_message = format_message_for_llm(
-        I18N_DEFAULT.slice("summary").format(merged_summary=merged_summary)
+    SummarizeMessages().summarize(
+        messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
     )
-    if preserved_files:
-        summary_message["files"] = preserved_files
-    messages.append(summary_message)
 
 
 def show_agent_logs(
@@ -1108,15 +1284,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        if callable(_create_plus_client_hook):
-            client = _create_plus_client_hook()
-        else:
+        def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
             from crewai.plus_api import PlusAPI
 
-            client = PlusAPI(api_key=get_auth_token())
+            return PlusAPI(api_key=get_auth_token())
+
+        client = resolve_plus_client(build_default_client)
         _print_current_organization()
-        response = asyncio.run(client.get_agent(from_repository))
+        response = resolve_plus_response(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
@@ -1130,8 +1306,18 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             )
 
         agent = response.json()
+        skill_versions = agent.get("skill_versions") or []
         for key, value in agent.items():
-            if key == "tools":
+            if value is None:
+                continue
+            if key == "skill_versions":
+                # Folded into the skill refs below, and not an Agent field.
+                continue
+            if key == "skills":
+                if not value:
+                    continue
+                attributes[key] = _pin_skill_refs(value, skill_versions)
+            elif key == "tools":
                 attributes[key] = []
                 for tool in value:
                     try:
@@ -1152,6 +1338,43 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             else:
                 attributes[key] = value
     return attributes
+
+
+def _pin_skill_refs(refs: list[Any], skill_versions: list[dict[str, Any]]) -> list[Any]:
+    """Pin repository skill refs to the versions the repository recorded.
+
+    An agent's ``skills`` are plain ``@org/name`` refs while ``skill_versions``
+    carries the version pinned against each one. Without folding the two
+    together the runtime resolves whatever version is newest, so publishing a
+    new version of a skill would silently change every agent using it.
+
+    Args:
+        refs: Skill references as returned by the repository.
+        skill_versions: Repository version records, each with a ``registry_ref``
+            and ``version``.
+
+    Returns:
+        The refs, version-pinned where the repository recorded one.
+    """
+    pinned_versions = {
+        entry["registry_ref"]: entry["version"]
+        for entry in skill_versions
+        if isinstance(entry, dict)
+        and entry.get("registry_ref")
+        and entry.get("version")
+    }
+    if not pinned_versions:
+        return refs
+
+    pinned_refs: list[Any] = []
+    for ref in refs:
+        version = pinned_versions.get(ref) if isinstance(ref, str) else None
+        # Leave anything already pinned (a second '@') exactly as it is.
+        already_pinned = isinstance(ref, str) and "@" in ref[1:]
+        pinned_refs.append(
+            f"{ref}@{version}" if version and not already_pinned else ref
+        )
+    return pinned_refs
 
 
 DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
@@ -1211,13 +1434,28 @@ def extract_tool_call_info(
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
         return call_id, sanitize_tool_name(tool_call.name), tool_call.input
     if isinstance(tool_call, dict):
-        # Support OpenAI "id", Bedrock "toolUseId", or generate one
+        # Prefer the Responses API "call_id", then OpenAI "id", then Bedrock
+        # "toolUseId", else generate one. A raw Responses function_call item carries
+        # both "id" (fc_...) and "call_id" (call_...) with different values, and the
+        # matching function_call_output must reference "call_id" -- reading "id"
+        # would produce a tool result that can't be correlated to its invocation.
         call_id = (
-            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+            tool_call.get("call_id")
+            or tool_call.get("id")
+            or tool_call.get("toolUseId")
+            or f"call_{id(tool_call)}"
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        func_args = func_info.get("arguments") or tool_call.get("input") or {}
+        # "arguments" is also read from the top level for the OpenAI Responses API,
+        # which emits {"id", "name", "arguments"} with no nested "function" object.
+        # Without it the args silently resolved to {} and the tool ran with no input.
+        func_args = (
+            func_info.get("arguments")
+            or tool_call.get("arguments")
+            or tool_call.get("input")
+            or {}
+        )
         return call_id, sanitize_tool_name(func_name), func_args
     return None
 
@@ -1249,6 +1487,16 @@ def is_tool_call_list(response: list[Any]) -> bool:
     # Bedrock-style
     if isinstance(first_item, dict) and "name" in first_item and "input" in first_item:
         return True
+    # OpenAI Responses API style: {"id", "name", "arguments"}, with no nested
+    # "function" object and no "input". This intentionally accepts the same broad
+    # shape as the Bedrock check above; only provider paths that return lists reach
+    # this classifier.
+    if (
+        isinstance(first_item, dict)
+        and "name" in first_item
+        and "arguments" in first_item
+    ):
+        return True
     # Gemini-style
     if hasattr(first_item, "function_call") and first_item.function_call:
         return True
@@ -1270,6 +1518,28 @@ def check_native_tool_support(llm: Any, original_tools: list[BaseTool] | None) -
         and callable(getattr(llm, "supports_function_calling", None))
         and llm.supports_function_calling()
         and bool(original_tools)
+    )
+
+
+def is_native_tool_calling_unsupported_error(error: BaseException) -> bool:
+    """Return whether an error means native tool calling is unavailable."""
+    message = str(error).lower()
+    return any(pattern in message for pattern in _NATIVE_TOOL_UNSUPPORTED_PATTERNS)
+
+
+def build_text_tool_calling_fallback_message(
+    tools_description: str,
+    tools_names: str,
+) -> str:
+    """Build instructions for downgrading native tools to text tool calls."""
+    text_tooling_prompt = I18N_DEFAULT.slice("tools").format(
+        tools=tools_description,
+        tool_names=tools_names,
+    )
+    return (
+        "Native tool calling is unavailable for this model/provider. "
+        "Continue using CrewAI text tool calling instead.\n"
+        f"{text_tooling_prompt}"
     )
 
 
@@ -1352,6 +1622,22 @@ class NativeToolCallResult:
     tool_message: LLMMessage = field(default_factory=dict)  # type: ignore[assignment]
 
 
+def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    """Format native tool output when a tool explicitly defines a formatter."""
+    if isinstance(raw_result, ToolFailure):
+        return raw_result.as_agent_message()
+
+    formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
+    if formatter is None:
+        return str(raw_result)
+
+    runtime_formatter = getattr(tool, "format_output_for_agent", None)
+    if not callable(runtime_formatter):
+        return str(raw_result)
+
+    return str(runtime_formatter(raw_result))
+
+
 def execute_single_native_tool_call(
     tool_call: Any,
     *,
@@ -1365,6 +1651,8 @@ def execute_single_native_tool_call(
     event_source: Any,
     printer: Printer | None = None,
     verbose: bool = False,
+    plan_step_number: int | None = None,
+    plan_step_description: str | None = None,
 ) -> NativeToolCallResult:
     """Execute a single native tool call with full lifecycle management.
 
@@ -1395,8 +1683,8 @@ def execute_single_native_tool_call(
     )
     from crewai.hooks.tool_hooks import (
         ToolCallHookContext,
-        get_after_tool_call_hooks,
-        get_before_tool_call_hooks,
+        run_after_tool_call_hooks,
+        run_before_tool_call_hooks,
     )
 
     info = extract_tool_call_info(tool_call)
@@ -1407,13 +1695,30 @@ def execute_single_native_tool_call(
 
     call_id, func_name, func_args = info
 
-    if isinstance(func_args, str):
-        try:
-            args_dict = json.loads(func_args)
-        except json.JSONDecodeError:
-            args_dict = {}
-    else:
-        args_dict = func_args
+    parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+    if parse_error is not None:
+        # Previously the decode error was swallowed into empty args and the tool
+        # ran with no input at all.
+        handle_tool_failure(
+            parse_error["tool_failure"],
+            tool_name=func_name,
+            tool_args=func_args,
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
+        return NativeToolCallResult(
+            call_id=call_id,
+            func_name=func_name,
+            result=parse_error["result"],
+            tool_message={
+                "role": "tool",
+                "tool_call_id": call_id,
+                "name": func_name,
+                "content": parse_error["result"],
+            },
+        )
+    args_dict = parsed_args if parsed_args is not None else {}
 
     agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
 
@@ -1423,18 +1728,26 @@ def execute_single_native_tool_call(
             original_tool = tool
             break
 
+    structured_tool: CrewStructuredTool | None = None
+    for structured in structured_tools or []:
+        if sanitize_tool_name(structured.name) == func_name:
+            structured_tool = structured
+            break
+
+    output_tool = original_tool or structured_tool
+
     from_cache = False
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
+    raw_tool_result: Any = result
+    tool_failure: ToolFailure | None = None
 
-    if tools_handler and tools_handler.cache:
+    if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
-            result = (
-                str(cached_result)
-                if not isinstance(cached_result, str)
-                else cached_result
-            )
+            raw_tool_result = cached_result
+            result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1446,18 +1759,13 @@ def execute_single_native_tool_call(
             from_agent=agent,
             from_task=task,
             agent_key=agent_key,
+            plan_step_number=plan_step_number,
+            plan_step_description=plan_step_description,
         ),
     )
 
     track_delegation_if_needed(func_name, args_dict, task)
 
-    structured_tool: CrewStructuredTool | None = None
-    for structured in structured_tools or []:
-        if sanitize_tool_name(structured.name) == func_name:
-            structured_tool = structured
-            break
-
-    hook_blocked = False
     before_hook_context = ToolCallHookContext(
         tool_name=func_name,
         tool_input=args_dict,
@@ -1466,22 +1774,21 @@ def execute_single_native_tool_call(
         task=task,
         crew=crew,
     )
-    try:
-        for hook in get_before_tool_call_hooks():
-            if hook(before_hook_context) is False:
-                hook_blocked = True
-                break
-    except Exception:  # noqa: S110
-        pass
+    hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
     error_event_emitted = False
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
+        raw_tool_result = result
+        # The blocked message replaces any cached result, so a cached failure
+        # must not be attributed to this call.
+        tool_failure = None
     elif not from_cache:
-        if func_name in available_functions:
+        if func_name in available_functions and output_tool is not None:
             try:
                 tool_func = available_functions[func_name]
                 raw_result = tool_func(**args_dict)
+                raw_tool_result = raw_result
 
                 if tools_handler and tools_handler.cache:
                     should_cache = True
@@ -1494,11 +1801,12 @@ def execute_single_native_tool_call(
                             tool=func_name, input=input_str, output=raw_result
                         )
 
-                result = (
-                    str(raw_result) if not isinstance(raw_result, str) else raw_result
-                )
+                result = format_native_tool_output_for_agent(output_tool, raw_result)
+                tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
+                raw_tool_result = result
+                tool_failure = failure_from_exception(e)
                 if task:
                     task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1509,10 +1817,20 @@ def execute_single_native_tool_call(
                         from_agent=agent,
                         from_task=task,
                         agent_key=agent_key,
+                        plan_step_number=plan_step_number,
+                        plan_step_description=plan_step_description,
                         error=e,
                     ),
                 )
                 error_event_emitted = True
+        else:
+            # Not cached and not executable: the model asked for a tool we do
+            # not have. The ReAct path reports this, so this one must too.
+            tool_failure = ToolFailure(
+                message=result,
+                reason=ToolFailureReason.UNKNOWN_TOOL,
+                code=func_name,
+            )
 
     after_hook_context = ToolCallHookContext(
         tool_name=func_name,
@@ -1522,15 +1840,11 @@ def execute_single_native_tool_call(
         task=task,
         crew=crew,
         tool_result=result,
+        raw_tool_result=raw_tool_result,
     )
-    try:
-        for after_hook in get_after_tool_call_hooks():
-            hook_result = after_hook(after_hook_context)
-            if hook_result is not None:
-                result = hook_result
-                after_hook_context.tool_result = result
-    except Exception:  # noqa: S110
-        pass
+    modified_result = run_after_tool_call_hooks(after_hook_context)
+    if modified_result is not None:
+        result = modified_result
 
     if not error_event_emitted:
         crewai_event_bus.emit(
@@ -1542,9 +1856,31 @@ def execute_single_native_tool_call(
                 from_agent=agent,
                 from_task=task,
                 agent_key=agent_key,
+                plan_step_number=plan_step_number,
+                plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
+                failure=reportable_failure(
+                    tool_failure,
+                    tool=structured_tool,
+                    agent=agent,
+                    task=task,
+                    crew=crew,
+                ),
             ),
+        )
+
+    # After the finished event, so subscribers see the full lifecycle even
+    # when the policy aborts.
+    if tool_failure is not None:
+        handle_tool_failure(
+            tool_failure,
+            tool_name=func_name,
+            tool_args=args_dict,
+            tool=structured_tool,
+            agent=agent,
+            task=task,
+            crew=crew,
         )
 
     tool_message: LLMMessage = {
@@ -1567,6 +1903,9 @@ def execute_single_native_tool_call(
         and original_tool.result_as_answer
         and not error_event_emitted
         and not hook_blocked
+        # A declared failure is excluded for the same reason a raised one is:
+        # an error must not silently become the task's answer.
+        and tool_failure is None
     )
 
     return NativeToolCallResult(
@@ -1590,21 +1929,28 @@ def parse_tool_call_args(
     Returns:
         ``(args_dict, None)`` on success, or ``(None, error_result)`` on
         JSON parse failure where ``error_result`` is a ready-to-return dict
-        with the same shape as ``_execute_single_native_tool_call`` return values.
+        with the same shape as ``_execute_single_native_tool_call`` return
+        values, carrying an ``INVALID_INPUT`` failure for the caller to report.
     """
     if isinstance(func_args, str):
         try:
             return json.loads(func_args), None
         except json.JSONDecodeError as e:
+            message = (
+                f"Error: Failed to parse tool arguments as JSON: {e}. "
+                f"Please provide valid JSON arguments for the '{func_name}' tool."
+            )
             return None, {
                 "call_id": call_id,
                 "func_name": func_name,
-                "result": (
-                    f"Error: Failed to parse tool arguments as JSON: {e}. "
-                    f"Please provide valid JSON arguments for the '{func_name}' tool."
-                ),
+                "result": message,
                 "from_cache": False,
                 "original_tool": original_tool,
+                "tool_failure": ToolFailure(
+                    message=message,
+                    reason=ToolFailureReason.INVALID_INPUT,
+                    code="json_decode_error",
+                ),
             }
     return func_args, None
 
@@ -1622,30 +1968,51 @@ def _setup_before_llm_call_hooks(
         verbose: Whether to print output.
 
     Returns:
-        True if LLM execution should proceed, False if blocked by a hook.
+        True if LLM execution should proceed, False if a hook blocked it by
+        returning ``False``.
+
+    Raises:
+        HookAborted: If a hook raised it, so the deny reaches the caller intact.
     """
-    if executor_context and executor_context.before_llm_call_hooks:
-        from crewai.hooks.llm_hooks import LLMCallHookContext
+    if executor_context:
+        from crewai.hooks.dispatch import (
+            InterceptionPoint,
+            get_scoped_hooks,
+            run_hooks,
+        )
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            LegacyHookBlocked,
+            before_llm_call_reducer,
+        )
+
+        # Executor snapshot first, then execution-scoped hooks — the same
+        # ordering dispatch() applies to global vs scoped hooks.
+        hooks: list[Any] = [
+            *executor_context.before_llm_call_hooks,
+            *get_scoped_hooks(InterceptionPoint.PRE_MODEL_CALL),
+        ]
+        if not hooks:
+            return True
 
         original_messages = executor_context.messages
 
         hook_context = LLMCallHookContext(executor_context)
         try:
-            for hook in executor_context.before_llm_call_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    if verbose:
-                        printer.print(
-                            content="LLM call blocked by before_llm_call hook",
-                            color="yellow",
-                        )
-                    return False
-        except Exception as e:
+            run_hooks(
+                InterceptionPoint.PRE_MODEL_CALL,
+                hook_context,
+                hooks,
+                reducer=before_llm_call_reducer,
+                verbose=verbose,
+            )
+        except LegacyHookBlocked:
             if verbose:
                 printer.print(
-                    content=f"Error in before_llm_call hook: {e}",
+                    content="LLM call blocked by before_llm_call hook",
                     color="yellow",
                 )
+            return False
 
         if not isinstance(executor_context.messages, list):
             if verbose:
@@ -1682,8 +2049,24 @@ def _setup_after_llm_call_hooks(
     Returns:
         The potentially modified response (string or Pydantic model).
     """
-    if executor_context and executor_context.after_llm_call_hooks:
-        from crewai.hooks.llm_hooks import LLMCallHookContext
+    if executor_context:
+        from crewai.hooks.dispatch import InterceptionPoint, get_scoped_hooks, run_hooks
+        from crewai.hooks.llm_hooks import LLMCallHookContext, after_llm_call_reducer
+
+        # Don't stringify structured tool-call payloads: the executor would
+        # treat the result as a final answer and skip tool execution (#6529).
+        # Hooks still run on the follow-up textual response.
+        if not isinstance(answer, (str, BaseModel)):
+            return answer
+
+        # Executor snapshot first, then execution-scoped hooks — the same
+        # ordering dispatch() applies to global vs scoped hooks.
+        hooks: list[Any] = [
+            *executor_context.after_llm_call_hooks,
+            *get_scoped_hooks(InterceptionPoint.POST_MODEL_CALL),
+        ]
+        if not hooks:
+            return answer
 
         original_messages = executor_context.messages
 
@@ -1696,18 +2079,15 @@ def _setup_after_llm_call_hooks(
             hook_response = str(answer)
 
         hook_context = LLMCallHookContext(executor_context, response=hook_response)
-        try:
-            for hook in executor_context.after_llm_call_hooks:
-                modified_response = hook(hook_context)
-                if modified_response is not None and isinstance(modified_response, str):
-                    hook_response = modified_response
-
-        except Exception as e:
-            if verbose:
-                printer.print(
-                    content=f"Error in after_llm_call hook: {e}",
-                    color="yellow",
-                )
+        run_hooks(
+            InterceptionPoint.POST_MODEL_CALL,
+            hook_context,
+            hooks,
+            reducer=after_llm_call_reducer,
+            verbose=verbose,
+        )
+        if hook_context.response is not None:
+            hook_response = hook_context.response
 
         if not isinstance(executor_context.messages, list):
             if verbose:

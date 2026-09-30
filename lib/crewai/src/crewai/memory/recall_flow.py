@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
 from datetime import datetime
 import logging
-from typing import Any
+from typing import Any, ClassVar
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -62,6 +62,8 @@ class RecallFlow(Flow[RecallState]):
     embeds each sub-query, searches across candidate scopes in parallel,
     and iteratively deepens exploration when confidence is low.
     """
+
+    is_crewai_internal: ClassVar[bool] = True
 
     _skip_auto_memory: bool = True
 
@@ -259,8 +261,9 @@ class RecallFlow(Flow[RecallState]):
                 candidates = []
         if not candidates:
             candidates = [scope_prefix]
-        self.state.candidate_scopes = candidates[:20]
-        return self.state.candidate_scopes
+        selected_scopes = candidates[:20]
+        self.state.candidate_scopes = selected_scopes
+        return selected_scopes
 
     @listen(filter_and_chunk)
     def search_chunks(self) -> list[Any]:
@@ -293,6 +296,8 @@ class RecallFlow(Flow[RecallState]):
 
         Decrements the exploration budget so the loop terminates.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         self.state.exploration_budget -= 1
 
         enhanced = []
@@ -318,6 +323,8 @@ class RecallFlow(Flow[RecallState]):
                         "results": finding["results"],
                     }
                 )
+            except HookAborted:
+                raise
             except Exception:
                 enhanced.append(
                     {
@@ -337,7 +344,7 @@ class RecallFlow(Flow[RecallState]):
     @router(re_search)
     def re_decide_depth(self) -> str:
         """Re-evaluate depth after re-search. Same logic as decide_depth."""
-        return self.decide_depth()  # type: ignore[call-arg]
+        return self.decide_depth()
 
     @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:
@@ -368,9 +375,10 @@ class RecallFlow(Flow[RecallState]):
                         )
                     )
         matches.sort(key=lambda m: m.score, reverse=True)
-        self.state.final_results = matches[: self.state.limit]
+        final_results = matches[: self.state.limit]
+        self.state.final_results = final_results
 
         if self.state.evidence_gaps and self.state.final_results:
             self.state.final_results[0].evidence_gaps = list(self.state.evidence_gaps)
 
-        return self.state.final_results
+        return final_results

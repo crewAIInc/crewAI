@@ -18,3 +18,10 @@ def test_huggingface_models():
     """Test that Huggingface models are properly configured."""
     assert "huggingface" in MODELS
     assert len(MODELS["huggingface"]) > 0
+
+
+def test_openai_models_include_gpt56_family() -> None:
+    """Curated OpenAI list should include Sol, Terra, Luna, and the alias."""
+    openai_models = MODELS["openai"]
+    for model in ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6"):
+        assert model in openai_models

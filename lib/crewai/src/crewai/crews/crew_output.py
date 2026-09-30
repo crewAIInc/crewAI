@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools.tool_failure import ToolFailureRecord
 from crewai.types.usage_metrics import UsageMetrics
 
 
@@ -24,8 +25,36 @@ class CrewOutput(BaseModel):
         description="Output of each task", default_factory=list
     )
     token_usage: UsageMetrics = Field(
-        description="Processed token summary", default_factory=UsageMetrics
+        description=(
+            "Processed token summary; ``usage_metrics`` exposes the same "
+            "data as a plain dict"
+        ),
+        default_factory=UsageMetrics,
     )
+
+    @property
+    def tool_failures(self) -> list[ToolFailureRecord]:
+        """Every tool failure recorded across all tasks, in task order.
+
+        A crew can finish successfully with a non-empty list -- agents narrate a
+        failed step and carry on. Check it before treating ``raw`` as complete.
+        """
+        return [failure for task in self.tasks_output for failure in task.tool_failures]
+
+    @property
+    def has_tool_failures(self) -> bool:
+        """Whether any tool reported a failure during this crew run."""
+        return any(task.tool_failures for task in self.tasks_output)
+
+    @property
+    def usage_metrics(self) -> dict[str, Any]:
+        """Token usage as a plain dict.
+
+        Same attribute name and shape as ``LiteAgentOutput.usage_metrics``
+        (the ``Agent.kickoff()`` result), so a usage accessor written for one
+        result type works on both.
+        """
+        return self.token_usage.model_dump()
 
     @property
     def json(self) -> str | None:  # type: ignore[override]

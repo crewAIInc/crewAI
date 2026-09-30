@@ -17,6 +17,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _uploader_or_none(provider: ProviderType) -> FileUploader | None:
+    """Return the provider's uploader, or None when it is unavailable.
+
+    get_uploader raises ValueError for an unknown or unconfigured provider.
+    Cleanup skips such providers rather than aborting the whole pass, so that
+    error is treated as "no uploader available" here.
+    """
+    try:
+        return get_uploader(provider)
+    except ValueError:
+        return None
+
+
 def _safe_delete(
     uploader: FileUploader,
     file_id: str,
@@ -70,7 +83,7 @@ def cleanup_uploaded_files(
 
     if delete_from_provider:
         for provider, uploads in provider_uploads.items():
-            uploader = get_uploader(provider)
+            uploader = _uploader_or_none(provider)
             if uploader is None:
                 logger.warning(
                     f"No uploader available for {provider}, skipping cleanup"
@@ -116,7 +129,7 @@ def cleanup_expired_files(
 
     if delete_from_provider:
         for upload in expired_entries:
-            uploader = get_uploader(upload.provider)
+            uploader = _uploader_or_none(upload.provider)
             if uploader is not None:
                 try:
                     uploader.delete(upload.file_id)
@@ -144,7 +157,7 @@ def cleanup_provider_files(
         Number of files deleted.
     """
     deleted = 0
-    uploader = get_uploader(provider)
+    uploader = _uploader_or_none(provider)
 
     if uploader is None:
         logger.warning(f"No uploader available for {provider}")
@@ -247,7 +260,7 @@ async def acleanup_uploaded_files(
 
         tasks: list[asyncio.Task[bool]] = []
         for provider, uploads in provider_uploads.items():
-            uploader = get_uploader(provider)
+            uploader = _uploader_or_none(provider)
             if uploader is None:
                 logger.warning(
                     f"No uploader available for {provider}, skipping cleanup"
@@ -298,7 +311,7 @@ async def acleanup_expired_files(
         async def delete_expired(cached: CachedUpload) -> None:
             """Delete an expired file with semaphore limiting."""
             async with semaphore:
-                file_uploader = get_uploader(cached.provider)
+                file_uploader = _uploader_or_none(cached.provider)
                 if file_uploader is not None:
                     try:
                         await file_uploader.adelete(cached.file_id)
@@ -334,7 +347,7 @@ async def acleanup_provider_files(
         Number of files deleted.
     """
     deleted = 0
-    uploader = get_uploader(provider)
+    uploader = _uploader_or_none(provider)
 
     if uploader is None:
         logger.warning(f"No uploader available for {provider}")

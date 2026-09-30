@@ -42,6 +42,7 @@ __all__ = [
     "is_first_execution",
     "is_tracing_enabled",
     "is_tracing_enabled_in_context",
+    "is_tui_mode",
     "mark_first_execution_completed",
     "mark_first_execution_done",
     "on_first_execution_tracing_confirmation",
@@ -50,9 +51,11 @@ __all__ = [
     "safe_serialize_to_dict",
     "set_suppress_tracing_messages",
     "set_tracing_enabled",
+    "set_tui_mode",
     "should_auto_collect_first_time_traces",
     "should_enable_tracing",
     "should_suppress_tracing_messages",
+    "tracing_asked_for",
     "truncate_messages",
     "update_user_data",
 ]
@@ -70,6 +73,16 @@ _first_time_trace_hook: ContextVar[Callable[[], bool] | None] = ContextVar(
 _suppress_tracing_messages: ContextVar[bool] = ContextVar(
     "_suppress_tracing_messages", default=False
 )
+
+_tui_mode: ContextVar[bool] = ContextVar("_tui_mode", default=False)
+
+
+def set_tui_mode(enabled: bool) -> object:
+    return _tui_mode.set(enabled)
+
+
+def is_tui_mode() -> bool:
+    return _tui_mode.get()
 
 
 def set_suppress_tracing_messages(suppress: bool) -> object:
@@ -91,6 +104,32 @@ def should_suppress_tracing_messages() -> bool:
         True if messages should be suppressed, False otherwise.
     """
     return _suppress_tracing_messages.get()
+
+
+def tracing_asked_for() -> bool:
+    """True when a PERSON turned tracing on for this run — `CREWAI_TRACING_ENABLED`,
+    or `tracing=True` on the crew or flow in this context — and is there to have
+    meant it.
+
+    Turning tracing on is the answer to "may we collect this?"; asking again when
+    the run ends is asking the same question twice. First-time auto-collection is
+    the case that still has to ask, because nobody asked for it.
+
+    Where the prompt could not be shown, there is nothing to answer. A copied
+    `.env` that reaches CI, a container or a server carries the variable without
+    carrying the person; a suite under test, and a host that asked for tracing
+    messages to be suppressed, are the same case. An ephemeral run has always
+    failed closed in all three rather than upload what nobody approved in front
+    of a screen, and it still does — this turns a second question into an
+    answer, and changes nothing about where the first one is asked.
+    """
+    if not (
+        is_tracing_enabled_in_context()
+        or os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1")
+    ):
+        return False
+
+    return _prompt_can_be_shown()
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
@@ -116,6 +155,8 @@ def should_enable_tracing(*, override: bool | None = None) -> bool:
     env_value = os.getenv("CREWAI_TRACING_ENABLED", "").lower()
     if env_value in ("true", "1"):
         return True
+    if env_value in ("false", "0"):
+        return False
 
     data = _load_user_data()
 
@@ -472,10 +513,15 @@ def _is_interactive_terminal() -> bool:
         return False
 
 
-def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
-    """
-    Prompt user if they want to see their traces with timeout.
-    Returns True if user wants to see traces, False otherwise.
+def _prompt_can_be_shown() -> bool:
+    """Could a question about traces be put to somebody at all?
+
+    Three cases where it cannot: a suite under test, a host that asked for
+    tracing messages to be suppressed, and a process with no terminal (CI, API
+    servers, Docker) where a prompt would block for twenty seconds with nobody
+    to answer it. `prompt_user_for_trace_viewing` returns False in each, which
+    is what keeps an unapproved ephemeral trace on the machine — and
+    `tracing_asked_for` asks the same question, so the two cannot drift apart.
     """
     if _is_test_environment():
         return False
@@ -483,9 +529,18 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
     if should_suppress_tracing_messages():
         return False
 
-    # Skip prompt in non-interactive contexts (CI, API servers, Docker, etc.)
-    # This avoids blocking for 20 seconds when no one can respond
-    if not _is_interactive_terminal():
+    return _is_interactive_terminal()
+
+
+def prompt_user_for_trace_viewing(
+    timeout_seconds: int = 20, *, sharing: bool = False
+) -> bool:
+    """
+    Prompt user if they want to see their traces with timeout.
+    Returns True if user agrees, False otherwise. ``sharing`` explicitly asks
+    permission to upload locally buffered spans rather than merely view a trace.
+    """
+    if not _prompt_can_be_shown():
         return False
 
     try:
@@ -502,6 +557,12 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         content.append("  • Agent decision-making process\n", style="bright_blue")
         content.append("  • Task execution flow and timing\n", style="bright_blue")
         content.append("  • Tool usage details", style="bright_blue")
+        if sharing:
+            content.append(
+                "\n\nThese traces are stored locally and may contain prompts, inputs, "
+                "and outputs. Sharing uploads them to CrewAI.",
+                style="white",
+            )
 
         panel = Panel(
             content,
@@ -512,8 +573,13 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         console.print("\n")
         console.print(panel)
 
+        question = (
+            "Share this execution trace with CrewAI?"
+            if sharing
+            else "Would you like to view your execution traces?"
+        )
         prompt_text = click.style(
-            f"Would you like to view your execution traces? [y/N] ({timeout_seconds}s timeout): ",
+            f"{question} [y/N] ({timeout_seconds}s timeout): ",
             fg="white",
             bold=True,
         )

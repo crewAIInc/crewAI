@@ -1,12 +1,128 @@
-"""Re-export of ``crewai_core.plus_api.PlusAPI``.
-
-Kept as a stable import path for the CLI; new code should import from
-``crewai_core.plus_api`` directly.
-"""
+"""CrewAI CLI API client extensions."""
 
 from __future__ import annotations
 
-from crewai_core.plus_api import PlusAPI as PlusAPI
+from pathlib import Path
+from typing import Any, Literal, cast
+from urllib.parse import urljoin
+
+from crewai_core.plus_api import PlusAPI as _CorePlusAPI
+import httpx
+
+
+HttpMethod = Literal["GET", "POST", "PATCH", "DELETE"]
+
+
+class PlusAPI(_CorePlusAPI):
+    """CLI API client.
+
+    The ZIP deployment methods live here as well as in newer crewai-core
+    versions so editable CLI installs still work when an older crewai-core is
+    present in the runtime environment. The evaluation methods live here
+    because only the CLI calls them.
+    """
+
+    EVALUATIONS_RESOURCE = f"{_CorePlusAPI.TRACING_RESOURCE}/evaluations"
+    # AMP reads the run's spans from Wharf inside the POST; a large run takes a while.
+    EVALUATION_START_TIMEOUT = 120.0
+    EVALUATION_POLL_TIMEOUT = 30.0
+
+    def create_evaluation(
+        self, execution_id: str, *, eval_config: str | None = None
+    ) -> httpx.Response:
+        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval).
+
+        EVAL_CONFIG is the project's own `eval.jsonc` when it has one: what
+        good means for this crew, in its own words. Sent as it was written,
+        comments and all, and read by the grader rather than here.
+        """
+        body: dict[str, str] = {"execution_id": execution_id}
+        if eval_config:
+            body["eval_config"] = eval_config
+        return self._make_request(
+            "POST",
+            self.EVALUATIONS_RESOURCE,
+            json=body,
+            timeout=self.EVALUATION_START_TIMEOUT,
+        )
+
+    def get_evaluation(self, evaluation_id: str) -> httpx.Response:
+        """The evaluation's status and, once done, its verdict."""
+        return self._make_request(
+            "GET",
+            f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}",
+            timeout=self.EVALUATION_POLL_TIMEOUT,
+        )
+
+    def _make_multipart_request(
+        self,
+        method: HttpMethod,
+        endpoint: str,
+        *,
+        zip_file_path: str | Path,
+        data: dict[str, str] | None = None,
+        timeout: float | None = None,
+        verify: bool = True,
+    ) -> httpx.Response:
+        """Send an authenticated multipart request containing a project ZIP."""
+        url = urljoin(self.base_url, endpoint)
+        headers = dict(cast(dict[str, str], self.headers))
+        headers.pop("Content-Type", None)
+        path = Path(zip_file_path)
+        request_kwargs: dict[str, Any] = {"headers": headers}
+        if data is not None:
+            request_kwargs["data"] = data
+        if timeout is not None:
+            request_kwargs["timeout"] = timeout
+
+        with (
+            path.open("rb") as file_handle,
+            httpx.Client(trust_env=False, verify=verify) as client,
+        ):
+            files = {
+                "zip_file": (path.name, file_handle, "application/zip"),
+            }
+            return client.request(method, url, files=files, **request_kwargs)
+
+    def create_crew_from_zip(
+        self,
+        zip_file_path: str | Path,
+        *,
+        name: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> httpx.Response:
+        """Create a crew deployment from a local project ZIP archive."""
+        data: dict[str, str] = {}
+        if name:
+            data["name"] = name
+        if env:
+            data.update({f"env[{key}]": value for key, value in env.items()})
+        return self._make_multipart_request(
+            "POST",
+            f"{self.CREWS_RESOURCE}/zip",
+            zip_file_path=zip_file_path,
+            data=data or None,
+            timeout=300,
+        )
+
+    def update_crew_from_zip(
+        self,
+        uuid: str,
+        zip_file_path: str | Path,
+        *,
+        env: dict[str, str] | None = None,
+    ) -> httpx.Response:
+        """Update an existing crew deployment from a local project ZIP archive."""
+        data: dict[str, str] = {}
+        if env:
+            data.update({f"env[{key}]": value for key, value in env.items()})
+        return self._make_multipart_request(
+            "POST",
+            f"{self.CREWS_RESOURCE}/{uuid}/zip_update",
+            zip_file_path=zip_file_path,
+            data=data or None,
+            timeout=300,
+        )
 
 
 __all__ = ["PlusAPI"]

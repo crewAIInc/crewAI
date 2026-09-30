@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 from unittest.mock import patch
 
@@ -109,10 +110,79 @@ class TestCheckpointListenerOptsOut:
             assert do_cp.call_count == 0
 
 
-class TestFlowResumeReplaysEvents:
-    """End-to-end: a resumed flow emits MethodExecution* events for completed methods."""
+class TestCheckpointResumeReplaysEvents:
+    """A flow resumed from a checkpoint replays MethodExecution* events for
+    completed methods and executes the pending ones. The checkpoint persists
+    the event record, which is reloaded into the per-run runtime state.
 
-    def test_resume_dispatches_completed_method_events(self, tmp_path) -> None:
+    ``step_c`` is gated on a threading.Event so the flow is frozen with exactly
+    ``step_a`` and ``step_b`` completed when the checkpoint is written — the
+    mid-run snapshot is deterministic rather than dependent on write timing.
+    """
+
+    def test_resume_replays_completed_and_executes_pending(self, tmp_path) -> None:
+        from crewai.flow.flow import Flow, listen, start
+        from crewai.state.checkpoint_config import CheckpointConfig
+
+        at_step_c = threading.Event()
+        release = threading.Event()
+        captured: list[Any] = []
+
+        class ThreeStepFlow(Flow[dict]):
+            @start()
+            def step_a(self) -> str:
+                return "a"
+
+            @listen(step_a)
+            def step_b(self) -> str:
+                return "b"
+
+            @listen(step_b)
+            def step_c(self) -> str:
+                captured.append(crewai_event_bus.runtime_state)
+                at_step_c.set()
+                release.wait(timeout=10)
+                return "c"
+
+        runner = threading.Thread(target=ThreeStepFlow().kickoff)
+        runner.start()
+        try:
+            assert at_step_c.wait(timeout=10)
+            location = captured[0].checkpoint(str(tmp_path / "cp"))
+        finally:
+            release.set()
+            runner.join(timeout=10)
+
+        captured_started: list[str] = []
+        captured_finished: list[str] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(MethodExecutionStartedEvent)
+            def _cs(_: Any, event: MethodExecutionStartedEvent) -> None:
+                captured_started.append(event.method_name)
+
+            @crewai_event_bus.on(MethodExecutionFinishedEvent)
+            def _cf(_: Any, event: MethodExecutionFinishedEvent) -> None:
+                captured_finished.append(event.method_name)
+
+            ThreeStepFlow().kickoff(
+                from_checkpoint=CheckpointConfig(restore_from=location)
+            )
+
+        assert captured_started == ["step_a", "step_b", "step_c"]
+        assert captured_finished == ["step_a", "step_b", "step_c"]
+
+
+class TestPersistResumeDoesNotReplayCompletedEvents:
+    """A @persist resume continues from pending methods only.
+
+    @persist stores flow state, not the event record, so completed-method
+    events have no persisted source to replay from. Runtime state is scoped
+    per run, so flow1's events are not visible to flow2.
+    """
+
+    def test_persist_resume_executes_only_pending_methods(self, tmp_path) -> None:
         from crewai.flow.flow import Flow, listen, start
         from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
@@ -131,9 +201,6 @@ class TestFlowResumeReplaysEvents:
             @listen(step_b)
             def step_c(self) -> str:
                 return "c"
-
-        if crewai_event_bus.runtime_state is not None:
-            crewai_event_bus.runtime_state.event_record.clear()
 
         flow1 = ThreeStepFlow(persistence=persistence)
         flow1.kickoff()
@@ -157,9 +224,5 @@ class TestFlowResumeReplaysEvents:
 
             flow2.kickoff(inputs={"id": flow_id})
 
-        assert captured_started.count("step_a") == 1
-        assert captured_started.count("step_b") == 1
-        assert captured_started.count("step_c") == 1
-        assert captured_finished.count("step_a") == 1
-        assert captured_finished.count("step_b") == 1
-        assert captured_finished.count("step_c") == 1
+        assert captured_started == ["step_c"]
+        assert captured_finished == ["step_c"]

@@ -1,0 +1,134 @@
+---
+title: البصمات الرقمية
+description: تعلم كيفية استخدام نظام البصمات الرقمية في CrewAI لتحديد وتتبع المكونات بشكل فريد طوال دورة حياتها.
+icon: fingerprint
+mode: "wide"
+---
+
+## نظرة عامة
+
+توفر البصمات الرقمية في CrewAI طريقة لتحديد وتتبع المكونات بشكل فريد طوال دورة حياتها. يتلقى كل `Agent` و`Crew` و`Task` بصمة رقمية فريدة تلقائيًا عند الإنشاء، ولا يمكن تجاوزها يدويًا.
+
+يمكن استخدام هذه البصمات لـ:
+- تدقيق وتتبع استخدام المكونات
+- ضمان سلامة هوية المكونات
+- إرفاق بيانات وصفية بالمكونات
+- إنشاء سلسلة عمليات قابلة للتتبع
+
+## كيف تعمل البصمات الرقمية
+
+البصمة الرقمية هي نسخة من فئة `Fingerprint` من وحدة `crewai.security`. تحتوي كل بصمة على:
+
+- سلسلة UUID: معرّف فريد للمكون يتم إنشاؤه تلقائيًا ولا يمكن تعيينه يدويًا
+- طابع زمني للإنشاء: متى تم إنشاء البصمة، يُعيَّن تلقائيًا ولا يمكن تعديله يدويًا
+- بيانات وصفية: قاموس معلومات إضافية يمكن تخصيصه
+
+تُنشأ البصمات الرقمية وتُعيَّن تلقائيًا عند إنشاء المكون. يكشف كل مكون بصمته من خلال خاصية للقراءة فقط.
+
+## الاستخدام الأساسي
+
+### الوصول إلى البصمات الرقمية
+
+```python
+from crewai import Agent, Crew, Task
+
+# Create components - fingerprints are automatically generated
+agent = Agent(
+    role="Data Scientist",
+    goal="Analyze data",
+    backstory="Expert in data analysis"
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[]
+)
+
+task = Task(
+    description="Analyze customer data",
+    expected_output="Insights from data analysis",
+    agent=agent
+)
+
+# Access the fingerprints
+agent_fingerprint = agent.fingerprint
+crew_fingerprint = crew.fingerprint
+task_fingerprint = task.fingerprint
+
+# Print the UUID strings
+print(f"Agent fingerprint: {agent_fingerprint.uuid_str}")
+print(f"Crew fingerprint: {crew_fingerprint.uuid_str}")
+print(f"Task fingerprint: {task_fingerprint.uuid_str}")
+```
+
+### العمل مع البيانات الوصفية للبصمة
+
+يمكنك إضافة بيانات وصفية إلى البصمات لسياق إضافي:
+
+```python
+# Add metadata to the agent's fingerprint
+agent.security_config.fingerprint.metadata = {
+    "version": "1.0",
+    "department": "Data Science",
+    "project": "Customer Analysis"
+}
+
+# Access the metadata
+print(f"Agent metadata: {agent.fingerprint.metadata}")
+```
+
+## استمرارية البصمة
+
+صُممت البصمات لتبقى ثابتة دون تغيير طوال دورة حياة المكون. إذا عدّلت مكونًا، تظل البصمة كما هي:
+
+```python
+original_fingerprint = agent.fingerprint.uuid_str
+
+# Modify the agent
+agent.goal = "New goal for analysis"
+
+# The fingerprint remains unchanged
+assert agent.fingerprint.uuid_str == original_fingerprint
+```
+
+## البصمات الحتمية
+
+بينما لا يمكنك تعيين UUID والطابع الزمني مباشرة، يمكنك إنشاء بصمات حتمية باستخدام طريقة `generate` مع بذرة:
+
+```python
+from crewai.security import Fingerprint
+
+# Create a deterministic fingerprint using a seed string
+deterministic_fingerprint = Fingerprint.generate(seed="my-agent-id")
+
+# The same seed always produces the same fingerprint
+same_fingerprint = Fingerprint.generate(seed="my-agent-id")
+assert deterministic_fingerprint.uuid_str == same_fingerprint.uuid_str
+
+# You can also set metadata
+custom_fingerprint = Fingerprint.generate(
+    seed="my-agent-id",
+    metadata={"version": "1.0"}
+)
+```
+
+## الاستخدام المتقدم
+
+### هيكل البصمة
+
+لكل بصمة الهيكل التالي:
+
+```python
+from crewai.security import Fingerprint
+
+fingerprint = agent.fingerprint
+
+# UUID string - the unique identifier (auto-generated)
+uuid_str = fingerprint.uuid_str  # e.g., "123e4567-e89b-12d3-a456-426614174000"
+
+# Creation timestamp (auto-generated)
+created_at = fingerprint.created_at  # A datetime object
+
+# Metadata - for additional information (can be customized)
+metadata = fingerprint.metadata  # A dictionary, defaults to {}
+```

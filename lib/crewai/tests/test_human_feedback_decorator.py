@@ -13,29 +13,45 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crewai.flow import Flow, human_feedback, listen, start
+from crewai.constants import DEFAULT_LLM_MODEL
+from crewai.flow import Flow, human_feedback, listen, persist, start
 from crewai.flow.human_feedback import (
+    HumanFeedbackCollapseError,
     HumanFeedbackConfig,
     HumanFeedbackResult,
+    _resolve_llm_instance,
 )
 
 
 class TestHumanFeedbackValidation:
     """Tests for decorator parameter validation."""
 
-    def test_emit_requires_llm(self):
-        """Test that specifying emit with llm=None raises ValueError."""
-        with pytest.raises(ValueError) as exc_info:
+    def test_emit_allows_omitted_llm(self):
+        """emit without an explicit llm is allowed; the engine resolves one later."""
 
-            @human_feedback(
-                message="Review this:",
-                emit=["approve", "reject"],
-                llm=None,
-            )
-            def test_method(self):
-                return "output"
+        @human_feedback(
+            message="Review this:",
+            emit=["approve", "reject"],
+        )
+        def test_method(self):
+            return "output"
 
-        assert "llm is required" in str(exc_info.value)
+        config = test_method.__human_feedback_config__
+        assert config.emit == ["approve", "reject"]
+        assert config.llm is None
+
+    def test_emit_allows_explicit_llm_none(self):
+        """llm=None with emit is the same as omitting llm."""
+
+        @human_feedback(
+            message="Review this:",
+            emit=["approve", "reject"],
+            llm=None,
+        )
+        def test_method(self):
+            return "output"
+
+        assert test_method.__human_feedback_config__.llm is None
 
     def test_default_outcome_requires_emit(self):
         """Test that specifying default_outcome without emit raises ValueError."""
@@ -78,8 +94,9 @@ class TestHumanFeedbackValidation:
             return "output"
 
         assert hasattr(test_method, "__human_feedback_config__")
-        assert test_method.__is_router__ is True
-        assert test_method.__router_paths__ == ["approve", "reject"]
+        assert test_method.__human_feedback_config__.emit == ["approve", "reject"]
+        assert not hasattr(test_method, "__is_router__")
+        assert not hasattr(test_method, "__router_emit__")
 
     def test_valid_configuration_without_routing(self):
         """Test that valid configuration without routing doesn't raise."""
@@ -89,7 +106,23 @@ class TestHumanFeedbackValidation:
             return "output"
 
         assert hasattr(test_method, "__human_feedback_config__")
-        assert not hasattr(test_method, "__is_router__") or not test_method.__is_router__
+        assert not hasattr(test_method, "__is_router__")
+
+    def test_persist_preserves_human_feedback_config(self):
+        """Test @persist preserves the config stamped by @human_feedback."""
+        llm = object()
+
+        @persist()
+        @human_feedback(
+            message="Review this:",
+            emit=["approve", "reject"],
+            llm=llm,
+        )
+        def test_method(self):
+            return "output"
+
+        assert hasattr(test_method, "__human_feedback_config__")
+        assert test_method.__human_feedback_config__.llm is llm
 
 
 class TestHumanFeedbackConfig:
@@ -110,6 +143,38 @@ class TestHumanFeedbackConfig:
         assert config.llm == "gpt-4"
         assert config.default_outcome == "a"
         assert config.metadata == {"key": "value"}
+
+
+class TestResolveLlmInstance:
+    """Omitted decorator llm follows create_llm (project MODEL, then default)."""
+
+    def test_none_uses_model_env(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("MODEL", "anthropic/claude-sonnet-4-5")
+        monkeypatch.delenv("MODEL_NAME", raising=False)
+        monkeypatch.delenv("OPENAI_MODEL_NAME", raising=False)
+
+        llm = _resolve_llm_instance(None)
+
+        assert llm is not None
+        assert "claude-sonnet-4-5" in getattr(llm, "model", "")
+
+    def test_explicit_string_wins_over_model_env(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("MODEL", "anthropic/claude-sonnet-4-5")
+
+        llm = _resolve_llm_instance("gpt-4o-mini")
+
+        assert llm is not None
+        assert getattr(llm, "model", "") == "gpt-4o-mini"
+
+    def test_none_falls_back_to_default_model(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.delenv("MODEL", raising=False)
+        monkeypatch.delenv("MODEL_NAME", raising=False)
+        monkeypatch.delenv("OPENAI_MODEL_NAME", raising=False)
+
+        llm = _resolve_llm_instance(None)
+
+        assert llm is not None
+        assert getattr(llm, "model", "") == DEFAULT_LLM_MODEL
 
 
 class TestHumanFeedbackResult:
@@ -157,10 +222,12 @@ class TestDecoratorAttributePreservation:
         flow = TestFlow()
         method = flow._methods.get("my_start_method")
         assert method is not None
-        assert hasattr(method, "__is_start_method__") or "my_start_method" in flow._start_methods
+        fragment = getattr(method, "__flow_method_definition__", None)
+        assert fragment is not None
+        assert fragment.start is True
 
-    def test_preserves_listen_method_attributes(self):
-        """Test that @human_feedback preserves @listen decorator attributes."""
+    def test_preserves_listen_method_definition(self):
+        """Test that @human_feedback preserves the @listen method definition."""
 
         class TestFlow(Flow):
             @start()
@@ -173,12 +240,14 @@ class TestDecoratorAttributePreservation:
                 return "review output"
 
         flow = TestFlow()
-        assert "review" in flow._listeners or any(
-            "review" in str(v) for v in flow._listeners.values()
-        )
+        method = flow._methods.get("review")
+        assert method is not None
+        fragment = getattr(method, "__flow_method_definition__", None)
+        assert fragment is not None
+        assert fragment.listen == "begin"
 
-    def test_sets_router_attributes_when_emit_specified(self):
-        """Test that router attributes are set when emit is specified."""
+    def test_emit_is_stored_on_human_feedback_config(self):
+        """Test that emit outcomes are stored on human feedback config."""
 
         @human_feedback(
             message="Review:",
@@ -188,8 +257,12 @@ class TestDecoratorAttributePreservation:
         def review_method(self):
             return "output"
 
-        assert review_method.__is_router__ is True
-        assert review_method.__router_paths__ == ["approved", "rejected"]
+        assert review_method.__human_feedback_config__.emit == [
+            "approved",
+            "rejected",
+        ]
+        assert not hasattr(review_method, "__is_router__")
+        assert not hasattr(review_method, "__router_emit__")
 
 
 class TestAsyncSupport:
@@ -293,6 +366,41 @@ class TestHumanFeedbackExecution:
         # But the outcome is still correctly set for routing purposes
         assert flow.last_human_feedback.outcome == "approved"
 
+    @patch("builtins.input", return_value="Approved!")
+    @patch("builtins.print")
+    def test_omitted_llm_collapse_uses_project_model(
+        self, mock_print, mock_input, monkeypatch: pytest.MonkeyPatch
+    ):
+        """When emit is set without llm=, collapse uses MODEL via create_llm."""
+        monkeypatch.setenv("MODEL", "anthropic/claude-sonnet-4-5")
+        monkeypatch.delenv("MODEL_NAME", raising=False)
+        monkeypatch.delenv("OPENAI_MODEL_NAME", raising=False)
+
+        class TestFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+            )
+            def review(self):
+                return "Content"
+
+        flow = TestFlow()
+
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="Looks great, approved!"
+            ),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved") as mock_collapse,
+        ):
+            result = flow.kickoff()
+
+        assert result == "Content"
+        mock_collapse.assert_called_once()
+        collapse_llm = mock_collapse.call_args.kwargs["llm"]
+        assert collapse_llm is not None
+        assert "claude-sonnet-4-5" in getattr(collapse_llm, "model", "")
+
 
 class TestHumanFeedbackHistory:
     """Tests for human feedback history tracking."""
@@ -380,8 +488,8 @@ class TestCollapseToOutcome:
 
         assert result == "approved"
 
-    def test_fallback_to_first(self):
-        """Test that unmatched response falls back to first outcome."""
+    def test_unmatched_response_raises(self):
+        """Unmatched LLM text fails closed instead of taking emit[0]."""
         flow = Flow()
 
         with patch("crewai.llm.LLM") as MockLLM:
@@ -389,31 +497,28 @@ class TestCollapseToOutcome:
             mock_llm.call.return_value = "something completely different"
             MockLLM.return_value = mock_llm
 
-            result = flow._collapse_to_outcome(
-                feedback="Unclear feedback",
-                outcomes=["approved", "rejected"],
-                llm="gpt-4o-mini",
-            )
+            with pytest.raises(HumanFeedbackCollapseError, match="Could not match"):
+                flow._collapse_to_outcome(
+                    feedback="Unclear feedback",
+                    outcomes=["approved", "rejected"],
+                    llm="gpt-4o-mini",
+                )
 
-        assert result == "approved"
-
-    def test_both_llm_calls_fail_returns_first_outcome(self):
-        """When both structured and simple prompting fail, return outcomes[0]."""
+    def test_both_llm_calls_fail_raises(self):
+        """When both structured and simple prompting fail, raise instead of emit[0]."""
         flow = Flow()
 
         with patch("crewai.llm.LLM") as MockLLM:
             mock_llm = MagicMock()
-            # Both calls raise — simulates wrong provider / auth failure
             mock_llm.call.side_effect = RuntimeError("Model not found")
             MockLLM.return_value = mock_llm
 
-            result = flow._collapse_to_outcome(
-                feedback="looks great, approve it",
-                outcomes=["needs_changes", "approved"],
-                llm="gemini-3-flash-preview",
-            )
-
-        assert result == "needs_changes"  # First in list (safe fallback)
+            with pytest.raises(HumanFeedbackCollapseError, match="Could not classify"):
+                flow._collapse_to_outcome(
+                    feedback="looks great, approve it",
+                    outcomes=["needs_changes", "approved"],
+                    llm="gemini-3-flash-preview",
+                )
 
     def test_structured_fails_but_simple_succeeds(self):
         """When structured output fails but simple prompting works, use that."""
@@ -435,7 +540,70 @@ class TestCollapseToOutcome:
 
         assert result == "approved"
 
+    def test_collapse_failure_does_not_route_to_first_emit(self):
+        """A failed collapse must not fire the first emit listener."""
+        routed: list[str] = []
 
+        class TestFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def review(self):
+                return "payment of $10"
+
+            @listen("approved")
+            def send_money(self):
+                routed.append("approved")
+                return "sent"
+
+            @listen("rejected")
+            def stop(self):
+                routed.append("rejected")
+                return "stopped"
+
+        flow = TestFlow()
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="no, reject this"
+            ),
+            patch.object(
+                flow,
+                "_collapse_to_outcome",
+                side_effect=HumanFeedbackCollapseError("failed"),
+            ),
+        ):
+            with pytest.raises(HumanFeedbackCollapseError, match="failed"):
+                flow.kickoff()
+
+        assert routed == []
+
+    def test_unresolved_collapse_llm_raises(self):
+        """If no LLM can be resolved, do not take emit[0]."""
+
+        class TestFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+            )
+            def review(self):
+                return "payment of $10"
+
+        flow = TestFlow()
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="no, reject this"
+            ),
+            patch(
+                "crewai.flow.runtime._resolve_llm_instance",
+                return_value=None,
+            ),
+        ):
+            with pytest.raises(HumanFeedbackCollapseError, match="Could not resolve"):
+                flow.kickoff()
 
 
 class TestHumanFeedbackLearn:
@@ -456,7 +624,7 @@ class TestHumanFeedbackLearn:
         with patch.object(
             flow, "_request_human_feedback", return_value="looks good"
         ):
-            flow.produce()
+            flow.kickoff()
 
         # memory.recall and memory.remember_many should NOT be called
         flow.memory.recall.assert_not_called()
@@ -491,7 +659,7 @@ class TestHumanFeedbackLearn:
             )
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         # remember_many should be called with the distilled lesson
         flow.memory.remember_many.assert_called_once()
@@ -526,7 +694,7 @@ class TestHumanFeedbackLearn:
 
         captured_output = {}
 
-        def capture_feedback(message, output, metadata=None, emit=None):
+        def capture_feedback(message, output, metadata=None, emit=None, method_name=""):
             captured_output["shown_to_human"] = output
             return "approved"
 
@@ -545,7 +713,7 @@ class TestHumanFeedbackLearn:
             ]
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         assert captured_output["shown_to_human"] == "draft with citations added"
         # recall was called to find past lessons
@@ -567,12 +735,12 @@ class TestHumanFeedbackLearn:
         with patch.object(
             flow, "_request_human_feedback", return_value=""
         ):
-            flow.produce()
+            flow.kickoff()
 
         flow.memory.remember_many.assert_not_called()
 
-    def test_learn_true_uses_default_llm(self):
-        """When learn=True and llm is not explicitly set, the default gpt-4o-mini is used."""
+    def test_learn_true_omits_llm_by_default(self):
+        """When learn=True and llm is not set, config.llm stays None for runtime resolve."""
 
         @human_feedback(message="Review:", learn=True)
         def test_method(self):
@@ -581,8 +749,7 @@ class TestHumanFeedbackLearn:
         config = test_method.__human_feedback_config__
         assert config is not None
         assert config.learn is True
-        # llm defaults to "gpt-4o-mini" at the function level
-        assert config.llm == "gpt-4o-mini"
+        assert config.llm is None
 
     def test_pre_review_failure_logs_and_returns_raw_output(self, caplog):
         """Pre-review LLM failure falls back to raw output AND logs a warning."""
@@ -606,7 +773,7 @@ class TestHumanFeedbackLearn:
 
         captured: dict[str, Any] = {}
 
-        def capture_feedback(message, output, metadata=None, emit=None):
+        def capture_feedback(message, output, metadata=None, emit=None, method_name=""):
             captured["shown_to_human"] = output
             return ""
 
@@ -620,7 +787,7 @@ class TestHumanFeedbackLearn:
             mock_llm.call.side_effect = RuntimeError("simulated pre-review failure")
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         assert captured["shown_to_human"] == "raw draft"
         assert any(
@@ -665,7 +832,7 @@ class TestHumanFeedbackLearn:
             MockLLM.return_value = mock_llm
 
             with pytest.raises(RuntimeError, match="simulated pre-review failure"):
-                flow.produce()
+                flow.kickoff()
 
     def test_distillation_failure_logs_and_does_not_block_flow(self, caplog):
         """Distillation LLM failure logs a warning but does not break the flow."""
@@ -692,7 +859,7 @@ class TestHumanFeedbackLearn:
             mock_llm.call.side_effect = RuntimeError("simulated distill failure")
             MockLLM.return_value = mock_llm
 
-            flow.produce()  # must not raise
+            flow.kickoff()  # must not raise
 
         flow.memory.remember_many.assert_not_called()
         assert any(
@@ -835,9 +1002,9 @@ class TestHumanFeedbackFinalOutputPreservation:
         ):
             flow.kickoff()
 
-        # _method_outputs should contain the real output
-        assert len(flow._method_outputs) == 1
-        assert flow._method_outputs[0] == {"data": "real output"}
+        # method_outputs should contain the real output
+        assert flow.method_outputs == [{"data": "real output"}]
+        assert flow._method_outputs[0]["method"] == "generate"
 
     @patch("builtins.input", return_value="looks good")
     @patch("builtins.print")

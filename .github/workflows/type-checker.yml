@@ -16,10 +16,16 @@ jobs:
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
         id: filter
         with:
+          # Exclusion-only patterns match every non-excluded file under the
+          # default "some" quantifier. Require all patterns (including "**")
+          # so docs/markdown/Actions-only PRs correctly set code=false.
+          predicate-quantifier: every
           filters: |
             code:
+              - '**'
               - '!docs/**'
               - '!**/*.md'
+              - '!.github/**'
 
   type-checker-matrix:
     name: type-checker (${{ matrix.python-version }})
@@ -70,17 +76,31 @@ jobs:
             .venv
           key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
 
+  # Report the required check names when the matrix is skipped.
+  # Branch protection expects these names; a skipped matrix never reports them.
+  type-checker-skip:
+    name: type-checker (${{ matrix.python-version }})
+    needs: changes
+    if: needs.changes.outputs.code != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Skip non-code change
+        run: echo "Non-code change, skipping type checks"
+
   # Summary job to provide single status for branch protection
   type-checker:
     name: type-checker
     runs-on: ubuntu-latest
-    needs: [changes, type-checker-matrix]
+    needs: [changes, type-checker-matrix, type-checker-skip]
     if: always()
     steps:
       - name: Check results
         run: |
           if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
-            echo "Docs-only change, skipping type checks"
+            echo "Non-code change, skipping type checks"
             exit 0
           fi
           if [ "${{ needs.type-checker-matrix.result }}" == "success" ]; then

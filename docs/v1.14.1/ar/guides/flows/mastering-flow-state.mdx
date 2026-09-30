@@ -1,0 +1,184 @@
+---
+title: إتقان إدارة حالة Flow
+description: دليل شامل لإدارة الحالة وحفظها والاستفادة منها في CrewAI Flows لبناء تطبيقات AI قوية.
+icon: diagram-project
+mode: "wide"
+---
+
+## فهم قوة الحالة في Flows
+
+إدارة الحالة هي العمود الفقري لأي سير عمل AI متطور. في CrewAI Flows، يتيح لك نظام الحالة الحفاظ على السياق ومشاركة البيانات بين الخطوات وبناء منطق تطبيق معقد. إتقان إدارة الحالة ضروري لإنشاء تطبيقات AI موثوقة وقابلة للصيانة وقوية.
+
+### لماذا تهم إدارة الحالة
+
+تمكّنك إدارة الحالة الفعّالة من:
+
+1. **الحفاظ على السياق عبر خطوات التنفيذ** - تمرير المعلومات بسلاسة بين مراحل سير العمل المختلفة
+2. **بناء منطق شرطي معقد** - اتخاذ قرارات بناءً على البيانات المتراكمة
+3. **إنشاء تطبيقات مستمرة** - حفظ واستعادة تقدم سير العمل
+4. **معالجة الأخطاء بلطف** - تنفيذ أنماط استرداد لتطبيقات أكثر قوة
+5. **توسيع تطبيقاتك** - دعم سير العمل المعقدة بتنظيم بيانات مناسب
+6. **تمكين التطبيقات الحوارية** - تخزين والوصول إلى سجل المحادثات للتفاعلات الواعية بالسياق
+
+## أساسيات إدارة الحالة
+
+### نهجان لإدارة الحالة
+
+يوفر CrewAI طريقتين لإدارة الحالة في Flows:
+
+1. **الحالة غير المنظمة** - استخدام كائنات شبيهة بالقاموس للمرونة
+2. **الحالة المنظمة** - استخدام نماذج Pydantic لسلامة الأنواع والتحقق
+
+### مثال الحالة غير المنظمة
+
+```python
+from crewai.flow.flow import Flow, listen, start
+
+class UnstructuredStateFlow(Flow):
+    @start()
+    def initialize_data(self):
+        self.state["user_name"] = "Alex"
+        self.state["preferences"] = {"theme": "dark", "language": "English"}
+        self.state["items"] = []
+        return "Initialized"
+
+    @listen(initialize_data)
+    def process_data(self, previous_result):
+        user = self.state["user_name"]
+        self.state["items"].append("item1")
+        self.state["processed"] = True
+        return "Processed"
+
+flow = UnstructuredStateFlow()
+result = flow.kickoff()
+```
+
+### مثال الحالة المنظمة
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
+
+class AppState(BaseModel):
+    user_name: str = ""
+    items: List[str] = []
+    processed: bool = False
+    completion_percentage: float = 0.0
+
+class StructuredStateFlow(Flow[AppState]):
+    @start()
+    def initialize_data(self):
+        self.state.user_name = "Taylor"
+        return "Initialized"
+
+    @listen(initialize_data)
+    def process_data(self, previous_result):
+        self.state.items.append("item1")
+        self.state.processed = True
+        self.state.completion_percentage = 50.0
+        return "Processed"
+
+flow = StructuredStateFlow()
+result = flow.kickoff()
+```
+
+### فوائد الحالة المنظمة
+
+1. **سلامة الأنواع** - اكتشاف أخطاء الأنواع في وقت التطوير
+2. **توثيق ذاتي** - نموذج الحالة يوثّق بوضوح البيانات المتاحة
+3. **التحقق** - التحقق التلقائي من أنواع البيانات والقيود
+4. **دعم IDE** - إكمال تلقائي وتوثيق مضمّن
+5. **قيم افتراضية** - تعريف بدائل سهلة للبيانات المفقودة
+
+## حفظ حالة Flow
+
+يوفر مزخرف `@persist()` حفظ حالة تلقائي عند نقاط رئيسية في التنفيذ.
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    value: int = 0
+
+@persist()
+class PersistentCounterFlow(Flow[CounterState]):
+    @start()
+    def increment(self):
+        self.state.value += 1
+        return self.state.value
+
+    @listen(increment)
+    def double(self, value):
+        self.state.value = value * 2
+        return self.state.value
+```
+
+## أنماط حالة متقدمة
+
+### المنطق الشرطي المبني على الحالة
+
+```python
+from crewai.flow.flow import Flow, listen, router, start
+from pydantic import BaseModel
+
+class PaymentState(BaseModel):
+    amount: float = 0.0
+    is_approved: bool = False
+    retry_count: int = 0
+
+class PaymentFlow(Flow[PaymentState]):
+    @start()
+    def process_payment(self):
+        self.state.amount = 100.0
+        self.state.is_approved = self.state.amount < 1000
+        return "Payment processed"
+
+    @router(process_payment)
+    def check_approval(self, previous_result):
+        if self.state.is_approved:
+            return "approved"
+        elif self.state.retry_count < 3:
+            return "retry"
+        else:
+            return "rejected"
+
+    @listen("approved")
+    def handle_approval(self):
+        return f"Payment of ${self.state.amount} approved!"
+
+    @listen("retry")
+    def handle_retry(self):
+        self.state.retry_count += 1
+        return "Retry initiated"
+
+    @listen("rejected")
+    def handle_rejection(self):
+        return f"Payment of ${self.state.amount} rejected after {self.state.retry_count} retries."
+```
+
+## أفضل الممارسات لإدارة الحالة
+
+1. **اجعل الحالة مركّزة** - صمم الحالة لتحتوي فقط على ما هو ضروري
+2. **استخدم الحالة المنظمة للـ Flows المعقدة** - مع نمو التعقيد تصبح الحالة المنظمة أكثر قيمة
+3. **وثّق انتقالات الحالة** - للـ Flows المعقدة، وثّق كيف تتغير الحالة عبر التنفيذ
+4. **عالج أخطاء الحالة بلطف** - طبّق معالجة أخطاء للوصول إلى الحالة
+5. **استخدم الحالة لتتبع التقدم** - استفد من الحالة لتتبع التقدم في Flows طويلة التشغيل
+6. **استخدم العمليات غير المتغيرة عند الإمكان** - خاصة مع الحالة المنظمة
+
+## الخلاصة
+
+إتقان إدارة الحالة في CrewAI Flows يمنحك القدرة على بناء تطبيقات AI متطورة وقوية تحافظ على السياق وتتخذ قرارات معقدة وتقدم نتائج متسقة.
+
+<Check>
+لقد أتقنت الآن مفاهيم وممارسات إدارة الحالة في CrewAI Flows! بهذه المعرفة، يمكنك إنشاء سير عمل AI قوية تحافظ على السياق بفعالية وتشارك البيانات بين الخطوات وتبني منطق تطبيق متطور.
+</Check>
+
+## الخطوات التالية
+
+- جرّب الحالة المنظمة وغير المنظمة في Flows
+- جرّب تطبيق حفظ الحالة لسير العمل طويلة التشغيل
+- استكشف [بناء أول Crew](/ar/guides/crews/first-crew) لمعرفة كيف تعمل Crews وFlows معًا
+- اطلع على [توثيق مرجع Flow](/ar/concepts/flows) لمزيد من الميزات المتقدمة

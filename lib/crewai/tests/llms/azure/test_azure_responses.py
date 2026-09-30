@@ -10,6 +10,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
+class _FakeOpenAICompletion:
+    """Plain stand-in: MagicMock is not reliably stored on Pydantic PrivateAttr."""
+
+    def __init__(self) -> None:
+        self.call = MagicMock(return_value="responses-result")
+        self.acall = AsyncMock(return_value="async-responses-result")
+        self.last_response_id = "resp_abc123"
+        self.last_reasoning_items = [{"type": "reasoning"}]
+        self.reset_chain = MagicMock()
+        self.reset_reasoning_chain = MagicMock()
 
 
 @pytest.fixture
@@ -32,13 +42,7 @@ def mock_openai_completion():
     Patches at the source module so that the dynamic import inside
     _init_responses_delegate picks up the mock.
     """
-    instance = MagicMock()
-    instance.call = MagicMock(return_value="responses-result")
-    instance.acall = AsyncMock(return_value="async-responses-result")
-    instance.last_response_id = "resp_abc123"
-    instance.last_reasoning_items = [{"type": "reasoning"}]
-    instance.reset_chain = MagicMock()
-    instance.reset_reasoning_chain = MagicMock()
+    instance = _FakeOpenAICompletion()
     mock_cls = MagicMock(return_value=instance)
 
     with patch(
@@ -245,8 +249,9 @@ class TestAzureResponsesProperties:
     """Test properties and methods delegated to the responses delegate."""
 
     def test_last_response_id(self, mock_openai_completion):
-        _mock_cls, _ = mock_openai_completion
+        _mock_cls, instance = mock_openai_completion
         comp = _create_azure_responses()
+        assert comp._responses_delegate is instance
         assert comp.last_response_id == "resp_abc123"
 
     def test_last_response_id_none_for_completions(self):
@@ -260,19 +265,22 @@ class TestAzureResponsesProperties:
         assert comp.last_response_id is None
 
     def test_last_reasoning_items(self, mock_openai_completion):
-        _mock_cls, _ = mock_openai_completion
+        _mock_cls, instance = mock_openai_completion
         comp = _create_azure_responses()
+        assert comp._responses_delegate is instance
         assert comp.last_reasoning_items == [{"type": "reasoning"}]
 
     def test_reset_chain(self, mock_openai_completion):
         _mock_cls, instance = mock_openai_completion
         comp = _create_azure_responses()
+        assert comp._responses_delegate is instance
         comp.reset_chain()
         instance.reset_chain.assert_called_once()
 
     def test_reset_reasoning_chain(self, mock_openai_completion):
         _mock_cls, instance = mock_openai_completion
         comp = _create_azure_responses()
+        assert comp._responses_delegate is instance
         comp.reset_reasoning_chain()
         instance.reset_reasoning_chain.assert_called_once()
 

@@ -452,7 +452,15 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
         )
     }
 
-    if not hook_methods:
+    # Methods decorated with @on(InterceptionPoint.X) carry ``_interception_point``
+    # instead of the legacy markers above.
+    on_methods = {
+        name: method
+        for name, method in cls.__dict__.items()
+        if hasattr(method, "_interception_point")
+    }
+
+    if not hook_methods and not on_methods:
         return
 
     from crewai.hooks import (
@@ -587,6 +595,25 @@ def _register_crew_hooks(instance: CrewInstance, cls: type) -> None:
             instance._registered_hook_functions.append(
                 ("after_tool_call", after_tool_hook)
             )
+
+    if on_methods:
+        from crewai.hooks.dispatch import (
+            _wrap_with_filters,
+            register as register_interception_hook,
+        )
+
+        for on_method in on_methods.values():
+            point = on_method._interception_point
+            bound_hook = on_method.__get__(instance, cls)
+            tools_filter = getattr(on_method, "_filter_tools", None)
+            agents_filter = getattr(on_method, "_filter_agents", None)
+            hook = (
+                _wrap_with_filters(bound_hook, agents_filter, tools_filter)
+                if (tools_filter or agents_filter)
+                else bound_hook
+            )
+            register_interception_hook(point, hook)
+            instance._registered_hook_functions.append((point.value, hook))
 
     instance._hooks_being_registered = False
 

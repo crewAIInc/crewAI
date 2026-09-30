@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, cast
 
 from crewai_core.printer import PRINTER
 
 from crewai.events.event_listener import event_listener
+from crewai.hooks.dispatch import (
+    HookAborted,
+    InterceptionPoint,
+    get_global_hook_list,
+)
 from crewai.hooks.types import (
     AfterLLMCallHookCallable,
     AfterLLMCallHookType,
@@ -150,8 +158,73 @@ class LLMCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-_before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = []
-_after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = []
+# The legacy registries are aliased to the generic dispatcher's global hook
+# lists for the model-call points, so legacy registrations and new-dialect
+# ``@on(InterceptionPoint.PRE_MODEL_CALL)`` hooks share one ordered queue.
+_before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.PRE_MODEL_CALL)
+)
+_after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.POST_MODEL_CALL)
+)
+
+
+class LegacyHookBlocked(HookAborted):
+    """A ``before_llm_call`` hook blocked the call by returning ``False``.
+
+    Distinguishes the boolean convention, which the LLM layer keeps surfacing as
+    the documented ``ValueError``, from a hook that raised :class:`HookAborted`
+    itself and must reach the caller as the deny it is. Raised by the reducer and
+    consumed inside the LLM layer, which re-raises it as
+    :class:`~crewai.llms.base_llm.LLMCallBlockedError`.
+    """
+
+
+_model_call_hooks_dispatched: ContextVar[bool] = ContextVar(
+    "model_call_hooks_dispatched", default=False
+)
+
+
+@contextmanager
+def model_call_hooks_dispatched() -> Iterator[None]:
+    """Mark the window where the model-call hooks already ran for a pending call.
+
+    The executor dispatches with its own richer context (executor, task, crew)
+    and only then reaches the LLM. Without this marker the LLM layer would
+    dispatch a second time for the same call.
+    """
+    token = _model_call_hooks_dispatched.set(True)
+    try:
+        yield
+    finally:
+        _model_call_hooks_dispatched.reset(token)
+
+
+def model_call_hooks_already_dispatched() -> bool:
+    """Whether an enclosing caller already dispatched hooks for the current call."""
+    return _model_call_hooks_dispatched.get()
+
+
+def before_llm_call_reducer(context: LLMCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``pre_model_call`` hooks.
+
+    A ``False`` return aborts the call (mapped to :class:`LegacyHookBlocked`);
+    messages are modified in place, so no payload replacement occurs here.
+    """
+    if result is False:
+        raise LegacyHookBlocked(reason="before_llm_call hook returned False")
+    return False
+
+
+def after_llm_call_reducer(context: LLMCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``post_model_call`` hooks.
+
+    A non-empty string return replaces the response on the context.
+    """
+    if result is not None and isinstance(result, str):
+        context.response = result
+        return True
+    return False
 
 
 def register_before_llm_call_hook(

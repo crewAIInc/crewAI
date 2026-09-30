@@ -4,10 +4,12 @@ Non-core CLI tests (train, test, version, deploy, login, flow_add_crew)
 have moved to lib/cli/tests/test_cli.py.
 """
 
+from pathlib import Path
 from unittest import mock
 
 from click.testing import CliRunner
 from crewai.crew import Crew
+from crewai.memory.unified_memory import Memory
 from crewai_cli.cli import reset_memories
 import pytest
 
@@ -30,6 +32,8 @@ def mock_get_crews(mock_crew):
         "crewai.utilities.reset_memories.get_crews", return_value=[mock_crew]
     ) as mock_get_crew, mock.patch(
         "crewai.utilities.reset_memories.get_flows", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories._get_json_crew", return_value=None
     ):
         yield mock_get_crew
 
@@ -170,6 +174,8 @@ def mock_get_flows(mock_flow):
         "crewai.utilities.reset_memories.get_flows", return_value=[mock_flow]
     ) as mock_get_flow, mock.patch(
         "crewai.utilities.reset_memories.get_crews", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories._get_json_crew", return_value=None
     ):
         yield mock_get_flow
 
@@ -177,6 +183,33 @@ def mock_get_flows(mock_flow):
 def test_reset_flow_memory(mock_get_flows, mock_flow, runner):
     result = runner.invoke(reset_memories, ["-m"])
     mock_flow.memory.reset.assert_called_once()
+    assert "[Flow (TestFlow)] Memory has been reset." in result.output
+
+
+def test_reset_flow_unified_memory_uses_full_reset(runner, tmp_path):
+    flow = mock.Mock()
+    flow.name = "TestFlow"
+    flow.memory = Memory(
+        storage=str(tmp_path / "db"),
+        llm=mock.Mock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+
+    with mock.patch(
+        "crewai.utilities.reset_memories.get_flows", return_value=[flow]
+    ), mock.patch(
+        "crewai.utilities.reset_memories.get_crews", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories._get_json_crew", return_value=None
+    ), mock.patch.object(
+        Memory, "reset_all"
+    ) as reset_all, mock.patch.object(
+        Memory, "reset"
+    ) as reset:
+        result = runner.invoke(reset_memories, ["-m"])
+
+    reset_all.assert_called_once_with()
+    reset.assert_not_called()
     assert "[Flow (TestFlow)] Memory has been reset." in result.output
 
 
@@ -197,9 +230,80 @@ def test_reset_no_crew_or_flow_found(runner):
         "crewai.utilities.reset_memories.get_crews", return_value=[]
     ), mock.patch(
         "crewai.utilities.reset_memories.get_flows", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories._get_json_crew", return_value=None
     ):
         result = runner.invoke(reset_memories, ["-m"])
         assert "No crew or flow found." in result.output
+
+
+def test_reset_json_crew_memory(mock_crew, runner, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"\n'
+    )
+
+    with mock.patch(
+        "crewai.utilities.reset_memories.get_crews", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories.get_flows", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories.load_crew",
+        return_value=(mock_crew, {}),
+    ) as mock_load_crew:
+        result = runner.invoke(reset_memories, ["-m"])
+
+    mock_load_crew.assert_called_once_with((tmp_path / "crew.jsonc").resolve())
+    mock_crew.reset_memories.assert_called_once_with(command_type="memory")
+    assert f"[Crew ({mock_crew.name})] Memory has been reset." in result.output
+
+
+def test_reset_invalid_json_crew_blocks_reset(
+    mock_crew, runner, monkeypatch, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "crew.jsonc").write_text("{invalid")
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"\n'
+    )
+
+    with mock.patch(
+        "crewai.utilities.reset_memories.get_crews", return_value=[mock_crew]
+    ), mock.patch(
+        "crewai.utilities.reset_memories.get_flows", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories.load_crew",
+        side_effect=ValueError("invalid JSON"),
+    ) as mock_load_crew:
+        result = runner.invoke(reset_memories, ["-m"])
+
+    mock_load_crew.assert_called_once_with((tmp_path / "crew.jsonc").resolve())
+    mock_crew.reset_memories.assert_not_called()
+    assert result.exit_code != 0
+    assert "An unexpected error occurred: invalid JSON" in result.output
+
+
+def test_reset_json_crew_skipped_for_declared_flow_project(
+    mock_crew, runner, monkeypatch, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text('[tool.crewai]\ntype = "flow"\n')
+
+    with mock.patch(
+        "crewai.utilities.reset_memories.get_crews", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories.get_flows", return_value=[]
+    ), mock.patch(
+        "crewai.utilities.reset_memories.load_crew",
+        return_value=(mock_crew, {}),
+    ) as mock_load_crew:
+        result = runner.invoke(reset_memories, ["-m"])
+
+    mock_load_crew.assert_not_called()
+    mock_crew.reset_memories.assert_not_called()
+    assert "No crew or flow found." in result.output
 
 
 def test_reset_crew_and_flow_memory(mock_crew, mock_flow, runner):
@@ -207,6 +311,8 @@ def test_reset_crew_and_flow_memory(mock_crew, mock_flow, runner):
         "crewai.utilities.reset_memories.get_crews", return_value=[mock_crew]
     ), mock.patch(
         "crewai.utilities.reset_memories.get_flows", return_value=[mock_flow]
+    ), mock.patch(
+        "crewai.utilities.reset_memories._get_json_crew", return_value=None
     ):
         result = runner.invoke(reset_memories, ["-m"])
         mock_crew.reset_memories.assert_called_once_with(command_type="memory")
@@ -223,6 +329,8 @@ def test_reset_flow_memory_none(runner):
         "crewai.utilities.reset_memories.get_crews", return_value=[]
     ), mock.patch(
         "crewai.utilities.reset_memories.get_flows", return_value=[mock_flow]
+    ), mock.patch(
+        "crewai.utilities.reset_memories._get_json_crew", return_value=None
     ):
         result = runner.invoke(reset_memories, ["-m"])
         assert "[Flow (NoMemFlow)] Memory has been reset." in result.output

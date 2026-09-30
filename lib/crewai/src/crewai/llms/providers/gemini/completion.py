@@ -10,7 +10,8 @@ from typing import Any, Literal, cast
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -313,16 +314,13 @@ class GeminiCompletion(BaseLLM):
 
                 messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
-                if not self._invoke_before_llm_call_hooks(
-                    messages_for_hooks, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
 
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
                 )
 
-                if self.stream:
+                if self._effective_stream():
                     return self._handle_streaming_completion(
                         formatted_content,
                         config,
@@ -341,6 +339,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)
@@ -397,11 +398,15 @@ class GeminiCompletion(BaseLLM):
                     self._format_messages_for_gemini(messages)
                 )
 
+                messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
+
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
                 )
 
-                if self.stream:
+                if self._effective_stream():
                     return await self._ahandle_streaming_completion(
                         formatted_content,
                         config,
@@ -420,6 +425,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)
@@ -554,12 +562,19 @@ class GeminiCompletion(BaseLLM):
         - System messages are separate system_instruction
         - Content is organized as Content objects with Parts
         - Roles are 'user' and 'model' (not 'assistant')
+        - History may not end on a model turn; a "Please continue." user turn
+          is appended when it does
 
         Args:
             messages: Input messages
 
         Returns:
             Tuple of (formatted_contents, system_instruction)
+
+        Raises:
+            ValueError: If the history ends on a model turn with an unresolved
+                function call, which requires a function response rather than a
+                continuation prompt.
         """
         base_formatted = super()._format_messages(messages)
 
@@ -582,6 +597,14 @@ class GeminiCompletion(BaseLLM):
                                 types.Part.from_bytes(
                                     data=base64.b64decode(inline["data"]),
                                     mime_type=inline["mimeType"],
+                                )
+                            )
+                        elif "fileData" in item:
+                            file_data = item["fileData"]
+                            parts.append(
+                                types.Part.from_uri(
+                                    file_uri=file_data["fileUri"],
+                                    mime_type=file_data["mimeType"],
                                 )
                             )
                     else:
@@ -672,6 +695,23 @@ class GeminiCompletion(BaseLLM):
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
+        if contents and contents[-1].role == "model":
+            # Gemini's generateContent API rejects a request whose history ends
+            # on a model turn (agent loops can produce this, e.g. after
+            # max-iteration handling or a guardrail retry).
+            last_parts = contents[-1].parts or []
+            if any(part.function_call for part in last_parts):
+                raise ValueError(
+                    "Gemini message history ends on an unresolved function call "
+                    "-- a function response must be provided before calling the "
+                    "model again."
+                )
+            contents.append(
+                types.Content(
+                    role="user", parts=[types.Part.from_text(text="Please continue.")]
+                )
+            )
+
         return contents, system_instruction
 
     def _validate_and_emit_structured_output(
@@ -682,6 +722,8 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
@@ -691,6 +733,8 @@ class GeminiCompletion(BaseLLM):
             messages_for_event: Messages to include in event
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
+            finish_reason: Raw provider finish reason.
+            response_id: Raw provider response id.
 
         Returns:
             Validated Pydantic model instance
@@ -708,6 +752,8 @@ class GeminiCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages_for_event,
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             return structured_data
@@ -724,6 +770,8 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> str | BaseModel:
         """Finalize completion response with validation and event emission.
 
@@ -747,6 +795,8 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
         self._emit_call_completed_event(
@@ -756,6 +806,8 @@ class GeminiCompletion(BaseLLM):
             from_agent=from_agent,
             messages=messages_for_event,
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -770,6 +822,8 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> BaseModel:
         """Validate and emit event for structured_output tool call.
 
@@ -795,6 +849,8 @@ class GeminiCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=self._convert_contents_to_dict(contents),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return validated_data
         except Exception as e:
@@ -828,6 +884,8 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Final response content or function call result
         """
+        finish_reason, response_id = self._extract_finish_reason_and_id(response)
+
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
@@ -854,6 +912,8 @@ class GeminiCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 usage=usage,
+                                finish_reason=finish_reason,
+                                response_id=response_id,
                             )
 
                 non_structured_output_parts = [
@@ -875,6 +935,8 @@ class GeminiCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=self._convert_contents_to_dict(contents),
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return non_structured_output_parts
 
@@ -915,6 +977,8 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
     def _process_stream_chunk(
@@ -925,7 +989,13 @@ class GeminiCompletion(BaseLLM):
         usage_data: dict[str, int] | None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int] | None]:
+    ) -> tuple[
+        str,
+        dict[int, dict[str, Any]],
+        dict[str, int] | None,
+        str | None,
+        str | None,
+    ]:
         """Process a single streaming chunk.
 
         Args:
@@ -937,9 +1007,13 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Tuple of (updated full_response, updated function_calls, updated usage_data)
+            Tuple of (updated full_response, updated function_calls, updated
+            usage_data, chunk finish_reason, chunk response_id).
         """
         response_id = chunk.response_id if hasattr(chunk, "response_id") else None
+        chunk_finish_reason, chunk_response_id = self._extract_finish_reason_and_id(
+            chunk
+        )
         if chunk.usage_metadata:
             usage_data = self._extract_token_usage(chunk)
 
@@ -996,7 +1070,13 @@ class GeminiCompletion(BaseLLM):
                             response_id=response_id,
                         )
 
-        return full_response, function_calls, usage_data
+        return (
+            full_response,
+            function_calls,
+            usage_data,
+            chunk_finish_reason,
+            chunk_response_id,
+        )
 
     def _finalize_streaming_response(
         self,
@@ -1008,6 +1088,8 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> str | BaseModel | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
@@ -1038,6 +1120,8 @@ class GeminiCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         usage=usage_data,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
 
         non_structured_output_calls = {
@@ -1058,6 +1142,8 @@ class GeminiCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=self._convert_contents_to_dict(contents),
                 usage=usage_data,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return raw_parts
 
@@ -1095,6 +1181,8 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             usage=usage_data,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
     def _handle_completion(
@@ -1148,6 +1236,8 @@ class GeminiCompletion(BaseLLM):
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
         usage_data: dict[str, int] | None = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
@@ -1156,7 +1246,13 @@ class GeminiCompletion(BaseLLM):
             contents=contents_for_api,
             config=config,
         ):
-            full_response, function_calls, usage_data = self._process_stream_chunk(
+            (
+                full_response,
+                function_calls,
+                usage_data,
+                chunk_finish_reason,
+                chunk_response_id,
+            ) = self._process_stream_chunk(
                 chunk=chunk,
                 full_response=full_response,
                 function_calls=function_calls,
@@ -1164,6 +1260,10 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+            if chunk_finish_reason:
+                stream_finish_reason = chunk_finish_reason
+            if chunk_response_id:
+                stream_response_id = chunk_response_id
 
         return self._finalize_streaming_response(
             full_response=full_response,
@@ -1174,6 +1274,8 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
 
     async def _ahandle_completion(
@@ -1227,6 +1329,8 @@ class GeminiCompletion(BaseLLM):
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
         usage_data: dict[str, int] | None = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
@@ -1236,7 +1340,13 @@ class GeminiCompletion(BaseLLM):
             config=config,
         )
         async for chunk in stream:
-            full_response, function_calls, usage_data = self._process_stream_chunk(
+            (
+                full_response,
+                function_calls,
+                usage_data,
+                chunk_finish_reason,
+                chunk_response_id,
+            ) = self._process_stream_chunk(
                 chunk=chunk,
                 full_response=full_response,
                 function_calls=function_calls,
@@ -1244,6 +1354,10 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+            if chunk_finish_reason:
+                stream_finish_reason = chunk_finish_reason
+            if chunk_response_id:
+                stream_response_id = chunk_response_id
 
         return self._finalize_streaming_response(
             full_response=full_response,
@@ -1254,6 +1368,8 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
 
     def supports_function_calling(self) -> bool:
@@ -1266,39 +1382,42 @@ class GeminiCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            GEMINI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
+        return resolve_context_window_size(
+            self.model, GEMINI_CONTEXT_WINDOWS, default=1_048_576
+        )
 
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
+    def _effective_max_tokens(self) -> int | float | None:
+        """Gemini caps generation via ``max_output_tokens``."""
+        return self.max_output_tokens or self.max_tokens
 
-        context_windows = {
-            "gemini-3-pro-preview": 1048576,  # 1M tokens
-            "gemini-2.0-flash": 1048576,  # 1M tokens
-            "gemini-2.0-flash-thinking": 32768,
-            "gemini-2.0-flash-lite": 1048576,
-            "gemini-2.5-flash": 1048576,
-            "gemini-2.5-pro": 1048576,
-            "gemini-1.5-pro": 2097152,  # 2M tokens
-            "gemini-1.5-flash": 1048576,
-            "gemini-1.5-flash-8b": 1048576,
-            "gemini-1.0-pro": 32768,
-            "gemma-3-1b": 32000,
-            "gemma-3-4b": 128000,
-            "gemma-3-12b": 128000,
-            "gemma-3-27b": 128000,
-        }
+    @staticmethod
+    def _extract_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract raw finish_reason and response_id from a Gemini
+        ``GenerateContentResponse``. ``finish_reason`` is the protobuf enum's
+        ``.name`` attribute (e.g. ``"STOP"``, ``"MAX_TOKENS"``); we forward
+        it raw and let downstream telemetry map to the OTel GenAI enum.
+        """
+        raw_response_id = getattr(response, "response_id", None)
+        response_id = raw_response_id if isinstance(raw_response_id, str) else None
 
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens default
+        finish_reason: str | None = None
+        candidates = getattr(response, "candidates", None)
+        if candidates:
+            try:
+                candidate_finish = getattr(candidates[0], "finish_reason", None)
+            except (IndexError, TypeError, KeyError):
+                candidate_finish = None
+            if candidate_finish is not None:
+                name = getattr(candidate_finish, "name", None)
+                finish_reason = name if isinstance(name, str) else None
+        return finish_reason, response_id
 
     @staticmethod
     def _extract_token_usage(response: GenerateContentResponse) -> dict[str, Any]:

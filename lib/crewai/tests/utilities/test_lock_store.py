@@ -1,11 +1,13 @@
 """Tests for lock_store.
 
-We verify our own logic: the _redis_available guard and which portalocker
-backend is selected. We trust portalocker to handle actual locking mechanics.
+We verify our own logic: the _redis_available guard, which portalocker
+backend is selected, and that a custom backend can be plugged in. We trust
+portalocker to handle actual locking mechanics.
 """
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import sys
 from unittest import mock
 
@@ -18,6 +20,14 @@ from crewai_core.lock_store import lock
 @pytest.fixture(autouse=True)
 def no_redis_url(monkeypatch):
     monkeypatch.setattr(lock_store, "_REDIS_URL", None)
+
+
+@pytest.fixture(autouse=True)
+def reset_backend():
+    """Ensure a custom backend never leaks across tests."""
+    lock_store.set_lock_backend(None)
+    yield
+    lock_store.set_lock_backend(None)
 
 
 # _redis_available
@@ -64,3 +74,40 @@ def test_uses_redis_lock_when_redis_available(monkeypatch):
     kwargs = mock_redis_lock.call_args.kwargs
     assert kwargs["channel"].startswith("crewai:")
     assert kwargs["connection"] is fake_conn
+
+
+# custom backend
+
+
+def test_custom_backend_is_used():
+    calls = []
+
+    @contextmanager
+    def fake_backend(name, *, timeout):
+        calls.append((name, timeout))
+        yield
+
+    lock_store.set_lock_backend(fake_backend)
+
+    # The default file/redis path must not be touched when overridden.
+    with mock.patch("portalocker.Lock") as mock_lock:
+        with lock("custom_test", timeout=5):
+            pass
+
+    mock_lock.assert_not_called()
+    assert calls == [("custom_test", 5)]
+
+
+def test_clearing_backend_restores_default():
+    @contextmanager
+    def fake_backend(name, *, timeout):
+        yield
+
+    lock_store.set_lock_backend(fake_backend)
+    lock_store.set_lock_backend(None)
+
+    with mock.patch("portalocker.Lock") as mock_lock:
+        with lock("after_clear"):
+            pass
+
+    mock_lock.assert_called_once()
