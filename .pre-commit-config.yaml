@@ -31,6 +31,7 @@ repos:
         # Keep this ignore list in sync with .github/workflows/vulnerability-scan.yml.
         # TODO: drop --ignore-vuln GHSA-8mgp-746c-j5xp when bumping nltk past 3.10.3.
         # TODO: drop --ignore-vuln GHSA-4j2p-28q2-5m79 when bumping accelerate past 1.14.0.
+        # TODO: drop --ignore-vuln GHSA-xpv3-w29h-x7cv when bumping oauthlib to 4.0.0 (after 2026-10-01 06:01 UTC).
         entry: >-
           bash -c 'case "$OSTYPE" in msys*|cygwin*|win32*) source .venv/Scripts/activate ;; *) source .venv/bin/activate ;; esac && uv run pip-audit --skip-editable
           --ignore-vuln PYSEC-2024-277
@@ -63,7 +64,8 @@ repos:
           --ignore-vuln GHSA-36p7-vc44-83pf
           --ignore-vuln GHSA-xph7-9rjv-w5fr
           --ignore-vuln GHSA-8mgp-746c-j5xp
-          --ignore-vuln GHSA-4j2p-28q2-5m79' --
+          --ignore-vuln GHSA-4j2p-28q2-5m79
+          --ignore-vuln GHSA-xpv3-w29h-x7cv' --
         language: system
         pass_filenames: false
         stages: [pre-push, manual]
