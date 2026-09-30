@@ -173,6 +173,7 @@ class ValkeyStorage:
         host: str = "localhost",
         port: int = 6379,
         db: int = 0,
+        username: str | None = None,
         password: str | None = None,
         use_tls: bool = False,
         tls_ca_cert_path: str | None = None,
@@ -210,6 +211,7 @@ class ValkeyStorage:
         self._port = port
         self._db = db
         self._password = password
+        self._username = username
         self._use_tls = use_tls
         # None = auto-detect the dimension from the first embedding at save
         # time, mirroring LanceDBStorage. Avoids hardcoding a size that can
@@ -275,8 +277,11 @@ class ValkeyStorage:
                             database_id=self._db,
                             use_tls=self._use_tls,
                             credentials=(
-                                ServerCredentials(password=self._password)
-                                if self._password
+                                ServerCredentials(
+                                    username=self._username,
+                                    password=self._password or "",
+                                )
+                                if (self._password or self._username)
                                 else None
                             ),
                             request_timeout=2000,  # 2 seconds for FT.SEARCH and other commands
@@ -1184,8 +1189,30 @@ class ValkeyStorage:
         """
         client = await self._get_client()
         record_ids: set[str] = set()
+        for scope_key in await self._find_scope_keys(scope_prefix):
+            members_result = await client.zrange(scope_key, RangeByIndex(0, -1))
+            record_ids.update(
+                m.decode("utf-8") if isinstance(m, bytes) else str(m)
+                for m in members_result
+            )
+        return list(record_ids)
 
-        # Scan for all scope keys
+    async def _find_scope_keys(self, scope_prefix: str) -> list[str]:
+        """Return the scope ZSET keys whose path matches the prefix.
+
+        Uses the same boundary-safe matching as record lookup (exact scope or a
+        '/'-delimited child), so callers can read members/scores directly.
+
+        Args:
+            scope_prefix: Scope path prefix to match.
+
+        Returns:
+            List of "scope:<path>" keys.
+        """
+        client = await self._get_client()
+        normalized_prefix = scope_prefix.rstrip("/") or "/"
+        scope_keys: list[str] = []
+
         cursor: str | bytes = "0"
         while True:
             result = await client.scan(cursor, match="scope:*", count=1000)
@@ -1193,36 +1220,20 @@ class ValkeyStorage:
             keys: list[bytes] = result[1]  # type: ignore[assignment]
 
             for key_bytes in keys:
-                # Extract scope path from key
                 key_str = (
                     key_bytes.decode("utf-8")
                     if isinstance(key_bytes, bytes)
                     else key_bytes
                 )
                 scope_path = key_str.split(":", 1)[1] if ":" in key_str else ""
-
-                # Check if scope matches prefix (boundary-safe)
-                normalized_prefix = scope_prefix.rstrip("/") or "/"
                 in_scope = (
                     normalized_prefix == "/"
                     or scope_path == normalized_prefix
                     or scope_path.startswith(f"{normalized_prefix}/")
                 )
                 if in_scope:
-                    # Get all record IDs in this scope
-                    scope_key = (
-                        key_bytes.decode("utf-8")
-                        if isinstance(key_bytes, bytes)
-                        else key_bytes
-                    )
-                    members_result = await client.zrange(scope_key, RangeByIndex(0, -1))
-                    # Convert bytes to strings
-                    record_ids.update(
-                        m.decode("utf-8") if isinstance(m, bytes) else str(m)
-                        for m in members_result
-                    )
+                    scope_keys.append(key_str)
 
-            # Check if cursor is 0 (scan complete)
             cursor_str = (
                 cursor_new.decode("utf-8")
                 if isinstance(cursor_new, bytes)
@@ -1232,7 +1243,7 @@ class ValkeyStorage:
                 break
             cursor = cursor_new
 
-        return list(record_ids)
+        return scope_keys
 
     async def _find_records_by_categories(self, categories: list[str]) -> list[str]:
         """Find all record IDs matching any of the categories.
@@ -1593,12 +1604,15 @@ class ValkeyStorage:
 
             # Post-filter by metadata_filter (AND logic). These fields are not
             # part of the FT index schema, so we filter after retrieval. (#5795)
+            # Require the key to be present and compare by value: str() coercion
+            # would make a missing key match "None" and treat 5 == "5", which
+            # diverges from LanceDB/Qdrant and returns the wrong recall set.
             if metadata_filter:
                 records = [
                     (rec, score)
                     for rec, score in records
                     if all(
-                        str(rec.metadata.get(k)) == str(v)
+                        k in rec.metadata and rec.metadata[k] == v
                         for k, v in metadata_filter.items()
                     )
                 ]
@@ -1814,33 +1828,39 @@ class ValkeyStorage:
         """
         client = await self._get_client()
 
-        # Find all record IDs in scope(s)
+        # Collect (record_id, score) pairs from the matching scope ZSETs. The
+        # ZSET score is the created_at timestamp, so we can order and paginate
+        # without hydrating every record — we only hgetall the requested page.
+        id_scores: dict[str, float] = {}
+
+        async def _collect_scope(scope_key: str) -> None:
+            pairs = await client.zrange_withscores(scope_key, RangeByIndex(0, -1))
+            # pairs maps member -> score (bytes/str keys depending on client)
+            for member, score in pairs.items():
+                rid = member.decode("utf-8") if isinstance(member, bytes) else str(member)
+                # A record id can appear once per scope; keep the max score.
+                if rid not in id_scores or score > id_scores[rid]:
+                    id_scores[rid] = float(score)
+
         if scope_prefix is not None:
-            # Get records from matching scopes
-            record_ids = await self._find_records_by_scope(scope_prefix)
+            # Boundary-safe prefix match reuses the scope-key discovery, then
+            # reads each matching ZSET's members+scores.
+            scope_keys = await self._find_scope_keys(scope_prefix)
+            for scope_key in scope_keys:
+                await _collect_scope(scope_key)
         else:
-            # Get all records from all scopes
-            record_ids = []
             cursor: str | bytes = "0"
             while True:
                 result = await client.scan(cursor, match="scope:*", count=1000)
                 cursor_new: str | bytes = result[0]  # type: ignore[assignment]
                 keys: list[bytes] = result[1]  # type: ignore[assignment]
-
                 for key_bytes in keys:
-                    # Get all record IDs in this scope
                     scope_key = (
                         key_bytes.decode("utf-8")
                         if isinstance(key_bytes, bytes)
                         else key_bytes
                     )
-                    members_result = await client.zrange(scope_key, RangeByIndex(0, -1))
-                    record_ids.extend(
-                        m.decode("utf-8") if isinstance(m, bytes) else str(m)
-                        for m in members_result
-                    )
-
-                # Check if cursor is 0 (scan complete)
+                    await _collect_scope(scope_key)
                 cursor_str = (
                     cursor_new.decode("utf-8")
                     if isinstance(cursor_new, bytes)
@@ -1850,18 +1870,18 @@ class ValkeyStorage:
                     break
                 cursor = cursor_new
 
-        # Fetch records and sort by created_at descending
+        # Order newest-first and slice to the requested page BEFORE hydrating,
+        # so a limit=200 list fetches ~200 records rather than the whole scope.
+        ordered_ids = sorted(id_scores, key=lambda r: id_scores[r], reverse=True)
+        page_ids = ordered_ids[offset : offset + limit]
+
         records: list[MemoryRecord] = []
-        for record_id in record_ids:
+        for record_id in page_ids:
             record = await self._aget_record(record_id)
             if record:
                 records.append(record)
 
-        # Sort by created_at descending (newest first)
-        records.sort(key=lambda r: r.created_at, reverse=True)
-
-        # Apply pagination
-        return records[offset : offset + limit]
+        return records
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         """Get information about a scope.

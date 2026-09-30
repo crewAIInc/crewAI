@@ -18,6 +18,7 @@ def mock_glide_client() -> AsyncMock:
     client = AsyncMock()
     client.hset = AsyncMock(return_value=1)
     client.zrange = AsyncMock(return_value=[])
+    client.zrange_withscores = AsyncMock(return_value={})
     client.zadd = AsyncMock()
     client.sadd = AsyncMock()
     client.zrem = AsyncMock()
@@ -60,8 +61,8 @@ class TestValkeyStorageListRecords:
         )
 
         # Mock ZRANGE to return record IDs
-        mock_glide_client.zrange.side_effect = [
-            [b"record-1", b"record-2", b"record-3"],  # ZRANGE response
+        mock_glide_client.zrange_withscores.side_effect = [
+            {b"record-1": 1.0, b"record-2": 2.0, b"record-3": 3.0},
         ]
 
         # Mock hgetall to return record data
@@ -133,8 +134,8 @@ class TestValkeyStorageListRecords:
         )
 
         # Mock ZRANGE to return record IDs
-        mock_glide_client.zrange.side_effect = [
-            [b"record-1", b"record-2", b"record-3", b"record-4", b"record-5"],
+        mock_glide_client.zrange_withscores.side_effect = [
+            {b"record-1": 1.0, b"record-2": 2.0, b"record-3": 3.0, b"record-4": 4.0, b"record-5": 5.0},
         ]
 
         # Mock hgetall to return record data
@@ -178,8 +179,8 @@ class TestValkeyStorageListRecords:
         )
 
         # Mock ZRANGE to return record IDs
-        mock_glide_client.zrange.side_effect = [
-            [b"record-1", b"record-2", b"record-3"],
+        mock_glide_client.zrange_withscores.side_effect = [
+            {b"record-1": 1.0, b"record-2": 2.0, b"record-3": 3.0},
         ]
 
         # Mock hgetall to return record data
@@ -222,8 +223,8 @@ class TestValkeyStorageListRecords:
         )
 
         # Mock ZRANGE to return record IDs
-        mock_glide_client.zrange.side_effect = [
-            [b"record-1", b"record-2", b"record-3", b"record-4", b"record-5"],
+        mock_glide_client.zrange_withscores.side_effect = [
+            {b"record-1": 1.0, b"record-2": 2.0, b"record-3": 3.0, b"record-4": 4.0, b"record-5": 5.0},
         ]
 
         # Mock hgetall to return record data
@@ -268,8 +269,8 @@ class TestValkeyStorageListRecords:
         )
 
         # Mock ZRANGE to return record IDs
-        mock_glide_client.zrange.side_effect = [
-            [b"record-1", b"record-2"],
+        mock_glide_client.zrange_withscores.side_effect = [
+            {b"record-1": 1.0, b"record-2": 2.0},
         ]
 
         # Mock hgetall to return record data
@@ -310,8 +311,8 @@ class TestValkeyStorageListRecords:
         )
 
         # Mock ZRANGE to return no record IDs
-        mock_glide_client.zrange.side_effect = [
-            [],  # No records
+        mock_glide_client.zrange_withscores.side_effect = [
+            {},
         ]
 
         # List records
@@ -331,8 +332,8 @@ class TestValkeyStorageListRecords:
         )
 
         # Mock ZRANGE to return record IDs
-        mock_glide_client.zrange.side_effect = [
-            [b"record-1"],
+        mock_glide_client.zrange_withscores.side_effect = [
+            {b"record-1": 1.0},
         ]
 
         # Mock hgetall to return record data
@@ -1117,3 +1118,39 @@ class TestValkeyStorageReset:
 
         # Restore original method
         valkey_storage.adelete = original_adelete  # type: ignore[method-assign]
+
+
+class TestListRecordsPaginationEfficiency:
+    """_alist_records must only hydrate the requested page, not every record in
+    scope (the whole point of the pagination fix).
+    """
+
+    @pytest.mark.asyncio
+    async def test_only_page_records_are_hydrated(
+        self, valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        mock_glide_client.scan.return_value = (b"0", [b"scope:/test"])
+        # 100 records in scope, scored so record-100 is newest.
+        mock_glide_client.zrange_withscores.side_effect = [
+            {f"record-{n}".encode(): float(n) for n in range(1, 101)},
+        ]
+
+        hydrated: list[str] = []
+
+        async def fake_get(record_id: str):
+            hydrated.append(record_id)
+            from crewai.memory.types import MemoryRecord
+
+            return MemoryRecord(id=record_id, content="x", scope="/test")
+
+        valkey_storage._aget_record = fake_get  # type: ignore[method-assign]
+
+        records = await valkey_storage._alist_records(
+            scope_prefix="/test", limit=10, offset=0
+        )
+
+        # Only the 10-record page is hydrated, not all 100.
+        assert len(records) == 10
+        assert len(hydrated) == 10
+        # Newest first.
+        assert records[0].id == "record-100"

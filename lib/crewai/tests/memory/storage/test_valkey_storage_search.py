@@ -1147,3 +1147,56 @@ class TestSearchDimensionMismatch:
             await valkey_storage.asearch([0.1] * 3072, limit=5)
         assert exc.value.stored_dim == 1536
         assert exc.value.new_dim == 3072
+
+
+class TestMetadataTypedComparison:
+    """Metadata post-filter must compare by value and require the key present:
+    str() coercion would match a missing key against 'None' and treat 5 == '5',
+    diverging from LanceDB/Qdrant.
+    """
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_missing_key_does_not_match_none(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        rec_missing = MemoryRecord(
+            id="rec-missing", content="no priority key", scope="/test",
+            metadata={"agent_id": "a1"}, embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+        mock_ft_list.return_value = [b"memory_index"]
+        mock_ft_search.return_value = create_mock_ft_search_response(
+            [(rec_missing, 0.9)]
+        )
+        # Filtering for priority=None must NOT match a record lacking the key.
+        results = await valkey_storage.asearch(
+            [0.1, 0.2, 0.3, 0.4], metadata_filter={"priority": None}, limit=10
+        )
+        assert results == []
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_typed_value_not_coerced(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        rec_int = MemoryRecord(
+            id="rec-int", content="int priority", scope="/test",
+            metadata={"priority": 5}, embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+        mock_ft_list.return_value = [b"memory_index"]
+        mock_ft_search.return_value = create_mock_ft_search_response([(rec_int, 0.9)])
+        # Filter value "5" (str) must NOT match metadata 5 (int).
+        results = await valkey_storage.asearch(
+            [0.1, 0.2, 0.3, 0.4], metadata_filter={"priority": "5"}, limit=10
+        )
+        assert results == []
+        # But an int 5 filter DOES match.
+        mock_ft_search.return_value = create_mock_ft_search_response([(rec_int, 0.9)])
+        results = await valkey_storage.asearch(
+            [0.1, 0.2, 0.3, 0.4], metadata_filter={"priority": 5}, limit=10
+        )
+        assert len(results) == 1

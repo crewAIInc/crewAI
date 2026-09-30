@@ -262,6 +262,7 @@ class Memory(BaseModel):
                     host=conn.get("host", "localhost"),
                     port=conn.get("port", 6379),
                     db=conn.get("db", 0),
+                    username=conn.get("username"),
                     password=conn.get("password"),
                     use_tls=conn.get("use_tls", False),
                 )
