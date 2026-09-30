@@ -1837,7 +1837,9 @@ class ValkeyStorage:
             pairs = await client.zrange_withscores(scope_key, RangeByIndex(0, -1))
             # pairs maps member -> score (bytes/str keys depending on client)
             for member, score in pairs.items():
-                rid = member.decode("utf-8") if isinstance(member, bytes) else str(member)
+                rid = (
+                    member.decode("utf-8") if isinstance(member, bytes) else str(member)
+                )
                 # A record id can appear once per scope; keep the max score.
                 if rid not in id_scores or score > id_scores[rid]:
                     id_scores[rid] = float(score)
