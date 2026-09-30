@@ -385,7 +385,7 @@ flow_2.kickoff(restore_from_state_id=flow_1.state.id)
 
 Behavior notes:
 
-- `restore_from_state_id` not found in persistence → the kickoff falls back silently to default behavior (mirrors the existing `inputs["id"]` resume not-found behavior). No exception is raised.
+- `restore_from_state_id` not found in persistence → the kickoff falls back silently to default behavior (mirrors the existing `inputs["id"]` resume not-found behavior). No exception is raised by default. Pass `raise_on_missing_state=True` to get a `ValueError` instead of a silent fresh run, or check `flow.last_restore_succeeded` after kickoff (`None` = no restore requested, `True` = hydrated, `False` = miss).
 - Combining `restore_from_state_id` with `from_checkpoint` raises a `ValueError` — they target different state systems (`@persist` vs. Checkpointing) and cannot be combined.
 - `restore_from_state_id=None` (default) is byte-identical to a kickoff without the parameter.
 - Pinning `inputs["id"]` while forking means the new run shares a persistence key with another flow — usually you want only `restore_from_state_id`.
