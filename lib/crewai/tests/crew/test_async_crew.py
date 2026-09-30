@@ -599,7 +599,7 @@ class TestAsyncCrewKickoff:
             unregister(InterceptionPoint.EXECUTION_START, _on_start)
             unregister(InterceptionPoint.INPUT, _on_input)
 
-        assert start_seen and start_seen[0].get("user_input") == "original" or True  # ordering, not content
+        assert start_seen, "EXECUTION_START hook was never dispatched"
         assert start_seen[0].get("callback_tag") is None, (
             "EXECUTION_START must observe PRE-callback inputs"
         )
