@@ -18,8 +18,10 @@ from a2a.types import (
     AgentCard,
     AgentSkill,
 )
-from aiocache import cached  # type: ignore[import-untyped]
-from aiocache import SimpleMemoryCache  # type: ignore[import-untyped]
+from aiocache import (
+    SimpleMemoryCache,  # type: ignore[import-untyped]
+    cached,  # type: ignore[import-untyped]
+)
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 import httpx
 
