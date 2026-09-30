@@ -36,6 +36,7 @@ class ValkeyCache:
         host: str = "localhost",
         port: int = 6379,
         db: int = 0,
+        username: str | None = None,
         password: str | None = None,
         default_ttl: int | None = None,
         use_tls: bool = False,
@@ -46,6 +47,7 @@ class ValkeyCache:
             host: Valkey server hostname.
             port: Valkey server port.
             db: Database number to use.
+            username: Optional ACL username for authentication.
             password: Optional password for authentication.
             default_ttl: Default TTL in seconds (None = no expiration).
             use_tls: Enable TLS/SSL encryption for connections (rediss/valkeys).
@@ -53,6 +55,7 @@ class ValkeyCache:
         self._host = host
         self._port = port
         self._db = db
+        self._username = username
         self._password = password
         self._default_ttl = default_ttl
         self._use_tls = use_tls
@@ -124,8 +127,11 @@ class ValkeyCache:
                             use_tls=self._use_tls,
                             database_id=db,
                             credentials=(
-                                ServerCredentials(password=self._password)
-                                if self._password
+                                ServerCredentials(
+                                    username=self._username,
+                                    password=self._password or "",
+                                )
+                                if (self._password or self._username)
                                 else None
                             ),
                         )

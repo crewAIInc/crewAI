@@ -17,7 +17,8 @@ def parse_cache_url() -> dict[str, Any] | None:
     Priority: VALKEY_URL > REDIS_URL.
 
     Returns:
-        Dict with host, port, db, password keys, or None if no URL is set.
+        Dict with host, port, db, username, password keys, or None if no URL
+        is set.
     """
     url = os.environ.get("VALKEY_URL") or os.environ.get("REDIS_URL")
     if not url:
@@ -27,6 +28,7 @@ def parse_cache_url() -> dict[str, Any] | None:
         "host": parsed.hostname or "localhost",
         "port": parsed.port or 6379,
         "db": _parse_db_from_path(parsed.path),
+        "username": parsed.username,
         "password": parsed.password,
         "use_tls": parsed.scheme in ("rediss", "valkeys"),
     }
@@ -64,6 +66,10 @@ def get_aiocache_config() -> dict[str, Any]:
             "db": conn.get("db", 0),
             "password": conn.get("password"),
         }
+        # Forward an ACL username when present (managed Valkey/Redis commonly
+        # requires it alongside the password).
+        if conn.get("username"):
+            redis_config["username"] = conn["username"]
         # Forward TLS for rediss:// / valkeys:// so the aiocache Redis path
         # opens an encrypted connection instead of plaintext.
         if conn.get("use_tls"):
