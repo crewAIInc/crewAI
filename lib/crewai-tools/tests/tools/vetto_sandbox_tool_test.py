@@ -15,14 +15,19 @@ from crewai_tools.tools.vetto_sandbox_tool import (
 
 
 class TestVettoSandboxTools(unittest.TestCase):
+    """Test suite for Vetto sandbox tools and containment invariants."""
+
     def setUp(self):
+        """Set up temporary directory and workspace for tests."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.workspace = Path(self.temp_dir.name).resolve()
 
     def tearDown(self):
+        """Clean up temporary directory after tests."""
         self.temp_dir.cleanup()
 
     def test_instantiation_defaults(self):
+        """Verify default configuration attributes of VettoBaseTool."""
         tool = VettoBaseTool(working_dir=str(self.workspace))
         self.assertEqual(tool.net, "off")
         self.assertEqual(tool.timeout, 120)
@@ -30,6 +35,7 @@ class TestVettoSandboxTools(unittest.TestCase):
         self.assertFalse(tool.allow_fallback)
 
     def test_build_command_with_vetto_binary(self):
+        """Verify command construction with flags when vetto binary exists."""
         tool = VettoExecTool(
             working_dir=str(self.workspace),
             net="allowlist",
@@ -57,6 +63,7 @@ class TestVettoSandboxTools(unittest.TestCase):
             self.assertEqual(cmd[-2:], ["ls", "-la"])
 
     def test_missing_binary_raises_without_fallback(self):
+        """Verify RuntimeError is raised when binary is missing and fallback disabled."""
         tool = VettoExecTool(working_dir=str(self.workspace), allow_fallback=False)
         with patch.object(tool, "_resolve_vetto_binary", return_value=None):
             with self.assertRaises(RuntimeError) as ctx:
@@ -64,12 +71,14 @@ class TestVettoSandboxTools(unittest.TestCase):
             self.assertIn("Vetto binary not found", str(ctx.exception))
 
     def test_missing_binary_passes_with_fallback(self):
+        """Verify un-sandboxed command returned when fallback enabled."""
         tool = VettoExecTool(working_dir=str(self.workspace), allow_fallback=True)
         with patch.object(tool, "_resolve_vetto_binary", return_value=None):
             cmd = tool._build_command(["echo", "hi"])
             self.assertEqual(cmd, ["echo", "hi"])
 
     def test_exec_tool_execution_mocked(self):
+        """Verify mocked execution of VettoExecTool returns proper schema."""
         tool = VettoExecTool(working_dir=str(self.workspace), allow_fallback=True)
         with patch("subprocess.Popen") as mock_popen:
             mock_proc = MagicMock()
@@ -83,6 +92,7 @@ class TestVettoSandboxTools(unittest.TestCase):
             self.assertFalse(result["timed_out"])
 
     def test_python_tool_execution_mocked(self):
+        """Verify mocked execution of VettoPythonTool returns proper schema."""
         tool = VettoPythonTool(working_dir=str(self.workspace), allow_fallback=True)
         with patch.object(tool, "_execute_subprocess") as mock_exec:
             mock_exec.return_value = {
@@ -98,6 +108,7 @@ class TestVettoSandboxTools(unittest.TestCase):
             self.assertTrue(mock_exec.called)
 
     def test_file_tool_write_read_append(self):
+        """Verify write, read, and append operations in VettoFileTool."""
         tool = VettoFileTool(working_dir=str(self.workspace))
 
         # Write
@@ -118,6 +129,7 @@ class TestVettoSandboxTools(unittest.TestCase):
         self.assertEqual(res_r2["content"], "line 1\nline 2\n")
 
     def test_file_tool_traversal_rejection(self):
+        """Verify path traversal outside workspace is blocked fail-closed."""
         tool = VettoFileTool(working_dir=str(self.workspace))
 
         # Traversal attempt via relative path
@@ -130,6 +142,7 @@ class TestVettoSandboxTools(unittest.TestCase):
             tool._resolve_safe_path(outside_path)
 
     def test_file_tool_management_actions(self):
+        """Verify directory creation, exists, search, find, and delete actions."""
         tool = VettoFileTool(working_dir=str(self.workspace))
 
         # mkdir
@@ -165,11 +178,13 @@ class TestVettoSandboxTools(unittest.TestCase):
         self.assertFalse((self.workspace / "subdir").exists())
 
     def test_exec_tool_cwd_outside_workspace_rejected(self):
+        """Verify execution fails when cwd escapes configured workspace."""
         tool = VettoExecTool(working_dir=str(self.workspace), allow_fallback=True)
         with self.assertRaises(PermissionError):
             tool._run("ls", cwd=str(self.workspace.parent))
 
     def test_file_tool_root_deletion_rejected(self):
+        """Verify deletion or moving of root workspace is rejected fail-closed."""
         tool = VettoFileTool(working_dir=str(self.workspace))
         with self.assertRaises(PermissionError):
             tool._run(action="delete", path=str(self.workspace), recursive=True)

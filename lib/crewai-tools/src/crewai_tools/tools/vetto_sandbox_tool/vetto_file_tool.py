@@ -68,6 +68,14 @@ class VettoFileToolSchema(BaseModel):
 
     @model_validator(mode="after")
     def _validate_action_args(self) -> VettoFileToolSchema:
+        """Validate required arguments based on the selected file action.
+
+        Returns:
+            The validated VettoFileToolSchema instance.
+
+        Raises:
+            ValueError: If required fields for an action are missing.
+        """
         if not self.path:
             raise ValueError(f"action={self.action!r} requires 'path'.")
         if self.action in ("write", "append") and self.content is None:
@@ -92,7 +100,17 @@ class VettoFileTool(VettoBaseTool):
     args_schema: type_[BaseModel] = VettoFileToolSchema
 
     def _resolve_safe_path(self, target_path: str) -> Path:
-        """Resolve path and ensure it does not escape the sandbox root."""
+        """Resolve path and ensure it does not escape the sandbox root.
+
+        Args:
+            target_path: Path string to resolve.
+
+        Returns:
+            Resolved absolute Path within the workspace.
+
+        Raises:
+            PermissionError: If path escapes sandbox workspace boundary.
+        """
         root = Path(self.working_dir or os.getcwd()).resolve()
         candidate = (root / target_path).resolve() if not os.path.isabs(target_path) else Path(target_path).resolve()
 

@@ -74,7 +74,11 @@ class VettoBaseTool(BaseTool):
     )
 
     def _resolve_vetto_binary(self) -> str | None:
-        """Resolve path to the vetto binary or None if not installed."""
+        """Resolve path to the vetto binary or None if not installed.
+
+        Returns:
+            Resolved executable path string or None if not found.
+        """
         if self.vetto_binary and os.path.isfile(self.vetto_binary) and os.access(self.vetto_binary, os.X_OK):
             return self.vetto_binary
 
@@ -103,7 +107,19 @@ class VettoBaseTool(BaseTool):
         cwd: str | None = None,
         timeout: int | None = None,
     ) -> list[str]:
-        """Construct the sandboxed execution command."""
+        """Construct the sandboxed execution command.
+
+        Args:
+            command_args: Argument vector to run inside the sandbox.
+            cwd: Working directory path for the process.
+            timeout: Execution timeout in seconds.
+
+        Returns:
+            Final command argument vector prefixed with vetto CLI parameters.
+
+        Raises:
+            RuntimeError: If vetto binary is missing and allow_fallback is False.
+        """
         vetto_bin = self._resolve_vetto_binary()
         if not vetto_bin:
             if not self.allow_fallback:
@@ -152,7 +168,17 @@ class VettoBaseTool(BaseTool):
         env: dict[str, str] | None = None,
         timeout: int | None = None,
     ) -> dict[str, Any]:
-        """Execute command within sandbox process boundary."""
+        """Execute command within sandbox process boundary.
+
+        Args:
+            command_args: Command and arguments to execute.
+            cwd: Working directory for process execution.
+            env: Optional environment variables dictionary.
+            timeout: Execution timeout in seconds.
+
+        Returns:
+            Dictionary with exit_code, stdout, stderr, timed_out flag, and elapsed_seconds.
+        """
         full_command = self._build_command(command_args, cwd=cwd, timeout=timeout)
         effective_cwd = cwd or self.working_dir or os.getcwd()
         resolved_cwd = str(Path(effective_cwd).resolve())
