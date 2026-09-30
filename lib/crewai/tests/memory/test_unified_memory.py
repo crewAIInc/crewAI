@@ -1212,3 +1212,34 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+def test_close_shuts_pool_before_closing_storage(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """close() must shut the save pool down before closing storage so an
+    in-flight save can never issue commands against a closed storage client.
+    """
+    from crewai.memory.unified_memory import Memory
+
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=mock_embedder)
+
+    order: list[str] = []
+
+    real_shutdown = mem._save_pool.shutdown
+
+    def tracking_shutdown(*args: object, **kwargs: object) -> None:
+        order.append("pool_shutdown")
+        return real_shutdown(*args, **kwargs)
+
+    def tracking_close() -> None:
+        order.append("storage_close")
+
+    mem._save_pool.shutdown = tracking_shutdown  # type: ignore[method-assign]
+    mem._storage.close = tracking_close  # type: ignore[method-assign]
+
+    mem.close()
+
+    assert order == ["pool_shutdown", "storage_close"]
