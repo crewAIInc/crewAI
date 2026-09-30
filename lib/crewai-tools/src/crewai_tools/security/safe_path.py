@@ -166,6 +166,11 @@ _BLOCKED_IPV4_NETWORKS = [
     ipaddress.ip_network("127.0.0.0/8"),
     ipaddress.ip_network("169.254.0.0/16"),  # Link-local / cloud metadata
     ipaddress.ip_network("0.0.0.0/32"),
+    # Listed explicitly so the result doesn't depend on the interpreter's
+    # ``is_global`` table, which has changed between Python versions.
+    ipaddress.ip_network("100.64.0.0/10"),  # CGNAT / Tailscale / Alibaba metadata
+    ipaddress.ip_network("198.18.0.0/15"),  # Benchmarking
+    ipaddress.ip_network("168.63.129.16/32"),  # Azure WireServer (is_global=True)
 ]
 
 _BLOCKED_IPV6_NETWORKS = [
@@ -173,24 +178,37 @@ _BLOCKED_IPV6_NETWORKS = [
     ipaddress.ip_network("::/128"),
     ipaddress.ip_network("fc00::/7"),  # Unique local addresses
     ipaddress.ip_network("fe80::/10"),  # Link-local IPv6
+    ipaddress.ip_network("fd00:ec2::254/128"),  # AWS IMDS over IPv6
 ]
+
+# NAT64 well-known prefix: the low 32 bits are the IPv4 destination.
+_NAT64_PREFIX = ipaddress.ip_network("64:ff9b::/96")
 
 
 def is_blocked_ip(ip_str: str) -> bool:
-    """Return True if *ip_str* is private, reserved, or otherwise unsafe to fetch."""
+    """Return True if *ip_str* is private, reserved, or otherwise unsafe to fetch.
+
+    Default-deny: anything that is not globally routable is blocked, plus the
+    explicit lists above for ranges ``is_global`` may allow or that changed
+    between Python versions. IPv6 forms that wrap an IPv4 address (IPv4-mapped
+    and NAT64) are checked as the embedded IPv4. 6to4, Teredo and local-use
+    NAT64 are not global, so they are blocked outright.
+    """
     try:
         addr = ipaddress.ip_address(ip_str)
-        # Unwrap IPv4-mapped IPv6 addresses (e.g., ::ffff:127.0.0.1) to IPv4
-        # so they are only checked against IPv4 networks (avoids TypeError when
-        # an IPv4Address is compared against an IPv6Network).
-        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
-            addr = addr.ipv4_mapped
+        # Unwrap so the embedded IPv4 is checked against IPv4 networks (also
+        # avoids a TypeError comparing an IPv4Address to an IPv6Network).
+        if isinstance(addr, ipaddress.IPv6Address):
+            if addr.ipv4_mapped:
+                addr = addr.ipv4_mapped
+            elif addr in _NAT64_PREFIX:
+                addr = ipaddress.IPv4Address(int(addr) & 0xFFFFFFFF)
         networks = (
             _BLOCKED_IPV4_NETWORKS
             if isinstance(addr, ipaddress.IPv4Address)
             else _BLOCKED_IPV6_NETWORKS
         )
-        return any(addr in network for network in networks)
+        return not addr.is_global or any(addr in network for network in networks)
     except ValueError:
         return True  # If we can't parse, block it
 
