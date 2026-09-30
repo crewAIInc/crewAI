@@ -714,7 +714,6 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             }
         }
         if self.project_id:
-            payload["deploy"]["project_id"] = self.project_id
             payload["project_id"] = self.project_id
         return payload
 

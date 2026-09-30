@@ -1364,8 +1364,9 @@ class TestDeploySendsTheProjectId(unittest.TestCase):
             self.deploy_command.create_crew(confirm=True, skip_validate=True)
 
         payload = self.mock_client.create_crew.call_args.args[0]
-        self.assertEqual(payload["deploy"]["project_id"], PROJECT_ID)
+        # Once, at the top level, where AMP reads it on every deploy route.
         self.assertEqual(payload["project_id"], PROJECT_ID)
+        self.assertNotIn("project_id", payload["deploy"])
 
     @patch("crewai_cli.deploy.main.create_project_zip", return_value=Path("/tmp/p.zip"))
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file", return_value={})

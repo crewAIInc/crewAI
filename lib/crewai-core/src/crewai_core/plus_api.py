@@ -58,13 +58,12 @@ class CrewDeploymentSpec(TypedDict):
     name: str
     repo_clone_url: str
     env: dict[str, str]
-    project_id: NotRequired[str]
 
 
 class CreateCrewPayload(TypedDict):
     deploy: CrewDeploymentSpec
-    # ``[tool.crewai].project_id``, beside the deployment's own fields and at
-    # the top level as every other deploy request sends it; only when set.
+    # ``[tool.crewai].project_id``, at the top level as every other deploy
+    # request sends it (AMP reads it there on every route); only when set.
     project_id: NotRequired[str]
 
 
@@ -327,7 +326,13 @@ class PlusAPI:
     def deploy_by_name(
         self, project_name: str, *, project_id: str | None = None
     ) -> httpx.Response:
-        """Redeploy by name, with PROJECT_ID (`[tool.crewai].project_id`) when set."""
+        """Redeploy by name, with PROJECT_ID (`[tool.crewai].project_id`) when set.
+
+        The body is sent only when there is a project id. An AMP that predates
+        project ids ignores it: this route has read its body through Rails'
+        ``params.permit`` since the v1 API (2024-08), which drops a key it does
+        not name, and AMP never made unpermitted keys an error.
+        """
         endpoint = f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
         if project_id:
             return self._make_request("POST", endpoint, json={"project_id": project_id})
