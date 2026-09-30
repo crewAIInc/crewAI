@@ -13,8 +13,15 @@ from types import MethodType
 from typing import TYPE_CHECKING
 
 from a2a.client.errors import A2AClientHTTPError
-from a2a.types import AgentCapabilities, AgentCard, AgentSkill
-from aiocache import cached  # type: ignore[import-untyped]
+from a2a.types import (
+    AgentCapabilities,
+    AgentCard,
+    AgentSkill,
+)
+from aiocache import (
+    SimpleMemoryCache,  # type: ignore[import-untyped]
+    cached,  # type: ignore[import-untyped]
+)
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 import httpx
 
@@ -223,7 +230,15 @@ def _fetch_agent_card_cached(
     return asyncio.run(coro)
 
 
-@cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]
+# Pinned to an in-process SimpleMemoryCache: PickleSerializer must never
+# deserialize values from an operator-/attacker-controlled Redis/Valkey
+# backend (that would be a pickle code-execution surface on cache read).
+# The network cache alias configured from VALKEY_URL/REDIS_URL is not used here.
+@cached(
+    ttl=300,
+    cache=SimpleMemoryCache,
+    serializer=PickleSerializer(),
+)  # type: ignore[untyped-decorator]
 async def _afetch_agent_card_cached(
     endpoint: str,
     auth_hash: str,
