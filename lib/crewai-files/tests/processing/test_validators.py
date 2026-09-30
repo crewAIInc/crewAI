@@ -647,8 +647,10 @@ class TestRealVideoFile:
         """Test validate_image rejects corrupted image bytes when dimension limits are set."""
         from crewai_files.processing.validators import validate_image
 
+        # Include valid PNG magic bytes so format check passes and dimension parser runs
+        corrupted_png = b"\x89PNG\r\n\x1a\ncorrupted_png_payload"
         file = ImageFile(
-            source=FileBytes(data=b"corrupted_png_bytes", filename="bad.png")
+            source=FileBytes(data=corrupted_png, filename="bad.png")
         )
         constraints = ImageConstraints(
             max_size_bytes=10 * 1024 * 1024,
