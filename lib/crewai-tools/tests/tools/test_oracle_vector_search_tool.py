@@ -23,6 +23,7 @@ ORACLE_USERNAME_ENV = "VECDB_USER"
 ORACLE_PASS_ENV = "VECDB_PASS"
 ORACLE_DSN_ENV = "VECDB_HOST"
 
+
 class FakeOracleError(Exception):
     def __init__(self, code: int):
         super().__init__()
@@ -202,7 +203,7 @@ def oracle_tool():
     creds = _oracle_env_config()
     if creds is not None:
         username, password, dsn = creds
-        table_name = f'CREWAI_ORACLE_UNIT_{uuid.uuid4().hex[:12].upper()}'
+        table_name = f"CREWAI_ORACLE_UNIT_{uuid.uuid4().hex[:12].upper()}"
         tool = OracleVectorSearchTool(
             oracle_config=OracleVectorSearchConfig(
                 user=username,
@@ -215,18 +216,18 @@ def oracle_tool():
             embedding_function=_embed_text,
             dimensions=3,
         )
-        tool.create_table()
-        tool.add_texts(
-            [
-                "Oracle vector guide",
-                "CrewAI onboarding",
-            ],
-            metadatas=[
-                {"source": "docs", "priority": 5},
-                {"source": "crew", "priority": 1},
-            ],
-        )
         try:
+            tool.create_table()
+            tool.add_texts(
+                [
+                    "Oracle vector guide",
+                    "CrewAI onboarding",
+                ],
+                metadatas=[
+                    {"source": "docs", "priority": 5},
+                    {"source": "crew", "priority": 1},
+                ],
+            )
             yield tool
         finally:
             _cleanup_real_tool(tool)
@@ -252,7 +253,9 @@ def oracle_tool():
 
 def test_successful_query_execution(oracle_tool):
     results = json.loads(
-        oracle_tool._run(query="oracle vector search", filter_by="source", filter_value="docs")
+        oracle_tool._run(
+            query="oracle vector search", filter_by="source", filter_value="docs"
+        )
     )
 
     assert len(results) >= 1
@@ -270,7 +273,7 @@ def test_query_config_filters_results_by_score_threshold():
     creds = _oracle_env_config()
     if creds is not None:
         username, password, dsn = creds
-        table_name = f'CREWAI_ORACLE_THRESH_{uuid.uuid4().hex[:12].upper()}'
+        table_name = f"CREWAI_ORACLE_THRESH_{uuid.uuid4().hex[:12].upper()}"
         tool = OracleVectorSearchTool(
             oracle_config=OracleVectorSearchConfig(
                 user=username,
@@ -283,15 +286,15 @@ def test_query_config_filters_results_by_score_threshold():
             embedding_function=_embed_text,
             dimensions=3,
         )
-        tool.create_table()
-        tool.add_texts(
-            ["Oracle vector guide", "CrewAI onboarding"],
-            metadatas=[
-                {"source": "docs"},
-                {"source": "crew"},
-            ],
-        )
         try:
+            tool.create_table()
+            tool.add_texts(
+                ["Oracle vector guide", "CrewAI onboarding"],
+                metadatas=[
+                    {"source": "docs"},
+                    {"source": "crew"},
+                ],
+            )
             results = json.loads(tool._run(query="oracle vector"))
             assert len(results) >= 1
             assert all(result["distance"] <= 0.5 for result in results)
@@ -326,7 +329,7 @@ def test_simple_filter_preserves_native_json_numeric_type():
     creds = _oracle_env_config()
     if creds is not None:
         username, password, dsn = creds
-        table_name = f'CREWAI_ORACLE_FILTER_{uuid.uuid4().hex[:12].upper()}'
+        table_name = f"CREWAI_ORACLE_FILTER_{uuid.uuid4().hex[:12].upper()}"
         tool = OracleVectorSearchTool(
             oracle_config=OracleVectorSearchConfig(
                 user=username,
@@ -338,15 +341,15 @@ def test_simple_filter_preserves_native_json_numeric_type():
             embedding_function=_embed_text,
             dimensions=3,
         )
-        tool.create_table()
-        tool.add_texts(
-            ["Oracle vector guide", "CrewAI onboarding"],
-            metadatas=[
-                {"source": "docs", "priority": 3},
-                {"source": "crew", "priority": 1},
-            ],
-        )
         try:
+            tool.create_table()
+            tool.add_texts(
+                ["Oracle vector guide", "CrewAI onboarding"],
+                metadatas=[
+                    {"source": "docs", "priority": 3},
+                    {"source": "crew", "priority": 1},
+                ],
+            )
             results = json.loads(
                 tool._run(
                     query="oracle vector search",
@@ -400,7 +403,7 @@ def test_per_call_score_threshold_filters_by_max_distance():
     creds = _oracle_env_config()
     if creds is not None:
         username, password, dsn = creds
-        table_name = f'CREWAI_ORACLE_CALLTH_{uuid.uuid4().hex[:12].upper()}'
+        table_name = f"CREWAI_ORACLE_CALLTH_{uuid.uuid4().hex[:12].upper()}"
         tool = OracleVectorSearchTool(
             oracle_config=OracleVectorSearchConfig(
                 user=username,
@@ -412,15 +415,15 @@ def test_per_call_score_threshold_filters_by_max_distance():
             embedding_function=_embed_text,
             dimensions=3,
         )
-        tool.create_table()
-        tool.add_texts(
-            ["Oracle vector guide", "CrewAI onboarding"],
-            metadatas=[
-                {"source": "docs"},
-                {"source": "crew"},
-            ],
-        )
         try:
+            tool.create_table()
+            tool.add_texts(
+                ["Oracle vector guide", "CrewAI onboarding"],
+                metadatas=[
+                    {"source": "docs"},
+                    {"source": "crew"},
+                ],
+            )
             results = json.loads(
                 tool._run(query="oracle vector search", score_threshold=0.5)
             )
@@ -479,9 +482,42 @@ def test_filters_json_builds_oracle_where_clause():
     assert 3 in params.values()
 
 
-def test_create_vector_index(oracle_tool):
+@pytest.mark.parametrize("failure_stage", ["create_table", "add_texts"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "fixture",
+        "test_query_config_filters_results_by_score_threshold",
+        "test_simple_filter_preserves_native_json_numeric_type",
+        "test_per_call_score_threshold_filters_by_max_distance",
+    ],
+)
+def test_real_setup_failure_closes_connection(monkeypatch, failure_stage, case):
+    tool = make_tool(client=FakeConnection())
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("setup failed")
+
+    monkeypatch.setattr(OracleVectorSearchTool, "create_table", lambda self: None)
+    monkeypatch.setattr(OracleVectorSearchTool, "add_texts", lambda *a, **kw: None)
+    monkeypatch.setattr(OracleVectorSearchTool, failure_stage, fail)
+    monkeypatch.setitem(
+        globals(), "_oracle_env_config", lambda: ("user", "pass", "dsn")
+    )
+    monkeypatch.setitem(globals(), "OracleVectorSearchTool", lambda **kw: tool)
+
+    with pytest.raises(RuntimeError, match="setup failed"):
+        if case == "fixture":
+            next(oracle_tool.__wrapped__())
+        else:
+            globals()[case]()
+
+    assert tool.client.closed
+
+
+def test_create_vector_index():
     index_cursor = FakeCursor()
-    oracle_tool.client = FakeConnection([index_cursor])
+    oracle_tool = make_tool(client=FakeConnection([index_cursor]))
 
     index_name = oracle_tool.create_vector_index(
         index_name="docs_vec_idx",
@@ -583,7 +619,9 @@ def test_create_vector_index_creates_ivf_index():
         ("IVF", {"idx_type": "IVF"}, "Invalid parameter: idx_type"),
     ],
 )
-def test_create_vector_index_validates_parameters(monkeypatch, idx_type, params, message):
+def test_create_vector_index_validates_parameters(
+    monkeypatch, idx_type, params, message
+):
     monkeypatch.setattr(vs, "oracledb", FakeOracleModule())
     monkeypatch.setattr(vs, "ORACLEDB_AVAILABLE", True)
     index_cursor = FakeCursor()
@@ -798,8 +836,7 @@ def test_generate_condition_covers_dict_branches():
 
     assert condition.startswith("(")
     assert (
-        "JSON_EXISTS(metadata, '$.metadata_field?(@ > $val0 && @ < $val1)'"
-        in condition
+        "JSON_EXISTS(metadata, '$.metadata_field?(@ > $val0 && @ < $val1)'" in condition
     )
     assert "NOT (JSON_EXISTS(metadata, '$.metadata_field?(@ == $val2)'" in condition
     assert "NOT (JSON_EXISTS(metadata, '$.metadata_field'))" in condition

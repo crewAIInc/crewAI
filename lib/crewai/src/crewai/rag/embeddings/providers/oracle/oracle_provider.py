@@ -37,7 +37,7 @@ class OracleProvider(BaseEmbeddingsProvider[OracleEmbeddingFunction]):
     )
 
     @model_validator(mode="after")
-    def validate_connection_source(self) -> "OracleProvider":
+    def validate_connection_source(self) -> OracleProvider:
         has_conn = self.conn is not None
         has_connection_params = self.connection_params is not None
         if has_conn == has_connection_params:

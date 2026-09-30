@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from contextlib import suppress
+import json
 from typing import Any
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
@@ -54,7 +54,9 @@ class OracleEmbeddingFunction(EmbeddingFunction[Documents]):
             cursor = self._conn.cursor()
 
             if self._proxy:
-                cursor.execute("begin utl_http.set_proxy(:proxy); end;", proxy=self._proxy)
+                cursor.execute(
+                    "begin utl_http.set_proxy(:proxy); end;", proxy=self._proxy
+                )
 
             chunks = [
                 json.dumps({"chunk_id": i, "chunk_data": text})
@@ -85,10 +87,9 @@ class OracleEmbeddingFunction(EmbeddingFunction[Documents]):
                 cursor.close()
 
     def __del__(self) -> None:
-        try:
+        # Destructors must tolerate partially initialized or closed connections.
+        with suppress(Exception):
             if getattr(self, "_owns_connection", False):
                 conn = getattr(self, "_conn", None)
                 if conn is not None:
                     conn.close()
-        except Exception:
-            pass

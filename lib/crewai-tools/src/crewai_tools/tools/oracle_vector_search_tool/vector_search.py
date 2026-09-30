@@ -27,7 +27,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-_IDENTIFIER_RE = re.compile(r'^(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_$#]*)(?:\.(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_$#]*))*$')
+_IDENTIFIER_RE = re.compile(
+    r'^(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_$#]*)(?:\.(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_$#]*))*$'
+)
 _JSON_PATH_RE = re.compile(r"^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$")
 _ID_COLUMN = "id"
 _TEXT_COLUMN = "text"
@@ -240,7 +242,9 @@ def _get_comparison_string(
     raise ValueError(f"Invalid operator: {oper}.")
 
 
-def _generate_condition(metadata_key: str, value: Any, bind_variables: list[Any]) -> str:
+def _generate_condition(
+    metadata_key: str, value: Any, bind_variables: list[Any]
+) -> str:
     single_mask = (
         "JSON_EXISTS(metadata, '$.{key}?(@ {oper} $val)' "
         'PASSING {value_bind} AS "val")'
@@ -334,7 +338,9 @@ def _generate_condition(metadata_key: str, value: Any, bind_variables: list[Any]
     raise ValueError("Filter format is invalid.")
 
 
-def _generate_where_clause(filter_spec: dict[str, Any], bind_variables: list[Any]) -> str:
+def _generate_where_clause(
+    filter_spec: dict[str, Any], bind_variables: list[Any]
+) -> str:
     if not isinstance(filter_spec, dict):
         raise ValueError("Filter syntax is incorrect. Must be a dictionary.")
 
@@ -482,7 +488,9 @@ class OracleVectorSearchTool(BaseTool):
         default=None,
         description="Optional embedding function used instead of OpenAI embeddings.",
     )
-    client: Any | None = Field(default=None, description="Optional pre-configured Oracle connection.")
+    client: Any | None = Field(
+        default=None, description="Optional pre-configured Oracle connection."
+    )
     _openai_client: Any | None = None
     _owns_client: bool = False
 
@@ -549,7 +557,8 @@ class OracleVectorSearchTool(BaseTool):
         try:
             with _get_connection(self.client) as connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(f"SELECT 1 FROM {table_name} WHERE ROWNUM < 1")
+                    # The caller validates and quotes the table identifier.
+                    cursor.execute(f"SELECT 1 FROM {table_name} WHERE ROWNUM < 1")  # noqa: S608
                     return True
         except Exception as exc:
             if _extract_oracle_error_code(exc) == 942:
@@ -721,9 +730,7 @@ class OracleVectorSearchTool(BaseTool):
                     f", samples_per_partition {index_config['samples_per_partition']}"
                 )
             if "min_vectors_per_partition" in index_config:
-                parameters_clause += (
-                    f", min_vectors_per_partition {index_config['min_vectors_per_partition']}"
-                )
+                parameters_clause += f", min_vectors_per_partition {index_config['min_vectors_per_partition']}"
             parameters_clause += ")"
 
             ddl = (
@@ -767,8 +774,9 @@ class OracleVectorSearchTool(BaseTool):
                 "Embedding dimension mismatch. Update dimensions or provide embeddings with consistent length."
             )
 
+        # Identifiers are validated; all inserted values use bind variables.
         insert_sql = (
-            f"INSERT INTO {_quote_identifier(self.oracle_config.table_name)} "
+            f"INSERT INTO {_quote_identifier(self.oracle_config.table_name)} "  # noqa: S608
             f"({_ID_COLUMN}, {_TEXT_COLUMN}, {_METADATA_COLUMN}, {_EMBEDDING_COLUMN}) "
             "VALUES (:1, :2, :3, :4)"
         )
@@ -847,6 +855,8 @@ class OracleVectorSearchTool(BaseTool):
             )
 
             query_vector = array.array("f", self._embed_texts([query])[0])
+            # Identifiers and filters are validated; metric and limit come from
+            # typed config/tool inputs. Vector and metadata values use binds.
             search_sql = f"""
                 SELECT
                     {_TEXT_COLUMN},
@@ -860,7 +870,7 @@ class OracleVectorSearchTool(BaseTool):
                 {"WHERE " + where_clause if where_clause else ""}
                 ORDER BY distance
                 FETCH APPROX FIRST {effective_limit} ROWS ONLY
-            """
+            """  # noqa: S608
 
             with _get_connection(self.client) as connection:
                 with connection.cursor() as cursor:
