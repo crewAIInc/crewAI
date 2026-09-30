@@ -217,7 +217,7 @@ def _get_comparison_string(
         return " && ".join(conditions), ",".join(passings)
 
     if oper in ["$in", "$nin", "$all"]:
-        if not isinstance(value, list):
+        if not isinstance(value, list) or not value:
             raise ValueError(
                 f"Invalid value for {oper}: {value}. It must be a non-empty list."
             )
@@ -424,7 +424,7 @@ class OracleVectorSearchQueryConfig(BaseModel):
     """Default query behavior for Oracle vector search."""
 
     limit: int | None = Field(default=None, ge=1)
-    score_threshold: float | None = Field(default=None, ge=0.0)
+    score_threshold: float | None = Field(default=None)
     filter: dict[str, Any] | None = Field(
         default=None,
         description="Optional Oracle-style metadata filter dictionary.",
@@ -439,7 +439,7 @@ class OracleVectorSearchConfig(BaseModel):
     dsn: str | None = None
     table_name: str
     limit: int = 3
-    score_threshold: float | None = Field(default=None, ge=0.0)
+    score_threshold: float | None = Field(default=None)
     distance_strategy: Literal["COSINE", "EUCLIDEAN", "DOT"] = "COSINE"
     index_name: str | None = None
     connection_kwargs: dict[str, Any] = Field(default_factory=dict)
@@ -562,7 +562,8 @@ class OracleVectorSearchTool(BaseTool):
         table_name: str | None = None,
         owner: str | None = None,
     ) -> bool:
-        index_name_no_quotes = index_name.replace('"', "")
+        index_parts = _split_identifier_parts(_quote_identifier(index_name))
+        index_name_no_quotes = index_parts[-1].strip('"')
         table_name_no_quotes = table_name.replace('"', "") if table_name else None
         owner_no_quotes = owner.replace('"', "") if owner else None
         query = """
@@ -571,12 +572,19 @@ class OracleVectorSearchTool(BaseTool):
             WHERE index_name = :idx_name
         """
         params = {"idx_name": index_name_no_quotes}
+        if len(index_parts) > 1:
+            query += " AND owner = :idx_owner"
+            params["idx_owner"] = index_parts[0].strip('"')
+        else:
+            query += " AND owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')"
         if table_name_no_quotes:
             query += " AND table_name = :table_name"
             params["table_name"] = table_name_no_quotes
-        if owner_no_quotes:
-            query += " AND owner = :idx_owner"
-            params["idx_owner"] = owner_no_quotes
+            if owner_no_quotes:
+                query += " AND table_owner = :table_owner"
+                params["table_owner"] = owner_no_quotes
+            else:
+                query += " AND table_owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')"
 
         with _get_connection(self.client) as connection:
             with connection.cursor() as cursor:
@@ -586,15 +594,34 @@ class OracleVectorSearchTool(BaseTool):
     def table_exists(self) -> bool:
         return self._table_exists(_quote_identifier(self.oracle_config.table_name))
 
-    def vector_index_exists(self, index_name: str | None = None) -> bool:
+    def _resolve_index_name(self, index_name: str | None, idx_type: str) -> str:
+        if not isinstance(idx_type, str) or idx_type.upper() not in {"HNSW", "IVF"}:
+            raise ValueError("idx_type must be HNSW or IVF.")
+        effective_index_name = index_name or self.oracle_config.index_name
+        if effective_index_name is not None:
+            return effective_index_name
+        table_parts = _split_identifier_parts(
+            _quote_identifier(self.oracle_config.table_name)
+        )
+        base_name = table_parts[-1].strip('"')
+        # Keep dots inside quoted table names as part of the generated index name.
+        name = f"{base_name}_{idx_type.upper()}_IDX"
+        if "." in name or not _IDENTIFIER_RE.fullmatch(name):
+            return f'"{name}"'
+        return name
+
+    def vector_index_exists(
+        self,
+        index_name: str | None = None,
+        *,
+        idx_type: Literal["HNSW", "IVF"] = "HNSW",
+    ) -> bool:
+        """Check an explicit index or the default name for the requested index type."""
         quoted_table_name = _quote_identifier(self.oracle_config.table_name)
         table_parts = _split_identifier_parts(quoted_table_name)
         table_name = table_parts[-1]
         owner = table_parts[0] if len(table_parts) > 1 else None
-        effective_index_name = index_name or self.oracle_config.index_name
-        if effective_index_name is None:
-            base_name = table_name.replace('"', "")
-            effective_index_name = f"{base_name}_HNSW_IDX"
+        effective_index_name = self._resolve_index_name(index_name, idx_type)
         return self._index_exists(
             _quote_identifier(effective_index_name),
             table_name,
@@ -627,16 +654,8 @@ class OracleVectorSearchTool(BaseTool):
         params: dict[str, Any] | None = None,
     ) -> str:
         table_name = _quote_identifier(self.oracle_config.table_name)
-        if not isinstance(idx_type, str):
-            raise ValueError("idx_type must be HNSW or IVF.")
+        effective_index_name = self._resolve_index_name(index_name, idx_type)
         normalized_idx_type = idx_type.upper()
-        if normalized_idx_type not in {"HNSW", "IVF"}:
-            raise ValueError("idx_type must be HNSW or IVF.")
-
-        effective_index_name = index_name or self.oracle_config.index_name
-        if effective_index_name is None:
-            base_name = self.oracle_config.table_name.split(".")[-1].replace('"', "")
-            effective_index_name = f"{base_name}_{normalized_idx_type}_IDX"
         quoted_index_name = _quote_identifier(effective_index_name)
 
         raw_params = {} if params is None else params

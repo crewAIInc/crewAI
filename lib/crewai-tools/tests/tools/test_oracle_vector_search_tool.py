@@ -1199,12 +1199,99 @@ def test_vector_index_exists_filters_schema_qualified_table_owner():
 
     assert tool.vector_index_exists() is True
     executed_sql, _, params = cursor.executed[0]
-    assert "owner = :idx_owner" in executed_sql
+    assert "table_owner = :table_owner" in executed_sql
+    assert "AND owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')" in executed_sql
     assert params == {
         "idx_name": "DOCS_VEC_IDX",
         "table_name": "docs_vectors",
-        "idx_owner": "APP_SCHEMA",
+        "table_owner": "APP_SCHEMA",
     }
+
+
+@pytest.mark.parametrize("operator", ["$in", "$nin", "$all"])
+def test_empty_list_filters_are_rejected(operator):
+    binds = []
+    with pytest.raises(ValueError, match="must be a non-empty list"):
+        vs._get_comparison_string(operator, [], binds)
+    assert binds == []
+
+
+@pytest.mark.parametrize("source", ["oracle_config", "query_config", "per_call"])
+def test_negative_dot_threshold_filters_by_max_distance(source):
+    cursor = FakeCursor(fetchall_result=[("near", {}, -0.8), ("far", {}, -0.2)])
+    config = {"table_name": "docs_vectors", "distance_strategy": "DOT"}
+    if source == "oracle_config":
+        config["score_threshold"] = -0.5
+    tool = make_tool(
+        client=FakeConnection([FakeCursor(), cursor]),
+        oracle_config=OracleVectorSearchConfig(**config),
+        query_config=OracleVectorSearchQueryConfig(
+            score_threshold=-0.5 if source == "query_config" else None
+        ),
+    )
+    overrides = {"score_threshold": -0.5} if source == "per_call" else {}
+    results = json.loads(tool._run(query="oracle", **overrides))
+    assert [row["context"] for row in results] == ["near"]
+
+
+@pytest.mark.parametrize("idx_type", ["HNSW", "IVF", "ivf"])
+@pytest.mark.parametrize(
+    "table_name,base_name",
+    [("docs_vectors", "docs_vectors"), ('"App"."Docs.v1"', "Docs.v1")],
+)
+def test_created_default_index_name_matches_lookup(idx_type, table_name, base_name):
+    create_cursor = FakeCursor()
+    lookup_cursor = FakeCursor(fetchone_result=("index",))
+    tool = make_tool(
+        client=FakeConnection([create_cursor, lookup_cursor]),
+        oracle_config=OracleVectorSearchConfig(table_name=table_name),
+    )
+    name = tool.create_vector_index(idx_type=idx_type)
+    assert tool.vector_index_exists(idx_type=idx_type)
+    expected = f"{base_name}_{idx_type.upper()}_IDX"
+    assert lookup_cursor.executed[0][2]["idx_name"] == expected
+    assert f'CREATE VECTOR INDEX "{expected}"' in create_cursor.executed[0][0]
+    assert name.strip('"') == expected
+
+
+@pytest.mark.parametrize("explicit", [None, '"IndexOwner"."Custom.idx"'])
+def test_index_owner_is_independent_of_table_owner(explicit):
+    create_cursor = FakeCursor()
+    lookup_cursor = FakeCursor(fetchone_result=("index",))
+    tool = make_tool(
+        client=FakeConnection([create_cursor, lookup_cursor]),
+        oracle_config=OracleVectorSearchConfig(
+            table_name='"TableOwner"."Docs"',
+            index_name='"ConfiguredOwner"."ConfiguredIndex"',
+        ),
+    )
+    name = tool.create_vector_index(index_name=explicit, idx_type="IVF")
+    assert tool.vector_index_exists(explicit, idx_type="IVF")
+    sql, _, binds = lookup_cursor.executed[0]
+    assert binds == {
+        "idx_name": "Custom.idx" if explicit else "ConfiguredIndex",
+        "idx_owner": "IndexOwner" if explicit else "ConfiguredOwner",
+        "table_name": "Docs",
+        "table_owner": "TableOwner",
+    }
+    assert "AND owner = :idx_owner" in sql
+    assert "AND table_owner = :table_owner" in sql
+    assert f"CREATE VECTOR INDEX {name}" in create_cursor.executed[0][0]
+
+
+def test_unqualified_index_lookup_scopes_both_owners():
+    cursor = FakeCursor(fetchone_result=None)
+    tool = make_tool(client=FakeConnection([cursor]))
+    assert not tool.vector_index_exists()
+    sql = cursor.executed[0][0]
+    assert "AND owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')" in sql
+    assert "AND table_owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')" in sql
+
+
+@pytest.mark.parametrize("idx_type", ["invalid", None, 42])
+def test_index_lookup_rejects_invalid_type(idx_type):
+    with pytest.raises(ValueError, match="idx_type must be HNSW or IVF"):
+        make_tool().vector_index_exists(idx_type=idx_type)
 
 
 def test_create_table_returns_early_when_table_exists():

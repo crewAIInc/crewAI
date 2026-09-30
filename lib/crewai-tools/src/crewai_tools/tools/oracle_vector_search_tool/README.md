@@ -166,7 +166,7 @@ tool.create_vector_index(
 - `connection_kwargs`: Optional extra keyword arguments passed to `oracledb.connect()` when the tool creates the connection.
 - `table_name`: Oracle table containing your text, metadata, and vector columns.
 - `limit`: Number of search results to return.
-- `score_threshold`: Optional maximum vector distance. Only rows with `distance <= score_threshold` are returned.
+- `score_threshold`: Optional maximum vector distance. Only rows with `distance <= score_threshold` are returned. Negative thresholds are supported for `DOT`, which returns the negative inner product.
 - `distance_strategy`: One of `COSINE`, `EUCLIDEAN`, or `DOT`.
 - `index_name`: Optional default vector index name used by `create_vector_index()`.
 
@@ -176,6 +176,14 @@ tool.create_vector_index(
 - `params`: Oracle vector index parameters. For `HNSW`, use `accuracy`, `neighbors`, `efconstruction`, and `parallel`. For `IVF`, use `accuracy`, `neighbor_partitions`, `samples_per_partition`, `min_vectors_per_partition`, and `parallel`.
 
 `client` may be a caller-managed `oracledb.Connection` or `oracledb.ConnectionPool`. Pools must be created by the caller and passed through `client`; `OracleVectorSearchConfig` only configures single connections created with `oracledb.connect()`.
+
+Use `vector_index_exists(idx_type="IVF")` to check the default IVF index name;
+the default index type remains `HNSW`. An explicit `index_name` overrides the
+configured name and the generated default name in both creation and lookup.
+Schema-qualified index and table names are resolved independently. Unqualified
+names use the connection's current schema. Identifier casing is preserved.
+
+Metadata operators `$in`, `$nin`, and `$all` require non-empty lists.
 
 The tool creates and expects a fixed Oracle schema:
 - `id`
