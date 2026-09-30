@@ -647,8 +647,14 @@ class TestRealVideoFile:
         """Test validate_image rejects corrupted image bytes when dimension limits are set."""
         from crewai_files.processing.validators import validate_image
 
-        file = ImageFile(source=b"invalid_corrupted_image_data", filename="bad.png")
-        constraints = ImageConstraints(max_width=1000)
+        file = ImageFile(
+            source=FileBytes(data=b"corrupted_png_bytes", filename="bad.png")
+        )
+        constraints = ImageConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            supported_formats=("image/png",),
+            max_width=1000,
+        )
 
         with pytest.raises(FileValidationError) as exc_info:
             validate_image(file, constraints)
@@ -663,8 +669,13 @@ class TestRealVideoFile:
         """Test validate_pdf rejects corrupted PDF bytes when page limits are set."""
         from crewai_files.processing.validators import validate_pdf
 
-        file = PDFFile(source=b"invalid_corrupted_pdf_data", filename="bad.pdf")
-        constraints = PDFConstraints(max_pages=5)
+        file = PDFFile(
+            source=FileBytes(data=b"%PDF-1.4\ncorrupted_pdf_data", filename="bad.pdf")
+        )
+        constraints = PDFConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_pages=5,
+        )
 
         with pytest.raises(FileValidationError) as exc_info:
             validate_pdf(file, constraints)
