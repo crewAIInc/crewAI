@@ -1570,6 +1570,79 @@ class TestValkeyStorageUpdate:
         for i, val in enumerate(new_embedding):
             assert abs(deserialized_embedding[i] - val) < 1e-6
 
+    @pytest.mark.asyncio
+    async def test_update_without_embedding_removes_stale_vector(
+        self, valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        """A content-only update (no embedding) must HDEL the old vector.
+
+        HSET does not remove omitted fields, so without an explicit HDEL the
+        hash keeps the previous embedding and Valkey Search keeps ranking the
+        record by a stale vector that no longer matches its content.
+        """
+        mock_glide_client.hgetall.return_value = {
+            "id": "stale-embed-record",
+            "content": "Original content",
+            "scope": "/test",
+            "categories": "",
+            "metadata": "{}",
+            "importance": "0.5",
+            "created_at": "2024-01-01T10:00:00",
+            "last_accessed": "2024-01-01T11:00:00",
+            "embedding": valkey_storage._embedding_to_bytes([0.1, 0.2, 0.3, 0.4]),
+            "source": "",
+            "private": "false",
+        }
+
+        # Updated record carries no embedding (e.g. consolidation update; a
+        # FT.SEARCH result never returns the stored embedding).
+        updated_record = MemoryRecord(
+            id="stale-embed-record",
+            content="Updated content",
+            scope="/test",
+            embedding=None,
+        )
+
+        await valkey_storage._aupdate(updated_record)
+
+        # HSET must not carry an embedding field...
+        hset_dict = mock_glide_client.hset.call_args[0][1]
+        assert "embedding" not in hset_dict
+        # ...and the stale vector must be explicitly deleted from the hash.
+        mock_glide_client.hdel.assert_called_once()
+        hdel_args = mock_glide_client.hdel.call_args[0]
+        assert hdel_args[0] == valkey_storage._record_key("stale-embed-record")
+        assert hdel_args[1] == ["embedding"]
+
+    @pytest.mark.asyncio
+    async def test_update_without_embedding_no_hdel_when_none_stored(
+        self, valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        """No HDEL when the existing hash had no embedding to remove."""
+        mock_glide_client.hgetall.return_value = {
+            "id": "no-embed-record",
+            "content": "Original content",
+            "scope": "/test",
+            "categories": "",
+            "metadata": "{}",
+            "importance": "0.5",
+            "created_at": "2024-01-01T10:00:00",
+            "last_accessed": "2024-01-01T11:00:00",
+            "source": "",
+            "private": "false",
+        }
+
+        updated_record = MemoryRecord(
+            id="no-embed-record",
+            content="Updated content",
+            scope="/test",
+            embedding=None,
+        )
+
+        await valkey_storage._aupdate(updated_record)
+
+        mock_glide_client.hdel.assert_not_called()
+
 
 class TestValkeyStorageDelete:
     """Tests for ValkeyStorage delete operation."""
