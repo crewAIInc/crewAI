@@ -164,6 +164,18 @@ class TestVettoSandboxTools(unittest.TestCase):
         self.assertEqual(res_del["status"], "deleted")
         self.assertFalse((self.workspace / "subdir").exists())
 
+    def test_exec_tool_cwd_outside_workspace_rejected(self):
+        tool = VettoExecTool(working_dir=str(self.workspace), allow_fallback=True)
+        with self.assertRaises(PermissionError):
+            tool._run("ls", cwd=str(self.workspace.parent))
+
+    def test_file_tool_root_deletion_rejected(self):
+        tool = VettoFileTool(working_dir=str(self.workspace))
+        with self.assertRaises(PermissionError):
+            tool._run(action="delete", path=str(self.workspace), recursive=True)
+        with self.assertRaises(PermissionError):
+            tool._run(action="move", path=str(self.workspace), destination=str(self.workspace / "moved"))
+
 
 if __name__ == "__main__":
     unittest.main()

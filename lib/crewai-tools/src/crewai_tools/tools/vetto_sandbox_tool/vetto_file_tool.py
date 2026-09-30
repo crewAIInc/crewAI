@@ -113,10 +113,29 @@ class VettoFileTool(VettoBaseTool):
         pattern: str | None = None,
         recursive: bool = False,
     ) -> Any:
+        """Perform a contained filesystem operation within the sandbox.
+
+        Args:
+            action: The filesystem operation to perform.
+            path: Target file or directory path.
+            content: Content string for write/append actions.
+            destination: Target destination path for move action.
+            pattern: Search string or glob pattern.
+            recursive: Boolean flag for recursive directory deletion.
+
+        Returns:
+            Dictionary containing operation status or queried data.
+        """
         if not path:
             raise ValueError("Missing required 'path' parameter.")
 
         safe_path = self._resolve_safe_path(path)
+        root = Path(self.working_dir or os.getcwd()).resolve()
+
+        if action in ("delete", "move") and safe_path == root:
+            raise PermissionError(
+                f"Cannot {action} the root sandbox workspace directory {root}."
+            )
 
         if action == "read":
             if not safe_path.exists():

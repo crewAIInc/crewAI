@@ -46,6 +46,28 @@ class VettoExecTool(VettoBaseTool):
         env: dict[str, str] | None = None,
         timeout: int | None = None,
     ) -> Any:
+        """Execute a shell command inside the sandbox.
+
+        Args:
+            command: Shell command string to execute.
+            cwd: Optional working directory for the command.
+            env: Optional environment variables.
+            timeout: Optional per-command timeout in seconds.
+
+        Returns:
+            Dictionary containing exit_code, stdout, stderr, timed_out flag, and elapsed_seconds.
+        """
+        if cwd and self.working_dir:
+            from pathlib import Path
+            resolved_cwd = Path(cwd).resolve()
+            resolved_root = Path(self.working_dir).resolve()
+            try:
+                resolved_cwd.relative_to(resolved_root)
+            except ValueError:
+                raise PermissionError(
+                    f"Execution cwd {cwd} escapes configured workspace boundary {self.working_dir}"
+                )
+
         if platform.system() == "Windows":
             shell_cmd = ["cmd.exe", "/c", command]
         else:

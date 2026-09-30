@@ -50,6 +50,17 @@ class VettoPythonTool(VettoBaseTool):
         env: dict[str, str] | None = None,
         timeout: int | None = None,
     ) -> Any:
+        """Execute a block of Python source code inside the sandbox.
+
+        Args:
+            code: Python code string to execute.
+            argv: Optional arguments passed to sys.argv.
+            env: Optional environment variables.
+            timeout: Optional per-execution timeout in seconds.
+
+        Returns:
+            Dictionary containing exit_code, stdout, stderr, timed_out flag, and elapsed_seconds.
+        """
         effective_cwd = self.working_dir or os.getcwd()
         os.makedirs(effective_cwd, exist_ok=True)
 
