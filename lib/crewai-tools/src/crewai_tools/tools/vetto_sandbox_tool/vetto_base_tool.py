@@ -26,6 +26,9 @@ class VettoBaseTool(BaseTool):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    name: str = "Vetto Sandbox Base Tool"
+    description: str = "Base execution tool for Vetto sandboxing."
+
     working_dir: str | None = Field(
         default=None,
         description="Root workspace directory for filesystem sandbox containment.",
@@ -241,3 +244,7 @@ class VettoBaseTool(BaseTool):
                 "timed_out": False,
                 "elapsed_seconds": 0.0,
             }
+
+    def _run(self, *args: Any, **kwargs: Any) -> Any:
+        """Abstract execution method implemented by concrete tools."""
+        raise NotImplementedError("Subclasses must implement _run.")

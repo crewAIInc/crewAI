@@ -64,11 +64,15 @@ class VettoPythonTool(VettoBaseTool):
         effective_cwd = self.working_dir or os.getcwd()
         os.makedirs(effective_cwd, exist_ok=True)
 
-        temp_name = f".vetto_script_{uuid.uuid4().hex[:8]}.py"
-        script_path = Path(effective_cwd) / temp_name
+        fd, temp_file_path = tempfile.mkstemp(
+            prefix=".vetto_script_",
+            suffix=".py",
+            dir=effective_cwd,
+        )
+        script_path = Path(temp_file_path)
 
         try:
-            with open(script_path, "w", encoding="utf-8") as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(code)
 
             cmd = [sys.executable, str(script_path)]

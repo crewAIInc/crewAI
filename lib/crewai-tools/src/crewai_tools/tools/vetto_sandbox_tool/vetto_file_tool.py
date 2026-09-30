@@ -234,6 +234,11 @@ class VettoFileTool(VettoBaseTool):
                 for root_dir, _, files in os.walk(safe_path):
                     for file in files:
                         fp = Path(root_dir) / file
+                        # Defense-in-depth: skip files or symlinks resolving outside workspace boundary
+                        try:
+                            fp.resolve().relative_to(root)
+                        except (ValueError, OSError):
+                            continue
                         try:
                             with open(fp, "r", encoding="utf-8", errors="ignore") as f:
                                 for line_no, line in enumerate(f, 1):
@@ -251,7 +256,13 @@ class VettoFileTool(VettoBaseTool):
             for root_dir, _, files in os.walk(search_root):
                 for f in files:
                     if fnmatch.fnmatch(f, pattern):
-                        results.append(str(Path(root_dir) / f))
+                        cand = Path(root_dir) / f
+                        # Defense-in-depth: skip files or symlinks resolving outside workspace boundary
+                        try:
+                            cand.resolve().relative_to(root)
+                        except (ValueError, OSError):
+                            continue
+                        results.append(str(cand))
             return {"pattern": pattern, "results": results[:100]}
 
         raise ValueError(f"Unknown action: {action}")

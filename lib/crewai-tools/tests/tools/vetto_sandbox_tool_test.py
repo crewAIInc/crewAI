@@ -191,6 +191,42 @@ class TestVettoSandboxTools(unittest.TestCase):
         with self.assertRaises(PermissionError):
             tool._run(action="move", path=str(self.workspace), destination=str(self.workspace / "moved"))
 
+    def test_file_tool_symlink_traversal_in_find_and_search_ignored(self):
+        """Verify symlinks escaping workspace are skipped during find and search."""
+        tool = VettoFileTool(working_dir=str(self.workspace))
+
+        outside_file = Path(self.temp_dir.name).parent / f"outside_target_{os.getpid()}.txt"
+        outside_file.write_text("CONFIDENTIAL_LEAK_TOKEN")
+
+        try:
+            leak_symlink = self.workspace / "leak_symlink.txt"
+            try:
+                leak_symlink.symlink_to(outside_file)
+            except (OSError, NotImplementedError):
+                return
+
+            find_res = tool._run(action="find", path=".", pattern="CONFIDENTIAL_LEAK_TOKEN")
+            self.assertEqual(len(find_res["matches"]), 0)
+
+            search_res = tool._run(action="search", path=".", pattern="leak_symlink.txt")
+            self.assertEqual(len(search_res["results"]), 0)
+
+            with self.assertRaises(PermissionError):
+                tool._run(action="read", path="leak_symlink.txt")
+        finally:
+            if outside_file.exists():
+                outside_file.unlink()
+
+    def test_python_tool_atomic_staging(self):
+        """Verify python script executes securely and cleans up staging file."""
+        tool = VettoPythonTool(working_dir=str(self.workspace), allow_fallback=True)
+        with patch.object(tool, "_resolve_vetto_binary", return_value=None):
+            res = tool._run("print('atomic_staging_ok')")
+            self.assertEqual(res.get("exit_code"), 0)
+            self.assertIn("atomic_staging_ok", res.get("stdout", ""))
+            remaining = list(self.workspace.glob(".vetto_script_*"))
+            self.assertEqual(len(remaining), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
