@@ -13,7 +13,8 @@ Invariants Enforced:
 """
 
 import re
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
+import secrets
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Type
 
 try:
     from pydantic import BaseModel, Field, PrivateAttr
@@ -71,36 +72,47 @@ class ZTDSSanitizerTool(BaseTool):
     )
     args_schema: Type[BaseModel] = ZTDSSanitizerSchema
 
+    TOKEN_PATTERN: ClassVar[re.Pattern] = re.compile(r"\[[A-Z_]+_TOKEN_[a-zA-Z0-9_-]+\]")
+
     PATTERNS: ClassVar[Dict[str, re.Pattern]] = {
-        "EMAIL": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}\b"),
+        "EMAIL": re.compile(r"\b[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,24}\b"),
         "IPV4": re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
         "IBAN": re.compile(r"\b[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}\b"),
         "CREDIT_CARD": re.compile(r"\b(?:\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}|\d{4}[-\s]?\d{6}[-\s]?\d{5})\b"),
         "SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
         "PHONE": re.compile(r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"),
-        "API_SECRET": re.compile(r"\b(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,})\b"),
+        "API_SECRET": re.compile(r"\b(?:sk-(?:proj-)?[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,})\b"),
     }
+
+    use_random_surrogates: bool = True
 
     _session_maps: Dict[str, Dict[str, str]] = PrivateAttr(default_factory=dict)
     _entity_maps: Dict[str, Dict[str, str]] = PrivateAttr(default_factory=dict)
+    _call_tokens: Dict[str, Set[str]] = PrivateAttr(default_factory=dict)
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, use_random_surrogates: bool = True, **kwargs: Any) -> None:
         """Initialize the ZTDSSanitizerTool with isolated in-memory mapping state.
 
         Args:
+            use_random_surrogates: Whether to generate unguessable high-entropy surrogates
+                to mitigate token oracle / blind substitution injection. Defaults to True.
             **kwargs: Arbitrary keyword arguments passed to the BaseTool superclass.
         """
         super().__init__(**kwargs)
+        self.use_random_surrogates = use_random_surrogates
         if not hasattr(self, "_session_maps") or self._session_maps is None:
             self._session_maps = {}
         if not hasattr(self, "_entity_maps") or self._entity_maps is None:
             self._entity_maps = {}
+        if not hasattr(self, "_call_tokens") or self._call_tokens is None:
+            self._call_tokens = {}
 
     def _run(self, text: str, session_id: str = "crew-default") -> str:
         """Execute in-memory zero-trust data sanitization on the provided text.
 
         Performs a two-pass algorithm:
-        1. Identifies all sensitive entity matches and assigns deterministic bracketed surrogates in ascending document order.
+        1. Identifies all sensitive entity matches and assigns bracketed surrogates
+           (unguessable hex surrogates by default to eliminate token oracle extraction).
         2. Substitutes matches in descending span offset order to preserve character indices without collisions.
 
         Args:
@@ -113,9 +125,11 @@ class ZTDSSanitizerTool(BaseTool):
         if session_id not in self._session_maps:
             self._session_maps[session_id] = {}
             self._entity_maps[session_id] = {}
+            self._call_tokens[session_id] = set()
 
         token_map = self._session_maps[session_id]
         entity_map = self._entity_maps[session_id]
+        call_tokens = self._call_tokens[session_id]
         sanitized = text
 
         for entity_type, pattern in self.PATTERNS.items():
@@ -123,19 +137,28 @@ class ZTDSSanitizerTool(BaseTool):
             if not matches:
                 continue
 
-            # Pass 1: Assign deterministic surrogates in ascending document order (left-to-right)
+            # Pass 1: Assign surrogates in ascending document order (left-to-right)
             for match in sorted(matches, key=lambda m: m.start()):
                 original = match.group(0)
                 if original not in entity_map:
-                    count = len([k for k in token_map if k.startswith(f"[{entity_type}_TOKEN_")]) + 1
-                    while True:
-                        candidate = f"[{entity_type}_TOKEN_{count}]"
-                        if candidate not in text and candidate not in token_map:
-                            token = candidate
-                            break
-                        count += 1
+                    if self.use_random_surrogates:
+                        while True:
+                            candidate = f"[{entity_type}_TOKEN_{secrets.token_hex(4)}]"
+                            if candidate not in text and candidate not in token_map:
+                                token = candidate
+                                break
+                    else:
+                        count = len([k for k in token_map if k.startswith(f"[{entity_type}_TOKEN_")]) + 1
+                        while True:
+                            candidate = f"[{entity_type}_TOKEN_{count}]"
+                            if candidate not in text and candidate not in token_map:
+                                token = candidate
+                                break
+                            count += 1
                     token_map[token] = original
                     entity_map[original] = token
+
+                call_tokens.add(entity_map[original])
 
             # Pass 2: Substitute surrogates in descending span offset order (right-to-left) to preserve indices
             for match in sorted(matches, key=lambda m: m.start(), reverse=True):
@@ -146,24 +169,47 @@ class ZTDSSanitizerTool(BaseTool):
 
         return sanitized
 
-    def restore(self, text: str, session_id: str = "crew-default") -> str:
+    def restore(
+        self,
+        text: str,
+        session_id: str = "crew-default",
+        allowed_tokens: Optional[Set[str]] = None,
+        auto_zeroize: bool = False,
+    ) -> str:
         """Restore bracketed surrogate tokens back to their original plaintext values.
 
-        Sorts surrogate keys in descending length order prior to substitution to ensure
-        compound tokens (e.g., [EMAIL_TOKEN_10]) are not corrupted by prefix matches (e.g., [EMAIL_TOKEN_1]).
+        Uses single-pass regular expression token dispatch to permanently eliminate
+        sequential string replacement collisions in O(N) time. Enforces caller-scoped
+        token allow-listing to prevent token oracle / blind substitution attacks.
 
         Args:
             text: Text string containing surrogate tokens to restore.
             session_id: Ephemeral session identifier whose mapping tables to use. Defaults to 'crew-default'.
+            allowed_tokens: Optional explicit set of authorized tokens to restore.
+                If None, defaults to tokens emitted in this session.
+            auto_zeroize: If True, automatically zeroizes the session mappings after restoration.
 
         Returns:
             Restored text string with surrogate tokens replaced by original values.
         """
         token_map = self._session_maps.get(session_id, {})
-        restored = text
-        # Descending length sort ensures [TOKEN_1] never corrupts [TOKEN_10]
-        for token in sorted(token_map.keys(), key=len, reverse=True):
-            restored = restored.replace(token, token_map[token])
+        if not token_map:
+            return text
+
+        effective_allowed = (
+            allowed_tokens if allowed_tokens is not None else self._call_tokens.get(session_id, None)
+        )
+
+        def _replace_token(match: re.Match) -> str:
+            tok = match.group(0)
+            if tok in token_map:
+                if effective_allowed is None or tok in effective_allowed:
+                    return token_map[tok]
+            return tok
+
+        restored = self.TOKEN_PATTERN.sub(_replace_token, text)
+        if auto_zeroize:
+            self.zeroize(session_id)
         return restored
 
     def zeroize(self, session_id: str = "crew-default") -> None:
@@ -181,3 +227,6 @@ class ZTDSSanitizerTool(BaseTool):
         if session_id in self._entity_maps:
             self._entity_maps[session_id].clear()
             del self._entity_maps[session_id]
+        if session_id in self._call_tokens:
+            self._call_tokens[session_id].clear()
+            del self._call_tokens[session_id]
