@@ -643,16 +643,34 @@ class TestRealVideoFile:
         assert "duration" in str(exc_info.value).lower()
         assert "2s" in str(exc_info.value)
 
-    def test_get_image_dimensions_corrupted_bytes_returns_none(self):
-        """Test _get_image_dimensions handles corrupted image bytes safely."""
-        from crewai_files.processing.validators import _get_image_dimensions
+    def test_validate_image_corrupted_bytes_raises_validation_error(self):
+        """Test validate_image rejects corrupted image bytes when dimension limits are set."""
+        from crewai_files.processing.validators import validate_image
 
-        res = _get_image_dimensions(b"invalid_corrupted_image_data")
-        assert res is None
+        file = ImageFile(source=b"invalid_corrupted_image_data", filename="bad.png")
+        constraints = ImageConstraints(max_width=1000)
 
-    def test_get_pdf_page_count_corrupted_bytes_returns_none(self):
-        """Test _get_pdf_page_count handles corrupted PDF bytes safely."""
-        from crewai_files.processing.validators import _get_pdf_page_count
+        with pytest.raises(FileValidationError) as exc_info:
+            validate_image(file, constraints)
+        assert "could not be parsed" in str(exc_info.value).lower()
 
-        res = _get_pdf_page_count(b"invalid_corrupted_pdf_data")
-        assert res is None
+        # When raise_on_error=False, it should return the error message
+        errors = validate_image(file, constraints, raise_on_error=False)
+        assert len(errors) > 0
+        assert any("could not be parsed" in e.lower() for e in errors)
+
+    def test_validate_pdf_corrupted_bytes_raises_validation_error(self):
+        """Test validate_pdf rejects corrupted PDF bytes when page limits are set."""
+        from crewai_files.processing.validators import validate_pdf
+
+        file = PDFFile(source=b"invalid_corrupted_pdf_data", filename="bad.pdf")
+        constraints = PDFConstraints(max_pages=5)
+
+        with pytest.raises(FileValidationError) as exc_info:
+            validate_pdf(file, constraints)
+        assert "could not be parsed" in str(exc_info.value).lower()
+
+        # When raise_on_error=False, it should return the error message
+        errors = validate_pdf(file, constraints, raise_on_error=False)
+        assert len(errors) > 0
+        assert any("could not be parsed" in e.lower() for e in errors)
