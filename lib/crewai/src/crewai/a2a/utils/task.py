@@ -118,6 +118,7 @@ def _ensure_task_cache() -> None:
                 host=conn.get("host", "localhost"),
                 port=conn.get("port", 6379),
                 db=conn.get("db", 0),
+                username=conn.get("username"),
                 password=conn.get("password"),
                 default_ttl=3600,
                 use_tls=conn.get("use_tls", False),
