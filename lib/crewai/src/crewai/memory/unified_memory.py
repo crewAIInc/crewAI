@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import suppress
-import concurrent.futures
 import contextvars
 import copy
 from datetime import datetime
