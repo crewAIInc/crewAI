@@ -406,8 +406,7 @@ def embed_texts(
             # empty embeddings back.
             if raise_on_timeout:
                 raise TimeoutError(
-                    "Embedder timed out after 30s; not persisting empty "
-                    "embeddings."
+                    "Embedder timed out after 30s; not persisting empty embeddings."
                 ) from e
             _logger.warning(
                 "Embedder timed out after 30s, returning empty embeddings. "
@@ -421,13 +420,10 @@ def embed_texts(
         # raise_on_timeout is set; otherwise run directly on this thread.
         if raise_on_timeout:
             try:
-                result = _EMBED_POOL.submit(embedder, texts_to_embed).result(
-                    timeout=30
-                )
+                result = _EMBED_POOL.submit(embedder, texts_to_embed).result(timeout=30)
             except concurrent.futures.TimeoutError as e:
                 raise TimeoutError(
-                    "Embedder timed out after 30s; not persisting empty "
-                    "embeddings."
+                    "Embedder timed out after 30s; not persisting empty embeddings."
                 ) from e
         else:
             result = embedder(texts_to_embed)
