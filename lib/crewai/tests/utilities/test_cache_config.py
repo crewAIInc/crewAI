@@ -137,3 +137,30 @@ class TestUseValkeyCache:
             os.environ, {"REDIS_URL": "redis://localhost:6379"}, clear=True
         ):
             assert use_valkey_cache() is False
+
+
+class TestCacheUrlUsername:
+    """ACL username in VALKEY_URL/REDIS_URL must be parsed and forwarded."""
+
+    def test_parse_cache_url_reads_username(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "redis://alice:s3cret@host:6379/0"}, clear=True
+        ):
+            conn = parse_cache_url()
+            assert conn is not None
+            assert conn["username"] == "alice"
+            assert conn["password"] == "s3cret"
+
+    def test_get_aiocache_config_forwards_username(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "redis://alice:s3cret@host:6379/0"}, clear=True
+        ):
+            config = get_aiocache_config()
+            assert config["default"]["username"] == "alice"
+
+    def test_no_username_key_when_absent(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "redis://:s3cret@host:6379/0"}, clear=True
+        ):
+            config = get_aiocache_config()
+            assert "username" not in config["default"]
