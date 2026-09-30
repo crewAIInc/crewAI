@@ -264,3 +264,40 @@ class TestExpiredTtlFloor:
         )
 
         assert captured["ttl"] >= 1
+
+
+class TestAiocacheBackendClearNamespace:
+    """AiocacheBackend.clear must scope to its namespace, not FLUSHDB the whole
+    shared Redis/Valkey database.
+    """
+
+    def test_clear_passes_namespace(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from crewai_files.cache.upload_cache import AiocacheBackend
+
+        fake_cache = MagicMock()
+        fake_cache.namespace = "crewai_uploads"
+        fake_cache.clear = AsyncMock()
+
+        backend = AiocacheBackend(fake_cache)
+        asyncio.run(backend.clear())
+
+        # Namespace-scoped clear (KEYS ns:* + DELETE), never a bare FLUSHDB.
+        fake_cache.clear.assert_awaited_once_with(namespace="crewai_uploads")
+
+    def test_clear_without_namespace_falls_back(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from crewai_files.cache.upload_cache import AiocacheBackend
+
+        fake_cache = MagicMock()
+        fake_cache.namespace = ""
+        fake_cache.clear = AsyncMock()
+
+        backend = AiocacheBackend(fake_cache)
+        asyncio.run(backend.clear())
+
+        fake_cache.clear.assert_awaited_once_with()
