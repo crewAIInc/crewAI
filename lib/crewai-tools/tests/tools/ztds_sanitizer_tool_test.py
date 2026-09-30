@@ -19,10 +19,14 @@ except (ImportError, ModuleNotFoundError):
 
 
 class TestCrewAIZTDSTool(unittest.TestCase):
-    def setUp(self):
+    """Test suite validating ZTDSSanitizerTool against RFC v1.0 and IETF draft-02 invariants."""
+
+    def setUp(self) -> None:
+        """Set up test environment and instantiate a fresh ZTDSSanitizerTool instance."""
         self.tool = ZTDSSanitizerTool()
 
-    def test_task_sanitization_and_restoration(self):
+    def test_task_sanitization_and_restoration(self) -> None:
+        """Verify full lifecycle: pre-dispatch sanitization, post-run restoration, and Theorem 2 RAM zeroization."""
         session_id = "agent-task-01"
         mock_key = "".join(["ghp_", "1234567890abcdef", "1234567890abcdef"])
         raw_task = f"Deploy update for lead@partner.org with token {mock_key}"
@@ -45,7 +49,8 @@ class TestCrewAIZTDSTool(unittest.TestCase):
         self.assertNotIn(session_id, self.tool._session_maps)
         self.assertNotIn(session_id, self.tool._entity_maps)
 
-    def test_multitoken_ordering_safety(self):
+    def test_multitoken_ordering_safety(self) -> None:
+        """Verify deterministic left-to-right surrogate indexing and length-descending substitution safety."""
         session_id = "agent-task-02"
         # First email in document must get TOKEN_1, tenth email must get TOKEN_10
         raw_task = " ".join([f"client{i}@corp.com" for i in range(1, 15)])
@@ -57,7 +62,8 @@ class TestCrewAIZTDSTool(unittest.TestCase):
         restored = self.tool.restore(output, session_id=session_id)
         self.assertEqual(restored, "Processed: client10@corp.com and client1@corp.com")
 
-    def test_extended_patterns(self):
+    def test_extended_patterns(self) -> None:
+        """Verify detection of modern long gTLD emails, 15-digit American Express cards, and API secrets."""
         session_id = "agent-task-03"
         # Test long gTLD email, 15-digit Amex card, and hyphenated API secret
         mock_secret = "".join(["s", "k", "-proj-", "1234567890abcdef1234567890"])
@@ -74,7 +80,8 @@ class TestCrewAIZTDSTool(unittest.TestCase):
         restored = self.tool.restore(sanitized, session_id=session_id)
         self.assertEqual(restored, raw)
 
-    def test_token_collision_avoidance(self):
+    def test_token_collision_avoidance(self) -> None:
+        """Verify that existing literal tokens in user text are preserved without colliding with assigned surrogates."""
         session_id = "agent-task-collision"
         # Input text already contains literal [EMAIL_TOKEN_1]
         raw = "Contact alice@example.com but preserve [EMAIL_TOKEN_1] literal"

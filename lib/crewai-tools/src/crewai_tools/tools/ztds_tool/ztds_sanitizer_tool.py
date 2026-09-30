@@ -19,10 +19,13 @@ try:
     from pydantic import BaseModel, Field, PrivateAttr
 except ImportError:
     class BaseModel:
+        """Fallback BaseModel when pydantic is not installed."""
         pass
     def Field(*args, **kwargs):
+        """Fallback Field factory."""
         return None
     def PrivateAttr(*args, **kwargs):
+        """Fallback PrivateAttr factory."""
         default_factory = kwargs.get("default_factory")
         if default_factory:
             return default_factory()
@@ -32,21 +35,34 @@ try:
     from crewai.tools import BaseTool
 except ImportError:
     class BaseTool:
+        """Fallback BaseTool when crewai is not installed."""
         def __init__(self, **kwargs: Any) -> None:
+            """Initialize fallback BaseTool."""
             pass
 
 
 class ZTDSSanitizerSchema(BaseModel):
-    """Input schema for ZTDSSanitizerTool."""
+    """Input schema definition for the ZTDSSanitizerTool.
+
+    Attributes:
+        text: The sensitive text to sanitize before model reasoning or delegation.
+        session_id: Ephemeral session scope for surrogate mapping.
+    """
     text: str = Field(..., description="The sensitive text to sanitize before model reasoning or delegation")
     session_id: Optional[str] = Field(default="crew-default", description="Ephemeral session scope for surrogate mapping")
 
 
 class ZTDSSanitizerTool(BaseTool):
-    """
-    CrewAI Tool providing Zero-Trust Data Sanitization (ZTDS) RFC v1.0.
+    """CrewAI Tool providing Zero-Trust Data Sanitization (ZTDS) RFC v1.0.
+
     Enforces in-memory surrogate mapping for PII, API tokens, and corporate credentials
     with 0 network egress and Theorem 2 RAM zeroization.
+
+    Attributes:
+        name: Human-readable name of the tool.
+        description: Functional description for LLM agent routing.
+        args_schema: Pydantic schema class for input argument validation.
+        PATTERNS: Class-level regex pattern catalog for sensitive entities.
     """
     name: str = "Zero-Trust Data Sanitizer"
     description: str = (
@@ -69,6 +85,11 @@ class ZTDSSanitizerTool(BaseTool):
     _entity_maps: Dict[str, Dict[str, str]] = PrivateAttr(default_factory=dict)
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize the ZTDSSanitizerTool with isolated in-memory mapping state.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments passed to the BaseTool superclass.
+        """
         super().__init__(**kwargs)
         if not hasattr(self, "_session_maps") or self._session_maps is None:
             self._session_maps = {}
@@ -76,6 +97,19 @@ class ZTDSSanitizerTool(BaseTool):
             self._entity_maps = {}
 
     def _run(self, text: str, session_id: str = "crew-default") -> str:
+        """Execute in-memory zero-trust data sanitization on the provided text.
+
+        Performs a two-pass algorithm:
+        1. Identifies all sensitive entity matches and assigns deterministic bracketed surrogates in ascending document order.
+        2. Substitutes matches in descending span offset order to preserve character indices without collisions.
+
+        Args:
+            text: Raw input string containing sensitive entities to be sanitized.
+            session_id: Ephemeral session identifier scope for mapping isolation. Defaults to 'crew-default'.
+
+        Returns:
+            Sanitized text string with all detected sensitive entities substituted by bracketed surrogates.
+        """
         if session_id not in self._session_maps:
             self._session_maps[session_id] = {}
             self._entity_maps[session_id] = {}
@@ -113,7 +147,18 @@ class ZTDSSanitizerTool(BaseTool):
         return sanitized
 
     def restore(self, text: str, session_id: str = "crew-default") -> str:
-        """Restores bracketed surrogate tokens strictly in volatile RAM."""
+        """Restore bracketed surrogate tokens back to their original plaintext values.
+
+        Sorts surrogate keys in descending length order prior to substitution to ensure
+        compound tokens (e.g., [EMAIL_TOKEN_10]) are not corrupted by prefix matches (e.g., [EMAIL_TOKEN_1]).
+
+        Args:
+            text: Text string containing surrogate tokens to restore.
+            session_id: Ephemeral session identifier whose mapping tables to use. Defaults to 'crew-default'.
+
+        Returns:
+            Restored text string with surrogate tokens replaced by original values.
+        """
         token_map = self._session_maps.get(session_id, {})
         restored = text
         # Descending length sort ensures [TOKEN_1] never corrupts [TOKEN_10]
@@ -122,7 +167,14 @@ class ZTDSSanitizerTool(BaseTool):
         return restored
 
     def zeroize(self, session_id: str = "crew-default") -> None:
-        """Theorem 2: RAM zeroization of mapping tables."""
+        """Execute Theorem 2 RAM zeroization by clearing and removing session mappings.
+
+        Physically clears all token and entity dictionaries for the specified session
+        and deletes the session keys from the tool's mapping registry.
+
+        Args:
+            session_id: Ephemeral session identifier to purge from volatile RAM. Defaults to 'crew-default'.
+        """
         if session_id in self._session_maps:
             self._session_maps[session_id].clear()
             del self._session_maps[session_id]
