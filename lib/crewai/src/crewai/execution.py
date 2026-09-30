@@ -147,15 +147,16 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     from crewai.telemetry.tracing.grants import (
         GrantSpanExporter,
         TraceGrantClient,
-        tracing_credential,
-        tracing_credential_source,
+        resolve_tracing_credential,
     )
     from crewai.telemetry.tracing.session import TraceSession
 
     stack = ExitStack()
     # First-run discovery is local even if CLI credentials happen to exist.
-    amp_credential = tracing_credential() if enabled else None
-    if amp_credential is None:
+    # The credential and its source are resolved ONCE: the pair that is sent is
+    # the pair a refusal names, whatever the environment says afterwards.
+    resolved = resolve_tracing_credential() if enabled else None
+    if resolved is None:
         from crewai.telemetry.tracing.ephemeral import ephemeral_tracing
 
         session = stack.enter_context(
@@ -164,6 +165,7 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
     else:
         from crewai.telemetry.tracing.grants import TraceGrantError
 
+        credential_source, amp_credential = resolved
         try:
             # The constructor refuses a blank credential with the same error, so
             # it sits inside the same boundary as the grant request.
@@ -174,7 +176,7 @@ def _start_tracing(execution_uuid: str, tracing: bool | None) -> None:
             # that expired or a token that was revoked must not take the run
             # down with it. The run goes on untraced and says so — never falls
             # back to an anonymous upload of a run whose owner is logged in.
-            logger.warning(_untraced_because(error, tracing_credential_source()))
+            logger.warning(_untraced_because(error, credential_source))
             stack.close()
             return
         exporter = GrantSpanExporter(client, grant)
