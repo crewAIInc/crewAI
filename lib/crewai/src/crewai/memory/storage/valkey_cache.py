@@ -286,10 +286,7 @@ class ValkeyCache:
             keys = result[1]
             if keys:
                 await client.delete(
-                    [
-                        k.decode("utf-8") if isinstance(k, bytes) else k
-                        for k in keys
-                    ]
+                    [k.decode("utf-8") if isinstance(k, bytes) else k for k in keys]
                 )
                 deleted += len(keys)
             cursor_str = (
