@@ -230,3 +230,37 @@ class TestNoEagerCrewaiImport:
         # Default (in-memory) cache path must not touch the Valkey helper.
         cache = UploadCache()
         assert cache is not None
+
+
+class TestExpiredTtlFloor:
+    """A past/sub-second expires_at must map to a real (>=1s) TTL, not 0 —
+    otherwise the Valkey backend treats it as never-expire and the entry
+    persists forever.
+    """
+
+    def test_past_expires_at_yields_positive_ttl(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock
+
+        cache = UploadCache()
+        captured: dict[str, int] = {}
+
+        async def fake_set(key: str, value: object, ttl: int) -> None:
+            captured["ttl"] = ttl
+
+        cache._backend.set = AsyncMock(side_effect=fake_set)  # type: ignore[method-assign]
+
+        file = ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test.png"))
+        past = datetime.now(timezone.utc) - timedelta(seconds=10)
+
+        asyncio.run(
+            cache.aset(
+                file=file,
+                provider="gemini",
+                file_id="file-123",
+                file_uri="files/file-123",
+                expires_at=past,
+            )
+        )
+
+        assert captured["ttl"] >= 1
