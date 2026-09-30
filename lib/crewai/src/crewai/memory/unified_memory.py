@@ -425,9 +425,14 @@ class Memory(BaseModel):
     def close(self) -> None:
         """Drain pending saves, flush storage, and shut down the background thread pool."""
         self.drain_writes()
+        # Shut the pool down BEFORE closing storage. drain_writes() may abandon a
+        # still-running save on timeout (cancel() is a no-op once a future is
+        # executing), so a save could otherwise keep issuing HSET/ZADD after the
+        # Valkey client is closed, leaving a half-written batch. shutdown(wait=
+        # True) guarantees no save is in flight when we close the client.
+        self._save_pool.shutdown(wait=True)
         if hasattr(self._storage, "close"):
             self._storage.close()
-        self._save_pool.shutdown(wait=True)
 
     def _encode_batch(
         self,
