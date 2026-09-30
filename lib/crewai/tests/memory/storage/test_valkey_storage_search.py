@@ -1200,3 +1200,72 @@ class TestMetadataTypedComparison:
             [0.1, 0.2, 0.3, 0.4], metadata_filter={"priority": 5}, limit=10
         )
         assert len(results) == 1
+
+
+class TestRootScopeCategoryQuery:
+    """Root scope '/' must be treated as no scope filter, never a standalone
+    '*' term inside a compound query.
+    """
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_root_scope_with_category_omits_wildcard(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        record1 = MemoryRecord(
+            id="record-1", content="Planning at root", scope="/",
+            categories=["planning"], embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+        mock_ft_list.return_value = [b"memory_index"]
+        mock_ft_search.return_value = create_mock_ft_search_response([(record1, 0.9)])
+
+        await valkey_storage.asearch(
+            [0.1, 0.2, 0.3, 0.4], scope_prefix="/", categories=["planning"], limit=10
+        )
+
+        query = mock_ft_search.call_args[0][2]
+        # No standalone '*' term; the query is the category filter alone. A
+        # "(* @categories:...)" query is invalid in Valkey Search.
+        assert "*" not in query.split("=>")[0]
+        assert "(@categories:{planning})=>[KNN 10 @embedding $BLOB AS score]" in query
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_root_scope_no_filters_uses_match_all(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        record1 = MemoryRecord(
+            id="record-1", content="Anything", scope="/",
+            embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+        mock_ft_list.return_value = [b"memory_index"]
+        mock_ft_search.return_value = create_mock_ft_search_response([(record1, 0.9)])
+
+        await valkey_storage.asearch([0.1, 0.2, 0.3, 0.4], scope_prefix="/", limit=10)
+
+        query = mock_ft_search.call_args[0][2]
+        # With no other filters, root scope collapses to the standalone match-all.
+        assert query.startswith("*=>[KNN 10 @embedding $BLOB AS score]")
+
+
+class TestEmptyQueryEmbedding:
+    """An empty query embedding must not drive a KNN search."""
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_empty_query_embedding_returns_no_results(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        mock_ft_list.return_value = [b"memory_index"]
+
+        results = await valkey_storage.asearch([], limit=10)
+
+        assert results == []
+        # No FT.SEARCH issued for an empty query vector.
+        mock_ft_search.assert_not_called()
