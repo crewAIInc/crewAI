@@ -139,6 +139,7 @@ class ValkeyCacheBackend:
         host: str = "localhost",
         port: int = 6379,
         db: int = 0,
+        username: str | None = None,
         password: str | None = None,
         default_ttl: int | None = None,
         namespace: str = "",
@@ -150,6 +151,7 @@ class ValkeyCacheBackend:
             host=host,
             port=port,
             db=db,
+            username=username,
             password=password,
             default_ttl=default_ttl,
             use_tls=use_tls,
@@ -236,6 +238,7 @@ class UploadCache:
                 host=cache_kwargs.get("host", conn.get("host", "localhost")),
                 port=cache_kwargs.get("port", conn.get("port", 6379)),
                 db=cache_kwargs.get("db", conn.get("db", 0)),
+                username=cache_kwargs.get("username", conn.get("username")),
                 password=cache_kwargs.get("password", conn.get("password")),
                 default_ttl=ttl,
                 namespace=namespace,
@@ -394,7 +397,11 @@ class UploadCache:
 
         ttl = self.ttl
         if expires_at is not None:
-            ttl = max(0, int((expires_at - now).total_seconds()))
+            # An explicit expiry must always translate to a real TTL. A past or
+            # sub-second expires_at rounds to 0, which the backend treats as
+            # "never expire" — the opposite of intent. Floor it to 1s so the
+            # entry expires promptly instead of persisting forever.
+            ttl = max(1, int((expires_at - now).total_seconds()))
 
         await self._backend.set(key, cached, ttl=ttl)
         self._track_key(provider, key)
