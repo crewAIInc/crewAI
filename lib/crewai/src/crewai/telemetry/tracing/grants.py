@@ -17,6 +17,7 @@ from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult, SpanExporter
 from rich.console import Console
+from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
@@ -26,6 +27,7 @@ from crewai.events.listeners.tracing.utils import (
     is_tui_mode,
     should_suppress_tracing_messages,
 )
+from crewai.telemetry.telemetry import Telemetry
 from crewai.telemetry.tracing import last_run
 from crewai.telemetry.tracing.session import MAX_EXPORT_BATCH_SIZE, otlp_exporter
 
@@ -292,18 +294,23 @@ class GrantSpanExporter(SpanExporter):
             self._recorded = True
             execution_uuid = self._grant.execution_uuid
             api = getattr(self._client, "_api", None)
+            tier = getattr(self._client, "_tier", None)
             last_run.record_last_run(
                 execution_id=execution_uuid,
-                tier=getattr(self._client, "_tier", None),
+                tier=tier,
                 started_at_ns=self._first_start_ns,
                 finished_at_ns=self._last_end_ns,
                 amp_base_url=getattr(api, "base_url", None),
+                trace_url=self._trace_url,
             )
             logger.debug("Traces exported for execution %s", execution_uuid)
+            # Counts that a trace reached AMP, never its contents. The legacy
+            # TraceBatchManager emits the same names for runs outside a kickoff.
+            Telemetry().feature_usage_span(f"tracing:{tier}_sent")
             self._show_trace_link()
 
     def _show_trace_link(self) -> None:
-        """One line, once: where to see the run that was just exported.
+        """Show where to see the run that was just exported, once.
 
         The execution id stays out of it — `crewai eval` reads that from the
         record — but whoever wants to open the trace gets AMP's viewer link.
@@ -317,7 +324,12 @@ class GrantSpanExporter(SpanExporter):
             self._trace_url,
             style=Style(color="cyan", underline=True, link=self._trace_url),
         )
-        Console().print(line)
+        title = (
+            "🔗 Ephemeral Execution Traces"
+            if self._client._tier == "ephemeral"
+            else "🔗 Execution Traces"
+        )
+        Console().print(Panel(line, title=title, border_style="green", padding=(1, 2)))
 
     def shutdown(self) -> None:
         with self._lock:

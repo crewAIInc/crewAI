@@ -75,6 +75,8 @@ def test_create_scaffolds_assistant_instructions(mock_subprocess, tool_command):
         assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
         claude_md = Path("test_tool", "CLAUDE.md").read_text(encoding="utf-8")
         assert "@AGENTS.md" in claude_md.splitlines()
+        cursor_md = Path("test_tool", "CURSOR.md").read_text(encoding="utf-8")
+        assert "@AGENTS.md" in cursor_md.splitlines()
         gemini_md = Path("test_tool", "GEMINI.md").read_text(encoding="utf-8")
         assert "@./AGENTS.md" in gemini_md.splitlines()
 

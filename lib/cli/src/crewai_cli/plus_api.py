@@ -27,12 +27,61 @@ class PlusAPI(_CorePlusAPI):
     EVALUATION_START_TIMEOUT = 120.0
     EVALUATION_POLL_TIMEOUT = 30.0
 
-    def create_evaluation(self, execution_id: str) -> httpx.Response:
-        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval)."""
+    def create_evaluation(
+        self,
+        execution_id: str,
+        *,
+        eval_config: str | None = None,
+        project_id: str | None = None,
+    ) -> httpx.Response:
+        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval).
+
+        EVAL_CONFIG is the project's own `eval.jsonc` when it has one: what
+        good means for this crew, in its own words. Sent as it was written,
+        comments and all, and read by the grader rather than here. PROJECT_ID
+        is `[tool.crewai].project_id`, so the evaluation is filed under the
+        project it is about.
+        """
+        body: dict[str, str] = {"execution_id": execution_id}
+        if eval_config:
+            body["eval_config"] = eval_config
+        if project_id:
+            body["project_id"] = project_id
         return self._make_request(
             "POST",
             self.EVALUATIONS_RESOURCE,
-            json={"execution_id": execution_id},
+            json=body,
+            timeout=self.EVALUATION_START_TIMEOUT,
+        )
+
+    def create_models_evaluation(
+        self,
+        models: list[str],
+        *,
+        project_id: str,
+        eval_config: str | None = None,
+        deployment_id: str | None = None,
+    ) -> httpx.Response:
+        """Ask AMP to run the project's deployment once per model and compare them.
+
+        AMP finds the deployment by PROJECT_ID (`[tool.crewai].project_id`)
+        unless DEPLOYMENT_ID names one. MODELS are `provider/model` strings;
+        the deployment's own models are the baseline, so they are not sent.
+        EVAL_CONFIG is the project's `eval.jsonc`, as `create_evaluation` sends it.
+        """
+        body: dict[str, Any] = {
+            "kind": "models",
+            "project_id": project_id,
+            "models": list(models),
+        }
+        if eval_config:
+            body["eval_config"] = eval_config
+        if deployment_id:
+            body["deployment_id"] = deployment_id
+        return self._make_request(
+            "POST",
+            self.EVALUATIONS_RESOURCE,
+            json=body,
             timeout=self.EVALUATION_START_TIMEOUT,
         )
 
@@ -80,11 +129,18 @@ class PlusAPI(_CorePlusAPI):
         *,
         name: str | None = None,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Create a crew deployment from a local project ZIP archive."""
+        """Create a crew deployment from a local project ZIP archive.
+
+        PROJECT_ID is `[tool.crewai].project_id`, so AMP knows which project the
+        deployment runs; sent only when the project has one.
+        """
         data: dict[str, str] = {}
         if name:
             data["name"] = name
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(
@@ -101,9 +157,15 @@ class PlusAPI(_CorePlusAPI):
         zip_file_path: str | Path,
         *,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Update an existing crew deployment from a local project ZIP archive."""
+        """Update an existing crew deployment from a local project ZIP archive.
+
+        PROJECT_ID as for `create_crew_from_zip`.
+        """
         data: dict[str, str] = {}
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(

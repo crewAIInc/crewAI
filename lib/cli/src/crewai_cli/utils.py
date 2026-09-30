@@ -101,8 +101,8 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
 def copy_assistant_imports(destination: Path) -> None:
-    """Copy the ``CLAUDE.md`` and ``GEMINI.md`` that import ``AGENTS.md``."""
-    for name in ("CLAUDE.md", "GEMINI.md"):
+    """Copy assistant instruction files that import ``AGENTS.md``."""
+    for name in ("CLAUDE.md", "CURSOR.md", "GEMINI.md"):
         shutil.copy2(_TEMPLATES_DIR / name, destination / name)
 
 
