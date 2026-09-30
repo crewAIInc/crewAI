@@ -642,3 +642,17 @@ class TestRealVideoFile:
 
         assert "duration" in str(exc_info.value).lower()
         assert "2s" in str(exc_info.value)
+
+    def test_get_image_dimensions_corrupted_bytes_returns_none(self):
+        """Test _get_image_dimensions handles corrupted image bytes safely."""
+        from crewai_files.processing.validators import _get_image_dimensions
+
+        res = _get_image_dimensions(b"invalid_corrupted_image_data")
+        assert res is None
+
+    def test_get_pdf_page_count_corrupted_bytes_returns_none(self):
+        """Test _get_pdf_page_count handles corrupted PDF bytes safely."""
+        from crewai_files.processing.validators import _get_pdf_page_count
+
+        res = _get_pdf_page_count(b"invalid_corrupted_pdf_data")
+        assert res is None

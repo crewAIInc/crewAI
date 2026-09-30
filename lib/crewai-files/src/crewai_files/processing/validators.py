@@ -36,19 +36,23 @@ def _get_image_dimensions(content: bytes) -> tuple[int, int] | None:
         content: Raw image bytes.
 
     Returns:
-        Tuple of (width, height) or None if Pillow unavailable.
+        Tuple of (width, height) or None if Pillow unavailable or parsing fails.
     """
     try:
         from PIL import Image
-
-        with Image.open(io.BytesIO(content)) as img:
-            width, height = img.size
-            return int(width), int(height)
     except ImportError:
         logger.warning(
             "Pillow not installed - cannot validate image dimensions. "
             "Install with: pip install Pillow"
         )
+        return None
+
+    try:
+        with Image.open(io.BytesIO(content)) as img:
+            width, height = img.size
+            return int(width), int(height)
+    except Exception as e:
+        logger.debug(f"Could not determine image dimensions: {e}")
         return None
 
 
@@ -59,18 +63,22 @@ def _get_pdf_page_count(content: bytes) -> int | None:
         content: Raw PDF bytes.
 
     Returns:
-        Page count or None if pypdf unavailable.
+        Page count or None if pypdf unavailable or parsing fails.
     """
     try:
         from pypdf import PdfReader
-
-        reader = PdfReader(io.BytesIO(content))
-        return len(reader.pages)
     except ImportError:
         logger.warning(
             "pypdf not installed - cannot validate PDF page count. "
             "Install with: pip install pypdf"
         )
+        return None
+
+    try:
+        reader = PdfReader(io.BytesIO(content))
+        return len(reader.pages)
+    except Exception as e:
+        logger.debug(f"Could not determine PDF page count: {e}")
         return None
 
 
