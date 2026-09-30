@@ -184,6 +184,13 @@ Schema-qualified index and table names are resolved independently. Unqualified
 names use the connection's current schema. Identifier casing is preserved.
 
 Metadata operators `$in`, `$nin`, and `$all` require non-empty lists.
+`$all` checks each requested value independently, so an array must contain
+every requested value to match. Search limits must be positive integers.
+
+If an insertion fails, `add_texts()` rolls back that batch to a savepoint,
+preserving earlier pending work on the same connection. Successful calls
+still commit the connection. Creating a missing table uses Oracle DDL, which
+implicitly commits; create the table before starting unrelated transactions.
 
 The tool creates and expects a fixed Oracle schema:
 - `id`

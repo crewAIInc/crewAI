@@ -218,7 +218,7 @@ def _get_comparison_string(
 
         return " && ".join(conditions), ",".join(passings)
 
-    if oper in ["$in", "$nin", "$all"]:
+    if oper in ["$in", "$nin"]:
         if not isinstance(value, list) or not value:
             raise ValueError(
                 f"Invalid value for {oper}: {value}. It must be a non-empty list."
@@ -232,10 +232,7 @@ def _get_comparison_string(
             value_binds.append(f"$val{bind_index}")
             passings.append(f':value{bind_index} AS "val{bind_index}"')
 
-        if oper == "$all":
-            condition = "@ == " + " && @ == ".join(value_binds)
-        else:
-            condition = f"@ in ({','.join(value_binds)})"
+        condition = f"@ in ({','.join(value_binds)})"
 
         return condition, ",".join(passings)
 
@@ -268,6 +265,19 @@ def _generate_condition(
         all_conditions: list[str] = []
 
         for oper, current_value in value.items():
+            if oper == "$all":
+                if not isinstance(current_value, list) or not current_value:
+                    raise ValueError(
+                        "Invalid value for $all: it must be a non-empty list."
+                    )
+                for item in current_value:
+                    bind_index = len(bind_variables)
+                    bind_variables.append(item)
+                    all_conditions.append(
+                        f"JSON_EXISTS(metadata, '$.{metadata_key}[*]?(@ == $val)' "
+                        f'PASSING :value{bind_index} AS "val")'
+                    )
+                continue
             if (
                 oper in NOT_OPERS
                 or (oper == "$eq" and isinstance(current_value, (list, dict)))
@@ -418,6 +428,7 @@ class OracleToolSchema(BaseModel):
     )
     limit: int | None = Field(
         default=None,
+        ge=1,
         description="Optional result limit overriding the tool default for this search.",
     )
     score_threshold: float | None = Field(
@@ -444,7 +455,7 @@ class OracleVectorSearchConfig(BaseModel):
     password: str | None = None
     dsn: str | None = None
     table_name: str
-    limit: int = 3
+    limit: int = Field(default=3, ge=1)
     score_threshold: float | None = Field(default=None)
     distance_strategy: Literal["COSINE", "EUCLIDEAN", "DOT"] = "COSINE"
     index_name: str | None = None
@@ -783,24 +794,28 @@ class OracleVectorSearchTool(BaseTool):
 
         with _get_connection(self.client) as connection:
             with connection.cursor() as cursor:
+                savepoint = f"crewai_{uuid.uuid4().hex[:20]}"
+                cursor.execute(f"SAVEPOINT {savepoint}")
                 cursor.setinputsizes(
                     None,
                     None,
                     oracledb.DB_TYPE_JSON,
                     oracledb.DB_TYPE_VECTOR,
                 )
-                for doc_id, text, metadata, embedding in zip(
-                    id_list, text_list, metadata_list, embeddings, strict=False
-                ):
-                    cursor.execute(
-                        insert_sql,
-                        [
-                            doc_id,
-                            text,
-                            metadata,
-                            array.array("f", embedding),
-                        ],
-                    )
+                try:
+                    for doc_id, text, metadata, embedding in zip(
+                        id_list, text_list, metadata_list, embeddings, strict=False
+                    ):
+                        cursor.execute(
+                            insert_sql,
+                            [doc_id, text, metadata, array.array("f", embedding)],
+                        )
+                except Exception:
+                    try:
+                        cursor.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                    except Exception:
+                        logger.exception("Failed to roll back Oracle insertion batch")
+                    raise
             connection.commit()
         return id_list
 
@@ -854,6 +869,9 @@ class OracleVectorSearchTool(BaseTool):
                 else self.oracle_config.score_threshold
             )
 
+            if type(effective_limit) is not int or effective_limit < 1:
+                raise ValueError("limit must be a positive integer.")
+
             query_vector = array.array("f", self._embed_texts([query])[0])
             # Identifiers and filters are validated; metric and limit come from
             # typed config/tool inputs. Vector and metadata values use binds.
@@ -869,12 +887,16 @@ class OracleVectorSearchTool(BaseTool):
                 FROM {table_name}
                 {"WHERE " + where_clause if where_clause else ""}
                 ORDER BY distance
-                FETCH APPROX FIRST {effective_limit} ROWS ONLY
+                FETCH APPROX FIRST :result_limit ROWS ONLY
             """  # noqa: S608
 
             with _get_connection(self.client) as connection:
                 with connection.cursor() as cursor:
-                    params = {"embedding": query_vector, **where_params}
+                    params = {
+                        "embedding": query_vector,
+                        "result_limit": effective_limit,
+                        **where_params,
+                    }
                     cursor.execute(search_sql, params)
                     rows = cursor.fetchall()
 

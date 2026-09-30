@@ -696,7 +696,53 @@ def test_add_texts_creates_table_and_inserts_rows(monkeypatch):
     assert ids == ["abc"]
     assert client.commit_count == 2
     assert insert_cursor.inputsizes[-1] is FakeOracleModule.DB_TYPE_VECTOR
-    assert "INSERT INTO" in insert_cursor.executed[0][0]
+    assert "INSERT INTO" in insert_cursor.executed[1][0]
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+@pytest.mark.parametrize(
+    "model",
+    [vs.OracleToolSchema, OracleVectorSearchConfig, OracleVectorSearchQueryConfig],
+)
+def test_limit_models_reject_nonpositive_values(model, limit):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        model(query="query", table_name="docs", limit=limit)
+
+
+@pytest.mark.parametrize("limit", [0, -1, True, 1.5, "1; DROP TABLE docs"])
+def test_direct_run_rejects_invalid_limit(limit, caplog):
+    connection = FakeConnection([FakeCursor()])
+    tool = make_tool(client=connection)
+    assert tool._run(query="query", limit=limit) == ""
+    assert "limit must be a positive integer" in caplog.text
+    assert connection.commit_count == 0
+
+
+def test_all_filter_uses_independent_array_membership_checks():
+    binds = []
+    sql = vs._generate_condition("tags", {"$all": ["red", "blue"]}, binds)
+    assert sql.count("JSON_EXISTS") == 2
+    assert " AND " in sql
+    assert "$.tags[*]" in sql
+    assert binds == ["red", "blue"]
+
+
+@pytest.mark.parametrize("pooled", [False, True])
+def test_failed_batch_rolls_back_to_its_savepoint(monkeypatch, pooled):
+    error = FakeOracleError(1)
+    cursor = FakeCursor(execute_side_effects=[None, None, error, None])
+    connection = FakeConnection([cursor])
+    tool = make_tool(client=FakeConnectionPool(connection) if pooled else connection)
+    monkeypatch.setattr(OracleVectorSearchTool, "create_table", lambda self: None)
+    with pytest.raises(FakeOracleError) as caught:
+        tool.add_texts(["first", "second"])
+    assert caught.value is error
+    savepoint = cursor.executed[0][0].removeprefix("SAVEPOINT ")
+    assert cursor.executed[-1][0] == f"ROLLBACK TO SAVEPOINT {savepoint}"
+    assert connection.commit_count == 0
+    assert not connection.closed
 
 
 def test_run_returns_empty_string_on_error():
@@ -802,12 +848,8 @@ def test_get_comparison_string_covers_all_branches(monkeypatch):
         vs._get_comparison_string("$in", "not-a-list", bind_variables)
 
     assert (
-        vs._get_comparison_string("$all", [1, 2], bind_variables)[0]
-        == "@ == $val2 && @ == $val3"
-    )
-    assert (
         vs._get_comparison_string("$in", [4, 5], bind_variables)[0]
-        == "@ in ($val4,$val5)"
+        == "@ in ($val2,$val3)"
     )
 
     monkeypatch.setitem(vs.COMPARISON_MAP, "$custom_empty", "")
@@ -1249,7 +1291,7 @@ def test_vector_index_exists_filters_schema_qualified_table_owner():
 def test_empty_list_filters_are_rejected(operator):
     binds = []
     with pytest.raises(ValueError, match="must be a non-empty list"):
-        vs._get_comparison_string(operator, [], binds)
+        vs._generate_condition("tags", {operator: []}, binds)
     assert binds == []
 
 

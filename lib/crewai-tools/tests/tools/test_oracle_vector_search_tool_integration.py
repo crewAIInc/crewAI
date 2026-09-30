@@ -50,6 +50,75 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
     return [_embed_text(text) for text in texts]
 
 
+@pytest.mark.timeout(120)
+def test_all_filters_limits_and_failed_batch_with_real_connection():
+    creds = _oracle_env_config()
+    if creds is None:
+        pytest.skip("Set VECDB_USER, VECDB_PASS, and VECDB_HOST for Oracle tests")
+    oracledb = pytest.importorskip("oracledb")
+    username, password, dsn = creds
+    connection = oracledb.connect(user=username, password=password, dsn=dsn)
+    table_name = f"CREWAI_ORACLE_REVIEW_{uuid.uuid4().hex[:12].upper()}"
+    tool = OracleVectorSearchTool(
+        oracle_config=OracleVectorSearchConfig(table_name=table_name),
+        client=connection,
+        embedding_function=_embed_text,
+        dimensions=3,
+    )
+    try:
+        tool.add_texts(
+            [
+                "Oracle vector both",
+                "Oracle vector one",
+                "Oracle vector missing",
+                "Oracle vector empty",
+            ],
+            metadatas=[{"tags": ["red", "blue"]}, {"tags": ["red"]}, {}, {"tags": []}],
+            ids=["both", "one", "missing", "empty"],
+        )
+        results = json.loads(
+            tool._run(
+                "Oracle vector",
+                filters=json.dumps({"tags": {"$all": ["red", "blue"]}}),
+                limit=10,
+            )
+        )
+        assert [row["context"] for row in results] == ["Oracle vector both"]
+        for requested, expected in [
+            (["red"], {"Oracle vector both", "Oracle vector one"}),
+            (["red", "red"], {"Oracle vector both", "Oracle vector one"}),
+            (["red", "absent"], set()),
+        ]:
+            rows = json.loads(
+                tool._run(
+                    "Oracle vector",
+                    filters=json.dumps({"tags": {"$all": requested}}),
+                    limit=10,
+                )
+            )
+            assert {row["context"] for row in rows} == expected
+        assert len(json.loads(tool._run("Oracle vector", limit=1))) == 1
+
+        # A failed batch must preserve work already pending on this connection.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'INSERT INTO "{table_name}" (id, text) VALUES (:1, :2)',
+                ["pending", "unrelated"],
+            )
+        with pytest.raises(oracledb.IntegrityError):
+            tool.add_texts(["Oracle first", "Oracle duplicate"], ids=["batch", "both"])
+        connection.commit()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'SELECT id FROM "{table_name}" WHERE id IN (:1, :2)',
+                ["pending", "batch"],
+            )
+            assert cursor.fetchall() == [("pending",)]
+    finally:
+        _drop_table(tool, table_name)
+        connection.close()
+
+
 def _drop_table(tool: OracleVectorSearchTool, table_name: str) -> None:
     try:
         with tool.client.cursor() as cursor:
@@ -83,7 +152,7 @@ def test_oracle_vector_search_tool_with_real_connection(
     else:
         connection.close()
 
-    table_name = f'CREWAI_ORACLE_TOOL_{uuid.uuid4().hex[:12].upper()}'
+    table_name = f"CREWAI_ORACLE_TOOL_{uuid.uuid4().hex[:12].upper()}"
 
     tool = OracleVectorSearchTool(
         oracle_config=OracleVectorSearchConfig(
@@ -141,7 +210,9 @@ def test_oracle_vector_search_tool_with_real_connection(
             )
         )
         assert len(numeric_filter_results) >= 1
-        assert all(result["metadata"]["priority"] == 5 for result in numeric_filter_results)
+        assert all(
+            result["metadata"]["priority"] == 5 for result in numeric_filter_results
+        )
 
         json_filter_results = json.loads(
             tool._run(
@@ -199,7 +270,7 @@ def test_oracle_vector_search_tool_with_real_connection_batch_embedding(
     else:
         connection.close()
 
-    table_name = f'CREWAI_ORACLE_BATCH_{uuid.uuid4().hex[:12].upper()}'
+    table_name = f"CREWAI_ORACLE_BATCH_{uuid.uuid4().hex[:12].upper()}"
     tool = OracleVectorSearchTool(
         oracle_config=OracleVectorSearchConfig(
             user=username,
@@ -278,8 +349,8 @@ def test_oracle_vector_search_tool_creates_vector_index_type(
     else:
         connection.close()
 
-    table_name = f'CREWAI_ORACLE_{idx_type}_{uuid.uuid4().hex[:12].upper()}'
-    index_name = f'{table_name}_IDX'
+    table_name = f"CREWAI_ORACLE_{idx_type}_{uuid.uuid4().hex[:12].upper()}"
+    index_name = f"{table_name}_IDX"
     tool = OracleVectorSearchTool(
         oracle_config=OracleVectorSearchConfig(
             user=username,
