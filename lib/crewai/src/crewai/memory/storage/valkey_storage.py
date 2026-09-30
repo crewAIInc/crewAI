@@ -603,7 +603,7 @@ class ValkeyStorage:
         """
         try:
             info = await ft.info(client, "memory_index")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             info = None
             _logger.debug("Could not read index info: %s", e)
         existing_dim = _extract_index_dimension(info) if info else None
@@ -646,7 +646,7 @@ class ValkeyStorage:
                 for i in (existing or [])
             }
             index_exists = "memory_index" in names
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _logger.debug("Could not list indexes, will attempt create: %s", e)
 
         if index_exists:
@@ -2173,7 +2173,7 @@ class ValkeyStorage:
         # embedder" recovery path.
         try:
             await ft.dropindex(client, "memory_index")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             # Index may not exist (nothing was ever saved) — not an error.
             _logger.debug("Could not drop index on reset: %s", e)
         self._index_created = False

@@ -183,7 +183,7 @@ def cancellable(
                         f"cancel:{task_id}"
                     ):
                         return True
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     logger.warning(
                         "Cancel watcher Valkey error, continuing to poll",
                         extra={"task_id": task_id, "error": str(e)},
