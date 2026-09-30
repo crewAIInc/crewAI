@@ -132,9 +132,19 @@ class AiocacheBackend:
         return bool(result > 0 if isinstance(result, int) else result)
 
     async def clear(self) -> None:
-        # Flush the whole namespace, including entries written by other
-        # processes or left from a previous run.
-        await self._cache.clear()
+        # Scope the clear to this cache's namespace. aiocache's Redis backend
+        # treats clear() with no namespace as FLUSHDB, which would wipe unrelated
+        # keys (A2A cancel flags, other app data) in a shared instance. Passing
+        # the namespace makes it delete only this cache's keys, and still covers
+        # entries written by other processes or left from a previous run.
+        namespace = getattr(self._cache, "namespace", None)
+        if namespace:
+            await self._cache.clear(namespace=namespace)
+        else:
+            # No namespace configured; fall back to the default clear so an
+            # unnamespaced cache still resets (memory backend, or an explicit
+            # empty namespace where FLUSHDB is the only option).
+            await self._cache.clear()
 
 
 class ValkeyCacheBackend:
