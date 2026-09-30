@@ -548,3 +548,30 @@ class TestValkeyCacheEventLoopRebind:
         assert first_loop is not second_loop
         # The stale first client was closed on rebind (no connection leak).
         created[0].close.assert_awaited()
+
+    def test_concurrent_callers_share_one_client(self) -> None:
+        import asyncio
+
+        cache = ValkeyCache(host="localhost", port=6379, db=0)
+        created: list[AsyncMock] = []
+
+        async def fake_create(_config: object) -> AsyncMock:
+            # Yield so overlapping callers interleave before the client is set.
+            await asyncio.sleep(0)
+            client = AsyncMock()
+            created.append(client)
+            return client
+
+        async def hammer() -> None:
+            with patch(
+                "crewai.memory.storage.valkey_cache.GlideClient.create",
+                side_effect=fake_create,
+            ):
+                clients = await asyncio.gather(
+                    *(cache._get_client() for _ in range(10))
+                )
+            # The double-check lock must collapse the burst to a single client.
+            assert len(created) == 1
+            assert all(c is created[0] for c in clients)
+
+        asyncio.run(hammer())

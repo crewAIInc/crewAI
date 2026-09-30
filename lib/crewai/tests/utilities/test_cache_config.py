@@ -118,6 +118,70 @@ class TestGetAiocacheConfig:
             config = get_aiocache_config()
             assert "ssl" not in config["default"]
 
+    def test_username_routed_through_connection_pool_kwargs(self) -> None:
+        # aiocache's RedisCache forwards unknown top-level keys to
+        # BaseCache.__init__, which rejects "username". The username must be
+        # nested under connection_pool_kwargs so it reaches the redis pool.
+        with patch.dict(
+            os.environ,
+            {"VALKEY_URL": "redis://acluser:pw@myhost:6379/0"},
+            clear=True,
+        ):
+            config = get_aiocache_config()
+            default = config["default"]
+            assert "username" not in default
+            assert default["connection_pool_kwargs"] == {"username": "acluser"}
+
+    def test_password_only_url_omits_username_kwargs(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "redis://:pw@myhost:6379/0"}, clear=True
+        ):
+            config = get_aiocache_config()
+            default = config["default"]
+            assert "username" not in default
+            assert "connection_pool_kwargs" not in default
+            assert default["password"] == "pw"
+
+    def test_username_config_constructs_without_typeerror(self) -> None:
+        # Regression: a URL with userinfo used to inject a top-level "username"
+        # key that crashed RedisCache construction with a TypeError.
+        aiocache = pytest.importorskip("aiocache")
+        with patch.dict(
+            os.environ,
+            {"VALKEY_URL": "redis://acluser:pw@localhost:6379/0"},
+            clear=True,
+        ):
+            config = get_aiocache_config()
+        aiocache.caches.set_config(config)
+        cache = aiocache.caches.get("default")  # must not raise
+        pool_kwargs = cache.client.connection_pool.connection_kwargs
+        assert pool_kwargs.get("username") == "acluser"
+        assert pool_kwargs.get("password") == "pw"
+
+
+class TestParseCacheUrlUsername:
+    """Username normalization in parse_cache_url()."""
+
+    def test_password_only_url_normalizes_empty_username_to_none(self) -> None:
+        with patch.dict(
+            os.environ, {"VALKEY_URL": "redis://:pw@myhost:6379/0"}, clear=True
+        ):
+            result = parse_cache_url()
+            assert result is not None
+            # Empty string would authenticate as a blank ACL user under GLIDE.
+            assert result["username"] is None
+            assert result["password"] == "pw"
+
+    def test_acl_username_preserved(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"VALKEY_URL": "redis://acluser:pw@myhost:6379/0"},
+            clear=True,
+        ):
+            result = parse_cache_url()
+            assert result is not None
+            assert result["username"] == "acluser"
+
 
 class TestUseValkeyCache:
     """Tests for use_valkey_cache()."""
@@ -156,7 +220,10 @@ class TestCacheUrlUsername:
             os.environ, {"VALKEY_URL": "redis://alice:s3cret@host:6379/0"}, clear=True
         ):
             config = get_aiocache_config()
-            assert config["default"]["username"] == "alice"
+            # Nested under connection_pool_kwargs, not a top-level key, because
+            # aiocache's BaseCache rejects an unknown "username" argument.
+            assert "username" not in config["default"]
+            assert config["default"]["connection_pool_kwargs"] == {"username": "alice"}
 
     def test_no_username_key_when_absent(self) -> None:
         with patch.dict(

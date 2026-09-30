@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 from typing import Any
 
 from glide import GlideClient, GlideClientConfiguration, NodeAddress
@@ -66,12 +67,21 @@ class ValkeyCache:
         # a GlideClient/Lock bound to a closed loop cannot be reused, so we
         # rebind when the running loop differs from the one we cached on.
         self._loop: asyncio.AbstractEventLoop | None = None
+        # Guards the loop-change rebind bookkeeping below. The asyncio.Lock is
+        # itself loop-bound, so it can't serialize the swap of that very lock
+        # across loops/threads; a plain threading.Lock can. This only wraps the
+        # cheap swap, never the awaited client creation.
+        self._rebind_lock = threading.Lock()
 
     def _get_lock(self) -> asyncio.Lock:
         """Get or create the client lock (lazy, avoids binding to a specific event loop at init)."""
-        if self._client_lock is None:
-            self._client_lock = asyncio.Lock()
-        return self._client_lock
+        # Guard creation so concurrent callers on the same loop share one lock
+        # instead of each allocating their own (which would defeat the
+        # double-check below).
+        with self._rebind_lock:
+            if self._client_lock is None:
+                self._client_lock = asyncio.Lock()
+            return self._client_lock
 
     async def _get_client(self) -> GlideClient:
         """Get or create Valkey client (lazy initialization).
@@ -88,23 +98,28 @@ class ValkeyCache:
         """
         # If we're now on a different event loop than the client/lock were bound
         # to (e.g. a previous asyncio.run() loop was closed), drop the stale
-        # instances so they are recreated on the current loop. Best-effort close
-        # the old client first so we don't leak its connection and reader task.
+        # instances so they are recreated on the current loop. The swap is done
+        # under a threading.Lock so concurrent callers arriving on a new loop
+        # can't each reset the asyncio lock and race to create duplicate
+        # clients. Best-effort close the old client so we don't leak it.
         running_loop = asyncio.get_running_loop()
-        if self._loop is not None and self._loop is not running_loop:
-            stale_client = self._client
-            if stale_client is not None:
-                try:
-                    await stale_client.close()
-                except Exception as e:
-                    # The old loop is gone; closing may fail. Log and move on
-                    # rather than leaving the rebind half-done.
-                    _logger.debug(
-                        "Best-effort close of stale Valkey client failed: %s",
-                        type(e).__name__,
-                    )
-            self._client = None
-            self._client_lock = None
+        stale_client = None
+        with self._rebind_lock:
+            if self._loop is not None and self._loop is not running_loop:
+                stale_client = self._client
+                self._client = None
+                self._client_lock = None
+            self._loop = running_loop
+        if stale_client is not None:
+            try:
+                await stale_client.close()
+            except Exception as e:
+                # The old loop is gone; closing may fail. Log and move on
+                # rather than leaving the rebind half-done.
+                _logger.debug(
+                    "Best-effort close of stale Valkey client failed: %s",
+                    type(e).__name__,
+                )
         self._loop = running_loop
 
         if self._client is None:
@@ -128,7 +143,7 @@ class ValkeyCache:
                             database_id=db,
                             credentials=(
                                 ServerCredentials(
-                                    username=self._username,
+                                    username=self._username or None,
                                     password=self._password or "",
                                 )
                                 if (self._password or self._username)

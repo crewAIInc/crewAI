@@ -24,11 +24,15 @@ def parse_cache_url() -> dict[str, Any] | None:
     if not url:
         return None
     parsed = urlparse(url)
+    # A password-only URL (redis://:pw@host) yields username="". Normalize the
+    # empty string to None so credential builders can treat "no ACL user" as
+    # password-only auth instead of authenticating as a blank ACL user.
+    username = parsed.username or None
     return {
         "host": parsed.hostname or "localhost",
         "port": parsed.port or 6379,
         "db": _parse_db_from_path(parsed.path),
-        "username": parsed.username,
+        "username": username,
         "password": parsed.password,
         "use_tls": parsed.scheme in ("rediss", "valkeys"),
     }
@@ -67,9 +71,12 @@ def get_aiocache_config() -> dict[str, Any]:
             "password": conn.get("password"),
         }
         # Forward an ACL username when present (managed Valkey/Redis commonly
-        # requires it alongside the password).
+        # requires it alongside the password). aiocache's RedisCache forwards
+        # unknown top-level keys to BaseCache.__init__, which rejects
+        # "username" with a TypeError; the username must reach the underlying
+        # redis ConnectionPool via connection_pool_kwargs instead.
         if conn.get("username"):
-            redis_config["username"] = conn["username"]
+            redis_config["connection_pool_kwargs"] = {"username": conn["username"]}
         # Forward TLS for rediss:// / valkeys:// so the aiocache Redis path
         # opens an encrypted connection instead of plaintext.
         if conn.get("use_tls"):
