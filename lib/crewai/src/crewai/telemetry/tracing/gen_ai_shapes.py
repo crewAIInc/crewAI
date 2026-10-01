@@ -18,6 +18,7 @@ Spec: https://opentelemetry.io/docs/specs/semconv/gen-ai/
 from __future__ import annotations
 
 import json
+import math
 import os
 from typing import Any
 
@@ -26,7 +27,24 @@ from crewai.utilities.serialization import to_serializable
 
 _MAX_DEPTH = 14
 
-DEFAULT_MAX_ATTR_BYTES = 32 * 1024
+DEFAULT_MAX_ATTR_BYTES = 384 * 1024
+"""Upper bound, in UTF-8 bytes, on one exported span attribute value.
+
+Tool results, task outputs, agent prompts and answers, and LLM messages are
+evidence: whoever reads the trace (a person in the trace viewer, an evaluator
+checking that a summary matches the data a tool returned) needs them whole, so
+the bound sits well above what a real run produces (a 300 KB tool result fits).
+It is set by Wharf, which refuses an OTLP request whose encoded body is over
+3,072,000 bytes; a span that alone exceeds that is never stored, so seven
+attributes at this bound still fit one request with room for the rest of the
+span. A value over the bound is cut as little as possible and says so:
+``<attr>.truncated`` and ``<attr>.original_size_bytes`` ride next to it.
+
+``CREWAI_OTEL_MAX_ATTR_BYTES`` replaces the bound. A span attribute length limit
+set for the OpenTelemetry SDK (``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT``, else
+``OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT``) lowers it, so the SDK, which cuts without
+a marker, never has anything left to cut.
+"""
 _PLACEHOLDER_ROLE = "system"
 _TRUNCATION_LOOP_LIMIT = 8
 
@@ -351,7 +369,7 @@ def truncate_attr(
     if payload is None:
         return None, {}
 
-    cap = max_bytes if max_bytes is not None else _max_attr_bytes()
+    cap = max_bytes if max_bytes is not None else max_attr_bytes()
     original_size = _byte_len(payload)
     if original_size <= cap:
         return payload, {}
@@ -371,15 +389,29 @@ def truncate_attr(
     return _envelope(payload, original_size, cap), markers
 
 
-def _max_attr_bytes() -> int:
-    raw = os.environ.get("CREWAI_OTEL_MAX_ATTR_BYTES")
+def _positive_env_int(name: str) -> int | None:
+    raw = os.environ.get(name)
     if not raw:
-        return DEFAULT_MAX_ATTR_BYTES
+        return None
     try:
         value = int(raw)
     except ValueError:
-        return DEFAULT_MAX_ATTR_BYTES
-    return value if value > 0 else DEFAULT_MAX_ATTR_BYTES
+        return None
+    return value if value > 0 else None
+
+
+def max_attr_bytes() -> int:
+    """The byte bound :func:`truncate_attr` applies when given none.
+
+    See :data:`DEFAULT_MAX_ATTR_BYTES`. The SDK's limit counts characters and a
+    character is at least one byte, so a value within this many bytes is
+    within the SDK's limit too.
+    """
+    cap = _positive_env_int("CREWAI_OTEL_MAX_ATTR_BYTES") or DEFAULT_MAX_ATTR_BYTES
+    sdk_limit = _positive_env_int(
+        "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT"
+    ) or _positive_env_int("OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT")
+    return min(cap, sdk_limit) if sdk_limit else cap
 
 
 def _byte_len(s: str) -> int:
@@ -446,7 +478,14 @@ def _shrink_text_until_fits(
         if target is None:
             break
         part, content = target
-        new_content = _trunc_text(content, _byte_len(content) // 2)
+        # Cut what is over and no more. JSON escaping makes each byte of the
+        # text weigh more once serialized, so scale the cut by that weight;
+        # a later pass takes whatever is still over.
+        overshoot = _byte_len(serialized) - cap
+        raw_bytes = _byte_len(content)
+        weight = _byte_len(json.dumps(content)) / max(1, raw_bytes)
+        cut = math.ceil(overshoot / weight) + 64
+        new_content = _trunc_text(content, raw_bytes - cut)
         if new_content == content:
             break
         part["content"] = new_content
@@ -473,9 +512,12 @@ def _largest_text_part(
 
 
 def _trunc_text(content: str, target_bytes: int) -> str:
+    """Keep the head and the tail of ``content`` in about ``target_bytes``."""
     encoded = content.encode("utf-8")
-    head_bytes = max(target_bytes // 2, 256)
-    tail_bytes = max(target_bytes // 4, 128)
+    head_bytes = max(target_bytes * 2 // 3, 256)
+    tail_bytes = max(target_bytes // 3, 128)
+    if head_bytes + tail_bytes >= len(encoded):
+        return content
     head = encoded[:head_bytes].decode("utf-8", errors="ignore")
     tail = encoded[-tail_bytes:].decode("utf-8", errors="ignore")
     omitted_kb = max(1, (len(encoded) - head_bytes - tail_bytes) // 1024)
@@ -489,9 +531,9 @@ def _envelope(payload: str, original_size: int, cap: int) -> str | None:
     Used when the structural strategy doesn't apply (non-message JSON,
     malformed JSON) or didn't fit (rare — message envelopes dominate).
     """
-    preview_bytes = min(cap // 4, 4 * 1024)
     encoded = payload.encode("utf-8")
-    preview = encoded[:preview_bytes].decode("utf-8", errors="ignore")
+    # As much of the payload as fits: the preview is what a reader still has.
+    preview = encoded[:cap].decode("utf-8", errors="ignore")
     while True:
         envelope = json.dumps(
             {
@@ -500,9 +542,13 @@ def _envelope(payload: str, original_size: int, cap: int) -> str | None:
                 "_preview": preview,
             }
         )
-        if _byte_len(envelope) <= cap:
+        overshoot = _byte_len(envelope) - cap
+        if overshoot <= 0:
             return envelope
         if not preview:
             return None
-        # JSON escaping can expand the preview, so measure the encoded result.
-        preview = preview[: len(preview) // 2]
+        # JSON escaping can expand the preview, so measure what each kept
+        # character weighs once encoded and drop just enough of them.
+        weight = _byte_len(json.dumps(preview)) / len(preview)
+        drop = math.ceil(overshoot / weight) + 8
+        preview = preview[: max(0, len(preview) - drop)]
