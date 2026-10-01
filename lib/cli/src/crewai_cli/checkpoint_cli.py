@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 import glob
 import json
@@ -290,7 +291,7 @@ def _info_json_file(path: str) -> dict[str, Any]:
 
 def _list_sqlite(db_path: str) -> list[dict[str, Any]]:
     results = []
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn, conn:
         for row in conn.execute(_SELECT_ALL):
             checkpoint_id, created_at, raw = row
             try:
@@ -310,7 +311,7 @@ def _list_sqlite(db_path: str) -> list[dict[str, Any]]:
 
 
 def _info_sqlite_latest(db_path: str) -> dict[str, Any] | None:
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn, conn:
         row = conn.execute(_SELECT_LATEST).fetchone()
     if not row:
         return None
@@ -323,7 +324,7 @@ def _info_sqlite_latest(db_path: str) -> dict[str, Any] | None:
 
 
 def _info_sqlite_id(db_path: str, checkpoint_id: str) -> dict[str, Any] | None:
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn, conn:
         row = conn.execute(_SELECT_ONE, (checkpoint_id,)).fetchone()
         if not row:
             row = conn.execute(_SELECT_LIKE, (f"%{checkpoint_id}%",)).fetchone()
@@ -688,7 +689,7 @@ def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -
 
 def _prune_sqlite(db_path: str, keep: int | None, older_than: timedelta | None) -> int:
     deleted: int = 0
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn, conn:
         if older_than is not None:
             cutoff: str = (datetime.now(timezone.utc) - older_than).strftime(
                 "%Y%m%dT%H%M%S"
@@ -717,7 +718,7 @@ def prune_checkpoints(
     deleted: int
     if _is_sqlite(location):
         if dry_run:
-            with sqlite3.connect(location) as conn:
+            with closing(sqlite3.connect(location)) as conn, conn:
                 total: int = conn.execute(_COUNT_CHECKPOINTS).fetchone()[0]
             click.echo(f"Would prune from {total} checkpoint(s) in {location}")
             return
