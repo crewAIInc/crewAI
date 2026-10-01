@@ -165,3 +165,47 @@ class TestWebPageLoader:
             mock_bs.return_value = self.setup_mock_soup("Content")
             result = WebPageLoader().load(SourceContent("https://example.com"))
             assert result.metadata["content_type"] == ctype
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 429, 500, 503])
+def test_http_error_html_is_not_returned_as_a_document(status_code: int) -> None:
+    import requests
+
+    response = requests.Response()
+    response.status_code = status_code
+    response.url = "https://example.com/unavailable"
+    response.headers["content-type"] = "text/html"
+    response._content = b"<html><title>Error</title><body>Try again later</body></html>"
+    response.encoding = "utf-8"
+
+    with patch(
+        "crewai_tools.rag.loaders.webpage_loader.safe_get", return_value=response
+    ):
+        with pytest.raises(
+            ValueError, match=f"Error loading webpage.*{status_code}"
+        ) as error:
+            WebPageLoader().load(SourceContent(response.url))
+
+    assert isinstance(error.value.__cause__, requests.HTTPError)
+
+
+def test_successful_html_response_still_produces_a_document() -> None:
+    import requests
+
+    response = requests.Response()
+    response.status_code = 200
+    response.url = "https://example.com/article"
+    response.headers["content-type"] = "text/html"
+    response._content = (
+        b"<html><title>Article</title><body>Useful content</body></html>"
+    )
+    response.encoding = "utf-8"
+
+    with patch(
+        "crewai_tools.rag.loaders.webpage_loader.safe_get", return_value=response
+    ):
+        result = WebPageLoader().load(SourceContent(response.url))
+
+    assert result.content == "Article Useful content"
+    assert result.metadata["status_code"] == 200
+    assert result.source == response.url
