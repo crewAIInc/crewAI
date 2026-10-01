@@ -17,12 +17,14 @@ pip install 'crewai[tools]'
 ```python
 from crewai_tools import CSVSearchTool
 
-# Initialize the tool with a specific tabular file. This setup allows the agent to only search that file.
-tool = CSVSearchTool(csv='path/to/your/workbook.xlsx')
+# Initialize the tool with one file. The agent can only search that file.
+csv_tool = CSVSearchTool(csv='path/to/your/data.csv')
+xls_tool = CSVSearchTool(csv='path/to/your/workbook.xls')
+xlsx_tool = CSVSearchTool(csv='path/to/your/workbook.xlsx')
 
 # OR
 
-# Initialize the tool without a specific CSV file. Agent  will need to provide the CSV path at runtime.
+# Initialize the tool without a file. The agent provides the path at runtime.
 tool = CSVSearchTool()
 ```
 
