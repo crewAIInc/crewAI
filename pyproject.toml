@@ -262,6 +262,11 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # fixed in 4.7.1. Declared as crewai-tools[snowflake] "snowflake-connector-python>=3.12.4",
 # which the lock resolved to 4.6.0.
 # soupsieve <=2.8.4 has GHSA-j934-xhv5-fg8f and GHSA-gjv8-xp57-g29c; force 2.9.2+.
+# litellm <1.88.6 has GHSA-3cv6-jpf6-8222 (CVE-2026-84377; authenticated SSRF and provider-credential
+# exfiltration via request-body routing parameters in the LiteLLM proxy server; crewAI uses litellm only as
+# a client SDK, but pip-audit flags the package). The floor lives in lib/crewai/pyproject.toml (the
+# crewai[litellm] extra, "litellm>=1.88.6,<2") rather than here, since crewai declares litellm directly.
+# 1.88.6 is older than the global 3-day cutoff, so no exclude-newer-package override is needed.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
