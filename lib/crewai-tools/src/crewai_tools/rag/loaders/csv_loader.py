@@ -1,7 +1,8 @@
 from collections.abc import Iterable
 import csv
+from datetime import datetime, time
 from io import BytesIO, StringIO
-from typing import Any
+from typing import Any, Final
 from urllib.parse import urlparse
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
@@ -9,10 +10,20 @@ from crewai_tools.rag.loaders.utils import load_from_url
 from crewai_tools.rag.source_content import SourceContent
 
 
+# Same ceiling URLReadTool uses for a remote workbook. A download limit does
+# not bound how far a sheet expands once parsed.
+_EXCEL_URL_MAX_BYTES: Final[int] = 5 * 1024 * 1024
+
+
 class CSVLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
-        suffix = urlparse(source_ref).path.rsplit(".", 1)[-1].lower()
+        # urlparse treats '#' in a local name as a fragment, so "report#1.xlsx"
+        # would miss the Excel branch. Only URLs should be parsed that way.
+        source_path = (
+            urlparse(source_ref).path if source_content.is_url() else source_ref
+        )
+        suffix = source_path.rsplit(".", 1)[-1].lower()
 
         if suffix in {"xls", "xlsx"}:
             content = self._load_excel_content(source_content, kwargs)
@@ -41,7 +52,7 @@ class CSVLoader(BaseLoader):
         source_content: SourceContent, kwargs: dict[str, Any]
     ) -> bytes:
         if source_content.is_url():
-            from crewai_tools.security.safe_requests import safe_get
+            from crewai_tools.security.safe_requests import safe_get_bounded
 
             headers = kwargs.get(
                 "headers",
@@ -51,9 +62,13 @@ class CSVLoader(BaseLoader):
                 },
             )
             try:
-                response = safe_get(source_content.source, headers=headers, timeout=30)
-                response.raise_for_status()
-                return response.content
+                body, _content_type, _final_url = safe_get_bounded(
+                    source_content.source,
+                    max_bytes=kwargs.get("max_bytes", _EXCEL_URL_MAX_BYTES),
+                    headers=headers,
+                    timeout=30,
+                )
+                return body
             except Exception as e:
                 raise ValueError(
                     f"Error fetching content from URL {source_content.source}: {e!s}"
@@ -98,10 +113,41 @@ class CSVLoader(BaseLoader):
         return [
             (
                 worksheet.name,
-                [tuple(worksheet.row_values(row)) for row in range(worksheet.nrows)],
+                [
+                    tuple(
+                        CSVLoader._xls_cell_value(cell, workbook.datemode)
+                        for cell in worksheet.row(row)
+                    )
+                    for row in range(worksheet.nrows)
+                ],
             )
             for worksheet in workbook.sheets()
         ]
+
+    @staticmethod
+    def _xls_cell_value(cell: Any, datemode: int) -> Any:
+        """Return a searchable value for one xlrd cell.
+
+        ``row_values()`` turns dates into Excel serial floats and whole numbers
+        into ``80.0``. Dates become ISO text, and integral numbers stay ints.
+        """
+        import xlrd
+
+        if cell.ctype == xlrd.XL_CELL_DATE:
+            try:
+                converted = xlrd.xldate_as_datetime(cell.value, datemode)
+            except xlrd.XLDateError:
+                return cell.value
+            if not isinstance(converted, datetime):
+                return converted
+            if converted.time() == time.min:
+                return converted.date().isoformat()
+            return converted.isoformat(sep=" ")
+
+        if cell.ctype == xlrd.XL_CELL_NUMBER and isinstance(cell.value, float):
+            if cell.value.is_integer():
+                return int(cell.value)
+        return cell.value
 
     def _parse_csv(self, content: str, source_ref: str) -> LoaderResult:
         try:
