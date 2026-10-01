@@ -591,17 +591,18 @@ def _task_output_format(task: Any, output: Any = None) -> str:
 def _set_span_attributes(span: Span, attributes: dict[str, Any]) -> None:
     """Set ``attributes`` on ``span``, no string value over the export bound.
 
-    The ``gen_ai.*`` content attributes arrive already bounded (and marked) by
-    ``semantic_conventions``; this catches every other string — a task's
-    ``crewai.task.output``, an MCP tool's ``crewai.mcp.tool_result``, a flow's
-    serialized state — so one oversized value marks itself instead of making
-    the whole span too large for Wharf to accept.
+    The ``gen_ai.*`` content attributes arrive already bounded (and marked),
+    message-aware, by ``semantic_conventions``; this catches every other
+    string — a task's ``crewai.task.output``, an MCP tool's ``crewai.mcp.tool_result``, a flow's
+    serialized state — with a plain cut (the head, up to the bound) so one
+    oversized value marks itself instead of making the whole span too large
+    for Wharf to accept, and is never reshaped as if it were a conversation.
     """
     for key, value in attributes.items():
         if value is None:
             continue
         if isinstance(value, str) and f"{key}.truncated" not in attributes:
-            value, markers = gen_ai_shapes.truncate_attr(value, attr=key)
+            value, markers = gen_ai_shapes.truncate_plain(value, attr=key)
             for marker, marker_value in markers.items():
                 span.set_attribute(marker, marker_value)
             if value is None:

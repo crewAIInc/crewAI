@@ -318,3 +318,61 @@ def test_a_span_with_every_content_attribute_at_the_bound_fits_one_wharf_request
 
     assert sum(1 for key in finished[0].attributes if key.endswith(".truncated")) == 7
     assert encode_spans(finished).ByteSize() < MAX_EXPORT_BODY_BYTES
+
+
+def test_a_role_bearing_plain_attribute_is_cut_plainly_never_reshaped() -> None:
+    """A task may produce a JSON list whose items carry ``role`` (a roster, a
+    chat log). On ``crewai.task.output`` that is data, not a GenAI
+    conversation: over the bound it keeps its head, nothing is replaced."""
+    roster = json.dumps(
+        [
+            {"role": "engineer", "name": f"person-{i}", "team": f"team-{i % 7}"}
+            for i in range(12_000)
+        ]
+    )
+    assert len(roster.encode("utf-8")) > BOUND
+
+    span = _task_span(roster)
+
+    kept = span.attributes["crewai.task.output"]
+    assert span.attributes["crewai.task.output.truncated"] is True
+    assert span.attributes["crewai.task.output.original_size_bytes"] == len(
+        roster.encode("utf-8")
+    )
+    assert len(kept.encode("utf-8")) == BOUND
+    assert roster.startswith(kept)
+    assert "truncated" not in kept
+
+
+def test_an_sdk_span_limit_of_zero_is_kept_and_cuts_everything_with_the_marker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The SDK accepts 0 and cuts every string to nothing; crewAI does the
+    same cut first, so it carries the marker."""
+    monkeypatch.setenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "0")
+    monkeypatch.setenv("OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT", "20000")
+    assert gen_ai_shapes.max_attr_bytes() == 0
+
+    span = _task_span("a summary")
+
+    assert span.attributes["crewai.task.output"] == ""
+    assert span.attributes["crewai.task.output.truncated"] is True
+    assert span.attributes["crewai.task.output.original_size_bytes"] == len(
+        "a summary"
+    )
+
+
+def test_an_explicitly_empty_span_limit_is_unlimited_not_the_general_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """In the SDK an empty span setting means unlimited and wins over the
+    general one; the bound is then crewAI's own."""
+    monkeypatch.setenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "")
+    monkeypatch.setenv("OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT", "20000")
+    assert gen_ai_shapes.max_attr_bytes() == BOUND
+
+    result = _text(50_000)
+    span = _tool_span(result)
+
+    assert json.loads(span.attributes["gen_ai.tool.call.result"]) == result
+    assert "gen_ai.tool.call.result.truncated" not in span.attributes

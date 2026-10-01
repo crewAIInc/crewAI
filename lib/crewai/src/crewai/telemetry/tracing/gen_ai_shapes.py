@@ -400,6 +400,46 @@ def _positive_env_int(name: str) -> int | None:
     return value if value > 0 else None
 
 
+_UNLIMITED = object()
+
+
+def _sdk_env_limit(name: str) -> int | None | object:
+    """Read one SDK length limit the way the OpenTelemetry SDK does.
+
+    Absent → ``None`` (fall through to the next setting); empty → unlimited;
+    a non-negative integer → that limit, ``0`` included (the SDK then cuts
+    every string to nothing). A value the SDK would reject is ignored here.
+    """
+    if name not in os.environ:
+        return None
+    raw = os.environ[name].strip().lower()
+    if raw == "":
+        return _UNLIMITED
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value >= 0 else None
+
+
+def _sdk_span_attribute_limit() -> int | None:
+    """The SDK's span attribute length limit; ``None`` when unlimited.
+
+    The span setting takes precedence over the general one, also when it is
+    explicitly empty (unlimited), as in ``SpanLimits``.
+    """
+    for name in (
+        "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT",
+        "OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT",
+    ):
+        limit = _sdk_env_limit(name)
+        if limit is _UNLIMITED:
+            return None
+        if isinstance(limit, int):
+            return limit
+    return None
+
+
 def max_attr_bytes() -> int:
     """The byte bound :func:`truncate_attr` applies when given none.
 
@@ -408,10 +448,33 @@ def max_attr_bytes() -> int:
     within the SDK's limit too.
     """
     cap = _positive_env_int("CREWAI_OTEL_MAX_ATTR_BYTES") or DEFAULT_MAX_ATTR_BYTES
-    sdk_limit = _positive_env_int(
-        "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT"
-    ) or _positive_env_int("OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT")
-    return min(cap, sdk_limit) if sdk_limit else cap
+    sdk_limit = _sdk_span_attribute_limit()
+    return min(cap, sdk_limit) if sdk_limit is not None else cap
+
+
+def truncate_plain(
+    payload: str | None,
+    *,
+    attr: str,
+    max_bytes: int | None = None,
+) -> tuple[str | None, dict[str, Any]]:
+    """Bound a plain (non-GenAI) string attribute: keep its head, mark the cut.
+
+    No shape is assumed: a JSON array whose items carry ``role`` may be a user
+    list or a chat log a task produced, not a GenAI conversation, so it is
+    never rewritten the way :func:`truncate_attr` rewrites messages.
+    """
+    if payload is None:
+        return None, {}
+    cap = max_bytes if max_bytes is not None else max_attr_bytes()
+    encoded = payload.encode("utf-8")
+    if len(encoded) <= cap:
+        return payload, {}
+    markers = {
+        f"{attr}.truncated": True,
+        f"{attr}.original_size_bytes": len(encoded),
+    }
+    return encoded[:cap].decode("utf-8", errors="ignore"), markers
 
 
 def _byte_len(s: str) -> int:
