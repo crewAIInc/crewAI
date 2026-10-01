@@ -430,6 +430,37 @@ def test_gemini_model_capabilities():
     assert llm_1_5.supports_tools == True
 
 
+@pytest.mark.parametrize(
+    "model",
+    ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-pro-latest"],
+)
+def test_gemini_latest_aliases_resolve_to_25_capabilities(model):
+    """
+    Version-less aliases resolve to the current 2.5 generation (#7636):
+    the version regex never matches them, so they used to fall back to
+    pre-1.5 defaults — tools silently dropped and native function calling
+    downgraded to ReAct.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = LLM(model=f"google/{model}")
+    assert isinstance(llm, GeminiCompletion)
+    assert llm.supports_tools == True
+    assert llm.supports_function_calling() == True
+
+
+def test_gemini_gemma_still_lacks_tool_support():
+    """
+    The alias map must not loosen the regex: gemma ids carry a version but
+    no function calling, and must keep the pre-1.5 defaults.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = LLM(model="google/gemini-gemma-2-27b-it")
+    assert isinstance(llm, GeminiCompletion)
+    assert llm.supports_tools == False
+
+
 def test_gemini_generation_config():
     """
     Test that generation config is properly prepared
