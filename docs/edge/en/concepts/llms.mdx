@@ -1155,6 +1155,31 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Hubris">
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    HUBRIS_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    import os
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-5",
+        custom_openai=True,
+        base_url="https://api.hubris.pw/v1",
+        api_key=os.environ["HUBRIS_API_KEY"]
+    )
+    ```
+
+    <Info>
+      Hubris is a ruble-billed, OpenAI-compatible LLM gateway giving access to 400+
+      models (OpenAI, Anthropic, Google, and more) behind one API key. See the full
+      model catalog at [hubris.pw/models](https://hubris.pw/models).
+    </Info>
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
