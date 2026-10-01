@@ -48,6 +48,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     Raises:
         SkillParseError: If frontmatter delimiters are missing or YAML is invalid.
     """
+    content = content.removeprefix("\ufeff")
     if not content.startswith("---"):
         msg = "SKILL.md must start with '---' frontmatter delimiter"
         raise SkillParseError(msg)
@@ -86,7 +87,7 @@ def parse_skill_md(path: Path) -> tuple[SkillFrontmatter, str]:
         FileNotFoundError: If the file does not exist.
         SkillParseError: If parsing fails.
     """
-    content = path.read_text(encoding="utf-8")
+    content = path.read_text(encoding="utf-8-sig")
     frontmatter_dict, body = parse_frontmatter(content)
     frontmatter = SkillFrontmatter(**frontmatter_dict)
     return frontmatter, body
