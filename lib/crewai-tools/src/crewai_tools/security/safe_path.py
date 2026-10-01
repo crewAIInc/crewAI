@@ -179,6 +179,14 @@ _BLOCKED_IPV6_NETWORKS = [
     ipaddress.ip_network("fc00::/7"),  # Unique local addresses
     ipaddress.ip_network("fe80::/10"),  # Link-local IPv6
     ipaddress.ip_network("fd00:ec2::254/128"),  # AWS IMDS over IPv6
+    ipaddress.ip_network("fec0::/10"),  # Deprecated site-local
+    # Wrappers around IPv4 that is_global misclassifies on some releases
+    # (6to4 and local-use NAT64 were global before the CVE-2024-4032 fix).
+    ipaddress.ip_network("::/96"),  # IPv4-compatible
+    ipaddress.ip_network("::ffff:0:0:0/96"),  # IPv4-translated (RFC 2765)
+    ipaddress.ip_network("2001::/32"),  # Teredo
+    ipaddress.ip_network("2002::/16"),  # 6to4
+    ipaddress.ip_network("64:ff9b:1::/48"),  # Local-use NAT64
 ]
 
 # NAT64 well-known prefix: the low 32 bits are the IPv4 destination.
@@ -191,8 +199,9 @@ def is_blocked_ip(ip_str: str) -> bool:
     Default-deny: anything that is not globally routable is blocked, plus the
     explicit lists above for ranges ``is_global`` may allow or that changed
     between Python versions. IPv6 forms that wrap an IPv4 address (IPv4-mapped
-    and NAT64) are checked as the embedded IPv4. 6to4, Teredo and local-use
-    NAT64 are not global, so they are blocked outright.
+    and NAT64) are checked as the embedded IPv4. Other transition ranges
+    (6to4, Teredo, local-use NAT64, IPv4-compatible/translated) are blocked
+    outright.
     """
     try:
         addr = ipaddress.ip_address(ip_str)
