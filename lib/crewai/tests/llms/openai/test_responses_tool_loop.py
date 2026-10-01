@@ -15,6 +15,9 @@ Sending the chat shape to /v1/responses is rejected outright:
 Verified against the live endpoint: the chat shape 400s, the native items complete.
 """
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 
 from crewai.llms.providers.openai.completion import OpenAICompletion
@@ -224,3 +227,169 @@ class TestPreparedParams:
         assert not any(
             "content" in item and item["content"] is None for item in params["input"]
         )
+
+
+class TestResponsesStreamingToolCalls:
+    """Responses streaming must return function calls when available_functions is None."""
+
+    @pytest.fixture
+    def mock_responses_stream(self):
+        """Create mock response payloads and sync/async streaming event generators."""
+        fc_item = SimpleNamespace(
+            type="function_call",
+            id="fc_1",
+            call_id="call_abc",
+            name="multiply",
+            arguments='{"a": 17, "b": 23}',
+            status="completed",
+        )
+        response = SimpleNamespace(
+            id="resp_1",
+            status="completed",
+            output=[fc_item],
+            output_text="",
+            usage=SimpleNamespace(
+                input_tokens=10,
+                output_tokens=5,
+                total_tokens=15,
+                input_tokens_details=None,
+                output_tokens_details=None,
+            ),
+        )
+
+        def sync_events():
+            yield SimpleNamespace(type="response.created", response=response)
+            yield SimpleNamespace(type="response.output_item.done", item=fc_item)
+            yield SimpleNamespace(type="response.completed", response=response)
+
+        async def async_events():
+            yield SimpleNamespace(type="response.created", response=response)
+            yield SimpleNamespace(type="response.output_item.done", item=fc_item)
+            yield SimpleNamespace(type="response.completed", response=response)
+
+        return response, sync_events, async_events
+
+    def test_sync_streaming_returns_tool_calls_when_available_functions_none(
+        self, mock_responses_stream
+    ):
+        """Verify sync Responses streaming returns tool calls list when available_functions is None."""
+        _, sync_events, _ = mock_responses_stream
+
+        class FakeResponses:
+            def create(self, **kwargs):
+                return sync_events()
+
+        class FakeClient:
+            def __init__(self):
+                self.responses = FakeResponses()
+
+        llm = build(stream=True)
+        llm._get_sync_client = lambda: FakeClient()
+
+        result = llm._handle_streaming_responses(
+            params={"input": [{"role": "user", "content": "multiply"}]},
+            available_functions=None,
+        )
+
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["name"] == "multiply"
+        assert result[0]["arguments"] == '{"a": 17, "b": 23}'
+        assert result[0]["id"] == "call_abc"
+
+    def test_sync_streaming_executes_function_when_available_functions_provided(
+        self, mock_responses_stream
+    ):
+        """Verify sync Responses streaming executes the tool when available_functions is provided."""
+        _, sync_events, _ = mock_responses_stream
+
+        class FakeResponses:
+            def create(self, **kwargs):
+                return sync_events()
+
+        class FakeClient:
+            def __init__(self):
+                self.responses = FakeResponses()
+
+        llm = build(stream=True)
+        llm._get_sync_client = lambda: FakeClient()
+
+        executed_args = []
+
+        def fake_multiply(a, b):
+            executed_args.append((a, b))
+            return 391
+
+        result = llm._handle_streaming_responses(
+            params={"input": [{"role": "user", "content": "multiply"}]},
+            available_functions={"multiply": fake_multiply},
+        )
+
+        assert result == "391"
+        assert executed_args == [(17, 23)]
+
+    def test_async_streaming_returns_tool_calls_when_available_functions_none(
+        self, mock_responses_stream
+    ):
+        """Verify async Responses streaming returns tool calls list when available_functions is None."""
+        _, _, async_events = mock_responses_stream
+
+        class FakeAsyncResponses:
+            async def create(self, **kwargs):
+                return async_events()
+
+        class FakeAsyncClient:
+            def __init__(self):
+                self.responses = FakeAsyncResponses()
+
+        llm = build(stream=True)
+        llm._get_async_client = lambda: FakeAsyncClient()
+
+        async def run_test():
+            return await llm._ahandle_streaming_responses(
+                params={"input": [{"role": "user", "content": "multiply"}]},
+                available_functions=None,
+            )
+
+        result = asyncio.run(run_test())
+
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["name"] == "multiply"
+        assert result[0]["arguments"] == '{"a": 17, "b": 23}'
+        assert result[0]["id"] == "call_abc"
+
+    def test_async_streaming_executes_function_when_available_functions_provided(
+        self, mock_responses_stream
+    ):
+        """Verify async Responses streaming executes the tool when available_functions is provided."""
+        _, _, async_events = mock_responses_stream
+
+        class FakeAsyncResponses:
+            async def create(self, **kwargs):
+                return async_events()
+
+        class FakeAsyncClient:
+            def __init__(self):
+                self.responses = FakeAsyncResponses()
+
+        llm = build(stream=True)
+        llm._get_async_client = lambda: FakeAsyncClient()
+
+        executed_args = []
+
+        def fake_multiply(a, b):
+            executed_args.append((a, b))
+            return 391
+
+        async def run_test():
+            return await llm._ahandle_streaming_responses(
+                params={"input": [{"role": "user", "content": "multiply"}]},
+                available_functions={"multiply": fake_multiply},
+            )
+
+        result = asyncio.run(run_test())
+
+        assert result == "391"
+        assert executed_args == [(17, 23)]
+
