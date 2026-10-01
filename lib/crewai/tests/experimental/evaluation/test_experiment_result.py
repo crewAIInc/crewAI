@@ -109,3 +109,49 @@ class TestExperimentResult:
         assert comparison["unchanged"] == ["test-2", "test-4"]
         assert comparison["new_tests"] == ["test-6"]
         assert comparison["missing_tests"] == ["test-5"]
+
+    def test_to_json_writes_utf8_and_stringifies_metadata(self, tmp_path):
+        from datetime import datetime, timezone
+
+        results = ExperimentResults(
+            [
+                ExperimentResult(
+                    identifier="café",
+                    inputs={},
+                    score=1,
+                    expected_score=1,
+                    passed=True,
+                )
+            ],
+            metadata={"note": "résumé", "when": datetime(2026, 1, 1, tzinfo=timezone.utc)},
+        )
+        results.display = MagicMock()
+        path = tmp_path / "out.json"
+        results.to_json(str(path))
+        raw = path.read_text(encoding="utf-8")
+        assert "café" in raw
+        assert "résumé" in raw
+        assert "2026-01-01" in raw
+
+    def test_compare_with_baseline_reads_utf8(self, tmp_path):
+        baseline = tmp_path / "baseline.json"
+        baseline.write_text(
+            '{"timestamp": "2026-01-01T00:00:00+00:00", "results": []}',
+            encoding="utf-8",
+        )
+        results = ExperimentResults(
+            [
+                ExperimentResult(
+                    identifier="café",
+                    inputs={},
+                    score=1,
+                    expected_score=1,
+                    passed=True,
+                )
+            ]
+        )
+        results.display = MagicMock()
+        comparison = results.compare_with_baseline(baseline_filepath=str(baseline))
+        assert comparison["new_tests"] == ["café"]
+        saved = baseline.read_text(encoding="utf-8")
+        assert "café" in saved
