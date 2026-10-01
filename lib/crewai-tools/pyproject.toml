@@ -172,6 +172,11 @@ e2b = [
     "e2b~=2.20.0",
     "e2b-code-interpreter~=2.6.0",
 ]
+velaris = [
+    # 2.59.0 is where velaris.run gained timeout and max_memory_mb; below it
+    # the tool has to enforce both from the outside.
+    "velaris-lang>=2.59.0",
+]
 
 
 [tool.uv]
