@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
+from dataclasses import dataclass
 from datetime import datetime
 import logging
 from typing import Any, ClassVar
@@ -32,6 +33,19 @@ from crewai.memory.types import (
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _SearchPlan:
+    """Immutable snapshot of the inputs that determine a recall search."""
+
+    embeddings: tuple[tuple[float, ...], ...]
+    scopes: tuple[str, ...]
+    categories: tuple[str, ...]
+    time_cutoff: datetime | None
+    source: str | None
+    include_private: bool
+    limit: int
 
 
 class RecallState(BaseModel):
@@ -81,10 +95,24 @@ class RecallFlow(Flow[RecallState]):
         self._llm = llm
         self._embedder = embedder
         self._config = config or MemoryConfig()
+        self._successful_search_plan: _SearchPlan | None = None
+        self._search_unchanged = False
 
     def _merged_categories(self) -> list[str] | None:
         """Return caller-supplied categories, or None if empty."""
         return self.state.categories or None
+
+    def _search_plan(self) -> _SearchPlan:
+        """Snapshot vectors and filters without retaining mutable state lists."""
+        return _SearchPlan(
+            embeddings=tuple(tuple(emb) for _, emb in self.state.query_embeddings),
+            scopes=tuple(self.state.candidate_scopes),
+            categories=tuple(self._merged_categories() or ()),
+            time_cutoff=self.state.time_cutoff,
+            source=self.state.source,
+            include_private=self.state.include_private,
+            limit=self.state.limit,
+        )
 
     def _do_search(self) -> list[dict[str, Any]]:
         """Run parallel search across (embeddings x scopes) with filters.
@@ -92,6 +120,8 @@ class RecallFlow(Flow[RecallState]):
         Populates ``state.chunk_findings`` and ``state.confidence``.
         Returns the findings list.
         """
+        plan = self._search_plan()
+        all_succeeded = True
         search_categories = self._merged_categories()
 
         def _search_one(
@@ -127,6 +157,7 @@ class RecallFlow(Flow[RecallState]):
                 try:
                     scope, results = _search_one(emb, sc)
                 except Exception:
+                    all_succeeded = False
                     logger.warning(
                         "Storage search failed in recall flow, skipping scope",
                         exc_info=True,
@@ -156,6 +187,7 @@ class RecallFlow(Flow[RecallState]):
                     try:
                         scope, results = future.result()
                     except Exception:
+                        all_succeeded = False
                         logger.warning(
                             "Storage search failed in recall flow, skipping scope",
                             exc_info=True,
@@ -175,6 +207,8 @@ class RecallFlow(Flow[RecallState]):
 
         self.state.chunk_findings = findings
         self.state.confidence = max((f["top_score"] for f in findings), default=0.0)
+        # A failed or partially failed batch must remain eligible for retries.
+        self._successful_search_plan = plan if all_succeeded else None
         return findings
 
     @start()
@@ -189,6 +223,8 @@ class RecallFlow(Flow[RecallState]):
         Sub-queries are embedded in a single batch ``embed_texts()`` call
         rather than sequential ``embed_text()`` calls.
         """
+        self._successful_search_plan = None
+        self._search_unchanged = False
         self.state.exploration_budget = self._config.exploration_budget
 
         query_len = len(self.state.query)
@@ -338,12 +374,22 @@ class RecallFlow(Flow[RecallState]):
 
     @listen(recursive_exploration)
     def re_search(self) -> list[Any]:
-        """Re-search after exploration to update confidence for the router loop."""
+        """Search again only when inputs changed or the previous batch failed.
+
+        Keep the first exploration's evidence gaps, but do not poll storage
+        with identical successful searches within one recall invocation.
+        """
+        self._search_unchanged = self._search_plan() == self._successful_search_plan
+        if self._search_unchanged:
+            findings: list[Any] = self.state.chunk_findings
+            return findings
         return self._do_search()
 
     @router(re_search)
     def re_decide_depth(self) -> str:
-        """Re-evaluate depth after re-search. Same logic as decide_depth."""
+        """Stop unchanged successful searches; otherwise re-evaluate depth."""
+        if self._search_unchanged:
+            return "synthesize"
         return self.decide_depth()
 
     @listen("synthesize")
