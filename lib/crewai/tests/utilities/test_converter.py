@@ -224,6 +224,20 @@ def test_handle_partial_json_ignores_trailing_braces_after_valid_json() -> None:
     assert output.age == 30
 
 
+def test_handle_partial_json_truncated_outer_object_falls_back_to_llm(
+    mock_agent: Mock,
+) -> None:
+    """A truncated outer object containing a complete inner object must not
+    be replaced by the inner object; it should use the LLM fallback.
+    """
+    result = '{"name": "Ada", "age": 36, "meta": {"src": "llm"}'
+    with patch("crewai.utilities.converter.convert_with_instructions") as fallback:
+        fallback.return_value = "fallback"
+        output = handle_partial_json(result, SimpleModel, False, mock_agent)
+    assert output == "fallback"
+    fallback.assert_called_once()
+
+
 def test_handle_partial_json_falls_through_for_non_json_curly_blocks(
     mock_agent: Mock,
 ) -> None:

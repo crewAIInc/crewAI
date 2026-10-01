@@ -25,29 +25,36 @@ _JSON_START_PATTERN: Final[re.Pattern[str]] = re.compile(r"{")
 _I18N = I18N_DEFAULT
 
 
-def _extract_first_json_object(result: str) -> Any | None:
-    """Parse the first well-formed JSON object found in ``result``.
+def _extract_first_json_object(result: str) -> dict[str, Any] | None:
+    """Parse the JSON object that starts at the first ``{`` in ``result``.
 
     Unlike a greedy ``{.*}`` regex, this stops at the end of the first
-    balanced JSON value starting at the first ``{``, so trailing text
-    (commentary, examples, other brace-delimited content) after a valid
-    JSON object no longer corrupts extraction.
+    balanced JSON value, so trailing text (commentary, examples, other
+    brace-delimited content) after a valid JSON object no longer corrupts
+    extraction.
+
+    Only the first ``{`` is tried. If it does not begin a valid object (for
+    example a truncated outer object that still contains a complete inner
+    object), ``None`` is returned so callers fall back to LLM conversion
+    rather than silently using the inner object.
 
     Args:
         result: The string to search for a JSON object.
 
     Returns:
-        The parsed JSON value, or ``None`` if no valid JSON object starts
-        at any ``{`` in the string.
+        The parsed object, or ``None`` if the first ``{`` does not start a
+        valid JSON object.
     """
-    decoder = json.JSONDecoder(strict=False)
-    for match in _JSON_START_PATTERN.finditer(result):
-        try:
-            parsed, _end = decoder.raw_decode(result, match.start())
-        except json.JSONDecodeError:
-            continue
-        return parsed
-    return None
+    match = _JSON_START_PATTERN.search(result)
+    if match is None:
+        return None
+    try:
+        # raw_decode from a "{" can only return a dict, never a scalar.
+        parsed: dict[str, Any]
+        parsed, _end = json.JSONDecoder(strict=False).raw_decode(result, match.start())
+    except json.JSONDecodeError:
+        return None
+    return parsed
 
 
 class ConverterError(Exception):
