@@ -1,3 +1,4 @@
+# Optional dependency: Requires pip install ube-foundation
 import json
 import uuid
 from ube_foundation import TrustEngine, PqcKeyPair
@@ -30,7 +31,7 @@ class NTIGuardrailMiddleware:
             "identity_claim": None
         }
         message = json.dumps(req, sort_keys=True).encode('utf-8')
-        req["pqc_signature"] = self.pqc_key.sign(message)
+        req["pqc_signature"] = self.pqc_key.sign(message).hex()
         req["pqc_public_key"] = self.pqc_key.public_key_hex()
         
         decision = json.loads(self.engine.evaluate(json.dumps(req)))
