@@ -1,22 +1,28 @@
 import tempfile
 from unittest.mock import Mock, patch
 
+from docx import Document
+from docx.document import Document as DocumentObject
+
 from crewai_tools.rag.base_loader import LoaderResult
 from crewai_tools.rag.loaders.docx_loader import DOCXLoader
 from crewai_tools.rag.source_content import SourceContent
 import pytest
 
 
+def make_document(*paragraphs: str, tables: int = 0) -> DocumentObject:
+    document = Document()
+    for text in paragraphs:
+        document.add_paragraph(text)
+    for index in range(tables):
+        document.add_table(rows=1, cols=1).cell(0, 0).text = f"Table {index + 1}"
+    return document
+
+
 class TestDOCXLoader:
     @patch("docx.Document")
     def test_load_docx_from_file(self, mock_docx_class):
-        mock_doc = Mock()
-        mock_doc.paragraphs = [
-            Mock(text="First paragraph"),
-            Mock(text="Second paragraph"),
-            Mock(text="   "),
-        ]
-        mock_doc.tables = []
+        mock_doc = make_document("First paragraph", "Second paragraph", "   ")
         mock_docx_class.return_value = mock_doc
 
         with tempfile.NamedTemporaryFile(suffix=".docx") as f:
@@ -30,9 +36,7 @@ class TestDOCXLoader:
 
     @patch("docx.Document")
     def test_load_docx_with_tables(self, mock_docx_class):
-        mock_doc = Mock()
-        mock_doc.paragraphs = [Mock(text="Document with table")]
-        mock_doc.tables = [Mock(), Mock()]
+        mock_doc = make_document("Document with table", tables=2)
         mock_docx_class.return_value = mock_doc
 
         with tempfile.NamedTemporaryFile(suffix=".docx") as f:
@@ -57,9 +61,7 @@ class TestDOCXLoader:
         mock_temp.__exit__ = Mock(return_value=None)
         mock_tempfile.return_value = mock_temp
 
-        mock_doc = Mock()
-        mock_doc.paragraphs = [Mock(text="Content from URL")]
-        mock_doc.tables = []
+        mock_doc = make_document("Content from URL")
         mock_docx_class.return_value = mock_doc
 
         loader = DOCXLoader()
@@ -83,7 +85,7 @@ class TestDOCXLoader:
         mock_get.return_value = Mock(
             content=b"fake docx content", raise_for_status=Mock()
         )
-        mock_docx_class.return_value = Mock(paragraphs=[], tables=[])
+        mock_docx_class.return_value = make_document()
 
         loader = DOCXLoader()
         custom_headers = {"Authorization": "Bearer token"}
@@ -129,7 +131,7 @@ class TestDOCXLoader:
 
     @patch("docx.Document")
     def test_load_docx_empty_document(self, mock_docx_class):
-        mock_docx_class.return_value = Mock(paragraphs=[], tables=[])
+        mock_docx_class.return_value = make_document()
 
         with tempfile.NamedTemporaryFile(suffix=".docx") as f:
             loader = DOCXLoader()
@@ -140,9 +142,7 @@ class TestDOCXLoader:
 
     @patch("docx.Document")
     def test_docx_doc_id_generation(self, mock_docx_class):
-        mock_docx_class.return_value = Mock(
-            paragraphs=[Mock(text="Consistent content")], tables=[]
-        )
+        mock_docx_class.return_value = make_document("Consistent content")
 
         with tempfile.NamedTemporaryFile(suffix=".docx") as f:
             loader = DOCXLoader()
