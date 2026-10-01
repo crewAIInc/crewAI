@@ -748,6 +748,44 @@ class TestTraceListenerSetup:
         assert "session ID: None" not in panel_text
         assert "ephemeral_trace_batches/None" not in panel_text
 
+    def test_finalize_backend_batch_survives_console_encoding_error(self) -> None:
+        """A console that cannot render the panel must not turn success into failure.
+
+        On Windows with stdout redirected to a file or pipe (cp1252), printing the
+        emoji panel raises ``UnicodeEncodeError``. The backend has already accepted
+        the finalization at that point, so the batch must stay finalized and must
+        not be reported as failed.
+        """
+        batch_manager = TraceBatchManager()
+        batch_manager.trace_batch_id = "batch-123"
+        batch_manager.is_current_batch_ephemeral = False
+
+        encoding_error = UnicodeEncodeError(
+            "charmap", "\u2705", 0, 1, "character maps to <undefined>"
+        )
+        with (
+            patch.object(
+                batch_manager.plus_api,
+                "finalize_trace_batch",
+                return_value=MagicMock(status_code=200, json=lambda: {}),
+            ),
+            patch.object(batch_manager, "_mark_batch_as_failed") as mock_mark_failed,
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.Console.print",
+                side_effect=encoding_error,
+            ),
+        ):
+            assert batch_manager._finalize_backend_batch(events_count=3) is True
+
+        assert batch_manager._batch_finalized is True
+        assert batch_manager.trace_url is not None
+        assert "trace_batches/batch-123" in batch_manager.trace_url
+        mock_mark_failed.assert_not_called()
+
     def test_finalize_backend_batch_is_serialized(self) -> None:
         """Concurrent finalizers must only call the backend once."""
         batch_manager = TraceBatchManager()
