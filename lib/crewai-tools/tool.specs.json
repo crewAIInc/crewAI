@@ -25946,6 +25946,332 @@
       }
     },
     {
+      "description": "Fetch any URL and get clean, LLM-ready Markdown back. Proxy rotation, anti-bot handling, CAPTCHA solving and JavaScript rendering happen server-side, so use this for pages that rate-limit, geo-gate or block automated traffic and return a block screen to an ordinary HTTP request.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for String Web Access",
+          "name": "STRING_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "String Web Access scrape tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Fetch any URL through String Web Access and return it as clean, LLM-ready Markdown.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "ignore_failures": {
+            "default": false,
+            "title": "Ignore Failures",
+            "type": "boolean"
+          },
+          "timeout": {
+            "default": 120,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "StringWebAccessScrapeTool",
+        "type": "object"
+      },
+      "name": "StringWebAccessScrapeTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "ISO 3166-1 alpha-2 country code to route the request through, e.g. 'US'",
+            "title": "Country Code"
+          },
+          "execute_js": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Render the page in a browser first. Use when a fetch comes back empty on a JavaScript-rendered site",
+            "title": "Execute Js"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "enum": [
+                  "markdown",
+                  "raw",
+                  "json"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "markdown",
+            "description": "Response format: markdown (default), raw for the verbatim body, json for a {statusCode, headers, data} envelope",
+            "title": "Format"
+          },
+          "main_content_only": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Strip page chrome (navigation, footers) from the returned Markdown",
+            "title": "Main Content Only"
+          },
+          "url": {
+            "description": "The http/https URL to fetch",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "StringWebAccessScrapeToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web and get the organic results back as structured JSON \u2014 position, title, url, displayUrl and snippet for each. Supports Google, DuckDuckGo, Brave and Mojeek, localized by country and language.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for String Web Access",
+          "name": "STRING_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "String Web Access search tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search the web through String Web Access and return the organic results.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "ignore_failures": {
+            "default": false,
+            "title": "Ignore Failures",
+            "type": "boolean"
+          },
+          "timeout": {
+            "default": 120,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "StringWebAccessSearchTool",
+        "type": "object"
+      },
+      "name": "StringWebAccessSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "US",
+            "description": "ISO 3166-1 alpha-2 country code used to localize the results",
+            "title": "Country"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "enum": [
+                  "google",
+                  "duckduckgo",
+                  "brave",
+                  "mojeek"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "google",
+            "description": "Search engine to query",
+            "title": "Engine"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language tag for the results, such as 'en' or 'pt-br'",
+            "title": "Language"
+          },
+          "max_results": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 10,
+            "description": "Maximum number of organic results to return",
+            "title": "Max Results"
+          },
+          "query": {
+            "description": "The search query to run",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "StringWebAccessSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a txt's content.",
       "env_vars": [],
       "humanized_name": "Search a txt's content",
