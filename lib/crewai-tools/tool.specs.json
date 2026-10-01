@@ -3047,9 +3047,9 @@
       }
     },
     {
-      "description": "A tool that can be used to semantic search a query from a CSV's content.",
+      "description": "A tool that can be used to semantic search a query from a CSV or Excel file's content.",
       "env_vars": [],
-      "humanized_name": "Search a CSV's content",
+      "humanized_name": "Search a CSV or Excel file's content",
       "init_params_schema": {
         "$defs": {
           "AzureProviderConfig": {
@@ -4154,7 +4154,7 @@
         "description": "Input for CSVSearchTool.",
         "properties": {
           "csv": {
-            "description": "File path or URL of a CSV file to be searched",
+            "description": "File path or URL of a CSV or Excel file to be searched",
             "title": "Csv",
             "type": "string"
           },
