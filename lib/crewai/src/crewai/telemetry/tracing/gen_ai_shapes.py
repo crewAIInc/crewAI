@@ -17,12 +17,17 @@ Spec: https://opentelemetry.io/docs/specs/semconv/gen-ai/
 
 from __future__ import annotations
 
+from functools import lru_cache
 import json
+import logging
 import math
 import os
 from typing import Any
 
 from crewai.utilities.serialization import to_serializable
+
+
+logger = logging.getLogger(__name__)
 
 
 _MAX_DEPTH = 14
@@ -35,15 +40,17 @@ evidence: whoever reads the trace (a person in the trace viewer, an evaluator
 checking that a summary matches the data a tool returned) needs them whole, so
 the bound sits well above what a real run produces (a 300 KB tool result fits).
 It is set by Wharf, which refuses an OTLP request whose encoded body is over
-3,072,000 bytes; a span that alone exceeds that is never stored, so seven
-attributes at this bound still fit one request with room for the rest of the
-span. A value over the bound is cut as little as possible and says so:
+3,072,000 bytes, so seven attributes at this bound still fit one request with
+room for the rest of the span (a span that does not fit is cut further at
+export, see ``grants._fit_span``). A value over the bound is cut as little as possible and says so:
 ``<attr>.truncated`` and ``<attr>.original_size_bytes`` ride next to it.
 
-``CREWAI_OTEL_MAX_ATTR_BYTES`` replaces the bound. A span attribute length limit
-set for the OpenTelemetry SDK (``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT``, else
-``OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT``) lowers it, so the SDK, which cuts without
-a marker, never has anything left to cut.
+It is also the ceiling: ``CREWAI_OTEL_MAX_ATTR_BYTES`` and the OpenTelemetry
+SDK's span attribute length limit (``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT``,
+else ``OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT``) can lower it, never raise it; a
+higher ``CREWAI_OTEL_MAX_ATTR_BYTES`` is clamped to it with one warning. The
+SDK cuts without a marker, so a lower SDK limit lowers the bound and the SDK
+never has anything left to cut.
 """
 _PLACEHOLDER_ROLE = "system"
 _TRUNCATION_LOOP_LIMIT = 8
@@ -447,9 +454,28 @@ def max_attr_bytes() -> int:
     character is at least one byte, so a value within this many bytes is
     within the SDK's limit too.
     """
-    cap = _positive_env_int("CREWAI_OTEL_MAX_ATTR_BYTES") or DEFAULT_MAX_ATTR_BYTES
+    cap = DEFAULT_MAX_ATTR_BYTES
+    configured = _positive_env_int("CREWAI_OTEL_MAX_ATTR_BYTES")
+    if configured is not None:
+        if configured > DEFAULT_MAX_ATTR_BYTES:
+            _warn_clamped(configured)
+        else:
+            cap = configured
     sdk_limit = _sdk_span_attribute_limit()
     return min(cap, sdk_limit) if sdk_limit is not None else cap
+
+
+@lru_cache(maxsize=8)
+def _warn_clamped(configured: int) -> None:
+    """Say once per configured value that it was clamped, and why."""
+    logger.warning(
+        "CREWAI_OTEL_MAX_ATTR_BYTES=%d is above the %d-byte ceiling; using %d. "
+        "Wharf refuses an OTLP request over 3,072,000 bytes, and a span with "
+        "several attributes above the ceiling would not fit one request.",
+        configured,
+        DEFAULT_MAX_ATTR_BYTES,
+        DEFAULT_MAX_ATTR_BYTES,
+    )
 
 
 def truncate_plain(

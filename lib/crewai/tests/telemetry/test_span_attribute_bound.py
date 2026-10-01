@@ -280,12 +280,37 @@ def test_the_span_limit_wins_over_the_general_one(
     assert gen_ai_shapes.max_attr_bytes() == 5_000
 
 
-def test_crewai_own_setting_still_replaces_the_bound(
+def test_a_lower_crewai_setting_is_honoured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("CREWAI_OTEL_MAX_ATTR_BYTES", str(1024 * 1024))
-    assert gen_ai_shapes.max_attr_bytes() == 1024 * 1024
+    monkeypatch.setenv("CREWAI_OTEL_MAX_ATTR_BYTES", "65536")
+    assert gen_ai_shapes.max_attr_bytes() == 65_536
     monkeypatch.setenv("CREWAI_OTEL_MAX_ATTR_BYTES", "not a number")
+    assert gen_ai_shapes.max_attr_bytes() == BOUND
+
+
+def test_a_higher_crewai_setting_is_clamped_to_the_ceiling_with_one_warning(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Above the ceiling, several bounded attributes would not fit one Wharf
+    request; the setting is clamped, said once, never silently raised."""
+    gen_ai_shapes._warn_clamped.cache_clear()
+    monkeypatch.setenv("CREWAI_OTEL_MAX_ATTR_BYTES", "1048576")
+
+    with caplog.at_level("WARNING", logger=gen_ai_shapes.__name__):
+        assert gen_ai_shapes.max_attr_bytes() == BOUND
+        assert gen_ai_shapes.max_attr_bytes() == BOUND
+
+    warnings = [r for r in caplog.records if "CREWAI_OTEL_MAX_ATTR_BYTES" in r.message]
+    assert len(warnings) == 1
+    assert "1048576" in warnings[0].message and str(BOUND) in warnings[0].message
+    assert "3,072,000" in warnings[0].message
+
+
+def test_an_sdk_limit_above_the_ceiling_does_not_raise_the_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "2000000")
     assert gen_ai_shapes.max_attr_bytes() == BOUND
 
 
