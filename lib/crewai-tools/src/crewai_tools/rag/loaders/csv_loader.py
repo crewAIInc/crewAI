@@ -136,10 +136,14 @@ class CSVLoader(BaseLoader):
         if cell.ctype == xlrd.XL_CELL_DATE:
             try:
                 converted = xlrd.xldate_as_datetime(cell.value, datemode)
-            except xlrd.XLDateError:
+            except (xlrd.XLDateError, OverflowError):
                 return cell.value
             if not isinstance(converted, datetime):
                 return converted
+            # A serial in [0, 1) is a time of day. xldate_as_datetime still
+            # attaches the 1899/1904 epoch, which would be indexed as a date.
+            if isinstance(cell.value, int | float) and 0 <= cell.value < 1:
+                return converted.time().isoformat()
             if converted.time() == time.min:
                 return converted.date().isoformat()
             return converted.isoformat(sep=" ")

@@ -218,6 +218,20 @@ class TestCSVLoader:
         assert "80.0" not in result.content
         assert result.metadata["format"] == "xls"
 
+    def test_xls_time_only_cell_omits_epoch_date(self):
+        import xlrd
+
+        cell = type("Cell", (), {"ctype": xlrd.XL_CELL_DATE, "value": 0.5})()
+
+        assert CSVLoader._xls_cell_value(cell, 0) == "12:00:00"
+
+    def test_xls_out_of_range_date_keeps_raw_value(self):
+        import xlrd
+
+        cell = type("Cell", (), {"ctype": xlrd.XL_CELL_DATE, "value": 1e20})()
+
+        assert CSVLoader._xls_cell_value(cell, 0) == 1e20
+
     @patch("crewai_tools.security.safe_requests.safe_get_bounded")
     def test_load_xlsx_from_url(self, mock_get):
         buffer = BytesIO()
