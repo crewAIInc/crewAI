@@ -148,7 +148,7 @@ from crewai import Agent, Task, Crew, LLM
 manager_llm = LLM(model="gemini/gemini-3.7-flash", temperature=0.1)
 
 # Creative model for content generation
-content_llm = LLM(model="claude-3-5-sonnet-20241022", temperature=0.7)
+content_llm = LLM(model="claude-sonnet-4-6", temperature=0.7)
 
 # Efficient model for data processing
 processing_llm = LLM(model="gpt-4o-mini", temperature=0)
@@ -322,7 +322,7 @@ domain_expert = Agent(
     You've worked with companies like Salesforce, HubSpot, and emerging unicorns, giving
     you perspective on both established and disruptive go-to-market strategies.
     """,
-    llm=LLM(model="claude-3-5-sonnet", temperature=0.3)  # Balanced creativity with domain knowledge
+    llm=LLM(model="claude-sonnet-4-6", temperature=0.3)  # Balanced creativity with domain knowledge
 )
 
 # This context enables Claude to perform like a domain expert
@@ -354,7 +354,7 @@ tech_writer = Agent(
     and practical use cases. You prioritize accuracy and usability over marketing fluff.
     """,
     llm=LLM(
-        model="claude-3-5-sonnet",  # Excellent for technical writing
+        model="claude-sonnet-4-6",  # Excellent for technical writing
         temperature=0.1  # Low temperature for accuracy
     ),
     tools=[code_analyzer_tool, api_scanner_tool],
@@ -418,7 +418,7 @@ tech_writer = Agent(
     # Creative 또는 고객 대응 agent
     content_agent = Agent(
         role="Content Creator",
-        llm=LLM(model="claude-3-5-sonnet"),  # 글쓰기에 최적
+        llm=LLM(model="claude-sonnet-4-6"),  # 글쓰기에 최적
         # ... 나머지 설정
     )
     ```
@@ -513,7 +513,7 @@ tech_writer = Agent(
     )
 
     # agent는 특별히 지정하지 않으면 crew LLM을 상속받음
-    agent1 = Agent(llm=LLM(model="claude-3-5-sonnet"))  # 특정 요구에 따라 오버라이드
+    agent1 = Agent(llm=LLM(model="claude-sonnet-4-6"))  # 특정 요구에 따라 오버라이드
     ```
 
   </Accordion>
@@ -531,7 +531,7 @@ tech_writer = Agent(
         tools=[search_tool, api_tool, data_tool],
         llm=LLM(model="gpt-4o"),  # 함수 호출에 우수
         # OR
-        llm=LLM(model="claude-3-5-sonnet")  # 도구 사용에 강점
+        llm=LLM(model="claude-sonnet-4-6")  # 도구 사용에 강점
     )
     ```
 
