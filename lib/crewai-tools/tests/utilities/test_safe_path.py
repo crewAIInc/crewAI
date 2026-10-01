@@ -230,6 +230,11 @@ class TestIsBlockedIp:
             "2002:c0a8:0101::1",  # 6to4 of 192.168.1.1
             "::ffff:100.100.100.200",  # IPv4-mapped
             "::ffff:127.0.0.1",
+            "::127.0.0.1",  # IPv4-compatible
+            "::10.0.0.1",
+            "::ffff:0:127.0.0.1",  # IPv4-translated (RFC 2765)
+            "fec0::1",  # deprecated site-local
+            "2001:0:4136:e378:8000:63bf:3fff:fdd2",  # Teredo
         ],
     )
     def test_blocks_non_public_addresses(self, ip):
