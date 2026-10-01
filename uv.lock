@@ -1558,7 +1558,7 @@ requires-dist = [
     { name = "json5", specifier = "~=0.10.0" },
     { name = "jsonref", specifier = "~=1.1.0" },
     { name = "lancedb", specifier = ">=0.29.2,<0.30.1" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.84.0,<2" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.88.6,<2" },
     { name = "mcp", specifier = "~=1.28.1" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.0,<3" },
     { name = "openai", specifier = ">=2.30.0,<3" },
@@ -1870,7 +1870,7 @@ requires-dist = [
     { name = "e2b-code-interpreter", marker = "extra == 'e2b'", specifier = "~=2.6.0" },
     { name = "exa-py", marker = "extra == 'exa-py'", specifier = ">=1.8.7" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
-    { name = "gitpython", marker = "extra == 'github'", specifier = ">=3.1.59,<4" },
+    { name = "gitpython", marker = "extra == 'github'", specifier = ">=3.1.62,<4" },
     { name = "hyperbrowser", marker = "extra == 'hyperbrowser'", specifier = ">=0.18.0" },
     { name = "langchain-apify", marker = "extra == 'apify'", specifier = ">=0.1.2,<1.0.0" },
     { name = "linkup-sdk", marker = "extra == 'linkup-sdk'", specifier = ">=0.2.2" },
@@ -2940,14 +2940,14 @@ wheels = [
 
 [[package]]
 name = "gitpython"
-version = "3.1.61"
+version = "3.1.62"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "gitdb" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6f/61/3285044215fb596bf093e39ccb96ece0a1076a8ca57a61e069a6a33cdb1b/gitpython-3.1.61.tar.gz", hash = "sha256:f51c24d8c0f733a195447385f5774a5dfe8767f5acfd7994a33755644c6ecc95", size = 231680, upload-time = "2026-08-28T11:01:13.761Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/db/3ca813cbacb23ab6fe46ff38a9b5ef8e73e970c8051f2ce903aacafe0446/gitpython-3.1.62.tar.gz", hash = "sha256:1791de66309bc0c7cfca40bf8d2e3de7ca091cbf94e6051be1ad0722c61062af", size = 231728, upload-time = "2026-09-07T02:57:21.155Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6f/5e/49cc172da4d0578644ba37cec5cb365b1fefc603b26edea9bcac1c7f830a/gitpython-3.1.61-py3-none-any.whl", hash = "sha256:8ab28c9da863cdd9e7d7694ec46cf3e6c9a12d8a30a1acd3447aec11975d530c", size = 222118, upload-time = "2026-08-28T11:01:12.262Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/0b/29d7965215f8ef830a7ca1f42997fe13e5693d85e9edb18f938d063ef5f2/gitpython-3.1.62-py3-none-any.whl", hash = "sha256:7002251225e10e29d2e1f49e6532613fe5d5d9f0b6f1f02997a52b38fe56899e", size = 222753, upload-time = "2026-09-07T02:57:19.762Z" },
 ]
 
 [[package]]
@@ -4271,7 +4271,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.84.8"
+version = "1.88.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -4287,9 +4287,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/2c/eda7995bc9d6a7277be409a317893df52a25131a21ed572651a3c27ac20e/litellm-1.84.8.tar.gz", hash = "sha256:5a6349ce1c153fc27c9b1f88c39a396779c30af16704d9ef3633ccb24d04d374", size = 15117432, upload-time = "2026-06-13T01:25:25.125Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/a6/d2312da4d65390f0d899a669731500983c8a10bd89009657680949c5766d/litellm-1.88.6.tar.gz", hash = "sha256:07d947dfe92f137d5296c40285dbcf97cb405b4300d73c0feda48d76468d6eb4", size = 13889078, upload-time = "2026-08-09T00:06:33.818Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/9b/70a4f3378130564505046e94ce521363f50d075198e16b7663b66b11eb23/litellm-1.84.8-py3-none-any.whl", hash = "sha256:297b81d56b3fdfc39411b0330edce0f29a4b2e82e90d5f73efdc102b57cb45e7", size = 16747828, upload-time = "2026-06-13T01:25:12.964Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/0b/2e42b95ccca2e2a8a524808e9c414f70a0352165dac589efa01192afb8ba/litellm-1.88.6-py3-none-any.whl", hash = "sha256:8c01f7e9aebded5b3509128be648518a2ec4f1feb8dfb87a539895091651898b", size = 15271205, upload-time = "2026-08-09T00:06:30.607Z" },
 ]
 
 [[package]]
