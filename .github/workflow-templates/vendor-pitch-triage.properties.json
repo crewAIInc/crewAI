@@ -1,0 +1,6 @@
+{
+  "name": "Vendor pitch triage",
+  "description": "Close vendor-pitch issues and their associated pull requests, then redirect contributors to the community projects repository.",
+  "iconName": "community",
+  "categories": ["Automation"]
+}
