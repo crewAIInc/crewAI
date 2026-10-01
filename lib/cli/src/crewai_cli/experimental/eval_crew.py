@@ -10,6 +10,13 @@ Who may evaluate what is AMP's decision: an anonymous run once without an
 account, then it needs one; a run traced while logged in for that
 organization's members; a deployment execution for members who may see its
 traces. The command sends the saved `crewai login` when there is one.
+
+`crewai eval --models "a,b"` compares models instead: AMP finds the project's
+deployment by `[tool.crewai].project_id` (or `--deployment`), which runs once as
+deployed and once per model; each run is graded, and the comparison — the four
+grades, cost and time per model, and what would make the agents do better — is
+printed when it is done. It always needs the login: it runs the deployment.
+Every evaluation, of either kind, is filed under the project id.
 """
 
 from __future__ import annotations
@@ -23,8 +30,9 @@ import os
 from pathlib import Path
 import sys
 import time
-from typing import Any
+from typing import Any, NoReturn, cast
 from urllib.parse import urlparse
+import uuid
 import webbrowser
 
 import click
@@ -33,11 +41,16 @@ from crewai_core.settings import Settings
 from dotenv import load_dotenv, set_key
 import httpx
 from rich.console import Console
+from rich.table import Table
 from rich.text import Text
 
 from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.plus_api import PlusAPI
-from crewai_cli.utils import get_or_create_project_id, is_dmn_mode_enabled
+from crewai_cli.utils import (
+    get_or_create_project_id,
+    get_project_id,
+    is_dmn_mode_enabled,
+)
 
 
 console = Console()
@@ -107,7 +120,7 @@ def _note(text: str, style: str = "dim") -> None:
 
 def eval_crew(run_id: str | None = None) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID."""
-    get_or_create_project_id()
+    project_id = get_or_create_project_id()
     # Read before the project's .env is loaded, so a project cannot add itself.
     trusted = _trusted_amp_origins()
     _load_project_env()
@@ -140,6 +153,7 @@ def eval_crew(run_id: str | None = None) -> None:
             client,
             execution_id,
             wait_for_spans=run_id is None and _ran_just_now(record),
+            project_id=project_id,
         )
     except EvaluationStoppedError as stopped:
         _fail(str(stopped))
@@ -334,7 +348,13 @@ def evaluate_run(
     for them is always on here.
     """
     client = _amp_client(_machine_amp_origins(), note=note)
-    started = _start_evaluation(client, execution_id, wait_for_spans=True, note=note)
+    started = _start_evaluation(
+        client,
+        execution_id,
+        wait_for_spans=True,
+        note=note,
+        project_id=get_project_id(),
+    )
     # After the start, exactly as the command counts it: `cli_usage:eval` is the
     # count of evaluations that began, and an evaluation the app runs is one.
     _record_usage(logged_in=client.api_key is not None)
@@ -622,6 +642,7 @@ def _start_evaluation(
     *,
     wait_for_spans: bool = False,
     note: Callable[[str], None] = _note,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
     deadline = time.monotonic() + SPANS_WAIT_SECONDS if wait_for_spans else 0.0
     said = False
@@ -630,7 +651,9 @@ def _start_evaluation(
     eval_config = project_eval_config(note=note)
     while True:
         try:
-            response = client.create_evaluation(execution_id, eval_config=eval_config)
+            response = client.create_evaluation(
+                execution_id, eval_config=eval_config, project_id=project_id
+            )
         except httpx.HTTPError as error:
             raise EvaluationStoppedError(
                 f"Could not reach AMP to start the evaluation: {error}"
@@ -647,6 +670,17 @@ def _start_evaluation(
             time.sleep(SPANS_POLL_SECONDS)
             continue
         break
+    return _accepted(response, f"run {execution_id}", note=note)
+
+
+def _accepted(
+    response: httpx.Response,
+    subject: str,
+    *,
+    note: Callable[[str], None] = _note,
+    about_a_deployment: bool = False,
+) -> dict[str, Any]:
+    """AMP's answer to a start: the evaluation it opened, or its refusal as a sentence."""
     if response.status_code in (200, 202):
         payload = _payload(response)
         # The id is what every later call is made with, so a missing or
@@ -666,7 +700,9 @@ def _start_evaluation(
         raise EvaluationStoppedError(
             f"AMP answered without an evaluation id ({response.status_code})."
         )
-    raise EvaluationStoppedError(_refusal_message(response, f"run {execution_id}"))
+    raise EvaluationStoppedError(
+        _refusal_message(response, subject, about_a_deployment=about_a_deployment)
+    )
 
 
 def _report_url(value: Any) -> str | None:
@@ -705,12 +741,16 @@ def _wait(
     url: str | None,
     *,
     on_status: Callable[[dict[str, Any]], None] | None = None,
+    answer: str = "verdict",
 ) -> dict[str, Any]:
     """Poll until the evaluation is done or failed.
 
     Every unfinished answer goes to ON_STATUS, so a caller that has somewhere to
-    show progress can show it; the caller decides what a Ctrl-C means.
+    show progress can show it; the caller decides what a Ctrl-C means. A done
+    answer must carry a well-formed ANSWER: a run's `verdict`, or a models
+    evaluation's `comparison`.
     """
+    well_formed = _WELL_FORMED[answer]
     where = f" at {url}" if url else ""
     subject = f"evaluation {evaluation_id}"
     misses = (
@@ -738,9 +778,9 @@ def _wait(
         misses = 0
         payload = _payload(response) or {}
         status = payload.get("status")
-        if status == "done" and not _well_formed_verdict(payload.get("verdict")):
+        if status == "done" and not well_formed(payload):
             raise EvaluationStoppedError(
-                f"AMP answered done without a verdict (protocol error); follow it{where or ' on AMP'}."
+                f"AMP answered done without a {answer} (protocol error); follow it{where or ' on AMP'}."
             )
         if status in FINISHED:
             return payload
@@ -751,6 +791,10 @@ def _wait(
         if on_status is not None:
             on_status(payload)
         time.sleep(POLL_SECONDS)
+
+
+def _carries_a_verdict(payload: dict[str, Any]) -> bool:
+    return _well_formed_verdict(payload.get("verdict"))
 
 
 def _well_formed_verdict(verdict: Any) -> bool:
@@ -767,6 +811,403 @@ def _well_formed_verdict(verdict: Any) -> bool:
 
 def _a_grade(grade: Any) -> bool:
     return grade is None or (type(grade) is int and 1 <= grade <= 5)
+
+
+def _carries_a_comparison(payload: dict[str, Any]) -> bool:
+    """`{"comparison": {"models": [{...}, ...]}}` — the rows are read cell by
+    cell when printed, and a cell that is not what it should be prints as "—";
+    a comparison with no rows to print is a protocol error."""
+    comparison = payload.get("comparison")
+    return (
+        isinstance(comparison, dict)
+        and isinstance(comparison.get("models"), list)
+        and bool(comparison["models"])
+        and all(isinstance(row, dict) for row in comparison["models"])
+    )
+
+
+_WELL_FORMED: dict[str, Callable[[dict[str, Any]], bool]] = {
+    "verdict": _carries_a_verdict,
+    "comparison": _carries_a_comparison,
+}
+
+
+# ── crewai eval --models ─────────────────────────────────────────────────────
+
+MAX_MODELS = 5
+MAX_MODEL_CHARS = 200
+MODELS_EXAMPLE = '--models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"'
+LOGIN_REQUIRED = (
+    "Comparing models runs your deployment, so it needs your CrewAI AMP account: "
+    "log in with `crewai login` and run it again."
+)
+GRADE_COLUMNS = ("goal", "tasks", "agents", "tools")
+TOP_SUGGESTIONS = 3
+
+
+def parse_models(text: str | None) -> list[str]:
+    """The models to compare, from ONE comma-separated list.
+
+    Items are stripped and a repeat is dropped. Each must name its provider
+    (`provider/model`) — the deployment builds the model from exactly that
+    string, and a bare `gpt-4o` would be a guess about which provider bills it.
+    """
+    models: list[str] = []
+    for raw in (text or "").split(","):
+        item = raw.strip()
+        if not item or item in models:
+            continue
+        provider, separator, name = item.partition("/")
+        if not (separator and provider.strip() and name.strip()):
+            raise EvaluationStoppedError(
+                f"{item!r} names no provider: write each model as provider/model, "
+                f"e.g. {MODELS_EXAMPLE}."
+            )
+        if len(item) > MAX_MODEL_CHARS:
+            raise EvaluationStoppedError(
+                f"{item[:40]!r}… is longer than {MAX_MODEL_CHARS} characters; "
+                "that is not a model name."
+            )
+        models.append(item)
+    if not models:
+        raise EvaluationStoppedError(
+            f"--models names no model: give one to {MAX_MODELS}, e.g. {MODELS_EXAMPLE}."
+        )
+    if len(models) > MAX_MODELS:
+        raise EvaluationStoppedError(
+            f"--models names {len(models)} models; compare at most {MAX_MODELS} at once."
+        )
+    return models
+
+
+def _deployment_id(value: str | None) -> str | None:
+    """`--deployment` as the UUID AMP knows the deployment by, or None."""
+    if value is None:
+        return None
+    try:
+        return str(uuid.UUID(value.strip()))
+    except ValueError:
+        raise EvaluationStoppedError(
+            f"--deployment {value!r} is not a deployment id; it is the UUID AMP "
+            "shows for the deployment."
+        ) from None
+
+
+# Model names that are the same for everyone who types them are public. What
+# else a `--models` item can carry is a customer's: a fine-tune id
+# (`openai/ft:gpt-4o-mini:acme-corp::abc`), an Azure deployment name, a
+# self-hosted model or host. Those are sent as `<provider>/other`.
+OTHER_MODEL = "other"
+# The vendor segment of an aggregator id (`openrouter/openai/gpt-4o-mini`)
+# that is itself public.
+_PUBLIC_VENDORS = frozenset(
+    {"openai", "anthropic", "google", "meta-llama", "mistralai", "deepseek", "qwen"}
+)
+
+
+def telemetry_model_name(model: str) -> str:
+    """MODEL as the usage stats may carry it: as typed when it is a model crewAI
+    knows, else `<provider>/other` — and `other/other` for a provider crewAI does
+    not know, since a provider string can name a host too.
+
+    Known means an exact entry of crewAI's model catalog (the context-window
+    tables every provider resolves against), never a prefix of one: a fine-tune
+    or a deployment named after a public model is still the customer's.
+    """
+    catalog, providers = _known_models_and_providers()
+    provider, _, name = model.partition("/")
+    if provider not in providers:
+        return f"{OTHER_MODEL}/{OTHER_MODEL}"
+    vendor, nested, tail = name.partition("/")
+    public = (
+        name in catalog
+        or model in catalog
+        or (nested and vendor in _PUBLIC_VENDORS and tail in catalog)
+    )
+    if not public or any(part.startswith("ft:") for part in model.split("/")):
+        return f"{provider}/{OTHER_MODEL}"
+    return model
+
+
+def _known_models_and_providers() -> tuple[frozenset[str], frozenset[str]]:
+    """crewAI's catalog of models and the providers it routes; empty when this
+    environment's crewai cannot say, so every model is then sent as "other"."""
+    from crewai_cli.constants import PROVIDERS
+
+    try:
+        from crewai.llm import SUPPORTED_NATIVE_PROVIDERS
+        from crewai.llms.context_window import LLM_CONTEXT_WINDOW_SIZES
+    except Exception:
+        return frozenset(), frozenset()
+    return (
+        frozenset(LLM_CONTEXT_WINDOW_SIZES),
+        frozenset(SUPPORTED_NATIVE_PROVIDERS) | frozenset(PROVIDERS),
+    )
+
+
+def _record_models_usage(models: list[str]) -> None:
+    """Count a comparison that is actually starting, and which models it compares.
+
+    The models go through `telemetry_model_name`: a public model by name, any
+    other as `<provider>/other`. Nothing names the run, the deployment or the
+    organization. Always logged in: a comparison cannot start without the
+    account.
+    """
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span(
+            "cli_usage:eval_models",
+            {
+                "authenticated": "true",
+                "models": ",".join(telemetry_model_name(m) for m in models),
+                "models_count": str(len(models)),
+            },
+        )
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
+
+
+def eval_models(models_text: str, deployment_id: str | None = None) -> None:
+    """Run this project's deployment once as deployed and once per model, and compare.
+
+    The deployment is AMP's to find, by the project id, unless DEPLOYMENT_ID
+    names one; its own models are the baseline, read off the deployment rather
+    than this checkout, which may differ from what was deployed.
+    """
+    try:
+        models = parse_models(models_text)
+        deployment = _deployment_id(deployment_id)
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
+    if not Path("pyproject.toml").is_file():
+        _fail(
+            "No crewAI project here (no pyproject.toml). Run `crewai eval --models` "
+            "from the directory of the project you deployed."
+        )
+    project_id = get_or_create_project_id()
+    if not project_id:
+        _fail(
+            "Could not read or write [tool.crewai].project_id in pyproject.toml, which "
+            "is how AMP finds this project's deployment."
+        )
+    # Read before the project's .env is loaded, so a project cannot add itself.
+    trusted = _trusted_amp_origins()
+    _load_project_env()
+    try:
+        client = _amp_client(trusted)
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
+    if client.api_key is None:
+        _fail(LOGIN_REQUIRED)
+
+    try:
+        response = client.create_models_evaluation(
+            models,
+            project_id=project_id,
+            eval_config=project_eval_config(),
+            deployment_id=deployment,
+        )
+    except httpx.HTTPError as error:
+        _fail(f"Could not reach AMP to start the comparison: {error}")
+    try:
+        started = _accepted(response, "the comparison", about_a_deployment=True)
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
+    # After, not before, as `cli_usage:eval` is counted: a refused request —
+    # no deployment, one this account may not run — is not a comparison.
+    _record_models_usage(models)
+    url = started.get("url")
+    console.print(
+        Text("Comparing ")
+        .append(", ".join(models), style="bold")
+        .append(" with the deployed models")
+    )
+    if url:
+        # Appended, never interpolated — the same reason as `eval_crew`'s link.
+        console.print(Text("Follow it at ").append(url, style="cyan underline"))
+        _open(url)
+
+    console.print("Waiting for the comparison…", style="dim")
+    shown: list[str] = []
+
+    def show_progress(payload: dict[str, Any]) -> None:
+        line = _progress_line(payload)
+        if line and (not shown or shown[-1] != line):
+            shown.append(line)
+            _note(line)
+
+    try:
+        finished = _wait(
+            client, started["id"], url, on_status=show_progress, answer="comparison"
+        )
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
+    except KeyboardInterrupt:
+        console.print(
+            Text(f"\nStill running{f' at {url}' if url else ''}."), style="yellow"
+        )
+        raise SystemExit(130) from None
+    _print_comparison(finished, url)
+    # The criteria the comparison was graded on, for the project to edit — only
+    # when it has none, exactly as after a Mode 1 evaluation.
+    _say_where_the_criteria_live(write_eval_config(finished))
+    if finished.get("status") != "done":
+        raise SystemExit(1)
+
+
+def _progress_line(payload: dict[str, Any]) -> str | None:
+    """One line for where the comparison is, from the poll's `progress` (or the
+    last of its `events`): which model is running, "model 2 of 3", and the
+    subject being judged. What is not there is left out, never guessed."""
+    progress = payload.get("progress")
+    events = payload.get("events")
+    if progress is None and isinstance(events, list) and events:
+        progress = events[-1]
+    if isinstance(progress, str):
+        return progress.strip() or None
+    if not isinstance(progress, dict):
+        return None
+    if isinstance(progress.get("message"), str) and progress["message"].strip():
+        return str(progress["message"]).strip()
+    event = progress.get("event")
+    detail = progress.get("payload")
+    if not isinstance(detail, dict):
+        detail = progress
+    index, total = detail.get("index"), detail.get("total")
+    position = (
+        f"model {index + 1} of {total}"
+        if type(index) is int and type(total) is int and 0 <= index < total
+        else None
+    )
+    name = next(
+        (
+            str(detail[key])
+            for key in ("label", "key")
+            if isinstance(detail.get(key), str) and detail[key]
+        ),
+        None,
+    )
+    subject = detail.get("subject")
+    if event == "judging" or isinstance(subject, str):
+        parts = [f"judging {subject}" if isinstance(subject, str) else "judging"]
+    elif event == "configuration_done":
+        parts = ["graded"]
+    else:
+        parts = ["running"]
+    parts += [part for part in (position, name) if part]
+    known = event is not None or isinstance(subject, str) or len(parts) > 1
+    return " · ".join(parts) if known else None
+
+
+def _print_comparison(finished: dict[str, Any], url: str | None) -> None:
+    """The models side by side, then what would make them better.
+
+    Every cell came over the wire, so each is a `Text`: a label such as
+    `Writer: [red]x[/red]` prints as written. The baseline — the deployment as
+    it is — is marked, and the best value in each column is starred: the highest
+    grade, the lowest cost and time. A column where every model is the same, or
+    only one has a value, stars nothing: there is no "best" to point at.
+    """
+    if finished.get("status") != "done":
+        console.print(
+            Text(f"Comparison failed: {finished.get('error') or 'no reason given'}"),
+            style="bold red",
+        )
+        if url:
+            console.print(Text(f"Report: {url}"))
+        return
+    comparison = finished["comparison"]  # _wait let only a well-formed one through
+    rows: list[dict[str, Any]] = comparison["models"]
+
+    grades = {area: [_grade_of(row, area) for row in rows] for area in GRADE_COLUMNS}
+    costs = [_number(row.get("cost_usd")) for row in rows]
+    seconds = [_number(row.get("seconds")) for row in rows]
+    best = {area: _best(values, max) for area, values in grades.items()}
+    cheapest, fastest = _best(costs, min), _best(seconds, min)
+
+    table = Table(show_edge=False, pad_edge=False)
+    for header in ("model", *GRADE_COLUMNS, "cost", "time"):
+        table.add_column(header, justify="left" if header == "model" else "right")
+    for n, row in enumerate(rows):
+        label = Text(str(row.get("label") or row.get("key") or "?"))
+        if row.get("baseline") is True:
+            label.append(" (deployed)", style="dim")
+        cells = [label]
+        for area in GRADE_COLUMNS:
+            grade = grades[area][n]
+            cells.append(
+                _starred(f"{grade}/5" if grade is not None else "—", grade, best[area])
+            )
+        cost, took = costs[n], seconds[n]
+        cells.append(
+            _starred(f"${cost:.4f}" if cost is not None else "—", cost, cheapest)
+        )
+        cells.append(
+            _starred(f"{took:.1f}s" if took is not None else "—", took, fastest)
+        )
+        table.add_row(*cells)
+    console.print(table)
+
+    suggestions = _top_suggestions(comparison.get("suggestions"))
+    if suggestions:
+        console.print(Text("What would make it better", style="bold"))
+    for n, item in enumerate(suggestions, 1):
+        where = " — ".join(
+            str(item[key])
+            for key in ("subject", "field")
+            if isinstance(item.get(key), str)
+        )
+        line = Text(f"{n}. ")
+        if where:
+            line.append(where, style="bold").append(": ")
+        line.append(str(item.get("problem") or ""))
+        if item.get("shared") is True:
+            line.append(" (every model)", style="dim")
+        console.print(line)
+        if isinstance(item.get("change"), str) and item["change"].strip():
+            console.print(Text(f"   change: {item['change'].strip()}"))
+    if url:
+        console.print(Text(f"Full report: {url}"))
+
+
+def _grade_of(row: dict[str, Any], area: str) -> int | None:
+    grades = row.get("grades")
+    grade = grades.get(area) if isinstance(grades, dict) else None
+    return grade if grade is not None and _a_grade(grade) else None
+
+
+def _number(value: Any) -> float | None:
+    """A non-negative number, or None: `True` is an `int` to Python and not a cost."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if value >= 0 else None
+
+
+def _best(values: list[Any], pick: Callable[[list[Any]], Any]) -> float | int | None:
+    known = [value for value in values if value is not None]
+    if len(known) < 2 or len(set(known)) == 1:
+        return None
+    return cast(float | int, pick(known))
+
+
+def _starred(text: str, value: Any, best: Any) -> Text:
+    cell = Text(text)
+    if best is not None and value == best:
+        cell.append(" ★", style="yellow")
+    return cell
+
+
+def _top_suggestions(value: Any) -> list[dict[str, Any]]:
+    """The first few suggestions, the ones every model needed first — a problem
+    every model had points at the prompt, not at a model."""
+    if not isinstance(value, list):
+        return []
+    items = [item for item in value if isinstance(item, dict) and item.get("problem")]
+    items.sort(key=lambda item: item.get("shared") is not True)
+    return items[:TOP_SUGGESTIONS]
 
 
 def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
@@ -817,15 +1258,26 @@ def _payload(response: httpx.Response) -> dict[str, Any] | None:
     return loaded if isinstance(loaded, dict) else None
 
 
-def _refusal_message(response: httpx.Response, subject: str) -> str:
+def _refusal_message(
+    response: httpx.Response, subject: str, *, about_a_deployment: bool = False
+) -> str:
     """AMP's own words when it sent them. SUBJECT is "run <id>" or "evaluation <id>".
 
     A sentence, not a print: the terminal and the run app both show it, and only
-    one of them shows it by printing.
+    one of them shows it by printing. ABOUT_A_DEPLOYMENT: a 403 that is not about
+    the credential — this account may not run that deployment — is AMP's
+    sentence alone, because logging in again changes nothing there.
     """
     payload = _payload(response) or {}
     message = str(payload.get("message") or "").strip()
     error = str(payload.get("error") or "")
+    if (
+        about_a_deployment
+        and response.status_code == 403
+        and error not in {"bad_credentials", "account_required"}
+        and message
+    ):
+        return message
     if response.status_code in (401, 403):
         if error == "account_required" and message:
             return message
@@ -843,7 +1295,7 @@ def _refused(response: httpx.Response, subject: str) -> None:
     _fail(_refusal_message(response, subject))
 
 
-def _fail(message: str) -> None:
+def _fail(message: str) -> NoReturn:
     # `Text`, because most of what reaches here is AMP's own sentence and a
     # `Console` parses square brackets. No caller relies on markup; the colour
     # comes from `style`.

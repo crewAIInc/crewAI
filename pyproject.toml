@@ -209,6 +209,9 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # global 3-day cutoff is now far later than that date, so the per-package pin only blocked the fix.
 # pyasn1 <0.6.4 has GHSA-8ppf-4f7h-5ppj and GHSA-hm4w-wwcw-mr6r; force 0.6.4+.
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
+# urllib3 <2.8.0 has GHSA-8988-9cw3-xx77 (HTTPS proxy TLS configuration ignored), GHSA-gh4c-6fx4-qh6g (chunked
+# deflate infinite loop) and GHSA-vxq7-64xx-v4gw (unbounded chunk-size line); force 2.8.0+.
+# virtualenv <21.7.13 has PYSEC-2026-4011..4014 (unchecked seed wheels, pyvenv.cfg and activator injection); force 21.7.13+.
 # langsmith <0.8.18 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure)
 # and GHSA-f4xh-w4cj-qxq8; force 0.8.18+.
 # authlib <1.6.12 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage) and PYSEC-2026-188.
@@ -259,6 +262,11 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # fixed in 4.7.1. Declared as crewai-tools[snowflake] "snowflake-connector-python>=3.12.4",
 # which the lock resolved to 4.6.0.
 # soupsieve <=2.8.4 has GHSA-j934-xhv5-fg8f and GHSA-gjv8-xp57-g29c; force 2.9.2+.
+# litellm <1.88.6 has GHSA-3cv6-jpf6-8222 (CVE-2026-84377; authenticated SSRF and provider-credential
+# exfiltration via request-body routing parameters in the LiteLLM proxy server; crewAI uses litellm only as
+# a client SDK, but pip-audit flags the package). The floor lives in lib/crewai/pyproject.toml (the
+# crewai[litellm] extra, "litellm>=1.88.6,<2") rather than here, since crewai declares litellm directly.
+# 1.88.6 is older than the global 3-day cutoff, so no exclude-newer-package override is needed.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
@@ -269,7 +277,8 @@ override-dependencies = [
     "pillow>=12.3.0",
     "langchain-core>=1.3.3,<2",
     "langchain-text-splitters>=1.1.2,<2",
-    "urllib3>=2.7.0",
+    "urllib3>=2.8.0",
+    "virtualenv>=21.7.13",
     "transformers>=5.4.0; python_version >= '3.10'",
     "cryptography>=50.0.0",
     "pypdf>=6.16.1,<7",

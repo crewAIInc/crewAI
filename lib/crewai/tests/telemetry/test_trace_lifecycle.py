@@ -19,6 +19,9 @@ from crewai.telemetry.tracing.grants import (
     GrantSpanExporter,
     TraceGrantClient,
     TraceGrantError,
+    resolve_tracing_credential,
+    tracing_credential,
+    tracing_credential_source,
 )
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -322,15 +325,115 @@ def test_explicit_disable_prevents_first_time_collection(monkeypatch, disabled):
 
 
 @pytest.mark.parametrize("async_run", [False, True])
-def test_grant_failure_restores_execution_context(monkeypatch, async_run):
+@pytest.mark.parametrize(
+    ("status", "says"),
+    [
+        (401, "refused the CREWAI_USER_PAT token (HTTP 401)"),
+        (403, "Replace it with a valid personal access token"),
+        (503, "unaffected"),
+    ],
+)
+def test_a_refused_grant_runs_untraced_and_says_why(
+    monkeypatch, caplog, async_run, status, says
+):
+    """A trace is a record of the run, not a condition of it: an expired login
+    must not fail the crew. The run completes, nothing is uploaded, the context
+    is restored, and the warning names the fix."""
     monkeypatch.setenv("CREWAI_USER_PAT", "invalid")
+    create = Mock(side_effect=TraceGrantError("AMP rejected credential", status))
+    monkeypatch.setattr(TraceGrantClient, "create", create)
+    exporter = Mock(return_value=InMemorySpanExporter())
+    monkeypatch.setattr(GrantSpanExporter, "_exporter", staticmethod(exporter))
+
+    with caplog.at_level("WARNING", logger="crewai.execution"):
+        flow = ExampleFlow(tracing=True)
+        result = asyncio.run(flow.kickoff_async()) if async_run else flow.kickoff()
+
+    assert result == "hello world"
+    create.assert_called_once()
+    exporter.assert_not_called()
+    assert get_trace_session() is None and get_execution_uuid() is None
+    assert any(says in record.getMessage() for record in caplog.records)
+
+
+@pytest.mark.parametrize(
+    ("source", "says", "never"),
+    [
+        ("pat", "refused the CREWAI_USER_PAT token", "crewai login"),
+        ("integration", "refused the platform integration token", "crewai login"),
+        ("login", "refused the saved login (HTTP 401). Run `crewai login` again", "CREWAI_USER_PAT"),
+    ],
+)
+def test_the_warning_names_the_credential_that_was_refused(
+    monkeypatch, caplog, source, says, never
+):
+    """The fix named is for the credential that was sent: refreshing a login does
+    nothing for a rejected CREWAI_USER_PAT or an integration token."""
+    grants = "crewai.telemetry.tracing.grants"
+    monkeypatch.setattr(
+        f"{grants}.resolve_tracing_credential", lambda: (source, "rejected")
+    )
     monkeypatch.setattr(
         TraceGrantClient,
         "create",
         Mock(side_effect=TraceGrantError("AMP rejected credential", 401)),
     )
-    with pytest.raises(TraceGrantError) as error:
-        flow = ExampleFlow(tracing=True)
-        asyncio.run(flow.kickoff_async()) if async_run else flow.kickoff()
-    assert error.value.status_code == 401
+
+    with caplog.at_level("WARNING", logger="crewai.execution"):
+        assert ExampleFlow(tracing=True).kickoff() == "hello world"
+
+    warning = next(r.getMessage() for r in caplog.records if "not traced" in r.getMessage())
+    assert says in warning and never not in warning
+
+
+def test_the_credential_source_follows_the_credential_order(monkeypatch):
+    grants = "crewai.telemetry.tracing.grants"
+    monkeypatch.setenv("CREWAI_USER_PAT", "pat")
+    assert tracing_credential_source() == "pat"
+    monkeypatch.delenv("CREWAI_USER_PAT")
+    monkeypatch.setattr(f"{grants}.get_platform_integration_token", lambda: "integration")
+    assert tracing_credential_source() == "integration"
+    monkeypatch.setattr(f"{grants}.get_platform_integration_token", lambda: None)
+    monkeypatch.setattr(f"{grants}.get_auth_token", lambda: "login")
+    assert tracing_credential_source() == "login"
+    assert tracing_credential() == "login"
+    assert resolve_tracing_credential() == ("login", "login")
+
+
+def test_the_warning_names_the_credential_that_was_sent_not_the_one_left_after(
+    monkeypatch, caplog
+):
+    """The credential and its source are read once: a PAT that disappears while
+    the grant request is in flight is still the one the warning names, never
+    the integration token the environment falls back to afterwards."""
+    grants = "crewai.telemetry.tracing.grants"
+    monkeypatch.setenv("CREWAI_USER_PAT", "rejected-pat")
+    monkeypatch.setattr(f"{grants}.get_platform_integration_token", lambda: "integration")
+    sent = []
+
+    def refuse(client, execution_uuid):
+        sent.append(client._api.api_key)
+        monkeypatch.delenv("CREWAI_USER_PAT")
+        raise TraceGrantError("AMP rejected credential", 401)
+
+    monkeypatch.setattr(TraceGrantClient, "create", refuse)
+    with caplog.at_level("WARNING", logger="crewai.execution"):
+        assert ExampleFlow(tracing=True).kickoff() == "hello world"
+
+    warning = next(r.getMessage() for r in caplog.records if "not traced" in r.getMessage())
+    assert sent == ["rejected-pat"]
+    assert "CREWAI_USER_PAT" in warning and "integration" not in warning
+
+
+def test_a_blank_credential_runs_untraced_too(monkeypatch, caplog):
+    """The grant client refuses a blank credential in its constructor, with the
+    same error a refused grant raises — so it must not fail the run either."""
+    monkeypatch.setattr(
+        "crewai.telemetry.tracing.grants.resolve_tracing_credential",
+        lambda: ("pat", "   "),
+    )
+    with caplog.at_level("WARNING", logger="crewai.execution"):
+        assert ExampleFlow(tracing=True).kickoff() == "hello world"
     assert get_trace_session() is None and get_execution_uuid() is None
+    assert any("not traced" in record.getMessage() for record in caplog.records)
+
