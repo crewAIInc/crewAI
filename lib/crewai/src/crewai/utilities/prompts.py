@@ -233,16 +233,21 @@ class Prompts(BaseModel):
             ]
             prompt = "".join(prompt_parts)
         else:
+            task_components = {"task", "native_task", "task_no_tools"}
             template_parts: list[str] = [
                 I18N_DEFAULT.slice(component)
                 for component in components
-                if component != "task"
+                if component not in task_components
             ]
             system: str = system_template.replace(
                 "{{ .System }}", "".join(template_parts)
             )
+            task_component = next(
+                (c for c in components if c in task_components),
+                "task",
+            )
             prompt = prompt_template.replace(
-                "{{ .Prompt }}", "".join(I18N_DEFAULT.slice("task"))
+                "{{ .Prompt }}", I18N_DEFAULT.slice(task_component)
             )
             if response_template:
                 response: str = response_template.split("{{ .Response }}")[0]
