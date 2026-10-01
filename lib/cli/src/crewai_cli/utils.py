@@ -126,7 +126,7 @@ def copy_template(
         },
     )
 
-    with open(dst, "w") as file:
+    with open(dst, "w", encoding="utf-8") as file:
         file.write(content)
 
     click.secho(f"  - Created {dst}", fg="green")
@@ -184,7 +184,7 @@ def tree_find_and_replace(directory: Path, find: str, replace: str) -> None:
 
             with open(filepath, "r", encoding="utf-8", errors="ignore") as file:
                 contents = file.read()
-            with open(filepath, "w") as file:
+            with open(filepath, "w", encoding="utf-8") as file:
                 file.write(contents.replace(find, replace))
 
             if find in filename:
