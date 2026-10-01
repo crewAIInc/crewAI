@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal
 from urllib.parse import quote, urlencode, urlparse
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 import requests
 
 from crewai_tools.security.safe_path import format_error_for_display
@@ -93,6 +93,25 @@ class FXMacroDataToolInput(BaseModel):
             "pagination.has_more is true."
         ),
     )
+
+    # Models often fill unused optional arguments with "" instead of omitting
+    # them. Treat a blank value as "not given" so it falls back to the field
+    # default rather than failing the path patterns above.
+    @field_validator(
+        "indicator", "base", "quote", "start_date", "end_date", mode="before"
+    )
+    @classmethod
+    def _blank_is_unset(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("currency", mode="before")
+    @classmethod
+    def _blank_currency_is_usd(cls, value: Any) -> Any:
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return "USD"
+        return value
 
 
 class FXMacroDataTool(BaseTool):

@@ -192,6 +192,66 @@ def test_pair_currencies_are_validated_like_the_currency_field(tool):
     assert "Invalid arguments" in result
 
 
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_blank_optional_arguments_are_treated_as_unset(tool, blank):
+    # Models often send "" for optional arguments they do not need.
+    captured = {}
+    with patch(SAFE_GET, side_effect=_mock_safe_get(captured)):
+        result = tool.run(
+            dataset="latest",
+            currency="JPY",
+            indicator=blank,
+            base=blank,
+            quote=blank,
+            start_date=blank,
+            end_date=blank,
+        )
+
+    assert captured["url"] == "https://api.fxmacrodata.com/v1/announcements/jpy/latest"
+    assert result == PAYLOAD
+
+
+def test_blank_currency_falls_back_to_usd(tool):
+    captured = {}
+    with patch(SAFE_GET, side_effect=_mock_safe_get(captured)):
+        tool.run(dataset="catalogue", currency="")
+
+    assert captured["url"] == "https://api.fxmacrodata.com/v1/data_catalogue/usd"
+
+
+def test_blank_history_window_is_not_sent(tool):
+    captured = {}
+    with patch(SAFE_GET, side_effect=_mock_safe_get(captured)):
+        tool.run(
+            dataset="history",
+            currency="USD",
+            indicator="inflation",
+            start_date="",
+            end_date="",
+        )
+
+    assert captured["url"] == (
+        "https://api.fxmacrodata.com/v1/announcements/usd/inflation?limit=20"
+    )
+
+
+def test_blank_indicator_for_history_points_at_the_catalogue(tool):
+    with patch(SAFE_GET) as safe_get:
+        result = tool._run(dataset="history", indicator="")
+
+    safe_get.assert_not_called()
+    assert "catalogue" in result
+    assert "Invalid arguments" not in result
+
+
+def test_blank_pair_side_is_reported_as_missing(tool):
+    with patch(SAFE_GET) as safe_get:
+        result = tool._run(dataset="fx_rate", base="USD", quote="")
+
+    safe_get.assert_not_called()
+    assert "needs both base and quote" in result
+
+
 def test_path_segments_are_percent_encoded():
     # The schema already rejects these characters; encoding is the second line
     # of defence for anything that reaches _resolve by another route.
