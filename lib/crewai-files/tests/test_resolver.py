@@ -1,14 +1,24 @@
 """Tests for FileResolver."""
 
-from crewai_files import FileBytes, ImageFile
+import asyncio
+import base64
+from io import BytesIO
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import aiofiles
+from crewai_files import FileBytes, FilePath, FileStream, ImageFile, TextFile
 from crewai_files.cache.upload_cache import UploadCache
-from crewai_files.core.resolved import InlineBase64, InlineBytes
+from crewai_files.core.resolved import FileReference, InlineBase64, InlineBytes
+from crewai_files.core.sources import AsyncFileStream
 from crewai_files.processing.exceptions import UploaderConfigurationError
 from crewai_files.resolution.resolver import (
     FileResolver,
     FileResolverConfig,
     create_resolver,
 )
+from crewai_files.uploaders.openai import OpenAIFileUploader
 import pytest
 
 
@@ -137,6 +147,155 @@ class TestFileResolver:
         uploads = resolver.get_cached_uploads("gemini")
 
         assert uploads == []
+
+
+class TestAsyncFileResolver:
+    """Async resolution reads async sources without losing sync-source support."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("preloaded", [False, True])
+    @pytest.mark.parametrize("provider", ["openai", "bedrock"])
+    async def test_aresolve_async_stream(
+        self, tmp_path: Path, preloaded: bool, provider: str
+    ) -> None:
+        """Resolve unread and cached async streams for both inline formats."""
+        path = tmp_path / "image.png"
+        path.write_bytes(MINIMAL_PNG)
+
+        async with aiofiles.open(path, "rb") as stream:
+            source = AsyncFileStream(stream=stream, filename="image.png")
+            if preloaded:
+                await source.aread()
+            file = ImageFile(source=source)
+
+            resolved = await FileResolver().aresolve(file, provider)
+
+            assert resolved.content_type == "image/png"
+            if provider == "bedrock":
+                assert isinstance(resolved, InlineBytes)
+                assert resolved.data == MINIMAL_PNG
+            else:
+                assert isinstance(resolved, InlineBase64)
+                assert base64.b64decode(resolved.data) == MINIMAL_PNG
+            assert await stream.tell() == len(MINIMAL_PNG)
+            assert await file.aread() == MINIMAL_PNG
+
+    @pytest.mark.asyncio
+    async def test_aresolve_files_mixed_sources(self, tmp_path: Path) -> None:
+        """Resolve mixed sources without rereading a shared sync stream."""
+        path = tmp_path / "image.png"
+        path.write_bytes(MINIMAL_PNG)
+
+        async with aiofiles.open(path, "rb") as stream:
+            sync_file = ImageFile(source=FileStream(stream=BytesIO(MINIMAL_PNG)))
+            files = {
+                "async_stream": ImageFile(
+                    source=AsyncFileStream(stream=stream, filename="image.png")
+                ),
+                "bytes": ImageFile(source=FileBytes(data=MINIMAL_PNG)),
+                "path": ImageFile(source=FilePath(path=path)),
+                "sync_stream": sync_file,
+                "shared_sync_stream": sync_file,
+            }
+
+            resolved = await FileResolver().aresolve_files(files, "openai")
+
+            assert resolved.keys() == files.keys()
+            for result in resolved.values():
+                assert isinstance(result, InlineBase64)
+                assert result.content_type == "image/png"
+                assert base64.b64decode(result.data) == MINIMAL_PNG
+
+    @pytest.mark.asyncio
+    async def test_aresolve_upload_async_stream_reads_once(self) -> None:
+        """Reuse async content and the provider's cached upload reference."""
+        stream = SimpleNamespace(read=AsyncMock(return_value=MINIMAL_PNG))
+        file = ImageFile(source=AsyncFileStream(stream=stream, filename="image.png"))
+        create_file = AsyncMock(return_value=SimpleNamespace(id="file-test"))
+        uploader = OpenAIFileUploader(
+            async_client=SimpleNamespace(files=SimpleNamespace(create=create_file))
+        )
+        resolver = FileResolver(
+            config=FileResolverConfig(prefer_upload=True),
+            upload_cache=UploadCache(),
+            _uploaders={"openai": uploader},
+        )
+
+        first = await resolver.aresolve(file, "openai")
+        cached = await resolver.aresolve(file, "openai")
+
+        assert isinstance(first, FileReference)
+        assert isinstance(cached, FileReference)
+        assert first.file_id == cached.file_id == "file-test"
+        assert first.content_type == "image/png"
+        stream.read.assert_awaited_once_with()
+        create_file.assert_awaited_once()
+        assert create_file.call_args.kwargs["file"].getvalue() == MINIMAL_PNG
+        assert create_file.call_args.kwargs["purpose"] == "vision"
+
+    @pytest.mark.asyncio
+    async def test_aresolve_empty_async_stream(self) -> None:
+        """Treat empty async content as loaded rather than rereading it."""
+        stream = SimpleNamespace(read=AsyncMock(return_value=b""))
+        file = TextFile(source=AsyncFileStream(stream=stream, filename="empty.txt"))
+
+        resolved = await FileResolver().aresolve(file, "openai")
+
+        assert isinstance(resolved, InlineBase64)
+        assert resolved.data == ""
+        stream.read.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("content", [b"shared async content", b""])
+    @pytest.mark.parametrize("separate_files", [False, True])
+    async def test_aresolve_files_shared_async_stream(
+        self, content: bytes, separate_files: bool
+    ) -> None:
+        """Concurrent batch entries share one initial read, including empty files."""
+        buffer = BytesIO(content)
+
+        async def read() -> bytes:
+            """Yield before reading the cursor so batch entries overlap."""
+            await asyncio.sleep(0)
+            return buffer.read()
+
+        stream = SimpleNamespace(read=AsyncMock(side_effect=read))
+        source = AsyncFileStream(stream=stream, filename="shared.txt")
+        first = TextFile(source=source)
+        second = TextFile(source=source) if separate_files else first
+
+        resolved = await FileResolver().aresolve_files(
+            {"first": first, "second": second}, "openai"
+        )
+
+        assert set(resolved) == {"first", "second"}
+        for result in resolved.values():
+            assert isinstance(result, InlineBase64)
+            assert base64.b64decode(result.data) == content
+        assert await source.aread() == content
+        stream.read.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "error", [OSError("read failed"), asyncio.CancelledError()]
+    )
+    async def test_aresolve_async_stream_after_read_error(
+        self, error: BaseException
+    ) -> None:
+        """A failed or cancelled first read does not block a later resolution."""
+        stream = SimpleNamespace(read=AsyncMock(side_effect=[error, MINIMAL_PNG]))
+        source = AsyncFileStream(stream=stream, filename="image.png")
+        with pytest.raises(type(error)):
+            await source.aread()
+
+        resolved = await asyncio.wait_for(
+            FileResolver().aresolve(ImageFile(source=source), "openai"), timeout=1
+        )
+
+        assert isinstance(resolved, InlineBase64)
+        assert base64.b64decode(resolved.data) == MINIMAL_PNG
+        assert await source.aread() == MINIMAL_PNG
+        assert stream.read.await_count == 2
 
 
 class TestCreateResolver:

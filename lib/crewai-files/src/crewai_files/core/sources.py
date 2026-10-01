@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Iterator
 import inspect
 import json
@@ -437,6 +438,7 @@ class AsyncFileStream(BaseModel):
     filename: str | None = Field(default=None, description="Optional filename.")
     _content: bytes | None = PrivateAttr(default=None)
     _content_type: str | None = PrivateAttr(default=None)
+    _read_lock: asyncio.Lock = PrivateAttr(default_factory=asyncio.Lock)
 
     @property
     def content_type(self) -> str:
@@ -448,9 +450,11 @@ class AsyncFileStream(BaseModel):
         return self._content_type
 
     async def aread(self) -> bytes:
-        """Async read the stream content. Content is cached after first read."""
+        """Async read and cache content, sharing the first read across callers."""
         if self._content is None:
-            self._content = await self.stream.read()
+            async with self._read_lock:
+                if self._content is None:
+                    self._content = await self.stream.read()
         return self._content
 
     async def aclose(self) -> None:
@@ -556,7 +560,7 @@ FileSource = FilePath | FileBytes | FileStream | AsyncFileStream | FileUrl
 
 def is_file_source(v: object) -> TypeIs[FileSource]:
     """Type guard to narrow input to FileSource."""
-    return isinstance(v, (FilePath, FileBytes, FileStream, FileUrl))
+    return isinstance(v, (FilePath, FileBytes, FileStream, AsyncFileStream, FileUrl))
 
 
 def _normalize_source(value: Any) -> FileSource:
