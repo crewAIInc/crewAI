@@ -1,8 +1,14 @@
 import os
+import sys
 import tempfile
+from io import BytesIO
+from types import ModuleType
 from unittest.mock import Mock, patch
 
+from openpyxl import Workbook
+
 from crewai_tools.rag.base_loader import LoaderResult
+from crewai_tools.rag.data_types import DataType, DataTypes
 from crewai_tools.rag.loaders.csv_loader import CSVLoader
 from crewai_tools.rag.source_content import SourceContent
 import pytest
@@ -26,6 +32,13 @@ def temp_csv_file():
 
 
 class TestCSVLoader:
+    @pytest.mark.parametrize("suffix", [".csv", ".xls", ".xlsx"])
+    def test_detects_tabular_file_extensions(self, tmp_path, suffix):
+        path = tmp_path / f"report{suffix}"
+        path.touch()
+
+        assert DataTypes.from_content(path) is DataType.CSV
+
     def test_load_csv_from_file(self, temp_csv_file):
         path = temp_csv_file("name,age,city\nJohn,25,New York\nJane,30,Chicago")
         loader = CSVLoader()
@@ -128,3 +141,69 @@ class TestCSVLoader:
 
         with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/notfound.csv"))
+
+    def test_load_xlsx_from_file(self, tmp_path):
+        path = tmp_path / "report.xlsx"
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Sales"
+        worksheet.append(["name", "revenue"])
+        worksheet.append(["North", 120])
+        workbook.create_sheet("Empty")
+        workbook.save(path)
+
+        result = CSVLoader().load(SourceContent(path))
+
+        assert "Sheet: Sales" in result.content
+        assert "Headers: name | revenue" in result.content
+        assert "Row 1: name: North | revenue: 120" in result.content
+        assert result.metadata == {
+            "format": "xlsx",
+            "sheets": [
+                {"name": "Sales", "columns": ["name", "revenue"], "rows": 1},
+                {"name": "Empty", "columns": [], "rows": 0},
+            ],
+        }
+
+    def test_load_xls_uses_xlrd(self, monkeypatch):
+        class Worksheet:
+            name = "Legacy"
+            nrows = 2
+
+            @staticmethod
+            def row_values(row):
+                return [["name", "revenue"], ["South", 80]][row]
+
+        class Workbook:
+            @staticmethod
+            def sheets():
+                return [Worksheet()]
+
+        xlrd = ModuleType("xlrd")
+        xlrd.open_workbook = lambda *, file_contents: Workbook()  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "xlrd", xlrd)
+
+        sheets = CSVLoader._load_xls(b"legacy workbook")
+        result = CSVLoader._format_excel_sheets(sheets, "report.xls", "xls")
+
+        assert "Sheet: Legacy" in result.content
+        assert "Row 1: name: South | revenue: 80" in result.content
+        assert result.metadata["format"] == "xls"
+
+    @patch("crewai_tools.security.safe_requests.safe_get")
+    def test_load_xlsx_from_url(self, mock_get):
+        buffer = BytesIO()
+        workbook = Workbook()
+        workbook.active.append(["name"])
+        workbook.active.append(["Remote"])
+        workbook.save(buffer)
+        mock_get.return_value = Mock(content=buffer.getvalue())
+
+        result = CSVLoader().load(
+            SourceContent("https://example.com/report.xlsx?token=1")
+        )
+
+        assert "Row 1: name: Remote" in result.content
+        assert "application/vnd.ms-excel" in mock_get.call_args.kwargs["headers"][
+            "Accept"
+        ]

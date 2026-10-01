@@ -151,6 +151,21 @@ def test_csv_search_tool():
         os.unlink(temp_file_path)
 
 
+def test_csv_search_tool_accepts_excel_files(mock_adapter):
+    mock_adapter.query.return_value = "this is a test"
+
+    fixed_tool = CSVSearchTool(csv="report.xlsx", adapter=mock_adapter)
+    assert "this is a test" in fixed_tool._run(search_query="test content")
+    mock_adapter.add.assert_called_once_with("report.xlsx", data_type=DataType.CSV)
+
+    mock_adapter.add.reset_mock()
+    runtime_tool = CSVSearchTool(adapter=mock_adapter)
+    assert "this is a test" in runtime_tool._run(
+        csv="report.xls", search_query="test content"
+    )
+    mock_adapter.add.assert_called_once_with("report.xls", data_type=DataType.CSV)
+
+
 @pytest.mark.vcr()
 def test_mdx_search_tool():
     with tempfile.NamedTemporaryFile(suffix=".mdx", delete=False) as temp_file:

@@ -21,8 +21,8 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
-langsmith = "2026-06-20T00:00:00Z"
 msgpack = "2026-06-20T00:00:00Z"
+langsmith = "2026-06-20T00:00:00Z"
 pydantic-settings = "2026-06-20T00:00:00Z"
 
 [manifest]
@@ -1722,6 +1722,7 @@ dependencies = [
     { name = "pytube" },
     { name = "requests" },
     { name = "tiktoken" },
+    { name = "xlrd" },
     { name = "youtube-transcript-api" },
 ]
 
@@ -1910,6 +1911,7 @@ requires-dist = [
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version >= '3.11' and extra == 'xml'", specifier = ">=0.24.0" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version < '3.11' and extra == 'xml'", specifier = ">=0.17.2" },
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
+    { name = "xlrd", specifier = "~=2.0.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
 provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
