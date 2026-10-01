@@ -23,7 +23,10 @@ def recall() -> RecallFixture:
     storage.list_scopes.return_value = ["/"]
     storage.search.return_value = [(record, 0.1)]
     llm = MagicMock()
-    llm.call.return_value = "Missing: the project's Python version."
+    llm.call.return_value = {
+        "evidence_gaps": ["The project's Python version."],
+        "follow_up_queries": [],
+    }
     flow = RecallFlow(
         storage=storage,
         llm=llm,
@@ -63,11 +66,11 @@ def test_unchanged_plan_searches_once(
     results = flow.kickoff(inputs={"query": "project"})
 
     assert storage.search.call_count == query_count * scope_count
-    assert llm.call.call_count == (query_count * scope_count if budget else 0)
+    assert llm.call.call_count == (1 if budget else 0)
     assert [match.record.id for match in results] == [record.id]
     assert results[0].score == pytest.approx(0.1)
     assert results[0].evidence_gaps == (
-        [llm.call.return_value] * query_count * scope_count if budget else []
+        llm.call.return_value["evidence_gaps"] if budget else []
     )
 
 
@@ -128,7 +131,7 @@ def test_changed_plan_searches_again_even_with_same_record_ids(
     flow, storage, llm, record = recall
     flow.state.categories = ["engineering"]
 
-    def explore(*args: Any) -> str:
+    def explore(*args: Any, **kwargs: Any) -> dict[str, list[str]]:
         if llm.call.call_count == 1:
             if field == "embedding":
                 flow.state.query_embeddings[0][1][0] = 0.2
@@ -145,13 +148,13 @@ def test_changed_plan_searches_again_even_with_same_record_ids(
                 flow.state.include_private = True
             elif field == "limit":
                 flow.state.limit = 5
-        return "Missing: version."
+        return {"evidence_gaps": ["Version."], "follow_up_queries": []}
 
     llm.call.side_effect = explore
     results = flow.kickoff(inputs={"query": "project"})
 
     assert storage.search.call_count == (3 if field == "scope" else 2)
-    assert llm.call.call_count == (3 if field == "scope" else 2)
+    assert llm.call.call_count == 2
     assert [match.record.id for match in results] == [record.id]
 
 
@@ -178,7 +181,7 @@ def test_failed_search_retries_until_a_complete_success(
     results = flow.kickoff(inputs={"query": "project"})
 
     assert storage.search.call_count == scope_count * 2
-    assert llm.call.call_count == (0 if empty else scope_count * 2 - 1)
+    assert llm.call.call_count == (0 if empty else scope_count)
     assert [match.record.id for match in results] == ([] if empty else [record.id])
 
 
@@ -284,4 +287,4 @@ def test_early_stop_preserves_filters_ranking_and_limit(recall: RecallFixture) -
     )
     assert [match.record.id for match in results] == [high.id]
     assert results[0].score == pytest.approx(0.2)
-    assert results[0].evidence_gaps == ["Missing: the project's Python version."]
+    assert results[0].evidence_gaps == ["The project's Python version."]
