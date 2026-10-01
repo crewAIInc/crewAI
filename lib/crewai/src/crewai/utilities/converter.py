@@ -52,7 +52,8 @@ def _extract_first_json_object(result: str) -> dict[str, Any] | None:
         # raw_decode from a "{" can only return a dict, never a scalar.
         parsed: dict[str, Any]
         parsed, _end = json.JSONDecoder(strict=False).raw_decode(result, match.start())
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, RecursionError):
+        # RecursionError: deeply nested, unclosed input is malformed too.
         return None
     return parsed
 

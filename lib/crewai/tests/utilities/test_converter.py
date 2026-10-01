@@ -238,6 +238,17 @@ def test_handle_partial_json_truncated_outer_object_falls_back_to_llm(
     fallback.assert_called_once()
 
 
+def test_handle_partial_json_deeply_nested_malformed_falls_back_to_llm(
+    mock_agent: Mock,
+) -> None:
+    """Deeply nested unclosed braces must not raise RecursionError."""
+    result = '{"x":' * 5000
+    with patch("crewai.utilities.converter.convert_with_instructions") as fallback:
+        fallback.return_value = "fallback"
+        output = handle_partial_json(result, SimpleModel, False, mock_agent)
+    assert output == "fallback"
+
+
 def test_handle_partial_json_falls_through_for_non_json_curly_blocks(
     mock_agent: Mock,
 ) -> None:
