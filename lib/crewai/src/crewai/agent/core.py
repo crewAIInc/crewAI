@@ -79,7 +79,7 @@ from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
-from crewai.llm_overlay import active as overlay_active, overlay_model_for
+from crewai.llm_overlay import active as overlay_active
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -114,7 +114,7 @@ from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.llm_utils import create_llm, create_llm_like
+from crewai.utilities.llm_utils import create_llm, overlay_llm_for
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -420,13 +420,7 @@ class Agent(BaseAgent):
         else:
             declared = create_llm(self.llm)
             self._declared_llm = declared
-            overlay_model = overlay_model_for(self.role)
-            if overlay_model:
-                self.llm = self._overlay_built = create_llm_like(
-                    overlay_model, declared
-                )
-            else:
-                self.llm = declared
+            self.llm = self._resolved_overlay(declared)
             self._overlay_read = True
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
@@ -523,14 +517,21 @@ class Agent(BaseAgent):
         if self.role == role_before or overlay_active.get() is None:
             return
         previous = self.llm
-        declared = self._declared_now()
-        overlay_model = overlay_model_for(self.role)
-        if overlay_model:
-            self.llm = self._overlay_built = create_llm_like(overlay_model, declared)
-        else:
-            self.llm = declared
+        self.llm = self._resolved_overlay(self._declared_now())
         if isinstance(previous, BaseLLM) and isinstance(self.llm, BaseLLM):
             self.llm.stream = previous.stream
+
+    def _resolved_overlay(self, declared: BaseLLM | None) -> BaseLLM | None:
+        """The llm ``llm_overlay`` puts this agent on, given its ``declared`` one.
+
+        The role's key wins over the model keys; with neither, ``declared``.
+        What the overlay built is remembered, so a later miss can tell it from
+        an llm the caller assigned.
+        """
+        resolved = overlay_llm_for(self.role, declared)
+        if resolved is not declared:
+            self._overlay_built = resolved
+        return resolved
 
     def _declared_now(self) -> BaseLLM | None:
         """The llm this agent is declared with, as of now.
