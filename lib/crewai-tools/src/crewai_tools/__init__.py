@@ -30,6 +30,7 @@ from crewai_tools.tools.brightdata_tool.brightdata_unlocker import (
     BrightDataWebUnlockerTool,
 )
 from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
+    AntibrowLoadTool,
     BrowserbaseLoadTool,
 )
 from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
@@ -235,6 +236,7 @@ __all__ = [
     "BraveLocalPOIsDescriptionTool",
     "BraveLocalPOIsTool",
     "BraveNewsSearchTool",
+    "AntibrowLoadTool",
     "BraveSearchTool",
     "BraveVideoSearchTool",
     "BraveWebSearchTool",
