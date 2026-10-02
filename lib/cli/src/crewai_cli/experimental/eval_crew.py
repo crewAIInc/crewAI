@@ -115,6 +115,7 @@ class EvaluationStoppedError(RuntimeError):
 
 
 def _note(text: str, style: str = "dim") -> None:
+    """Print evaluation progress using the caller-selected style."""
     console.print(Text(text), style=style)
 
 

@@ -107,6 +107,7 @@ def install(monkeypatch, amp: FakeAMP, configured_amp: str = "https://amp.test")
 
 
 def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(project, monkeypatch, capsys):
+    """Evaluate the recorded run, open its report and print the returned verdict."""
     directory, opened = project
     record_last_run(directory)
     amp = install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), done()]))
@@ -122,6 +123,7 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
 
 
 def test_eval_can_print_the_report_without_opening_a_browser(project, monkeypatch, capsys):
+    """Keep the report URL and verdict available when browser opening is disabled."""
     directory, opened = project
     record_last_run(directory)
     amp = install(monkeypatch, FakeAMP(statuses=[done()]))
@@ -139,6 +141,7 @@ def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkey
     # would drop the ones it had not heard of and invent "not measured" for
     # ones that no longer exist — which is what happens the moment the
     # evaluation's vocabulary moves ahead of an installed CLI.
+    """Render the evaluator-provided areas without inventing fixed categories."""
     directory, _ = project
     record_last_run(directory)
     graded = done(grades={"goal": 5, "tasks": 3, "agents": 4, "tools": None})
@@ -1099,6 +1102,7 @@ def test_a_run_that_leaves_no_trace_behind_is_explained(project, monkeypatch, ca
 
 
 def test_the_cli_command_maps_to_the_implementation(monkeypatch):
+    """Forward the selected run and browser preference from CLI options."""
     calls = []
     monkeypatch.setattr("crewai_cli.cli.eval_crew", lambda **kwargs: calls.append(kwargs))
     runner = CliRunner()
@@ -1310,6 +1314,7 @@ class FakeModelsAMP(FakeAMP):
 
 @pytest.fixture
 def deployed(project, monkeypatch):
+    """Set up a project whose deployment can be found by its project ID."""
     directory, opened = project
     (directory / "pyproject.toml").write_text('[tool.crewai]\nproject_id = "proj-1"\n')
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: "proj-1")
@@ -1318,6 +1323,7 @@ def deployed(project, monkeypatch):
 
 @pytest.mark.parametrize("open_browser", [True, False])
 def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, monkeypatch, capsys, open_browser):
+    """Preserve comparison results and progress with either browser preference."""
     directory, opened = deployed
     (directory / "eval.jsonc").write_text('{"dataset": []}')
     running = httpx.Response(200, json={"id": "ev-9", "status": "running", "progress": {
@@ -1559,6 +1565,7 @@ def test_the_last_event_stands_in_for_progress():
 
 
 def test_the_cli_maps_models_and_deployment_to_the_comparison(monkeypatch):
+    """Forward model, deployment and browser options while rejecting mixed modes."""
     calls = []
     monkeypatch.setattr("crewai_cli.cli.eval_models", lambda *args, **kwargs: calls.append((args, kwargs)))
     monkeypatch.setattr("crewai_cli.cli.eval_crew", lambda **kwargs: calls.append(("run", kwargs)))
