@@ -148,6 +148,7 @@ class TestWebPageLoader:
     @patch("crewai_tools.security.safe_requests._raw_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
     def test_status_code_and_content_type(self, mock_bs, mock_get):
+        """Preserve response status and content type in document metadata."""
         for status in [200, 201, 301]:
             mock_get.return_value = self.setup_mock_response(
                 f"<html><body>Status {status}</body></html>", status_code=status
@@ -169,6 +170,7 @@ class TestWebPageLoader:
 
 @pytest.mark.parametrize("status_code", [400, 401, 403, 404, 429, 500, 503])
 def test_http_error_html_is_not_returned_as_a_document(status_code: int) -> None:
+    """Reject HTTP error pages and preserve the HTTPError as the error cause."""
     import requests
 
     response = requests.Response()
@@ -190,6 +192,7 @@ def test_http_error_html_is_not_returned_as_a_document(status_code: int) -> None
 
 
 def test_successful_html_response_still_produces_a_document() -> None:
+    """Continue extracting content and metadata from successful HTML responses."""
     import requests
 
     response = requests.Response()
