@@ -13,6 +13,7 @@ from crewai_tools.rag.source_content import SourceContent
 def test_xml_content_is_parsed_without_reopening_its_reference(
     source_kind: str, prefix: str, tmp_path: Path
 ) -> None:
+    """Parse plain and BOM-prefixed XML from inline, local and URL sources."""
     content = prefix + "<catalog><item>First</item><item>Second</item></catalog>"
     source = content
     if source_kind == "file":
@@ -38,6 +39,7 @@ def test_xml_content_is_parsed_without_reopening_its_reference(
 
 @pytest.mark.parametrize("content", ["", "not XML", "<root>unclosed"])
 def test_malformed_inline_xml_returns_parse_error_metadata(content: str) -> None:
+    """Preserve malformed input instead of trying to open its source hash."""
     result = XMLLoader().load(SourceContent(content))
 
     assert result.content == content

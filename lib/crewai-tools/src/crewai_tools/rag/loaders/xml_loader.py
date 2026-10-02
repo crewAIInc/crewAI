@@ -38,6 +38,7 @@ class XMLLoader(BaseLoader):
             return file.read()
 
     def _parse_xml(self, content: str, source_ref: str) -> LoaderResult:
+        """Parse resolved XML text and retain malformed content with error metadata."""
         try:
             root = fromstring(content)  # noqa: S314
 
