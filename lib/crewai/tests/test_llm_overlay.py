@@ -1,10 +1,13 @@
-"""`llm_overlay` swaps an agent's model by role, for the calling context only.
+"""`llm_overlay` swaps an agent's model by role, and any LLM's by model, for
+the calling context only.
 
-The overlay is read in exactly three places: the validators where `Agent` and
-`LiteAgent` resolve their `llm`, and `Agent.interpolate_inputs`, which looks the
+The overlay is read in exactly four places: the validators where `Agent` and
+`LiteAgent` resolve their `llm`, `Agent.interpolate_inputs`, which looks the
 interpolated role up again because a templated role only becomes a key once a
-kickoff fills its placeholders in. So these tests build agents, interpolate
-them, and look at the model they end up with. No LLM is ever called.
+kickoff fills its placeholders in, and `LLM.__new__`, where a `model:` key maps
+an LLM built from a model string. So these tests build agents and LLMs,
+interpolate them, and look at the model they end up with. No LLM is ever called
+over the network.
 
 `create_llm("openai/gpt-4o")` returns the native OpenAI provider, which strips
 the `openai/` prefix, so the resolved model reads `"gpt-4o"`.
@@ -19,8 +22,14 @@ from typing import Any
 from crewai import Agent, Crew, Task
 from crewai.lite_agent import LiteAgent
 from crewai.llm import LLM
-from crewai.llm_overlay import active, llm_overlay, overlay_model_for
+from crewai.llm_overlay import (
+    MODEL_KEY_PREFIX,
+    active,
+    llm_overlay,
+    overlay_model_for,
+)
 from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.llm_utils import create_llm
 import pytest
 
 
@@ -567,3 +576,315 @@ def test_re_validation_keeps_the_llm_a_kickoff_time_swap_set() -> None:
         RuntimeState(root=[agent])
 
     assert agent.llm is swapped
+
+
+# ── model keys: `model:<provider/model>` and `model:*` ───────────────────────
+
+
+def test_the_model_key_prefix_is_a_public_constant() -> None:
+    """Another package feature-detects the model-for-model form on it."""
+    assert MODEL_KEY_PREFIX == "model:"
+
+
+def test_a_bare_llm_call_in_a_flow_step_runs_on_the_mapped_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The case roles cannot reach: a flow step's own `LLM(...).call()`."""
+    from crewai.flow.flow import Flow, start
+
+    openai_class = type(LLM(model="openai/gpt-4o-mini"))
+    monkeypatch.setattr(
+        openai_class,
+        "call",
+        lambda self, messages, *args, **kwargs: f"answered by {self.model}",
+    )
+
+    class Poem(Flow):  # type: ignore[type-arg]
+        @start()
+        def write(self) -> str:
+            return LLM(model="openai/gpt-5.6-sol").call("a poem")
+
+    with llm_overlay({"model:openai/gpt-5.6-sol": "openai/gpt-4o-mini"}):
+        assert Poem().kickoff() == "answered by gpt-4o-mini"
+
+    assert Poem().kickoff() == "answered by gpt-5.6-sol"
+
+
+def test_a_model_key_matches_with_and_without_the_provider_prefix() -> None:
+    """Native providers strip `openai/`; a key written either way matches both."""
+    with llm_overlay({"model:openai/gpt-4o": "openai/gpt-4.1"}):
+        assert LLM(model="gpt-4o").model == "gpt-4.1"
+        assert LLM(model="openai/gpt-4o").model == "gpt-4.1"
+        assert LLM(model="openai/gpt-4o-mini").model == "gpt-4o-mini"
+    with llm_overlay({"model:gpt-4o": "openai/gpt-4.1"}):
+        assert LLM(model="openai/gpt-4o").model == "gpt-4.1"
+
+
+def test_an_exact_model_key_wins_over_a_stripped_one_and_over_the_wildcard() -> (
+    None
+):
+    with llm_overlay(
+        {
+            "model:gpt-4o": "openai/gpt-4.1-nano",
+            "model:openai/gpt-4o": "openai/gpt-4.1",
+            "model:*": "openai/gpt-4o-mini",
+        }
+    ):
+        assert LLM(model="openai/gpt-4o").model == "gpt-4.1"
+        assert LLM(model="gpt-4o").model == "gpt-4.1-nano"
+        assert LLM(model="openai/o3-mini").model == "gpt-4o-mini"
+
+
+def test_the_wildcard_maps_every_llm_built_from_a_model_string() -> None:
+    with llm_overlay({"model:*": "openai/gpt-4o-mini"}):
+        built = [
+            LLM(model="openai/gpt-4o"),
+            create_llm("anthropic/claude-haiku-4-5"),
+            LLM(model="gpt-5.6-sol"),
+        ]
+
+    assert [(type(b).__name__, b.model) for b in built] == [
+        ("OpenAICompletion", "gpt-4o-mini")
+    ] * 3
+    assert LLM(model="openai/gpt-4o").model == "gpt-4o"
+
+
+def test_a_mapped_model_is_not_mapped_again() -> None:
+    """A chain of keys is one step: the model a key maps to is built as it is."""
+    with llm_overlay(
+        {"model:openai/gpt-4o": "openai/gpt-4.1", "model:openai/gpt-4.1": "openai/o3"}
+    ):
+        assert LLM(model="openai/gpt-4o").model == "gpt-4.1"
+
+
+def test_the_caller_settings_follow_the_mapped_model_by_the_declared_llm_rule() -> (
+    None
+):
+    """Generation settings go to any provider; a key and an endpoint only to
+    the provider they were issued for."""
+    with llm_overlay({"model:*": "openai/gpt-4o"}):
+        same = LLM(model="openai/gpt-4o-mini", **CONFIGURATION)
+    with llm_overlay({"model:*": "anthropic/claude-haiku-4-5"}):
+        other = LLM(model="openai/gpt-4o-mini", **CONFIGURATION)
+
+    assert type(same).__name__ == "OpenAICompletion" and same.model == "gpt-4o"
+    assert _configuration_of(same) == CONFIGURATION
+    assert type(other).__name__ == "AnthropicCompletion"
+    assert other.model == "claude-haiku-4-5"
+    assert other.timeout == 42 and other.temperature == 0.1
+    assert other.max_tokens == 77
+    assert other.api_key != "k" and other.base_url is None
+
+
+def test_a_model_mapped_onto_litellm_is_not_initialized_again() -> None:
+    """`LLM.__new__` returning an `LLM` makes Python call `__init__` with the
+    caller's arguments; the mapped instance must keep the mapped model."""
+    pytest.importorskip("litellm")
+    with llm_overlay({"model:*": "groq/llama-3.1-8b-instant"}):
+        built = LLM(model="openai/gpt-4o-mini", temperature=0.3, api_key="k")
+
+    assert type(built).__name__ == "LLM" and built.is_litellm
+    assert built.model == "groq/llama-3.1-8b-instant"
+    assert built.temperature == 0.3 and built.api_key != "k"
+
+
+def test_an_agent_declared_with_a_model_string_runs_on_the_mapped_model() -> None:
+    with llm_overlay({"model:openai/gpt-4o-mini": "openai/gpt-4o"}):
+        agent = _agent("Writer")
+
+    assert agent.llm.model == "gpt-4o"
+
+
+def test_an_agent_whose_llm_was_built_outside_the_block_is_mapped_by_its_model() -> (
+    None
+):
+    """The declared instance is looked up by its model, with the configuration
+    carried like a role's swap."""
+    declared = _configured_llm()
+    with llm_overlay({"model:openai/gpt-4o-mini": "openai/gpt-4o"}):
+        agent = Agent(role="Writer", goal="g", backstory="b", llm=declared)
+        lite = LiteAgent(role="Writer", goal="g", backstory="b", llm=declared)
+
+    for built in (agent.llm, lite.llm):
+        assert built is not declared and built.model == "gpt-4o"
+        assert _configuration_of(built) == CONFIGURATION
+
+
+def test_a_role_key_wins_over_model_keys_for_that_agent() -> None:
+    with llm_overlay(
+        {
+            "Researcher": "openai/gpt-4o",
+            "model:*": "openai/gpt-4.1-nano",
+        }
+    ):
+        researcher = _agent("Researcher")
+        writer = _agent("Writer")
+        outside = Agent(
+            role="Researcher", goal="g", backstory="b", llm=_configured_llm()
+        )
+
+    assert researcher.llm.model == "gpt-4o"
+    assert writer.llm.model == "gpt-4.1-nano"
+    assert outside.llm.model == "gpt-4o"
+
+
+def test_a_role_that_looks_like_a_model_key_is_never_one() -> None:
+    with llm_overlay({"model:*": "openai/gpt-4o"}):
+        assert overlay_model_for("model:*") is None
+
+
+def test_a_model_key_that_names_no_model_is_refused() -> None:
+    with pytest.raises(ValueError, match="names no model"):
+        with llm_overlay({"model: ": "openai/gpt-4o"}):
+            pass
+
+
+def test_a_subclass_of_llm_keeps_its_model() -> None:
+    """Only `LLM` itself routes; a subclass is the caller's own choice of class."""
+    pytest.importorskip("litellm")
+
+    class Mine(LLM):
+        pass
+
+    with llm_overlay({"model:*": "openai/gpt-4o"}):
+        mine = Mine(model="groq/llama-3.1-8b-instant")
+
+    assert type(mine) is Mine and mine.model == "groq/llama-3.1-8b-instant"
+
+
+def test_a_declared_model_whose_sdk_is_missing_still_maps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nothing is built on the declared model, so its SDK need not be here; its
+    key cannot be matched to the new provider, so it stays behind."""
+    native = LLM._get_native_provider.__func__  # type: ignore[attr-defined]
+
+    def without_anthropic(cls: type[LLM], provider: str) -> Any:
+        if provider in ("anthropic", "claude"):
+            raise ImportError("Anthropic native provider not available")
+        return native(cls, provider)
+
+    monkeypatch.setattr(LLM, "_get_native_provider", classmethod(without_anthropic))
+    with llm_overlay({"model:*": "openai/gpt-4o-mini"}):
+        built = LLM(model="anthropic/claude-haiku-4-5", api_key="k", temperature=0.2)
+
+    assert type(built).__name__ == "OpenAICompletion" and built.model == "gpt-4o-mini"
+    assert built.temperature == 0.2 and built.api_key != "k"
+
+
+def test_a_litellm_routed_llm_keeps_its_key_on_the_same_provider_only() -> None:
+    """Same provider is a question about the provider, not the class: an
+    `LLM(...)` the caller routed through LiteLLM keeps its key and endpoint
+    when mapped to another model of that provider, and another provider's
+    model never gets them."""
+    pytest.importorskip("litellm")
+    declared = {"api_key": "k", "base_url": "http://localhost:9999/v1"}
+    with llm_overlay({"model:*": "openai/gpt-4o-mini"}):
+        same = LLM(model="openai/gpt-4o", is_litellm=True, **declared)
+    with llm_overlay({"model:*": "anthropic/claude-haiku-4-5"}):
+        other = LLM(model="openai/gpt-4o", is_litellm=True, **declared)
+
+    assert "gpt-4o-mini" in same.model
+    assert same.api_key == "k" and same.base_url == "http://localhost:9999/v1"
+    assert "claude-haiku-4-5" in other.model
+    assert other.api_key != "k" and other.base_url != "http://localhost:9999/v1"
+
+
+@pytest.mark.parametrize(
+    ("built", "key"),
+    [
+        ("openrouter/openai/gpt-4o", "model:openai/gpt-4o"),
+        ("openrouter/openai/gpt-4o", "model:gpt-4o"),
+    ],
+)
+def test_an_aggregators_route_is_never_the_native_model_it_names(
+    built: str, key: str
+) -> None:
+    """`openrouter/openai/gpt-4o` is OpenRouter's model, not OpenAI's: a key
+    written for the native model leaves it alone."""
+    with llm_overlay({key: "openai/gpt-4.1"}):
+        llm = LLM(model=built)
+
+    assert type(llm).__name__ == "OpenAICompatibleCompletion"
+    assert llm.model == "openai/gpt-4o"
+
+
+def test_an_aggregators_route_is_matched_by_its_own_full_name() -> None:
+    declared = LLM(model="openrouter/openai/gpt-4o")
+    with llm_overlay({"model:openrouter/openai/gpt-4o": "openai/gpt-4.1"}):
+        built = LLM(model="openrouter/openai/gpt-4o")
+        agent = Agent(role="Writer", goal="g", backstory="b", llm=declared)
+    with llm_overlay({"model:openai/gpt-4o": "openai/gpt-4.1"}):
+        untouched = Agent(role="Writer", goal="g", backstory="b", llm=declared)
+
+    assert built.model == "gpt-4.1" and agent.llm.model == "gpt-4.1"
+    assert untouched.llm is declared
+
+
+def test_a_native_provider_prefix_is_still_its_own() -> None:
+    with llm_overlay({"model:llama3": "ollama/qwen3"}):
+        assert LLM(model="ollama/llama3").model == "qwen3"
+
+
+def test_a_role_key_is_built_from_the_declaration_a_model_key_mapped() -> None:
+    """Role wins, with the caller's declared settings: the llm a model key
+    swapped on the way in is not what the role's model is built like."""
+    overlay = {"Researcher": "openai/gpt-4o", "model:*": "anthropic/claude-haiku-4-5"}
+    with llm_overlay(overlay):
+        declared = _configured_llm()  # mapped to Anthropic, without the key
+        researcher = Agent(role="Researcher", goal="g", backstory="b", llm=declared)
+        by_string = Agent(
+            role="Researcher", goal="g", backstory="b", llm="openai/gpt-4o-mini"
+        )
+        writer = Agent(role="Writer", goal="g", backstory="b", llm=declared)
+
+    assert type(declared).__name__ == "AnthropicCompletion"
+    assert type(researcher.llm).__name__ == "OpenAICompletion"
+    assert researcher.llm.model == "gpt-4o"
+    assert _configuration_of(researcher.llm) == CONFIGURATION
+    assert by_string.llm.model == "gpt-4o"
+    assert writer.llm is declared
+
+
+def test_a_providers_other_name_is_the_same_model_on_both_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`google/x` routes as `gemini/x`, so a key written either way matches an
+    llm built in the block and one built before it, whichever name it used."""
+    pytest.importorskip("google.genai")
+    monkeypatch.setenv("GEMINI_API_KEY", "g")
+    outside = LLM(model="google/gemini-2.5-pro")  # records provider "gemini"
+    for key in ("model:google/gemini-2.5-pro", "model:gemini/gemini-2.5-pro"):
+        with llm_overlay({key: "openai/gpt-4o-mini"}):
+            built = [LLM(model="google/gemini-2.5-pro"), LLM(model="gemini/gemini-2.5-pro")]
+            agent = Agent(role="Writer", goal="g", backstory="b", llm=outside)
+
+        assert [b.model for b in built] == ["gpt-4o-mini", "gpt-4o-mini"], key
+        assert agent.llm.model == "gpt-4o-mini", key
+
+
+def test_an_aggregator_route_under_an_alias_still_is_not_the_native_model() -> None:
+    with llm_overlay({"model:google/gemini-2.5-pro": "openai/gpt-4o-mini"}):
+        llm = LLM(model="openrouter/google/gemini-2.5-pro")
+
+    assert llm.model == "google/gemini-2.5-pro"
+
+
+def test_a_caller_who_chose_litellm_keeps_it_when_the_declared_sdk_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("litellm")
+    native = LLM._get_native_provider.__func__  # type: ignore[attr-defined]
+
+    def without_anthropic(cls: type[LLM], provider: str) -> Any:
+        if provider in ("anthropic", "claude"):
+            raise ImportError("Anthropic native provider not available")
+        return native(cls, provider)
+
+    monkeypatch.setattr(LLM, "_get_native_provider", classmethod(without_anthropic))
+    with llm_overlay({"model:*": "openai/gpt-4o-mini"}):
+        chosen = LLM(model="anthropic/claude-haiku-4-5", is_litellm=True)
+        default = LLM(model="anthropic/claude-haiku-4-5")
+
+    assert type(chosen).__name__ == "LLM" and chosen.is_litellm
+    assert type(default).__name__ == "OpenAICompletion"
