@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+import shutil
 import sys
 from typing import overload
 
@@ -96,18 +97,22 @@ def _draw_multi(
     action_indices: set[int] | None = None,
     separator_indices: set[int] | None = None,
     clear: bool = False,
-) -> None:
+    previous_line_count: int | None = None,
+) -> int:
     action_indices = action_indices or set()
     separator_indices = separator_indices or set()
+    start, end = _visible_row_range(len(labels), cursor)
     hint_text = "↑↓ navigate, space toggle, enter confirm"
     if action_indices:
         hint_text = "↑↓ navigate, space toggle, enter confirm, ▸ rows expand/collapse"
+    if end - start < len(labels):
+        hint_text += f" · showing {start + 1}-{end} of {len(labels)}"
     hint = f"  {_DIM}{hint_text}{_RESET}"
-    total = len(labels) + 1
     if clear:
-        sys.stdout.write(f"\033[{total}A")
+        sys.stdout.write(f"\033[{previous_line_count or 1}A")
     sys.stdout.write(f"\033[2K{hint}\n")
-    for i, label in enumerate(labels):
+    for i in range(start, end):
+        label = labels[i]
         if i in separator_indices:
             sys.stdout.write(f"\033[2K      {_TEAL}{label}{_RESET}\n")
             continue
@@ -121,6 +126,17 @@ def _draw_multi(
         bold = f"{_BOLD}{label}{_RESET}" if i == cursor else label
         sys.stdout.write(f"\033[2K    {arrow}{check} {bold}\n")
     sys.stdout.flush()
+    return end - start + 1
+
+
+def _visible_row_range(total: int, cursor: int) -> tuple[int, int]:
+    """Return the portion of a multi-select list that fits in the terminal."""
+    max_rows = max(5, shutil.get_terminal_size(fallback=(80, 24)).lines - 5)
+    if total <= max_rows:
+        return 0, total
+
+    start = min(max(cursor - max_rows // 2, 0), total - max_rows)
+    return start, start + max_rows
 
 
 def _arrow_select_one(labels: list[str]) -> int:
@@ -168,7 +184,7 @@ def _arrow_select_multi(
     sys.stdout.write(_HIDE_CURSOR)
     sys.stdout.flush()
     try:
-        _draw_multi(
+        rendered_lines = _draw_multi(
             labels,
             cursor,
             selected,
@@ -179,44 +195,47 @@ def _arrow_select_multi(
             key = _read_key()
             if key == "up":
                 cursor = _next_selectable_index(cursor, -1, total, separator_indices)
-                _draw_multi(
+                rendered_lines = _draw_multi(
                     labels,
                     cursor,
                     selected,
                     action_indices=action_indices,
                     separator_indices=separator_indices,
                     clear=True,
+                    previous_line_count=rendered_lines,
                 )
             elif key == "down":
                 cursor = _next_selectable_index(cursor, 1, total, separator_indices)
-                _draw_multi(
+                rendered_lines = _draw_multi(
                     labels,
                     cursor,
                     selected,
                     action_indices=action_indices,
                     separator_indices=separator_indices,
                     clear=True,
+                    previous_line_count=rendered_lines,
                 )
             elif key == "space":
                 if cursor in action_indices:
-                    _clear_lines(total + 1)
+                    _clear_lines(rendered_lines)
                     return sorted(selected), cursor
                 selected ^= {cursor}
-                _draw_multi(
+                rendered_lines = _draw_multi(
                     labels,
                     cursor,
                     selected,
                     action_indices=action_indices,
                     separator_indices=separator_indices,
                     clear=True,
+                    previous_line_count=rendered_lines,
                 )
             elif key == "enter":
-                _clear_lines(total + 1)
+                _clear_lines(rendered_lines)
                 if cursor in action_indices:
                     return sorted(selected), cursor
                 return sorted(selected), None
             elif key in ("esc", "q"):
-                _clear_lines(total + 1)
+                _clear_lines(rendered_lines)
                 return sorted(selected), None
     finally:
         sys.stdout.write(_SHOW_CURSOR)

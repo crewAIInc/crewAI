@@ -1549,9 +1549,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
-        self._method_outputs.append(
-            {"method": context.method_name, "output": resumed_method_output}
-        )
+        method_output_entry: dict[str, Any] = {
+            "method": context.method_name,
+            "output": resumed_method_output,
+        }
+        if emit and isinstance(result, HumanFeedbackResult):
+            method_output_entry["human_feedback"] = result
+        self._method_outputs.append(method_output_entry)
 
         try:
             if emit and collapsed_outcome:
@@ -2981,12 +2985,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # For @human_feedback methods with emit, the result is the collapsed outcome
             # (e.g., "approved") used for routing. But we want the actual method output
             # to be the stored result (for final flow output). Replace the last entry
-            # if a stashed output exists. Dict-based stash is concurrency-safe and
-            # handles None return values (presence in dict = stashed, not value).
+            # if a stashed output exists, keeping the feedback alongside the output so
+            # expressions read `outputs.<method>` as the full feedback result.
+            # Dict-based stash is concurrency-safe.
             if method_name in self._human_feedback_method_outputs:
-                self._method_outputs[-1]["output"] = (
-                    self._human_feedback_method_outputs.pop(method_name)
-                )
+                feedback_result = self._human_feedback_method_outputs.pop(method_name)
+                self._method_outputs[-1] = {
+                    "method": str(method_name),
+                    "output": feedback_result.output,
+                    "human_feedback": feedback_result,
+                }
 
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
@@ -3660,10 +3668,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
 
         if emit:
-            # Stash the real method output: the collapsed outcome routes
-            # listeners, but the flow's final result stays the method's
-            # actual return value.
-            self._human_feedback_method_outputs[method_name] = method_output
+            # Stash the feedback result: the collapsed outcome routes listeners,
+            # but the flow's final result stays the method's actual return
+            # value (result.output).
+            self._human_feedback_method_outputs[method_name] = result
             return result.outcome
         return result
 
