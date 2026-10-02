@@ -11,6 +11,7 @@ import pytest
 
 
 def make_document(*paragraphs: str, tables: int = 0) -> DocumentObject:
+    """Build a real DOCX document with the requested paragraphs and tables."""
     document = Document()
     for text in paragraphs:
         document.add_paragraph(text)
@@ -22,6 +23,7 @@ def make_document(*paragraphs: str, tables: int = 0) -> DocumentObject:
 class TestDOCXLoader:
     @patch("docx.Document")
     def test_load_docx_from_file(self, mock_docx_class):
+        """Read nonempty paragraphs and preserve local document metadata."""
         mock_doc = make_document("First paragraph", "Second paragraph", "   ")
         mock_docx_class.return_value = mock_doc
 
@@ -36,6 +38,7 @@ class TestDOCXLoader:
 
     @patch("docx.Document")
     def test_load_docx_with_tables(self, mock_docx_class):
+        """Count top-level tables in document metadata."""
         mock_doc = make_document("Document with table", tables=2)
         mock_docx_class.return_value = mock_doc
 
@@ -52,6 +55,7 @@ class TestDOCXLoader:
     def test_load_docx_from_url(
         self, mock_unlink, mock_tempfile, mock_docx_class, mock_get
     ):
+        """Download a DOCX file with the default document request headers."""
         mock_get.return_value = Mock(
             content=b"fake docx content", raise_for_status=Mock()
         )
@@ -82,6 +86,7 @@ class TestDOCXLoader:
     @patch("crewai_tools.security.safe_requests._raw_get")
     @patch("docx.Document")
     def test_load_docx_from_url_with_custom_headers(self, mock_docx_class, mock_get):
+        """Forward custom headers when downloading DOCX content."""
         mock_get.return_value = Mock(
             content=b"fake docx content", raise_for_status=Mock()
         )
@@ -131,6 +136,7 @@ class TestDOCXLoader:
 
     @patch("docx.Document")
     def test_load_docx_empty_document(self, mock_docx_class):
+        """Return empty content and zero counts for a blank document."""
         mock_docx_class.return_value = make_document()
 
         with tempfile.NamedTemporaryFile(suffix=".docx") as f:
@@ -142,6 +148,7 @@ class TestDOCXLoader:
 
     @patch("docx.Document")
     def test_docx_doc_id_generation(self, mock_docx_class):
+        """Generate a stable identifier for unchanged document content."""
         mock_docx_class.return_value = make_document("Consistent content")
 
         with tempfile.NamedTemporaryFile(suffix=".docx") as f:

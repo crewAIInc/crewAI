@@ -13,6 +13,7 @@ from crewai_tools.security.safe_requests import safe_get
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from docx.oxml.table import CT_Tc
     from docx.table import Table
     from docx.text.paragraph import Paragraph
 
@@ -68,6 +69,7 @@ class DOCXLoader(BaseLoader):
         source_ref: str,
         DocxDocument: Any,  # noqa: N803
     ) -> LoaderResult:
+        """Extract ordered paragraph and table text while retaining source metadata."""
         try:
             doc = DocxDocument(file_path)
 
@@ -98,10 +100,16 @@ class DOCXLoader(BaseLoader):
                 if block.text.strip():
                     yield block.text
             else:
+                # Merged grid positions can refer to the same cell across rows.
+                seen_cells: set[CT_Tc] = set()
                 for row in block.rows:
-                    cells = [
-                        "\n".join(self._iter_text(cell.iter_inner_content()))
-                        for cell in row.cells
-                    ]
+                    cells = []
+                    for cell in row.cells:
+                        if cell._tc in seen_cells:
+                            continue
+                        seen_cells.add(cell._tc)
+                        cells.append(
+                            "\n".join(self._iter_text(cell.iter_inner_content()))
+                        )
                     if any(cell.strip() for cell in cells):
                         yield " | ".join(cells)
