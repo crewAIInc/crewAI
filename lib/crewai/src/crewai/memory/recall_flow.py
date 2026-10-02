@@ -379,6 +379,9 @@ class RecallFlow(Flow[RecallState]):
         Keep the first exploration's evidence gaps, but do not poll storage
         with identical successful searches within one recall invocation.
         """
+        # Exploration currently leaves search inputs unchanged, so a successful
+        # search is followed by at most one exploration before synthesis. Comparing
+        # plans also allows future query or scope refinement to trigger a new search.
         self._search_unchanged = self._search_plan() == self._successful_search_plan
         if self._search_unchanged:
             findings: list[Any] = self.state.chunk_findings
