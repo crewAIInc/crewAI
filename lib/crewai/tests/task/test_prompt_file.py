@@ -135,3 +135,85 @@ def test_standalone_task_keeps_default_prompt() -> None:
     assert task.prompt() == "Summarize a document\n" + I18N_DEFAULT.slice(
         "expected_output"
     ).format(expected_output="A short summary")
+
+
+@pytest.mark.parametrize("process", [Process.sequential, Process.hierarchical])
+@pytest.mark.parametrize("with_history", [False, True])
+def test_replay_uses_custom_task_prompt_on_recreated_crew(
+    prompt_file: Path, process: Process, with_history: bool
+) -> None:
+    """Replay resolves custom instructions even without an earlier kickoff."""
+    previous_task = make_crew(prompt_file, process).tasks[0]
+    inputs = (
+        {
+            "crew_chat_messages": json.dumps(
+                [{"role": "user", "content": "Discuss the findings"}]
+            )
+        }
+        if with_history
+        else {}
+    )
+    stored_output = {
+        "task_id": str(previous_task.id),
+        "task_key": previous_task.key,
+        "expected_output": previous_task.expected_output,
+        "output": {"description": previous_task.description},
+        "inputs": inputs,
+    }
+    crew = make_crew(prompt_file, process)
+    with (
+        patch(
+            "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+            return_value=[stored_output],
+        ),
+        patch.object(
+            Agent, "execute_task", side_effect=lambda task, **_: task.prompt()
+        ),
+    ):
+        output = crew.replay(str(previous_task.id))
+
+    assert "CUSTOM OUTPUT: A short summary" in output.raw
+    if with_history:
+        assert "CUSTOM HISTORY\n\nUser: Discuss the findings" in output.raw
+
+
+@pytest.mark.parametrize("restore_default", [False, True])
+def test_replay_resolves_updated_prompt_file_after_kickoff(
+    prompt_file: Path, tmp_path: Path, restore_default: bool
+) -> None:
+    """Replay uses the current prompt configuration rather than the last kickoff's."""
+    crew = make_crew(prompt_file, Process.sequential)
+    task = crew.tasks[0]
+    stored_output = {
+        "task_id": str(task.id),
+        "task_key": task.key,
+        "expected_output": task.expected_output,
+        "output": {"description": task.description},
+        "inputs": {},
+    }
+    second_file = tmp_path / "second-prompts.json"
+    second_file.write_text(
+        prompt_file.read_text(encoding="utf-8").replace(
+            "CUSTOM OUTPUT", "SECOND OUTPUT"
+        ),
+        encoding="utf-8",
+    )
+    with (
+        patch(
+            "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+            return_value=[stored_output],
+        ),
+        patch.object(
+            Agent, "execute_task", side_effect=lambda task, **_: task.prompt()
+        ),
+    ):
+        assert "CUSTOM OUTPUT: A short summary" in crew.kickoff().raw
+        crew.prompt_file = None if restore_default else str(second_file)
+        output = crew.replay(str(task.id))
+
+    expected = (
+        I18N_DEFAULT.slice("expected_output").format(expected_output="A short summary")
+        if restore_default
+        else "SECOND OUTPUT: A short summary"
+    )
+    assert output.raw == "Summarize a document\n" + expected
