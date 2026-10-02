@@ -4006,6 +4006,119 @@ def test_human_feedback_pending_and_resume_from_declaration():
     assert flow_id not in DefinitionStoreBackend.pending
 
 
+EMIT_REVIEW_EXPR_YAML = """
+schema: crewai.flow/v1
+name: EmitReviewExprFlow
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review the draft:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      default_outcome: rejected
+  rewrite:
+    do:
+      call: expression
+      expr: "outputs.draft.feedback + '|' + outputs.draft.outcome + '|' + outputs.draft.output"
+    listen: rejected
+"""
+
+
+def test_human_feedback_emit_exposes_feedback_in_outputs():
+    flow = Flow.from_declaration(contents=EMIT_REVIEW_EXPR_YAML)
+
+    with (
+        patch.object(flow, "_request_human_feedback", return_value="make it shorter"),
+        patch.object(flow, "_collapse_to_outcome", return_value="rejected"),
+    ):
+        result = flow.kickoff()
+
+    assert result == "make it shorter|rejected|draft-content"
+    assert flow.method_outputs[0] == "draft-content"
+
+
+def test_human_feedback_emit_feedback_renders_in_action_templates():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EmitFeedbackTemplateFlow
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review the draft:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+  rewrite:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "Draft: ${{outputs.draft.output}}. Reason: ${{outputs.draft.feedback}}"
+        prefix: rewrite
+    listen: rejected
+"""
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    with (
+        patch.object(flow, "_request_human_feedback", return_value="too long"),
+        patch.object(flow, "_collapse_to_outcome", return_value="rejected"),
+    ):
+        result = flow.kickoff()
+
+    assert result == "rewrite:Draft: draft-content. Reason: too long"
+
+
+PENDING_EMIT_REVIEW_YAML = f"""
+schema: crewai.flow/v1
+name: PendingEmitReviewFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: hitl-pending-emit
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  rewrite:
+    do:
+      call: expression
+      expr: "outputs.draft.feedback + '|' + outputs.draft.output"
+    listen: rejected
+"""
+
+
+def test_human_feedback_emit_exposes_feedback_in_outputs_after_resume():
+    definition = FlowDefinition.from_declaration(contents=PENDING_EMIT_REVIEW_YAML)
+    pending = Flow.from_declaration(contents=definition).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    resumed = Flow.from_pending(
+        pending.context.flow_id,
+        DefinitionStoreBackend(store="hitl-pending-emit"),
+        definition=definition,
+    )
+    with patch.object(resumed, "_collapse_to_outcome", return_value="rejected"):
+        result = resumed.resume("make it shorter")
+
+    assert result == "make it shorter|draft-content"
+    assert resumed.method_outputs[0] == "draft-content"
+
+
 def test_flow_config_provider_fallback_from_declaration():
     yaml_str = f"""
 schema: crewai.flow/v1
