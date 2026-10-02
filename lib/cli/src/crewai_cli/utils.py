@@ -21,6 +21,7 @@ from crewai_core.tool_credentials import (
     build_env_with_all_tool_credentials as build_env_with_all_tool_credentials,
     build_env_with_tool_repository_credentials as build_env_with_tool_repository_credentials,
 )
+from dotenv import dotenv_values
 from rich.console import Console
 
 from crewai_cli.version import get_crewai_tools_dependency
@@ -142,25 +143,24 @@ def render_template(src: Path, replacements: Mapping[str, str]) -> str:
 
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
-    """Fetch the environment variables from a .env file and return them as a dictionary."""
-    try:
-        with open(env_file_path, "r") as f:
-            env_content = f.read()
+    """Fetch the environment variables from a .env file and return them as a dictionary.
 
-        env_dict = {}
-        for line in env_content.splitlines():
-            if line.strip() and not line.strip().startswith("#"):
-                key, value = line.split("=", 1)
-                env_dict[key.strip()] = value.strip()
-
-        return env_dict
-
-    except FileNotFoundError:
+    The file is parsed with python-dotenv, the same parser ``crewai run`` loads
+    it with, so quoted values, ``export`` prefixes and inline comments reach a
+    deployment exactly as they reach a local run. Keys without a value are
+    skipped.
+    """
+    if not os.path.isfile(env_file_path):
         console.print(f"Error: {env_file_path} not found.", style="bold red")
+        return {}
+
+    try:
+        env_values = dotenv_values(env_file_path)
     except Exception as e:
         console.print(f"Error reading the .env file: {e}", style="bold red")
+        return {}
 
-    return {}
+    return {key: value for key, value in env_values.items() if value is not None}
 
 
 def tree_copy(source: Path, destination: Path) -> None:
