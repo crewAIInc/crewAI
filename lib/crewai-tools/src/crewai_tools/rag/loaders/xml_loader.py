@@ -34,6 +34,7 @@ class XMLLoader(BaseLoader):
 
     @staticmethod
     def _load_from_file(path: str) -> str:
+        """Read local XML content as UTF-8 text before parsing it."""
         with open(path, encoding="utf-8") as file:
             return file.read()
 
