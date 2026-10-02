@@ -212,6 +212,8 @@ def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recor
     # a run that was exported whole, and not where tracing messages are suppressed.
     shown = recorded and suppression is None
     assert ("View traces:" in output) == shown
+    assert ("Execution Traces" in output and "╭" in output) == shown
+    assert ("Ephemeral Execution Traces" in output) == (shown and not authenticated)
     assert (url in output.replace("\n", "")) == shown
     assert len(collector.batches) == int(authenticated or approved)
     # A run whose spans reached Wharf is recorded for `crewai eval`, silently,
@@ -223,6 +225,10 @@ def test_the_viewer_link_is_shown_the_id_is_not_and_a_successful_export_is_recor
         assert written["tier"] == ("authenticated" if authenticated else "ephemeral")
         assert written["started_at"] and written["finished_at"] and written["recorded_at"]
         assert written["amp_base_url"] == collector.url
+        # The link is recorded even where it is never printed: under a TUI the
+        # console line is silenced, and the run app's View Traces button has
+        # nowhere else to read it from.
+        assert written["trace_url"] == url
     else:
         assert written is None
 
@@ -705,9 +711,9 @@ def test_first_time_execution_uses_local_session_even_with_saved_credentials(
         "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
         lambda: True,
     )
-    credential = Mock(return_value="saved-login")
+    credential = Mock(return_value=("login", "saved-login"))
     monkeypatch.setattr(
-        "crewai.telemetry.tracing.grants.tracing_credential", credential
+        "crewai.telemetry.tracing.grants.resolve_tracing_credential", credential
     )
     save = Mock()
     monkeypatch.setattr(ephemeral, "update_user_data", save)
@@ -841,3 +847,142 @@ def test_invalid_buffer_limits_use_safe_defaults(monkeypatch, invalid):
     buffer = EphemeralSpanBuffer()
     assert buffer._max_spans == 1000 and buffer._max_bytes == 8388608
     buffer.shutdown()
+
+
+@pytest.fixture
+def sent_features(monkeypatch):
+    """The `tracing:*` Feature Usage names emitted, in order."""
+    from crewai.telemetry.telemetry import Telemetry
+
+    features = []
+    monkeypatch.setattr(
+        Telemetry,
+        "feature_usage_span",
+        lambda self, feature: features.append(feature)
+        if feature.startswith("tracing:")
+        else None,
+    )
+    return features
+
+
+@pytest.mark.parametrize(
+    ("authenticated", "approved", "grant_status", "export_status", "expected"),
+    [
+        (True, True, 200, 200, ["tracing:authenticated_sent"]),
+        (False, True, 200, 200, ["tracing:ephemeral_sent"]),
+        (False, False, 200, 200, []),
+        (True, True, 200, 401, []),
+        (False, True, 200, 401, []),
+        (False, True, 500, 200, []),
+    ],
+)
+def test_a_trace_that_reaches_amp_is_counted_once_by_tier(
+    collector,
+    sent_features,
+    monkeypatch,
+    authenticated,
+    approved,
+    grant_status,
+    export_status,
+    expected,
+):
+    """Declined consent, a refused grant, or a rejected export never counts."""
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    collector.grant_status = grant_status
+    collector.export_status = export_status
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    def run():
+        with trace_consent(lambda: approved):
+            token = begin_execution(tracing=True)
+            try:
+                record(get_trace_session())
+                nested = begin_execution(tracing=True)
+                end_execution(nested)
+            finally:
+                end_execution(token)
+
+    copy_context().run(run)
+    assert sent_features == expected
+
+
+def test_a_deferred_run_is_counted_once_when_it_finally_ends(
+    collector, sent_features, monkeypatch
+):
+    from crewai.execution import begin_execution, end_execution
+    from crewai.telemetry.tracing.context import get_trace_session
+
+    monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+    token = begin_execution(tracing=True)
+    try:
+        session = get_trace_session()
+        record(session)
+        session.flush()
+    finally:
+        lifetime = end_execution(token, defer=True)
+    assert sent_features == []  # spans reached AMP, but the run is not over
+
+    token = begin_execution(tracing=True, trace_session=lifetime)
+    try:
+        record(get_trace_session(), "second turn")
+    finally:
+        end_execution(token)
+    assert sent_features == ["tracing:authenticated_sent"]
+
+
+def test_recording_the_same_export_twice_counts_it_once(collector, sent_features):
+    client = TraceGrantClient(None)
+    grant = client.create(str(uuid4()))
+    exporter = GrantSpanExporter(client, grant)
+    session = TraceSession(grant.execution_uuid, [exporter])
+    try:
+        record(session)
+    finally:
+        session.shutdown()
+    exporter.record_export()
+    exporter.record_export()
+    assert sent_features == ["tracing:ephemeral_sent"]
+
+
+def test_a_truncated_ephemeral_trace_is_not_counted(
+    collector, sent_features, monkeypatch
+):
+    """It is uploaded, but like the `crewai eval` record it is not a whole run."""
+    monkeypatch.setenv("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", "1")
+    with trace_consent(lambda: True), ephemeral_tracing(str(uuid4())) as session:
+        record(session, "first")
+        record(session, "second")
+    assert len(collector.batches) == 1
+    assert sent_features == []
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+@pytest.mark.parametrize("use_async", [False, True])
+def test_a_flow_kickoff_counts_its_trace(
+    collector, sent_features, monkeypatch, authenticated, use_async
+):
+    from crewai.flow.flow import Flow, start
+
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    class Greeting(Flow):
+        @start()
+        def greet(self):
+            return "hello"
+
+    def run():
+        with trace_consent(lambda: True):
+            flow = Greeting(tracing=True)
+            if use_async:
+                return asyncio.run(flow.kickoff_async())
+            return flow.kickoff()
+
+    assert copy_context().run(run) == "hello"
+    assert collector.batches
+    assert sent_features == [
+        "tracing:authenticated_sent" if authenticated else "tracing:ephemeral_sent"
+    ]
