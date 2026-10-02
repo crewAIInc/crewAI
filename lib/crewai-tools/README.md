@@ -1,6 +1,6 @@
 <div align="center">
 
-![Logo of crewAI, two people rowing on a boat](./assets/crewai_logo.png)
+![Logo of crewAI, two people rowing on a boat](../../docs/images/crewai_logo.png)
 
 <div align="left">
 
@@ -83,7 +83,7 @@ To quickly get started with MCP in CrewAI you have 2 options:
 
 ### Option 1: Fully managed connection
 
-In this scenario we use a contextmanager (`with` statement) to start and stop the the connection with the MCP server.
+In this scenario we use a contextmanager (`with` statement) to start and stop the connection with the MCP server.
 This is done in the background and you only get to interact with the CrewAI tools corresponding to the MCP server's tools.
 
 For an STDIO based MCP server:
