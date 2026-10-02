@@ -90,6 +90,7 @@ def test_get_retry_delay_seconds_applies_jitter_and_honors_retry_after() -> None
 
 
 def test_run_with_rate_limit_retry_retries_with_backoff() -> None:
+    """Retry a synchronous provider throttle using the calculated backoff."""
     outcomes: list[str | Exception] = [
         RuntimeError("rate limit exceeded"),
         "complete",
@@ -107,6 +108,7 @@ def test_run_with_rate_limit_retry_retries_with_backoff() -> None:
 @pytest.mark.parametrize("asynchronous", [False, True])
 @pytest.mark.asyncio
 async def test_retry_honors_sdk_response_retry_after(asynchronous: bool) -> None:
+    """Honor response Retry-After headers in synchronous and asynchronous calls."""
     response = httpx.Response(
         429,
         headers={"Retry-After": "7"},
@@ -119,9 +121,11 @@ async def test_retry_honors_sdk_response_retry_after(asynchronous: bool) -> None
     delays: list[float] = []
 
     async def record_delay(delay: float) -> None:
+        """Record the requested sleep without delaying the test."""
         delays.append(delay)
 
     async def operation() -> str:
+        """Return the next scripted result or raise its provider error."""
         return _pop_outcome(outcomes)
 
     if asynchronous:
@@ -137,6 +141,7 @@ async def test_retry_honors_sdk_response_retry_after(asynchronous: bool) -> None
 
 @pytest.mark.asyncio
 async def test_arun_with_rate_limit_retry_retries_with_backoff() -> None:
+    """Retry an asynchronous provider throttle using the calculated backoff."""
     outcomes: list[str | Exception] = [
         RuntimeError("rate limit exceeded"),
         "complete",
@@ -144,9 +149,11 @@ async def test_arun_with_rate_limit_retry_retries_with_backoff() -> None:
     delays: list[float] = []
 
     async def record_delay(delay: float) -> None:
+        """Record the requested sleep without delaying the test."""
         delays.append(delay)
 
     async def operation() -> str:
+        """Return the next scripted result or raise its provider error."""
         return _pop_outcome(outcomes)
 
     result = await arun_with_rate_limit_retry(operation, sleep=record_delay)
