@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 class DOCXLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
+        """Load DOCX text from a local file or URL and clean up downloaded files."""
         try:
             from docx import Document as DocxDocument
         except ImportError as e:
@@ -44,6 +45,7 @@ class DOCXLoader(BaseLoader):
 
     @staticmethod
     def _download_from_url(url: str, kwargs: dict[str, Any]) -> str:
+        """Download DOCX content to a temporary file after checking HTTP status."""
         headers = kwargs.get(
             "headers",
             {

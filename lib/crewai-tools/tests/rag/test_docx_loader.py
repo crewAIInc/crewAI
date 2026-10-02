@@ -104,6 +104,7 @@ class TestDOCXLoader:
 
     @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_docx_url_download_error(self, mock_get):
+        """Report download failures with the source URL."""
         mock_get.side_effect = Exception("Network error")
 
         loader = DOCXLoader()
@@ -112,6 +113,7 @@ class TestDOCXLoader:
 
     @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_docx_url_http_error(self, mock_get):
+        """Reject unsuccessful HTTP responses before parsing DOCX data."""
         mock_get.return_value = Mock(
             raise_for_status=Mock(side_effect=Exception("404 Not Found"))
         )
@@ -121,12 +123,14 @@ class TestDOCXLoader:
             loader.load(SourceContent("https://example.com/notfound.docx"))
 
     def test_load_docx_invalid_source(self):
+        """Reject input that is neither an existing file nor a URL."""
         loader = DOCXLoader()
         with pytest.raises(ValueError, match="Source must be a valid file path or URL"):
             loader.load(SourceContent("not_a_file_or_url"))
 
     @patch("docx.Document")
     def test_load_docx_parsing_error(self, mock_docx_class):
+        """Wrap document parsing failures with a loader-specific error."""
         mock_docx_class.side_effect = Exception("Invalid DOCX file")
 
         with tempfile.NamedTemporaryFile(suffix=".docx") as f:
