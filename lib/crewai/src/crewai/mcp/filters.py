@@ -64,6 +64,7 @@ class StaticToolFilter:
             blocked_tool_names: List of tool names to block. Blocked tools
                 take precedence over allowed tools.
         """
+        self._has_allowlist = allowed_tool_names is not None
         self.allowed_tool_names = set(allowed_tool_names or [])
         self.blocked_tool_names = set(blocked_tool_names or [])
 
@@ -82,7 +83,7 @@ class StaticToolFilter:
         if self.blocked_tool_names and tool_name in self.blocked_tool_names:
             return False
 
-        if self.allowed_tool_names:
+        if self._has_allowlist or self.allowed_tool_names:
             return tool_name in self.allowed_tool_names
 
         return True
