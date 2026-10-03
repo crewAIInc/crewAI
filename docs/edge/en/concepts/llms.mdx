@@ -1166,6 +1166,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     FLEXAI_BASE_URL=https://api.flex.ai/v1
     ```
 
+    FlexAI runs on CrewAI's built-in OpenAI-compatible provider, so it needs no extra install (it does not use `crewai[litellm]`).
+
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(

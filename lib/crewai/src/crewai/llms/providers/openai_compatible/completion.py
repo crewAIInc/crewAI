@@ -33,6 +33,9 @@ class ProviderConfig:
         default_headers: HTTP headers to include in all requests.
         api_key_required: Whether an API key is required for this provider.
         default_api_key: Default API key to use if none is provided and not required.
+        require_https: Whether a resolved base URL must use HTTPS. Plain HTTP
+            would send the API key in the clear, so it is refused unless the
+            host is loopback (a local development server).
     """
 
     base_url: str
@@ -41,6 +44,7 @@ class ProviderConfig:
     default_headers: dict[str, str] = field(default_factory=dict)
     api_key_required: bool = True
     default_api_key: str | None = None
+    require_https: bool = False
 
 
 OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
@@ -95,10 +99,13 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_env="FLEXAI_API_KEY",
         base_url_env="FLEXAI_BASE_URL",
         api_key_required=True,
+        require_https=True,
     ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
+
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 def _normalize_ollama_base_url(base_url: str) -> str:
@@ -248,6 +255,18 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
         if provider in ("ollama", "ollama_chat"):
             resolved = _normalize_ollama_base_url(resolved)
+
+        if config.require_https:
+            parts = urlsplit(resolved)
+            scheme = parts.scheme.lower()
+            local_http = scheme == "http" and parts.hostname in _LOOPBACK_HOSTS
+            if scheme != "https" and not local_http:
+                # Name the host only: netloc can carry user:password.
+                raise ValueError(
+                    f"Base URL for provider '{provider}' must use HTTPS, got "
+                    f"'{scheme}://{parts.hostname}'. A non-TLS endpoint "
+                    "would send the API key in the clear."
+                )
 
         return resolved
 
