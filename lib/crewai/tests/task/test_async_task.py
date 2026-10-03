@@ -1,6 +1,7 @@
 """Tests for async task execution."""
 
 import asyncio
+from io import StringIO
 import threading
 from typing import Any
 
@@ -9,8 +10,9 @@ from pydantic import BaseModel
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agent import Agent
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.task_events import TaskFailedEvent
+from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
+from crewai.events.event_listener import EventListener
+from crewai.events.types.task_events import TaskFailedEvent, TaskStartedEvent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.tasks.output_format import OutputFormat
@@ -476,7 +478,9 @@ class TestCancelledTaskCleanup:
     ``EventListener.execution_spans`` on purpose. Handlers run on a thread
     pool with no ordering between them, so whether the started or the
     terminal handler runs first is not deterministic; asserting on the
-    dict produced a test that failed roughly one run in five.
+    dict from this test produced one that failed roughly one run in five.
+    ``TestTerminalEventOrdering`` covers the span bookkeeping itself, by
+    driving the two handlers in a fixed order instead of racing them.
     """
 
     @pytest.mark.asyncio
@@ -513,3 +517,111 @@ class TestCancelledTaskCleanup:
             assert captured["error_type"] is asyncio.CancelledError
         finally:
             crewai_event_bus.off(TaskFailedEvent, on_failed)
+
+
+class TestTerminalEventOrdering:
+    """A task's span must be closed even when its events arrive out of order.
+
+    ``emit`` dispatches synchronous handlers on a ``ThreadPoolExecutor``, so a
+    task's ``TaskStartedEvent`` and its terminal event carry no happens-before
+    relation. When the terminal handler ran first there was no span to pop,
+    and the started handler then stored one that nothing would ever remove --
+    pinning the task, and its agent, crew and tooling, for the life of the
+    process. Reproducing that by racing the two handlers is flaky by
+    construction, so these tests drive them in a fixed order instead.
+    """
+
+    @pytest.fixture
+    def handlers(self) -> tuple[Any, Any, Any]:
+        """Register a throwaway listener and return its (started, failed) handlers.
+
+        The two handlers have to be driven in an order the thread pool would not
+        guarantee, and ``emit`` offers no way to pin that, so they are invoked
+        directly. Registration goes to a local bus and the instance is built
+        with ``object.__new__`` so the ``EventListener`` singleton -- whose
+        ``__new__`` clears ``_initialized`` and would re-register handlers on
+        the shared bus -- is left untouched.
+        """
+        bus = CrewAIEventsBus()
+        listener = object.__new__(EventListener)
+        listener._telemetry = MagicMock()
+        listener.logger = MagicMock()
+        listener.execution_spans = {}
+        listener.next_chunk = 0
+        listener.text_stream = StringIO()
+        listener.knowledge_retrieval_in_progress = False
+        listener.knowledge_query_in_progress = False
+        listener._terminal_task_ids = set()
+        listener._failed_task_ids = set()
+        listener.formatter = MagicMock()
+        listener.setup_listeners(bus)
+
+        def find(event_type: type, name: str) -> Any:
+            matches = [
+                handler
+                for handler in bus._sync_handlers.get(event_type, ())
+                if getattr(handler, "__name__", "") == name
+            ]
+            assert matches, f"{name} is not registered for {event_type.__name__}"
+            return matches[-1]
+
+        return (
+            listener,
+            find(TaskStartedEvent, "on_task_started"),
+            find(TaskFailedEvent, "on_task_failed"),
+        )
+
+    @staticmethod
+    def _task(agent: Agent) -> Task:
+        return Task(
+            description="Ordered task",
+            expected_output="Never produced",
+            agent=agent,
+        )
+
+    def test_terminal_before_started_does_not_leak_a_span(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """The losing order for the started handler leaves no span behind."""
+        listener, on_started, on_failed = handlers
+        task = self._task(test_agent)
+
+        on_failed(task, TaskFailedEvent(error="cancelled", task=task))
+        on_started(task, TaskStartedEvent(context=None, task=task))
+
+        assert task not in listener.execution_spans, (
+            "started handler ran after the terminal event and stored a span "
+            "that will never be popped"
+        )
+        assert task.id not in listener._terminal_task_ids, (
+            "reconciled task id was not discarded"
+        )
+
+    def test_repeated_out_of_order_events_do_not_accumulate(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """Repeated cancellations must not grow the tracking sets."""
+        listener, on_started, on_failed = handlers
+        tasks = [self._task(test_agent) for _ in range(20)]
+
+        for task in tasks:
+            on_failed(task, TaskFailedEvent(error="cancelled", task=task))
+            on_started(task, TaskStartedEvent(context=None, task=task))
+
+        assert not listener._terminal_task_ids
+        assert not listener._failed_task_ids
+        assert not listener.execution_spans
+
+    def test_started_before_terminal_still_closes_the_span(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """The common order is unaffected: the span is stored, then closed."""
+        listener, on_started, on_failed = handlers
+        task = self._task(test_agent)
+
+        on_started(task, TaskStartedEvent(context=None, task=task))
+        assert task in listener.execution_spans
+
+        on_failed(task, TaskFailedEvent(error="cancelled", task=task))
+        assert task not in listener.execution_spans
+        assert not listener._terminal_task_ids
