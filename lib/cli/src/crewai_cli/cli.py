@@ -688,6 +688,11 @@ def run(
 
 @crewai.command(name="eval")
 @click.option(
+    "--no-open",
+    is_flag=True,
+    help="Print the report URL without opening a browser.",
+)
+@click.option(
     "--run",
     "run_id",
     type=str,
@@ -722,7 +727,7 @@ def run(
     ),
 )
 def eval_command(
-    run_id: str | None, models: str | None, deployment_id: str | None
+    run_id: str | None, models: str | None, deployment_id: str | None, no_open: bool
 ) -> None:
     """Evaluate the last traced run through CrewAI AMP, or compare models on the
     project's deployment (--models).
@@ -738,13 +743,13 @@ def eval_command(
                 "--run grades a run that already happened; --models runs the "
                 "deployment again. Give one of them."
             )
-        eval_models(models, deployment_id=deployment_id)
+        eval_models(models, deployment_id=deployment_id, open_browser=not no_open)
         return
     if deployment_id is not None:
         raise click.UsageError(
             "--deployment names the deployment --models runs; add --models LIST."
         )
-    eval_crew(run_id=run_id)
+    eval_crew(run_id=run_id, open_browser=not no_open)
 
 
 @crewai.command()
