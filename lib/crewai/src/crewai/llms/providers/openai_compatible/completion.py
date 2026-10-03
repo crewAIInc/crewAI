@@ -71,6 +71,13 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_required=False,
         default_api_key="ollama",
     ),
+    "llmman": ProviderConfig(
+        base_url="http://localhost:17434/v1",
+        api_key_env="LLMMAN_API_KEY",
+        base_url_env="LLMMAN_HOST",
+        api_key_required=False,
+        default_api_key="llmman",
+    ),
     "hosted_vllm": ProviderConfig(
         base_url="http://localhost:8000/v1",
         api_key_env="VLLM_API_KEY",
@@ -95,13 +102,15 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
 _OLLAMA_DEFAULT_PORT = 11434
 
 
-def _normalize_ollama_base_url(base_url: str) -> str:
-    """Normalize an Ollama base URL into a full OpenAI-compatible endpoint.
+def _normalize_local_base_url(
+    base_url: str, default_port: int = _OLLAMA_DEFAULT_PORT
+) -> str:
+    """Normalize a local server base URL into a full OpenAI-compatible endpoint.
 
-    ``OLLAMA_HOST`` follows Ollama's own convention and may be a bare host
-    (``0.0.0.0``), a ``host:port`` pair (``127.0.0.1:11434``), or a full URL.
-    Whichever parts are missing are filled in: ``http://`` when no scheme is
-    given, the default Ollama port when none is given and the scheme is
+    ``OLLAMA_HOST`` and ``LLMMAN_HOST`` follow the servers' own convention and
+    may be a bare host (``0.0.0.0``), a ``host:port`` pair (``127.0.0.1:11434``),
+    or a full URL. Whichever parts are missing are filled in: ``http://`` when
+    no scheme is given, ``default_port`` when none is given and the scheme is
     ``http`` (``https`` implies 443), and the ``/v1`` suffix that the
     OpenAI-compatible endpoint requires.
 
@@ -118,7 +127,7 @@ def _normalize_ollama_base_url(base_url: str) -> str:
 
     netloc = parts.netloc
     if parts.scheme == "http" and parts.port is None:
-        netloc = f"{netloc}:{_OLLAMA_DEFAULT_PORT}"
+        netloc = f"{netloc}:{default_port}"
 
     path = parts.path.rstrip("/")
     if not path.endswith("/v1"):
@@ -139,6 +148,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - deepseek: DeepSeek (https://deepseek.com)
         - ollama: Ollama local server (https://ollama.ai)
         - ollama_chat: Alias for ollama
+        - llmman: llmman local server (https://github.com/llmmanorg/llmman)
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
@@ -239,8 +249,10 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         else:
             resolved = config.base_url
 
-        if provider in ("ollama", "ollama_chat"):
-            resolved = _normalize_ollama_base_url(resolved)
+        if provider in ("ollama", "ollama_chat", "llmman"):
+            resolved = _normalize_local_base_url(
+                resolved, urlsplit(config.base_url).port or _OLLAMA_DEFAULT_PORT
+            )
 
         return resolved
 
