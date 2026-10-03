@@ -617,3 +617,78 @@ from crewai.flow import (
 
 - [Dominando o Gerenciamento de Estado em Flows](/pt-BR/guides/flows/mastering-flow-state) — persistência, estado Pydantic, `@persist`
 - [Construa Seu Primeiro Flow](/pt-BR/guides/flows/first-flow) — fundamentos de flow
+
+
+## Jobs experimentais que abrangem vários turnos de conversa
+
+Esta API é experimental e pode mudar. Importe-a explicitamente de `crewai.experimental.flow_jobs`; ela não faz parte da API estável de `crewai.flow`.
+
+`JobRecord`, `JobState`, `JobUpdate`, `JobWorkState`, `JobWorkFlow` e `JobRunner` oferecem um contrato opcional de jobs em memória. Os Flows conversacionais existentes mantêm seu comportamento. Um job possui identidade própria, turno de origem, revisão, tentativa de execução, status, etapa atual, etapas concluídas e erro. As aplicações adicionam entradas e saídas tipadas; não é necessária uma classe separada de artefatos.
+
+Declare os campos de resultado graváveis em `output_fields`. Updates do worker não podem alterar campos de entrada, propriedade ou ciclo de vida por meio do payload de saída. O registro candidato completo é validado antes do commit; updates inválidos, de outro proprietário, obsoletos, duplicados ou posteriores ao término não alteram o estado aceito.
+
+```python
+import asyncio
+from typing import ClassVar
+from pydantic import Field
+from crewai.flow import ConversationState, start
+from crewai.experimental.flow_jobs import (
+    JobRecord, JobRunner, JobState, JobWorkFlow, JobWorkState, add_job,
+)
+
+class ReportJob(JobRecord):
+    output_fields: ClassVar[frozenset[str]] = frozenset({"notes"})
+    question: str
+    notes: list[str] = Field(default_factory=list)
+    stage: str = "collect"
+
+class WorkChatState(ConversationState, JobState[ReportJob]):
+    pass
+
+class ReportWork(JobWorkFlow[JobWorkState[ReportJob]]):
+    @start()
+    def collect(self):
+        self.check_open()
+        self.publish_update("started")
+        self.publish_update(
+            "stage_completed", stage="collect", outputs={"notes": ["Example fact"]},
+        )
+        self.publish_update("completed")
+
+async def run_job():
+    state = WorkChatState()
+    changes = asyncio.Queue()
+
+    def make_work(job, inputs, publish):
+        return ReportWork(
+            initial_state=JobWorkState[ReportJob](job=job),
+            publish=publish, suppress_flow_events=True,
+        )
+
+    runner = JobRunner(state, make_work, on_update=changes.put)
+    try:
+        async with runner.state_lock:
+            job = ReportJob(session_id=state.id, question="Example report")
+            if not add_job(state, job):
+                raise RuntimeError("Job registration rejected")
+            runner.submit(job, {})
+        while True:
+            snapshot = await changes.get()
+            if snapshot["jobs"][0]["status"] in {"completed", "failed"}:
+                return snapshot
+    finally:
+        await runner.aclose()
+
+# Run in a script: asyncio.run(run_job())
+
+```
+
+Crie `JobRunner(state, make_work, on_update=publish_snapshot)` em um loop asyncio em execução. `make_work(job, inputs, publish)` retorna um `JobWorkFlow` sem streaming, com estado tipado próprio, cópias do job e das entradas, e `publish=publish`. `on_update` é um callback assíncrono que recebe snapshots compatíveis com JSON (`session_id`, `seq`, `jobs`); adapte-os ao transporte existente. `format_error` pode remover detalhes sensíveis do provider, e `on_worker_event` observa o início e o encerramento do worker.
+
+Use `runner.state_lock` para **todos** os turnos em primeiro plano, registros de jobs e alterações do estado pai. Registre com `add_job(state, job)` e então chame `runner.submit(job, inputs)`. Execute turnos síncronos em uma thread de trabalho mantendo esse lock; nunca execute dois turnos simultaneamente no mesmo Flow. O `publish_update()` do worker também é executado fora do event loop do runner e aguarda a aceitação do commit antes da próxima etapa. Um update `stage_started` exige que a etapa anterior tenha sido consolidada; `stage_completed` retém as saídas tipadas antes da conclusão bem-sucedida. Uma falha posterior preserva as saídas anteriores.
+
+Forneça status e saídas relevantes pelos hooks `build_router_context()` e `build_agent_context()`. Snapshots não se tornam automaticamente mensagens públicas ou respostas faladas. A interpretação do domínio e a capacidade de admissão continuam sendo políticas da aplicação.
+
+Ao encerrar a sessão, chame `runner.request_close()` no loop proprietário antes de aguardar a execução em primeiro plano e, depois, `await runner.aclose()`. Isso fecha a admissão e a publicação, sinaliza cada worker, libera publishers em espera e aguarda as tasks próprias. Os métodos de trabalho devem chamar `check_open()` nos limites das etapas. Uma operação do provider em andamento não é abortada. Uma falha do subscriber fecha o runner para não deixar publishers bloqueados. Interromper apenas a fala não deve fechar o runner.
+
+O ciclo inicial é `queued → running → completed/failed`. Pause/resume, substituição, entrega automática de respostas e recuperação distribuída não são fornecidos. Os registros podem ser serializados com os recursos de estado existentes, mas restaurá-los não recria workers ativos nem garante efeitos externos exatamente uma vez.
