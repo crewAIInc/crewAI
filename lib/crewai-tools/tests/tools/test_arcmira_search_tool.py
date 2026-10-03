@@ -162,6 +162,21 @@ def test_network_failure_has_no_automatic_retry(
     assert get.call_count == 1
 
 
+@pytest.mark.parametrize("payload", [["quota exceeded"], "rate limited", None])
+def test_non_object_error_preserves_http_status(
+    payload: object, api_response: tuple[MagicMock, MagicMock]
+) -> None:
+    get, response = api_response
+    response.status_code = 429
+    response.json.return_value = payload
+    with pytest.raises(RuntimeError) as failure:
+        ArcmiraSearchTool(api_key="test-key").run(query="open source")
+    prefix = "Arcmira search failed (HTTP 429): "
+    assert str(failure.value).startswith(prefix)
+    assert json.loads(str(failure.value)[len(prefix) :]) == payload
+    get.assert_called_once()
+
+
 def test_non_json_error_omits_raw_response(
     api_response: tuple[MagicMock, MagicMock],
 ) -> None:

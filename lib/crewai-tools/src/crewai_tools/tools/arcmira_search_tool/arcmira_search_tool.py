@@ -79,11 +79,11 @@ class ArcmiraSearchTool(BaseTool):
             raise RuntimeError(
                 f"Arcmira returned a non-JSON response (HTTP {response.status_code})."
             ) from None
-        if not isinstance(payload, dict):
-            raise RuntimeError("Arcmira returned an unexpected response format.")
         if response.status_code != 200:
             raise RuntimeError(
                 f"Arcmira search failed (HTTP {response.status_code}): "
                 f"{json.dumps(payload, ensure_ascii=False)}"
             )
+        if not isinstance(payload, dict):
+            raise RuntimeError("Arcmira returned an unexpected response format.")
         return payload
