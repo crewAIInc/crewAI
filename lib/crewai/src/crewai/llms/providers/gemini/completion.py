@@ -34,6 +34,16 @@ except ImportError:
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
+# Version-less aliases from GEMINI_MODELS that the version regex below cannot
+# match, mapped to the Gemini generation they currently point to. Kept explicit
+# (rather than a looser regex) so look-alike names such as
+# "gemini-gemma-2-27b-it" are never misread as a Gemini version.
+GEMINI_LATEST_ALIAS_VERSIONS: dict[str, float] = {
+    "gemini-flash-latest": 2.5,
+    "gemini-flash-lite-latest": 2.5,
+    "gemini-pro-latest": 2.5,
+}
+
 
 class GeminiCompletion(BaseLLM):
     """Google Gemini native completion implementation.
@@ -95,21 +105,18 @@ class GeminiCompletion(BaseLLM):
             use_vx = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
         data["use_vertexai"] = use_vx
 
-        model = data.get("model", "gemini-2.0-flash-001")
-        version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
-        data["supports_tools"] = bool(
-            version_match and float(version_match.group(1)) >= 1.5
+        model = data.get("model", "gemini-2.0-flash-001").lower()
+        version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model)
+        gemini_version = (
+            float(version_match.group(1))
+            if version_match
+            else GEMINI_LATEST_ALIAS_VERSIONS.get(model, 0.0)
         )
-        data["is_gemini_2_0"] = bool(
-            version_match and float(version_match.group(1)) >= 2.0
-        )
+        data["supports_tools"] = gemini_version >= 1.5
+        data["is_gemini_2_0"] = gemini_version >= 2.0
 
         # Auto-enable thinking for gemini-2.5+
-        if (
-            data.get("thinking_config") is None
-            and version_match
-            and float(version_match.group(1)) >= 2.5
-        ):
+        if data.get("thinking_config") is None and gemini_version >= 2.5:
             data["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
 
         return data
