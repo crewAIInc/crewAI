@@ -2,6 +2,7 @@ import os
 from typing import Annotated, Any
 
 from crewai.tools import BaseTool, EnvVar
+from crewai_core.version import get_crewai_version
 from pydantic import BaseModel, Field
 import requests
 
@@ -82,9 +83,13 @@ class ParallelSearchTool(BaseTool):
         if not objective and not search_queries:
             return "Error: Provide at least one of 'objective' or 'search_queries'"
 
+        version = get_crewai_version()
+        project_agent = f"crewai/{version}" if version != "unknown" else "crewai"
         headers = {
             "x-api-key": api_key,
             "Content-Type": "application/json",
+            # Keep project-wide aggregate attribution on the HTTP transport.
+            "User-Agent": f"{project_agent} {requests.utils.default_user_agent()}",
         }
 
         try:
