@@ -487,6 +487,8 @@ This is particularly useful in multi-user or enterprise deployments where differ
 - **`depth="shallow"`** -- Direct vector search with composite scoring. Fast (~200ms), no LLM calls.
 - **`depth="deep"` (default)** -- Runs a multi-step RecallFlow: query analysis, scope selection, parallel vector search, confidence-based routing, and optional recursive exploration when confidence is low.
 
+During exploration, the LLM reviews a bounded set of retrieved excerpts and returns structured evidence gaps and up to three follow-up queries per round. For example, a memory identifying the codename `ORION` can lead to a search for `ORION release date`. Follow-up queries are deduplicated and batch-embedded within `exploration_budget`; they keep the existing scopes, categories, time, and privacy filters. Final results combine real records from all rounds, retaining the strongest similarity for duplicate record IDs. Invalid suggestions, repeated queries, or unusable embeddings preserve the evidence already retrieved; failed searches remain eligible for retries within the budget. `MemoryMatch.evidence_gaps` reflects the latest successful analysis and may still report a gap when the budget ends before another analysis.
+
 **Smart LLM skip**: Queries shorter than `query_analysis_threshold` (default 200 characters) skip the LLM query analysis entirely, even in deep mode. Short queries like "What database do we use?" are already good search phrases -- the LLM analysis adds little value. This saves ~1-3s per recall for typical short queries. Only longer queries (e.g. full task descriptions) go through LLM distillation into targeted sub-queries.
 
 ```python
