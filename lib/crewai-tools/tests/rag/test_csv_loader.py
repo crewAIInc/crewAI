@@ -76,6 +76,24 @@ class TestCSVLoader:
         assert result.metadata["columns"] == ["col1", "col2"]
         assert result.metadata["rows"] == 2
 
+    def test_load_csv_with_utf8_bom(self, temp_csv_file):
+        # A BOM (U+FEFF) is a common prefix on UTF-8 files written by Windows
+        # editors.  It must not leak into the first column name.
+        path = temp_csv_file("\ufeffname,age,city\nJohn,25,New York")
+        result = CSVLoader().load(SourceContent(path))
+
+        assert "Headers: name | age | city" in result.content
+        assert "Row 1: name: John | age: 25 | city: New York" in result.content
+        assert result.metadata["columns"] == ["name", "age", "city"]
+
+    def test_load_csv_bom_with_inline_text(self):
+        raw_csv = "\ufeffcol1,col2\nvalue1,value2"
+        result = CSVLoader().load(SourceContent(raw_csv))
+
+        assert "Headers: col1 | col2" in result.content
+        assert "Row 1: col1: value1 | col2: value2" in result.content
+        assert result.metadata["columns"] == ["col1", "col2"]
+
     def test_doc_id_is_deterministic(self, temp_csv_file):
         path = temp_csv_file("name,value\ntest,123")
         loader = CSVLoader()
