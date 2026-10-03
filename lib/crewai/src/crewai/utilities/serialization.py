@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from datetime import date, datetime
+import enum
 import json
 from typing import Any, TypeAlias
 import uuid
@@ -49,6 +50,16 @@ def to_serializable(
     if _ancestors is None:
         _ancestors = set()
 
+    if isinstance(obj, enum.Enum):
+        # Unwrapping is not nesting: the value keeps the current depth so a
+        # member at the depth limit still serializes to its native form.
+        return to_serializable(
+            obj.value,
+            exclude=exclude,
+            max_depth=max_depth,
+            _current_depth=_current_depth,
+            _ancestors=_ancestors,
+        )
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
     if isinstance(obj, uuid.UUID):
@@ -122,8 +133,15 @@ def to_serializable(
 
 
 def _to_serializable_key(key: Any) -> str:
+    if isinstance(key, enum.Enum):
+        return _to_serializable_key(key.value)
     if isinstance(key, (str, int)):
         return str(key)
+    if isinstance(key, (date, datetime)):
+        return key.isoformat()
+    if isinstance(key, (tuple, list)):
+        # Deterministic for value tuples: no object id, unlike opaque objects.
+        return repr(list(key))
     return f"key_{id(key)}_{key!r}"
 
 
