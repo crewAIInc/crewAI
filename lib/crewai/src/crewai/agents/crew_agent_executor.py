@@ -1053,16 +1053,33 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         ``BaseTool.arun`` is callable by inheritance even when only ``_run``
         is implemented; awaiting it then raises ``NotImplementedError``. A
-        tool supports native async when its ``_arun`` is overridden or its
-        wrapped function returns awaitables.
+        tool supports native async when its own ``_arun`` can run without
+        raising, i.e. when the wrapped function is async or returns
+        awaitables. A class-level ``type(tool)._arun is not BaseTool._arun``
+        check is not sufficient here: ``Tool`` always overrides ``_arun``
+        (it dispatches to the wrapped function and raises
+        ``NotImplementedError`` for sync-only wrapped functions), so sync
+        ``@tool`` functions must be classified by their wrapped function.
         """
         from crewai.tools.base_tool import BaseTool
 
         if isinstance(tool, BaseTool):
-            if type(tool)._arun is not BaseTool._arun:
-                return True
+            cls_arun = getattr(type(tool), "_arun", None)
+            if cls_arun is not None and cls_arun is not BaseTool._arun:
+                cls_qname = getattr(cls_arun, "__qualname__", "")
+                # ``Tool._arun`` demotes to the wrapped-function probes below;
+                # any other override (a subclass with real async support) is
+                # natively async by definition.
+                if cls_qname not in ("Tool._arun", "BaseTool._arun"):
+                    return True
             wrapped_func = getattr(tool, "func", None)
-            return inspect.iscoroutinefunction(wrapped_func)
+            if inspect.iscoroutinefunction(wrapped_func):
+                return True
+            # Sync-wrapped ``Tool``: classify as async only when the wrapped
+            # function returns awaitables, so ``Tool._arun`` dispatch would
+            # succeed; the runner still recovers via NotImplementedError if
+            # this proves wrong at call time.
+            return False
         return False
 
     async def _aexecute_single_native_tool_call(
@@ -1085,7 +1102,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         async def async_tool_runner(tool: Any, kwargs: dict[str, Any]) -> Any:
             if self._tool_supports_native_async(tool):
-                return await tool.arun(**kwargs)
+                try:
+                    return await tool.arun(**kwargs)
+                except NotImplementedError:
+                    # ``Tool._arun`` demotes to ``NotImplementedError`` for
+                    # sync-only wrapped functions; fall back to the worker
+                    # thread so sync ``@tool`` tools still execute.
+                    pass
             return await asyncio.to_thread(available_functions[func_name], **kwargs)
 
         return await self._execute_single_native_tool_call_impl(
@@ -1109,10 +1132,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
     ) -> tuple[dict[str, Any] | None, dict[str, Any] | None, Any | None]:
         """Resolve and validate a native tool call before execution.
 
-        Returns ``(args_dict, error_result, original_tool)``; ``error_result``
-        is a ready-to-return dict when arguments cannot be parsed or usage
-        limits are reached, and ``original_tool`` is resolved from the
-        executor's tools when missing.
+        Returns ``(args_dict, max_usage_reached, original_tool)``;
+        ``max_usage_reached`` is ``True`` when the call must not execute the
+        tool body (arguments used verbatim, limit message rendered by the
+        shared orchestration below — which still emits started/finished
+        events and runs before/after hooks, matching the pre-refactor sync
+        flow). ``original_tool`` is resolved from the executor's tools when
+        missing.
         """
         args_dict, parse_error = parse_tool_call_args(
             func_args, func_name, call_id, original_tool
@@ -1133,22 +1159,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         ):
             max_usage_reached = True
 
-        if max_usage_reached and original_tool:
-            return (
-                args_dict,
-                {
-                    "call_id": call_id,
-                    "func_name": func_name,
-                    "result": (
-                        f"Tool '{func_name}' has reached its usage limit of "
-                        f"{original_tool.max_usage_count} times and cannot be used anymore."
-                    ),
-                    "from_cache": False,
-                    "original_tool": original_tool,
-                },
-                original_tool,
-            )
-        return args_dict, None, original_tool
+        return args_dict, (max_usage_reached if original_tool else False), original_tool
 
     def _resolve_native_tool(
         self,
@@ -1312,15 +1323,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
             ToolUsageStartedEvent,
         )
 
-        args_dict, error_result, original_tool = self._prepare_single_native_tool_call(
+        args_dict, max_usage_reached, original_tool = self._prepare_single_native_tool_call(
             func_name=func_name,
             func_args=func_args,
             call_id=call_id,
             original_tool=original_tool,
             should_execute=should_execute,
         )
-        if error_result is not None:
-            return error_result
 
         structured_tool = self._resolve_structured_tool(func_name, original_tool)
         output_tool = original_tool or structured_tool
@@ -1358,6 +1367,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         input_str = json.dumps(args_dict) if args_dict else ""
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
+            raw_tool_result = result
+        elif max_usage_reached and original_tool:
+            result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             raw_tool_result = result
         elif (
             not from_cache
@@ -1434,15 +1446,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
             ToolUsageStartedEvent,
         )
 
-        args_dict, error_result, original_tool = self._prepare_single_native_tool_call(
+        args_dict, max_usage_reached, original_tool = self._prepare_single_native_tool_call(
             func_name=func_name,
             func_args=func_args,
             call_id=call_id,
             original_tool=original_tool,
             should_execute=should_execute,
         )
-        if error_result is not None:
-            return error_result
 
         structured_tool = self._resolve_structured_tool(func_name, original_tool)
         output_tool = original_tool or structured_tool
@@ -1480,6 +1490,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         input_str = json.dumps(args_dict) if args_dict else ""
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
+            raw_tool_result = result
+        elif max_usage_reached and original_tool:
+            result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             raw_tool_result = result
         elif (
             not from_cache
