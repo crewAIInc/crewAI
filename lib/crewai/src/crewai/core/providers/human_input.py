@@ -179,6 +179,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
+        self._show_result(formatted_answer)
         feedback = self._prompt_input(context.crew)
 
         if context._is_training_mode():
@@ -200,6 +201,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
+        self._show_result(formatted_answer)
         feedback = await self._prompt_input_async(context.crew)
 
         if context._is_training_mode():
@@ -259,6 +261,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = context._invoke_loop()
+                self._show_result(answer)
                 feedback = self._prompt_input(context.crew)
 
         return answer
@@ -311,9 +314,36 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = await context._ainvoke_loop()
+                self._show_result(answer)
                 feedback = await self._prompt_input_async(context.crew)
 
         return answer
+
+    @staticmethod
+    def _show_result(answer: AgentFinish) -> None:
+        """Display the agent's result before prompting for feedback.
+
+        Args:
+            answer: The agent's finished answer to display.
+        """
+        from rich.panel import Panel
+        from rich.text import Text
+
+        from crewai.events.event_listener import event_listener
+
+        formatter = event_listener.formatter
+
+        output = HumanInputProvider._get_output_string(answer)
+        content = Text()
+        content.append(output)
+
+        result_panel = Panel(
+            content,
+            title="\U0001f4dd Task Result",
+            border_style="green",
+            padding=(1, 2),
+        )
+        formatter.console.print(result_panel)
 
     @staticmethod
     def _prompt_input(crew: Crew | None) -> str:
