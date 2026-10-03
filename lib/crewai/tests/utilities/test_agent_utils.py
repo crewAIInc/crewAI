@@ -1112,6 +1112,25 @@ class TestParallelSummarization:
         assert "Flow summary 1" in messages[-1]["content"]
         assert "Flow summary 2" in messages[-1]["content"]
 
+    def test_falls_back_to_call_when_acall_not_implemented(self) -> None:
+        """Custom LLMs that only implement `call` must still be summarized."""
+        from crewai.llms.base_llm import BaseLLM
+
+        class SyncOnlyLLM(BaseLLM):
+            def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+                return "<summary>Sync summary</summary>"
+
+            def get_context_window_size(self) -> int:
+                return 100
+
+        messages = self._make_messages_for_n_chunks(2)
+
+        summarize_messages(
+            messages=messages, llm=SyncOnlyLLM(model="sync-only"), callbacks=[]
+        )
+
+        assert messages[-1]["content"].count("Sync summary") == 2
+
 
 def _build_long_conversation() -> list[dict[str, Any]]:
     """Build a multi-turn conversation that produces multiple chunks at max_tokens=200.
