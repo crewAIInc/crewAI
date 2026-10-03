@@ -613,6 +613,44 @@ from crewai.flow import (
 )
 ```
 
+## Experimental: `/btw` commands
+
+<Warning>
+`/btw` is an experimental add-on. Conversational flows ignore slash lines until you opt in, and the API may change.
+</Warning>
+
+Each `handle_turn()` treats the user line as a new graph run. `/btw` is a side-channel so you can interject a steering note — or force a route — **without** appending a user message or running the graph.
+
+```python
+from crewai.experimental.conversation_commands import btw_commands
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+
+
+@btw_commands
+@ConversationConfig()
+class SupportFlow(Flow[ConversationState]):
+    @listen("RESEARCH")
+    def handle_research(self) -> str:
+        """Fresh web research."""
+        reply = "I would research that."
+        self.append_assistant_message(reply)
+        return reply
+```
+
+| Line | Effect |
+|------|--------|
+| `/btw keep answers under 20 words` | Persist a steering note. No user turn is recorded. Later `converse` and router prompts include the note. |
+| `/btw route RESEARCH` | Force the **next** turn onto that route, then resume normal routing. |
+| `/btw stay RESEARCH` or `/btw route RESEARCH persist` | Keep forcing that route until `/btw clear`. |
+| `/btw clear` | Drop notes and forced routes. |
+| `/btw` or `/btw show` | Print the current steering. |
+| `/help` | List commands. |
+| `What's the weather /btw keep it to one sentence` | Apply the command, then run the leftover text as the user turn. |
+
+For a flow you already constructed (including `Flow.from_declaration(...)`), call `enable_btw_commands(flow)` instead of the decorator.
+
+Standalone `/btw` lines return an acknowledgement and do not call `kickoff()`. Because `chat()` and the CLI TUI wrap `handle_turn()`, they pick the add-on up automatically once it is installed. Flows without the add-on still treat `/btw …` as a normal user message.
+
 ## See also
 
 - [Mastering Flow State Management](/en/guides/flows/mastering-flow-state) — persistence, Pydantic state, `@persist`
