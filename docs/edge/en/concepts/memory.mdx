@@ -763,6 +763,7 @@ memory = Memory(
 
 - **Default**: LanceDB, stored under `./.crewai/memory` (or `$CREWAI_STORAGE_DIR/memory` if the env var is set, or the path you pass as `storage="path/to/dir"`).
 - **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
+- **Community backends**: [`crewai-memory`](https://github.com/skamalj/crewai-memory) provides `StorageBackend` implementations for Amazon DynamoDB ([`crewai-memory-dynamodb`](https://pypi.org/project/crewai-memory-dynamodb/)), Azure Cosmos DB ([`crewai-memory-cosmosdb`](https://pypi.org/project/crewai-memory-cosmosdb/)), Google Firestore ([`crewai-memory-firestore`](https://pypi.org/project/crewai-memory-firestore/)) and PostgreSQL with pgvector ([`crewai-memory-postgres`](https://pypi.org/project/crewai-memory-postgres/)), each using the database's own vector search. They are maintained outside this repository.
 
 
 ## Discovery
