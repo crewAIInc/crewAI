@@ -1102,13 +1102,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         async def async_tool_runner(tool: Any, kwargs: dict[str, Any]) -> Any:
             if self._tool_supports_native_async(tool):
-                try:
-                    return await tool.arun(**kwargs)
-                except NotImplementedError:
-                    # ``Tool._arun`` demotes to ``NotImplementedError`` for
-                    # sync-only wrapped functions; fall back to the worker
-                    # thread so sync ``@tool`` tools still execute.
-                    pass
+                return await tool.arun(**kwargs)
+            # Sync-wrapped Tools must go through ``tool.run`` (which claims
+            # usage once); an arun fallback would claim usage twice and rerun
+            # tool side effects after a genuine NotImplementedError from the
+            # tool body.
             return await asyncio.to_thread(available_functions[func_name], **kwargs)
 
         return await self._execute_single_native_tool_call_impl(
@@ -1129,22 +1127,23 @@ class CrewAgentExecutor(BaseAgentExecutor):
         call_id: str,
         original_tool: Any | None,
         should_execute: bool,
-    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None, Any | None]:
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None, bool, Any | None]:
         """Resolve and validate a native tool call before execution.
 
-        Returns ``(args_dict, max_usage_reached, original_tool)``;
-        ``max_usage_reached`` is ``True`` when the call must not execute the
-        tool body (arguments used verbatim, limit message rendered by the
+        Returns ``(args_dict, error_result, max_usage_reached,
+        original_tool)``; ``error_result`` is a ready-to-return dict when the
+        arguments cannot be parsed and must surface verbatim (carrying the
+        ``INVALID_INPUT`` failure). ``max_usage_reached`` is ``True`` when the
+        call must not execute the tool body (limit message rendered by the
         shared orchestration below — which still emits started/finished
-        events and runs before/after hooks, matching the pre-refactor sync
-        flow). ``original_tool`` is resolved from the executor's tools when
-        missing.
+        events and runs hooks, matching the pre-refactor sync flow).
+        ``original_tool`` is resolved from the executor's tools when missing.
         """
         args_dict, parse_error = parse_tool_call_args(
             func_args, func_name, call_id, original_tool
         )
         if parse_error is not None:
-            return None, parse_error, original_tool
+            return None, parse_error, False, original_tool
 
         original_tool = self._resolve_native_tool(func_name, original_tool)
 
@@ -1159,7 +1158,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         ):
             max_usage_reached = True
 
-        return args_dict, (max_usage_reached if original_tool else False), original_tool
+        return args_dict, None, (max_usage_reached if original_tool else False), original_tool
 
     def _resolve_native_tool(
         self,
@@ -1323,13 +1322,17 @@ class CrewAgentExecutor(BaseAgentExecutor):
             ToolUsageStartedEvent,
         )
 
-        args_dict, max_usage_reached, original_tool = self._prepare_single_native_tool_call(
-            func_name=func_name,
-            func_args=func_args,
-            call_id=call_id,
-            original_tool=original_tool,
-            should_execute=should_execute,
+        args_dict, error_result, max_usage_reached, original_tool = (
+            self._prepare_single_native_tool_call(
+                func_name=func_name,
+                func_args=func_args,
+                call_id=call_id,
+                original_tool=original_tool,
+                should_execute=should_execute,
+            )
         )
+        if error_result is not None:
+            return error_result
 
         structured_tool = self._resolve_structured_tool(func_name, original_tool)
         output_tool = original_tool or structured_tool
@@ -1446,13 +1449,17 @@ class CrewAgentExecutor(BaseAgentExecutor):
             ToolUsageStartedEvent,
         )
 
-        args_dict, max_usage_reached, original_tool = self._prepare_single_native_tool_call(
-            func_name=func_name,
-            func_args=func_args,
-            call_id=call_id,
-            original_tool=original_tool,
-            should_execute=should_execute,
+        args_dict, error_result, max_usage_reached, original_tool = (
+            self._prepare_single_native_tool_call(
+                func_name=func_name,
+                func_args=func_args,
+                call_id=call_id,
+                original_tool=original_tool,
+                should_execute=should_execute,
+            )
         )
+        if error_result is not None:
+            return error_result
 
         structured_tool = self._resolve_structured_tool(func_name, original_tool)
         output_tool = original_tool or structured_tool
