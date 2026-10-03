@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Awaitable, Callable, Iterator, Mapping
 import contextvars
 import random
 import time
@@ -213,7 +213,9 @@ def _retry_after_seconds(error: BaseException) -> float | None:
         if headers is None and isinstance(response, dict):
             metadata = response.get("ResponseMetadata") or {}
             headers = metadata.get("HTTPHeaders") or response.get("headers")
-        if not isinstance(headers, dict):
+        if headers is None:
+            headers = getattr(response, "headers", None)
+        if not isinstance(headers, Mapping):
             continue
         retry_after = headers.get("retry-after") or headers.get("Retry-After")
         if retry_after is None:
