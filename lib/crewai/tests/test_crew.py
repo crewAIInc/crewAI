@@ -284,6 +284,57 @@ def test_crew_config_with_wrong_keys():
         Crew(process=Process.sequential, config=no_agents_config)
 
 
+def test_crew_config_unknown_agent_role_raises_helpful_value_error():
+    """A task referencing an unknown agent role raises a ValueError naming the role."""
+    config = {
+        "agents": [
+            {
+                "role": "Researcher",
+                "goal": "Research",
+                "backstory": "Expert researcher",
+            }
+        ],
+        "tasks": [
+            {
+                "description": "Write an article",
+                "expected_output": "An article",
+                "agent": "Writer",
+            }
+        ],
+    }
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Task references agent role 'Writer' which doesn't match any agent"),
+    ) as exc_info:
+        Crew(process=Process.sequential, config=config)
+    assert "Researcher" in str(exc_info.value)
+
+
+def test_crew_config_dict_is_not_mutated_by_task_creation():
+    """Reusing the same config dict across two Crew constructions must not raise KeyError."""
+    config = {
+        "agents": [
+            {
+                "role": "Researcher",
+                "goal": "Research",
+                "backstory": "Expert researcher",
+            }
+        ],
+        "tasks": [
+            {
+                "description": "Write an article",
+                "expected_output": "An article",
+                "agent": "Researcher",
+            }
+        ],
+    }
+    first_crew = Crew(process=Process.sequential, config=config)
+    assert len(first_crew.tasks) == 1
+    assert first_crew.tasks[0].agent.role == "Researcher"
+    second_crew = Crew(process=Process.sequential, config=config)
+    assert len(second_crew.tasks) == 1
+
+
 @pytest.mark.vcr()
 def test_crew_creation(researcher, writer):
     tasks = [
@@ -2124,6 +2175,63 @@ def test_task_callback_on_crew():
         mock_callback.assert_called_once()
         args, _ = mock_callback.call_args
         assert isinstance(args[0], TaskOutput)
+
+
+def _make_after_kickoff_crew(after_kickoff_callbacks):
+    """Build a minimal single-agent crew with after_kickoff_callbacks set."""
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+    )
+
+    return Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[task],
+        after_kickoff_callbacks=after_kickoff_callbacks,
+    )
+
+
+def test_after_kickoff_callback_returning_none_preserves_result():
+    """A None-returning after_kickoff callback must not replace the crew result."""
+    callback_called = False
+
+    def logging_callback(result):
+        nonlocal callback_called
+        callback_called = True
+
+    crew = _make_after_kickoff_crew([logging_callback])
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        result = crew.kickoff()
+
+        assert callback_called
+        assert result is not None
+        assert result.raw == "ok"
+
+
+def test_after_kickoff_callback_returning_result_still_replaces_result():
+    """A result-returning after_kickoff callback still replaces the crew result."""
+    def replacing_callback(result):
+        return CrewOutput(raw="adjusted")
+
+    crew = _make_after_kickoff_crew([replacing_callback])
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw == "adjusted"
 
 
 def test_task_callback_both_on_task_and_crew():
