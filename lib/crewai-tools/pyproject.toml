@@ -26,6 +26,9 @@ Documentation = "https://docs.crewai.com"
 
 
 [project.optional-dependencies]
+adanos = [
+    "adanos>=2.7.0,<3",
+]
 scrapfly-sdk = [
     "scrapfly-sdk>=0.8.19",
 ]

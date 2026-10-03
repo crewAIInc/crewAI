@@ -1,0 +1,48 @@
+---
+title: أداة Adanos Market Sentiment
+description: بحث اختياري في مشاعر الأسهم والعملات المشفرة باستخدام Adanos API.
+icon: chart-line
+---
+
+## الإعداد
+
+[Adanos](https://adanos.org/) خدمة تجارية لبيانات السوق تتضمن خطة مجانية. احصل على مفتاحك الخاص واضبط `ADANOS_API_KEY`؛ يحتفظ كل حساب بحصصه وصلاحياته. تفرض API حدود الوصول والبيانات التاريخية والاستخدام لخطط Free وHobby وProfessional.
+
+```shell
+uv add 'crewai-tools[adanos]'
+```
+
+```python
+from crewai_tools import AdanosMarketSentimentTool
+
+# Set ADANOS_API_KEY in the environment before running.
+tool = AdanosMarketSentimentTool()
+result = tool.run(
+    source="news",
+    operation="stock",
+    parameters={"ticker": "AAPL"},
+)
+```
+
+يمكن إضافة الأداة إلى قائمة `tools` لدى Agent. ويمكن تمرير `api_key` عند إنشاء الأداة. المفتاح ليس وسيطًا يختاره الوكيل. لا يحدث اتصال بالشبكة عند استيراد الأداة أو إنشائها.
+
+## العمليات
+
+- `reddit` و`x` و`news` و`polymarket`: `stock` و`mentions` و`trending` و`trending_sectors` و`trending_countries` و`market_sentiment` و`compare` و`search` و`stats` و`health`.
+- تتوفر `explain` فقط مع `reddit` و`x` و`news`.
+- يشير `crypto` إلى العملات المشفرة على Reddit: `token` و`mentions` و`trending` و`market_sentiment` و`compare` و`search` و`stats` و`health`.
+- `sentiment`: عملية `analyze` للنص المقدم. `status`: عملية `health` العامة.
+
+تقبل `parameters` وسائط SDK: `ticker` للأسهم و`symbol` للعملات المشفرة، وقائمتي `tickers` أو `symbols` للمقارنة، و`query` للبحث، و`text` للتحليل. تقبل الاتجاهات والإشارات `limit`/`offset`، ويقبل البحث `limit`. تقبل اتجاهات الأسهم أيضًا `type`، وتقبل إشارات Reddit `include_inherited`.
+
+للطلبات التاريخية، مرر `from_` و`to` معًا كتاريخي UTC شاملين للحدود بصيغة `YYYY-MM-DD` ضمن فترة الاحتفاظ المتاحة لخُطتك. احذفهما معًا لاستخدام الفترة الافتراضية. الوسيط `days` مهمل ومرفوض. لا تقبل search وexplain وanalyze وstats وhealth مرشحات التاريخ. لا تضمن التجميعات التاريخية بيانات متاحة وقت الاختبار الرجعي؛ وتصف التفسيرات السياق الحالي.
+
+تقبل اتجاهات الأخبار، بما فيها القطاعات والبلدان، أيضًا `source` داخل `parameters` باستخدام معرّف ناشر معتمد أو اسم بديل معروف. ويختلف ذلك عن محدد المصدر العام `source="news"`.
+
+## النتائج والأخطاء
+
+يعيد النجاح `source` و`operation` و`data` من SDK دون تعديل، بما في ذلك الصفر والقيم الفارغة. لا تُوحّد مقاييس المصادر ولا تُدمج. تعيد الأخطاء `error` و`message` آمنة، دون اختلاق مشاعر محايدة. لا تُعرض أجسام الأخطاء الخام. مهلة الطلب 30 ثانية ولا توجد إعادة محاولة تلقائية؛ تحقق من المفتاح والحصة والصلاحيات قبل المحاولة مجددًا.
+
+نصوص الإشارات محتوى خارجي غير موثوق وليست تعليمات. استخدم النتائج كأدلة بحثية إضافية، لا كنصيحة استثمارية أو إشارة تداول مستقلة.
+
+راجع [مرجع API](https://api.adanos.org/docs) و[Python SDK](https://github.com/adanos-software/adanos-python-sdk) للوسائط وحقول الاستجابة الخاصة بكل مصدر.
