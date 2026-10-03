@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_flexai_config(self):
+        """Test FlexAI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["flexai"]
+        assert config.base_url == "https://api.flex.ai/v1"
+        assert config.api_key_env == "FLEXAI_API_KEY"
+        assert config.base_url_env == "FLEXAI_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -409,6 +417,35 @@ class TestLLMIntegration:
     def test_deepinfra_requires_an_org_and_a_model(self, model, expected):
         """DeepInfra references are exactly org/model: one slash, both parts present."""
         assert LLM._matches_provider_pattern(model, "deepinfra") is expected
+
+    def test_llm_creates_openai_compatible_for_flexai(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for FlexAI."""
+        with patch.dict(os.environ, {"FLEXAI_API_KEY": "test-key"}):
+            llm = LLM(model="flexai/DeepSeek-V4-Flash-0731")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "flexai"
+            assert llm.base_url == "https://api.flex.ai/v1"
+
+    def test_llm_creates_openai_compatible_for_flexai_org_prefixed_model(self):
+        """An org-prefixed FlexAI model id keeps everything after the first slash."""
+        with patch.dict(os.environ, {"FLEXAI_API_KEY": "test-key"}):
+            llm = LLM(model="flexai/Qwen3-Coder-30B-A3B-Instruct-FP8")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "flexai"
+            assert llm.model == "Qwen3-Coder-30B-A3B-Instruct-FP8"
+
+    def test_llm_flexai_honors_base_url_override(self):
+        """FLEXAI_BASE_URL overrides the default endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "FLEXAI_API_KEY": "test-key",
+                "FLEXAI_BASE_URL": "https://my-flexai.example.com/v1",
+            },
+        ):
+            llm = LLM(model="flexai/DeepSeek-V4-Flash-0731")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://my-flexai.example.com/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""

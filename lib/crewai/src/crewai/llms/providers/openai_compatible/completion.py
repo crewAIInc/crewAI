@@ -2,7 +2,7 @@
 
 This module provides a thin subclass of OpenAICompletion that supports
 various OpenAI-compatible APIs like OpenRouter, DeepSeek, Ollama, vLLM,
-Cerebras, and Dashscope (Alibaba/Qwen).
+Cerebras, Dashscope (Alibaba/Qwen), and FlexAI.
 
 Usage:
     llm = LLM(model="deepseek/deepseek-chat")  # Uses DeepSeek API
@@ -96,6 +96,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "flexai": ProviderConfig(
+        base_url="https://api.flex.ai/v1",
+        api_key_env="FLEXAI_API_KEY",
+        base_url_env="FLEXAI_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -149,6 +155,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - flexai: FlexAI (https://flex.ai)
 
     Example:
         # Using provider prefix
