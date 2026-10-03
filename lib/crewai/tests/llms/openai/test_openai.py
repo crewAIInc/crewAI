@@ -214,6 +214,15 @@ def test_openai_completion_module_is_imported(monkeypatch):
     """
     module_name = "crewai.llms.providers.openai.completion"
 
+    # Re-importing binds the fresh module on its package too, and monkeypatch
+    # only restores sys.modules: without also restoring the attribute, every
+    # later test in this worker sees two module objects for one name, and a
+    # `patch("crewai.llms.providers.openai.completion.X")` patches the one that
+    # `from ... import X` does not read.
+    import crewai.llms.providers.openai as openai_package
+
+    if hasattr(openai_package, "completion"):
+        monkeypatch.setattr(openai_package, "completion", openai_package.completion)
     monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="gpt-4o")

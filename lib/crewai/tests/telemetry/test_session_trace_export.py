@@ -711,9 +711,9 @@ def test_first_time_execution_uses_local_session_even_with_saved_credentials(
         "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
         lambda: True,
     )
-    credential = Mock(return_value="saved-login")
+    credential = Mock(return_value=("login", "saved-login"))
     monkeypatch.setattr(
-        "crewai.telemetry.tracing.grants.tracing_credential", credential
+        "crewai.telemetry.tracing.grants.resolve_tracing_credential", credential
     )
     save = Mock()
     monkeypatch.setattr(ephemeral, "update_user_data", save)
