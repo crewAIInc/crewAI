@@ -539,6 +539,7 @@ def _strip_jsonc_comments(text: str) -> str:
             continue
 
         if char == "/" and next_char == "*":
+            result.append(" ")
             i += 2
             closed = False
             while i < len(text) - 1:
