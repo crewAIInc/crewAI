@@ -18,13 +18,17 @@ class FixedCSVSearchToolSchema(BaseModel):
 class CSVSearchToolSchema(FixedCSVSearchToolSchema):
     """Input for CSVSearchTool."""
 
-    csv: str = Field(..., description="File path or URL of a CSV file to be searched")
+    csv: str = Field(
+        ...,
+        description="File path or URL of a CSV or Excel file to be searched",
+    )
 
 
 class CSVSearchTool(RagTool):
-    name: str = "Search a CSV's content"
+    name: str = "Search a CSV or Excel file's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a CSV's content."
+        "A tool that can be used to semantic search a query from a CSV or Excel "
+        "file's content."
     )
     args_schema: type[BaseModel] = CSVSearchToolSchema
 
@@ -32,7 +36,10 @@ class CSVSearchTool(RagTool):
         super().__init__(**kwargs)
         if csv is not None:
             self.add(csv)
-            self.description = f"A tool that can be used to semantic search a query the {csv} CSV's content."
+            self.description = (
+                "A tool that can be used to semantic search a query the "
+                f"{csv} file's content."
+            )
             self.args_schema = FixedCSVSearchToolSchema
             self._generate_description()
 

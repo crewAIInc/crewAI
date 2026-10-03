@@ -116,6 +116,8 @@ class DataTypes:
             mapping = {
                 ".pdf": DataType.PDF_FILE,
                 ".csv": DataType.CSV,
+                ".xls": DataType.CSV,
+                ".xlsx": DataType.CSV,
                 ".mdx": DataType.MDX,
                 ".md": DataType.MDX,
                 ".docx": DataType.DOCX,
@@ -124,7 +126,7 @@ class DataTypes:
                 ".txt": DataType.TEXT_FILE,
             }
             for ext, dtype in mapping.items():
-                if path.endswith(ext):
+                if path.lower().endswith(ext):
                     return dtype
             return None
 
