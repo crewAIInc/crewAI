@@ -16,6 +16,7 @@ from crewai.skills.loader import load_skills
 from crewai.skills.models import Skill as SkillModel
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files
+from crewai.utilities.i18n import get_i18n
 from crewai.utilities.streaming import (
     StreamingState,
     TaskInfo,
@@ -341,6 +342,10 @@ def prepare_kickoff(
 
     _flow_files = baggage.get_baggage("flow_input_files")
     flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
+
+    i18n = get_i18n(prompt_file=crew.prompt_file)
+    for task in crew.tasks:
+        task._i18n = i18n
 
     if normalized is not None:
         unpacked_files = _extract_files_from_inputs(normalized)

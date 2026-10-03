@@ -2116,6 +2116,10 @@ class Crew(FlowTrackable, BaseModel):
         )
         self._inputs = replay_inputs
 
+        i18n = get_i18n(prompt_file=self.prompt_file)
+        for task in self.tasks:
+            task._i18n = i18n
+
         if replay_inputs:
             self._interpolate_inputs(replay_inputs)
 
