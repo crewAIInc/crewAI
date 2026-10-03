@@ -79,6 +79,7 @@ from crewai.events.types.flow_events import (
 )
 from crewai.events.types.llm_events import LLMCallCompletedEvent
 from crewai.execution import (
+    ExecutionTrace,
     begin_execution,
     end_execution,
     get_execution_uuid,
@@ -134,6 +135,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.telemetry.tracing.context import get_trace_session
 from crewai.utilities.declarative_refs import InvalidRefError, resolve_ref
 
 
@@ -506,6 +508,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """Whether this kickoff should defer final flow trace finalization."""
         return bool(getattr(self, "defer_trace_finalization", False))
 
+    def _begin_trace_execution(
+        self, execution_uuid: str | None = None
+    ) -> contextvars.Token[str | None] | None:
+        previous = self._deferred_execution_trace
+        token = begin_execution(
+            execution_uuid, tracing=self.tracing, trace_session=previous
+        )
+        if token is not None and get_trace_session() is not (
+            previous.session if previous else None
+        ):
+            # A tracing toggle starts a fresh lifecycle; the old opener belongs
+            # to the previous session (or to an untraced turn).
+            object.__setattr__(self, "_deferred_flow_started_event_id", None)
+        return token
+
+    def _end_trace_execution(self, token: contextvars.Token[str | None] | None) -> None:
+        if token is None:
+            return
+        owned_trace = get_trace_session() is not None
+        defer = self._should_defer_trace_finalization()
+        self._deferred_execution_trace = end_execution(token, defer=defer)
+        if owned_trace and defer and self._deferred_execution_trace is None:
+            object.__setattr__(self, "_deferred_flow_started_event_id", None)
+
     @classmethod
     def flow_definition(cls) -> FlowDefinition:
         """Return the static Flow Definition built from this Flow class."""
@@ -781,6 +807,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
     _deferred_flow_started_event_id: str | None = PrivateAttr(default=None)
+    _deferred_execution_trace: ExecutionTrace | None = PrivateAttr(default=None)
     _aggregated_usage_metrics: UsageMetrics = PrivateAttr(default_factory=UsageMetrics)
     _usage_metrics_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _flow_match_id: str | None = PrivateAttr(default=None)
@@ -1389,7 +1416,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # feedback for days, and expressions after resume must see today.
         self._cel_now = datetime.now(timezone.utc)
 
-        execution_token = begin_execution(self._pending_feedback_context.execution_uuid)
+        execution_token = None
 
         # Force `current_flow_id` to this flow's match id for the
         # duration of the resume so the usage listener's filter passes
@@ -1403,8 +1430,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # paired EXECUTION_END (unless the body already dispatched it).
         hook_state = {"end_dispatched": False}
         try:
+            execution_token = self._begin_trace_execution(
+                self._pending_feedback_context.execution_uuid,
+            )
+            if execution_token is not None and (session := get_trace_session()):
+                session.context.parent_otel_context = (
+                    self._pending_feedback_context.trace_context
+                )
+                session.context.resume_feedback = feedback
             return await self._resume_async_body(feedback, hook_state)
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             if not hook_state["end_dispatched"]:
                 self._dispatch_execution_end_failure(e)
             await self._emit_flow_failed(e)
@@ -1417,41 +1456,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._detach_usage_aggregation_listener()
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
-            end_execution(execution_token)
+            self._end_trace_execution(execution_token)
 
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
     ) -> Any:
-        if get_current_parent_id() is None:
-            reset_emission_counter()
-            reset_last_event_id()
-
-        # Emitted unconditionally, matching both the kickoff path and the
-        # FlowFinishedEvent below. This used to sit behind suppress_flow_events,
-        # which produced an unpaired finish: the finish emit is not gated, so a
-        # resumed flow reported finishing without ever having started, breaking
-        # every started/finished pairing and duration built on it.
-        #
-        # suppress_flow_events is not the right gate for emission in any case. It
-        # asks for console quiet - see _flow_origin in events/event_listener.py,
-        # which says so and notes it "can legitimately be set on a caller's own
-        # flow" - and the listener already honours it where it prints. Suppressing
-        # the event instead removed the resumed leg from telemetry entirely.
-        future = crewai_event_bus.emit(
-            self,
-            FlowStartedEvent(
-                type="flow_started",
-                flow_name=self._definition.name,
-                inputs=None,
-            ),
-        )
-        if future and isinstance(future, Future):
-            try:
-                await asyncio.wrap_future(future)
-            except Exception:
-                logger.warning("FlowStartedEvent handler failed", exc_info=True)
-
-        get_env_context()
+        await self._open_flow_scope(None)
 
         context = self._pending_feedback_context
         if context is None:
@@ -1539,9 +1549,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
-        self._method_outputs.append(
-            {"method": context.method_name, "output": resumed_method_output}
-        )
+        method_output_entry: dict[str, Any] = {
+            "method": context.method_name,
+            "output": resumed_method_output,
+        }
+        if emit and isinstance(result, HumanFeedbackResult):
+            method_output_entry["human_feedback"] = result
+        self._method_outputs.append(method_output_entry)
 
         try:
             if emit and collapsed_outcome:
@@ -1569,13 +1583,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     if isinstance(self._state, dict)
                     else self._state.model_dump()
                 )
-                self.persistence.save_pending_feedback(
-                    flow_uuid=e.context.flow_id,
-                    context=e.context,
-                    state_data=state_data,
-                )
-
-                crewai_event_bus.emit(
+                future = crewai_event_bus.emit(
                     self,
                     FlowPausedEvent(
                         type="flow_paused",
@@ -1586,6 +1594,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         message=e.context.message,
                         emit=e.context.emit,
                     ),
+                )
+                if future:
+                    await asyncio.wrap_future(future)
+                if session := get_trace_session():
+                    e.context.trace_context = session.context.otel_resume_context
+                self.persistence.save_pending_feedback(
+                    flow_uuid=e.context.flow_id,
+                    context=e.context,
+                    state_data=state_data,
                 )
                 return e
             raise
@@ -1654,19 +1671,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 except Exception:
                     logger.warning("FlowFinishedEvent handler failed", exc_info=True)
-
-            trace_listener = TraceCollectionListener()
-            if (
-                trace_listener.batch_manager.batch_owner_type == "flow"
-                and current_flow_id.get() == self.flow_id
-                and not trace_listener.batch_manager.defer_session_finalization
-                and not current_flow_defer_trace_finalization.get()
-            ):
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
 
         return final_result
 
@@ -2204,7 +2208,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if current_flow_request_id.get() is None:
             request_id_token = current_flow_request_id.set(self.flow_id)
 
-        execution_token = begin_execution()
+        execution_token = None
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
 
@@ -2229,6 +2233,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow_scope_open = False
 
         try:
+            execution_token = self._begin_trace_execution()
             from crewai.hooks.contexts import (
                 ExecutionEndContext,
                 ExecutionStartContext,
@@ -2413,12 +2418,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         if isinstance(self._state, dict)
                         else self._state.model_dump()
                     )
-                    self.persistence.save_pending_feedback(
-                        flow_uuid=e.context.flow_id,
-                        context=e.context,
-                        state_data=state_data,
-                    )
-
                     # Emit flow paused event
                     future = crewai_event_bus.emit(
                         self,
@@ -2445,6 +2444,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             ]
                         )
                         self._event_futures.clear()
+
+                    if session := get_trace_session():
+                        e.context.trace_context = session.context.otel_resume_context
+                    self.persistence.save_pending_feedback(
+                        flow_uuid=e.context.flow_id,
+                        context=e.context,
+                        state_data=state_data,
+                    )
 
                     # Return the pending exception instead of raising
                     # This allows the caller to handle the paused state gracefully
@@ -2518,19 +2525,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             "FlowFinishedEvent handler failed", exc_info=True
                         )
 
-                trace_listener = TraceCollectionListener()
-                if (
-                    trace_listener.batch_manager.batch_owner_type == "flow"
-                    and current_flow_id.get() == self.flow_id
-                    and not trace_listener.batch_manager.defer_session_finalization
-                    and not current_flow_defer_trace_finalization.get()
-                ):
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
-
             return final_output
         except Exception as e:
             # Pairing invariant: only fire the failure EXECUTION_END when this
@@ -2565,7 +2559,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_id.reset(flow_id_token)
             if flow_inputs_token is not None:
                 detach(flow_inputs_token)
-            end_execution(execution_token)
+            self._end_trace_execution(execution_token)
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
@@ -2642,11 +2636,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         should_emit_flow_started = not (
             defer_trace_finalization and deferred_started_event_id
         )
-        if current_flow_id.get() == self.flow_id:
-            TraceCollectionListener().batch_manager.defer_session_finalization = (
-                defer_trace_finalization
-            )
-
         flow_scope_open = False
         if (
             defer_trace_finalization
@@ -2727,18 +2716,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 except Exception:
                     logger.warning("FlowFailedEvent handler failed", exc_info=True)
 
-            trace_listener = TraceCollectionListener()
-            if (
-                trace_listener.batch_manager.batch_owner_type == "flow"
-                and current_flow_id.get() == self.flow_id
-                and not trace_listener.batch_manager.defer_session_finalization
-                and not current_flow_defer_trace_finalization.get()
-            ):
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
         except Exception:
             logger.warning("Failed to signal flow failure", exc_info=True)
 
@@ -3008,12 +2985,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # For @human_feedback methods with emit, the result is the collapsed outcome
             # (e.g., "approved") used for routing. But we want the actual method output
             # to be the stored result (for final flow output). Replace the last entry
-            # if a stashed output exists. Dict-based stash is concurrency-safe and
-            # handles None return values (presence in dict = stashed, not value).
+            # if a stashed output exists, keeping the feedback alongside the output so
+            # expressions read `outputs.<method>` as the full feedback result.
+            # Dict-based stash is concurrency-safe.
             if method_name in self._human_feedback_method_outputs:
-                self._method_outputs[-1]["output"] = (
-                    self._human_feedback_method_outputs.pop(method_name)
-                )
+                feedback_result = self._human_feedback_method_outputs.pop(method_name)
+                self._method_outputs[-1] = {
+                    "method": str(method_name),
+                    "output": feedback_result.output,
+                    "human_feedback": feedback_result,
+                }
 
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
@@ -3687,10 +3668,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
 
         if emit:
-            # Stash the real method output: the collapsed outcome routes
-            # listeners, but the flow's final result stays the method's
-            # actual return value.
-            self._human_feedback_method_outputs[method_name] = method_output
+            # Stash the feedback result: the collapsed outcome routes listeners,
+            # but the flow's final result stays the method's actual return
+            # value (result.output).
+            self._human_feedback_method_outputs[method_name] = result
             return result.outcome
         return result
 

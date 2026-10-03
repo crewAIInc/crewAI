@@ -157,16 +157,14 @@ class TestCrewaiPlatformTools(unittest.TestCase):
     def test_crewai_platform_tools_api_error_handling(self, mock_get):
         mock_get.side_effect = Exception("API Error")
 
-        tools = CrewaiPlatformTools(apps=["github"])
-        assert tools is not None
-        assert isinstance(tools, list)
-        assert len(tools) == 0
+        with self.assertRaisesRegex(Exception, "API Error"):
+            CrewaiPlatformTools(apps=["github"])
 
     def test_crewai_platform_tools_no_token(self):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(ValueError) as context:
                 CrewaiPlatformTools(apps=["github"])
-            assert "No platform integration token found" in str(context.exception)
+            assert "CREWAI_PLATFORM_INTEGRATION_TOKEN" in str(context.exception)
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
@@ -263,6 +261,31 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             "connection_id": connection_id,
         }
         assert result == '{\n  "issue": 42\n}'
+
+    @patch.dict(
+        "os.environ",
+        {
+            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_PLUS_URL": "https://platform.example.test/",
+        },
+        clear=True,
+    )
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+    )
+    def test_private_connection_selects_clipper_api(self, mock_get):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": []}
+        mock_get.return_value = response
+
+        tools = CrewaiPlatformTools(apps=["github@private"])
+
+        assert tools == []
+        assert mock_get.call_args.args[0].endswith(
+            "/clipper/v1/applications/github/tools"
+        )
+        assert mock_get.call_args.kwargs["params"] == {"connection_id": "private"}
 
     @patch.dict(
         "os.environ",

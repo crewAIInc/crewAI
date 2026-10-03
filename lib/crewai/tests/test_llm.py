@@ -11,8 +11,13 @@ from crewai.events.event_types import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, DEFAULT_CONTEXT_WINDOW_SIZE, LLM
+from crewai.llm import DEFAULT_CONTEXT_WINDOW_SIZE, LLM
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
@@ -254,6 +259,7 @@ def test_validate_call_params_no_response_format():
 @pytest.mark.parametrize(
     "model",
     [
+        "gemini/gemini-3.8-flash",
         "gemini/gemini-3-pro-preview",
         "gemini/gemini-2.0-flash-thinking-exp-01-21",
         "gemini/gemini-2.0-flash-001",
@@ -338,9 +344,9 @@ def test_context_window_validation():
             {"test-model": 500},
             clear=True,
         ):
-            llm = LLM(model="test-model")
+            llm = LLM(model="test-model", is_litellm=True)
             llm.get_context_window_size()
-    assert "must be between 1024 and 2097152" in str(excinfo.value)
+    assert "must be between 1024 and 10000000" in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
@@ -356,7 +362,43 @@ def test_gpt56_family_uses_official_context_window(model: str) -> None:
 def test_gpt56_does_not_override_gpt54_mini_window() -> None:
     """A more specific older prefix must keep its own window."""
     llm = LLM(model="gpt-5.4-mini", is_litellm=True)
-    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(400000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_qualified_litellm_gpt4_keeps_the_provider_context_window() -> None:
+    openai_llm = LLM(model="openai/gpt-4", is_litellm=True)
+    azure_llm = LLM(model="azure/gpt-4", is_litellm=True)
+
+    assert openai_llm.get_context_window_size() == int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert azure_llm.get_context_window_size() == int(
+        128_000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
+def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
+    llm = LLM(model="gpt-5", is_litellm=True)
+
+    assert llm.get_context_window_size() == int(
+        400_000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+
+
+@pytest.mark.parametrize(
+    ("native_model", "litellm_model"),
+    [
+        ("openai/gpt-5", "gpt-5"),
+        ("openai/o1-pro", "o1-pro"),
+        ("anthropic/claude-sonnet-4-6", "claude-sonnet-4-6"),
+        ("google/gemini-2.5-flash", "gemini-2.5-flash"),
+    ],
+)
+def test_native_and_litellm_context_windows_match(
+    native_model: str, litellm_model: str
+) -> None:
+    native_llm = LLM(model=native_model)
+    litellm_llm = LLM(model=litellm_model, is_litellm=True)
+
+    assert native_llm.get_context_window_size() == litellm_llm.get_context_window_size()
 
 
 @pytest.mark.parametrize(
@@ -429,6 +471,7 @@ def test_context_window_exceeded_error_handling():
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
 
+
     llm = LLM(model="gpt-4", stream=True, is_litellm=True)
     with patch("litellm.completion") as mock_completion:
         mock_completion.side_effect = ContextWindowExceededError(
@@ -442,6 +485,24 @@ def test_context_window_exceeded_error_handling():
 
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
+
+
+def test_rate_limits_are_not_treated_as_context_window_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    error = RuntimeError("API throttled: too many tokens requested this minute")
+
+    assert not is_context_length_exceeded(error)
+    assert not LLMContextLengthExceededError._is_context_length_exceeded_error(error)
+
+    monkeypatch.setattr("crewai.llms.retry.time.sleep", lambda _: None)
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    with patch("litellm.completion", side_effect=error) as completion:
+        with pytest.raises(RuntimeError) as exc_info:
+            llm.call("Hello")
+
+    assert exc_info.value is error
+    assert completion.call_count == 3
 
 
 @pytest.fixture
@@ -1099,6 +1160,44 @@ def test_explicit_provider_kwarg_takes_priority():
         llm2 = LLM(model="gpt-4o", provider="openai", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "openai"
+
+
+def test_resolve_route_decides_what_new_constructs():
+    """`LLM._resolve_route` is `__new__`'s routing, callable without building anything."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    route = LLM._resolve_route("openai/gpt-4o", {})
+    assert (route.provider, route.model, route.native_class, route.custom_openai) == (
+        "openai",
+        "gpt-4o",
+        OpenAICompletion,
+        False,
+    )
+    assert (
+        LLM._resolve_route("claude/claude-haiku-4-5", {}).native_class
+        is AnthropicCompletion
+    )
+    assert LLM._resolve_route("claude/claude-haiku-4-5", {}).provider == "anthropic"
+
+    # An unknown openai/ model is LiteLLM's — unless a custom endpoint is configured.
+    plain = LLM._resolve_route("openai/not-a-known-model", {})
+    assert (plain.provider, plain.native_class) == ("openai", None)
+    custom = LLM._resolve_route(
+        "openai/not-a-known-model", {"base_url": "http://localhost:1/v1"}
+    )
+    assert (custom.native_class, custom.custom_openai) == (OpenAICompletion, True)
+
+    litellm_route = LLM._resolve_route("groq/llama-3.1-8b-instant", {})
+    assert (
+        litellm_route.provider,
+        litellm_route.model,
+        litellm_route.native_class,
+    ) == ("groq", "llama-3.1-8b-instant", None)
+    assert LLM._resolve_route("gpt-4o", {}).native_class is OpenAICompletion
+    kwargs = {"provider": "anthropic"}
+    assert LLM._resolve_route("some-model", kwargs).native_class is AnthropicCompletion
+    assert kwargs == {"provider": "anthropic"}
 
 
 def test_validate_model_in_constants():

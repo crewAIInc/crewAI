@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from contextlib import closing
 import json
 import os
 import sqlite3
@@ -505,7 +506,7 @@ class TestSqliteProviderFork:
             loc = provider.checkpoint("{}", db, parent_id="p1", branch="exp")
             cid = provider.extract_id(loc)
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 row = conn.execute(
                     "SELECT parent_id, branch FROM checkpoints WHERE id = ?",
                     (cid,),
@@ -523,7 +524,7 @@ class TestSqliteProviderFork:
 
             provider.prune(db, max_keep=1, branch="main")
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 main_count = conn.execute(
                     "SELECT COUNT(*) FROM checkpoints WHERE branch = 'main'"
                 ).fetchone()[0]
@@ -549,7 +550,7 @@ class TestSqliteProviderFork:
             id2 = state._checkpoint_id
             assert id2 != id1
 
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 row = conn.execute(
                     "SELECT parent_id FROM checkpoints WHERE id = ?", (id2,)
                 ).fetchone()

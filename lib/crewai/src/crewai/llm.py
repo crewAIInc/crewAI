@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from contextvars import ContextVar
 from datetime import datetime
 import json
 import logging
@@ -11,6 +12,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NamedTuple,
     TypedDict,
     cast,
 )
@@ -32,6 +34,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.hooks.dispatch import HookAborted
+from crewai.llm_overlay import overlay_model_for_model
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
@@ -46,6 +49,13 @@ from crewai.llms.constants import (
     BEDROCK_MODELS,
     GEMINI_MODELS,
     OPENAI_MODELS,
+)
+from crewai.llms.context_window import (
+    AZURE_OPENAI_CONTEXT_WINDOWS,
+    DEFAULT_CONTEXT_WINDOW_SIZE,
+    LLM_CONTEXT_WINDOW_SIZES,
+    OPENAI_CONTEXT_WINDOWS,
+    resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -79,6 +89,10 @@ logger = logging.getLogger(__name__)
 # stay None until _ensure_litellm() rebinds them.
 _litellm_loaded = False
 LITELLM_AVAILABLE = False
+
+# The instance ``LLM.__new__`` just built on a model ``llm_overlay`` mapped to,
+# whose ``__init__`` call with the caller's arguments must be skipped.
+_overlay_built: ContextVar[LLM | None] = ContextVar("llm_overlay_built", default=None)
 
 if TYPE_CHECKING:
     import litellm
@@ -163,170 +177,8 @@ def _ensure_litellm() -> bool:
     return LITELLM_AVAILABLE
 
 
-MIN_CONTEXT: Final[int] = 1024
-MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
 ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
 
-LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
-    "gpt-4": 8192,
-    "gpt-4o": 128000,
-    "gpt-4o-mini": 128000,
-    "gpt-5.4-mini": 200000,
-    "gpt-5.6": 1050000,  # sol, terra, luna, and the gpt-5.6 alias
-    "gpt-4-turbo": 128000,
-    "gpt-4.1": 1047576,  # Based on official docs
-    "gpt-4.1-mini-2025-04-14": 1047576,
-    "gpt-4.1-nano-2025-04-14": 1047576,
-    "o1-preview": 128000,
-    "o1-mini": 128000,
-    "o3-mini": 200000,
-    "o4-mini": 200000,
-    "gemini-3-pro-preview": 1048576,
-    "gemini-2.0-flash": 1048576,
-    "gemini-2.0-flash-thinking-exp-01-21": 32768,
-    "gemini-2.0-flash-lite-001": 1048576,
-    "gemini-2.0-flash-001": 1048576,
-    "gemini-2.5-flash-preview-04-17": 1048576,
-    "gemini-2.5-pro-exp-03-25": 1048576,
-    "gemini-1.5-pro": 2097152,
-    "gemini-1.5-flash": 1048576,
-    "gemini-1.5-flash-8b": 1048576,
-    "gemini/gemma-3-1b-it": 32000,
-    "gemini/gemma-3-4b-it": 128000,
-    "gemini/gemma-3-12b-it": 128000,
-    "gemini/gemma-3-27b-it": 128000,
-    "deepseek-chat": 128000,
-    "gemma2-9b-it": 8192,
-    "gemma-7b-it": 8192,
-    "llama3-groq-70b-8192-tool-use-preview": 8192,
-    "llama3-groq-8b-8192-tool-use-preview": 8192,
-    "llama-3.1-70b-versatile": 131072,
-    "llama-3.1-8b-instant": 131072,
-    "llama-3.2-1b-preview": 8192,
-    "llama-3.2-3b-preview": 8192,
-    "llama-3.2-11b-text-preview": 8192,
-    "llama-3.2-90b-text-preview": 8192,
-    "llama3-70b-8192": 8192,
-    "llama3-8b-8192": 8192,
-    "mixtral-8x7b-32768": 32768,
-    "llama-3.3-70b-versatile": 128000,
-    "llama-3.3-70b-instruct": 128000,
-    "Meta-Llama-3.3-70B-Instruct": 131072,
-    "QwQ-32B-Preview": 8192,
-    "Qwen2.5-72B-Instruct": 8192,
-    "Qwen2.5-Coder-32B-Instruct": 8192,
-    "Meta-Llama-3.1-405B-Instruct": 8192,
-    "Meta-Llama-3.1-70B-Instruct": 131072,
-    "Meta-Llama-3.1-8B-Instruct": 131072,
-    "Llama-3.2-90B-Vision-Instruct": 16384,
-    "Llama-3.2-11B-Vision-Instruct": 16384,
-    "Meta-Llama-3.2-3B-Instruct": 4096,
-    "Meta-Llama-3.2-1B-Instruct": 16384,
-    "us.amazon.nova-pro-v1:0": 300000,
-    "us.amazon.nova-micro-v1:0": 128000,
-    "us.amazon.nova-lite-v1:0": 300000,
-    "us.anthropic.claude-opus-4-7": 1000000,
-    "us.anthropic.claude-sonnet-4-6": 1000000,
-    "us.anthropic.claude-opus-4-6-v1": 1000000,
-    "us.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "us.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "us.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "us.anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "us.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
-    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
-    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,
-    "us.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "us.meta.llama3-2-11b-instruct-v1:0": 128000,
-    "us.meta.llama3-2-3b-instruct-v1:0": 131000,
-    "us.meta.llama3-2-90b-instruct-v1:0": 128000,
-    "us.meta.llama3-2-1b-instruct-v1:0": 131000,
-    "us.meta.llama3-1-8b-instruct-v1:0": 128000,
-    "us.meta.llama3-1-70b-instruct-v1:0": 128000,
-    "us.meta.llama3-3-70b-instruct-v1:0": 128000,
-    "us.meta.llama3-1-405b-instruct-v1:0": 128000,
-    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "eu.anthropic.claude-opus-4-7": 1000000,
-    "eu.anthropic.claude-sonnet-4-6": 1000000,
-    "eu.anthropic.claude-opus-4-6-v1": 1000000,
-    "eu.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "eu.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "eu.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "eu.anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "eu.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
-    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
-    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "apac.anthropic.claude-opus-4-7": 1000000,
-    "apac.anthropic.claude-sonnet-4-6": 1000000,
-    "apac.anthropic.claude-opus-4-6-v1": 1000000,
-    "apac.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "apac.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "apac.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "apac.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "apac.anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "apac.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "amazon.nova-pro-v1:0": 300000,
-    "amazon.nova-micro-v1:0": 128000,
-    "amazon.nova-lite-v1:0": 300000,
-    "anthropic.claude-opus-4-7": 1000000,
-    "anthropic.claude-sonnet-4-6": 1000000,
-    "anthropic.claude-opus-4-6-v1": 1000000,
-    "anthropic.claude-opus-4-5-20251101-v1:0": 200000,
-    "anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
-    "anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
-    "anthropic.claude-opus-4-1-20250805-v1:0": 200000,
-    "anthropic.claude-opus-4-20250514-v1:0": 200000,
-    "anthropic.claude-sonnet-4-20250514-v1:0": 200000,
-    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
-    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
-    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
-    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
-    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,
-    "anthropic.claude-3-opus-20240229-v1:0": 200000,
-    "anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    "anthropic.claude-v2:1": 200000,
-    "anthropic.claude-v2": 100000,
-    "anthropic.claude-instant-v1": 100000,
-    "meta.llama3-1-405b-instruct-v1:0": 128000,
-    "meta.llama3-1-70b-instruct-v1:0": 128000,
-    "meta.llama3-1-8b-instruct-v1:0": 128000,
-    "meta.llama3-70b-instruct-v1:0": 8000,
-    "meta.llama3-8b-instruct-v1:0": 8000,
-    "amazon.titan-text-lite-v1": 4000,
-    "amazon.titan-text-express-v1": 8000,
-    "cohere.command-text-v14": 4000,
-    "ai21.j2-mid-v1": 8191,
-    "ai21.j2-ultra-v1": 8191,
-    "ai21.jamba-instruct-v1:0": 256000,
-    "mistral.mistral-7b-instruct-v0:2": 32000,
-    "mistral.mixtral-8x7b-instruct-v0:1": 32000,
-    "mistral-tiny": 32768,
-    "mistral-small-latest": 32768,
-    "mistral-medium-latest": 32768,
-    "mistral-large-latest": 32768,
-    "mistral-large-2407": 32768,
-    "mistral-large-2402": 32768,
-    "mistral/mistral-tiny": 32768,
-    "mistral/mistral-small-latest": 32768,
-    "mistral/mistral-medium-latest": 32768,
-    "mistral/mistral-large-latest": 32768,
-    "mistral/mistral-large-2407": 32768,
-    "mistral/mistral-large-2402": 32768,
-}
-
-DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
-CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "openai",
     "anthropic",
@@ -346,6 +198,30 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
 ]
+
+
+# The provider a ``<prefix>/<model>`` string routes to, by prefix: the names
+# crewAI accepts for each native provider. ``llm_overlay`` compares model
+# names through the same table, so ``google/x`` and ``gemini/x`` are one model.
+PROVIDER_ALIASES: Final[dict[str, str]] = {
+    "openai": "openai",
+    "anthropic": "anthropic",
+    "claude": "anthropic",
+    "azure": "azure",
+    "azure_openai": "azure",
+    "google": "gemini",
+    "gemini": "gemini",
+    "bedrock": "bedrock",
+    "aws": "bedrock",
+    "openrouter": "openrouter",
+    "deepseek": "deepseek",
+    "ollama": "ollama",
+    "ollama_chat": "ollama_chat",
+    "hosted_vllm": "hosted_vllm",
+    "cerebras": "cerebras",
+    "dashscope": "dashscope",
+    "snowflake": "snowflake",
+}
 
 
 class Delta(TypedDict):
@@ -368,6 +244,15 @@ class AccumulatedToolArgs(BaseModel):
     function: FunctionArgs = Field(default_factory=FunctionArgs)
 
 
+class _Route(NamedTuple):
+    """Where ``LLM(model, **kwargs)`` goes; see :meth:`LLM._resolve_route`."""
+
+    provider: str
+    model: str
+    native_class: type[BaseLLM] | None
+    custom_openai: bool
+
+
 class LLM(BaseLLM):
     llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
@@ -386,7 +271,9 @@ class LLM(BaseLLM):
     api_base: str | None = None
     api_version: str | None = None
     callbacks: list[Any] | None = None
-    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    reasoning_effort: (
+        Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None
+    ) = None
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
@@ -409,84 +296,28 @@ class LLM(BaseLLM):
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
-        custom_openai = bool(kwargs.pop("custom_openai", False))
-        custom_openai_route = custom_openai
-        explicit_provider = kwargs.get("provider")
+        if cls is LLM:
+            mapped = cls._overlay_mapped(model, is_litellm, kwargs)
+            if mapped is not None:
+                return mapped
 
-        if custom_openai:
-            if not cls._has_custom_openai_endpoint(kwargs):
-                raise ValueError(
-                    "custom_openai=True requires base_url, api_base, "
-                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
-                )
-            provider = "openai"
-            use_native = True
-            prefix, separator, model_part = model.partition("/")
-            model_string = (
-                model_part if separator and prefix.lower() == "openai" else model
-            )
-        elif explicit_provider:
-            provider = explicit_provider
-            use_native = True
-            model_string = model
-        elif "/" in model:
-            prefix, _, model_part = model.partition("/")
-
-            provider_mapping = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-                "openrouter": "openrouter",
-                "deepseek": "deepseek",
-                "ollama": "ollama",
-                "ollama_chat": "ollama_chat",
-                "hosted_vllm": "hosted_vllm",
-                "cerebras": "cerebras",
-                "dashscope": "dashscope",
-                "snowflake": "snowflake",
-            }
-
-            canonical_provider = provider_mapping.get(prefix.lower())
-
-            valid_native_model = bool(
-                canonical_provider
-                and cls._validate_model_in_constants(model_part, canonical_provider)
-            )
-            custom_openai_route = bool(
-                canonical_provider == "openai"
-                and not valid_native_model
-                and cls._has_custom_openai_base_url(kwargs)
-            )
-
-            if canonical_provider and (valid_native_model or custom_openai_route):
-                provider = canonical_provider
-                use_native = True
-                model_string = model_part
-            else:
-                provider = prefix
-                use_native = False
-                model_string = model_part
-        else:
-            provider = cls._infer_provider_from_model(model)
-            use_native = True
-            model_string = model
-
-        native_class = cls._get_native_provider(provider) if use_native else None
-        if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
+        route = cls._resolve_route(model, kwargs)
+        if route.native_class is not None and not is_litellm:
             try:
-                # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
-                kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
-                if custom_openai_route:
+                # The route decided 'provider' and 'custom_openai'; the caller's
+                # values must not reach the native class a second time.
+                kwargs_copy = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in ("provider", "custom_openai")
+                }
+                if route.custom_openai:
                     kwargs_copy["custom_openai"] = True
                 return cast(
                     Self,
-                    native_class(model=model_string, provider=provider, **kwargs_copy),
+                    route.native_class(
+                        model=route.model, provider=route.provider, **kwargs_copy
+                    ),
                 )
             except NotImplementedError:
                 raise
@@ -513,6 +344,39 @@ class LLM(BaseLLM):
             raise ImportError(error_msg) from None
 
         return object.__new__(cls)
+
+    def __init__(self, model: str, is_litellm: bool = False, **kwargs: Any) -> None:
+        # Python calls ``__init__`` on whatever ``__new__`` returns when it is an
+        # ``LLM``; an instance ``llm_overlay`` built on a mapped model is already
+        # initialized, and initializing it again with the caller's arguments
+        # would put the declared model back.
+        if _overlay_built.get() is self:
+            _overlay_built.set(None)
+            return
+        super().__init__(model=model, is_litellm=is_litellm, **kwargs)
+
+    @classmethod
+    def _overlay_mapped(
+        cls, model: str, is_litellm: bool, kwargs: dict[str, Any]
+    ) -> LLM | None:
+        """``LLM(model, **kwargs)`` built on the model an ``llm_overlay`` key maps it to.
+
+        ``None`` when no model key of the active overlay matches ``model``. The
+        provider a bare model routes to is put beside it, so a key written
+        ``model:openai/gpt-4o`` matches ``LLM(model="gpt-4o")``.
+        """
+        provider = kwargs.get("provider")
+        if not provider and "/" not in model:
+            provider = cls._infer_provider_from_model(model)
+        mapped_model = overlay_model_for_model(model, provider)
+        if mapped_model is None:
+            return None
+        from crewai.utilities.llm_utils import create_llm_from_kwargs_like
+
+        built = create_llm_from_kwargs_like(mapped_model, model, kwargs, is_litellm)
+        if isinstance(built, LLM):
+            _overlay_built.set(built)
+        return cast(LLM, built)
 
     @classmethod
     def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
@@ -584,6 +448,71 @@ class LLM(BaseLLM):
             return True
 
         return False
+
+    @classmethod
+    def _resolve_route(cls, model: str, kwargs: dict[str, Any]) -> _Route:
+        """Decide which class ``LLM(model, **kwargs)`` constructs, without building it.
+
+        The routing ``__new__`` applies, in its priority order: ``custom_openai``
+        forces the native OpenAI provider; an explicit ``provider`` names one;
+        a ``<prefix>/<model>`` string goes native when the prefix is a native
+        provider and the model is one it knows (or, for ``openai/``, when a
+        custom endpoint is configured); a bare model name infers its provider.
+        ``native_class`` is ``None`` when the call falls back to LiteLLM.
+        ``kwargs`` is read, never mutated.
+        """
+        custom_openai = bool(kwargs.get("custom_openai", False))
+        custom_openai_route = custom_openai
+        explicit_provider = kwargs.get("provider")
+
+        if custom_openai:
+            if not cls._has_custom_openai_endpoint(kwargs):
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            provider = "openai"
+            use_native = True
+            prefix, separator, model_part = model.partition("/")
+            model_string = (
+                model_part if separator and prefix.lower() == "openai" else model
+            )
+        elif explicit_provider:
+            provider = explicit_provider
+            use_native = True
+            model_string = model
+        elif "/" in model:
+            prefix, _, model_part = model.partition("/")
+
+            canonical_provider = PROVIDER_ALIASES.get(prefix.lower())
+
+            valid_native_model = bool(
+                canonical_provider
+                and cls._validate_model_in_constants(model_part, canonical_provider)
+            )
+            custom_openai_route = bool(
+                canonical_provider == "openai"
+                and not valid_native_model
+                and cls._has_custom_openai_base_url(kwargs)
+            )
+
+            if canonical_provider and (valid_native_model or custom_openai_route):
+                provider = canonical_provider
+                use_native = True
+                model_string = model_part
+            else:
+                provider = prefix
+                use_native = False
+                model_string = model_part
+        else:
+            provider = cls._infer_provider_from_model(model)
+            use_native = True
+            model_string = model
+
+        native_class = cls._get_native_provider(provider) if use_native else None
+        if provider not in SUPPORTED_NATIVE_PROVIDERS:
+            native_class = None
+        return _Route(provider, model_string, native_class, custom_openai_route)
 
     @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
@@ -679,7 +608,7 @@ class LLM(BaseLLM):
         return "openai"
 
     @classmethod
-    def _get_native_provider(cls, provider: str) -> type | None:
+    def _get_native_provider(cls, provider: str) -> type[BaseLLM] | None:
         """Get native provider class if available."""
         if provider == "openai":
             from crewai.llms.providers.openai.completion import OpenAICompletion
@@ -1112,7 +1041,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
 
             logging.error(f"Error in streaming response: {e!s}")
@@ -1261,6 +1190,7 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1268,7 +1198,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
@@ -1307,7 +1238,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
@@ -1418,6 +1349,7 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1425,7 +1357,8 @@ class LLM(BaseLLM):
                 raise ValueError("Messages are required when using response_model")
 
             combined_content = "\n\n".join(
-                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+                f"{msg['role'].upper()}: {message_content_text(msg)}"
+                for msg in messages
             )
 
             instructor_instance = InternalInstructor(
@@ -1460,7 +1393,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
@@ -1732,7 +1665,7 @@ class LLM(BaseLLM):
             raise
         except Exception as e:
             error_msg = str(e)
-            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+            if LLMContextLengthExceededError._is_context_length_exceeded_error(e):
                 raise LLMContextLengthExceededError(error_msg) from e
 
             if chunk_count == 0:
@@ -2500,6 +2433,22 @@ class LLM(BaseLLM):
             return remainder
         return self.model
 
+    def _context_window_sizes(self) -> Mapping[str, int]:
+        """Pick a provider catalog when the model id is provider-qualified.
+
+        The merged catalog lets Azure's ``gpt-4`` override OpenAI's. Qualified
+        LiteLLM ids must keep the provider that was named.
+        """
+        prefix, separator, _remainder = self.model.partition("/")
+        if not separator:
+            return LLM_CONTEXT_WINDOW_SIZES
+        provider = prefix.lower()
+        if provider == "openai":
+            return OPENAI_CONTEXT_WINDOWS
+        if provider in {"azure", "azure_openai"}:
+            return AZURE_OPENAI_CONTEXT_WINDOWS
+        return LLM_CONTEXT_WINDOW_SIZES
+
     def get_context_window_size(self) -> int:
         """
         Returns the context window size, using 75% of the maximum to avoid
@@ -2511,22 +2460,12 @@ class LLM(BaseLLM):
         if self.context_window_size != 0:
             return self.context_window_size
 
-        min_context = 1024
-        max_context = 2097152  # Current max from gemini-1.5-pro
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        self.context_window_size = int(
-            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+        self.context_window_size = resolve_context_window_size(
+            self._context_window_model_name(),
+            self._context_window_sizes(),
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            extra_names=(self.model,),
         )
-        model_name = self._context_window_model_name()
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if model_name.startswith(key) or self.model.startswith(key):
-                self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
     @staticmethod

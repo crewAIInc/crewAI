@@ -700,9 +700,8 @@ def test_agent_step_callback():
         callback.assert_called()
 
 
-@pytest.mark.vcr()
-@pytest.mark.skip(reason="result_as_answer feature not yet implemented in native tool calling path")
-def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
+def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
+    """Use a native tool result as the Crew's final answer without another LLM call."""
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -710,13 +709,16 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
         description: str = "Get a random greeting back"
 
         def _run(self) -> str:
+            """Return a deterministic greeting for the integration test."""
             return "Howdy!"
 
+    llm = LLM(model="gpt-4o-mini")
     agent1 = Agent(
         role="Data Scientist",
         goal="Product amazing resports on AI",
         backstory="You work with data and AI",
         tools=[MyCustomTool(result_as_answer=True)],
+        llm=llm,
     )
 
     essay = Task(
@@ -727,8 +729,18 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
 
-    result = crew.kickoff()
+    tool_call = {
+        "id": "call_greeting",
+        "function": {"name": "get_greetings", "arguments": "{}"},
+    }
+    with patch(
+        "crewai.experimental.agent_executor.get_llm_response",
+        return_value=[tool_call],
+    ) as mock_llm_response:
+        result = crew.kickoff()
+
     assert result.raw == "Howdy!"
+    mock_llm_response.assert_called_once()
 
 
 def test_agent_definition_based_on_dict():
@@ -2877,3 +2889,101 @@ class TestSharedLLMStopWords:
 
         assert seen == [{"Original:", "Observation:"}]
         assert shared.stop == ["Original:"]
+
+
+class TestMaxIterationsForcedAnswer:
+    """Both sync loops request the forced final answer with a trailing user turn.
+
+    Current Claude models reject a request that ends on an assistant message,
+    so the nudge must never be sent as assistant prefill.
+    """
+
+    @staticmethod
+    def _make_executor(llm: MagicMock, original_tools: list) -> CrewAgentExecutor:
+        from crewai.agents.tools_handler import ToolsHandler
+
+        agent = Agent(role="r", goal="g", backstory="b", llm=llm, verbose=False)
+        task = Task(description="d", expected_output="o", agent=agent)
+        executor = CrewAgentExecutor(
+            agent=agent,
+            task=task,
+            llm=llm,
+            crew=None,
+            prompt={"prompt": "p {input} {tool_names} {tools}"},
+            max_iter=1,
+            tools=[],
+            original_tools=original_tools,
+            tools_names="",
+            stop_words=[],
+            tools_description="",
+            tools_handler=ToolsHandler(),
+        )
+        executor.iterations = 1
+        return executor
+
+    def test_react_loop_forces_final_answer_with_user_turn(self) -> None:
+        from crewai.utilities.i18n import I18N_DEFAULT
+
+        llm = MagicMock(spec=LLM)
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+        llm.supports_function_calling.return_value = False
+        llm.call.return_value = "Final Answer: forced"
+        executor = self._make_executor(llm, original_tools=[])
+        executor.messages = [
+            {"role": "user", "content": "Collect all the data."},
+            {"role": "assistant", "content": "Thought: I need data\nObservation: partial"},
+        ]
+
+        with patch.object(executor, "_show_logs"):
+            result = executor._invoke_loop()
+
+        sent = llm.call.call_args.args[0]
+        assert sent[-1] == {
+            "role": "user",
+            "content": I18N_DEFAULT.errors("force_final_answer"),
+        }
+        assert isinstance(result, AgentFinish)
+        assert result.output == "forced"
+
+    def test_native_tools_loop_forces_final_answer_with_user_turn(self) -> None:
+        from crewai.utilities.i18n import I18N_DEFAULT
+
+        @tool
+        def get_data(step: str) -> str:
+            """Get data for a step."""
+            return f"data for {step}"
+
+        llm = MagicMock(spec=LLM)
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+        llm.supports_function_calling.return_value = True
+        llm.call.return_value = "Final Answer: forced"
+        executor = self._make_executor(llm, original_tools=[get_data])
+        executor.messages = [
+            {"role": "user", "content": "Collect all the data."},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "get_data", "arguments": "{}"},
+                    }
+                ],
+            },
+            {"role": "tool", "tool_call_id": "call_1", "name": "get_data", "content": "partial"},
+            {"role": "user", "content": I18N_DEFAULT.slice("post_tool_reasoning")},
+        ]
+
+        with patch.object(executor, "_show_logs"):
+            result = executor._invoke_loop()
+
+        sent = llm.call.call_args.args[0]
+        assert sent[-1] == {
+            "role": "user",
+            "content": I18N_DEFAULT.errors("force_final_answer"),
+        }
+        assert isinstance(result, AgentFinish)
+        assert result.output == "forced"
