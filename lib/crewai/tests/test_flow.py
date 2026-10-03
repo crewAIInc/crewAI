@@ -1193,6 +1193,144 @@ def test_multiple_routers_from_same_trigger():
     )
 
 
+@pytest.mark.parametrize("second_outcome", ["right", None])
+def test_sibling_router_outcomes_continue_their_chains(second_outcome: str | None) -> None:
+    """Every sibling outcome must reach downstream routers, even before a None result."""
+    execution_order: list[str] = []
+    started_events: dict[str, MethodExecutionStartedEvent] = {}
+    finished_events: dict[str, MethodExecutionFinishedEvent] = {}
+
+    class SiblingRouterFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            """Provide the shared input for both router branches."""
+            return "input"
+
+        @router(begin)
+        def first_route(self, result: str) -> str:
+            """Emit the first sibling's outcome."""
+            assert result == "input"
+            execution_order.append("first_route")
+            return "left"
+
+        @router(begin)
+        def second_route(self, result: str) -> str | None:
+            """Emit another outcome or stop only this sibling branch."""
+            assert result == "input"
+            execution_order.append("second_route")
+            return second_outcome
+
+        @router("left")
+        def left_route(self, result: str) -> str:
+            """Continue the first sibling's router chain."""
+            assert result == "input"
+            execution_order.append("left_route")
+            return "left_done"
+
+        @router("right")
+        def right_route(self, result: str) -> str:
+            """Continue the second sibling's router chain."""
+            assert result == "input"
+            execution_order.append("right_route")
+            return "right_done"
+
+        @listen("left_done")
+        def left_listener(self, result: str) -> None:
+            """Consume the first branch's final outcome."""
+            assert result == "left_done"
+            execution_order.append("left_listener")
+
+        @listen("right_done")
+        def right_listener(self, result: str) -> None:
+            """Consume the second branch's final outcome."""
+            assert result == "right_done"
+            execution_order.append("right_listener")
+
+        @listen(begin)
+        def direct_listener(self, result: str) -> None:
+            """Retain the start method as the cause despite intervening routers."""
+            assert result == "input"
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def capture_started(source: object, event: MethodExecutionStartedEvent) -> None:
+            """Capture actual emitted listener and router start events."""
+            started_events[event.method_name] = event
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def capture_finished(source: object, event: MethodExecutionFinishedEvent) -> None:
+            """Capture completion IDs for causal-link assertions."""
+            finished_events[event.method_name] = event
+
+        SiblingRouterFlow().kickoff()
+        crewai_event_bus.flush()
+
+    expected = ["first_route", "second_route", "left_route"]
+    if second_outcome is not None:
+        expected.append("right_route")
+    expected.append("left_listener")
+    if second_outcome is not None:
+        expected.append("right_listener")
+    assert execution_order == expected
+
+    expected_causes = {
+        "first_route": "begin",
+        "second_route": "begin",
+        "direct_listener": "begin",
+        "left_route": "first_route",
+        "left_listener": "left_route",
+    }
+    if second_outcome is not None:
+        expected_causes.update(
+            right_route="second_route", right_listener="right_route"
+        )
+    for method_name, cause in expected_causes.items():
+        assert started_events[method_name].triggered_by_event_id == (
+            finished_events[cause].event_id
+        ), f"{method_name} should be triggered by {cause}"
+
+
+def test_sibling_router_outcomes_satisfy_and_router_and_or_listener() -> None:
+    """Sibling outcomes must satisfy joins without firing an OR listener twice."""
+    calls: list[str] = []
+
+    class JoinedRouterFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            """Start both sibling routers."""
+            pass
+
+        @router(begin)
+        def first_route(self) -> str:
+            """Emit the first half of the join condition."""
+            return "left"
+
+        @router(begin)
+        def second_route(self) -> str:
+            """Emit the remaining half of the join condition."""
+            return "right"
+
+        @router(and_("left", "right"))
+        def join_routes(self) -> str:
+            """Join both sibling outcomes into one downstream trigger."""
+            calls.append("join")
+            return "joined"
+
+        @listen(or_("left", "right"))
+        def either_route(self) -> None:
+            """Record a single execution for either sibling outcome."""
+            calls.append("either")
+
+        @listen("joined")
+        def after_join(self) -> None:
+            """Record that the joined router chain reached its listener."""
+            calls.append("after_join")
+
+    JoinedRouterFlow().kickoff()
+
+    assert calls == ["join", "either", "after_join"]
+
+
 def test_flow_name():
     class MyFlow(Flow):
         name = "MyFlow"
