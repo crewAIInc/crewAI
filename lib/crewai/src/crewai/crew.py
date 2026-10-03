@@ -716,9 +716,13 @@ class Crew(FlowTrackable, BaseModel):
                     self.knowledge.add_sources()
 
             except Exception as e:
-                self._logger.log(
-                    "warning", f"Failed to init knowledge: {e}", color="yellow"
-                )
+                self._logger.log("error", f"Failed to init knowledge: {e}", color="red")
+                raise ValueError(
+                    "Failed to initialize crew knowledge_sources. "
+                    "Check your embedder configuration (CrewAI defaults to OpenAI "
+                    "embeddings and requires OPENAI_API_KEY unless you set a local "
+                    "embedder such as provider='ollama' or provider='onnx')."
+                ) from e
         return self
 
     @model_validator(mode="after")
