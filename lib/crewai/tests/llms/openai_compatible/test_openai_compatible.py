@@ -36,6 +36,7 @@ class TestProviderConfig:
         assert config.default_headers == {}
         assert config.api_key_required is True
         assert config.default_api_key is None
+        assert config.require_https is False
 
 
 class TestProviderRegistry:
@@ -94,6 +95,15 @@ class TestProviderRegistry:
         assert config.base_url == "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
+
+    def test_flexai_config(self):
+        """Test FlexAI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["flexai"]
+        assert config.base_url == "https://api.flex.ai/v1"
+        assert config.api_key_env == "FLEXAI_API_KEY"
+        assert config.base_url_env == "FLEXAI_BASE_URL"
+        assert config.api_key_required is True
+        assert config.require_https is True
 
 
 class TestNormalizeOllamaBaseUrl:
@@ -218,6 +228,68 @@ class TestOpenAICompatibleCompletion:
             )
             assert completion.base_url == "https://explicit.deepseek.com/v1"
 
+    def test_flexai_https_base_url_override_accepted(self):
+        """Test an HTTPS FLEXAI_BASE_URL override is used as given."""
+        with patch.dict(
+            os.environ,
+            {"FLEXAI_API_KEY": "test-key", "FLEXAI_BASE_URL": "https://eu.flex.example/v1"},
+        ):
+            completion = OpenAICompatibleCompletion(model="test-model", provider="flexai")
+            assert completion.base_url == "https://eu.flex.example/v1"
+
+    @pytest.mark.parametrize(
+        "url", ["http://api.flex.example/v1", "HTTP://api.flex.example/v1", "ftp://api.flex.example/v1"]
+    )
+    def test_flexai_non_https_env_base_url_rejected(self, url):
+        """Test a non-TLS remote FLEXAI_BASE_URL is refused before the client is built."""
+        with patch.dict(os.environ, {"FLEXAI_API_KEY": "test-key", "FLEXAI_BASE_URL": url}):
+            with pytest.raises(ValueError, match="must use HTTPS"):
+                OpenAICompatibleCompletion(model="test-model", provider="flexai")
+
+    def test_flexai_https_error_does_not_echo_credentials(self):
+        """Test the rejection message names the host but not URL userinfo."""
+        with patch.dict(
+            os.environ,
+            {"FLEXAI_API_KEY": "test-key", "FLEXAI_BASE_URL": "http://user:s3cret@api.flex.example/v1"},
+        ):
+            with pytest.raises(ValueError, match="must use HTTPS") as exc:
+                OpenAICompatibleCompletion(model="test-model", provider="flexai")
+        assert "api.flex.example" in str(exc.value)
+        assert "s3cret" not in str(exc.value)
+
+    def test_flexai_loopback_non_http_scheme_rejected(self):
+        """Test the loopback exemption covers plain HTTP only."""
+        with patch.dict(
+            os.environ, {"FLEXAI_API_KEY": "test-key", "FLEXAI_BASE_URL": "ftp://localhost/v1"}
+        ):
+            with pytest.raises(ValueError, match="must use HTTPS"):
+                OpenAICompatibleCompletion(model="test-model", provider="flexai")
+
+    def test_flexai_explicit_http_base_url_rejected(self):
+        """Test an explicit non-TLS remote base_url is refused for FlexAI too."""
+        with patch.dict(os.environ, {"FLEXAI_API_KEY": "test-key"}):
+            with pytest.raises(ValueError, match="must use HTTPS"):
+                OpenAICompatibleCompletion(
+                    model="test-model",
+                    provider="flexai",
+                    base_url="http://api.flex.example/v1",
+                )
+
+    @pytest.mark.parametrize(
+        "url", ["http://localhost:8000/v1", "http://127.0.0.1:8000/v1", "http://[::1]:8000/v1"]
+    )
+    def test_flexai_loopback_http_base_url_allowed(self, url):
+        """Test plain HTTP is still allowed for a local development server."""
+        with patch.dict(os.environ, {"FLEXAI_API_KEY": "test-key", "FLEXAI_BASE_URL": url}):
+            completion = OpenAICompatibleCompletion(model="test-model", provider="flexai")
+            assert completion.base_url == url
+
+    def test_http_base_url_unaffected_for_providers_without_require_https(self):
+        """Test the HTTPS requirement is opt-in per provider."""
+        with patch.dict(os.environ, {"VLLM_BASE_URL": "http://gpu-box:8000/v1"}):
+            completion = OpenAICompatibleCompletion(model="test-model", provider="hosted_vllm")
+            assert completion.base_url == "http://gpu-box:8000/v1"
+
     def test_ollama_base_url_normalized(self):
         """Test Ollama base URL is normalized to include /v1."""
         with patch.dict(os.environ, {"OLLAMA_HOST": "http://custom-ollama:11434"}):
@@ -311,6 +383,35 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
             assert llm.base_url == "https://my-dashscope.example.com/v1"
+
+    def test_llm_creates_openai_compatible_for_flexai(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for FlexAI."""
+        with patch.dict(os.environ, {"FLEXAI_API_KEY": "test-key"}):
+            llm = LLM(model="flexai/DeepSeek-V4-Flash-0731")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "flexai"
+            assert llm.base_url == "https://api.flex.ai/v1"
+
+    def test_llm_creates_openai_compatible_for_flexai_org_prefixed_model(self):
+        """An org-prefixed FlexAI model id keeps everything after the first slash."""
+        with patch.dict(os.environ, {"FLEXAI_API_KEY": "test-key"}):
+            llm = LLM(model="flexai/Qwen3-Coder-30B-A3B-Instruct-FP8")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "flexai"
+            assert llm.model == "Qwen3-Coder-30B-A3B-Instruct-FP8"
+
+    def test_llm_flexai_honors_base_url_override(self):
+        """FLEXAI_BASE_URL overrides the default endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "FLEXAI_API_KEY": "test-key",
+                "FLEXAI_BASE_URL": "https://my-flexai.example.com/v1",
+            },
+        ):
+            llm = LLM(model="flexai/DeepSeek-V4-Flash-0731")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://my-flexai.example.com/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""

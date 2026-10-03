@@ -1012,6 +1012,37 @@ mode: "wide"
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="FlexAI">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    FLEXAI_API_KEY=<your-api-key>
+
+    # Optional
+    FLEXAI_BASE_URL=https://api.flex.ai/v1
+    ```
+
+    يعمل FlexAI عبر مزوّد CrewAI المدمج المتوافق مع OpenAI، لذلك لا يحتاج إلى أي تثبيت إضافي (ولا يستخدم `crewai[litellm]`).
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="flexai/DeepSeek-V4-Flash-0731",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات FlexAI:
+      - نماذج مفتوحة الأوزان عبر واجهة برمجة تطبيقات واحدة متوافقة مع OpenAI
+      - نقاط نهاية للمحادثة والتضمين والرؤية والصور والكلام والنسخ
+      - دعم استدعاء الأدوات
+      - أسعار تنافسية
+    </Info>
+
+    تتغير النماذج التي تقدمها FlexAI بمرور الوقت. راجع [وثائق FlexAI](https://docs.flex.ai) ونقطة النهاية `/v1/models` للحصول على معرّفات النماذج الحالية وأطوال السياق الخاصة بها قبل النشر.
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات
