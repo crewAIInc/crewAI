@@ -164,7 +164,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(ValueError) as context:
                 CrewaiPlatformTools(apps=["github"])
-            assert "No platform integration token found" in str(context.exception)
+            assert "CREWAI_PLATFORM_INTEGRATION_TOKEN" in str(context.exception)
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
@@ -261,6 +261,31 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             "connection_id": connection_id,
         }
         assert result == '{\n  "issue": 42\n}'
+
+    @patch.dict(
+        "os.environ",
+        {
+            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_PLUS_URL": "https://platform.example.test/",
+        },
+        clear=True,
+    )
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+    )
+    def test_private_connection_selects_clipper_api(self, mock_get):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": []}
+        mock_get.return_value = response
+
+        tools = CrewaiPlatformTools(apps=["github@private"])
+
+        assert tools == []
+        assert mock_get.call_args.args[0].endswith(
+            "/clipper/v1/applications/github/tools"
+        )
+        assert mock_get.call_args.kwargs["params"] == {"connection_id": "private"}
 
     @patch.dict(
         "os.environ",

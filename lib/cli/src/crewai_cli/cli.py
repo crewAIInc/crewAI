@@ -48,6 +48,18 @@ def run_crew(*args: Any, **kwargs: Any) -> Any:
     return _run_crew(*args, **kwargs)
 
 
+def eval_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.experimental.eval_crew import eval_crew as _eval_crew
+
+    return _eval_crew(*args, **kwargs)
+
+
+def eval_models(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.experimental.eval_crew import eval_models as _eval_models
+
+    return _eval_models(*args, **kwargs)
+
+
 if TYPE_CHECKING:
     # mypy sees the real classes; at runtime the shims below defer the
     # heavy imports until a command actually instantiates them.
@@ -672,6 +684,67 @@ def run(
         definition=definition,
         inputs=inputs,
     )
+
+
+@crewai.command(name="eval")
+@click.option(
+    "--run",
+    "run_id",
+    type=str,
+    default=None,
+    metavar="EXECUTION_ID",
+    help=(
+        "Evaluate this traced run instead of the last one. The execution id "
+        "crewAI recorded for the run."
+    ),
+)
+@click.option(
+    "--models",
+    "models",
+    type=str,
+    default=None,
+    metavar="LIST",
+    help=(
+        "Compare models on this project's deployment instead: ONE comma-separated "
+        'list of provider/model, e.g. "openai/gpt-4o-mini,anthropic/claude-haiku-4-5". '
+        "The deployment runs once as deployed and once per model; needs `crewai login`."
+    ),
+)
+@click.option(
+    "--deployment",
+    "deployment_id",
+    type=str,
+    default=None,
+    metavar="UUID",
+    help=(
+        "With --models: the deployment to run, when AMP cannot tell it from the "
+        "project id."
+    ),
+)
+def eval_command(
+    run_id: str | None, models: str | None, deployment_id: str | None
+) -> None:
+    """Evaluate the last traced run through CrewAI AMP, or compare models on the
+    project's deployment (--models).
+
+    A run's evaluation exits 0 only when the goal gate PASSED, and 1 otherwise — a
+    failed gate, no verdict, or an evaluation that could not run — so a CI job can
+    gate on it. A comparison exits 0 when it finished, 1 when it failed or could
+    not start.
+    """
+    if models is not None:
+        if run_id is not None:
+            raise click.UsageError(
+                "--run grades a run that already happened; --models runs the "
+                "deployment again. Give one of them."
+            )
+        eval_models(models, deployment_id=deployment_id)
+        return
+    if deployment_id is not None:
+        raise click.UsageError(
+            "--deployment names the deployment --models runs; add --models LIST."
+        )
+    eval_crew(run_id=run_id)
 
 
 @crewai.command()

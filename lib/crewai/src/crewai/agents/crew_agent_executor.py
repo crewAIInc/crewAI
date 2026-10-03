@@ -365,7 +365,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
-                        formatted_answer,
                         printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
@@ -525,7 +524,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
-                        None,
                         printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
@@ -1068,6 +1066,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
+                    from_cache=from_cache,
                 ),
             )
 
@@ -1188,7 +1187,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
-                        formatted_answer,
                         printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
@@ -1334,7 +1332,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
-                        None,
                         printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
