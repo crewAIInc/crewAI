@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from threading import Event
-from typing import ClassVar, Self
+from typing import ClassVar
 
 from pydantic import ConfigDict, Field, PrivateAttr, ValidationError, model_validator
 import pytest
@@ -332,7 +332,7 @@ class ValidatedReportJob(ReportJob):
     _consumer_tag: str = PrivateAttr(default="retained")
 
     @model_validator(mode="after")
-    def validate_collected_notes(self) -> Self:
+    def validate_collected_notes(self) -> ValidatedReportJob:
         """Reject collection commits without their required notes."""
         if "collect" in self.committed_stages and not self.notes:
             raise ValueError("Committed collection requires notes")
