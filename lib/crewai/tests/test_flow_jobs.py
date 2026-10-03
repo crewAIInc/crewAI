@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from threading import Event
-from typing import ClassVar
+from typing import ClassVar, Self
 
-from pydantic import Field, PrivateAttr, ValidationError
+from pydantic import ConfigDict, Field, PrivateAttr, ValidationError, model_validator
 import pytest
 
 from crewai.flow import ConversationState, Flow, listen, start
@@ -323,3 +323,45 @@ async def test_failed_update_subscriber_does_not_leave_a_worker_waiting_forever(
         assert not runner._receipts
     finally:
         runner.request_close()
+
+
+class ValidatedReportJob(ReportJob):
+    """Require committed collection output to satisfy a cross-field invariant."""
+
+    model_config = ConfigDict(validate_assignment=True)
+    _consumer_tag: str = PrivateAttr(default="retained")
+
+    @model_validator(mode="after")
+    def validate_collected_notes(self) -> Self:
+        """Reject collection commits without their required notes."""
+        if "collect" in self.committed_stages and not self.notes:
+            raise ValueError("Committed collection requires notes")
+        return self
+
+
+def test_commit_preserves_identity_with_assignment_validation() -> None:
+    """Commit related fields together without validating intermediate states."""
+    state = JobState[ValidatedReportJob]()
+    job = ValidatedReportJob(session_id=state.id, question="Report")
+    assert add_job(state, job)
+    assert commit_job_update(state, proposal(state, job, 1, "started"))
+    before = state.model_dump_json()
+    assert not commit_job_update(
+        state, proposal(state, job, 2, "stage_completed", stage="collect")
+    )
+    assert state.model_dump_json() == before
+    assert commit_job_update(
+        state,
+        proposal(
+            state, job, 2, "stage_completed", stage="collect", outputs={"notes": ["Fact"]}
+        ),
+    )
+    assert state.jobs[job.job_id] is job
+    assert job.notes == ["Fact"]
+    assert job.committed_stages == ["collect"]
+    assert job.last_update_seq == 2
+    assert job.model_dump(exclude_unset=True)["committed_stages"] == ["collect"]
+    assert job._consumer_tag == "retained"
+    assert state.job_sequence == 3
+    assert commit_job_update(state, proposal(state, job, 3, "completed"))
+    assert job.status == "completed"
