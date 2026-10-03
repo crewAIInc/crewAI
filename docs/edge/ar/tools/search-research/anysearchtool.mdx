@@ -1,0 +1,78 @@
+---
+title: AnySearch
+description: أداة `AnySearchTool` تبحث في الويب عبر واجهة AnySearch وتعمل بدون مفتاح API.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `AnySearchTool`
+
+## الوصف
+
+تقوم هذه الأداة بإجراء بحث على الويب لاستعلام معين باستخدام واجهة [AnySearch](https://anysearch.com) API وتعيد النتائج الأكثر صلة كسلسلة JSON.
+
+`AnySearchTool` تعمل دون أي إعداد: تقبل AnySearch الطلبات المجهولة، لذا تكون الأداة قابلة للاستخدام فور استيرادها. توفير مفتاح API ينقل الطلبات إلى الوضع المُوثَّق، وتحدد خدمة AnySearch الحصة والصلاحيات المطبَّقة.
+
+## التثبيت
+
+لاستخدام `AnySearchTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت الحزمة**: تأكد من تثبيت حزمة `crewai[tools]` في بيئة بايثون الخاصة بك.
+2. **الحصول على مفتاح API (اختياري)**: احصل على مفتاح AnySearch API من https://anysearch.com. يمكن تخطي هذه الخطوة لإرسال طلبات مجهولة.
+3. **إعداد البيئة**: إذا كان لديك مفتاح، فخزنه في متغير بيئة باسم `ANYSEARCH_API_KEY`.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة وتنفيذ بحث باستعلام معين:
+
+```python Code
+from crewai_tools import AnySearchTool
+
+# لا حاجة إلى مفتاح API
+tool = AnySearchTool()
+
+# تنفيذ بحث؛ وإرجاع النتائج كسلسلة JSON
+result = tool.run(query="أحدث التطورات في نماذج LLM على الأجهزة")
+print(result)
+```
+
+إرفاقها بوكيل:
+
+```python Code
+from crewai import Agent
+from crewai_tools import AnySearchTool
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information on the web",
+    backstory="An analyst who always checks primary sources.",
+    tools=[AnySearchTool()],
+)
+```
+
+## المعاملات
+
+تأتي `AnySearchTool` مع عدة معاملات:
+
+- **search_url**: نقطة نهاية URL لواجهة البحث. (الافتراضي هو `https://api.anysearch.com/v1/search`)
+- **api_key**: اختياري. مفتاح AnySearch API. القيمة الافتراضية هي متغير البيئة `ANYSEARCH_API_KEY`. عند عدم تعيينه، تُرسل الطلبات بشكل مجهول.
+- **max_results**: عدد نتائج البحث المراد إرجاعها، بين `1` و`10`. الافتراضي هو `10`.
+- **result_format**: تنسيق المحتوى المطلوب من الواجهة، إما `json` أو `markdown`. الافتراضي هو `json`.
+- **timeout**: مهلة الطلب بالثواني. الافتراضي هو `30`.
+- **max_content_length_per_result**: حد الاقتطاع لحقل `content` لكل نتيجة، لحماية نافذة سياق الوكيل. الافتراضي هو `1000`.
+
+## مثال مع المعاملات
+
+```python Code
+from crewai_tools import AnySearchTool
+
+tool = AnySearchTool(
+    max_results=5,
+    result_format="markdown",
+    timeout=15,
+)
+```
