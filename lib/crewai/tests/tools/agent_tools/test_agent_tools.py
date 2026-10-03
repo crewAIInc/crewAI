@@ -124,3 +124,33 @@ def test_ask_question_to_wrong_agent():
         result
         == "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n- researcher\n"
     )
+
+
+@pytest.mark.parametrize(
+    "coworker",
+    [
+        "researcher",
+        "[researcher]",
+        '["researcher"]',
+        "['researcher']",
+        "['researcher', 'writer']",
+    ],
+)
+def test_delegate_work_resolves_coworker_spellings(coworker: str, monkeypatch) -> None:
+    """Every spelling a model may emit for one coworker must reach that coworker."""
+    called: list[str] = []
+
+    def fake_execute(self, task, context=None, tools=None):
+        called.append(self.role)
+        return "answered"
+
+    monkeypatch.setattr(Agent, "execute_task", fake_execute)
+
+    result = delegate_tool.run(
+        coworker=coworker,
+        task="share your take on AI Agents",
+        context="I heard you hate them",
+    )
+
+    assert result == "answered"
+    assert called == ["researcher"]

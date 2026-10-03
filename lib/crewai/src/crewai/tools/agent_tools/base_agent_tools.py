@@ -41,6 +41,9 @@ class BaseAgentTool(BaseTool):
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
+            # A repr'ed list quotes its items with single quotes, which
+            # sanitize_agent_name does not strip, so drop the wrapping quotes here.
+            coworker = coworker.strip().strip("'\"")
         return coworker
 
     def _execute(
