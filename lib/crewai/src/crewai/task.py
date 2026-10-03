@@ -795,6 +795,23 @@ class Task(BaseModel):
                 TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
+        except asyncio.CancelledError:
+            # CancelledError derives from BaseException, so the ``except
+            # Exception`` below never sees it. Without a terminal event the
+            # listener never closes this task's span, and the span it holds
+            # strongly references the task -- and its agent, crew and tooling --
+            # for the rest of the process. Re-raised bare so cancellation still
+            # reaches the canceller.
+            self.end_time = datetime.datetime.now()
+            crewai_event_bus.emit(
+                self,
+                TaskFailedEvent(
+                    error="Task cancelled",
+                    error_type=asyncio.CancelledError,
+                    task=self,
+                ),
+            )
+            raise
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(
