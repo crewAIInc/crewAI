@@ -36,6 +36,10 @@ def _run_coroutine_sync(coro: Coroutine[Any, Any, LiteAgentOutput]) -> LiteAgent
     return asyncio.run(coro)
 
 
+class GuardrailExecutionError(Exception):
+    """The guardrail could not run. Not a statement about the output."""
+
+
 class LLMGuardrailResult(BaseModel):
     valid: bool = Field(
         description="Whether the task output complies with the guardrail"
@@ -108,6 +112,8 @@ class LLMGuardrail:
 
         Raises:
             HookAborted: A `pre_model_call` hook denied the validation call.
+            GuardrailExecutionError: The guardrail could not run. This is not a
+                statement about whether the output is valid.
         """
         from crewai.hooks.dispatch import HookAborted
 
@@ -122,4 +128,4 @@ class LLMGuardrail:
         except HookAborted:
             raise
         except Exception as e:
-            return False, f"Error while validating the task output: {e!s}"
+            raise GuardrailExecutionError(str(e)) from e
