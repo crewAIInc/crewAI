@@ -16,7 +16,7 @@ uv add crewai-tools
 
 Create an Arcmira API key using the [API quickstart](https://arcmira.com/docs), then set `ARCMIRA_API_KEY` in your environment. Keep credentials outside prompts and source control. You can also pass `api_key` when constructing the tool; it is excluded from serialized tool configuration and model inputs.
 
-Search calls consume your Arcmira account allowance and may use on-demand spending if you have enabled it. Check [usage and billing](https://arcmira.com/docs/usage-and-billing) before running the example.
+Search calls use credits from your plan, then your on-demand budget. Check [usage and billing](https://arcmira.com/docs/usage-and-billing) before running the example.
 
 ```python
 from crewai_tools import ArcmiraSearchTool
@@ -41,4 +41,4 @@ Preserve `watch_url` and `start_seconds` when citing a passage. Report `partial`
 
 Missing credentials fail during setup. HTTP failures raise `RuntimeError` with the status and API error body, including quota, authentication or rate-limit details. Network and non-JSON failures report a short error without raw diagnostics. The tool makes one request per invocation and does not retry internally; an agent may choose to invoke it again.
 
-The tool only calls `GET /v1/search`. It does not download videos, purchase Premium transcripts, create monitors or alter webhook settings. For broader research, use [Arcmira's MCP integration](https://arcmira.com/docs/mcp-server).
+The tool only calls `GET /v1/search`. It does not read Premium transcripts, create monitors or change webhook settings. For broader research, use [Arcmira's MCP integration](https://arcmira.com/docs/mcp-server).
