@@ -38,6 +38,58 @@ def test_simple_sequential_flow():
     assert execution_order == ["step_1", "step_2"]
 
 
+def test_sequential_flow_method_panels_follow_method_execution():
+    """Method status panels stay ordered around sequential flow methods."""
+    execution_order = []
+    running_panel_started = threading.Event()
+    completed_panel_started = threading.Event()
+    step_1_body_started = threading.Event()
+    step_2_body_started = threading.Event()
+    flow = None
+
+    def handle_method_started(source, event):
+        if source is flow and event.method_name == "step_1":
+            running_panel_started.set()
+            step_1_body_started.wait(timeout=1)
+            execution_order.append("panel:step_1:running")
+
+    def handle_method_finished(source, event):
+        if source is flow and event.method_name == "step_1":
+            completed_panel_started.set()
+            step_2_body_started.wait(timeout=1)
+            execution_order.append("panel:step_1:completed")
+
+    crewai_event_bus.on(MethodExecutionStartedEvent)(handle_method_started)
+    crewai_event_bus.on(MethodExecutionFinishedEvent)(handle_method_finished)
+
+    class SequentialFlow(Flow):
+        @start()
+        def step_1(self):
+            assert running_panel_started.wait(timeout=1)
+            execution_order.append("method:step_1")
+            step_1_body_started.set()
+
+        @listen(step_1)
+        def step_2(self):
+            assert completed_panel_started.wait(timeout=1)
+            execution_order.append("method:step_2")
+            step_2_body_started.set()
+
+    flow = SequentialFlow()
+    try:
+        flow.kickoff()
+    finally:
+        crewai_event_bus.off(MethodExecutionStartedEvent, handle_method_started)
+        crewai_event_bus.off(MethodExecutionFinishedEvent, handle_method_finished)
+
+    assert execution_order.index("panel:step_1:running") < execution_order.index(
+        "method:step_1"
+    )
+    assert execution_order.index("panel:step_1:completed") < execution_order.index(
+        "method:step_2"
+    )
+
+
 def test_flow_with_multiple_starts():
     """Test a flow with multiple start methods."""
     execution_order = []

@@ -1219,7 +1219,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         racing_tasks = [
             asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
+                self._execute_single_listener(
+                    name,
+                    result,
+                    triggering_event_id,
+                    _await_status_events=False,
+                ),
                 name=str(name),
             )
             for name in racing_listeners
@@ -1227,7 +1232,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         other_tasks = [
             asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
+                self._execute_single_listener(
+                    name,
+                    result,
+                    triggering_event_id,
+                    _await_status_events=False,
+                ),
                 name=str(name),
             )
             for name in other_listeners
@@ -2393,12 +2403,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 starts_to_execute, run_starts_sequentially = (
                     self._order_start_methods_for_kickoff(starts_to_execute)
                 )
-                if run_starts_sequentially:
+                if run_starts_sequentially or len(starts_to_execute) == 1:
                     for start_method in starts_to_execute:
                         await self._execute_start_method(start_method)
                 else:
                     tasks = [
-                        self._execute_start_method(start_method)
+                        self._execute_start_method(
+                            start_method, _await_status_events=False
+                        )
                         for start_method in starts_to_execute
                     ]
                     await asyncio.gather(*tasks)
@@ -2785,7 +2797,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         exc_info=True,
                     )
 
-    async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
+    async def _execute_start_method(
+        self,
+        start_method_name: FlowMethodName,
+        *,
+        _await_status_events: bool = True,
+    ) -> None:
         """Executes a flow's start method and its triggered listeners.
 
         This internal method handles the execution of methods marked with @start
@@ -2817,7 +2834,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         enhanced_method = self._inject_trigger_payload_for_start_method(method)
 
         result, finished_event_id = await self._execute_method(
-            start_method_name, enhanced_method
+            start_method_name,
+            enhanced_method,
+            _await_status_events=_await_status_events,
         )
 
         # If start method is a router, use its result as an additional trigger
@@ -2880,6 +2899,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         method_name: FlowMethodName,
         method: Callable[..., Any],
         *args: Any,
+        _await_status_events: bool = True,
         **kwargs: Any,
     ) -> tuple[Any, str | None]:
         """Execute a method and emit events.
@@ -2907,6 +2927,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
                 if future:
                     self._event_futures.append(future)
+                    if _await_status_events:
+                        # Keep sequential method output behind its status event.
+                        await asyncio.gather(
+                            asyncio.wrap_future(future), return_exceptions=True
+                        )
 
             from crewai.hooks.contexts import StepContext
             from crewai.hooks.dispatch import InterceptionPoint
@@ -3017,6 +3042,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 future = crewai_event_bus.emit(self, finished_event)
                 if future:
                     self._event_futures.append(future)
+                    if _await_status_events:
+                        await asyncio.gather(
+                            asyncio.wrap_future(future), return_exceptions=True
+                        )
 
             return result, finished_event_id
         except Exception as e:
@@ -3228,11 +3257,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             current_triggering_event_id,
                         )
                     else:
+                        await_status_events = len(listeners_triggered) == 1
                         tasks = [
                             self._execute_single_listener(
                                 listener_name,
                                 listener_result,
                                 current_triggering_event_id,
+                                _await_status_events=await_status_events,
                             )
                             for listener_name in listeners_triggered
                         ]
@@ -3293,6 +3324,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         listener_name: FlowMethodName,
         result: Any,
         triggering_event_id: str | None = None,
+        *,
+        _await_status_events: bool = True,
     ) -> tuple[Any, str | None]:
         """Executes a single listener method with proper event handling.
 
@@ -3364,20 +3397,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 with triggered_by_scope(triggering_event_id):
                     if method_params:
                         listener_result, finished_event_id = await self._execute_method(
-                            listener_name, method, result
+                            listener_name,
+                            method,
+                            result,
+                            _await_status_events=_await_status_events,
                         )
                     else:
                         listener_result, finished_event_id = await self._execute_method(
-                            listener_name, method
+                            listener_name,
+                            method,
+                            _await_status_events=_await_status_events,
                         )
             else:
                 if method_params:
                     listener_result, finished_event_id = await self._execute_method(
-                        listener_name, method, result
+                        listener_name,
+                        method,
+                        result,
+                        _await_status_events=_await_status_events,
                     )
                 else:
                     listener_result, finished_event_id = await self._execute_method(
-                        listener_name, method
+                        listener_name,
+                        method,
+                        _await_status_events=_await_status_events,
                     )
 
             await self._execute_listeners(
