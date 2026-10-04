@@ -1,8 +1,9 @@
 import logging
 import os
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from crewai.tools import BaseTool
+from crewai.tools.base_tool import EnvVar
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -40,15 +41,16 @@ class YouTubeSearchTool(BaseTool):
         "Returns a list of videos with title, video_id, URL, description, and publish date."
     )
     args_schema: type[BaseModel] = YouTubeSearchToolSchema
-    env_vars: list[dict[str, Any]] = Field(
-        default_factory=lambda: [
-            {
-                "name": "YOUTUBE_API_KEY",
-                "description": "API key for YouTube Data API v3",
-                "required": True,
-            }
-        ]
-    )
+    
+    env_vars: List[EnvVar] = [
+        EnvVar(
+            name="YOUTUBE_API_KEY",
+            description="API key for YouTube Data API v3",
+            required=True,
+        )
+    ]
+    
+    package_dependencies: List[str] = ["google-api-python-client"]
 
     def _run(
         self,
