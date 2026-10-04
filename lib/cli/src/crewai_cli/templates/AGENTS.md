@@ -854,6 +854,41 @@ flow.plot("my_flow")           # Generates my_flow.html
 
 ## Custom Tools
 
+### CrewAI Platform Tools
+CrewAI AMP provides integrations for supported applications, exposing the actions
+available through each connected application as CrewAI tools. Before selecting an
+integration, use your file-read or search tools to read the installed
+`crewai_core/platform_apps.py` module. Its `PLATFORM_APPS` catalog is the source
+of truth for supported application selectors; do not hard-code that list.
+For how to connect applications and use their actions in AMP, see
+[CrewAI Platform Tools and Integrations](https://docs-platform.crewai.com/platform/en/features/tools-and-integrations).
+
+Connect the required application in CrewAI AMP before using it. Then pass its
+selector to `CrewaiPlatformTools`; the factory returns the action tools available
+for that application, which can be assigned directly to an agent:
+
+```python
+from crewai_tools import CrewaiPlatformTools
+
+gmail_tools = CrewaiPlatformTools(apps=["gmail"])
+agent = Agent(..., tools=gmail_tools)
+```
+
+Multiple connected applications can be requested together:
+
+```python
+platform_tools = CrewaiPlatformTools(apps=["gmail", "slack"])
+```
+
+In JSON crew projects, use the equivalent `platform:<app>` selector in the
+agent's `tools` list:
+```jsonc
+{ "tools": ["platform:gmail"] }
+```
+
+If an application or action is not listed in `PLATFORM_APPS`, do not invent a
+selector; use an appropriate built-in or custom tool instead.
+
 ### Using BaseTool
 ```python
 from typing import Type
