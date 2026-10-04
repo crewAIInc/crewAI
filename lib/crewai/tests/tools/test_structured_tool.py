@@ -519,3 +519,36 @@ def test_structured_tool_invoke_exception_handling():
         tool.invoke({"should_fail": True})
 
     assert call_count == 1
+
+
+def test_structured_tool_from_function_with_variadic_parameters():
+    """Test that *args and **kwargs are not treated as required schema fields."""
+
+    def search_kwargs(query: str, **options: str) -> str:
+        """Search query with variadic keyword options."""
+        return f"{query}:{sorted(options.keys())}"
+
+    def search_args(query: str, *extra_terms: str) -> str:
+        """Search query with variadic positional terms."""
+        return f"{query}:{len(extra_terms)}"
+
+    def search_both(query: str, *args: int, **kwargs: str) -> str:
+        """Search query with both variadic args and kwargs."""
+        return query
+
+    tool_kwargs = CrewStructuredTool.from_function(search_kwargs)
+    assert "query" in tool_kwargs.args_schema.model_fields
+    assert "options" not in tool_kwargs.args_schema.model_fields
+    assert tool_kwargs.invoke({"query": "hello"}) == "hello:[]"
+
+    tool_args = CrewStructuredTool.from_function(search_args)
+    assert "query" in tool_args.args_schema.model_fields
+    assert "extra_terms" not in tool_args.args_schema.model_fields
+    assert tool_args.invoke({"query": "hello"}) == "hello:0"
+
+    tool_both = CrewStructuredTool.from_function(search_both)
+    assert "query" in tool_both.args_schema.model_fields
+    assert "args" not in tool_both.args_schema.model_fields
+    assert "kwargs" not in tool_both.args_schema.model_fields
+    assert tool_both.invoke({"query": "hello"}) == "hello"
+
