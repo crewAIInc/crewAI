@@ -186,7 +186,7 @@ class KickoffTaskOutputsSQLiteStorage:
             return None
         try:
             return json.loads(raw_value)
-        except (json.JSONDecodeError, TypeError) as e:
+        except (json.JSONDecodeError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Could not decode JSON for column '{column_name}': {e}. "
                 "Returning the raw stored value."

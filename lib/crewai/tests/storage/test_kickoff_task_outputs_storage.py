@@ -188,3 +188,22 @@ def test_load_tolerates_legacy_unencoded_json_column(tmp_path: Path) -> None:
 
     result = storage.load()[0]
     assert result["output"] == "not valid json"
+
+
+def test_load_tolerates_legacy_non_utf8_blob_column(tmp_path: Path) -> None:
+    """``load`` must not crash on a legacy row whose JSON column holds raw
+    bytes that are not valid UTF-8."""
+    import sqlite3
+
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    with sqlite3.connect(storage.db_path) as conn:
+        conn.execute(
+            "UPDATE latest_kickoff_task_outputs SET output = ? WHERE task_index = 0",
+            (b"\xff\xfe\x00",),
+        )
+        conn.commit()
+
+    result = storage.load()[0]
+    assert result["output"] == b"\xff\xfe\x00"
