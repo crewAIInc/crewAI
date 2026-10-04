@@ -1,0 +1,55 @@
+---
+title: "بحث SerpKite"
+description: "نتائج بحث Google بصيغة Markdown باستخدام حزمة SerpKite الخارجية."
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+# `SerpKiteSearchTool`
+
+يتولى فريق SerpKite صيانة هذا التكامل ويُوزَّع ضمن `serpkite[crewai]`. وهو ليس جزءًا من `crewai-tools`.
+
+## التثبيت
+
+ثبّت الحزمة واضبط `SERPKITE_API_KEY` على مفتاح من [SerpKite](https://app.serpkite.com/keys).
+
+```shell
+uv add "serpkite[crewai]"
+export SERPKITE_API_KEY="skt_live_..."
+```
+
+## الاستخدام
+
+تعيد الأداة Markdown يتضمن نتائج البحث وروابط المصادر. مرّرها مباشرة إلى وكيل CrewAI. اضبط مزوّد نموذج اللغة المفضل لديك بشكل منفصل.
+
+```python
+from crewai import Agent
+from serpkite.crewai import SerpKiteSearchTool
+
+search = SerpKiteSearchTool()
+print(search.run(query="latest Python release"))
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find current information and cite sources",
+    backstory="You research public information using web search.",
+    tools=[search],
+)
+```
+
+## الإعدادات
+
+استخدم `endpoint` لاختيار `search` (الافتراضي)، أو `news`، أو `images`، أو `videos`، أو `maps`، أو `places`، أو `shopping`، أو `scholar`، أو `patents`، أو `autocomplete`. يمكن ضبط `country` و`language` و`location` و`num` كقيم افتراضية. يستطيع الوكيل تمرير `query` و`num` و`country` و`language` و`time` (`hour`، `day`، `week`، `month`، `year`).
+
+```python
+news = SerpKiteSearchTool(endpoint="news", country="us", language="en", num=10)
+print(news.run(query="renewable energy", time="week"))
+```
+
+## المراجع
+
+- [دليل المزوّد](https://serpkite.com/integrations/crewai)
+- [المصدر والحزمة](https://github.com/SerpKite/serpkite-python)
+- [PyPI](https://pypi.org/project/serpkite/)
+
+Google علامة تجارية لشركة Google LLC.
