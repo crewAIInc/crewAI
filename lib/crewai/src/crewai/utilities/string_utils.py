@@ -34,8 +34,11 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
         max_length: Maximum allowed length (default 64 per OpenAI/Bedrock limits).
 
     Returns:
-        Sanitized tool name (lowercase, a-z0-9_ only, max 64 chars).
+        Sanitized tool name (lowercase, a-z0-9_ only, max 64 chars). Names with
+        no ASCII letters or digits fall back to ``tool_<hash>``; a blank name
+        stays "".
     """
+    original = name
     name = unicodedata.normalize("NFKD", name)
     name = name.encode("ascii", "ignore").decode("ascii")
     name = _CAMEL_UPPER_LOWER.sub(r"\1_\2", name)
@@ -45,6 +48,14 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = _DISALLOWED_CHARS_PATTERN.sub("_", name)
     name = _DUPLICATE_UNDERSCORE_PATTERN.sub("_", name)
     name = name.strip("_")
+
+    if not name and original.strip():
+        # Names with no ASCII letters or digits (e.g. "搜索工具") would sanitize
+        # to "", which providers reject. Hash the original so each such name
+        # maps to a stable, distinct identifier. A blank name stays "": callers
+        # treat that as "no tool name".
+        name_hash = hashlib.sha256(original.encode()).hexdigest()[:8]
+        name = f"tool_{name_hash}"
 
     if len(name) > max_length:
         name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]
