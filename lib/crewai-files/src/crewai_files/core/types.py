@@ -31,7 +31,7 @@ class _FileSourceCoercer:
     @classmethod
     def _coerce(cls, v: Any) -> FileSource:
         """Convert raw input to appropriate FileSource type."""
-        if isinstance(v, (FilePath, FileBytes, FileStream, FileUrl)):
+        if is_file_source(v):
             return v
         if isinstance(v, str):
             if v.startswith(("http://", "https://")):
