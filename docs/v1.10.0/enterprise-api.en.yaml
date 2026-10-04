@@ -215,10 +215,10 @@ paths:
 
         Retrieves the current status and results of a crew execution using its kickoff ID.
 
-        The response structure varies depending on the execution state:
-        - **running**: Execution in progress with current task info
-        - **completed**: Execution finished with full results
-        - **error**: Execution failed with error details
+        The response returns a `TaskStatus` object with the execution state and details.
+        The `state` field indicates the current execution state: `PENDING`, `STARTED`, `RUNNING`,
+        `SUCCESS`, `FAILED`, `PAUSED`, `REVOKED`, or `NOT FOUND`.
+        The `status` field contains an optional human-readable message (null on success).
       operationId: getExecutionStatus
       parameters:
         - name: kickoff_id
@@ -235,41 +235,47 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: "#/components/schemas/ExecutionRunning"
-                  - $ref: "#/components/schemas/ExecutionCompleted"
-                  - $ref: "#/components/schemas/ExecutionError"
+                $ref: "#/components/schemas/TaskStatus"
               examples:
                 running:
                   summary: Execution in progress
                   value:
-                    status: "running"
-                    current_task: "research_task"
+                    state: "RUNNING"
+                    status: null
+                    result: null
                     progress:
-                      completed_tasks: 1
-                      total_tasks: 3
-                completed:
+                      completed: 1
+                      total: 3
+                      current: "research_task"
+                      current_agent: "Travel Researcher"
+                    source: "application"
+                success:
                   summary: Execution completed successfully
                   value:
-                    status: "completed"
-                    result:
-                      output: "Comprehensive travel itinerary for 7 days in Japan focusing on tech culture..."
-                      tasks:
-                        - task_id: "research_task"
-                          output: "Research findings on tech destinations in Japan..."
-                          agent: "Travel Researcher"
-                          execution_time: 45.2
-                        - task_id: "planning_task"
-                          output: "7-day detailed itinerary with activities and recommendations..."
-                          agent: "Trip Planner"
-                          execution_time: 62.8
-                    execution_time: 108.5
-                error:
+                    state: "SUCCESS"
+                    status: null
+                    result: "Comprehensive travel itinerary for 7 days in Japan focusing on tech culture..."
+                    result_json: null
+                    usage_metrics:
+                      total_tokens: 15230
+                      prompt_tokens: 12100
+                      completion_tokens: 3130
+                    source: "memory"
+                failed:
                   summary: Execution failed
                   value:
-                    status: "error"
-                    error: "Task execution failed: Invalid API key for external service"
-                    execution_time: 23.1
+                    state: "FAILED"
+                    status: "Task execution failed: Invalid API key for external service"
+                    result: null
+                    source: "memory"
+                paused:
+                  summary: Execution paused for human input
+                  value:
+                    state: "PAUSED"
+                    status: "Waiting for human feedback"
+                    result: null
+                    flow_id: "flow-abc123"
+                    source: "application"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -426,67 +432,109 @@ components:
         **User Bearer Token**: User-scoped access with limited permissions
 
   schemas:
-    ExecutionRunning:
+    TaskStatus:
       type: object
+      description: Execution status response from the CrewAI API
+      required:
+        - state
+        - source
       properties:
+        state:
+          type: string
+          enum: ["PENDING", "STARTED", "RUNNING", "SUCCESS", "FAILED", "PAUSED", "REVOKED", "NOT FOUND"]
+          description: Primary execution state
         status:
           type: string
-          enum: ["running"]
-          example: "running"
-        current_task:
+          nullable: true
+          description: Human-readable status message. Null on success.
+        result:
+          nullable: true
+          description: The execution output (present on success)
+        result_json:
+          type: object
+          nullable: true
+          description: Parsed JSON result if the output is valid JSON
+        usage_metrics:
+          type: object
+          nullable: true
+          description: Token usage metrics for the execution
+          properties:
+            total_tokens:
+              type: integer
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+        flow_id:
           type: string
-          description: Name of the currently executing task
-          example: "research_task"
+          nullable: true
+          description: Flow ID (present when state is PAUSED)
+        last_step:
+          nullable: true
+          description: Information about the last step executed
+        last_executed_task:
+          nullable: true
+          description: Details of the last executed task
+        last_event:
+          type: object
+          nullable: true
+          description: The most recent event
+        events:
+          type: array
+          nullable: true
+          description: List of execution events
+        events_count:
+          type: integer
+          nullable: true
+          description: Total number of events
+        events_by_type:
+          type: object
+          nullable: true
+          description: Events grouped by type
         progress:
           type: object
+          nullable: true
+          description: Execution progress details
           properties:
-            completed_tasks:
-              type: integer
-              description: Number of completed tasks
-              example: 1
-            total_tasks:
-              type: integer
-              description: Total number of tasks in the crew
-              example: 3
-
-    ExecutionCompleted:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: ["completed"]
-          example: "completed"
-        result:
-          type: object
-          properties:
-            output:
+            unit:
               type: string
-              description: Final output from the crew execution
-              example: "Comprehensive travel itinerary..."
-            tasks:
-              type: array
-              items:
-                $ref: "#/components/schemas/TaskResult"
-        execution_time:
-          type: number
-          description: Total execution time in seconds
-          example: 108.5
-
-    ExecutionError:
-      type: object
-      properties:
-        status:
+            completed:
+              type: integer
+            total:
+              type: integer
+            remaining:
+              type: integer
+            current:
+              type: string
+              description: Current task name
+            current_agent:
+              type: string
+              description: Name of the currently active agent
+            started_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            duration_seconds:
+              type: number
+        triggered_by:
+          type: object
+          nullable: true
+          description: Information about who triggered the execution
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+        execution_origin:
           type: string
-          enum: ["error"]
-          example: "error"
-        error:
+          nullable: true
+          description: Origin of the execution
+        source:
           type: string
-          description: Error message describing what went wrong
-          example: "Task execution failed: Invalid API key"
-        execution_time:
-          type: number
-          description: Time until error occurred in seconds
-          example: 23.1
+          enum: ["memory", "application"]
+          description: Where the status was retrieved from
 
     TaskResult:
       type: object
