@@ -228,6 +228,8 @@ class VettoFileTool(VettoBaseTool):
         elif action == "find":
             if not pattern:
                 raise ValueError("action='find' requires 'pattern'")
+            if not safe_path.exists():
+                return {"error": f"Path not found: {path}", "exists": False}
             matches = []
             if safe_path.is_file():
                 try:
@@ -236,6 +238,8 @@ class VettoFileTool(VettoBaseTool):
                         for line_no, line in enumerate(f, 1):
                             if pattern in line:
                                 matches.append({"file": str(safe_path), "line": line_no, "text": line.strip()})
+                                if len(matches) >= 100:
+                                    break
                 except (ValueError, OSError, RuntimeError, UnicodeDecodeError):
                     pass
             elif safe_path.is_dir():
@@ -252,25 +256,44 @@ class VettoFileTool(VettoBaseTool):
                                 for line_no, line in enumerate(f, 1):
                                     if pattern in line:
                                         matches.append({"file": str(fp), "line": line_no, "text": line.strip()})
+                                        if len(matches) >= 100:
+                                            break
                         except (OSError, UnicodeDecodeError):
                             continue
+                        if len(matches) >= 100:
+                            break
+                    if len(matches) >= 100:
+                        break
             return {"pattern": pattern, "matches": matches[:100]}
 
         elif action == "search":
             if not pattern:
                 raise ValueError("action='search' requires 'pattern'")
+            if not safe_path.exists():
+                return {"error": f"Path not found: {path}", "exists": False}
             results = []
-            search_root = safe_path if safe_path.is_dir() else safe_path.parent
-            for root_dir, _, files in os.walk(search_root):
-                for f in files:
-                    if fnmatch.fnmatch(f, pattern):
-                        cand = Path(root_dir) / f
-                        # Defense-in-depth: skip files or symlinks resolving outside workspace boundary
-                        try:
-                            cand.resolve(strict=False).relative_to(root)
-                        except (ValueError, OSError, RuntimeError):
-                            continue
-                        results.append(str(cand))
+            if safe_path.is_file():
+                if fnmatch.fnmatch(safe_path.name, pattern):
+                    try:
+                        safe_path.resolve(strict=False).relative_to(root)
+                        results.append(str(safe_path))
+                    except (ValueError, OSError, RuntimeError):
+                        pass
+            elif safe_path.is_dir():
+                for root_dir, _, files in os.walk(safe_path):
+                    for file in files:
+                        if fnmatch.fnmatch(f, pattern):
+                            cand = Path(root_dir) / f
+                            # Defense-in-depth: skip files or symlinks resolving outside workspace boundary
+                            try:
+                                cand.resolve(strict=False).relative_to(root)
+                            except (ValueError, OSError, RuntimeError):
+                                continue
+                            results.append(str(cand))
+                            if len(results) >= 100:
+                                break
+                    if len(results) >= 100:
+                        break
             return {"pattern": pattern, "results": results[:100]}
 
         raise ValueError(f"Unknown action: {action}")

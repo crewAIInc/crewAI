@@ -276,6 +276,52 @@ class TestVettoSandboxTools(unittest.TestCase):
             search_mocked = tool._run(action="search", path=".", pattern="*")
             self.assertNotIn(str(cyclic_link), search_mocked["results"])
 
+    def test_env_sanitization_removes_dynamic_loader_vars(self):
+        """Verify dynamic loader injection variables are stripped from subprocess env."""
+        tool = VettoBaseTool(working_dir=str(self.workspace), allow_fallback=True)
+        malicious_env = {
+            "LD_PRELOAD": "/lib/evil.so",
+            "DYLD_INSERT_LIBRARIES": "/lib/evil.dylib",
+            "DYLD_FALLBACK_INSERT_LIBRARIES": "/lib/evil2.dylib",
+            "SAFE_VAR": "clean_value",
+        }
+        with patch.dict(os.environ, {"LD_PRELOAD": "/lib/host_evil.so"}):
+            with patch("subprocess.Popen") as mock_popen:
+                mock_proc = MagicMock()
+                mock_proc.communicate.return_value = (b"", b"")
+                mock_proc.returncode = 0
+                mock_popen.return_value = mock_proc
+
+                tool._execute_subprocess(["echo", "hi"], env=malicious_env)
+                called_env = mock_popen.call_args[1]["env"]
+                self.assertNotIn("LD_PRELOAD", called_env)
+                self.assertNotIn("DYLD_INSERT_LIBRARIES", called_env)
+                self.assertNotIn("DYLD_FALLBACK_INSERT_LIBRARIES", called_env)
+                self.assertEqual(called_env.get("SAFE_VAR"), "clean_value")
+
+    def test_file_tool_search_on_single_file(self):
+        """Verify search action on single file only checks that file without walking parent."""
+        tool = VettoFileTool(working_dir=str(self.workspace))
+        tool._run(action="write", path="target.txt", content="content")
+        tool._run(action="write", path="other.txt", content="other content")
+
+        match_res = tool._run(action="search", path="target.txt", pattern="*.txt")
+        self.assertEqual(match_res["results"], [str(self.workspace / "target.txt")])
+
+        no_match_res = tool._run(action="search", path="target.txt", pattern="*.py")
+        self.assertEqual(no_match_res["results"], [])
+
+    def test_file_tool_find_and_search_nonexistent_path(self):
+        """Verify find and search on nonexistent paths return error without raising or escaping."""
+        tool = VettoFileTool(working_dir=str(self.workspace))
+        find_res = tool._run(action="find", path="nonexistent.txt", pattern="test")
+        self.assertIn("error", find_res)
+        self.assertFalse(find_res["exists"])
+
+        search_res = tool._run(action="search", path="nonexistent_dir", pattern="*.txt")
+        self.assertIn("error", search_res)
+        self.assertFalse(search_res["exists"])
+
 
 if __name__ == "__main__":
     unittest.main()

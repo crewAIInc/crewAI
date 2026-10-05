@@ -190,6 +190,10 @@ class VettoBaseTool(BaseTool):
         if env:
             exec_env.update(env)
 
+        # Sanitize dynamic loader injection variables to prevent unauthorized code injection
+        for loader_var in ("LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "DYLD_FALLBACK_INSERT_LIBRARIES"):
+            exec_env.pop(loader_var, None)
+
         effective_timeout = timeout if timeout is not None else self.timeout
 
         kwargs: dict[str, Any] = {

@@ -61,10 +61,10 @@ class VettoExecTool(VettoBaseTool):
         """
         sandbox_root = Path(self.working_dir or os.getcwd()).resolve()
         if cwd:
-            resolved_cwd = (sandbox_root / cwd).resolve() if not os.path.isabs(cwd) else Path(cwd).resolve()
             try:
+                resolved_cwd = (sandbox_root / cwd).resolve(strict=False) if not os.path.isabs(cwd) else Path(cwd).resolve(strict=False)
                 resolved_cwd.relative_to(sandbox_root)
-            except ValueError:
+            except (ValueError, RuntimeError):
                 raise PermissionError(
                     f"Execution cwd {cwd} escapes configured workspace boundary {sandbox_root}"
                 )
