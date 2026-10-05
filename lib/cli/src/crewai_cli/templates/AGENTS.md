@@ -103,11 +103,11 @@ Full details: [Observability & Traces](#observability--traces) and [Deployment](
 
 ## Evaluating this crew/flow
 
-Run `crewai eval` after a change: it grades the project's last traced run — a goal gate, a 1–5 grade per area, and a link to the full report. In a terminal with no traced run recorded, it offers to run the project once with tracing on and grades that. Without a terminal, run the project first: `CREWAI_TRACING_ENABLED=true` in `.env`, logged in (`crewai login` — an unattended run is only traced when logged in), then `crewai run`.
+Run `crewai eval` after a change: it grades the project's last traced run — a goal gate, a 1–5 grade per area, and a link to the full report. It grades a run that already happened, so after changing code run the project again first (`crewai run`, with `CREWAI_TRACING_ENABLED=true` in `.env`; a run with no terminal is only traced when logged in with `crewai login`), then `crewai eval`. In a terminal with no traced run recorded, it offers to run the project once with tracing on.
 
-- Run by a coding agent or script (no terminal), it prints a **markdown brief** after the verdict: what failed and the change to make. Act on its "what failed" changes, then run `crewai eval` again.
+- Run by a coding agent or script (no terminal), it prints a **markdown brief** after the verdict: what failed and the change to make. Act on its "what failed" changes, then `crewai run` and `crewai eval` again. (An older AMP may print only a link to the brief, or nothing.)
 - `crewai eval --models "provider/model,…"` compares models on the deployed project (needs `crewai login` and a deployment); the brief then names the model for each part and how sure each difference is.
-- The exit code is the gate: 0 only when it passed. Criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.
+- Exit codes: `crewai eval` exits 0 only when the goal gate passed; `--models` exits 0 when the comparison finished, whatever each model's grades. Criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.
 
 ## Quick Reference
 
@@ -144,7 +144,7 @@ crewai run                  # Run crew or flow (auto-detects from pyproject.toml
 crewai flow kickoff         # Deprecated compatibility alias for crewai run
 
 # Evaluation
-crewai eval                           # Run once, trace, grade; prints a markdown brief when run by an agent
+crewai eval                           # Grade the last traced run; prints a markdown brief when run by an agent
 crewai eval --models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"  # Compare models on the deployment
 
 # Testing & training
