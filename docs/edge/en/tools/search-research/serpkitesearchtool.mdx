@@ -41,6 +41,8 @@ researcher = Agent(
 
 Use `endpoint` to choose `search` (default), `news`, `images`, `videos`, `maps`, `places`, `shopping`, `scholar`, `patents` or `autocomplete`. Set `country`, `language`, `location` and `num` as defaults. The agent can provide `query`, `num`, `country`, `language` and `time` (`hour`, `day`, `week`, `month`, `year`).
 
+Not every endpoint accepts every option. For example, `scholar` does not accept `time`. Check the [endpoint reference](https://serpkite.com/docs) before setting endpoint-specific options.
+
 ```python
 news = SerpKiteSearchTool(endpoint="news", country="us", language="en", num=10)
 print(news.run(query="renewable energy", time="week"))

@@ -41,6 +41,8 @@ researcher = Agent(
 
 `endpoint`에는 `search`(기본값), `news`, `images`, `videos`, `maps`, `places`, `shopping`, `scholar`, `patents`, `autocomplete`를 지정할 수 있습니다. `country`, `language`, `location`, `num`의 기본값을 설정할 수 있습니다. 에이전트는 `query`, `num`, `country`, `language`, `time`(`hour`, `day`, `week`, `month`, `year`)을 전달할 수 있습니다.
 
+모든 엔드포인트가 모든 옵션을 지원하는 것은 아닙니다. 예를 들어 `scholar`는 `time`을 지원하지 않습니다. 엔드포인트별 옵션을 설정하기 전에 [엔드포인트 참조](https://serpkite.com/docs)를 확인하세요.
+
 ```python
 news = SerpKiteSearchTool(endpoint="news", country="us", language="en", num=10)
 print(news.run(query="renewable energy", time="week"))

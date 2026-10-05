@@ -41,6 +41,8 @@ researcher = Agent(
 
 استخدم `endpoint` لاختيار `search` (الافتراضي)، أو `news`، أو `images`، أو `videos`، أو `maps`، أو `places`، أو `shopping`، أو `scholar`، أو `patents`، أو `autocomplete`. يمكن ضبط `country` و`language` و`location` و`num` كقيم افتراضية. يستطيع الوكيل تمرير `query` و`num` و`country` و`language` و`time` (`hour`، `day`، `week`، `month`، `year`).
 
+لا يقبل كل مسار جميع الخيارات. على سبيل المثال، لا يقبل `scholar` الخيار `time`. راجع [مرجع المسارات](https://serpkite.com/docs) قبل ضبط الخيارات الخاصة بكل مسار.
+
 ```python
 news = SerpKiteSearchTool(endpoint="news", country="us", language="en", num=10)
 print(news.run(query="renewable energy", time="week"))
