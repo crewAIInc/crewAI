@@ -617,3 +617,78 @@ from crewai.flow import (
 
 - [Mastering Flow State Management](/en/guides/flows/mastering-flow-state) — persistence, Pydantic state, `@persist`
 - [Build Your First Flow](/en/guides/flows/first-flow) — flow basics
+
+
+## Experimental jobs spanning conversational turns
+
+This API is experimental and may change. Import it explicitly from `crewai.experimental.flow_jobs`; it is not part of the stable `crewai.flow` surface.
+
+`JobRecord`, `JobState`, `JobUpdate`, `JobWorkState`, `JobWorkFlow`, and `JobRunner` provide an opt-in, in-memory job contract. Existing conversational Flows keep their behavior. A job has its own identity, originating turn, revision, execution attempt, status, current stage, completed stages, and error. Applications add typed inputs and outputs; no separate artifact class is required.
+
+Declare writable result fields in `output_fields`. Worker updates cannot change input, ownership, or lifecycle fields through an output payload. The complete candidate record is validated before a commit; malformed, foreign, stale, duplicate, and post-terminal updates leave accepted state unchanged.
+
+```python
+import asyncio
+from typing import ClassVar
+from pydantic import Field
+from crewai.flow import ConversationState, start
+from crewai.experimental.flow_jobs import (
+    JobRecord, JobRunner, JobState, JobWorkFlow, JobWorkState, add_job,
+)
+
+class ReportJob(JobRecord):
+    output_fields: ClassVar[frozenset[str]] = frozenset({"notes"})
+    question: str
+    notes: list[str] = Field(default_factory=list)
+    stage: str = "collect"
+
+class WorkChatState(ConversationState, JobState[ReportJob]):
+    pass
+
+class ReportWork(JobWorkFlow[JobWorkState[ReportJob]]):
+    @start()
+    def collect(self):
+        self.check_open()
+        self.publish_update("started")
+        self.publish_update(
+            "stage_completed", stage="collect", outputs={"notes": ["Example fact"]},
+        )
+        self.publish_update("completed")
+
+async def run_job():
+    state = WorkChatState()
+    changes = asyncio.Queue()
+
+    def make_work(job, inputs, publish):
+        return ReportWork(
+            initial_state=JobWorkState[ReportJob](job=job),
+            publish=publish, suppress_flow_events=True,
+        )
+
+    runner = JobRunner(state, make_work, on_update=changes.put)
+    try:
+        async with runner.state_lock:
+            job = ReportJob(session_id=state.id, question="Example report")
+            if not add_job(state, job):
+                raise RuntimeError("Job registration rejected")
+            runner.submit(job, {})
+        while True:
+            snapshot = await changes.get()
+            if snapshot["jobs"][0]["status"] in {"completed", "failed"}:
+                return snapshot
+    finally:
+        await runner.aclose()
+
+# Run in a script: asyncio.run(run_job())
+
+```
+
+Construct `JobRunner(state, make_work, on_update=publish_snapshot)` on a running asyncio loop. `make_work(job, inputs, publish)` returns a non-streaming `JobWorkFlow` with its own typed state, copied job/inputs, and `publish=publish`. `on_update` is an async callback receiving JSON-compatible snapshots (`session_id`, `seq`, `jobs`); adapt them to your existing transport. `format_error` can redact provider details, and `on_worker_event` observes worker start/settlement.
+
+Hold `runner.state_lock` for **every** foreground turn, job admission, and parent-state mutation. Register with `add_job(state, job)` and then call `runner.submit(job, inputs)`. Run synchronous turns in a worker thread while holding that lock; never run two turns concurrently on one Flow. Worker `publish_update()` also runs off the runner's event loop and waits for an accepted commit before the next stage. A `stage_started` update requires the previous stage to be committed; `stage_completed` retains typed outputs before successful completion. A later failure preserves earlier outputs.
+
+Project relevant job status and outputs through `build_router_context()` and `build_agent_context()`. Snapshots are not automatically public chat messages or spoken replies. Domain interpretation and admission capacity remain application policy.
+
+At session teardown, call `runner.request_close()` on its owning loop before draining foreground execution, then `await runner.aclose()`. This closes admission/publication, signals each worker, releases waiting publishers, and settles owned tasks. Work methods must call `check_open()` at stage boundaries. An in-flight provider operation is not aborted. Subscriber failure closes the runner rather than stranding publishers. Stopping speech alone should not close the runner.
+
+The initial lifecycle is `queued → running → completed/failed`. Pause/resume, replacement, automatic reply delivery, and distributed recovery are not supplied. Records can be serialized with existing state facilities, but restoring them does not recreate live workers or guarantee exactly-once external effects.
