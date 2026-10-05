@@ -940,13 +940,13 @@ class SummarizeMessages:
             prompt = self._build_summary_prompt(chunk)
 
             try:
-                try:
-                    response = await llm.acall(prompt, callbacks=self.callbacks)
-                except NotImplementedError:
+                if getattr(type(llm), "acall", None) is BaseLLM.acall:
                     # Custom LLMs may implement only the sync `call`.
                     response = await asyncio.to_thread(
                         llm.call, prompt, callbacks=self.callbacks
                     )
+                else:
+                    response = await llm.acall(prompt, callbacks=self.callbacks)
                 summary = str(response)
             except LLMContextLengthExceededError:
                 pass

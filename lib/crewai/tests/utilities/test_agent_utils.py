@@ -1116,20 +1116,50 @@ class TestParallelSummarization:
         """Custom LLMs that only implement `call` must still be summarized."""
         from crewai.llms.base_llm import BaseLLM
 
+        received_callbacks: list[Any] = []
+
         class SyncOnlyLLM(BaseLLM):
             def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+                received_callbacks.append(kwargs.get("callbacks"))
                 return "<summary>Sync summary</summary>"
+
+            def get_context_window_size(self) -> int:
+                return 100
+
+        callbacks = [MagicMock()]
+        messages = self._make_messages_for_n_chunks(2)
+
+        summarize_messages(
+            messages=messages, llm=SyncOnlyLLM(model="sync-only"), callbacks=callbacks
+        )
+
+        assert messages[-1]["content"].count("Sync summary") == 2
+        assert received_callbacks == [callbacks, callbacks]
+
+    def test_does_not_fall_back_when_acall_is_overridden(self) -> None:
+        """A NotImplementedError from a real `acall` must not trigger a second request."""
+        from crewai.llms.base_llm import BaseLLM
+
+        sync_call = MagicMock(return_value="<summary>Sync summary</summary>")
+
+        class AsyncLLM(BaseLLM):
+            def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+                return sync_call(messages, *args, **kwargs)
+
+            async def acall(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+                raise NotImplementedError("unsupported feature")
 
             def get_context_window_size(self) -> int:
                 return 100
 
         messages = self._make_messages_for_n_chunks(2)
 
-        summarize_messages(
-            messages=messages, llm=SyncOnlyLLM(model="sync-only"), callbacks=[]
-        )
+        with pytest.raises(NotImplementedError):
+            summarize_messages(
+                messages=messages, llm=AsyncLLM(model="async"), callbacks=[]
+            )
 
-        assert messages[-1]["content"].count("Sync summary") == 2
+        sync_call.assert_not_called()
 
 
 def _build_long_conversation() -> list[dict[str, Any]]:
