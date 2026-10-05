@@ -1,108 +1,174 @@
+from typing import Any
+
 import requests
-from typing import Optional, Type, Dict, Any, List
-from pydantic import BaseModel, Field
 from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
 
 class OpenAlexResearchToolInput(BaseModel):
     """Input schema for OpenAlexResearchTool."""
 
     query: str = Field(
-        description="The search query or research topic (e.g., 'retrieval augmented generation', 'CRISPR gene editing')."
+        description=(
+            "The search query or research topic "
+            "(e.g., 'retrieval augmented generation', 'CRISPR gene editing')."
+        )
     )
     limit: int = Field(
         default=5,
+        ge=1,
+        le=20,
         description="Number of relevant paper results to return (1 to 20).",
-    )
-    email: Optional[str] = Field(
-        default=None,
-        description="Optional email address to join OpenAlex's polite pool for faster response times.",
     )
 
 
 class OpenAlexResearchTool(BaseTool):
+    """Search scholarly works using the OpenAlex REST API."""
+
     name: str = "OpenAlex Research Search"
     description: str = (
-        "Searches over 250M+ open-access scholarly works, scientific papers, "
-        "authors, and venues via the OpenAlex REST API."
+        "Searches scholarly works across academic disciplines via the "
+        "OpenAlex REST API, returning publication metadata, citation counts, "
+        "available open-access URLs, and abstract snippets."
     )
-    args_schema: Type[BaseModel] = OpenAlexResearchToolInput
+    args_schema: type[BaseModel] = OpenAlexResearchToolInput
 
-    def _reconstruct_abstract(self, inverted_index: Optional[Dict[str, List[int]]]) -> str:
-        """Reconstruct abstract text from OpenAlex abstract_inverted_index."""
-        if not inverted_index or not isinstance(inverted_index, dict):
+    def _reconstruct_abstract(
+        self,
+        inverted_index: dict[str, list[int]] | None,
+    ) -> str:
+        """Reconstruct abstract text from OpenAlex's inverted index."""
+        if not isinstance(inverted_index, dict) or not inverted_index:
             return "N/A"
 
-        word_positions = []
-        for word, positions in inverted_index.items():
-            for pos in positions:
-                word_positions.append((pos, word))
+        word_positions: list[tuple[int, str]] = []
 
-        word_positions.sort(key=lambda x: x[0])
+        for word, positions in inverted_index.items():
+            if not isinstance(word, str) or not isinstance(positions, list):
+                continue
+
+            for position in positions:
+                if isinstance(position, int):
+                    word_positions.append((position, word))
+
+        word_positions.sort(key=lambda item: item[0])
         abstract_text = " ".join(word for _, word in word_positions)
 
         if len(abstract_text) > 300:
             return abstract_text[:300] + "..."
-        return abstract_text
 
-    def _run(self, query: str, limit: int = 5, email: Optional[str] = None) -> str:
-        """Fetch scholarly works from OpenAlex API."""
+        return abstract_text or "N/A"
+
+    def _run(self, query: str, limit: int = 5) -> str:
+        """Search OpenAlex for scholarly works matching the query."""
         if not query or not query.strip():
             return "Error: Search query must be a non-empty string."
 
-        clamped_limit = max(1, min(limit, 20))
         clean_query = query.strip()
 
-        url = f"https://api.openalex.org/works?search={clean_query}&per_page={clamped_limit}"
-        if email and email.strip():
-            url += f"&mailto={email.strip()}"
-
         try:
-            response = requests.get(url, timeout=10)
+            response = requests.get(
+                "https://api.openalex.org/works",
+                params={
+                    "search": clean_query,
+                    "per_page": limit,
+                },
+                timeout=10,
+            )
             response.raise_for_status()
-            data = response.json()
+            data: Any = response.json()
 
-            results = data.get("results", [])
-            if not results or not isinstance(results, list):
+            if not isinstance(data, dict):
+                return "Error: Unexpected response format from OpenAlex."
+
+            results = data.get("results")
+
+            if not isinstance(results, list):
+                return "Error: Unexpected response format from OpenAlex."
+
+            if not results:
                 return f"No scholarly works found matching query: '{clean_query}'"
 
-            output_lines = [f"Found {len(results)} paper(s) for '{clean_query}':\n"]
+            output_lines: list[str] = []
 
-            for idx, work in enumerate(results, 1):
-                if not work or not isinstance(work, dict):
+            for work in results:
+                if not isinstance(work, dict):
                     continue
 
                 title = work.get("title") or "Untitled Work"
                 pub_year = work.get("publication_year", "N/A")
                 cited_count = work.get("cited_by_count", 0)
 
-                primary_location = work.get("primary_location") or {}
-                source = primary_location.get("source") or {}
+                primary_location = work.get("primary_location")
+                if not isinstance(primary_location, dict):
+                    primary_location = {}
+
+                source = primary_location.get("source")
+                if not isinstance(source, dict):
+                    source = {}
+
                 venue = source.get("display_name", "N/A")
 
-                authorships = work.get("authorships") or []
-                author_names = []
-                for auth in authorships[:3]:
-                    author_obj = auth.get("author") or {}
-                    if author_obj.get("display_name"):
-                        author_names.append(author_obj["display_name"])
-                authors_str = ", ".join(author_names) if author_names else "Unknown Authors"
+                authorships = work.get("authorships")
+                if not isinstance(authorships, list):
+                    authorships = []
 
-                oa_info = work.get("open_access") or {}
-                oa_url = oa_info.get("oa_url") or work.get("doi") or work.get("id", "N/A")
+                author_names: list[str] = []
 
-                abstract = self._reconstruct_abstract(work.get("abstract_inverted_index"))
+                for authorship in authorships[:3]:
+                    if not isinstance(authorship, dict):
+                        continue
 
-                entry = (
-                    f"{idx}. {title} ({pub_year})\n"
+                    author = authorship.get("author")
+                    if not isinstance(author, dict):
+                        continue
+
+                    author_name = author.get("display_name")
+                    if isinstance(author_name, str) and author_name:
+                        author_names.append(author_name)
+
+                authors_str = (
+                    ", ".join(author_names) if author_names else "Unknown Authors"
+                )
+
+                open_access = work.get("open_access")
+                if not isinstance(open_access, dict):
+                    open_access = {}
+
+                oa_url = open_access.get("oa_url")
+                doi = work.get("doi")
+                work_id = work.get("id")
+
+                if isinstance(oa_url, str) and oa_url:
+                    url = oa_url
+                elif isinstance(doi, str) and doi:
+                    url = doi
+                elif isinstance(work_id, str) and work_id:
+                    url = work_id
+                else:
+                    url = "N/A"
+
+                abstract = self._reconstruct_abstract(
+                    work.get("abstract_inverted_index")
+                )
+
+                output_lines.append(
+                    f"{len(output_lines) + 1}. {title} ({pub_year})\n"
                     f"   Authors: {authors_str}\n"
                     f"   Venue: {venue} | Citations: {cited_count}\n"
-                    f"   URL: {oa_url}\n"
-                    f"   Abstract: {abstract}\n"
+                    f"   URL: {url}\n"
+                    f"   Abstract: {abstract}"
                 )
-                output_lines.append(entry)
 
-            return "\n".join(output_lines)
+            if not output_lines:
+                return f"No scholarly works found matching query: '{clean_query}'"
 
-        except Exception as e:
-            return f"Error retrieving OpenAlex research data: {str(e)}"
+            return (
+                f"Found {len(output_lines)} paper(s) for "
+                f"'{clean_query}':\n\n" + "\n\n".join(output_lines)
+            )
+
+        except requests.RequestException as exc:
+            return f"Error retrieving OpenAlex research data: {exc}"
+        except (ValueError, TypeError) as exc:
+            return f"Error retrieving OpenAlex research data: {exc}"
