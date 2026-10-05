@@ -710,7 +710,7 @@ class Chat(Flow[TurnState]):
         return "acknowledge"
 
     @listen("acknowledge")
-    def acknowledge(self):
+    def handle_acknowledge(self):
         return "Request received."
 
 flow = Chat(suppress_flow_events=True)
