@@ -282,8 +282,8 @@ class VettoFileTool(VettoBaseTool):
             elif safe_path.is_dir():
                 for root_dir, _, files in os.walk(safe_path):
                     for file in files:
-                        if fnmatch.fnmatch(f, pattern):
-                            cand = Path(root_dir) / f
+                        if fnmatch.fnmatch(file, pattern):
+                            cand = Path(root_dir) / file
                             # Defense-in-depth: skip files or symlinks resolving outside workspace boundary
                             try:
                                 cand.resolve(strict=False).relative_to(root)

@@ -322,6 +322,17 @@ class TestVettoSandboxTools(unittest.TestCase):
         self.assertIn("error", search_res)
         self.assertFalse(search_res["exists"])
 
+    def test_file_tool_search_on_directory(self):
+        """Verify search action on a directory recurses and matches files without UnboundLocalError."""
+        tool = VettoFileTool(working_dir=str(self.workspace))
+        tool._run(action="mkdir", path="search_dir/nested")
+        tool._run(action="write", path="search_dir/nested/match.py", content="code")
+        tool._run(action="write", path="search_dir/ignore.txt", content="text")
+
+        res = tool._run(action="search", path="search_dir", pattern="*.py")
+        self.assertEqual(res["results"], [str(self.workspace / "search_dir" / "nested" / "match.py")])
+
+
 
 if __name__ == "__main__":
     unittest.main()
