@@ -31,7 +31,8 @@ class CSVLoader(BaseLoader):
 
     def _parse_csv(self, content: str, source_ref: str) -> LoaderResult:
         try:
-            csv_reader = csv.DictReader(StringIO(content))
+            # Strip a leading UTF-8 BOM so it never becomes part of the first header.
+            csv_reader = csv.DictReader(StringIO(content.removeprefix("\ufeff")))
 
             text_parts = []
             headers = csv_reader.fieldnames
