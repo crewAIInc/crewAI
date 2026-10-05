@@ -840,6 +840,15 @@ class BedrockCompletion(BaseLLM):
                 response_id=response_id,
             )
 
+            if response_model:
+                # Text instead of a structured_output call: parse it as the OpenAI provider does.
+                try:
+                    return self._validate_structured_output(
+                        text_content, response_model
+                    )
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
+
             return self._invoke_after_llm_call_hooks(
                 messages,
                 text_content,
@@ -1199,6 +1208,13 @@ class BedrockCompletion(BaseLLM):
             response_id=response_id,
         )
 
+        if response_model:
+            # Text instead of a structured_output call: parse it as the OpenAI provider does.
+            try:
+                return self._validate_structured_output(full_response, response_model)  # type: ignore[return-value]
+            except ValueError as e:
+                logging.warning(f"Structured output validation failed: {e}")
+
         return full_response
 
     async def _ensure_async_client(self) -> Any:
@@ -1454,6 +1470,15 @@ class BedrockCompletion(BaseLLM):
                 finish_reason=stop_reason,
                 response_id=response_id,
             )
+
+            if response_model:
+                # Text instead of a structured_output call: parse it as the OpenAI provider does.
+                try:
+                    return self._validate_structured_output(
+                        text_content, response_model
+                    )
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
 
             return text_content
 
@@ -1814,6 +1839,13 @@ class BedrockCompletion(BaseLLM):
             finish_reason=stream_finish_reason,
             response_id=response_id,
         )
+
+        if response_model:
+            # Text instead of a structured_output call: parse it as the OpenAI provider does.
+            try:
+                return self._validate_structured_output(full_response, response_model)  # type: ignore[return-value]
+            except ValueError as e:
+                logging.warning(f"Structured output validation failed: {e}")
 
         return self._invoke_after_llm_call_hooks(
             messages,
