@@ -11,6 +11,7 @@ import inspect
 
 
 def test_prompt_functions_accept_result():
+    """Both prompt paths accept the result under review."""
     from crewai.core.providers.human_input import SyncHumanInputProvider
 
     assert "result" in inspect.signature(SyncHumanInputProvider._prompt_input).parameters
@@ -21,6 +22,7 @@ def test_prompt_functions_accept_result():
 
 
 def test_get_output_string_handles_str_and_model():
+    """Output extraction works for plain strings and models."""
     from crewai.core.providers.human_input import HumanInputProvider
 
     class FakeModel:
@@ -37,6 +39,7 @@ def test_get_output_string_handles_str_and_model():
 
 
 def test_prompt_embeds_result_instead_of_referencing_above():
+    """The panel shows the result, never referencing unseen output."""
     from crewai.core.providers.human_input import SyncHumanInputProvider
 
     src = inspect.getsource(SyncHumanInputProvider._prompt_input)
