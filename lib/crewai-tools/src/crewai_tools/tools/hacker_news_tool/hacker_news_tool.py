@@ -1,7 +1,6 @@
 import requests
-from typing import Type
-
 from pydantic import BaseModel, Field
+
 from crewai.tools import BaseTool
 
 
@@ -17,12 +16,14 @@ class HackerNewsTopStoriesToolInput(BaseModel):
 
 
 class HackerNewsTopStoriesTool(BaseTool):
+    """Tool for retrieving the current top Hacker News stories."""
+
     name: str = "Hacker News Top Stories"
     description: str = (
         "Fetches current top stories from Hacker News, returning story titles, "
         "scores, and URLs."
     )
-    args_schema: Type[BaseModel] = HackerNewsTopStoriesToolInput
+    args_schema: type[BaseModel] = HackerNewsTopStoriesToolInput
 
     def _run(self, limit: int = 5) -> str:
         """Fetch and format the current top Hacker News stories."""
@@ -36,14 +37,20 @@ class HackerNewsTopStoriesTool(BaseTool):
 
             stories = []
 
-            for story_id in story_ids:
+            max_items_to_check = min(
+                len(story_ids),
+                max(limit * 5, 20),
+            )
+
+            for story_id in story_ids[:max_items_to_check]:
                 item_url = f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json"
-                item_res = requests.get(item_url, timeout=10)
 
-                if item_res.status_code != 200:
+                try:
+                    item_res = requests.get(item_url, timeout=10)
+                    item_res.raise_for_status()
+                    item = item_res.json()
+                except (requests.RequestException, ValueError):
                     continue
-
-                item = item_res.json()
 
                 if (
                     not item
@@ -73,5 +80,5 @@ class HackerNewsTopStoriesTool(BaseTool):
 
             return "\n\n".join(stories)
 
-        except Exception as e:
+        except (requests.RequestException, ValueError) as e:
             return f"Error fetching Hacker News top stories: {str(e)}"

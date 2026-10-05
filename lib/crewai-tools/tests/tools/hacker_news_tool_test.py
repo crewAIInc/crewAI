@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from crewai_tools import HackerNewsTopStoriesTool
 
 
@@ -93,6 +95,7 @@ def test_hacker_news_tool_skips_deleted_item(mock_get):
     mock_item = MagicMock(status_code=200)
     mock_item.json.return_value = {
         "id": 99999,
+        "type": "story",
         "deleted": True,
     }
 
@@ -101,3 +104,46 @@ def test_hacker_news_tool_skips_deleted_item(mock_get):
     tool = HackerNewsTopStoriesTool()
 
     assert tool._run(limit=1) == "No stories retrieved."
+
+
+@patch("requests.get")
+def test_hacker_news_tool_continues_after_item_request_failure(mock_get):
+    mock_top = MagicMock(status_code=200)
+    mock_top.json.return_value = [1, 2]
+
+    mock_story = MagicMock(status_code=200)
+    mock_story.json.return_value = {
+        "type": "story",
+        "title": "Story After Failure",
+        "url": "https://example.com/story",
+        "score": 100,
+    }
+
+    mock_get.side_effect = [
+        mock_top,
+        requests.Timeout("request timed out"),
+        mock_story,
+    ]
+
+    tool = HackerNewsTopStoriesTool()
+    output = tool._run(limit=1)
+
+    assert "Story After Failure" in output
+    assert mock_get.call_count == 3
+
+
+@patch("requests.get")
+def test_hacker_news_tool_bounds_item_lookups(mock_get):
+    mock_top = MagicMock(status_code=200)
+    mock_top.json.return_value = list(range(1, 101))
+
+    mock_item = MagicMock(status_code=200)
+    mock_item.json.return_value = None
+
+    mock_get.side_effect = [mock_top] + [mock_item] * 20
+
+    tool = HackerNewsTopStoriesTool()
+    output = tool._run(limit=1)
+
+    assert output == "No stories retrieved."
+    assert mock_get.call_count == 21
