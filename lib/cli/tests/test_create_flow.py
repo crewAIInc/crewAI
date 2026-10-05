@@ -66,3 +66,19 @@ def test_create_flow_scaffolds_assistant_instructions(
     assert "@AGENTS.md" in claude_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_create_flow_writes_files_as_utf8(tmp_path: Path, monkeypatch: MonkeyPatch):
+    """Every scaffolded file is UTF-8, so non-ASCII template text survives on Windows."""
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+
+    project_root = tmp_path / "research_flow"
+    tasks_yaml = (
+        project_root / "src/research_flow/crews/content_crew/config/tasks.yaml"
+    ).read_text(encoding="utf-8")
+    assert "Do not rewrite the post — refine and polish it." in tasks_yaml
+
+    for path in project_root.rglob("*"):
+        if path.is_file() and ".git" not in path.parts:
+            path.read_bytes().decode("utf-8")
