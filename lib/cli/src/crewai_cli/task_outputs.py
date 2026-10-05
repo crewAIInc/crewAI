@@ -7,6 +7,7 @@ importing the full crewai framework.
 
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import logging
 from pathlib import Path
@@ -28,7 +29,7 @@ def load_task_outputs(db_path: str | None = None) -> list[dict[str, Any]]:
         return []
 
     try:
-        with sqlite3.connect(db_path) as conn:
+        with closing(sqlite3.connect(db_path)) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("""
