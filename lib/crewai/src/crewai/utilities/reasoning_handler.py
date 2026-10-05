@@ -48,23 +48,29 @@ PlanningPlan = ReasoningPlan
 AgentPlanningOutput = AgentReasoningOutput
 
 
-_READY_DECISION_RE: Final[re.Pattern[str]] = re.compile(
-    r"\b(NOT\s+)?READY\b", re.IGNORECASE
+_READY_LEGACY_SENTENCE: Final[str] = "READY: I am ready to execute the task."
+
+_READY_VERDICT_LINE_RE: Final[re.Pattern[str]] = re.compile(
+    r"^[ \t>•\-*#\d.)\]]*(NOT\s+)?READY\b\s*(?::.*|[.!?])?\s*$",
+    re.IGNORECASE | re.MULTILINE,
 )
 
 
 def _detect_ready(response: str) -> bool:
     """Detect a READY verdict, honoring the last decision in the trace.
 
-    Accepts bare `READY`, markdown/bulleted variants (`**READY**`, `- READY`),
-    and the legacy `"READY: I am ready to execute the task."` string.
-    A trailing `NOT READY` (including markdown like `NOT **READY**`) wins
-    over any earlier READY, so it never false-positives as ready.
+    Only verdict-position lines count (bare `READY`, bulleted/numbered or
+    markdown variants, the legacy sentence): prose merely mentioning the word
+    (e.g. "once the tools are ready") is ignored. A trailing `NOT READY`
+    (including markdown like `NOT **READY**`) wins over any earlier READY,
+    so it never false-positives as ready.
     """
     if not response:
         return False
+    if _READY_LEGACY_SENTENCE in response:
+        return True
     cleaned = response.replace("*", "")
-    matches = list(_READY_DECISION_RE.finditer(cleaned))
+    matches = list(_READY_VERDICT_LINE_RE.finditer(cleaned))
     if not matches:
         return False
     return matches[-1].group(1) is None
