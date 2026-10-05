@@ -197,6 +197,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "deepinfra",
 ]
 
 
@@ -221,6 +222,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "cerebras": "cerebras",
     "dashscope": "dashscope",
     "snowflake": "snowflake",
+    "deepinfra": "deepinfra",
 }
 
 
@@ -444,6 +446,12 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "deepinfra":
+            # DeepInfra ids are exactly org/model, so a full reference is
+            # deepinfra/<org>/<model>: one slash with both parts non-empty.
+            parts = model_lower.split("/")
+            return len(parts) == 2 and all(parts)
+
         if provider == "snowflake":
             return True
 
@@ -481,6 +489,13 @@ class LLM(BaseLLM):
             provider = explicit_provider
             use_native = True
             model_string = model
+            if provider == "deepinfra" and not cls._matches_provider_pattern(
+                model, provider
+            ):
+                raise ValueError(
+                    "DeepInfra model ids are org/model, for example "
+                    f"'deepseek-ai/DeepSeek-V4-Flash-0731'; got '{model}'"
+                )
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 
@@ -650,6 +665,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "deepinfra",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
