@@ -746,3 +746,63 @@ To compose with background work, declare `class WorkChatState(TurnState, JobStat
 This increment does not supply background reply queues, speaking-floor scheduling, playback receipts, exact word alignment, speculative generation, or job pause/resume. Snapshots contain records, not locks, cancellation signals or running executions. They do not resume work or replay delivery. Restore state before creating a new tracked live turn; `from_checkpoint` and `restore_from_state_id` are deliberately rejected by this wrapper. Durable reconciliation and persistence of terminal tracking records remain separate work. Continue using the stable Flow APIs for existing checkpoint workflows.
 
 During tracked execution, the current restored state remains authoritative: automatic session reload is suppressed so it cannot discard admitted turn/reply records or accepted background job updates. Native Flow turn APIs retain their existing persistence reload behavior. Closing after a terminal event does not interrupt the completed reply. Failure remains an acceptable terminal lifecycle signal if interruption arrives after failure.
+
+## Experimental queued background replies
+
+`crewai.experimental.flow_replies` adds `ReplyQueueState`, `ReplyQueue`, `DeliveryRecord`, `DeliveryFloor`, `CoveredUpdate`, and `ClientActivity` on top of the turn/reply contract. Declare state that combines `ReplyQueueState` and `JobState[MyJob]`, then create **one** `TurnRunner` and **one** `ReplyQueue` for that live Flow. Existing Flows remain opt-in; the job executor and stable conversational APIs do not change.
+
+A successful job is immediately available in state, even when its announcement waits. `enqueue(job)` accepts only a current, committed `completed` job with an existing originating turn. The pending delivery stores that job's revision, attempt and accepted update sequence; duplicate notifications coalesce to the same `delivery_id`. This ID is also the eventual public `ReplyRecord` identity. Each job completion gets one attributable announcement; intermediate stage progress does not create a speaking queue.
+
+```python
+from crewai.experimental.flow_jobs import JobState
+from crewai.experimental.flow_turns import TurnRunner
+from crewai.experimental.flow_replies import (
+    ClientActivity, CoveredUpdate, ReplyQueue, ReplyQueueState,
+)
+
+class WorkChatState(ReplyQueueState, JobState[MyJob]):
+    pass
+
+# Your conversational Flow uses WorkChatState; jobs is its JobRunner.
+turns = TurnRunner(flow)
+replies = ReplyQueue(turns, is_relevant=lambda job: job.job_id not in cancelled_job_ids)
+
+async def on_job_snapshot(snapshot):
+    async with jobs.state_lock:
+        for job in flow.state.jobs.values():
+            if job.status == "completed":
+                replies.enqueue(job)
+    # Publish snapshots and wake your application-owned delivery task.
+
+async def try_delivery():
+    async with jobs.state_lock:
+        delivery = replies.claim()
+        if delivery is None:
+            return
+        events = replies.prepare(
+            delivery.delivery_id,
+            lambda current_jobs: "\n\n".join(job.answer for job in current_jobs),
+        )
+    for event in events:
+        async with jobs.state_lock:
+            if not replies.accepts_output(delivery.delivery_id):
+                replies.settle(delivery.delivery_id, "skipped")
+                return
+            if turns.accept_event(event):
+                await send_public_event(event)
+    # Generation has completed. The speaking floor is still leased.
+    # Validate whole-message adapter feedback before calling:
+    # replies.settle(delivery.delivery_id, "completed")
+```
+
+Serialize enqueue, claim, preparation, coverage changes, and output handoff with the same `JobRunner.state_lock` used by foreground turns and job commits. `ReplyQueue` also protects its own controls with a lock so two claims cannot acquire the floor. `prepare()` reads copied **current accepted artifacts**, rather than cached text captured at enqueue, and emits the shared `started`/`text`/`completed` public reply events with origin and job identity. It does not execute an LLM, append history, or schedule TTS. The application chooses intentional public text, history insertion, delivery tasks and transport.
+
+`set_foreground(True)` holds the gate through foreground generation and draining, including pending user requests; release it when that work has settled. `observe_client(ClientActivity(...))` accepts only the owning session and increasing client sequence, with strict boolean `recording`, `playback`, and `muted` observations. Identified playback must belong to the Flow; a stale stop for a different reply cannot clear newer playback. Null `delivery_id` accommodates a local cached acknowledgment. Recording, playback, mute, a running turn, session closure or an already active delivery blocks `claim()`. If recording/mute or a new user request arrives during an announcement, the adapter must interrupt and stop that active delivery, then update activity and wake scheduling.
+
+`claim()` atomically changes one eligible delivery from `pending` to `scheduled`. Before preparation and **each** handoff, recheck relevance with `accepts_output(delivery_id)` and claim text events with `turns.accept_event(event)`. Identity/version changes, missing jobs, non-successful work, ended sessions, already-covered updates and application `is_relevant(job)` policy invalidate announcements. The callback must be side-effect free; use it for application cancellation/supersession beyond the existing job contract. Wake the delivery task when activity or relevance changes. Relevance skips never remove retained artifacts.
+
+After a requested summary has actually been handed off, `mark_covered(CoveredUpdate.from_job(job))` records the accepted version and skips matching pending announcements. Merely requesting a summary is not delivery. A later job version remains eligible. Do not mark all context jobs covered by a status response or unrelated conversation.
+
+`settle(delivery_id, status, reason=...)` releases only the active delivery, once. Its terminal status is `completed`, `interrupted`, `skipped`, or `failed`; generation completion alone does **not** settle delivery. Validate feedback session, turn, input revision and delivery identity at the adapter boundary, and accept completion only after output generation has settled. Whole-message adapter completion is a scheduling observation, not proof of audible words. On interruption, failure or invalidation, stop local playback and in-flight adapter delivery, fence remaining public output, and leave the result available. Interrupted/failed announcements are not automatically replayed; users can request a fresh summary. TTS failure does not change job success.
+
+Call `close()` before cancelling and draining your application-owned delivery tasks. It fences pending/active deliveries while retaining job outputs. Snapshot data includes floor observations and delivery records, not a timer, media connection or resumable lease. Restoration does not restart delivery; reconcile active records through application recovery policy. Segment-level receipts, exact spoken context, automatic job cancellation/replacement, distributed scheduling and playback timeouts remain separate features. A client that never reports completion conservatively retains the floor until interrupted or closed; applications can add an explicit timeout policy.
