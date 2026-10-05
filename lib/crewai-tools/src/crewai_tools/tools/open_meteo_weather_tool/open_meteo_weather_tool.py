@@ -1,22 +1,26 @@
-
+import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-import requests
 
 
 class OpenMeteoWeatherToolInput(BaseModel):
     """Input schema for OpenMeteoWeatherTool."""
 
     city_name: str = Field(
-        description="The name of the city to query weather for (e.g. 'San Francisco', 'Tokyo', 'London')."
+        description=(
+            "The name of the city to query weather for "
+            "(e.g. 'San Francisco', 'Tokyo', 'London')."
+        )
     )
 
 
 class OpenMeteoWeatherTool(BaseTool):
+    """Retrieve current weather information for a city."""
+
     name: str = "Open-Meteo Weather"
     description: str = (
-        "Retrieves live weather data (temperature, wind speed, weather conditions) "
-        "for a specified city using the free Open-Meteo REST API."
+        "Retrieves current temperature and wind speed for a specified city "
+        "using the public Open-Meteo REST API."
     )
     args_schema: type[BaseModel] = OpenMeteoWeatherToolInput
 
@@ -26,40 +30,82 @@ class OpenMeteoWeatherTool(BaseTool):
             return "Error: City name must be a non-empty string."
 
         city = city_name.strip()
-        geocoding_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1&language=en&format=json"
 
         try:
-            # Step 1: Geocode city name to lat/lon
-            geo_res = requests.get(geocoding_url, timeout=10)
+            geo_res = requests.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={
+                    "name": city,
+                    "count": 1,
+                    "language": "en",
+                    "format": "json",
+                },
+                timeout=10,
+            )
             geo_res.raise_for_status()
+
             geo_data = geo_res.json()
 
+            if not isinstance(geo_data, dict):
+                return f"Location '{city}' not found."
+
             results = geo_data.get("results")
-            if not results or not isinstance(results, list):
+
+            if (
+                not isinstance(results, list)
+                or not results
+                or not isinstance(results[0], dict)
+            ):
                 return f"Location '{city}' not found."
 
             location = results[0]
             lat = location.get("latitude")
             lon = location.get("longitude")
+
+            if lat is None or lon is None:
+                return f"Location '{city}' not found."
+
             name = location.get("name", city)
             country = location.get("country", "")
 
-            # Step 2: Fetch current weather for coordinates
-            weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-            weather_res = requests.get(weather_url, timeout=10)
+            weather_res = requests.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "current": "temperature_2m,wind_speed_10m",
+                    "temperature_unit": "celsius",
+                    "wind_speed_unit": "kmh",
+                },
+                timeout=10,
+            )
             weather_res.raise_for_status()
+
             weather_data = weather_res.json()
 
-            current = weather_data.get("current_weather", {})
-            temp = current.get("temperature", "N/A")
-            windspeed = current.get("windspeed", "N/A")
+            if not isinstance(weather_data, dict):
+                return "Error: Unexpected response from the weather API."
+
+            current = weather_data.get("current")
+
+            if not isinstance(current, dict):
+                return "Error: Current weather data is unavailable."
+
+            temperature = current.get("temperature_2m", "N/A")
+            wind_speed = current.get("wind_speed_10m", "N/A")
 
             location_str = f"{name}, {country}" if country else name
+
             return (
                 f"Current Weather for {location_str}:\n"
-                f"- Temperature: {temp}°C\n"
-                f"- Wind Speed: {windspeed} km/h"
+                f"- Temperature: {temperature}°C\n"
+                f"- Wind Speed: {wind_speed} km/h\n"
+                "- Source: Weather data by Open-Meteo.com "
+                "(https://open-meteo.com/), licensed under CC BY 4.0 "
+                "(https://creativecommons.org/licenses/by/4.0/)."
             )
 
-        except Exception as e:
-            return f"Error retrieving weather data for '{city}': {e!s}"
+        except requests.RequestException as exc:
+            return f"Error retrieving weather data for '{city}': {exc}"
+        except (ValueError, TypeError, KeyError) as exc:
+            return f"Error retrieving weather data for '{city}': {exc}"

@@ -17423,6 +17423,82 @@
       }
     },
     {
+      "description": "Retrieves current temperature and wind speed for a specified city using the public Open-Meteo REST API.",
+      "env_vars": [],
+      "humanized_name": "Open-Meteo Weather",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Retrieve current weather information for a city.",
+        "properties": {},
+        "required": [],
+        "title": "OpenMeteoWeatherTool",
+        "type": "object"
+      },
+      "name": "OpenMeteoWeatherTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for OpenMeteoWeatherTool.",
+        "properties": {
+          "city_name": {
+            "description": "The name of the city to query weather for (e.g. 'San Francisco', 'Tokyo', 'London').",
+            "title": "City Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "city_name"
+        ],
+        "title": "OpenMeteoWeatherToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Scrape Amazon product pages with Oxylabs Amazon Product Scraper",
       "env_vars": [
         {
