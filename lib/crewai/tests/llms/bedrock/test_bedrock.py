@@ -1272,3 +1272,22 @@ def test_bedrock_structured_output_text_reply(handler, text, parsed):
     result, _ = _run_converse_handler(llm, handler, {'text': text}, City)
 
     assert result == (City(name="Paris", country="France") if parsed else text)
+
+
+# The other two handlers don't call the after_llm_call hooks (same as main).
+@pytest.mark.parametrize("handler", ["_handle_converse", "_ahandle_streaming_converse"])
+def test_bedrock_structured_output_text_reply_runs_after_llm_call_hooks(handler):
+    """after_llm_call hooks see a text reply before it is parsed into the response model."""
+    from crewai.hooks import InterceptionPoint
+    from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+    City = _city_model()
+    llm = LLM(model="bedrock/us.anthropic.claude-opus-5-5")
+    with scoped_hooks():
+        register_scoped(InterceptionPoint.POST_MODEL_CALL,
+                        lambda ctx: ctx.response.replace("SECRET", "[REDACTED]"))
+        result, _ = _run_converse_handler(
+            llm, handler, {'text': '{"name": "SECRET", "country": "France"}'}, City
+        )
+
+    assert result == City(name="[REDACTED]", country="France")

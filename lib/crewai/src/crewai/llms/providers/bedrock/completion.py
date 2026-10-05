@@ -840,6 +840,12 @@ class BedrockCompletion(BaseLLM):
                 response_id=response_id,
             )
 
+            text_content = self._invoke_after_llm_call_hooks(
+                messages,
+                text_content,
+                from_agent,
+            )
+
             if response_model:
                 # Text instead of a structured_output call: parse it as the OpenAI provider does.
                 try:
@@ -849,11 +855,7 @@ class BedrockCompletion(BaseLLM):
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
 
-            return self._invoke_after_llm_call_hooks(
-                messages,
-                text_content,
-                from_agent,
-            )
+            return text_content
 
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -1840,6 +1842,12 @@ class BedrockCompletion(BaseLLM):
             response_id=response_id,
         )
 
+        full_response = self._invoke_after_llm_call_hooks(
+            messages,
+            full_response,
+            from_agent,
+        )
+
         if response_model:
             # Text instead of a structured_output call: parse it as the OpenAI provider does.
             try:
@@ -1847,11 +1855,7 @@ class BedrockCompletion(BaseLLM):
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
 
-        return self._invoke_after_llm_call_hooks(
-            messages,
-            full_response,
-            from_agent,
-        )
+        return full_response
 
     def _format_messages_for_converse(
         self, messages: str | list[LLMMessage]
