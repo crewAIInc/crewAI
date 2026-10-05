@@ -1326,3 +1326,16 @@ def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     assert "@AGENTS.md" in cursor_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "## Evaluating this crew/flow" in agents_md
+    assert "Run `crewai eval` after a change" in agents_md
+    assert "it prints a **markdown brief** after the verdict" in agents_md
+    assert 'crewai eval --models "provider/model,…"' in agents_md

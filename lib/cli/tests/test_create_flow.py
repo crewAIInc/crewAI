@@ -66,3 +66,19 @@ def test_create_flow_scaffolds_assistant_instructions(
     assert "@AGENTS.md" in claude_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_flow_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+    create_flow("Declared Flow", declarative=True)
+
+    for project in ("research_flow", "declared_flow"):
+        agents_md = (tmp_path / project / "AGENTS.md").read_text(encoding="utf-8")
+        assert "## Evaluating this" in agents_md
+        assert "Run `crewai eval` after a change" in agents_md
+        assert "it prints a **markdown brief** after the verdict" in agents_md
+        assert 'crewai eval --models "provider/model,…"' in agents_md
+        assert "{{name}}" not in agents_md

@@ -707,7 +707,9 @@ def run(
     help=(
         "Compare models on this project's deployment instead: ONE comma-separated "
         'list of provider/model, e.g. "openai/gpt-4o-mini,anthropic/claude-haiku-4-5". '
-        "The deployment runs once as deployed and once per model; needs `crewai login`."
+        "The deployment runs once as deployed and once per model; needs `crewai login`. "
+        "Run by a script or coding agent (no terminal), it prints a markdown brief "
+        "after the comparison: the model for each part and the changes to make."
     ),
 )
 @click.option(
@@ -726,6 +728,10 @@ def eval_command(
 ) -> None:
     """Evaluate the last traced run through CrewAI AMP, or compare models on the
     project's deployment (--models).
+
+    Run by a script or coding agent (no terminal), it prints a markdown brief
+    after the verdict — what failed and the change to make — so an agent can act
+    on it directly, then run `crewai eval` again.
 
     A run's evaluation exits 0 only when the goal gate PASSED, and 1 otherwise — a
     failed gate, no verdict, or an evaluation that could not run — so a CI job can
