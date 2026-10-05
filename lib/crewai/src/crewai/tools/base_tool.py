@@ -291,7 +291,9 @@ class BaseTool(BaseModel, ABC):
         if self.args_schema is not None and self.args_schema.model_fields:
             try:
                 validated = self.args_schema.model_validate(kwargs)
-                return validated.model_dump()
+                # Drop fields the caller never provided so unset optionals are
+                # omitted (not sent as null). Explicitly passed values survive.
+                return validated.model_dump(exclude_unset=True)
             except Exception as e:
                 hint = build_schema_hint(self.args_schema)
                 raise ValueError(
