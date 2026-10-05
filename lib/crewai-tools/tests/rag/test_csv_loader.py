@@ -77,11 +77,11 @@ class TestCSVLoader:
         assert result.metadata["rows"] == 2
 
     def test_load_csv_with_utf8_bom_text_input(self):
-        raw_csv = '\ufeff"last, first",age\n"Doe, Jane",30\n'
+        raw_csv = '\ufeff"last, first",age\n"Doe,\ufeff Jane",30\n'
         result = CSVLoader().load(SourceContent(raw_csv))
 
         assert result.metadata["columns"] == ["last, first", "age"]
-        assert "Row 1: last, first: Doe, Jane | age: 30" in result.content
+        assert "Row 1: last, first: Doe,\ufeff Jane | age: 30" in result.content
         assert result.metadata["rows"] == 1
 
     def test_load_csv_with_utf8_bom_file(self, tmp_path):
