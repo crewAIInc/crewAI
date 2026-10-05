@@ -249,3 +249,21 @@ def test_ended_conversation_cannot_enqueue_or_publish_results():
     assert queue.settle(delivery_id, "completed")
     assert flow.state.deliveries[delivery_id].status == "skipped"
     assert job.answer == "Result one"
+
+
+def test_shared_turn_interruption_fences_background_handoff_and_completion():
+    flow, turns, queue = setup()
+    job = complete(flow)
+    delivery_id = queue.enqueue(job)
+    record = queue.claim()
+    events = queue.prepare(delivery_id, lambda current: current[0].answer)
+    assert queue.accepts_output(delivery_id)
+    assert turns.interrupt(session_id=record.session_id, turn_id=record.turn_id,
+        input_revision=record.input_revision, delivery_id=record.delivery_id)
+    assert not queue.accepts_output(delivery_id)
+    assert not turns.accept_event(events[1])
+    assert queue.settle(delivery_id, "completed")
+    assert flow.state.deliveries[delivery_id].status == "interrupted"
+    assert job.job_id not in flow.state.covered_updates
+    assert job.status == "completed" and job.answer == "Result one"
+    assert queue.claim() is None

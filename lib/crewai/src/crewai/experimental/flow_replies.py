@@ -386,7 +386,10 @@ class ReplyQueue:
                 or status not in {"completed", "interrupted", "skipped", "failed"}
             ):
                 return False
-            if status == "completed" and not self._eligible(record):
+            reply = self.state.replies.get(delivery_id)
+            if status == "completed" and reply is not None and reply.interrupted:
+                status, reason = "interrupted", "Public reply interrupted."
+            elif status == "completed" and not self._eligible(record):
                 status, reason = "skipped", "Invalidated before delivery completion."
             if status == "completed":
                 for coverage in record.covered_updates:
@@ -407,8 +410,12 @@ class ReplyQueue:
         """Recheck after queues/provider waits, immediately before transport handoff."""
         with self._lock:
             record = self.state.deliveries.get(delivery_id)
+            reply = self.state.replies.get(delivery_id)
             return bool(
                 record
+                and reply is not None
+                and not reply.interrupted
+                and reply.status != "failed"
                 and record.status == "scheduled"
                 and self.state.delivery_floor.active_delivery_id == delivery_id
                 and not self.state.delivery_floor.closed
