@@ -692,3 +692,55 @@ Project relevant job status and outputs through `build_router_context()` and `bu
 At session teardown, call `runner.request_close()` on its owning loop before draining foreground execution, then `await runner.aclose()`. This closes admission/publication, signals each worker, releases waiting publishers, and settles owned tasks. Work methods must call `check_open()` at stage boundaries. An in-flight provider operation is not aborted. Subscriber failure closes the runner rather than stranding publishers. Stopping speech alone should not close the runner.
 
 The initial lifecycle is `queued → running → completed/failed`. Pause/resume, replacement, automatic reply delivery, and distributed recovery are not supplied. Records can be serialized with existing state facilities, but restoring them does not recreate live workers or guarantee exactly-once external effects.
+
+## Experimental turn and public reply identities
+
+Import `TurnRecord`, `ReplyRecord`, `TurnState`, `ReplyEvent`, and `TurnRunner` explicitly from `crewai.experimental.flow_turns`. This opt-in API may change. It wraps an existing conversational Flow; the stable `handle_turn()`/`stream_turn()` APIs, return values, and experimental job contract are unchanged.
+
+`TurnState` extends `ConversationState` with serializable `turns` and `replies`. One invocation of `TurnRunner.stream_turn()` tracks one committed input and its primary public reply. Every accepted input has a session-scoped, single-use `turn_id`; a new utterance or correction gets a new turn ID. `input_revision` is a positive integer (default `1`), not automatic provisional transcript replacement. `delivery_id` is the sole reply identity; there is no second `reply_id`. Reply kinds are `acknowledgment`, `answer`, and `progress`.
+
+```python
+from crewai.flow import Flow, listen
+from crewai.experimental.flow_turns import TurnRunner, TurnState
+
+class Chat(Flow[TurnState]):
+    conversational = True
+
+    def route_turn(self, context):
+        return "acknowledge"
+
+    @listen("acknowledge")
+    def acknowledge(self):
+        return "Request received."
+
+flow = Chat(suppress_flow_events=True)
+runner = TurnRunner(flow)
+events = runner.stream_turn("Hello", turn_id="turn-1", kind="acknowledgment")
+try:
+    for event in events:
+        if runner.accept_event(event):
+            print(event.model_dump_json())
+finally:
+    events.close()
+
+snapshot = runner.snapshot()
+reply = snapshot["replies"][0]
+runner.interrupt(
+    session_id=reply["session_id"], turn_id=reply["turn_id"],
+    input_revision=reply["input_revision"], delivery_id=reply["delivery_id"],
+)
+```
+
+Hardcoded replies and final-only providers emit the same public `text`/`completed` contract as streaming responders. The existing Flow remains responsible for canonical history. `seq` orders events within a delivery; `segment_id` numbers text deltas starting at one. A text delta is not necessarily a complete spoken sentence. Route and generation observation events include the same identity. `completed` means text generation finished, **not** that audio was played or heard.
+
+Only dedicated public responder methods (`converse_turn` and `answer_from_history_turn` by default), or explicitly selected public agent IDs, allow live model text. Configure `public_methods` and the `public_agent_ids` callback deliberately; do not designate a method that mixes private model work with public response generation. Router streams, reasoning, tool-call chunks, tool-enabled calls, and unrelated agents are excluded. Private agent results do not become replies. Providers without observable deltas still publish their canonical final message; no model timing is invented.
+
+`runner.accept_event(event)` claims one runner-issued event before transport handoff. It rejects foreign identity, duplicate/out-of-order sequence, and output invalidated by interruption or failure. Invoke it after any application queue/delay, immediately before handoff. It is not a validator for untrusted client playback receipts. Already handed-off output needs adapter-side identity fencing and audio interruption.
+
+`runner.interrupt(session_id=..., turn_id=..., input_revision=..., delivery_id=...)` targets exactly one reply and is idempotent for valid repeated requests. During generation it marks the turn/reply interrupted; after generation it preserves completed text and marks the reply interrupted without changing job success. `on_interrupt` may signal existing cooperative stage checks; `should_interrupt` can observe an application's existing stop signal. These callbacks do not abort arbitrary provider calls. The stream must settle before another tracked turn can execute on the same Flow. Closing the iterator signals interruption and drains native execution; it can wait for an in-flight provider.
+
+To compose with background work, declare `class WorkChatState(TurnState, JobState[MyJob]): ...`. Hold `JobRunner.state_lock` around the **entire** foreground iteration and all parent job mutations. TurnRunner separately protects its records and interruption controls. Do not run native turn APIs concurrently with the wrapper. After successfully admitting a job, `runner.associate_job(job)` links its session/originating turn and revision/attempt to the active reply; it never admits, submits, or cancels work. A new conversational turn does not invalidate independent research.
+
+`elapsed_ms` uses a server monotonic clock from tracked-turn startup. `model_first_text_ms`, when available, is the difference between provider request-start and first public text **event timestamps**; it includes provider/SDK/network work and is not isolated inference-engine TTFT. Never subtract browser and server timestamps. TTS first chunk, cached audio, physical audible onset, and playback completion remain adapter measurements.
+
+This increment does not supply background reply queues, speaking-floor scheduling, playback receipts, exact word alignment, speculative generation, or job pause/resume. Snapshots contain records, not locks, cancellation signals or running executions. They do not resume work or replay delivery. Restore state before creating a new tracked live turn; `from_checkpoint` is deliberately rejected by this wrapper. Durable reconciliation and persistence of terminal tracking records remain separate work. Continue using the stable Flow APIs for existing checkpoint workflows.
