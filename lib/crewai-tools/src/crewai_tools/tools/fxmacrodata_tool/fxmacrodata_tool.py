@@ -246,7 +246,11 @@ class FXMacroDataTool(BaseTool):
             url = f"{url}?{urlencode(params)}"
 
         headers = {"Accept": "application/json"}
-        api_key = self.api_key or getenv("FXMACRODATA_API_KEY")
+        api_key = (self.api_key or getenv("FXMACRODATA_API_KEY") or "").strip()
+        if any(char.isspace() or not char.isprintable() for char in api_key):
+            # requests would echo the whole header value in its InvalidHeader
+            # error, so reject the key here without repeating it.
+            return "The FXMacroData API key contains whitespace or control characters."
         if api_key:
             # The key only ever travels as a header over TLS. base_url is
             # settable, so refuse to attach it to a plain-http URL rather than

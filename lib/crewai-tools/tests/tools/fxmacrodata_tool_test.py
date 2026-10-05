@@ -131,6 +131,25 @@ def test_no_auth_header_without_a_key(monkeypatch):
     assert "x-api-key" not in headers
 
 
+def test_surrounding_whitespace_is_stripped_from_the_key():
+    captured = {}
+    with patch(SAFE_GET, side_effect=_mock_safe_get(captured)):
+        FXMacroDataTool(api_key="  test_key\n").run(dataset="market_sessions")
+
+    headers = {key.lower(): value for key, value in captured["headers"].items()}
+    assert headers["x-api-key"] == "test_key"
+
+
+def test_malformed_key_is_rejected_without_echoing_it():
+    tool = FXMacroDataTool(api_key="test_key\r\nX-Other: 1")
+    with patch(SAFE_GET) as safe_get:
+        result = tool.run(dataset="market_sessions")
+
+    safe_get.assert_not_called()
+    assert "whitespace or control characters" in result
+    assert "test_key" not in result
+
+
 def test_key_is_never_sent_over_plain_http():
     tool = FXMacroDataTool(api_key="test_key", base_url="http://example.com/v1")
     with patch(SAFE_GET) as safe_get:
