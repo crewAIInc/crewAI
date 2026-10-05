@@ -293,7 +293,16 @@ class BaseTool(BaseModel, ABC):
                 validated = self.args_schema.model_validate(kwargs)
                 # Drop fields the caller never provided so unset optionals are
                 # omitted (not sent as null). Explicitly passed values survive.
-                return validated.model_dump(exclude_unset=True)
+                dumped = validated.model_dump(exclude_unset=True)
+                # ... except fields carrying a real (non-None) default, which
+                # implementations may require positionally (e.g. an explicit
+                # schema declaring `count: int = 1` with `_run(self, count)`).
+                for name, field in self.args_schema.model_fields.items():
+                    if name not in dumped:
+                        default = field.get_default(call_default_factory=True)
+                        if default is not None:
+                            dumped[name] = default
+                return dumped
             except Exception as e:
                 hint = build_schema_hint(self.args_schema)
                 raise ValueError(
