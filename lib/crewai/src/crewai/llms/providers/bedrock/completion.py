@@ -52,7 +52,11 @@ STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
 # Claude models that reject a forced toolChoice ("any" or a named "tool") on
 # Bedrock with a 400. For these, structured_output is offered without forcing.
-_FORCED_TOOL_CHOICE_UNSUPPORTED = ("claude-opus-5-5", "claude-fable-5-1")
+_FORCED_TOOL_CHOICE_UNSUPPORTED = (
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-fable-5-1",
+)
 
 
 def _supports_forced_tool_choice(model: str) -> bool:

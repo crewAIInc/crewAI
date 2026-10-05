@@ -1182,6 +1182,7 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
     [
         ("us.anthropic.claude-opus-5-5", False),
         ("global.anthropic.claude-opus-5-5", False),
+        ("us.anthropic.claude-sonnet-5-5", False),
         ("us.anthropic.claude-fable-5-1", False),
         ("us.anthropic.claude-opus-5", True),
     ],
