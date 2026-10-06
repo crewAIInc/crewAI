@@ -283,7 +283,10 @@ class BaseTool(BaseModel, ABC):
             kwargs: The keyword arguments to validate.
 
         Returns:
-            Validated (and possibly coerced) keyword arguments.
+            Validated (and possibly coerced) keyword arguments. Fields the
+            caller did not provide are omitted rather than serialized as
+            null, except fields with a non-None schema default, which are
+            passed through for implementations that require them.
 
         Raises:
             ValueError: If validation against args_schema fails.
