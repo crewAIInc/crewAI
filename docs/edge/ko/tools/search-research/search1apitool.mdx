@@ -1,0 +1,92 @@
+---
+title: Search1API 도구
+description: Search1API API를 사용한 웹 검색, 뉴스 검색, 페이지 크롤링.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# Search1API 도구
+
+## 설명
+
+[Search1API](https://s1.dev)는 AI 에이전트를 위한 웹 액세스 API입니다. CrewAI는 Search1API 엔드포인트마다 하나씩, 세 가지 도구를 제공합니다:
+
+| 도구 | 엔드포인트 | 용도 |
+| --- | --- | --- |
+| `Search1APISearchTool` | `/search` | Google, Bing, Baidu 같은 검색 엔진 또는 Reddit, GitHub, arXiv, YouTube 같은 플랫폼의 웹 검색 결과 |
+| `Search1APINewsTool` | `/news` | 게시 날짜가 포함된 최신 뉴스 기사 |
+| `Search1APICrawlTool` | `/crawl` | 웹 페이지의 본문을 깔끔한 마크다운으로 반환 |
+
+이 도구들은 `requests`로 API를 호출하므로 추가 패키지가 필요하지 않습니다.
+
+## 설치
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 시작 단계
+
+1. [Search1API 대시보드](https://app.s1.dev)에서 **API 키를 발급**합니다.
+2. **환경 변수** `SEARCH1API_API_KEY`를 설정하거나, `api_key` 매개변수로 키를 전달합니다.
+
+## 예제
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import Search1APICrawlTool, Search1APINewsTool, Search1APISearchTool
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find and summarize current information about a topic",
+    backstory="An analyst who checks recent sources before answering.",
+    tools=[
+        Search1APISearchTool(max_results=5),
+        Search1APINewsTool(time_range="week"),
+        Search1APICrawlTool(max_content_length=8000),
+    ],
+)
+
+task = Task(
+    description="Summarize this week's most important news about AI agent frameworks.",
+    expected_output="A short summary with source URLs.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff())
+```
+
+각 도구를 직접 실행할 수도 있습니다:
+
+```python Code
+from crewai_tools import Search1APISearchTool
+
+tool = Search1APISearchTool(search_service="github", max_results=3)
+print(tool.run(query="crewAI"))
+```
+
+## 매개변수
+
+`Search1APISearchTool`과 `Search1APINewsTool`은 다음을 지원합니다:
+
+- `api_key`: Search1API API 키. 기본값은 `SEARCH1API_API_KEY` 환경 변수입니다.
+- `max_results`: 최대 결과 수(1-50). 기본값 `5`.
+- `crawl_results`: 상위 N개 결과의 전체 콘텐츠도 가져옵니다(0-50, `max_results` 이하). 크롤링한 페이지마다 크레딧이 1 추가됩니다. 기본값 `0`.
+- `time_range`: 최근 `day`, `week`, `month`, `year` 이내의 결과만 반환합니다.
+- `include_sites` / `exclude_sites`: 포함하거나 제외할 사이트 목록.
+- `search_service`: 조회할 엔진 또는 소스. 검색은 예를 들어 `google`, `bing`, `baidu`, `reddit`, `github`, `arxiv`, `youtube`, `x`, `wikipedia`, 뉴스는 예를 들어 `google`, `bing`, `hackernews`. 설정하지 않으면 Search1API가 선택합니다.
+- `max_content_length_per_result`: 결과마다 유지할 크롤링 콘텐츠의 최대 길이. 기본값 `4000`.
+- `timeout`: 요청 타임아웃(초). 기본값 `30`.
+
+`Search1APISearchTool`은 `language`(예: `en`, `zh`, `ja`)도 지원합니다.
+
+`Search1APICrawlTool`은 `api_key`, `timeout`, `max_content_length`(기본값은 설정 안 함, 전체 페이지 유지)를 지원합니다.
+
+에이전트는 `query`(검색 및 뉴스) 또는 `url`(크롤링)만 제공합니다. 나머지 매개변수는 도구를 생성할 때 설정합니다.
+
+## 출력
+
+검색과 뉴스는 `query`와 `results` 목록이 담긴 JSON 객체를 반환합니다. 각 결과에는 `title`, `url`, `snippet`이 있고, 가능한 경우 `published_date`와 `content`가 포함됩니다. 크롤링 도구는 `title`, `url`, `content`가 담긴 JSON 객체를 반환합니다.
+
+요청이 실패하면 HTTP 상태와 API가 반환한 메시지를 포함한 오류가 발생합니다. 예: `HTTP 401: Unauthorized: Invalid bearer credential`.

@@ -1,0 +1,92 @@
+---
+title: "أدوات Search1API"
+description: "البحث في الويب والبحث في الأخبار وقراءة الصفحات باستخدام واجهة Search1API."
+icon: magnifying-glass
+mode: "wide"
+---
+
+# أدوات Search1API
+
+## الوصف
+
+[Search1API](https://s1.dev) هي واجهة برمجية للوصول إلى الويب مخصصة لوكلاء الذكاء الاصطناعي. يوفر CrewAI ثلاث أدوات، أداة لكل نقطة نهاية في Search1API:
+
+| الأداة | نقطة النهاية | الاستخدام |
+| --- | --- | --- |
+| `Search1APISearchTool` | `/search` | نتائج الويب من محركات مثل Google وBing وBaidu، أو من منصات مثل Reddit وGitHub وarXiv وYouTube |
+| `Search1APINewsTool` | `/news` | أحدث المقالات الإخبارية مع تواريخ النشر |
+| `Search1APICrawlTool` | `/crawl` | المحتوى الرئيسي لصفحة ويب بصيغة markdown نظيفة |
+
+تستدعي الأدوات الواجهة باستخدام `requests` ولا تحتاج إلى أي حزمة إضافية.
+
+## التثبيت
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## البدء
+
+1. **احصل على مفتاح API** من [لوحة تحكم Search1API](https://app.s1.dev).
+2. **عيّن متغير البيئة** `SEARCH1API_API_KEY`، أو مرّر المفتاح عبر المعامل `api_key`.
+
+## مثال على الاستخدام
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import Search1APICrawlTool, Search1APINewsTool, Search1APISearchTool
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find and summarize current information about a topic",
+    backstory="An analyst who checks recent sources before answering.",
+    tools=[
+        Search1APISearchTool(max_results=5),
+        Search1APINewsTool(time_range="week"),
+        Search1APICrawlTool(max_content_length=8000),
+    ],
+)
+
+task = Task(
+    description="Summarize this week's most important news about AI agent frameworks.",
+    expected_output="A short summary with source URLs.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff())
+```
+
+يمكن أيضًا تشغيل كل أداة مباشرة:
+
+```python Code
+from crewai_tools import Search1APISearchTool
+
+tool = Search1APISearchTool(search_service="github", max_results=3)
+print(tool.run(query="crewAI"))
+```
+
+## المعاملات
+
+تقبل `Search1APISearchTool` و`Search1APINewsTool` ما يلي:
+
+- `api_key`: مفتاح Search1API. القيمة الافتراضية هي متغير البيئة `SEARCH1API_API_KEY`.
+- `max_results`: الحد الأقصى لعدد النتائج (1-50). الافتراضي `5`.
+- `crawl_results`: جلب المحتوى الكامل لأول N نتيجة أيضًا (0-50، وبحد أقصى `max_results`). كل صفحة تتم قراءتها تكلف رصيدًا إضافيًا واحدًا. الافتراضي `0`.
+- `time_range`: إرجاع النتائج من آخر `day` أو `week` أو `month` أو `year` فقط.
+- `include_sites` / `exclude_sites`: قوائم بالمواقع المطلوب حصر البحث فيها أو استبعادها.
+- `search_service`: المحرك أو المصدر المطلوب الاستعلام منه. للبحث مثلًا `google` أو `bing` أو `baidu` أو `reddit` أو `github` أو `arxiv` أو `youtube` أو `x` أو `wikipedia`؛ وللأخبار مثلًا `google` أو `bing` أو `hackernews`. اتركه فارغًا ليختار Search1API.
+- `max_content_length_per_result`: الحد الأقصى لطول المحتوى المحفوظ لكل نتيجة. الافتراضي `4000`.
+- `timeout`: مهلة الطلب بالثواني. الافتراضي `30`.
+
+تقبل `Search1APISearchTool` أيضًا المعامل `language` (مثل `en` أو `zh` أو `ja`).
+
+تقبل `Search1APICrawlTool` المعاملات `api_key` و`timeout` و`max_content_length` (غير مُعيّن افتراضيًا، أي يتم الاحتفاظ بالصفحة كاملة).
+
+يوفّر الوكيل `query` فقط (للبحث والأخبار) أو `url` (لقراءة الصفحة). تُضبط بقية المعاملات عند إنشاء الأداة.
+
+## المخرجات
+
+تُرجع أداتا البحث والأخبار كائن JSON يحتوي على `query` وقائمة `results`. تحتوي كل نتيجة على `title` و`url` و`snippet`، بالإضافة إلى `published_date` و`content` عند توفرهما. تُرجع أداة القراءة كائن JSON يحتوي على `title` و`url` و`content`.
+
+عند فشل الطلب يتم رفع خطأ يتضمن حالة HTTP والرسالة التي أعادتها الواجهة، مثل `HTTP 401: Unauthorized: Invalid bearer credential`.

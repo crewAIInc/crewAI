@@ -1,0 +1,92 @@
+---
+title: Ferramentas Search1API
+description: Busca na web, busca de notícias e leitura de páginas com a API Search1API.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# Ferramentas Search1API
+
+## Descrição
+
+O [Search1API](https://s1.dev) é uma API de acesso à web para agentes de IA. O CrewAI oferece três ferramentas, uma para cada endpoint do Search1API:
+
+| Ferramenta | Endpoint | Caso de uso |
+| --- | --- | --- |
+| `Search1APISearchTool` | `/search` | Resultados de mecanismos como Google, Bing ou Baidu, ou de plataformas como Reddit, GitHub, arXiv e YouTube |
+| `Search1APINewsTool` | `/news` | Notícias recentes com data de publicação |
+| `Search1APICrawlTool` | `/crawl` | O conteúdo principal de uma página web em markdown limpo |
+
+As ferramentas chamam a API com `requests` e não precisam de nenhum pacote extra.
+
+## Instalação
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Etapas para Começar
+
+1. **Obtenha uma chave de API** no [painel do Search1API](https://app.s1.dev).
+2. **Defina a variável de ambiente** `SEARCH1API_API_KEY` ou passe a chave pelo parâmetro `api_key`.
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import Search1APICrawlTool, Search1APINewsTool, Search1APISearchTool
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find and summarize current information about a topic",
+    backstory="An analyst who checks recent sources before answering.",
+    tools=[
+        Search1APISearchTool(max_results=5),
+        Search1APINewsTool(time_range="week"),
+        Search1APICrawlTool(max_content_length=8000),
+    ],
+)
+
+task = Task(
+    description="Summarize this week's most important news about AI agent frameworks.",
+    expected_output="A short summary with source URLs.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+print(crew.kickoff())
+```
+
+Cada ferramenta também pode ser executada diretamente:
+
+```python Code
+from crewai_tools import Search1APISearchTool
+
+tool = Search1APISearchTool(search_service="github", max_results=3)
+print(tool.run(query="crewAI"))
+```
+
+## Parâmetros
+
+`Search1APISearchTool` e `Search1APINewsTool` aceitam:
+
+- `api_key`: chave de API do Search1API. O padrão é a variável de ambiente `SEARCH1API_API_KEY`.
+- `max_results`: número máximo de resultados (1-50). Padrão `5`.
+- `crawl_results`: também busca o conteúdo completo dos N primeiros resultados (0-50, no máximo `max_results`). Cada página lida custa um crédito extra. Padrão `0`.
+- `time_range`: retorna apenas resultados do último `day`, `week`, `month` ou `year`.
+- `include_sites` / `exclude_sites`: listas de sites para restringir ou excluir.
+- `search_service`: mecanismo ou fonte a consultar. Para busca, por exemplo `google`, `bing`, `baidu`, `reddit`, `github`, `arxiv`, `youtube`, `x` ou `wikipedia`; para notícias, por exemplo `google`, `bing` ou `hackernews`. Se não for definido, o Search1API escolhe.
+- `max_content_length_per_result`: tamanho máximo do conteúdo lido mantido por resultado. Padrão `4000`.
+- `timeout`: tempo limite da requisição em segundos. Padrão `30`.
+
+`Search1APISearchTool` também aceita `language` (por exemplo `en`, `zh` ou `ja`).
+
+`Search1APICrawlTool` aceita `api_key`, `timeout` e `max_content_length` (não definido por padrão, o que mantém a página inteira).
+
+O agente fornece apenas `query` (busca e notícias) ou `url` (leitura de página). Os demais parâmetros são definidos ao criar a ferramenta.
+
+## Saída
+
+Busca e notícias retornam um objeto JSON com a `query` e uma lista `results`. Cada resultado tem `title`, `url` e `snippet`, além de `published_date` e `content` quando disponíveis. A ferramenta de leitura retorna um objeto JSON com `title`, `url` e `content`.
+
+Requisições com falha geram um erro que inclui o status HTTP e a mensagem retornada pela API, por exemplo `HTTP 401: Unauthorized: Invalid bearer credential`.
