@@ -569,11 +569,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _listener_methods(
         self,
     ) -> Iterator[tuple[FlowMethodName, FlowMethodDefinition, FlowDefinitionCondition]]:
-        # (name, definition, condition) for every non-start method that listens.
+        # (name, definition, condition) for every method that listens, start
+        # methods included: `start: true` plus `listen` runs at kickoff and again
+        # on each listen event (e.g. a review step re-drafting on request_changes).
         # Routers are included (they listen too); callers wanting only plain
         # listeners filter on definition.router.
         for method_name, method_definition in self._definition.methods.items():
-            if method_definition.listen is not None and not method_definition.is_start:
+            if method_definition.listen is not None:
                 yield (
                     FlowMethodName(method_name),
                     method_definition,
