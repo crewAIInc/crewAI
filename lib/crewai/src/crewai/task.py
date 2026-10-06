@@ -6,6 +6,7 @@ from concurrent.futures import Future
 import contextvars
 from copy import copy as shallow_copy
 import datetime
+import functools
 from hashlib import md5
 import inspect
 import json
@@ -19,6 +20,7 @@ from typing import (
     cast,
     get_args,
     get_origin,
+    get_type_hints,
 )
 import uuid
 import warnings
@@ -352,6 +354,25 @@ class Task(BaseModel):
                 raise ValueError("Guardrail function must accept exactly one parameter")
 
             return_annotation = sig.return_annotation
+            if isinstance(return_annotation, str):
+                # Postponed evaluation (PEP 563, `from __future__ import
+                # annotations`) leaves the annotation as a string. Resolve
+                # only the return annotation in the callable's own namespace
+                # before applying the structural checks below. Unresolvable
+                # hints fall through and are rejected as before.
+                try:
+                    target = v
+                    while isinstance(target, functools.partial):
+                        target = target.func
+                    if not (inspect.isfunction(target) or inspect.ismethod(target)):
+                        bound_call = getattr(target, "__call__", None)
+                        if bound_call is not None:
+                            target = bound_call
+                    return_annotation = get_type_hints(target).get(
+                        "return", return_annotation
+                    )
+                except Exception:
+                    pass
             if return_annotation != inspect.Signature.empty:
                 return_annotation_args = get_args(return_annotation)
                 if not (

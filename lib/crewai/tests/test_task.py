@@ -6,6 +6,7 @@ import os
 import time
 from functools import partial
 from hashlib import md5
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -285,6 +286,40 @@ def test_guardrail_type_error():
             description=desc,
             expected_output=expected_output,
             guardrail=error_fn,
+        )
+
+
+def test_guardrail_postponed_annotations():
+    """Postponed (PEP 563) return annotations should validate like eager ones."""
+    desc = "Describe one item"
+    expected_output = "A string"
+
+    def make_postponed(source: str):
+        namespace: dict[str, object] = {"Any": Any, "TaskOutput": TaskOutput}
+        exec(f"from __future__ import annotations\n{source}", namespace)
+        return namespace["postponed_guardrail"]
+
+    valid = make_postponed(
+        "def postponed_guardrail(output) -> tuple[bool, Any]:\n"
+        "    return True, output\n"
+    )
+    assert isinstance(valid.__annotations__["return"], str)
+    Task(description=desc, expected_output=expected_output, guardrail=valid)
+
+    invalid = make_postponed(
+        "def postponed_guardrail(output) -> tuple[bool, int, str]:\n"
+        "    return True, output\n"
+    )
+    with pytest.raises(ValidationError):
+        Task(description=desc, expected_output=expected_output, guardrail=invalid)
+
+    unresolvable = make_postponed(
+        "def postponed_guardrail(output) -> tuple[bool, NotDefinedAnywhere]:\n"
+        "    return True, output\n"
+    )
+    with pytest.raises(ValidationError):
+        Task(
+            description=desc, expected_output=expected_output, guardrail=unresolvable
         )
 
 
