@@ -435,7 +435,6 @@ class TurnRunner:
                     reply.status = "failed"
                     turn.status = "failed"
                 terminal = event("interrupted" if reply.interrupted else "failed")
-            terminal_emitted = True
             yield terminal
             raise
         finally:
