@@ -425,3 +425,28 @@ def test_proxy_environment_is_provider_specific(monkeypatch):
     monkeypatch.setenv("ORACLE_PROXY", "oracle-proxy")
     assert OracleProvider(**kwargs).proxy == "oracle-proxy"
     assert OracleProvider(**kwargs, proxy="explicit-proxy").proxy == "explicit-proxy"
+
+
+@pytest.mark.parametrize("source", ["environment", "dotenv"])
+def test_connection_object_is_not_loaded_from_settings(monkeypatch, tmp_path, source):
+    if source == "environment":
+        monkeypatch.setenv("ORACLE_CONN", "not-a-connection")
+        monkeypatch.setenv("ORACLE_PROXY", "oracle-proxy")
+        env_file = None
+    else:
+        env_file = tmp_path / ".env"
+        env_file.write_text(
+            "ORACLE_CONN=not-a-connection\nCONN=also-not-a-connection\nORACLE_PROXY=oracle-proxy\n"
+        )
+    params = {"user": "u", "dsn": "db"}
+    provider = OracleProvider(
+        connection_params=params, embedding_params={}, _env_file=env_file
+    )
+    assert provider.conn is None
+    assert provider.connection_params == params
+    assert provider.proxy == "oracle-proxy"
+    connection = object()
+    provider = OracleProvider(conn=connection, embedding_params={}, _env_file=env_file)
+    assert provider.conn is connection
+    with pytest.raises(ValueError, match="exactly one"):
+        OracleProvider(embedding_params={}, _env_file=env_file)

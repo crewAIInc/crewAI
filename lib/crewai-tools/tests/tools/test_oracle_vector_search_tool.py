@@ -1485,3 +1485,37 @@ def test_null_distances_do_not_hide_valid_matches():
     sql = cursor.executed[0][0]
     assert "WHERE embedding IS NOT NULL" in sql
     assert "AND (" in sql
+
+
+@pytest.mark.parametrize("operator", ["$and", "$or", "$nor"])
+@pytest.mark.parametrize(
+    "children", [[], [{}], [{"source": "docs"}, {}], [{"$and": []}], [{"source": {}}]]
+)
+def test_empty_logical_and_nested_filters_are_rejected(operator, children):
+    with pytest.raises(ValueError, match="non-empty|at least one"):
+        vs._generate_where_clause({operator: children}, [])
+
+
+def test_top_level_empty_filter_still_means_no_filter():
+    assert vs._build_metadata_filter(None, None, {}) == ("", {})
+
+
+def test_custom_embedding_does_not_declare_openai_key_required(monkeypatch):
+    from crewai_tools.generate_tool_specs import ToolSpecExtractor
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
+    tool = make_tool()
+    assert tool._embed_texts(["hello"]) == [[5.0]]
+    assert all(
+        not env.required for env in tool.env_vars if env.name == "OPENAI_API_KEY"
+    )
+    spec = ToolSpecExtractor._extract_env_vars_from_model_fields(
+        OracleVectorSearchTool.model_fields
+    )
+    assert (
+        next(env for env in spec if env["name"] == "OPENAI_API_KEY")["required"]
+        is False
+    )
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        make_tool(embedding_function=None)

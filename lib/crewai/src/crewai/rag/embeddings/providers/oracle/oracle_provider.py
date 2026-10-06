@@ -5,7 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import Field, model_validator
-from pydantic_settings import SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.providers.oracle.embedding_callable import (
@@ -38,6 +43,25 @@ class OracleProvider(BaseEmbeddingsProvider[OracleEmbeddingFunction]):
         default=None,
         description="Optional proxy value passed to utl_http.set_proxy before embedding requests.",
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        # A live connection must be supplied by the caller, never as env text.
+        for source in (env_settings, dotenv_settings):
+            if isinstance(source, EnvSettingsSource):
+                source.env_vars = {
+                    key: value
+                    for key, value in source.env_vars.items()
+                    if key.lower() not in {"conn", "oracle_conn"}
+                }
+        return init_settings, env_settings, dotenv_settings, file_secret_settings
 
     @model_validator(mode="after")
     def validate_connection_source(self) -> OracleProvider:

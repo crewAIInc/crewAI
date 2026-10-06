@@ -271,6 +271,8 @@ def _generate_condition(
         return single_mask.format(key=path_key, oper="==", value_bind=bind_name)
 
     if isinstance(value, dict):
+        if not value:
+            raise ValueError("Field filters must contain at least one operator.")
         if not all(value_key.startswith("$") for value_key in value):
             raise ValueError("Nested metadata objects are not supported in filters.")
 
@@ -378,6 +380,8 @@ def _generate_where_clause(
 ) -> str:
     if not isinstance(filter_spec, dict):
         raise ValueError("Filter syntax is incorrect. Must be a dictionary.")
+    if not filter_spec:
+        raise ValueError("Nested filters must be non-empty dictionaries.")
 
     all_conditions: list[str] = []
     for key, value in filter_spec.items():
@@ -386,6 +390,10 @@ def _generate_where_clause(
                 raise ValueError(f"'{key}' is not a recognized logical operator.")
             if not isinstance(value, list):
                 raise ValueError("Logical operators require an array of values.")
+            if not value:
+                raise ValueError(
+                    "Logical operators require a non-empty array of filters."
+                )
             joiner, wrapper = LOGICAL_MAP[key]
             combine_conditions = [
                 _generate_where_clause(item, bind_variables) for item in value
@@ -503,7 +511,7 @@ class OracleVectorSearchTool(BaseTool):
             EnvVar(
                 name="OPENAI_API_KEY",
                 description="API key for default OpenAI embeddings when embedding_function is not provided",
-                required=True,
+                required=False,
             )
         ]
     )
