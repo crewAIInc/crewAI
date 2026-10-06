@@ -262,6 +262,9 @@ def test_content_limits_must_be_positive(limit):
         "http://127.0.0.1:8080/admin",
         "http://169.254.169.254/latest/meta-data/",
         "http://10.0.0.1/",
+        "http://[::1]/",
+        # Userinfo must not hide a loopback host.
+        "http://user:pass@127.0.0.1/",
     ],
 )
 def test_crawl_rejects_unsafe_urls_without_calling_api(url):
