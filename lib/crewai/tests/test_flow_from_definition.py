@@ -4167,6 +4167,39 @@ def test_start_step_listening_to_its_own_outcome_reruns_after_resume():
     assert result == "published:ship it"
 
 
+@pytest.mark.parametrize("router", [False, True])
+def test_conditional_start_that_also_listens_runs_once_per_event(router):
+    handler_routing = "router: true\n    emit: [done]" if router else ""
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ConditionalStartListenFlow
+methods:
+  seed:
+    do:
+      call: expression
+      expr: "'x'"
+    start: true
+  route:
+    do:
+      call: expression
+      expr: "'go'"
+    listen: seed
+    router: true
+    emit: [go]
+  handler:
+    do:
+      call: expression
+      expr: "'done'"
+    start: go
+    listen: go
+    {handler_routing}
+"""
+    flow = Flow.from_declaration(contents=yaml_str)
+    flow.kickoff()
+
+    assert flow._method_execution_counts["handler"] == 1
+
+
 def test_flow_config_provider_fallback_from_declaration():
     yaml_str = f"""
 schema: crewai.flow/v1

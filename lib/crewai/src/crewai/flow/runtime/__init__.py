@@ -3154,6 +3154,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         current_trigger = trigger_method
         current_result = result  # Track the result to pass to each router
         current_triggering_event_id = triggering_event_id
+        # Methods already run per trigger, so a conditional start that also
+        # listens to the same event is not run a second time below.
+        ran_for_trigger: dict[str, set[FlowMethodName]] = {}
 
         while True:
             routers_triggered = self._find_triggered_methods(
@@ -3161,6 +3164,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             if not routers_triggered:
                 break
+            ran_for_trigger.setdefault(str(current_trigger), set()).update(
+                routers_triggered
+            )
 
             for router_name in routers_triggered:
                 # For routers triggered by a router outcome, pass the HumanFeedbackResult
@@ -3209,6 +3215,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 listeners_triggered = self._find_triggered_methods(
                     current_trigger, router_only=False
                 )
+                ran_for_trigger.setdefault(str(current_trigger), set()).update(
+                    listeners_triggered
+                )
                 if listeners_triggered:
                     listener_result = router_result_payloads.get(
                         str(current_trigger), result
@@ -3244,6 +3253,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     for method_name in self._start_method_names():
                         if self._start_condition_triggered_by(
                             method_name, current_trigger
+                        ) and method_name not in ran_for_trigger.get(
+                            str(current_trigger), set()
                         ):
                             if method_name in self._completed_methods:
                                 # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
