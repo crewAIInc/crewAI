@@ -738,4 +738,6 @@ runner.interrupt(
 
 `elapsed_ms`는 추적 턴 시작부터 server monotonic clock을 사용합니다. 관측 가능한 `model_first_text_ms`는 provider 요청 시작과 첫 공개 텍스트의 **이벤트 timestamp 차이**입니다. provider/SDK/네트워크 작업을 포함하며 추론 엔진만의 TTFT가 아닙니다. 브라우저와 서버 timestamp를 서로 빼지 마세요. TTS 첫 chunk, 캐시 오디오, 실제 가청 시작, 재생 완료는 adapter 측정입니다.
 
-이 단계는 백그라운드 응답 queue, 발언권 스케줄링, 재생 receipt, 정확한 단어 정렬, speculative generation, job pause/resume를 제공하지 않습니다. snapshot에는 기록만 있고 lock, 취소 신호, 실행 중인 작업은 없습니다. 작업을 재개하거나 delivery를 다시 재생하지 않습니다. 새 추적 live turn 전에 상태를 복원하세요. wrapper는 `from_checkpoint`를 의도적으로 거부합니다. 영속적인 조정과 최종 추적 기록 저장은 별도 작업입니다. 기존 checkpoint 워크플로에는 안정적인 Flow API를 계속 사용하세요.
+이 단계는 백그라운드 응답 queue, 발언권 스케줄링, 재생 receipt, 정확한 단어 정렬, speculative generation, job pause/resume를 제공하지 않습니다. snapshot에는 기록만 있고 lock, 취소 신호, 실행 중인 작업은 없습니다. 작업을 재개하거나 delivery를 다시 재생하지 않습니다. 새 추적 live turn 전에 상태를 복원하세요. wrapper는 `from_checkpoint` 및 `restore_from_state_id`를 의도적으로 거부합니다. 영속적인 조정과 최종 추적 기록 저장은 별도 작업입니다. 기존 checkpoint 워크플로에는 안정적인 Flow API를 계속 사용하세요.
+
+추적 실행 중에는 현재 복원된 상태가 기준이 됩니다. 자동 세션 재로드를 억제하여 등록된 turn/reply 기록이나 승인된 백그라운드 job 업데이트가 사라지지 않도록 합니다. 기본 Flow 턴 API의 기존 영속 상태 재로드 동작은 유지됩니다. 종료 이벤트 이후 iterator를 닫아도 완료된 응답을 중단하지 않습니다. 실패 이후 중단 요청이 도착해도 실패 이벤트는 유효한 종료 수명 주기 신호로 처리됩니다.

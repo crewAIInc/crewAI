@@ -11,7 +11,7 @@ import pytest
 
 from crewai.experimental.flow_jobs import (
     JobRecord, JobRunner, JobState, JobWorkFlow, JobWorkState,
-    add_job,
+    JobUpdate, add_job, commit_job_update,
 )
 from crewai.experimental.flow_turns import TurnRunner, TurnState
 from crewai.flow import ConversationConfig, ConversationState, Flow, listen, start
@@ -198,7 +198,8 @@ def test_closing_stream_signals_control_before_draining_provider():
 def test_input_identity_owner_and_order_are_validated_before_execution():
     runner = TurnRunner(chat())
     for kwargs in ({"input_revision": True}, {"input_revision": 0},
-                   {"turn_id": ""}, {"session_id": "foreign"}, {"from_checkpoint": "checkpoint"}):
+                   {"turn_id": ""}, {"session_id": "foreign"}, {"from_checkpoint": "checkpoint"},
+                   {"restore_from_state_id": "other-state"}):
         with pytest.raises(ValueError):
             list(runner.stream_turn("Hello", **kwargs))
     assert not runner.state.turns
@@ -328,3 +329,99 @@ def test_private_agent_return_does_not_become_public_reply():
     assert events[-1].text == ""
     assert "PRIVATE" not in str(events)
     assert len(runner.flow.conversation_messages) == 1
+
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_closing_after_terminal_keeps_queued_event_deliverable(failure):
+    stopped = Event()
+    runner = TurnRunner(chat(PublicLLM(failure=failure)), on_interrupt=stopped.set)
+    stream = runner.stream_turn("Finish")
+    for event in stream:
+        if event.type in {"completed", "failed"}:
+            stream.close()
+            reply = runner.state.replies[event.delivery_id]
+            assert reply.status == event.type
+            assert not reply.interrupted
+            assert not stopped.is_set()
+            assert runner.accept_event(event)
+            assert not runner.flow._skip_persistence_restore
+            break
+    else:
+        pytest.fail("Missing terminal event")
+
+
+def test_failure_terminal_remains_acceptable_after_cross_thread_interruption():
+    runner = TurnRunner(chat(PublicLLM(failure=True)))
+    stream = runner.stream_turn("Fail")
+    for event in stream:
+        if event.type == "failed":
+            control = dict(session_id=event.session_id, turn_id=event.turn_id,
+                           input_revision=event.input_revision, delivery_id=event.delivery_id)
+            with ThreadPoolExecutor(1) as pool:
+                assert pool.submit(runner.interrupt, **control).result(timeout=5)
+            assert runner.state.replies[event.delivery_id].status == "failed"
+            assert runner.accept_event(event)
+            assert not runner.accept_event(event)
+            with pytest.raises(RuntimeError, match="Provider failed"):
+                next(stream)
+            assert not runner.flow._skip_persistence_restore
+            break
+    else:
+        pytest.fail("Missing failure event")
+
+
+def test_persisted_tracked_turn_keeps_live_records_and_jobs(tmp_path):
+    from crewai.flow.persistence import persist
+    from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+    class State(TurnState, JobState[JobRecord]):
+        pass
+
+    store = SQLiteFlowPersistence(str(tmp_path / "turns.db"))
+
+    @persist(store)
+    class Chat(Flow[State]):
+        conversational = True
+
+        def route_turn(self, context):
+            if runner._active is None:
+                return "ack"
+            assert runner.state.replies[runner._active].turn_id in self.state.turns
+            job = JobRecord(session_id=self.state.id,
+                            origin_turn_id=self.state.replies[runner._active].turn_id)
+            assert add_job(self.state, job)
+            assert runner.associate_job(job)
+            return "ack"
+
+        @listen("ack")
+        def reply(self):
+            return "Accepted."
+
+    flow = Chat()
+    # An existing snapshot is deliberately older than current live job state.
+    store.save_state(flow.state.id, "seed", flow.state.model_dump())
+    restored = Chat(initial_state=State.model_validate(store.load_state(flow.state.id)))
+    live = restored.state
+    job = JobRecord(session_id=live.id, origin_turn_id="earlier")
+    assert add_job(live, job)
+    for seq, kind in enumerate(("started", "completed"), 1):
+        assert commit_job_update(live, JobUpdate(session_id=live.id, job_id=job.job_id,
+            revision=1, attempt=1, seq=seq, kind=kind))
+    runner = TurnRunner(restored)
+    first = list(runner.stream_turn("First", turn_id="first"))
+    assert restored.state is live
+    assert runner.accept_event(first[-1])
+    # Persisted snapshots precede terminal tracking; a second reload would regress it.
+    assert list(runner.stream_turn("Second", turn_id="second"))[-1].type == "completed"
+    assert restored.state is live
+    assert live.turns["first"].status == "completed"
+    assert live.jobs[job.job_id].status == "completed"
+    assert len(live.jobs) == 3
+    assert len(runner.snapshot()["replies"]) == 2
+    assert not restored._skip_persistence_restore
+    assert runner.interrupt(session_id=first[0].session_id, turn_id="first",
+                            input_revision=1, delivery_id=first[0].delivery_id)
+    # The same Flow's native turn API still reloads persisted state normally.
+    restored.handle_turn("Native")
+    assert restored.state is not live

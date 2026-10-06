@@ -229,9 +229,15 @@ class TurnRunner:
                 or not reply.last_accepted_seq < event.seq <= reply.last_event_seq
             ):
                 return False
-            if reply.interrupted and event.type != "interrupted":
-                return False
-            if reply.status == "failed" and event.type != "failed":
+            # Failure is a terminal lifecycle signal, not deliverable text.
+            # Preserve it if interruption arrives after failure was observed.
+            if event.type == "failed":
+                if reply.status != "failed":
+                    return False
+            elif reply.interrupted:
+                if event.type != "interrupted":
+                    return False
+            elif reply.status == "failed":
                 return False
             reply.last_accepted_seq = event.seq
             return True
@@ -267,7 +273,7 @@ class TurnRunner:
         """
         if not isinstance(message, str) or not message.strip():
             raise ValueError("A non-empty committed message is required")
-        if "from_checkpoint" in turn_kwargs:
+        if {"from_checkpoint", "restore_from_state_id"} & turn_kwargs.keys():
             raise ValueError("Restore state before starting a tracked live turn")
         started = perf_counter()
         with self._lock:
@@ -333,8 +339,13 @@ class TurnRunner:
         public_calls: dict[str, StreamFrame] = {}
         first_chunks: set[str] = set()
         stream = None
+        terminal_emitted = False
         suppression = self.flow.suppress_flow_events
+        skip_restore = self.flow._skip_persistence_restore
         try:
+            # The current state owns admitted turns and accepted background jobs.
+            # Native session reload would replace it with an older snapshot.
+            self.flow._skip_persistence_restore = True
             yield event("started")
             # Native method/message frames are required even for suppressed Flows.
             self.flow.suppress_flow_events = False
@@ -397,6 +408,7 @@ class TurnRunner:
                     if not reply.segments and final and not interrupted():
                         yield text_segment(final)
             if interrupted():
+                terminal_emitted = True
                 yield event("interrupted")
             else:
                 with self._lock:
@@ -406,21 +418,25 @@ class TurnRunner:
                         reply.status = "completed"
                         turn.status = "completed"
                         terminal = event("completed", text=reply.text)
+                terminal_emitted = True
                 yield terminal
         except GeneratorExit:
-            self.interrupt(
-                session_id=reply.session_id,
-                turn_id=reply.turn_id,
-                input_revision=reply.input_revision,
-                delivery_id=reply.delivery_id,
-            )
+            if not terminal_emitted:
+                self.interrupt(
+                    session_id=reply.session_id,
+                    turn_id=reply.turn_id,
+                    input_revision=reply.input_revision,
+                    delivery_id=reply.delivery_id,
+                )
             raise
         except Exception:
             with self._lock:
                 if not reply.interrupted:
                     reply.status = "failed"
                     turn.status = "failed"
-            yield event("interrupted" if reply.interrupted else "failed")
+                terminal = event("interrupted" if reply.interrupted else "failed")
+            terminal_emitted = True
+            yield terminal
             raise
         finally:
             try:
@@ -428,5 +444,6 @@ class TurnRunner:
                     stream.close()  # Joins native execution on consumer abandonment.
             finally:
                 self.flow.suppress_flow_events = suppression
+                self.flow._skip_persistence_restore = skip_restore
                 with self._lock:
                     self._active = None
