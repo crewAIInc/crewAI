@@ -68,8 +68,10 @@ class TestFunctionSchema:
         assert step_props["description"]["type"] == "string"
 
         assert "tool_to_use" in step_props
-        # tool_to_use should be nullable
-        assert step_props["tool_to_use"]["type"] == ["string", "null"]
+        tool_types = {
+            option["type"] for option in step_props["tool_to_use"]["anyOf"]
+        }
+        assert tool_types == {"string", "null"}
 
         assert "depends_on" in step_props
         assert step_props["depends_on"]["type"] == "array"
