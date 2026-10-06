@@ -10,6 +10,8 @@ from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field, model_validator
 import requests
 
+from crewai_tools.security.safe_path import validate_url
+
 
 SEARCH1API_API_URL = "https://api.search1api.com"
 
@@ -259,6 +261,7 @@ class Search1APICrawlTool(Search1APIBaseTool):
     )
 
     def _run(self, url: str) -> str:
+        url = validate_url(url)
         body = self._post("/crawl", {"url": url})
         page = body.get("results")
         if not isinstance(page, dict) or not isinstance(page.get("content"), str):

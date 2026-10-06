@@ -1,5 +1,7 @@
 import json
 import os
+import socket
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from pydantic import ValidationError
@@ -34,6 +36,21 @@ def _response(
 def _api_key():
     with patch.dict(os.environ, {"SEARCH1API_API_KEY": "s1-test-key"}):
         yield
+
+
+@pytest.fixture(autouse=True)
+def _public_example_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The crawl tool resolves the URL host before posting; keep tests offline.
+    original_getaddrinfo = socket.getaddrinfo
+
+    def fake_getaddrinfo(host: str, port: Any, *args: Any, **kwargs: Any):
+        if host == "example.com":
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
+            ]
+        return original_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
 
 
 def test_search_sends_request_and_normalizes_results():
@@ -235,3 +252,20 @@ def test_content_limits_must_be_positive(limit):
         Search1APICrawlTool(max_content_length=limit)
     with pytest.raises(ValidationError, match="max_content_length_per_result"):
         Search1APISearchTool(max_content_length_per_result=limit)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "file:///etc/passwd",
+        "ftp://example.com/file",
+        "http://127.0.0.1:8080/admin",
+        "http://169.254.169.254/latest/meta-data/",
+        "http://10.0.0.1/",
+    ],
+)
+def test_crawl_rejects_unsafe_urls_without_calling_api(url):
+    with patch(POST) as post:
+        with pytest.raises(ValueError):
+            Search1APICrawlTool().run(url=url)
+    post.assert_not_called()
