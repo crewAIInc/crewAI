@@ -284,6 +284,8 @@ class ReplyQueue:
         application choice; this neither invokes an LLM nor claims audio completion.
         """
         with self._lock:
+            if delivery_id in self.state.replies:
+                return []  # Preparation is single-use, never duplicate public output.
             record = self.state.deliveries.get(delivery_id)
             floor = self.state.delivery_floor
             if (
@@ -304,8 +306,6 @@ class ReplyQueue:
             ):
                 self._change(record, "interrupted", "The speaking floor became busy.")
                 return []
-            if delivery_id in self.state.replies:
-                return []  # Preparation is single-use, never duplicate public output.
             started = perf_counter()
             try:
                 current = [self._current(c) for c in record.covered_updates]

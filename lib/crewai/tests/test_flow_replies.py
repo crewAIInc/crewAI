@@ -267,3 +267,28 @@ def test_shared_turn_interruption_fences_background_handoff_and_completion():
     assert job.job_id not in flow.state.covered_updates
     assert job.status == "completed" and job.answer == "Result one"
     assert queue.claim() is None
+
+
+
+def test_preparation_retry_during_playback_preserves_lease_and_completion():
+    flow, turns, queue = setup()
+    jobs = [complete(flow, name) for name in ("one", "two")]
+    deliveries = [queue.enqueue(job) for job in jobs]
+    delivery = queue.claim()
+    events = queue.prepare(delivery.delivery_id, lambda current: current[0].answer)
+    assert all(turns.accept_event(event) for event in events)
+    assert queue.observe_client(ClientActivity(session_id=flow.state.id, seq=1,
+        recording=False, playback=True, muted=False, delivery_id=delivery.delivery_id))
+    snapshot = queue.snapshot()
+    assert queue.prepare(delivery.delivery_id,
+                         lambda _: pytest.fail("Prepared twice")) == []
+    assert queue.snapshot() == snapshot
+    assert queue.accepts_output(delivery.delivery_id)
+    assert queue.claim() is None
+    assert queue.settle(delivery.delivery_id, "completed")
+    assert flow.state.deliveries[delivery.delivery_id].status == "completed"
+    assert not flow.state.replies[delivery.delivery_id].interrupted
+    assert queue.claim() is None  # Playback stop and completion are distinct.
+    assert queue.observe_client(activity(flow, 2, delivery_id=delivery.delivery_id))
+    assert queue.claim().delivery_id == deliveries[1]
+    assert [job.status for job in jobs] == ["completed", "completed"]
