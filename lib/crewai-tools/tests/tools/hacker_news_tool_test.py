@@ -147,3 +147,18 @@ def test_hacker_news_tool_bounds_item_lookups(mock_get):
 
     assert output == "No stories retrieved."
     assert mock_get.call_count == 21
+
+
+@patch("requests.get")
+def test_hacker_news_tool_handles_invalid_top_stories_response(mock_get):
+    mock_top = MagicMock(status_code=200)
+    mock_top.json.return_value = {"unexpected": "format"}
+
+    mock_get.return_value = mock_top
+
+    tool = HackerNewsTopStoriesTool()
+
+    assert (
+        tool._run(limit=1)
+        == "Error fetching Hacker News top stories: unexpected response format"
+    )

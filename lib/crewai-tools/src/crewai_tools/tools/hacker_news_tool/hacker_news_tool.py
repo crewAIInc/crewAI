@@ -35,6 +35,11 @@ class HackerNewsTopStoriesTool(BaseTool):
             response.raise_for_status()
             story_ids = response.json()
 
+            if not isinstance(story_ids, list):
+                return (
+                    "Error fetching Hacker News top stories: unexpected response format"
+                )
+
             stories = []
 
             max_items_to_check = min(
@@ -69,7 +74,7 @@ class HackerNewsTopStoriesTool(BaseTool):
                 score = item.get("score", 0)
 
                 stories.append(
-                    f"{len(stories) + 1}. {title} ({score} points)\n   URL: {url}"
+                    f"{len(stories) + 1}. {title} ({score} points)\n URL: {url}"
                 )
 
                 if len(stories) == limit:
