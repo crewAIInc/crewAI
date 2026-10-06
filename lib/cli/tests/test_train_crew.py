@@ -1,6 +1,9 @@
 import subprocess
 from unittest import mock
 
+import click
+import pytest
+
 from crewai_cli.train_crew import train_crew
 
 
@@ -24,22 +27,33 @@ def test_train_crew_positive_iterations(mock_subprocess_run):
     )
 
 
-@mock.patch("crewai_cli.train_crew.click")
-def test_train_crew_zero_iterations(click):
-    train_crew(0, "trained_agents_data.pkl")
-    click.echo.assert_called_once_with(
-        "An unexpected error occurred: The number of iterations must be a positive integer.",
-        err=True,
-    )
+@mock.patch("crewai_cli.train_crew.subprocess.run")
+def test_train_crew_zero_iterations(mock_subprocess_run):
+    with pytest.raises(
+        click.ClickException,
+        match="The number of iterations must be a positive integer.",
+    ):
+        train_crew(0, "trained_agents_data.pkl")
+    mock_subprocess_run.assert_not_called()
 
 
-@mock.patch("crewai_cli.train_crew.click")
-def test_train_crew_negative_iterations(click):
-    train_crew(-2, "trained_agents_data.pkl")
-    click.echo.assert_called_once_with(
-        "An unexpected error occurred: The number of iterations must be a positive integer.",
-        err=True,
-    )
+@mock.patch("crewai_cli.train_crew.subprocess.run")
+def test_train_crew_negative_iterations(mock_subprocess_run):
+    with pytest.raises(
+        click.ClickException,
+        match="The number of iterations must be a positive integer.",
+    ):
+        train_crew(-2, "trained_agents_data.pkl")
+    mock_subprocess_run.assert_not_called()
+
+
+@mock.patch("crewai_cli.train_crew.subprocess.run")
+def test_train_crew_invalid_filename(mock_subprocess_run):
+    with pytest.raises(
+        click.ClickException, match=r"The filename must end with \.pkl"
+    ):
+        train_crew(5, "myfile.txt")
+    mock_subprocess_run.assert_not_called()
 
 
 @mock.patch("crewai_cli.train_crew.click")
