@@ -30,8 +30,12 @@ class CSVLoader(BaseLoader):
             return file.read()
 
     def _parse_csv(self, content: str, source_ref: str) -> LoaderResult:
+        """Parse CSV text into display content and metadata.
+
+        A single leading UTF-8 BOM is stripped so it never becomes part of
+        the first header. Embedded BOM characters elsewhere are preserved.
+        """
         try:
-            # Strip a leading UTF-8 BOM so it never becomes part of the first header.
             csv_reader = csv.DictReader(StringIO(content.removeprefix("\ufeff")))
 
             text_parts = []
