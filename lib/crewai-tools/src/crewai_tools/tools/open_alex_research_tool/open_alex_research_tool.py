@@ -1,8 +1,8 @@
 from typing import Any
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
 
 
 class OpenAlexResearchToolInput(BaseModel):
@@ -19,6 +19,10 @@ class OpenAlexResearchToolInput(BaseModel):
         ge=1,
         le=20,
         description="Number of relevant paper results to return (1 to 20).",
+    )
+    email: str | None = Field(
+        default=None,
+        description="Optional email address for OpenAlex's polite pool.",
     )
 
 
@@ -47,9 +51,9 @@ class OpenAlexResearchTool(BaseTool):
             if not isinstance(word, str) or not isinstance(positions, list):
                 continue
 
-            for position in positions:
-                if isinstance(position, int):
-                    word_positions.append((position, word))
+            word_positions.extend(
+                (position, word) for position in positions if isinstance(position, int)
+            )
 
         word_positions.sort(key=lambda item: item[0])
         abstract_text = " ".join(word for _, word in word_positions)
@@ -59,20 +63,39 @@ class OpenAlexResearchTool(BaseTool):
 
         return abstract_text or "N/A"
 
-    def _run(self, query: str, limit: int = 5) -> str:
+    def _run(
+        self,
+        query: str,
+        limit: int = 5,
+        email: str | None = None,
+    ) -> str:
         """Search OpenAlex for scholarly works matching the query."""
+        validated_input = OpenAlexResearchToolInput(
+            query=query,
+            limit=limit,
+            email=email,
+        )
+        query = validated_input.query
+        limit = validated_input.limit
+        email = validated_input.email
+
         if not query or not query.strip():
             return "Error: Search query must be a non-empty string."
 
         clean_query = query.strip()
 
         try:
+            params = {
+                "search": clean_query,
+                "per_page": limit,
+            }
+
+            if email and email.strip():
+                params["mailto"] = email.strip()
+
             response = requests.get(
                 "https://api.openalex.org/works",
-                params={
-                    "search": clean_query,
-                    "per_page": limit,
-                },
+                params=params,
                 timeout=10,
             )
             response.raise_for_status()
