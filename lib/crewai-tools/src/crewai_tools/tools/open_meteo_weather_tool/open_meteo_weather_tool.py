@@ -1,6 +1,6 @@
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
 
 
 class OpenMeteoWeatherToolInput(BaseModel):
@@ -92,7 +92,9 @@ class OpenMeteoWeatherTool(BaseTool):
                 return "Error: Current weather data is unavailable."
 
             temperature = current.get("temperature_2m", "N/A")
-            wind_speed = current.get("wind_speed_10m", "N/A")
+            wind_speed = current.get("wind_speed_10m")
+            if wind_speed is None:
+                wind_speed = "N/A"
 
             location_str = f"{name}, {country}" if country else name
 
