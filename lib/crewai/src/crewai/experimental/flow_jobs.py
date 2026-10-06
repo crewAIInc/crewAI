@@ -172,7 +172,7 @@ def commit_job_update(state: JobState[Any], update: JobUpdate) -> bool:
     job.__dict__.update(
         {name: getattr(candidate, name) for name in type(job).model_fields}
     )
-    job.__pydantic_fields_set__.update(candidate.model_fields_set)
+    job.__pydantic_fields_set__.update(changes)
     state.job_sequence += 1
     return True
 

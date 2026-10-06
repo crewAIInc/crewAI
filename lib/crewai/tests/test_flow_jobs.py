@@ -344,7 +344,11 @@ def test_commit_preserves_identity_with_assignment_validation() -> None:
     state = JobState[ValidatedReportJob]()
     job = ValidatedReportJob(session_id=state.id, question="Report")
     assert add_job(state, job)
+    assert "answer" not in job.model_fields_set
+    assert "answer" not in job.model_dump(exclude_unset=True)
     assert commit_job_update(state, proposal(state, job, 1, "started"))
+    assert "answer" not in job.model_fields_set
+    assert "answer" not in job.model_dump(exclude_unset=True)
     before = state.model_dump_json()
     assert not commit_job_update(
         state, proposal(state, job, 2, "stage_completed", stage="collect")
@@ -361,7 +365,11 @@ def test_commit_preserves_identity_with_assignment_validation() -> None:
     assert job.committed_stages == ["collect"]
     assert job.last_update_seq == 2
     assert job.model_dump(exclude_unset=True)["committed_stages"] == ["collect"]
+    assert job.model_dump(exclude_unset=True)["notes"] == ["Fact"]
+    assert "answer" not in job.model_fields_set
+    assert "answer" not in job.model_dump(exclude_unset=True)
     assert job._consumer_tag == "retained"
     assert state.job_sequence == 3
     assert commit_job_update(state, proposal(state, job, 3, "completed"))
     assert job.status == "completed"
+    assert "answer" not in job.model_dump(exclude_unset=True)
