@@ -1326,3 +1326,25 @@ def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     assert "@AGENTS.md" in cursor_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_create_crew_loop_does_not_shadow_provider_param():
+    import ast
+    import inspect
+
+    from crewai_cli import create_crew as mod
+
+    def _target_names(target: ast.expr) -> list[str]:
+        # Loop targets are often tuples (`for a, b in ...`), not bare names.
+        return [n.id for n in ast.walk(target) if isinstance(n, ast.Name)]
+
+    tree = ast.parse(inspect.getsource(mod.create_crew))
+    func = next(
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == "create_crew"
+    )
+    loop_targets = [
+        name for n in ast.walk(func) if isinstance(n, ast.For) for name in _target_names(n.target)
+    ]
+    assert "provider" not in loop_targets
