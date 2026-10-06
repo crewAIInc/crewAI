@@ -184,6 +184,10 @@ Schema-qualified index and table names are resolved independently. Unqualified
 names use the connection's current schema. Identifier casing is preserved.
 
 Metadata operators `$in`, `$nin`, and `$all` require non-empty lists.
+`$in` and `$nin` test membership for scalar fields and array elements.
+Member names containing spaces or commas are quoted in JSON paths; dots
+represent nesting and `[*]` represents an array wildcard.
+Searches exclude rows with null embeddings.
 `$all` checks each requested value independently, so an array must contain
 every requested value to match. Search limits must be positive integers.
 

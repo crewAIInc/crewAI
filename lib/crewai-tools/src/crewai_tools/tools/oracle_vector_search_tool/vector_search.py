@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import re
-from typing import Any, Literal
+from typing import Any, Literal, cast
 import uuid
 
 from crewai.tools import BaseTool, EnvVar
@@ -22,7 +22,7 @@ try:
     ORACLEDB_AVAILABLE = True
 except ImportError:
     ORACLEDB_AVAILABLE = False
-    oracledb = Any  # type: ignore[assignment,misc]
+    oracledb = Any  # type: ignore[assignment]
 
 
 logger = logging.getLogger(__name__)
@@ -122,10 +122,25 @@ def _quote_identifier(name: str) -> str:
 
 
 def _validate_metadata_key(metadata_key: str) -> None:
-    if not re.fullmatch(r"[A-Za-z0-9_\.\[\],\s\*]*", metadata_key):
+    if not re.fullmatch(
+        r"[A-Za-z0-9_ ,]+(?:\[\*\])?(?:\.[A-Za-z0-9_ ,]+(?:\[\*\])?)*", metadata_key
+    ):
         raise ValueError(
-            f"Invalid metadata key '{metadata_key}'. Only letters, numbers, underscores, nesting via '.', and array wildcards '[*]' are allowed."
+            f"Invalid metadata key '{metadata_key}'. Use member names separated by '.' and optional '[*]' array wildcards."
         )
+
+
+def _metadata_path_key(metadata_key: str) -> str:
+    """Quote member names requiring JSON path escaping while preserving nesting."""
+    _validate_metadata_key(metadata_key)
+    parts = []
+    for part in metadata_key.split("."):
+        suffix = "[*]" if part.endswith("[*]") else ""
+        name = part[:-3] if suffix else part
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            name = json.dumps(name)
+        parts.append(name + suffix)
+    return ".".join(parts)
 
 
 def _validate_int_param(
@@ -225,16 +240,16 @@ def _get_comparison_string(
             )
 
         value_binds: list[str] = []
-        passings: list[str] = []
+        membership_passings: list[str] = []
         for current_value in value:
             bind_index = len(bind_variables)
             bind_variables.append(current_value)
             value_binds.append(f"$val{bind_index}")
-            passings.append(f':value{bind_index} AS "val{bind_index}"')
+            membership_passings.append(f':value{bind_index} AS "val{bind_index}"')
 
         condition = f"@ in ({','.join(value_binds)})"
 
-        return condition, ",".join(passings)
+        return condition, ",".join(membership_passings)
 
     raise ValueError(f"Invalid operator: {oper}.")
 
@@ -248,12 +263,12 @@ def _generate_condition(
     )
     multiple_mask = "JSON_EXISTS(metadata, '$.{key}?({filters})' PASSING {passes})"
 
-    _validate_metadata_key(metadata_key)
+    path_key = _metadata_path_key(metadata_key)
 
     if not isinstance(value, (dict, list, tuple)):
         bind_name = f":value{len(bind_variables)}"
         bind_variables.append(value)
-        return single_mask.format(key=metadata_key, oper="==", value_bind=bind_name)
+        return single_mask.format(key=path_key, oper="==", value_bind=bind_name)
 
     if isinstance(value, dict):
         if not all(value_key.startswith("$") for value_key in value):
@@ -265,6 +280,16 @@ def _generate_condition(
         all_conditions: list[str] = []
 
         for oper, current_value in value.items():
+            if oper == "$in":
+                result, passings = _get_comparison_string(
+                    oper, current_value, bind_variables
+                )
+                all_conditions.append(
+                    multiple_mask.format(
+                        key=path_key + "[*]", filters=result, passes=passings
+                    )
+                )
+                continue
             if oper == "$all":
                 if not isinstance(current_value, list) or not current_value:
                     raise ValueError(
@@ -274,7 +299,7 @@ def _generate_condition(
                     bind_index = len(bind_variables)
                     bind_variables.append(item)
                     all_conditions.append(
-                        f"JSON_EXISTS(metadata, '$.{metadata_key}[*]?(@ == $val)' "
+                        f"JSON_EXISTS(metadata, '$.{path_key}[*]?(@ == $val)' "
                         f'PASSING :value{bind_index} AS "val")'
                     )
                 continue
@@ -295,7 +320,7 @@ def _generate_condition(
         if comparison_values:
             all_conditions.append(
                 multiple_mask.format(
-                    key=metadata_key,
+                    key=path_key,
                     filters=" && ".join(comparison_values),
                     passes=" , ".join(passing_values),
                 )
@@ -312,10 +337,10 @@ def _generate_condition(
                         f"Invalid value for $exists: {current_value}. It must be a boolean."
                     )
                 if current_value:
-                    all_conditions.append(f"JSON_EXISTS(metadata, '$.{metadata_key}')")
+                    all_conditions.append(f"JSON_EXISTS(metadata, '$.{path_key}')")
                 else:
                     all_conditions.append(
-                        f"NOT (JSON_EXISTS(metadata, '$.{metadata_key}'))"
+                        f"NOT (JSON_EXISTS(metadata, '$.{path_key}'))"
                     )
             elif oper == "$nin":
                 result, passings = _get_comparison_string(
@@ -324,20 +349,20 @@ def _generate_condition(
                 all_conditions.append(
                     " NOT "
                     + multiple_mask.format(
-                        key=metadata_key, filters=result, passes=passings
+                        key=path_key + "[*]", filters=result, passes=passings
                     )
                 )
             elif oper == "$eq":
                 bind_index = len(bind_variables)
                 bind_variables.append(json.dumps(current_value))
                 all_conditions.append(
-                    f"JSON_EQUAL(JSON_QUERY(metadata, '$.{metadata_key}'), JSON(:value{bind_index}))"
+                    f"JSON_EQUAL(JSON_QUERY(metadata, '$.{path_key}'), JSON(:value{bind_index}))"
                 )
             elif oper == "$ne":
                 bind_index = len(bind_variables)
                 bind_variables.append(json.dumps(current_value))
                 all_conditions.append(
-                    f"NOT (JSON_EQUAL(JSON_QUERY(metadata, '$.{metadata_key}'), JSON(:value{bind_index})))"
+                    f"NOT (JSON_EQUAL(JSON_QUERY(metadata, '$.{path_key}'), JSON(:value{bind_index})))"
                 )
 
         result = " AND ".join(all_conditions)
@@ -547,14 +572,23 @@ class OracleVectorSearchTool(BaseTool):
     def _embed_texts(self, texts: list[str]) -> list[list[float]]:
         if self.embedding_function is not None:
             try:
-                embeddings = self.embedding_function(texts)  # type: ignore[arg-type]
+                batch_embedder = cast(
+                    Callable[[list[str]], list[list[float]]], self.embedding_function
+                )
+                embeddings = batch_embedder(texts)
             except (AttributeError, TypeError):
                 embeddings = None
             else:
-                if _is_nested_sequence(embeddings) and len(embeddings) == len(texts):
+                if (
+                    embeddings is not None
+                    and _is_nested_sequence(embeddings)
+                    and len(embeddings) == len(texts)
+                ):
                     return list(embeddings)
 
             return [self.embedding_function(text) for text in texts]
+        if self._openai_client is None:
+            raise ValueError("No embedding client is configured.")
         return [
             item.embedding
             for item in self._openai_client.embeddings.create(
@@ -885,7 +919,8 @@ class OracleVectorSearchTool(BaseTool):
                         {self.oracle_config.distance_strategy}
                     ) AS distance
                 FROM {table_name}
-                {"WHERE " + where_clause if where_clause else ""}
+                WHERE {_EMBEDDING_COLUMN} IS NOT NULL
+                {"AND (" + where_clause + ")" if where_clause else ""}
                 ORDER BY distance
                 FETCH APPROX FIRST :result_limit ROWS ONLY
             """  # noqa: S608
@@ -902,6 +937,8 @@ class OracleVectorSearchTool(BaseTool):
 
             formatted_rows = []
             for text, metadata, distance in rows:
+                if distance is None:
+                    continue
                 text = _read_lob_if_needed(text)
                 metadata = _read_lob_if_needed(metadata)
                 distance_value = float(distance)
@@ -934,14 +971,16 @@ class OracleVectorSearchTool(BaseTool):
 
     def __del__(self) -> None:
         try:
-            if getattr(self, "_owns_client", False) and getattr(self, "client", None):
-                self.client.close()
+            client = getattr(self, "client", None)
+            if getattr(self, "_owns_client", False) and client is not None:
+                client.close()
         except Exception as exc:
             if "DPY-1001" not in str(exc):
                 logger.error("Failed to close Oracle client: %s", exc)
 
         try:
-            if getattr(self, "_openai_client", None):
-                self._openai_client.close()
+            openai_client = getattr(self, "_openai_client", None)
+            if openai_client is not None:
+                openai_client.close()
         except Exception as exc:
             logger.error("Failed to close OpenAI client: %s", exc)

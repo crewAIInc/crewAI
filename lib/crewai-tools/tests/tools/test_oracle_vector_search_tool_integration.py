@@ -97,6 +97,41 @@ def test_all_filters_limits_and_failed_batch_with_real_connection():
                 )
             )
             assert {row["context"] for row in rows} == expected
+        for operator, expected in [
+            ("$in", {"Oracle vector both", "Oracle vector one"}),
+            ("$nin", {"Oracle vector missing", "Oracle vector empty"}),
+        ]:
+            rows = json.loads(
+                tool._run(
+                    "Oracle vector",
+                    filters=json.dumps({"tags": {operator: ["red"]}}),
+                    limit=10,
+                )
+            )
+            assert {row["context"] for row in rows} == expected
+        tool.add_texts(
+            ["Oracle vector scalar"],
+            metadatas=[{"tags": "red", "file name": "guide"}],
+            ids=["scalar"],
+        )
+        rows = json.loads(
+            tool._run(
+                "Oracle vector",
+                filters=json.dumps({"tags": {"$in": ["red"]}}),
+                limit=10,
+            )
+        )
+        assert {row["context"] for row in rows} == {
+            "Oracle vector both",
+            "Oracle vector one",
+            "Oracle vector scalar",
+        }
+        rows = json.loads(
+            tool._run(
+                "Oracle vector", filters=json.dumps({"file name": "guide"}), limit=10
+            )
+        )
+        assert [row["context"] for row in rows] == ["Oracle vector scalar"]
         assert len(json.loads(tool._run("Oracle vector", limit=1))) == 1
 
         # A failed batch must preserve work already pending on this connection.
@@ -108,6 +143,9 @@ def test_all_filters_limits_and_failed_batch_with_real_connection():
         with pytest.raises(oracledb.IntegrityError):
             tool.add_texts(["Oracle first", "Oracle duplicate"], ids=["batch", "both"])
         connection.commit()
+        rows = json.loads(tool._run("Oracle vector", limit=10))
+        assert len(rows) == 5
+        assert "unrelated" not in {row["context"] for row in rows}
         with connection.cursor() as cursor:
             cursor.execute(
                 f'SELECT id FROM "{table_name}" WHERE id IN (:1, :2)',

@@ -1447,3 +1447,41 @@ def test_del_logs_cleanup_errors(caplog):
 
     assert "Failed to close Oracle client" in caplog.text
     assert "Failed to close OpenAI client" in caplog.text
+
+
+@pytest.mark.parametrize("operator", ["$in", "$nin"])
+def test_membership_filters_probe_array_elements(operator):
+    binds = []
+    condition = vs._generate_condition("tags", {operator: ["red", "blue"]}, binds)
+    assert "$.tags[*]?(@ in ($val0,$val1))" in condition
+    assert binds == ["red", "blue"]
+    assert ("NOT" in condition) is (operator == "$nin")
+
+
+@pytest.mark.parametrize("operator", ["$eq", "$in", "$nin", "$all", "$exists"])
+def test_filters_quote_spaced_member_names(operator):
+    value = (
+        True
+        if operator == "$exists"
+        else ["red"]
+        if operator in {"$in", "$nin", "$all"}
+        else "red"
+    )
+    condition = vs._generate_condition("file name.tags", {operator: value}, [])
+    assert '$."file name".tags' in condition
+
+
+@pytest.mark.parametrize("key", ["", "*", "a..b", "a[", "a[0]", "a'", 'a"', "a[*]junk"])
+def test_filters_reject_invalid_path_syntax(key):
+    with pytest.raises(ValueError, match="Invalid metadata key"):
+        vs._generate_condition(key, "red", [])
+
+
+def test_null_distances_do_not_hide_valid_matches():
+    cursor = FakeCursor(fetchall_result=[("missing", {}, None), ("valid", {}, 0.2)])
+    tool = make_tool(client=FakeConnection([FakeCursor(fetchone_result=(1,)), cursor]))
+    results = json.loads(tool._run("query", filters=json.dumps({"source": "docs"})))
+    assert [r["context"] for r in results] == ["valid"]
+    sql = cursor.executed[0][0]
+    assert "WHERE embedding IS NOT NULL" in sql
+    assert "AND (" in sql

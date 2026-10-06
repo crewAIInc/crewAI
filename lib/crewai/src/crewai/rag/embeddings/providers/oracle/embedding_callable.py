@@ -6,6 +6,8 @@ from contextlib import suppress
 import json
 from typing import Any
 
+import numpy as np
+
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.types import Documents, Embeddings
 
@@ -22,7 +24,7 @@ class OracleEmbeddingFunction(EmbeddingFunction[Documents]):
         proxy: str | None = None,
     ) -> None:
         try:
-            import oracledb  # type: ignore[import-not-found]
+            import oracledb
         except ImportError as e:
             raise ImportError(
                 "oracledb is required for oracle embeddings. Install it with: uv add oracledb"
@@ -40,17 +42,23 @@ class OracleEmbeddingFunction(EmbeddingFunction[Documents]):
         return "oracle"
 
     def __call__(self, input: Documents) -> Embeddings:
-        """Generate embeddings for input documents using Oracle Database."""
+        """Embed documents of at most 4000 characters, aligned by Oracle embed_id.
+
+        Missing, duplicate, or unexpected result IDs raise ValueError. LOB
+        payloads are read locally without changing process-wide driver defaults.
+        """
         if isinstance(input, str):
             input = [input]
         if not input:
             raise ValueError("Oracle embeddings input cannot be empty.")
 
+        if any(len(text) > 4000 for text in input):
+            raise ValueError(
+                "Oracle embedding documents must not exceed 4000 characters."
+            )
+
         cursor = None
-        previous_fetch_lobs = self._oracledb.defaults.fetch_lobs
         try:
-            # Return strings/bytes for JSON payloads instead of locators.
-            self._oracledb.defaults.fetch_lobs = False
             cursor = self._conn.cursor()
 
             if self._proxy:
@@ -71,15 +79,33 @@ class OracleEmbeddingFunction(EmbeddingFunction[Documents]):
                 [inputs, self._embedding_params],
             )
 
-            embeddings: list[list[float]] = []
+            embeddings_by_id: dict[int, list[float]] = {}
             for row in cursor:
                 if row is None:
                     raise ValueError("Oracle embeddings returned an empty row.")
-                parsed = json.loads(row[0])
-                embeddings.append(json.loads(parsed["embed_vector"]))
-            return embeddings
+                payload = row[0]
+                if hasattr(payload, "read"):
+                    payload = payload.read()
+                parsed = json.loads(payload)
+                embed_id = parsed.get("embed_id")
+                if (
+                    type(embed_id) is not int
+                    or not 1 <= embed_id <= len(input)
+                    or embed_id in embeddings_by_id
+                ):
+                    raise ValueError(
+                        "Oracle embeddings returned an invalid or duplicate embed_id."
+                    )
+                embeddings_by_id[embed_id] = json.loads(parsed["embed_vector"])
+            if len(embeddings_by_id) != len(input):
+                raise ValueError(
+                    "Oracle embeddings count does not match the input documents."
+                )
+            return [
+                np.asarray(embeddings_by_id[i], dtype=np.float32)
+                for i in range(1, len(input) + 1)
+            ]
         finally:
-            self._oracledb.defaults.fetch_lobs = previous_fetch_lobs
             if cursor is not None:
                 if self._proxy and not self._owns_connection:
                     with suppress(Exception):

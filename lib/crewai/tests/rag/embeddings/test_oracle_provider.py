@@ -93,8 +93,8 @@ class FakeOracleModule:
         return self._connection
 
 
-def _embedding_row(vector: list[float]) -> tuple[str]:
-    return (json.dumps({"embed_vector": json.dumps(vector)}),)
+def _embedding_row(vector: list[float], embed_id: int = 1) -> tuple[str]:
+    return (json.dumps({"embed_id": embed_id, "embed_vector": json.dumps(vector)}),)
 
 
 class TestOracleProvider:
@@ -148,7 +148,7 @@ class TestOracleProvider:
 
     def test_build_embedder_with_existing_connection_reuses_it(self, monkeypatch: pytest.MonkeyPatch):
         fake_conn = FakeConnection(
-            cursor=FakeCursor(rows=[_embedding_row([0.1, 0.2]), _embedding_row([0.3, 0.4])])
+            cursor=FakeCursor(rows=[_embedding_row([0.1, 0.2]), _embedding_row([0.3, 0.4], 2)])
         )
         fake_oracledb = FakeOracleModule()
         monkeypatch.setitem(sys.modules, "oracledb", fake_oracledb)
@@ -371,3 +371,57 @@ class TestOracleProvider:
         )
 
         embedder.__del__()
+
+@pytest.mark.parametrize("fetch_lobs", [True, False])
+def test_embedding_orders_rows_and_reads_lobs_without_changing_defaults(
+    monkeypatch, fetch_lobs
+):
+    from unittest.mock import Mock
+
+    lob = Mock()
+    lob.read.return_value = _embedding_row([2.0], 2)[0]
+    cursor = FakeCursor(rows=[(lob,), _embedding_row([1.0], 1)])
+    driver = FakeOracleModule()
+
+    class ReadOnlyDefaults:
+        @property
+        def fetch_lobs(self):
+            return fetch_lobs
+
+    driver.defaults = ReadOnlyDefaults()
+    monkeypatch.setitem(sys.modules, "oracledb", driver)
+    embedder = OracleEmbeddingFunction(conn=FakeConnection(cursor), embedding_params={})
+    assert [vector.tolist() for vector in embedder(["first", "second"])] == [
+        [1.0],
+        [2.0],
+    ]
+    assert driver.defaults.fetch_lobs is fetch_lobs
+    assert cursor.closed
+
+
+@pytest.mark.parametrize("ids", [[], [1], [1, 1], [1, 3], [0, 2], [True, 2], [None, 2]])
+def test_embedding_rejects_missing_duplicate_and_invalid_ids(monkeypatch, ids):
+    cursor = FakeCursor(rows=[_embedding_row([1.0], i) for i in ids])
+    monkeypatch.setitem(sys.modules, "oracledb", FakeOracleModule())
+    embedder = OracleEmbeddingFunction(conn=FakeConnection(cursor), embedding_params={})
+    with pytest.raises(ValueError, match="count|embed_id"):
+        embedder(["first", "second"])
+    assert cursor.closed
+
+
+def test_embedding_rejects_long_documents_before_database_call(monkeypatch):
+    cursor = FakeCursor()
+    monkeypatch.setitem(sys.modules, "oracledb", FakeOracleModule())
+    embedder = OracleEmbeddingFunction(conn=FakeConnection(cursor), embedding_params={})
+    with pytest.raises(ValueError, match="4000"):
+        embedder(["x" * 4001])
+    assert cursor.executed == []
+
+
+def test_proxy_environment_is_provider_specific(monkeypatch):
+    monkeypatch.setenv("PROXY", "generic-proxy")
+    kwargs = {"conn": object(), "embedding_params": {"provider": "database"}}
+    assert OracleProvider(**kwargs).proxy is None
+    monkeypatch.setenv("ORACLE_PROXY", "oracle-proxy")
+    assert OracleProvider(**kwargs).proxy == "oracle-proxy"
+    assert OracleProvider(**kwargs, proxy="explicit-proxy").proxy == "explicit-proxy"

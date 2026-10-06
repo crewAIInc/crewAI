@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import Field, model_validator
+from pydantic_settings import SettingsConfigDict
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.providers.oracle.embedding_callable import (
@@ -14,6 +15,8 @@ from crewai.rag.embeddings.providers.oracle.embedding_callable import (
 
 class OracleProvider(BaseEmbeddingsProvider[OracleEmbeddingFunction]):
     """Oracle embeddings provider."""
+
+    model_config = SettingsConfigDict(env_prefix="ORACLE_")
 
     embedding_callable: type[OracleEmbeddingFunction] = Field(
         default=OracleEmbeddingFunction,
