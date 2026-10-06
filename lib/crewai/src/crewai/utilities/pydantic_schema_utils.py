@@ -873,12 +873,16 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
     effective_root = force_additional_properties_false(effective_root)
 
     in_progress: dict[int, Any] = {}
+    # Keep all temporary schema dicts alive for the full conversion so that
+    # id() values registered in in_progress are never reused by a later dict.
+    _schema_keepalive: list[Any] = []
     model = _build_model_from_schema(
         json_schema,
         effective_root,
         model_name=model_name,
         enrich_descriptions=enrich_descriptions,
         in_progress=in_progress,
+        _schema_keepalive=_schema_keepalive,
         __config__=__config__,
         __base__=__base__,
         __module__=__module__,
@@ -911,6 +915,7 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     model_name: str | None,
     enrich_descriptions: bool,
     in_progress: dict[int, Any],
+    _schema_keepalive: list[Any] | None = None,
     __config__: ConfigDict | None = None,
     __base__: type[BaseModel] | None = None,
     __module__: str = __name__,
@@ -944,6 +949,7 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
             effective_root,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            _schema_keepalive=_schema_keepalive,
         )
         for name, prop in (json_schema.get("properties", {}) or {}).items()
     }
@@ -973,6 +979,7 @@ def _json_schema_to_pydantic_field(
     *,
     enrich_descriptions: bool = False,
     in_progress: dict[int, Any] | None = None,
+    _schema_keepalive: list[Any] | None = None,
 ) -> Any:
     """Convert a JSON schema property to a Pydantic field definition.
 
@@ -992,6 +999,7 @@ def _json_schema_to_pydantic_field(
         name_=name.title(),
         enrich_descriptions=enrich_descriptions,
         in_progress=in_progress,
+        _schema_keepalive=_schema_keepalive,
     )
     is_required = name in required
 
@@ -1142,6 +1150,7 @@ def _json_schema_to_pydantic_type(
     name_: str | None = None,
     enrich_descriptions: bool = False,
     in_progress: dict[int, Any] | None = None,
+    _schema_keepalive: list[Any] | None = None,
 ) -> Any:
     """Convert a JSON schema to a Python/Pydantic type.
 
@@ -1176,6 +1185,7 @@ def _json_schema_to_pydantic_type(
             name_=name_,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            _schema_keepalive=_schema_keepalive,
         )
 
     enum_values = json_schema.get("enum")
@@ -1196,6 +1206,7 @@ def _json_schema_to_pydantic_type(
                 name_=f"{name_ or 'Union'}Option{i}",
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                _schema_keepalive=_schema_keepalive,
             )
             for i, schema in enumerate(any_of_schemas)
         ]
@@ -1210,6 +1221,7 @@ def _json_schema_to_pydantic_type(
                 name_=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                _schema_keepalive=_schema_keepalive,
             )
         if in_progress is not None:
             return _build_model_from_schema(
@@ -1218,6 +1230,7 @@ def _json_schema_to_pydantic_type(
                 model_name=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                _schema_keepalive=_schema_keepalive,
             )
         merged = _merge_all_of_schemas(all_of_schemas, root_schema)
         return _json_schema_to_pydantic_type(
@@ -1226,6 +1239,7 @@ def _json_schema_to_pydantic_type(
             name_=name_,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            _schema_keepalive=_schema_keepalive,
         )
 
     type_ = json_schema.get("type")
@@ -1240,16 +1254,31 @@ def _json_schema_to_pydantic_type(
         # members are handled just above: build a Union of the
         # corresponding Python types. A single-element list collapses to
         # that one type, matching typing.Union's own behavior.
-        member_types = [
-            _json_schema_to_pydantic_type(
-                {**json_schema, "type": member},
-                root_schema,
-                name_=f"{name_ or 'Union'}Option{i}",
-                enrich_descriptions=enrich_descriptions,
-                in_progress=in_progress,
-            )
-            for i, member in enumerate(type_)
-        ]
+        # Build each member type. Keep all derived schemas alive in a list
+        # for the full duration of the conversion so that no temporary dict is
+        # GC'd while in_progress still holds its id(). "null" maps directly to
+        # type(None) and never needs a temporary dict at all.
+        # Build each member type. Temporary schema dicts are appended to
+        # _schema_keepalive so they remain alive for the entire top-level
+        # conversion, preventing id() reuse in the shared in_progress cache.
+        member_types = []
+        for i, member in enumerate(type_):
+            if member == "null":
+                member_types.append(type(None))
+            else:
+                member_schema = {**json_schema, "type": member}
+                if _schema_keepalive is not None:
+                    _schema_keepalive.append(member_schema)
+                member_types.append(
+                    _json_schema_to_pydantic_type(
+                        member_schema,
+                        root_schema,
+                        name_=f"{name_ or 'Union'}Option{i}",
+                        enrich_descriptions=enrich_descriptions,
+                        in_progress=in_progress,
+                        _schema_keepalive=_schema_keepalive,
+                    )
+                )
         return Union[tuple(member_types)]  # noqa: UP007
 
     if type_ == "string":
@@ -1269,6 +1298,7 @@ def _json_schema_to_pydantic_type(
                 name_=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                _schema_keepalive=_schema_keepalive,
             )
             return list[item_type]  # type: ignore[valid-type]
         return list
@@ -1282,6 +1312,7 @@ def _json_schema_to_pydantic_type(
                     model_name=name_,
                     enrich_descriptions=enrich_descriptions,
                     in_progress=in_progress,
+                    _schema_keepalive=_schema_keepalive,
                 )
             json_schema_ = json_schema.copy()
             if json_schema_.get("title") is None:
