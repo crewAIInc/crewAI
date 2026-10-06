@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Mapping
+from contextvars import ContextVar
 from datetime import datetime
 import json
 import logging
@@ -33,6 +34,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.hooks.dispatch import HookAborted
+from crewai.llm_overlay import overlay_model_for_model
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
@@ -87,6 +89,10 @@ logger = logging.getLogger(__name__)
 # stay None until _ensure_litellm() rebinds them.
 _litellm_loaded = False
 LITELLM_AVAILABLE = False
+
+# The instance ``LLM.__new__`` just built on a model ``llm_overlay`` mapped to,
+# whose ``__init__`` call with the caller's arguments must be skipped.
+_overlay_built: ContextVar[LLM | None] = ContextVar("llm_overlay_built", default=None)
 
 if TYPE_CHECKING:
     import litellm
@@ -194,6 +200,30 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
 ]
 
 
+# The provider a ``<prefix>/<model>`` string routes to, by prefix: the names
+# crewAI accepts for each native provider. ``llm_overlay`` compares model
+# names through the same table, so ``google/x`` and ``gemini/x`` are one model.
+PROVIDER_ALIASES: Final[dict[str, str]] = {
+    "openai": "openai",
+    "anthropic": "anthropic",
+    "claude": "anthropic",
+    "azure": "azure",
+    "azure_openai": "azure",
+    "google": "gemini",
+    "gemini": "gemini",
+    "bedrock": "bedrock",
+    "aws": "bedrock",
+    "openrouter": "openrouter",
+    "deepseek": "deepseek",
+    "ollama": "ollama",
+    "ollama_chat": "ollama_chat",
+    "hosted_vllm": "hosted_vllm",
+    "cerebras": "cerebras",
+    "dashscope": "dashscope",
+    "snowflake": "snowflake",
+}
+
+
 class Delta(TypedDict):
     content: str | None
     role: str | None
@@ -266,6 +296,11 @@ class LLM(BaseLLM):
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
+        if cls is LLM:
+            mapped = cls._overlay_mapped(model, is_litellm, kwargs)
+            if mapped is not None:
+                return mapped
+
         route = cls._resolve_route(model, kwargs)
         if route.native_class is not None and not is_litellm:
             try:
@@ -309,6 +344,39 @@ class LLM(BaseLLM):
             raise ImportError(error_msg) from None
 
         return object.__new__(cls)
+
+    def __init__(self, model: str, is_litellm: bool = False, **kwargs: Any) -> None:
+        # Python calls ``__init__`` on whatever ``__new__`` returns when it is an
+        # ``LLM``; an instance ``llm_overlay`` built on a mapped model is already
+        # initialized, and initializing it again with the caller's arguments
+        # would put the declared model back.
+        if _overlay_built.get() is self:
+            _overlay_built.set(None)
+            return
+        super().__init__(model=model, is_litellm=is_litellm, **kwargs)
+
+    @classmethod
+    def _overlay_mapped(
+        cls, model: str, is_litellm: bool, kwargs: dict[str, Any]
+    ) -> LLM | None:
+        """``LLM(model, **kwargs)`` built on the model an ``llm_overlay`` key maps it to.
+
+        ``None`` when no model key of the active overlay matches ``model``. The
+        provider a bare model routes to is put beside it, so a key written
+        ``model:openai/gpt-4o`` matches ``LLM(model="gpt-4o")``.
+        """
+        provider = kwargs.get("provider")
+        if not provider and "/" not in model:
+            provider = cls._infer_provider_from_model(model)
+        mapped_model = overlay_model_for_model(model, provider)
+        if mapped_model is None:
+            return None
+        from crewai.utilities.llm_utils import create_llm_from_kwargs_like
+
+        built = create_llm_from_kwargs_like(mapped_model, model, kwargs, is_litellm)
+        if isinstance(built, LLM):
+            _overlay_built.set(built)
+        return cast(LLM, built)
 
     @classmethod
     def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
@@ -416,27 +484,7 @@ class LLM(BaseLLM):
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 
-            provider_mapping = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-                "openrouter": "openrouter",
-                "deepseek": "deepseek",
-                "ollama": "ollama",
-                "ollama_chat": "ollama_chat",
-                "hosted_vllm": "hosted_vllm",
-                "cerebras": "cerebras",
-                "dashscope": "dashscope",
-                "snowflake": "snowflake",
-            }
-
-            canonical_provider = provider_mapping.get(prefix.lower())
+            canonical_provider = PROVIDER_ALIASES.get(prefix.lower())
 
             valid_native_model = bool(
                 canonical_provider

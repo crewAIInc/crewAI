@@ -616,3 +616,78 @@ from crewai.flow import (
 
 - [إتقان إدارة حالة Flow](/ar/guides/flows/mastering-flow-state)
 - [أنشئ أول Flow](/ar/guides/flows/first-flow)
+
+
+## Jobs تجريبية تمتد عبر أدوار المحادثة
+
+هذه API تجريبية وقد تتغير. استوردها صراحةً من `crewai.experimental.flow_jobs`؛ وليست جزءًا من واجهة `crewai.flow` المستقرة.
+
+توفر `JobRecord` و`JobState` و`JobUpdate` و`JobWorkState` و`JobWorkFlow` و`JobRunner` عقدًا اختياريًا للـ jobs داخل الذاكرة. تحتفظ conversational Flows الحالية بسلوكها. لكل job هوية مستقلة ودور منشئ ومراجعة ومحاولة تنفيذ وحالة ومرحلة حالية ومراحل مكتملة وخطأ. تضيف التطبيقات مدخلات ومخرجات ذات أنواع محددة؛ ولا يلزم إنشاء فئة منفصلة للـ artifacts.
+
+عرّف حقول النتائج القابلة للكتابة في `output_fields`. لا يستطيع worker تغيير حقول المدخلات أو الملكية أو دورة الحياة عبر payload المخرجات. يُتحقق من السجل المرشح بالكامل قبل commit؛ ولا تغير التحديثات غير الصالحة أو التابعة لمالك آخر أو القديمة أو المكررة أو اللاحقة للانتهاء الحالة المقبولة.
+
+```python
+import asyncio
+from typing import ClassVar
+from pydantic import Field
+from crewai.flow import ConversationState, start
+from crewai.experimental.flow_jobs import (
+    JobRecord, JobRunner, JobState, JobWorkFlow, JobWorkState, add_job,
+)
+
+class ReportJob(JobRecord):
+    output_fields: ClassVar[frozenset[str]] = frozenset({"notes"})
+    question: str
+    notes: list[str] = Field(default_factory=list)
+    stage: str = "collect"
+
+class WorkChatState(ConversationState, JobState[ReportJob]):
+    pass
+
+class ReportWork(JobWorkFlow[JobWorkState[ReportJob]]):
+    @start()
+    def collect(self):
+        self.check_open()
+        self.publish_update("started")
+        self.publish_update(
+            "stage_completed", stage="collect", outputs={"notes": ["Example fact"]},
+        )
+        self.publish_update("completed")
+
+async def run_job():
+    state = WorkChatState()
+    changes = asyncio.Queue()
+
+    def make_work(job, inputs, publish):
+        return ReportWork(
+            initial_state=JobWorkState[ReportJob](job=job),
+            publish=publish, suppress_flow_events=True,
+        )
+
+    runner = JobRunner(state, make_work, on_update=changes.put)
+    try:
+        async with runner.state_lock:
+            job = ReportJob(session_id=state.id, question="Example report")
+            if not add_job(state, job):
+                raise RuntimeError("Job registration rejected")
+            runner.submit(job, {})
+        while True:
+            snapshot = await changes.get()
+            if snapshot["jobs"][0]["status"] in {"completed", "failed"}:
+                return snapshot
+    finally:
+        await runner.aclose()
+
+# Run in a script: asyncio.run(run_job())
+
+```
+
+أنشئ `JobRunner(state, make_work, on_update=publish_snapshot)` داخل asyncio loop يعمل بالفعل. تعيد `make_work(job, inputs, publish)` كائن `JobWorkFlow` غير متدفق، بحالة ذات أنواع محددة ونسخ من job والمدخلات، مع `publish=publish`. الدالة `on_update` هي async callback تتلقى snapshots متوافقة مع JSON (`session_id`, `seq`, `jobs`)؛ اربطها بوسيلة النقل الموجودة. يمكن لـ `format_error` حذف تفاصيل provider الحساسة، وتراقب `on_worker_event` بدء worker وانتهاءه.
+
+استخدم `runner.state_lock` مع **كل** دور في المقدمة وتسجيل job وتعديل لحالة الأب. سجّل بواسطة `add_job(state, job)` ثم استدعِ `runner.submit(job, inputs)`. شغّل الأدوار المتزامنة في worker thread مع الاحتفاظ بالقفل؛ ولا تشغّل دورين بالتوازي على Flow واحد. تعمل `publish_update()` أيضًا خارج event loop الخاص بالـ runner وتنتظر قبول commit قبل المرحلة التالية. يتطلب تحديث `stage_started` تثبيت المرحلة السابقة؛ ويحفظ `stage_completed` المخرجات ذات الأنواع المحددة قبل الإكمال الناجح. يحافظ الفشل اللاحق على المخرجات السابقة.
+
+قدّم حالة job ومخرجاته ذات الصلة عبر `build_router_context()` و`build_agent_context()`. لا تتحول snapshots تلقائيًا إلى رسائل محادثة عامة أو ردود صوتية. يبقى تفسير المجال وحدود قبول العمل من سياسات التطبيق.
+
+عند إغلاق الجلسة، استدعِ `runner.request_close()` على loop المالك قبل انتظار انتهاء التنفيذ في المقدمة، ثم `await runner.aclose()`. يؤدي ذلك إلى إغلاق قبول العمل والنشر وإرسال إشارة إلى كل worker وتحرير publishers المنتظرين وانتظار tasks المملوكة. يجب أن تستدعي طرق العمل `check_open()` عند حدود المراحل. لا تُجهض عملية provider قيد التنفيذ. يغلق فشل subscriber الـ runner بدل ترك publishers معلقين. لا ينبغي أن يؤدي إيقاف الكلام وحده إلى إغلاق runner.
+
+دورة الحياة الأولية هي `queued → running → completed/failed`. لا تتوفر pause/resume أو الاستبدال أو تسليم الردود تلقائيًا أو الاستعادة الموزعة. يمكن تسلسل السجلات باستخدام إمكانات الحالة الموجودة، لكن استعادتها لا تعيد إنشاء workers نشطين ولا تضمن تنفيذ الآثار الخارجية مرة واحدة بالضبط.

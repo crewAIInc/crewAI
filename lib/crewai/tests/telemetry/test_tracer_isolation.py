@@ -118,6 +118,32 @@ def test_a_feature_span_keeps_only_what_the_feature_may_send(telemetry_with_expo
     assert deploy_span.attributes["feature"] == "cli_usage:deploy"
 
 
+def test_the_models_span_carries_the_models_compared_and_nothing_else(
+    telemetry_with_exporter,
+):
+    telemetry, exporter = telemetry_with_exporter
+    telemetry.set_tracer()
+
+    telemetry.feature_usage_span(
+        "cli_usage:eval_models",
+        {
+            "authenticated": "true",
+            "models": "openai/gpt-4o-mini,anthropic/claude-haiku-4-5",
+            "models_count": "2",
+            "evaluation_id": "ev-1",
+            "organization_id": "org-1",
+        },
+    )
+
+    (span,) = exporter.get_finished_spans()
+    assert span.attributes["feature"] == "cli_usage:eval_models"
+    assert span.attributes["authenticated"] == "true"
+    assert span.attributes["models"] == "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"
+    assert span.attributes["models_count"] == "2"
+    assert "evaluation_id" not in span.attributes
+    assert "organization_id" not in span.attributes
+
+
 def test_our_spans_are_unaffected_by_an_application_provider(telemetry_with_exporter):
     """An app that installs its own provider must not divert our telemetry.
 

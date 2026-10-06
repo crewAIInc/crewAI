@@ -24,12 +24,12 @@ dependencies = [
     "opentelemetry-sdk>=1.42,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.42,<2",
     # Data Handling
-    "chromadb~=1.1.0",
+    "chromadb~=1.5.9",
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
     "python-dotenv>=1.2.2,<2",
-    "pyjwt>=2.13.0,<3",
+    "pyjwt>=2.15.0,<3",
     # Configuration and Utils
     "click>=8.1.7,<9",
     "appdirs~=1.4.4",
@@ -90,7 +90,7 @@ voyageai = [
     "voyageai~=0.3.5",
 ]
 litellm = [
-    "litellm>=1.84.0,<2",
+    "litellm>=1.88.6,<2",
 ]
 bedrock = [
     "boto3~=1.43.46",
