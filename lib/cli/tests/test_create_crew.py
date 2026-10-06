@@ -1319,6 +1319,8 @@ def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     project_root = tmp_path / "json_crew"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert "## Evaluating this crew/flow" in agents_md
+    assert "crewai-eval:" not in agents_md
     assert "crew.jsonc" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
@@ -1339,3 +1341,4 @@ def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
     assert "Run `crewai eval` after a change" in agents_md
     assert "it prints a **markdown brief** after the verdict" in agents_md
     assert 'crewai eval --models "provider/model,…"' in agents_md
+    assert "crewai-eval:" not in agents_md  # the markers never reach a project

@@ -82,3 +82,4 @@ def test_scaffolded_flow_agents_md_tells_assistants_to_evaluate_with_crewai_eval
         assert "it prints a **markdown brief** after the verdict" in agents_md
         assert 'crewai eval --models "provider/model,…"' in agents_md
         assert "{{name}}" not in agents_md
+        assert "crewai-eval:" not in agents_md

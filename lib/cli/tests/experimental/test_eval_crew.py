@@ -1707,4 +1707,5 @@ def test_the_help_tells_an_agent_it_gets_a_brief():
         "Run by a script or coding agent (no terminal), it prints a markdown brief "
         "after the verdict — what failed and the change to make — so an agent can act on it directly"
     ) in help_text
-    assert "it prints a markdown brief after the comparison" in help_text
+    assert "That is when AMP provides the brief: otherwise its link, when AMP sends only that, else nothing more" in help_text
+    assert "it prints a markdown brief after the comparison when AMP provides one" in help_text

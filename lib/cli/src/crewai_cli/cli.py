@@ -709,8 +709,8 @@ def run(
         'list of provider/model, e.g. "openai/gpt-4o-mini,anthropic/claude-haiku-4-5". '
         "The deployment runs once as deployed and once per model; needs `crewai login`. "
         "Run by a script or coding agent (no terminal), it prints a markdown brief "
-        "after the comparison: the model for each part and the changes to make "
-        "(or a link to it, when AMP sends only that)."
+        "after the comparison when AMP provides one — the model for each part and "
+        "the changes to make — else its link, else nothing more."
     ),
 )
 @click.option(
@@ -732,9 +732,9 @@ def eval_command(
 
     Run by a script or coding agent (no terminal), it prints a markdown brief
     after the verdict — what failed and the change to make — so an agent can act
-    on it directly (or a link to the brief, when AMP sends only that). It grades
-    a run that already happened: after a change, `crewai run` again, then
-    `crewai eval`.
+    on it directly. That is when AMP provides the brief: otherwise its link, when
+    AMP sends only that, else nothing more. It grades a run that already
+    happened: after a change, `crewai run` again, then `crewai eval`.
 
     A run's evaluation exits 0 only when the goal gate PASSED, and 1 otherwise — a
     failed gate, no verdict, or an evaluation that could not run — so a CI job can

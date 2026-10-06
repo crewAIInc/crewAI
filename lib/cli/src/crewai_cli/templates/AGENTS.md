@@ -101,6 +101,7 @@ Two rules:
 
 Full details: [Observability & Traces](#observability--traces) and [Deployment](#deployment).
 
+<!-- crewai-eval:start -->
 ## Evaluating this crew/flow
 
 Run `crewai eval` after a change: it grades the project's last traced run — a goal gate, a 1–5 grade per area, and a link to the full report. It grades a run that already happened, so after changing code run the project again first (`crewai run`, with `CREWAI_TRACING_ENABLED=true` in `.env`; a run with no terminal is only traced when logged in with `crewai login`), then `crewai eval`. In a terminal with no traced run recorded, it offers to run the project once with tracing on.
@@ -109,6 +110,7 @@ Run `crewai eval` after a change: it grades the project's last traced run — a 
 - `crewai eval --models "provider/model,…"` compares models on the deployed project (needs `crewai login` and a deployment); the brief then names the model for each part and how sure each difference is.
 - Exit codes: `crewai eval` exits 0 only when the goal gate passed; `--models` exits 0 when the comparison finished, whatever each model's grades. Criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.
 
+<!-- crewai-eval:end -->
 ## Quick Reference
 
 ```bash
@@ -143,10 +145,12 @@ crewai template list
 crewai run                  # Run crew or flow (auto-detects from pyproject.toml)
 crewai flow kickoff         # Deprecated compatibility alias for crewai run
 
+<!-- crewai-eval:start -->
 # Evaluation
 crewai eval                           # Grade the last traced run; prints a markdown brief when run by an agent
 crewai eval --models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"  # Compare models on the deployment
 
+<!-- crewai-eval:end -->
 # Testing & training
 crewai test                           # Test crew (default: 2 iterations, gpt-4o-mini)
 crewai test -n 5 -m gpt-4o           # Custom iterations and model
