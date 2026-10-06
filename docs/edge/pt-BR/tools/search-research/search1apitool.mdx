@@ -89,4 +89,4 @@ O agente fornece apenas `query` (busca e notícias) ou `url` (leitura de página
 
 Busca e notícias retornam um objeto JSON com a `query` e uma lista `results`. Cada resultado tem `title`, `url` e `snippet`, além de `published_date` e `content` quando disponíveis. A ferramenta de leitura retorna um objeto JSON com `title`, `url` e `content`.
 
-Requisições com falha geram um erro que inclui o status HTTP e a mensagem retornada pela API, por exemplo `HTTP 401: Unauthorized: Invalid bearer credential`.
+Quando a API responde com um erro HTTP, a ferramenta gera um erro que inclui o status HTTP e a mensagem retornada pela API, por exemplo `HTTP 401: Unauthorized: Invalid bearer credential`. Falhas de conexão e tempos limite geram um erro com a causa da falha da requisição, sem status HTTP.

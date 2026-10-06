@@ -115,6 +115,7 @@ class _Search1APIResultsTool(Search1APIBaseTool):
     )
     max_content_length_per_result: int = Field(
         default=4000,
+        ge=1,
         description="Maximum length of crawled page content kept per result, "
         "to avoid context window issues.",
     )
@@ -149,9 +150,13 @@ class _Search1APIResultsTool(Search1APIBaseTool):
 
         results: list[dict[str, str]] = []
         for r in raw_results:
+            link = r.get("link")
+            # A result without a usable URL can't be cited or crawled.
+            if not isinstance(link, str) or not link.strip():
+                continue
             result = {
                 "title": str(r.get("title") or ""),
-                "url": str(r.get("link") or ""),
+                "url": link,
                 "snippet": str(r.get("snippet") or ""),
             }
             if r.get("published_date"):
@@ -248,6 +253,7 @@ class Search1APICrawlTool(Search1APIBaseTool):
     args_schema: type[BaseModel] = Search1APICrawlToolSchema
     max_content_length: int | None = Field(
         default=None,
+        ge=1,
         description="Maximum length of the returned page content. None keeps "
         "the full page.",
     )
@@ -258,7 +264,10 @@ class Search1APICrawlTool(Search1APIBaseTool):
         if not isinstance(page, dict) or not isinstance(page.get("content"), str):
             raise RuntimeError("Search1API /crawl returned a malformed response")
         content: str = page["content"]
-        if self.max_content_length and len(content) > self.max_content_length:
+        if (
+            self.max_content_length is not None
+            and len(content) > self.max_content_length
+        ):
             content = content[: self.max_content_length] + "..."
         return json.dumps(
             {

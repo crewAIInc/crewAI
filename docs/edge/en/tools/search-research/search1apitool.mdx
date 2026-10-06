@@ -89,4 +89,4 @@ The agent only provides `query` (search and news) or `url` (crawl). All other pa
 
 Search and news return a JSON object with the `query` and a `results` list. Each result has `title`, `url`, and `snippet`, plus `published_date` and `content` when available. The crawl tool returns a JSON object with `title`, `url`, and `content`.
 
-Failed requests raise an error that includes the HTTP status and the message returned by the API, for example `HTTP 401: Unauthorized: Invalid bearer credential`.
+When the API responds with an HTTP error, the tool raises an error that includes the HTTP status and the message returned by the API, for example `HTTP 401: Unauthorized: Invalid bearer credential`. Connection failures and timeouts raise an error with the underlying request failure instead, without an HTTP status.

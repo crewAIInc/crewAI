@@ -210,3 +210,28 @@ def test_api_key_is_not_exposed():
 def test_crawl_results_cannot_exceed_max_results():
     with pytest.raises(ValidationError, match="crawl_results"):
         Search1APISearchTool(max_results=2, crawl_results=3)
+
+
+def test_search_skips_results_without_link():
+    body = {
+        "results": [
+            {"title": "No link", "snippet": "missing"},
+            {"title": "Empty link", "link": "  "},
+            {"title": "Not a string", "link": 42},
+            {"title": "Kept", "link": "https://example.com"},
+        ]
+    }
+    with patch(POST, return_value=_response(json_data=body)):
+        output = json.loads(Search1APISearchTool().run(query="q"))
+
+    assert output["results"] == [
+        {"title": "Kept", "url": "https://example.com", "snippet": ""}
+    ]
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_content_limits_must_be_positive(limit):
+    with pytest.raises(ValidationError, match="max_content_length"):
+        Search1APICrawlTool(max_content_length=limit)
+    with pytest.raises(ValidationError, match="max_content_length_per_result"):
+        Search1APISearchTool(max_content_length_per_result=limit)

@@ -89,4 +89,4 @@ print(tool.run(query="crewAI"))
 
 تُرجع أداتا البحث والأخبار كائن JSON يحتوي على `query` وقائمة `results`. تحتوي كل نتيجة على `title` و`url` و`snippet`، بالإضافة إلى `published_date` و`content` عند توفرهما. تُرجع أداة القراءة كائن JSON يحتوي على `title` و`url` و`content`.
 
-عند فشل الطلب يتم رفع خطأ يتضمن حالة HTTP والرسالة التي أعادتها الواجهة، مثل `HTTP 401: Unauthorized: Invalid bearer credential`.
+عندما تستجيب الواجهة بخطأ HTTP، يتم رفع خطأ يتضمن حالة HTTP والرسالة التي أعادتها الواجهة، مثل `HTTP 401: Unauthorized: Invalid bearer credential`. أما عند فشل الاتصال أو انتهاء المهلة، فيتضمن الخطأ سبب فشل الطلب بدون حالة HTTP.

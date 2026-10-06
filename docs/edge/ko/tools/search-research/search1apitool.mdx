@@ -89,4 +89,4 @@ print(tool.run(query="crewAI"))
 
 검색과 뉴스는 `query`와 `results` 목록이 담긴 JSON 객체를 반환합니다. 각 결과에는 `title`, `url`, `snippet`이 있고, 가능한 경우 `published_date`와 `content`가 포함됩니다. 크롤링 도구는 `title`, `url`, `content`가 담긴 JSON 객체를 반환합니다.
 
-요청이 실패하면 HTTP 상태와 API가 반환한 메시지를 포함한 오류가 발생합니다. 예: `HTTP 401: Unauthorized: Invalid bearer credential`.
+API가 HTTP 오류로 응답하면 HTTP 상태와 API가 반환한 메시지를 포함한 오류가 발생합니다. 예: `HTTP 401: Unauthorized: Invalid bearer credential`. 연결 실패나 시간 초과 시에는 HTTP 상태 없이 요청 실패 원인을 담은 오류가 발생합니다.
