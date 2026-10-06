@@ -119,6 +119,51 @@ def test_is_dmn_mode_enabled_for_falsey_values(monkeypatch, value):
     assert utils.is_dmn_mode_enabled() is False
 
 
+def test_fetch_and_json_env_file_strips_quotes(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# Model settings\n"
+        'MODEL="gpt-4o-mini"\n'
+        "OPENAI_API_KEY='sk-proj-abc123'\n"
+        "SERPER_API_KEY=serper-xyz\n",
+        encoding="utf-8",
+    )
+
+    assert utils.fetch_and_json_env_file(str(env_file)) == {
+        "MODEL": "gpt-4o-mini",
+        "OPENAI_API_KEY": "sk-proj-abc123",
+        "SERPER_API_KEY": "serper-xyz",
+    }
+
+
+def test_fetch_and_json_env_file_handles_export_comments_and_bare_keys(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "OPENAI_API_KEY=sk-proj-abc123 # personal key\n"
+        "export SERPER_API_KEY=serper-xyz\n"
+        "DEBUG\n",
+        encoding="utf-8",
+    )
+
+    assert utils.fetch_and_json_env_file(str(env_file)) == {
+        "OPENAI_API_KEY": "sk-proj-abc123",
+        "SERPER_API_KEY": "serper-xyz",
+    }
+
+
+def test_fetch_and_json_env_file_keeps_equals_in_values(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("DATABASE_URL=postgres://u:p@host/db?sslmode=require\n")
+
+    assert utils.fetch_and_json_env_file(str(env_file)) == {
+        "DATABASE_URL": "postgres://u:p@host/db?sslmode=require"
+    }
+
+
+def test_fetch_and_json_env_file_missing_file(tmp_path):
+    assert utils.fetch_and_json_env_file(str(tmp_path / ".env")) == {}
+
+
 # Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
 # is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
 # implementations are in crewai.utilities.project_utils.
