@@ -17423,6 +17423,90 @@
       }
     },
     {
+      "description": "Searches scholarly works across academic disciplines via the OpenAlex REST API, returning publication metadata, citation counts, available open-access URLs, and abstract snippets.",
+      "env_vars": [],
+      "humanized_name": "OpenAlex Research Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search scholarly works using the OpenAlex REST API.",
+        "properties": {},
+        "required": [],
+        "title": "OpenAlexResearchTool",
+        "type": "object"
+      },
+      "name": "OpenAlexResearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for OpenAlexResearchTool.",
+        "properties": {
+          "limit": {
+            "default": 5,
+            "description": "Number of relevant paper results to return (1 to 20).",
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "description": "The search query or research topic (e.g., 'retrieval augmented generation', 'CRISPR gene editing').",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "OpenAlexResearchToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Scrape Amazon product pages with Oxylabs Amazon Product Scraper",
       "env_vars": [
         {
