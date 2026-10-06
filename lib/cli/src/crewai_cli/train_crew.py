@@ -10,15 +10,17 @@ def train_crew(n_iterations: int, filename: str) -> None:
     Args:
         n_iterations (int): The number of iterations to train the crew.
     """
+    if n_iterations <= 0:
+        raise click.ClickException(
+            "The number of iterations must be a positive integer."
+        )
+
+    if not filename.endswith(".pkl"):
+        raise click.ClickException("The filename must end with .pkl")
+
     command = ["uv", "run", "train", str(n_iterations), filename]
 
     try:
-        if n_iterations <= 0:
-            raise ValueError("The number of iterations must be a positive integer.")
-
-        if not filename.endswith(".pkl"):
-            raise ValueError("The filename must end with .pkl")
-
         result = subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
 
         if result.stderr:
