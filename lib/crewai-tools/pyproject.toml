@@ -155,6 +155,9 @@ mongodb = [
     # consumers installing crewai-tools[mongodb] get this floor.
     "pymongo>=4.18.2"
 ]
+oracledb = [
+    "oracledb>=2.2.0"
+]
 mysql = [
     "pymysql>=1.1.1"
 ]
