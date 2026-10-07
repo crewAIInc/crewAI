@@ -1,0 +1,116 @@
+---
+title: Cracked
+description: "Cracked gives your CrewAI agents 60,000+ tools through one API key: web search and scraping, social media, maps, ecommerce, finance, weather and AI models, with per-call billing and automatic provider routing."
+icon: "plug"
+mode: "wide"
+---
+
+# Cracked tool router
+
+Integrate [Cracked](https://cracked.ai) into your CrewAI workflows.
+
+## Description
+
+Cracked is a tool router for agents. One API key and one prepaid balance give an agent access to 60,000+ tools: web search and page scraping, Instagram, TikTok, YouTube, X, Reddit and LinkedIn data, Google Maps places and reviews, Amazon products, company enrichment and email finding, jobs, real estate, stock and crypto quotes, weather, and AI models for text, image, video and speech.
+
+The `cracked-ai-crewai` package wraps the Cracked API as `crewai.tools.BaseTool` classes. An agent finds a tool in natural language with `cracked_discover`, reads its input schema with `cracked_inspect`, runs it with `cracked_run`, or skips both steps with `cracked_run_capability` when the task matches a capability such as `web-search`, `instagram-profile` or `weather-forecast`.
+
+For details, see the [Cracked SDK docs](https://cracked.ai/docs/sdks).
+
+## Steps to get started
+
+<Steps>
+    <Step title="Install dependencies">
+        Install `crewai[tools]` and `cracked-ai-crewai` using pip: `pip install 'crewai[tools]' cracked-ai-crewai`.
+    </Step>
+    <Step title="Obtain a Cracked API key">
+        Create a key at [cracked.ai/app/keys](https://cracked.ai/app/keys), or let the agent register its own workspace (trial credit included) with `Cracked.register_agent(name="my-crew")` from the `cracked-ai` package.
+    </Step>
+    <Step title="Configure environment">
+        Set the key as the `CRACKED_API_KEY` environment variable. `CRACKED_BASE_URL` is optional (default `https://cracked.ai/v1`).
+    </Step>
+</Steps>
+
+## Usage example
+
+Give an agent the full toolkit so it can discover, inspect and run tools on its own:
+
+```python
+from crewai import Agent, Crew, Task
+from cracked_ai_crewai import cracked_toolkit
+
+researcher = Agent(
+    role="Researcher",
+    goal="Answer with real data from external tools",
+    backstory="You find the right tool with cracked_discover, read its schema with cracked_inspect, then cracked_run it.",
+    tools=cracked_toolkit(),  # cracked_discover, cracked_inspect, cracked_run, cracked_run_capability
+)
+
+task = Task(
+    description="What is the weather in Austin, TX right now?",
+    expected_output="One sentence with the temperature.",
+    agent=researcher,
+)
+
+print(Crew(agents=[researcher], tasks=[task]).kickoff())
+```
+
+### Pre-resolved tools
+
+`cracked_tools(query)` turns discover results into one tool per endpoint, with the provider's real JSON Schema as the tool arguments, so the model fills the actual fields:
+
+```python
+from crewai import Agent
+from cracked_ai_crewai import cracked_tools
+
+tools = cracked_tools("instagram profile followers", limit=3)
+
+agent = Agent(
+    role="Social analyst",
+    goal="Report follower counts from live data",
+    backstory="You call the provided scraper tools and quote their output fields.",
+    tools=tools,
+)
+```
+
+### Running a tool manually
+
+Every tool can be called directly. The result is a status line (`runId`, `status`, `httpStatus`, `costUsd`) followed by the JSON output:
+
+```python
+from cracked_ai_crewai import CrackedCapabilityTool
+
+tool = CrackedCapabilityTool()
+print(tool.run(capability="web-search", input={"query": "CrewAI", "limit": 3}))
+```
+
+### Expected output
+
+```text
+{"runId": "run_...", "status": "COMPLETED", "httpStatus": 200, "costUsd": 0.01, "routedTo": {"provider": "tavily", "endpoint": "/search"}}
+{"results": [{"title": "...", "url": "https://...", "snippet": "..."}, ...]}
+```
+
+## Configuration
+
+Classes: `CrackedDiscoverTool`, `CrackedInspectTool`, `CrackedRunTool`, `CrackedCapabilityTool`, `CrackedEndpointTool` (all `crewai.tools.BaseTool`).
+
+- **`client`** (optional)
+  Pass `client=Cracked(api_key=..., base_url=...)` (from `cracked_ai`) to any tool class or to `cracked_toolkit()` / `cracked_tools()` instead of relying on environment variables.
+- **`max_output_chars`** (optional, default `20000`)
+  Tool output is truncated to this many characters so large scraper results do not flood the context window.
+- **`limit`** on `cracked_tools(query, limit=...)`
+  Number of discovered endpoints to turn into tools.
+
+Behaviour worth knowing:
+
+- API errors are returned as JSON strings so the agent can recover. `402` means the balance needs a top-up at [cracked.ai/app/billing](https://cracked.ai/app/billing); `503 BLOCKED` means the provider needs your own key, so the agent picks another discover result.
+- `status: COMPLETED` with `httpStatus: 404` means the provider found nothing. That is not an error.
+- Per-result tools bill per row returned, so `limit` and `maxItems` inputs are respected.
+
+## Resources
+
+- **[Cracked](https://cracked.ai)**: The tool router for agents.
+- **[SDK docs](https://cracked.ai/docs/sdks)**: Python, TypeScript and framework integrations.
+- **[Capabilities](https://cracked.ai/v1/capabilities)**: Public list of capability ids and their input fields.
+- **[cracked-ai-crewai on PyPI](https://pypi.org/project/cracked-ai-crewai/)**: Package page.
