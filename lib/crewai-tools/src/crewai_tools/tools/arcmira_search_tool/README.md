@@ -16,7 +16,7 @@ uv add crewai-tools
 
 Create an Arcmira API key using the [API quickstart](https://arcmira.com/docs), then set `ARCMIRA_API_KEY` in your environment. Keep credentials outside prompts and source control. You can also pass `api_key` when constructing the tool; it is excluded from serialized tool configuration and model inputs.
 
-Search calls use credits from your plan, then your on-demand budget. Check [usage and billing](https://arcmira.com/docs/usage-and-billing) before running the example.
+Search calls use credits from your plan, then any top-up credits, then your on-demand budget. Check [usage and billing](https://arcmira.com/docs/usage-and-billing) before running the example.
 
 ```python
 from crewai_tools import ArcmiraSearchTool
