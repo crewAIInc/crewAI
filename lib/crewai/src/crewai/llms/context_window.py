@@ -296,7 +296,9 @@ LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     **_BEDROCK_BASE_CONTEXT_WINDOWS,
     **_BEDROCK_LEGACY_CONTEXT_WINDOWS,
-    **_prefixed_context_windows(_BEDROCK_BASE_CONTEXT_WINDOWS, ("us.", "eu.", "apac.")),
+    **_prefixed_context_windows(
+        _BEDROCK_BASE_CONTEXT_WINDOWS, ("us.", "eu.", "apac.", "jp.", "au.", "in.", "ca.")
+    ),
     **_prefixed_context_windows(
         ANTHROPIC_CONTEXT_WINDOWS,
         (
@@ -305,6 +307,10 @@ BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = {
             "eu.anthropic.",
             "apac.anthropic.",
             "global.anthropic.",
+            "jp.anthropic.",
+            "au.anthropic.",
+            "in.anthropic.",
+            "ca.anthropic.",
         ),
     ),
     # Geo inference ID is not produced by the us/eu/apac expansion.

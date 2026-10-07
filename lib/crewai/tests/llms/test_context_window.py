@@ -54,6 +54,30 @@ def test_bedrock_regional_aliases_preserve_the_base_model_context_window() -> No
     assert result == int(128_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+@pytest.mark.parametrize(
+    ("model", "raw_context_window"),
+    [
+        ("jp.anthropic.claude-sonnet-4-6", 1_000_000),
+        ("au.anthropic.claude-opus-4-8", 1_000_000),
+        ("in.anthropic.claude-sonnet-5", 1_000_000),
+        ("ca.anthropic.claude-opus-5-5", 1_000_000),
+        ("jp.amazon.nova-2-lite-v1:0", 1_000_000),
+        ("ca.amazon.nova-lite-v1:0", 300_000),
+        ("in.meta.llama3-3-70b-instruct-v1:0", 128_000),
+    ],
+)
+def test_bedrock_jp_au_in_ca_profiles_use_the_model_context_window(
+    model: str, raw_context_window: int
+) -> None:
+    result = resolve_context_window_size(
+        model,
+        BEDROCK_CONTEXT_WINDOWS,
+        default=DEFAULT_CONTEXT_WINDOW_SIZE,
+    )
+
+    assert result == int(raw_context_window * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_litellm_map_includes_the_openai_gpt5_family() -> None:
     result = resolve_context_window_size(
         "gpt-5", LLM_CONTEXT_WINDOW_SIZES, default=DEFAULT_CONTEXT_WINDOW_SIZE

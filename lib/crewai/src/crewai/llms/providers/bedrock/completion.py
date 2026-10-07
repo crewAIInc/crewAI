@@ -2148,28 +2148,42 @@ class BedrockCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+        Claude 3+ and Nova Lite/Pro/Premier/2 on Bedrock support vision,
+        across bare, cross-region, and regional inference profiles.
 
         Returns:
             True if the model supports images.
         """
         model_lower = self.model.lower()
-        vision_models = (
+        vision_regions = (
+            "",
+            "us.",
+            "eu.",
+            "apac.",
+            "global.",
+            "jp.",
+            "au.",
+            "in.",
+            "ca.",
+        )
+        vision_families = (
             "anthropic.claude-3",
             "anthropic.claude-sonnet-4",
             "anthropic.claude-opus-4",
             "anthropic.claude-haiku-4",
+            "anthropic.claude-sonnet-5",
+            "anthropic.claude-opus-5",
+            "anthropic.claude-haiku-5",
+            "amazon.nova-2-",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
         )
-        return any(model_lower.startswith(m) for m in vision_models)
+        return any(
+            model_lower.startswith(f"{region}{family}")
+            for region in vision_regions
+            for family in vision_families
+        )
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.

@@ -293,6 +293,28 @@ class TestBedrockMultimodal:
         llm = LLM(model="bedrock/anthropic.claude-v2")
         assert llm.supports_multimodal() is False
 
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+            "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            "bedrock/anthropic.claude-opus-5-5",
+            "bedrock/global.anthropic.claude-opus-5-5",
+            "bedrock/us.anthropic.claude-sonnet-5-5",
+            "bedrock/jp.anthropic.claude-sonnet-4-6",
+            "bedrock/au.anthropic.claude-opus-4-8",
+            "bedrock/in.anthropic.claude-sonnet-5",
+            "bedrock/eu.amazon.nova-pro-v1:0",
+            "bedrock/amazon.nova-2-lite-v1:0",
+            "bedrock/jp.amazon.nova-2-lite-v1:0",
+            "bedrock/ca.amazon.nova-lite-v1:0",
+        ],
+    )
+    def test_supports_multimodal_regional_and_newer_models(self, model: str) -> None:
+        """Regional profiles, Claude 5, and Nova 2 all accept image input."""
+        llm = LLM(model=model)
+        assert llm.supports_multimodal() is True
+
     def test_format_multimodal_content_image(self) -> None:
         """Test Bedrock uses Converse API image format."""
         llm = LLM(model="bedrock/anthropic.claude-3-sonnet")
