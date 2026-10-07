@@ -692,3 +692,57 @@ Forneça status e saídas relevantes pelos hooks `build_router_context()` e `bui
 Ao encerrar a sessão, chame `runner.request_close()` no loop proprietário antes de aguardar a execução em primeiro plano e, depois, `await runner.aclose()`. Isso fecha a admissão e a publicação, sinaliza cada worker, libera publishers em espera e aguarda as tasks próprias. Os métodos de trabalho devem chamar `check_open()` nos limites das etapas. Uma operação do provider em andamento não é abortada. Uma falha do subscriber fecha o runner para não deixar publishers bloqueados. Interromper apenas a fala não deve fechar o runner.
 
 O ciclo inicial é `queued → running → completed/failed`. Pause/resume, substituição, entrega automática de respostas e recuperação distribuída não são fornecidos. Os registros podem ser serializados com os recursos de estado existentes, mas restaurá-los não recria workers ativos nem garante efeitos externos exatamente uma vez.
+
+## Identidades experimentais de turnos e respostas públicas
+
+Importe `TurnRecord`, `ReplyRecord`, `TurnState`, `ReplyEvent` e `TurnRunner` explicitamente de `crewai.experimental.flow_turns`. Esta API é opcional e pode mudar. Ela envolve um conversational Flow existente; as APIs estáveis `handle_turn()`/`stream_turn()`, seus valores de retorno e o contrato experimental de jobs permanecem inalterados.
+
+`TurnState` estende `ConversationState` com `turns` e `replies` serializáveis. Uma chamada a `TurnRunner.stream_turn()` acompanha uma entrada confirmada e sua resposta pública principal. Cada entrada tem um `turn_id` usado uma única vez na sessão; uma nova fala ou correção recebe um novo ID. `input_revision` é um inteiro positivo (padrão `1`), não uma substituição automática de transcrição provisória. `delivery_id` é a única identidade da resposta; não existe um segundo `reply_id`. Os tipos são `acknowledgment`, `answer` e `progress`.
+
+```python
+from crewai.flow import Flow, listen
+from crewai.experimental.flow_turns import TurnRunner, TurnState
+
+class Chat(Flow[TurnState]):
+    conversational = True
+
+    def route_turn(self, context):
+        return "acknowledge"
+
+    @listen("acknowledge")
+    def handle_acknowledge(self):
+        return "Request received."
+
+flow = Chat(suppress_flow_events=True)
+runner = TurnRunner(flow)
+events = runner.stream_turn("Hello", turn_id="turn-1", kind="acknowledgment")
+try:
+    for event in events:
+        if runner.accept_event(event):
+            print(event.model_dump_json())
+finally:
+    events.close()
+
+snapshot = runner.snapshot()
+reply = snapshot["replies"][0]
+runner.interrupt(
+    session_id=reply["session_id"], turn_id=reply["turn_id"],
+    input_revision=reply["input_revision"], delivery_id=reply["delivery_id"],
+)
+```
+
+Respostas fixas e providers que retornam somente o resultado final usam o mesmo contrato público `text`/`completed` das respostas em streaming. O Flow existente continua responsável pelo histórico canônico. `seq` ordena eventos dentro de uma entrega; `segment_id` numera deltas de texto a partir de um. Um delta não é necessariamente uma frase falada completa. Eventos de rota e observação de geração incluem a mesma identidade. `completed` significa que a geração de texto terminou, **não** que o áudio foi reproduzido ou ouvido.
+
+Somente métodos dedicados à resposta pública (`converse_turn` e `answer_from_history_turn` por padrão), ou IDs de Agent públicos selecionados explicitamente, permitem texto ao vivo do modelo. Configure `public_methods` e o callback `public_agent_ids` com cuidado; não selecione um método que misture trabalho privado do modelo e geração pública. Streams do router, raciocínio, chunks de tool calls, chamadas com tools habilitadas e Agents não relacionados são excluídos. Resultados privados de Agent não viram respostas. Providers sem deltas observáveis publicam sua mensagem canônica final sem inventar métricas do modelo.
+
+`runner.accept_event(event)` aceita um evento emitido pelo runner antes do envio ao transporte. Rejeita identidade estrangeira, sequência duplicada ou fora de ordem e saída invalidada por interrupção ou falha. Chame após qualquer fila/espera da aplicação, imediatamente antes do envio. Não valida recibos de reprodução não confiáveis enviados pelo cliente. Saídas já enviadas precisam de proteção por identidade e interrupção de áudio no adapter.
+
+`runner.interrupt(session_id=..., turn_id=..., input_revision=..., delivery_id=...)` direciona exatamente uma resposta e é idempotente para pedidos válidos repetidos. Durante a geração, marca turno e resposta como interrupted; após a geração, preserva o texto completo e marca a interrupção sem alterar o sucesso do job. `on_interrupt` pode sinalizar verificações cooperativas existentes; `should_interrupt` pode observar o sinal de parada da aplicação. Esses callbacks não abortam chamadas arbitrárias de provider. O stream deve terminar antes de executar outro turno no mesmo Flow. Fechar o iterator sinaliza a interrupção e aguarda a execução nativa, podendo esperar uma operação de provider em andamento.
+
+Para combinar com trabalho em segundo plano, declare `class WorkChatState(TurnState, JobState[MyJob]): ...`. Mantenha `JobRunner.state_lock` durante **toda** a iteração em primeiro plano e todas as alterações de jobs no estado pai. TurnRunner protege seus registros e controles de interrupção separadamente. Não execute APIs nativas de turno simultaneamente com o wrapper. Após admitir um job com sucesso, `runner.associate_job(job)` associa sessão/turno de origem e revision/attempt à resposta ativa; nunca admite, inicia ou cancela trabalho. Um novo turno de conversa não invalida pesquisa independente.
+
+`elapsed_ms` usa um relógio monotônico do servidor a partir do início do turno acompanhado. Quando disponível, `model_first_text_ms` é a diferença entre os **timestamps dos eventos** de início da solicitação ao provider e primeiro texto público; inclui trabalho do provider/SDK/rede e não é TTFT isolado do motor de inferência. Não subtraia timestamps do navegador e do servidor. Primeiro chunk de TTS, áudio em cache, início audível físico e conclusão da reprodução continuam sendo métricas do adapter.
+
+Esta etapa não oferece filas de respostas em segundo plano, agendamento da vez de falar, recibos de reprodução, alinhamento exato de palavras, geração especulativa ou pause/resume de jobs. Snapshots contêm registros, não locks, sinais de cancelamento ou execuções ativas. Não retomam trabalho nem repetem entregas. Restaure o estado antes de criar um novo turno acompanhado; este wrapper rejeita `from_checkpoint` e `restore_from_state_id` deliberadamente. Reconciliação durável e persistência dos registros finais de acompanhamento continuam sendo trabalhos separados. Use as APIs estáveis de Flow para workflows existentes de checkpoint.
+
+Durante a execução acompanhada, o estado atual restaurado permanece como referência: o recarregamento automático da sessão é suprimido para não descartar registros de turn/reply admitidos nem atualizações aceitas de jobs em segundo plano. As APIs nativas de turno do Flow mantêm seu comportamento de recarregamento de persistência. Fechar o iterator após um evento terminal não interrompe a resposta concluída. Uma falha continua sendo um sinal terminal de ciclo de vida aceito se a interrupção chegar após a falha.

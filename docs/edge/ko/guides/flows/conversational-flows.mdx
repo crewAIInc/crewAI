@@ -687,3 +687,57 @@ async def run_job():
 Session 종료 시 foreground 실행을 정리하기 전에 소유 loop에서 `runner.request_close()`를 호출하고 이후 `await runner.aclose()`를 실행합니다. 새 작업 등록과 publication을 닫고 각 worker에 신호를 보내며 대기 중인 publisher를 해제하고 소유 task를 정리합니다. Work method는 단계 경계에서 `check_open()`을 호출해야 합니다. 진행 중인 provider 작업은 강제로 중단되지 않습니다. Subscriber 실패 시 publisher가 무한히 기다리지 않도록 runner가 닫힙니다. 음성 재생만 중지할 때는 runner를 닫지 않습니다.
 
 초기 lifecycle은 `queued → running → completed/failed`입니다. Pause/resume, replacement, 자동 응답 전달과 분산 recovery는 제공하지 않습니다. 기존 state 기능으로 record를 직렬화할 수 있지만, 복원은 live worker를 다시 만들거나 외부 작업의 exactly-once 실행을 보장하지 않습니다.
+
+## 실험적 턴 및 공개 응답 식별자
+
+`TurnRecord`, `ReplyRecord`, `TurnState`, `ReplyEvent`, `TurnRunner`는 `crewai.experimental.flow_turns`에서 명시적으로 가져옵니다. 이 API는 선택적으로 사용하며 변경될 수 있습니다. 기존 conversational Flow를 감싸므로 안정적인 `handle_turn()`/`stream_turn()` API, 반환값, 실험적 job 계약은 바뀌지 않습니다.
+
+`TurnState`는 `ConversationState`에 직렬화 가능한 `turns`와 `replies`를 추가합니다. `TurnRunner.stream_turn()` 호출 하나는 확정된 입력 하나와 기본 공개 응답을 추적합니다. 입력마다 세션 내에서 한 번만 사용하는 `turn_id`가 있으며, 새 발화나 정정에는 새 턴 ID를 사용합니다. `input_revision`은 양의 정수(기본값 `1`)이며 잠정 전사를 자동으로 교체하지 않습니다. `delivery_id`가 유일한 응답 ID이고 별도의 `reply_id`는 없습니다. 응답 종류는 `acknowledgment`, `answer`, `progress`입니다.
+
+```python
+from crewai.flow import Flow, listen
+from crewai.experimental.flow_turns import TurnRunner, TurnState
+
+class Chat(Flow[TurnState]):
+    conversational = True
+
+    def route_turn(self, context):
+        return "acknowledge"
+
+    @listen("acknowledge")
+    def handle_acknowledge(self):
+        return "Request received."
+
+flow = Chat(suppress_flow_events=True)
+runner = TurnRunner(flow)
+events = runner.stream_turn("Hello", turn_id="turn-1", kind="acknowledgment")
+try:
+    for event in events:
+        if runner.accept_event(event):
+            print(event.model_dump_json())
+finally:
+    events.close()
+
+snapshot = runner.snapshot()
+reply = snapshot["replies"][0]
+runner.interrupt(
+    session_id=reply["session_id"], turn_id=reply["turn_id"],
+    input_revision=reply["input_revision"], delivery_id=reply["delivery_id"],
+)
+```
+
+고정 응답과 최종 결과만 반환하는 provider도 스트리밍 응답과 같은 공개 `text`/`completed` 계약을 사용합니다. 기존 Flow가 정식 대화 기록을 관리합니다. `seq`는 delivery 내 이벤트 순서이고 `segment_id`는 1부터 시작하는 텍스트 델타 번호입니다. 델타가 완전한 음성 문장이라는 보장은 없습니다. 라우팅과 생성 관측 이벤트도 같은 ID를 포함합니다. `completed`는 텍스트 생성 완료이며, **오디오 재생이나 청취 완료가 아닙니다**.
+
+전용 공개 응답 메서드(기본값 `converse_turn`, `answer_from_history_turn`) 또는 명시적으로 선택한 공개 Agent ID만 실시간 모델 텍스트를 허용합니다. `public_methods`와 `public_agent_ids` callback을 신중하게 설정하고 비공개 모델 작업과 공개 응답을 섞는 메서드를 선택하지 마세요. router 스트림, 추론, tool-call chunk, tools가 활성화된 호출, 무관한 Agent는 제외합니다. 비공개 Agent 결과는 응답으로 전환되지 않습니다. 관측 가능한 델타가 없는 provider는 정식 최종 메시지만 공개하며 모델 타이밍을 만들어내지 않습니다.
+
+`runner.accept_event(event)`는 전송 직전에 runner가 발행한 이벤트 하나를 승인합니다. 다른 소유자의 ID, 중복되거나 순서가 뒤바뀐 이벤트, 중단 또는 실패로 무효화된 출력을 거부합니다. 애플리케이션 queue나 지연 이후 실제 전달 직전에 호출하세요. 신뢰할 수 없는 클라이언트 재생 receipt를 검증하는 API는 아닙니다. 이미 전달한 출력은 adapter에서 ID를 확인하고 오디오를 중단해야 합니다.
+
+`runner.interrupt(session_id=..., turn_id=..., input_revision=..., delivery_id=...)`는 응답 하나만 대상으로 하며 올바른 반복 요청은 idempotent합니다. 생성 중에는 턴과 응답을 interrupted로 표시합니다. 생성 후에는 완료된 텍스트를 보존하고 job 성공 상태를 바꾸지 않은 채 응답 중단을 표시합니다. `on_interrupt`는 기존 협력적 중단 검사에 신호를 보내고 `should_interrupt`는 애플리케이션의 기존 중단 신호를 관찰할 수 있습니다. callback은 임의의 provider 호출을 강제로 중단하지 않습니다. 같은 Flow에서 다음 턴을 실행하기 전에 stream이 종료되어야 합니다. iterator를 닫으면 중단을 요청하고 기존 실행을 끝까지 기다리므로 진행 중인 provider 작업을 기다릴 수 있습니다.
+
+백그라운드 작업과 조합하려면 `class WorkChatState(TurnState, JobState[MyJob]): ...`를 선언합니다. **전체** foreground 반복과 모든 부모 job 변경 동안 `JobRunner.state_lock`을 유지하세요. TurnRunner는 자체 기록과 중단 제어를 별도로 보호합니다. wrapper와 기본 턴 API를 동시에 실행하지 마세요. job을 성공적으로 등록한 뒤 `runner.associate_job(job)`을 호출하면 세션, 원래 턴, revision/attempt를 활성 응답에 연결합니다. 이 메서드는 작업을 등록, 제출 또는 취소하지 않습니다. 새 대화 턴은 독립적인 연구를 무효화하지 않습니다.
+
+`elapsed_ms`는 추적 턴 시작부터 server monotonic clock을 사용합니다. 관측 가능한 `model_first_text_ms`는 provider 요청 시작과 첫 공개 텍스트의 **이벤트 timestamp 차이**입니다. provider/SDK/네트워크 작업을 포함하며 추론 엔진만의 TTFT가 아닙니다. 브라우저와 서버 timestamp를 서로 빼지 마세요. TTS 첫 chunk, 캐시 오디오, 실제 가청 시작, 재생 완료는 adapter 측정입니다.
+
+이 단계는 백그라운드 응답 queue, 발언권 스케줄링, 재생 receipt, 정확한 단어 정렬, speculative generation, job pause/resume를 제공하지 않습니다. snapshot에는 기록만 있고 lock, 취소 신호, 실행 중인 작업은 없습니다. 작업을 재개하거나 delivery를 다시 재생하지 않습니다. 새 추적 live turn 전에 상태를 복원하세요. wrapper는 `from_checkpoint` 및 `restore_from_state_id`를 의도적으로 거부합니다. 영속적인 조정과 최종 추적 기록 저장은 별도 작업입니다. 기존 checkpoint 워크플로에는 안정적인 Flow API를 계속 사용하세요.
+
+추적 실행 중에는 현재 복원된 상태가 기준이 됩니다. 자동 세션 재로드를 억제하여 등록된 turn/reply 기록이나 승인된 백그라운드 job 업데이트가 사라지지 않도록 합니다. 기본 Flow 턴 API의 기존 영속 상태 재로드 동작은 유지됩니다. 종료 이벤트 이후 iterator를 닫아도 완료된 응답을 중단하지 않습니다. 실패 이후 중단 요청이 도착해도 실패 이벤트는 유효한 종료 수명 주기 신호로 처리됩니다.

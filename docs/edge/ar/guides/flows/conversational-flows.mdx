@@ -691,3 +691,57 @@ async def run_job():
 عند إغلاق الجلسة، استدعِ `runner.request_close()` على loop المالك قبل انتظار انتهاء التنفيذ في المقدمة، ثم `await runner.aclose()`. يؤدي ذلك إلى إغلاق قبول العمل والنشر وإرسال إشارة إلى كل worker وتحرير publishers المنتظرين وانتظار tasks المملوكة. يجب أن تستدعي طرق العمل `check_open()` عند حدود المراحل. لا تُجهض عملية provider قيد التنفيذ. يغلق فشل subscriber الـ runner بدل ترك publishers معلقين. لا ينبغي أن يؤدي إيقاف الكلام وحده إلى إغلاق runner.
 
 دورة الحياة الأولية هي `queued → running → completed/failed`. لا تتوفر pause/resume أو الاستبدال أو تسليم الردود تلقائيًا أو الاستعادة الموزعة. يمكن تسلسل السجلات باستخدام إمكانات الحالة الموجودة، لكن استعادتها لا تعيد إنشاء workers نشطين ولا تضمن تنفيذ الآثار الخارجية مرة واحدة بالضبط.
+
+## هويات الأدوار والردود العامة التجريبية
+
+استورد `TurnRecord` و`ReplyRecord` و`TurnState` و`ReplyEvent` و`TurnRunner` صراحةً من `crewai.experimental.flow_turns`. هذه API اختيارية وتجريبية وقد تتغير. تغلّف conversational Flow موجودًا؛ ولا تغيّر `handle_turn()` أو `stream_turn()` المستقرة أو قيم الإرجاع أو عقد jobs التجريبي.
+
+تضيف `TurnState` إلى `ConversationState` مجموعتي `turns` و`replies` القابلتين للتسلسل. يتتبع استدعاء `TurnRunner.stream_turn()` مدخلًا مؤكدًا واحدًا وردّه العام الأساسي. لكل مدخل `turn_id` يستخدم مرة واحدة داخل الجلسة؛ ويأخذ الكلام الجديد أو التصحيح هوية دور جديدة. `input_revision` عدد صحيح موجب، افتراضيًا `1`، وليس استبدالًا تلقائيًا للنص المؤقت. `delivery_id` هو هوية الرد الوحيدة؛ لا توجد هوية `reply_id` ثانية. أنواع الرد هي `acknowledgment` و`answer` و`progress`.
+
+```python
+from crewai.flow import Flow, listen
+from crewai.experimental.flow_turns import TurnRunner, TurnState
+
+class Chat(Flow[TurnState]):
+    conversational = True
+
+    def route_turn(self, context):
+        return "acknowledge"
+
+    @listen("acknowledge")
+    def handle_acknowledge(self):
+        return "Request received."
+
+flow = Chat(suppress_flow_events=True)
+runner = TurnRunner(flow)
+events = runner.stream_turn("Hello", turn_id="turn-1", kind="acknowledgment")
+try:
+    for event in events:
+        if runner.accept_event(event):
+            print(event.model_dump_json())
+finally:
+    events.close()
+
+snapshot = runner.snapshot()
+reply = snapshot["replies"][0]
+runner.interrupt(
+    session_id=reply["session_id"], turn_id=reply["turn_id"],
+    input_revision=reply["input_revision"], delivery_id=reply["delivery_id"],
+)
+```
+
+تستخدم الردود الثابتة وproviders التي تعيد جوابًا نهائيًا فقط عقد `text`/`completed` العام نفسه الذي تستخدمه الردود المتدفقة. يظل Flow الموجود مسؤولًا عن سجل المحادثة الأساسي. ترتب `seq` الأحداث داخل الرد، وتُرقّم `segment_id` أجزاء النص بدءًا من واحد. جزء النص ليس بالضرورة جملة صوتية كاملة. تحمل أحداث اختيار المسار وتوليد الرد الهوية نفسها. تعني `completed` انتهاء توليد النص، **ولا** تعني تشغيل الصوت أو سماعه.
+
+يُسمح بالنص الحي من طرق الرد العام المخصصة فقط (`converse_turn` و`answer_from_history_turn` افتراضيًا)، أو من هويات Agent العامة المختارة صراحةً. اضبط `public_methods` وcallback الخاص بـ `public_agent_ids` بعناية؛ ولا تحدد طريقة تمزج عمل LLM الخاص مع توليد الرد العام. تُستبعد تدفقات router والتفكير وtool-call chunks والاستدعاءات التي تفعّل tools وAgents غير المعنية. لا تتحول نتائج Agent الخاصة إلى ردود. ينشر provider الذي لا يتيح أجزاء النص رسالته الأساسية النهائية دون اختلاق توقيت للـ LLM.
+
+تقبل `runner.accept_event(event)` حدثًا صادرًا عن runner قبل تسليمه للنقل. ترفض الهوية الأجنبية والتسلسل المكرر أو غير المرتب والمخرجات التي أُلغي صلاحيتها بسبب المقاطعة أو الفشل. استدعها بعد أي انتظار أو queue في التطبيق وقبل التسليم مباشرةً. ليست أداة للتحقق من إيصالات تشغيل الصوت غير الموثوقة من العميل. تتطلب المخرجات التي سُلّمت بالفعل حماية الهوية وإيقاف الصوت داخل adapter.
+
+تستهدف `runner.interrupt(session_id=..., turn_id=..., input_revision=..., delivery_id=...)` ردًا واحدًا، وتكون الطلبات الصحيحة المتكررة idempotent. أثناء التوليد تجعل الدور والرد interrupted؛ وبعد التوليد تحفظ النص المكتمل وتحدد مقاطعة الرد دون تغيير نجاح job. يمكن لـ `on_interrupt` إرسال إشارة إلى فحوص الإيقاف التعاوني الموجودة، ويمكن لـ `should_interrupt` مراقبة إشارة التطبيق الحالية. لا تُجهض callbacks هذه استدعاء provider عشوائيًا. يجب انتظار انتهاء stream قبل تنفيذ دور آخر على Flow نفسه. يؤدي إغلاق iterator إلى طلب المقاطعة وانتظار التنفيذ الأصلي، وقد ينتظر عملية provider قيد التنفيذ.
+
+للدمج مع العمل الخلفي، أعلن `class WorkChatState(TurnState, JobState[MyJob]): ...`. احتفظ بـ `JobRunner.state_lock` طوال **كامل** التكرار في المقدمة وكل تعديلات jobs الأب. يحمي TurnRunner سجلاته وأوامر المقاطعة بصورة منفصلة. لا تشغّل واجهات الدور الأصلية بالتوازي مع wrapper. بعد قبول job بنجاح، تربط `runner.associate_job(job)` هويات الجلسة والدور الأصلي وrevision/attempt بالرد النشط؛ ولا تقبل أو تشغّل أو تلغي العمل. لا يبطل دور محادثة جديد البحث المستقل.
+
+تستخدم `elapsed_ms` ساعة server monotonic منذ بدء الدور المتتبع. تمثل `model_first_text_ms`، عند توفرها، الفرق بين **timestamps لأحداث** بدء طلب provider وأول نص عام؛ وتشمل عمل provider وSDK والشبكة ولا تمثل TTFT لمحرك inference وحده. لا تطرح timestamps المتصفح والخادم بعضها من بعض. يظل أول جزء TTS والصوت المخزن وبداية الصوت المسموع فعليًا واكتمال التشغيل من قياسات adapter.
+
+لا يوفر هذا الإصدار queues للردود الخلفية أو جدولة دور الكلام أو إيصالات التشغيل أو محاذاة الكلمات الدقيقة أو speculative generation أو pause/resume للـ jobs. تحتوي snapshots على سجلات لا أقفال أو إشارات إلغاء أو تنفيذ نشط، ولا تستأنف العمل أو تعيد تشغيل الرد. استعد الحالة قبل بدء دور حي متتبع جديد؛ ويرفض wrapper خيار `from_checkpoint` و`restore_from_state_id` عمدًا. تبقى المصالحة المستمرة وحفظ سجلات التتبع النهائية عملًا منفصلًا. استخدم واجهات Flow المستقرة لمسارات checkpoint الموجودة.
+
+أثناء التنفيذ المتتبع، تظل الحالة المستعادة الحالية هي المرجع: يُمنع التحميل التلقائي لحالة الجلسة كي لا تُفقد سجلات turn/reply المقبولة أو تحديثات jobs الخلفية. تحتفظ واجهات Flow الأصلية بسلوك تحميل الحالة المحفوظة المعتاد. لا يؤدي إغلاق iterator بعد حدث نهائي إلى مقاطعة الرد المكتمل. ويظل حدث الفشل إشارة نهائية مقبولة لدورة الحياة إذا وصلت المقاطعة بعد الفشل.
