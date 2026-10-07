@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from unittest import mock
 
@@ -346,6 +347,18 @@ def test_create_requires_name_in_dmn_mode(runner):
 
     assert result.exit_code == 2
     assert "NAME is required when CREWAI_DMN is set" in result.output
+
+
+def test_installation_coding_agent_prompt_uses_valid_dmn_create_command():
+    installation_doc = (
+        Path(__file__).parents[3] / "docs" / "edge" / "en" / "installation.mdx"
+    )
+    doc_text = installation_doc.read_text()
+
+    match = re.search(r"CREWAI_DMN=true crewai create(?P<args>[^\n`]*)", doc_text)
+
+    assert match is not None
+    assert match.group("args").strip().split() == ["crew", "<project_name>"]
 
 
 @mock.patch("crewai_cli.cli.AuthenticationCommand")
