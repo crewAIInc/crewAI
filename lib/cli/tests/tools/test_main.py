@@ -82,6 +82,19 @@ def test_create_scaffolds_assistant_instructions(mock_subprocess, tool_command):
 
 
 @patch("crewai_cli.tools.main.subprocess.run")
+def test_a_tool_project_gets_no_evaluation_guidance(mock_subprocess, tool_command):
+    # A tool project has no `crewai run` and no traced run for `crewai eval`.
+    with in_temp_dir():
+        tool_command.create("test-tool")
+
+        agents_md = Path("test_tool", "AGENTS.md").read_text(encoding="utf-8")
+        assert "Evaluating this" not in agents_md
+        assert "crewai eval" not in agents_md
+        assert "crewai-eval:" not in agents_md
+        assert "## Quick Reference" in agents_md
+
+
+@patch("crewai_cli.tools.main.subprocess.run")
 @patch("crewai_cli.plus_api.PlusAPI.get_tool")
 @patch("crewai_cli.tools.main.ToolCommand._print_current_organization")
 def test_install_success(

@@ -181,6 +181,7 @@ def eval_crew(run_id: str | None = None) -> None:
         )
         raise SystemExit(130) from None
     _print_verdict(finished, url)
+    _print_brief(finished)
     _say_where_the_criteria_live(write_eval_config(finished))
     # The exit code is what a CI job reads, so it is the gate's: 0 only for a
     # run that PASSED. A failed gate, one without a verdict, and an evaluation
@@ -1051,6 +1052,7 @@ def eval_models(models_text: str, deployment_id: str | None = None) -> None:
         )
         raise SystemExit(130) from None
     _print_comparison(finished, url)
+    _print_brief(finished)
     # The criteria the comparison was graded on, for the project to edit — only
     # when it has none, exactly as after a Mode 1 evaluation.
     _say_where_the_criteria_live(write_eval_config(finished))
@@ -1241,6 +1243,47 @@ def _print_verdict(finished: dict[str, Any], url: str | None) -> None:
     console.print(line)
     if url:
         console.print(Text(f"Full report: {url}"))
+
+
+def nobody_watching() -> bool:
+    """Is the output going somewhere no person reads it as it prints?
+
+    A coding agent or a script runs `crewai eval` with its stdout captured, so
+    stdout — not stdin — is the question: the brief is for whoever READS the
+    output. The enterprise non-interactive mode counts as nobody, as it does
+    for every prompt this command would otherwise put.
+    """
+    if is_dmn_mode_enabled():
+        return True
+    try:
+        return not sys.stdout.isatty()
+    except Exception:  # a replaced stream without isatty is not a terminal
+        return True
+
+
+def _print_brief(finished: dict[str, Any]) -> None:
+    """The markdown brief AMP wrote for a coding agent, when nobody is watching.
+
+    It is what the report page's "Copy for your coding agent" button copies:
+    what failed and the change to make (for `--models`, the model for each part
+    and how sure each difference is). Written to stdout as-is, never through
+    the Rich console, which would read `[Errno 13]` or `[link]` in it as markup.
+    In a terminal nothing changes: the person has the report link. An older AMP
+    sends neither field, and then there is nothing to print.
+    """
+    if not nobody_watching():
+        return
+    brief = finished.get("brief_markdown")
+    if isinstance(brief, str) and brief.strip():
+        text = brief
+    else:
+        link = _report_url(finished.get("brief_url"))
+        if link is None:
+            return
+        text = f"Brief (markdown): {link}"
+    console.file.flush()
+    sys.stdout.write(text if text.endswith("\n") else f"{text}\n")
+    sys.stdout.flush()
 
 
 def _open(url: str) -> None:
