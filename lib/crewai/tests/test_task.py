@@ -334,6 +334,110 @@ def test_guardrail_postponed_annotations():
     )
 
 
+# Additional postponed-annotation cases consolidated from Sinfony8838's
+# draft PR #7905 matrix (callable wrappers, input-expression
+# non-evaluation, annotation immutability, quoted hints).
+
+
+def test_guardrail_postponed_callable_object():
+    """Postponed annotations on a callable object's __call__ validate too."""
+    desc = "Describe one item"
+    expected_output = "A string"
+    namespace: dict[str, object] = {"Any": Any}
+    exec(
+        "from __future__ import annotations\n"
+        "class Guardrail:\n"
+        "    def __call__(self, output) -> tuple[bool, Any]:\n"
+        "        return True, output\n"
+        "guardrail = Guardrail()\n",
+        namespace,
+    )
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=namespace["guardrail"],
+    )
+
+
+def test_guardrail_postponed_partial():
+    """Postponed annotations survive functools.partial wrapping."""
+    desc = "Describe one item"
+    expected_output = "A string"
+    namespace: dict[str, object] = {"Any": Any}
+    exec(
+        "from __future__ import annotations\n"
+        "def postponed_two(x, y=True) -> tuple[bool, Any]:\n"
+        "    return True, x\n",
+        namespace,
+    )
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=partial(namespace["postponed_two"], y=True),
+    )
+
+
+def test_guardrail_input_expressions_not_evaluated():
+    """Input annotation expressions must never be evaluated."""
+    desc = "Describe one item"
+    expected_output = "A string"
+    evaluations = []
+
+    def input_type():
+        evaluations.append(True)
+        return Any
+
+    namespace: dict[str, object] = {"Any": Any, "input_type": input_type}
+    exec(
+        "from __future__ import annotations\n"
+        "def postponed_guardrail(output: input_type()) -> tuple[bool, Any]:\n"
+        "    return True, output\n",
+        namespace,
+    )
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=namespace["postponed_guardrail"],
+    )
+    assert evaluations == []
+
+
+def test_guardrail_annotations_not_mutated():
+    """Validation must not mutate the guardrail's own annotations."""
+    desc = "Describe one item"
+    expected_output = "A string"
+    namespace: dict[str, object] = {"Any": Any}
+    exec(
+        "from __future__ import annotations\n"
+        "def postponed_guardrail(output) -> tuple[bool, Any]:\n"
+        "    return True, output\n",
+        namespace,
+    )
+    guardrail = namespace["postponed_guardrail"]
+    original = dict(guardrail.__annotations__)
+    Task(description=desc, expected_output=expected_output, guardrail=guardrail)
+    assert guardrail.__annotations__ == original
+
+
+@pytest.mark.parametrize("postponed", [False, True], ids=["eager", "postponed"])
+def test_guardrail_quoted_return_annotation(postponed: bool):
+    """Explicitly quoted return annotations validate like plain ones."""
+    desc = "Describe one item"
+    expected_output = "A string"
+    prefix = "from __future__ import annotations\n" if postponed else ""
+    namespace: dict[str, object] = {"Any": Any}
+    exec(
+        prefix + "def quoted_guardrail(output) -> 'tuple[bool, Any]':\n"
+        "    return True, output\n",
+        namespace,
+    )
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=namespace["quoted_guardrail"],
+    )
+
+
 @pytest.mark.vcr()
 def test_output_pydantic_sequential():
     class ScoreOutput(BaseModel):
