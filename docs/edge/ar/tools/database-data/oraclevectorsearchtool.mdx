@@ -17,34 +17,58 @@ mode: "wide"
 uv add 'crewai-tools[oracledb]'
 ```
 
-عيّن `ORACLE_DB_USERNAME` و`ORACLE_DB_SECRET` و`ORACLE_DB_DSN` للأمثلة أدناه. تقرأ الأمثلة هذه الأسماء صراحةً. يتطلب مسار التضمين الافتراضي أيضاً `OPENAI_API_KEY`. إذا عُيّن `AZURE_OPENAI_ENDPOINT`، تستخدم الأداة `AzureOpenAI`؛ اضبط بيانات الاعتماد وdeployment اللذين يتوقعهما هذا العميل.
+عيّن `ORACLE_DB_USERNAME` و`ORACLE_DB_SECRET` و`ORACLE_DB_DSN` للأمثلة أدناه. تقرأ الأمثلة هذه الأسماء صراحةً.
+
+استورد نموذج تضمين إلى Oracle Database قبل تشغيل هذا المثال، وعيّن `ORACLE_EMBEDDING_MODEL` إلى اسم النموذج و`ORACLE_EMBEDDING_DIMENSIONS` إلى بُعد مخرجاته. تثبيت `oracledb` لا يثبت نموذج تضمين. يحتاج الحساب إلى صلاحية استخدام `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS` والنموذج المختار. يجب ألا يتجاوز كل مستند يمرّر إلى مزود Oracle عدد 4000 حرف.
 
 ## الاستخدام الأساسي
 
-يستخدم هذا المثال تضمينات OpenAI، وينشئ جدولاً، ويدرج مستندين، ويتيح الأداة لـ Agent. يجب أن يطابق نموذج التضمين وبُعد المتجه المتجهات المخزنة مسبقاً في أي جدول موجود.
+يولّد هذا المثال التضمينات في Oracle Database، وينشئ جدولاً، ويدرج مستندين، ويبحث فيهما. يجب أن يطابق نموذج التضمين وبُعد المتجه المتجهات المخزنة مسبقاً في أي جدول موجود.
 
 ```python
 import os
 
-from crewai import Agent
+import oracledb
+from crewai.rag.embeddings.factory import build_embedder
 from crewai_tools import (
     OracleVectorSearchConfig,
     OracleVectorSearchQueryConfig,
     OracleVectorSearchTool,
 )
 
+connection = oracledb.connect(
+    user=os.environ["ORACLE_DB_USERNAME"],
+    password=os.environ["ORACLE_DB_SECRET"],
+    dsn=os.environ["ORACLE_DB_DSN"],
+)
+oracle_embedder = build_embedder({
+    "provider": "oracle",
+    "config": {
+        "conn": connection,
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+
+
+def embed_text(text: str) -> list[float]:
+    if not isinstance(text, str):
+        raise TypeError("embed_text expects a single string")
+    return oracle_embedder([text])[0].tolist()
+
+
 tool = OracleVectorSearchTool(
     oracle_config=OracleVectorSearchConfig(
-        user=os.environ["ORACLE_DB_USERNAME"],
-        password=os.environ["ORACLE_DB_SECRET"],
-        dsn=os.environ["ORACLE_DB_DSN"],
         table_name="CREWAI_DOCS",
         distance_strategy="COSINE",
         limit=3,
     ),
     query_config=OracleVectorSearchQueryConfig(filter={"source": "docs"}),
-    embedding_model="text-embedding-3-large",
-    dimensions=3072,
+    client=connection,
+    embedding_function=embed_text,
+    dimensions=int(os.environ["ORACLE_EMBEDDING_DIMENSIONS"]),
 )
 
 tool.create_table()
@@ -61,13 +85,6 @@ tool.add_texts(
 
 results = tool.run(query="How can agents search Oracle documents?")
 print(results)
-
-agent = Agent(
-    role="Document researcher",
-    goal="Find relevant information in Oracle documents",
-    backstory="You answer questions using retrieved document evidence.",
-    tools=[tool],
-)
 ```
 
 يجب أن يحتوي الجدول على الأعمدة `id` و`text` و`metadata` (نوع Oracle `JSON` الأصلي) و`embedding` (`VECTOR`). تنشئ `create_table()` الأعمدة `id VARCHAR2(64) PRIMARY KEY` و`text CLOB` و`metadata JSON` و`embedding VECTOR(dimensions, FLOAT32)`. يحتاج الحساب إلى الوصول إلى الجدول وصلاحيات إنشاء الجداول أو الفهارس التي يستخدمها.
@@ -108,50 +125,9 @@ print(tool.vector_index_exists(idx_type="HNSW"))
 
 إذا لم تحدد `index_name`، تُولّد الأسماء من اسم الجدول ونوع الفهرس. استخدم `vector_index_exists(idx_type="IVF")` عند التحقق من فهرس IVF. تُدعم أسماء الجداول والفهارس المؤهلة باسم المخطط، وتُحفظ حالة الأحرف في المعرّفات.
 
-## التضمينات والاتصالات المخصصة
+## اتصالات Oracle
 
-وفّر `embedding_function` لاستخدام دالة تضمّن سلسلة واحدة وتعيد قائمة أعداد عائمة. لا يتطلب هذا المسار مفتاح OpenAI. يستخدم المثال التالي [مزود التضمينات Oracle](/ar/concepts/memory) مع اتصال يديره المستدعي.
-
-استورد نموذج تضمين إلى Oracle Database قبل تشغيل هذا المثال، وعيّن `ORACLE_EMBEDDING_MODEL` إلى اسم النموذج و`ORACLE_EMBEDDING_DIMENSIONS` إلى بُعد مخرجاته. تثبيت `oracledb` لا يثبت نموذج تضمين. يحتاج الحساب إلى صلاحية استخدام `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS` والنموذج المختار. يجب ألا يتجاوز كل مستند يمرّر إلى مزود Oracle عدد 4000 حرف.
-
-```python
-import os
-
-import oracledb
-from crewai.rag.embeddings.factory import build_embedder
-from crewai_tools import OracleVectorSearchConfig, OracleVectorSearchTool
-
-with oracledb.connect(
-    user=os.environ["ORACLE_DB_USERNAME"],
-    password=os.environ["ORACLE_DB_SECRET"],
-    dsn=os.environ["ORACLE_DB_DSN"],
-) as connection:
-    oracle_embedder = build_embedder({
-        "provider": "oracle",
-        "config": {
-            "conn": connection,
-            "embedding_params": {
-                "provider": "database",
-                "model": os.environ["ORACLE_EMBEDDING_MODEL"],
-            },
-        },
-    })
-
-    def embed_text(text: str) -> list[float]:
-        if not isinstance(text, str):
-            raise TypeError("embed_text expects a single string")
-        return oracle_embedder([text])[0].tolist()
-
-    oracle_tool = OracleVectorSearchTool(
-        oracle_config=OracleVectorSearchConfig(table_name="CREWAI_ORACLE_DOCS"),
-        client=connection,
-        embedding_function=embed_text,
-        dimensions=int(os.environ["ORACLE_EMBEDDING_DIMENSIONS"]),
-    )
-    oracle_tool.create_table()
-    oracle_tool.add_texts(["Oracle Database generates document embeddings."])
-    print(oracle_tool.run(query="Where are embeddings generated?"))
-```
+يستخدم المثال [مزود التضمينات Oracle](/edge/ar/concepts/memory) مع اتصال يديره المستدعي. أبقِ الاتصال مفتوحاً لأمثلة البحث والفهرسة أعلاه، ثم استدعِ `connection.close()` عند الانتهاء.
 
 تقبل `client` أيضاً `oracledb.ConnectionPool` يديره المستدعي. تحصل الأداة على اتصال لكل عملية في قاعدة البيانات. أبقِ الاتصالات أو المجموعات مفتوحة أثناء الاستخدام وأغلقها عند الانتهاء. تمرّر `connection_kwargs` الخيارات الإضافية، مثل إعداد wallet، إلى `oracledb.connect()` عندما تنشئ الأداة اتصالها.
 
@@ -162,9 +138,8 @@ with oracledb.connect(
 | `oracle_config` | إعدادات الاتصال والبحث. `table_name` مطلوب؛ وفّر بيانات الاتصال عند عدم تمرير `client`. تشمل الحقول الأخرى `connection_kwargs` و`limit` و`score_threshold` و`distance_strategy` و`index_name`. |
 | `query_config` | قيم افتراضية اختيارية لـ `filter` و`limit` و`score_threshold`. تتجاوز الحدود لكل استدعاء القيم الافتراضية. |
 | `client` | اتصال Oracle أو مجموعة اتصالات موجودة. |
-| `embedding_function` | دالة اختيارية لتضمين نص واحد. |
-| `embedding_model` | نموذج مسار التضمين الافتراضي لـ OpenAI. القيمة الافتراضية هي `text-embedding-3-large`. |
-| `dimensions` | بُعد المتجه لإنشاء الجداول وطلبات التضمين. القيمة الافتراضية هي `3072`. |
+| `embedding_function` | دالة لتضمين نص واحد؛ وفّر دالة تضمين Oracle الموضحة أعلاه. |
+| `dimensions` | بُعد المتجه لإنشاء الجداول؛ اضبطه على بُعد مخرجات نموذج Oracle. |
 
 ## النتائج والأخطاء
 

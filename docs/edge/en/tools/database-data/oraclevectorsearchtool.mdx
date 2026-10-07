@@ -17,34 +17,58 @@ Use Oracle Database 23ai or later with AI Vector Search available. Install the O
 uv add 'crewai-tools[oracledb]'
 ```
 
-Set `ORACLE_DB_USERNAME`, `ORACLE_DB_SECRET`, and `ORACLE_DB_DSN` for the examples below. These names are read explicitly by the examples. The default embedding path also requires `OPENAI_API_KEY`. If `AZURE_OPENAI_ENDPOINT` is set, the tool uses `AzureOpenAI` instead; configure the credentials and deployment expected by that client.
+Set `ORACLE_DB_USERNAME`, `ORACLE_DB_SECRET`, and `ORACLE_DB_DSN` for the examples below. These names are read explicitly by the examples.
+
+Import an embedding model into Oracle Database before running this example, set `ORACLE_EMBEDDING_MODEL` to its model name, and set `ORACLE_EMBEDDING_DIMENSIONS` to its output dimension. Installing `oracledb` does not install an embedding model. The database account needs permission to use `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS` and the selected model. Each document passed to the Oracle provider must be at most 4000 characters.
 
 ## Basic usage
 
-This example uses OpenAI embeddings, creates a table, inserts two documents, and makes the tool available to an Agent. The embedding model and vector dimension must match the vectors already stored in an existing table.
+This example generates embeddings in Oracle Database, creates a table, inserts two documents, and searches them. The embedding model and vector dimension must match the vectors already stored in an existing table.
 
 ```python
 import os
 
-from crewai import Agent
+import oracledb
+from crewai.rag.embeddings.factory import build_embedder
 from crewai_tools import (
     OracleVectorSearchConfig,
     OracleVectorSearchQueryConfig,
     OracleVectorSearchTool,
 )
 
+connection = oracledb.connect(
+    user=os.environ["ORACLE_DB_USERNAME"],
+    password=os.environ["ORACLE_DB_SECRET"],
+    dsn=os.environ["ORACLE_DB_DSN"],
+)
+oracle_embedder = build_embedder({
+    "provider": "oracle",
+    "config": {
+        "conn": connection,
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+
+
+def embed_text(text: str) -> list[float]:
+    if not isinstance(text, str):
+        raise TypeError("embed_text expects a single string")
+    return oracle_embedder([text])[0].tolist()
+
+
 tool = OracleVectorSearchTool(
     oracle_config=OracleVectorSearchConfig(
-        user=os.environ["ORACLE_DB_USERNAME"],
-        password=os.environ["ORACLE_DB_SECRET"],
-        dsn=os.environ["ORACLE_DB_DSN"],
         table_name="CREWAI_DOCS",
         distance_strategy="COSINE",
         limit=3,
     ),
     query_config=OracleVectorSearchQueryConfig(filter={"source": "docs"}),
-    embedding_model="text-embedding-3-large",
-    dimensions=3072,
+    client=connection,
+    embedding_function=embed_text,
+    dimensions=int(os.environ["ORACLE_EMBEDDING_DIMENSIONS"]),
 )
 
 tool.create_table()
@@ -61,13 +85,6 @@ tool.add_texts(
 
 results = tool.run(query="How can agents search Oracle documents?")
 print(results)
-
-agent = Agent(
-    role="Document researcher",
-    goal="Find relevant information in Oracle documents",
-    backstory="You answer questions using retrieved document evidence.",
-    tools=[tool],
-)
 ```
 
 The table must contain `id`, `text`, `metadata` (native Oracle `JSON`), and `embedding` (`VECTOR`) columns. `create_table()` creates `id VARCHAR2(64) PRIMARY KEY`, `text CLOB`, `metadata JSON`, and `embedding VECTOR(dimensions, FLOAT32)`. The account needs access to the table and permissions for any table or index creation it performs.
@@ -108,50 +125,9 @@ print(tool.vector_index_exists(idx_type="HNSW"))
 
 Without an explicit `index_name`, names are generated from the table name and index type. Use `vector_index_exists(idx_type="IVF")` when checking an IVF index. Schema-qualified table and index names are supported; identifier casing is preserved.
 
-## Custom embeddings and connections
+## Oracle connections
 
-Supply `embedding_function` to use a callable that embeds a single string and returns a list of floats. This path does not require an OpenAI key. The following example uses the [Oracle embedding provider](/en/concepts/memory) with a caller-managed connection.
-
-Import an embedding model into Oracle Database before running this example, set `ORACLE_EMBEDDING_MODEL` to its model name, and set `ORACLE_EMBEDDING_DIMENSIONS` to its output dimension. Installing `oracledb` does not install an embedding model. The database account needs permission to use `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS` and the selected model. Each document passed to the Oracle provider must be at most 4000 characters.
-
-```python
-import os
-
-import oracledb
-from crewai.rag.embeddings.factory import build_embedder
-from crewai_tools import OracleVectorSearchConfig, OracleVectorSearchTool
-
-with oracledb.connect(
-    user=os.environ["ORACLE_DB_USERNAME"],
-    password=os.environ["ORACLE_DB_SECRET"],
-    dsn=os.environ["ORACLE_DB_DSN"],
-) as connection:
-    oracle_embedder = build_embedder({
-        "provider": "oracle",
-        "config": {
-            "conn": connection,
-            "embedding_params": {
-                "provider": "database",
-                "model": os.environ["ORACLE_EMBEDDING_MODEL"],
-            },
-        },
-    })
-
-    def embed_text(text: str) -> list[float]:
-        if not isinstance(text, str):
-            raise TypeError("embed_text expects a single string")
-        return oracle_embedder([text])[0].tolist()
-
-    oracle_tool = OracleVectorSearchTool(
-        oracle_config=OracleVectorSearchConfig(table_name="CREWAI_ORACLE_DOCS"),
-        client=connection,
-        embedding_function=embed_text,
-        dimensions=int(os.environ["ORACLE_EMBEDDING_DIMENSIONS"]),
-    )
-    oracle_tool.create_table()
-    oracle_tool.add_texts(["Oracle Database generates document embeddings."])
-    print(oracle_tool.run(query="Where are embeddings generated?"))
-```
+The example uses the [Oracle embedding provider](/edge/en/concepts/memory) with a caller-managed connection. Keep the connection open for the search and index examples above, then call `connection.close()` when finished.
 
 `client` also accepts a caller-managed `oracledb.ConnectionPool`. The tool acquires a connection for each database operation. Keep caller-managed connections or pools open while using the tool, and close them when finished. `connection_kwargs` forwards extra options, such as wallet configuration, to `oracledb.connect()` when the tool creates its own connection.
 
@@ -162,9 +138,8 @@ with oracledb.connect(
 | `oracle_config` | Connection and search settings. `table_name` is required; provide connection credentials when no `client` is supplied. Other fields include `connection_kwargs`, `limit`, `score_threshold`, `distance_strategy`, and `index_name`. |
 | `query_config` | Optional default `filter`, `limit`, and `score_threshold`. Per-call limits and thresholds override defaults. |
 | `client` | Existing Oracle connection or connection pool. |
-| `embedding_function` | Optional single-text embedding callable. |
-| `embedding_model` | Model used by the default OpenAI embedding path. Defaults to `text-embedding-3-large`. |
-| `dimensions` | Vector dimension for table creation and embedding requests. Defaults to `3072`. |
+| `embedding_function` | Single-text embedding callable; supply the Oracle embedding function shown above. |
+| `dimensions` | Vector dimension for table creation; set it to the Oracle model output dimension. |
 
 ## Results and errors
 
