@@ -235,13 +235,9 @@ def _prefixed_context_windows(
 # Legacy (not EOL) on Bedrock, so keep its provider-specific limit until AWS
 # retires it: https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle-legacy.html
 _BEDROCK_LEGACY_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "anthropic.claude-sonnet-4": 200_000,
-    "us.anthropic.claude-sonnet-4": 200_000,
-    "eu.anthropic.claude-sonnet-4": 200_000,
-    "apac.anthropic.claude-sonnet-4": 200_000,
-    "global.anthropic.claude-sonnet-4": 200_000,
     **_prefixed_context_windows(
         {
+            "anthropic.claude-sonnet-4": 200_000,
             "anthropic.claude-opus-4-1": 200_000,
             "anthropic.claude-opus-4": 200_000,
             "anthropic.claude-haiku-4": 200_000,
