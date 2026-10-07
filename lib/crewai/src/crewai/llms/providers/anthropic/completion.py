@@ -19,7 +19,10 @@ from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.types.usage_metrics import _coerce_int
-from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.agent_utils import (
+    is_context_length_exceeded,
+    message_content_text,
+)
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -854,9 +857,9 @@ class AnthropicCompletion(BaseLLM):
 
             if role == "system":
                 if system_message:
-                    system_message += f"\n\n{content}"
+                    system_message += f"\n\n{message_content_text(message)}"
                 else:
-                    system_message = cast(str, content)
+                    system_message = message_content_text(message)
             elif role == "tool":
                 tool_call_id = message.get("tool_call_id", "")
                 if not tool_call_id:
