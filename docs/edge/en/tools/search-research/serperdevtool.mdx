@@ -105,3 +105,6 @@ print(tool.run(search_query="Jeux Olympiques"))
 
 By integrating the `SerperDevTool` into Python projects, users gain the ability to conduct real-time, relevant searches across the internet directly from their applications. 
 The updated parameters allow for more customized and localized search results. By adhering to the setup and usage guidelines provided, incorporating this tool into projects is streamlined and straightforward.
+
+
+Support any Serper.dev-compatible endpoint (like litescrape.com, serpbase.dev, serpensapi.org, and others). Pass the provider base URL (without `/search`) as `SerperDevTool(base_url="https://search.example.com")` and set `SERPER_API_KEY` to a key issued by that provider. The tool appends the selected search type to `base_url`.
