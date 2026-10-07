@@ -5,6 +5,8 @@ import random
 import threading
 import time
 from unittest.mock import MagicMock, patch
+import asyncio
+import sys
 
 from crewai import Agent, Task
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -29,6 +31,7 @@ from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
+
 
 
 class RandomNumberToolInput(BaseModel):
@@ -903,3 +906,128 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+@pytest.mark.asyncio
+async def test_tool_usage_single_invocation_per_attempt_on_failure_async():
+    """Async counterpart to test_tool_usage_single_invocation_per_attempt_on_failure.
+
+    Confirms the same fix applies to the async path (_ause/tool.ainvoke),
+    not just the sync path (_use/tool.invoke).
+    """
+    
+    call_count = {"n": 0}
+
+    class AlwaysFailingTool(BaseTool):
+        name: str = "always_failing_tool"
+        description: str = "A tool that always raises at runtime"
+
+        def _run(self, logical_id: str) -> str:
+            call_count["n"] += 1
+            raise RuntimeError("boom")
+
+    failing_tool = AlwaysFailingTool().to_structured_tool()
+
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task"
+    mock_task.id = "test-task-id"
+
+    mock_action = MagicMock()
+    mock_action.tool = "always_failing_tool"
+    mock_action.tool_input = '{"logical_id": "abc"}'
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        tools=[failing_tool],
+        task=mock_task,
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=mock_action,
+    )
+    tool_usage._max_parsing_attempts = 3
+
+    calling = ToolCalling(
+        tool_name="always_failing_tool", arguments={"logical_id": "abc"}
+    )
+
+    with patch("crewai.events.event_bus.crewai_event_bus.emit"):
+        await tool_usage.ause(
+            calling=calling, tool_string="always_failing_tool(logical_id=abc)"
+        )
+
+    assert call_count["n"] == 3, (
+        f"expected the tool to be invoked once per outer parsing attempt "
+        f"(3 total), but it was invoked {call_count['n']} times"
+    )
+    assert tool_usage._run_attempts == 4
+    """Regression test for #7449.
+
+    tool.invoke() must be called exactly once per outer parsing attempt,
+    even when the tool's own function raises at runtime (not just when
+    argument-schema filtering itself fails). Before the fix, the inner
+    except-fallback re-invoked the tool a second time on ANY exception,
+    doubling the invocation count per outer attempt.
+    """
+    call_count = {"n": 0}
+
+    class AlwaysFailingTool(BaseTool):
+        name: str = "always_failing_tool"
+        description: str = "A tool that always raises at runtime"
+
+        def _run(self, logical_id: str) -> str:
+            call_count["n"] += 1
+            raise RuntimeError("boom")
+
+    failing_tool = AlwaysFailingTool().to_structured_tool()
+
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task"
+    mock_task.id = "test-task-id"
+
+    mock_action = MagicMock()
+    mock_action.tool = "always_failing_tool"
+    mock_action.tool_input = '{"logical_id": "abc"}'
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        tools=[failing_tool],
+        task=mock_task,
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=mock_action,
+    )
+    tool_usage._max_parsing_attempts = 3
+
+    calling = ToolCalling(
+        tool_name="always_failing_tool", arguments={"logical_id": "abc"}
+    )
+
+    with patch("crewai.events.event_bus.crewai_event_bus.emit"):
+        tool_usage.use(
+            calling=calling, tool_string="always_failing_tool(logical_id=abc)"
+        )
+
+    # Before the fix this was 6 (2x per outer attempt x 3 attempts).
+    assert call_count["n"] == 3, (
+        f"expected the tool to be invoked once per outer parsing attempt "
+        f"(3 total), but it was invoked {call_count['n']} times"
+    )
+    assert tool_usage._run_attempts == 4
