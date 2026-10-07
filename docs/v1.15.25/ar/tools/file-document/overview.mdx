@@ -1,0 +1,97 @@
+---
+title: "نظرة عامة"
+description: "قراءة وكتابة والبحث في صيغ ملفات متنوعة باستخدام أدوات معالجة المستندات من CrewAI"
+icon: "face-smile"
+mode: "wide"
+---
+
+تتيح هذه الأدوات لوكلائك العمل مع صيغ ملفات وأنواع مستندات متنوعة. من قراءة ملفات PDF إلى معالجة بيانات JSON، تتعامل هذه الأدوات مع جميع احتياجات معالجة المستندات الخاصة بك.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة قراءة الملفات" icon="folders" href="/ar/tools/file-document/filereadtool">
+    قراءة المحتوى من أي نوع ملف بما في ذلك النصوص و Markdown والمزيد.
+  </Card>
+
+  <Card title="أداة كتابة الملفات" icon="file-pen" href="/ar/tools/file-document/filewritetool">
+    كتابة المحتوى في الملفات وإنشاء مستندات جديدة وحفظ البيانات المعالجة.
+  </Card>
+
+  <Card title="أداة بحث PDF" icon="file-pdf" href="/ar/tools/file-document/pdfsearchtool">
+    البحث واستخراج محتوى نصي من مستندات PDF بكفاءة.
+  </Card>
+
+  <Card title="أداة بحث DOCX" icon="file-word" href="/ar/tools/file-document/docxsearchtool">
+    البحث في مستندات Microsoft Word واستخراج المحتوى ذي الصلة.
+  </Card>
+
+  <Card title="أداة بحث JSON" icon="brackets-curly" href="/ar/tools/file-document/jsonsearchtool">
+    تحليل والبحث في ملفات JSON بإمكانيات استعلام متقدمة.
+  </Card>
+
+  <Card title="أداة بحث CSV" icon="table" href="/ar/tools/file-document/csvsearchtool">
+    معالجة والبحث في ملفات CSV واستخراج صفوف وأعمدة محددة.
+  </Card>
+
+  <Card title="أداة بحث XML" icon="code" href="/ar/tools/file-document/xmlsearchtool">
+    تحليل ملفات XML والبحث عن عناصر وخصائص محددة.
+  </Card>
+
+  <Card title="أداة بحث MDX" icon="markdown" href="/ar/tools/file-document/mdxsearchtool">
+    البحث في ملفات MDX واستخراج المحتوى من الوثائق.
+  </Card>
+
+  <Card title="أداة بحث TXT" icon="file-lines" href="/ar/tools/file-document/txtsearchtool">
+    البحث في ملفات النص العادي بإمكانيات مطابقة الأنماط.
+  </Card>
+
+  <Card title="أداة بحث المجلدات" icon="folder-open" href="/ar/tools/file-document/directorysearchtool">
+    البحث عن الملفات والمجلدات داخل هياكل المجلدات.
+  </Card>
+
+  <Card title="أداة قراءة المجلدات" icon="folder" href="/ar/tools/file-document/directoryreadtool">
+    قراءة وعرض محتويات المجلدات وهياكل الملفات والبيانات الوصفية.
+  </Card>
+
+  <Card title="أداة OCR" icon="image" href="/ar/tools/file-document/ocrtool">
+    استخراج النص من الصور (ملفات محلية أو عناوين URL) باستخدام نموذج LLM مزود بالرؤية.
+  </Card>
+
+  <Card title="أداة كتابة نص PDF" icon="file-pdf" href="/ar/tools/file-document/pdf-text-writing-tool">
+    كتابة نص في إحداثيات محددة في ملفات PDF، مع خطوط مخصصة اختيارية.
+  </Card>
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **معالجة المستندات**: استخراج وتحليل المحتوى من صيغ ملفات متنوعة
+- **استيراد البيانات**: قراءة بيانات منظمة من ملفات CSV و JSON و XML
+- **بحث المحتوى**: العثور على معلومات محددة داخل مجموعات مستندات كبيرة
+- **إدارة الملفات**: تنظيم ومعالجة الملفات والمجلدات
+- **تصدير البيانات**: حفظ النتائج المعالجة في صيغ ملفات متنوعة
+
+## **مثال للبدء السريع**
+
+```python
+from crewai_tools import FileReadTool, PDFSearchTool, JSONSearchTool
+
+# Create tools
+file_reader = FileReadTool()
+pdf_searcher = PDFSearchTool()
+json_processor = JSONSearchTool()
+
+# Add to your agent
+agent = Agent(
+    role="Document Analyst",
+    tools=[file_reader, pdf_searcher, json_processor],
+    goal="Process and analyze various document types"
+)
+```
+
+## **نصائح لمعالجة المستندات**
+
+- **صلاحيات الملفات**: تأكد من أن وكيلك لديه صلاحيات القراءة/الكتابة المناسبة
+- **الملفات الكبيرة**: فكر في التقسيم إلى أجزاء للمستندات الكبيرة جداً
+- **دعم الصيغ**: راجع وثائق الأداة لمعرفة صيغ الملفات المدعومة
+- **معالجة الأخطاء**: طبّق معالجة أخطاء مناسبة للملفات التالفة أو التي يتعذر الوصول إليها
