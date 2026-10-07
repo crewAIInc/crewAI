@@ -15,7 +15,10 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
 from crewai.llms.providers.utils.common import safe_tool_conversion
-from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.agent_utils import (
+    is_context_length_exceeded,
+    message_content_text,
+)
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -1843,9 +1846,9 @@ class BedrockCompletion(BaseLLM):
             if role == "system":
                 # Converse API handles system messages separately
                 if system_message:
-                    system_message += f"\n\n{content}"
+                    system_message += f"\n\n{message_content_text(message)}"
                 else:
-                    system_message = cast(str, content)
+                    system_message = message_content_text(message)
             elif role == "tool":
                 if not tool_call_id:
                     raise ValueError("Tool message missing required tool_call_id")
@@ -1853,7 +1856,7 @@ class BedrockCompletion(BaseLLM):
                     {
                         "toolResult": {
                             "toolUseId": tool_call_id,
-                            "content": [{"text": str(content) if content else ""}],
+                            "content": [{"text": message_content_text(message)}],
                         }
                     }
                 )
