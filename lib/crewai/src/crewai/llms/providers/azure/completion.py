@@ -18,6 +18,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
+from crewai.llms.providers.azure.tool_arguments import parse_tool_arguments
 
 
 try:
@@ -892,12 +893,7 @@ class AzureCompletion(BaseLLM):
             tool_call = message.tool_calls[0]  # Handle first tool call
             if isinstance(tool_call, ChatCompletionsToolCall):
                 function_name = tool_call.function.name
-
-                try:
-                    function_args = json.loads(tool_call.function.arguments)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse tool arguments: {e}")
-                    function_args = {}
+                function_args = parse_tool_arguments(tool_call.function.arguments)
 
                 result = self._handle_tool_execution(
                     function_name=function_name,
@@ -1111,12 +1107,7 @@ class AzureCompletion(BaseLLM):
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
                 function_name = call_data["name"]
-
-                try:
-                    function_args = json.loads(call_data["arguments"])
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse streamed tool arguments: {e}")
-                    continue
+                function_args = parse_tool_arguments(call_data["arguments"])
 
                 result = self._handle_tool_execution(
                     function_name=function_name,
