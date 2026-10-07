@@ -295,6 +295,7 @@ def test_guardrail_postponed_annotations():
     expected_output = "A string"
 
     def make_postponed(source: str):
+        """Build a function with PEP 563 postponed (string) annotations."""
         namespace: dict[str, object] = {"Any": Any, "TaskOutput": TaskOutput}
         exec(f"from __future__ import annotations\n{source}", namespace)
         return namespace["postponed_guardrail"]
@@ -321,6 +322,16 @@ def test_guardrail_postponed_annotations():
         Task(
             description=desc, expected_output=expected_output, guardrail=unresolvable
         )
+
+    input_unresolvable = make_postponed(
+        "def postponed_guardrail(output: NotDefinedAnywhere) -> tuple[bool, Any]:\n"
+        "    return True, output\n"
+    )
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=input_unresolvable,
+    )
 
 
 @pytest.mark.vcr()

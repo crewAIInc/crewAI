@@ -357,22 +357,26 @@ class Task(BaseModel):
             if isinstance(return_annotation, str):
                 # Postponed evaluation (PEP 563, `from __future__ import
                 # annotations`) leaves the annotation as a string. Resolve
-                # only the return annotation in the callable's own namespace
-                # before applying the structural checks below. Unresolvable
+                # only the return hint in the callable's own namespace;
+                # input annotations are never evaluated here. Unresolvable
                 # hints fall through and are rejected as before.
-                try:
-                    target = v
-                    while isinstance(target, functools.partial):
-                        target = target.func
-                    if not (inspect.isfunction(target) or inspect.ismethod(target)):
-                        bound_call = getattr(target, "__call__", None)
-                        if bound_call is not None:
-                            target = bound_call
-                    return_annotation = get_type_hints(target).get(
-                        "return", return_annotation
-                    )
-                except Exception:
+                def return_hint() -> None:
                     pass
+
+                return_hint.__annotations__ = {"return": return_annotation}
+                try:
+                    target = inspect.unwrap(v)
+                    while isinstance(target, functools.partial):
+                        target = inspect.unwrap(target.func)
+                    if not (inspect.isfunction(target) or inspect.ismethod(target)):
+                        target = inspect.unwrap(target.__call__)
+                    return_annotation = get_type_hints(
+                        return_hint,
+                        globalns=getattr(target, "__globals__", {}),
+                        include_extras=True,
+                    )["return"]
+                except Exception:
+                    return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
                 return_annotation_args = get_args(return_annotation)
                 if not (
