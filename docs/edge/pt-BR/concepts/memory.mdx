@@ -695,6 +695,41 @@ def my_embedder(texts: list[str]) -> list[list[float]]:
 memory = Memory(embedder=my_embedder)
 ```
 </Accordion>
+
+<Accordion title="Oracle Database">
+
+Instale `oracledb` (`uv add oracledb`) e importe um modelo de embeddings no Oracle Database antes de usar este provedor. Defina `ORACLE_EMBEDDING_MODEL` com um modelo acessível à conta configurada. O provedor chama `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS`.
+
+```python
+import os
+
+from crewai import Memory
+
+memory = Memory(embedder={
+    "provider": "oracle",
+    "config": {
+        "connection_params": {
+            "user": os.environ["ORACLE_DB_USERNAME"],
+            "password": os.environ["ORACLE_DB_SECRET"],
+            "dsn": os.environ["ORACLE_DB_DSN"],
+        },
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+```
+
+Forneça exatamente um entre `connection_params` e um objeto de conexão `conn` programático. `ORACLE_CONN` não é usado como objeto de conexão.
+
+`proxy` ou `ORACLE_PROXY` opcionais configuram `UTL_HTTP` para solicitações remotas.
+
+Documentos devem ter no máximo 4000 caracteres; os vetores retornados são alinhados por `embed_id`, e resultados ausentes ou duplicados geram erro.
+
+Essa configuração seleciona o provedor de embeddings; o armazenamento do Memory e seu LLM são configurados separadamente. Para pesquisar documentos em tabelas Oracle, use [Oracle Vector Search](/pt-BR/tools/database-data/oraclevectorsearchtool).
+
+</Accordion>
 </AccordionGroup>
 
 ### Referência de Provedores
@@ -702,6 +737,7 @@ memory = Memory(embedder=my_embedder)
 | Provedor | Chave | Modelo Típico | Notas |
 | :--- | :--- | :--- | :--- |
 | OpenAI | `openai` | `text-embedding-3-small` | Padrão. Defina `OPENAI_API_KEY`. |
+| Oracle Database | `oracle` | `ORACLE_EMBEDDING_MODEL` | Modelo importado no Oracle; exige `oracledb` e acesso a `DBMS_VECTOR_CHAIN`. |
 | Ollama | `ollama` | `mxbai-embed-large` | Local, sem API key. |
 | Azure OpenAI | `azure` | `text-embedding-ada-002` | Requer `deployment_id`. |
 | Google AI | `google-generativeai` | `gemini-embedding-001` | Defina `GOOGLE_API_KEY`. |

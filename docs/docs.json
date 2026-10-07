@@ -286,6 +286,7 @@
                           "edge/en/tools/database-data/pgsearchtool",
                           "edge/en/tools/database-data/snowflakesearchtool",
                           "edge/en/tools/database-data/nl2sqltool",
+                          "edge/en/tools/database-data/oraclevectorsearchtool",
                           "edge/en/tools/database-data/qdrantvectorsearchtool",
                           "edge/en/tools/database-data/weaviatevectorsearchtool",
                           "edge/en/tools/database-data/mongodbvectorsearchtool",
@@ -15966,6 +15967,7 @@
                           "edge/pt-BR/tools/database-data/pgsearchtool",
                           "edge/pt-BR/tools/database-data/snowflakesearchtool",
                           "edge/pt-BR/tools/database-data/nl2sqltool",
+                          "edge/pt-BR/tools/database-data/oraclevectorsearchtool",
                           "edge/pt-BR/tools/database-data/qdrantvectorsearchtool",
                           "edge/pt-BR/tools/database-data/weaviatevectorsearchtool"
                         ]
@@ -30516,6 +30518,7 @@
                           "edge/ko/tools/database-data/pgsearchtool",
                           "edge/ko/tools/database-data/snowflakesearchtool",
                           "edge/ko/tools/database-data/nl2sqltool",
+                          "edge/ko/tools/database-data/oraclevectorsearchtool",
                           "edge/ko/tools/database-data/qdrantvectorsearchtool",
                           "edge/ko/tools/database-data/weaviatevectorsearchtool",
                           "edge/ko/tools/database-data/mongodbvectorsearchtool",
@@ -45548,6 +45551,7 @@
                           "edge/ar/tools/database-data/pgsearchtool",
                           "edge/ar/tools/database-data/snowflakesearchtool",
                           "edge/ar/tools/database-data/nl2sqltool",
+                          "edge/ar/tools/database-data/oraclevectorsearchtool",
                           "edge/ar/tools/database-data/qdrantvectorsearchtool",
                           "edge/ar/tools/database-data/weaviatevectorsearchtool",
                           "edge/ar/tools/database-data/mongodbvectorsearchtool",

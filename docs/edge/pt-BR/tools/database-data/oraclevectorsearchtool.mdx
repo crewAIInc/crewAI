@@ -1,0 +1,171 @@
+---
+title: "Ferramenta Oracle Vector Search"
+description: "Pesquise tabelas do Oracle AI Vector Search e use embeddings gerados no Oracle com Agents do CrewAI"
+icon: "database"
+mode: "wide"
+---
+
+## Visão geral
+
+`OracleVectorSearchTool` pesquisa documentos armazenados no Oracle Database usando Oracle AI Vector Search. Oferece filtros de metadados JSON, limites por consulta, limiares de distância máxima e índices HNSW ou IVF.
+
+## Instalação e pré-requisitos
+
+Use Oracle Database 23ai ou posterior com AI Vector Search disponível. Instale o extra do Oracle:
+
+```bash
+uv add 'crewai-tools[oracledb]'
+```
+
+Defina `ORACLE_DB_USERNAME`, `ORACLE_DB_SECRET` e `ORACLE_DB_DSN` para os exemplos abaixo. Os exemplos leem esses nomes explicitamente. O caminho padrão de embeddings também exige `OPENAI_API_KEY`. Se `AZURE_OPENAI_ENDPOINT` estiver definido, a ferramenta usa `AzureOpenAI`; configure as credenciais e o deployment esperados por esse cliente.
+
+## Uso básico
+
+Este exemplo usa embeddings do OpenAI, cria uma tabela, insere dois documentos e disponibiliza a ferramenta para um Agent. O modelo de embeddings e a dimensão vetorial devem corresponder aos vetores já armazenados em uma tabela existente.
+
+```python
+import os
+
+from crewai import Agent
+from crewai_tools import (
+    OracleVectorSearchConfig,
+    OracleVectorSearchQueryConfig,
+    OracleVectorSearchTool,
+)
+
+tool = OracleVectorSearchTool(
+    oracle_config=OracleVectorSearchConfig(
+        user=os.environ["ORACLE_DB_USERNAME"],
+        password=os.environ["ORACLE_DB_SECRET"],
+        dsn=os.environ["ORACLE_DB_DSN"],
+        table_name="CREWAI_DOCS",
+        distance_strategy="COSINE",
+        limit=3,
+    ),
+    query_config=OracleVectorSearchQueryConfig(filter={"source": "docs"}),
+    embedding_model="text-embedding-3-large",
+    dimensions=3072,
+)
+
+tool.create_table()
+tool.add_texts(
+    [
+        "CrewAI agents can search documents in Oracle Database.",
+        "Oracle AI Vector Search supports semantic similarity queries.",
+    ],
+    metadatas=[
+        {"source": "docs", "tags": ["oracle", "crewai"]},
+        {"source": "docs", "tags": ["oracle", "search"]},
+    ],
+)
+
+results = tool.run(query="How can agents search Oracle documents?")
+print(results)
+
+agent = Agent(
+    role="Document researcher",
+    goal="Find relevant information in Oracle documents",
+    backstory="You answer questions using retrieved document evidence.",
+    tools=[tool],
+)
+```
+
+A tabela deve conter as colunas `id`, `text`, `metadata` (Oracle `JSON` nativo) e `embedding` (`VECTOR`). `create_table()` cria `id VARCHAR2(64) PRIMARY KEY`, `text CLOB`, `metadata JSON` e `embedding VECTOR(dimensions, FLOAT32)`. A conta precisa de acesso à tabela e das permissões para criar as tabelas ou os índices utilizados.
+
+`create_table()` e a criação de índices executam DDL do Oracle, que faz commit implícito. Chamadas bem-sucedidas de `add_texts()` fazem commit da conexão. Se uma inserção falhar, o lote retorna a um savepoint, preservando o trabalho pendente anterior quando a tabela já existe.
+
+## Filtros de metadados e distâncias
+
+Passe filtros mais completos como uma string JSON em `filters`. Os filtros de `query_config` e da chamada de pesquisa são combinados com AND.
+
+```python
+import json
+
+results = tool.run(
+    query="Oracle semantic search",
+    filters=json.dumps({"tags": {"$in": ["search"]}}),
+    limit=2,
+    score_threshold=0.6,
+)
+```
+
+Os operadores incluem `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$between`, `$in`, `$nin`, `$all`, `$exists` e `$not`; combine-os com `$and`, `$or` ou `$nor`. Listas lógicas e objetos de filtro aninhados não podem ser vazios. `$in`, `$nin` e `$all` exigem listas não vazias. `$in` e `$nin` verificam valores escalares ou elementos de arrays; `$all` exige todos os valores solicitados. Pontos representam membros aninhados, `[*]` representa um curinga de array e nomes com espaços recebem aspas automaticamente. Para igualdade escalar simples, passe `filter_by` e `filter_value` juntos.
+
+`score_threshold` é uma distância máxima: um resultado é mantido quando `distance <= score_threshold`. As estratégias são `COSINE`, `EUCLIDEAN` e `DOT`. `DOT` retorna o produto interno negativo, portanto limiares negativos são válidos. Os limites devem ser inteiros positivos. Linhas com embeddings nulos são excluídas.
+
+## Índices vetoriais
+
+Crie um índice após carregar os documentos. HNSW é o tipo padrão; IVF é uma alternativa. Os recursos e as permissões do banco devem permitir o tipo escolhido.
+
+```python
+tool.create_vector_index(idx_type="HNSW", params={"accuracy": 90})
+
+# An alternative to HNSW:
+# tool.create_vector_index(index_name="CREWAI_DOCS_IVF", idx_type="IVF")
+
+print(tool.vector_index_exists(idx_type="HNSW"))
+```
+
+Sem `index_name` explícito, os nomes são gerados a partir da tabela e do tipo de índice. Use `vector_index_exists(idx_type="IVF")` para verificar um índice IVF. Nomes de tabelas e índices qualificados por schema são aceitos; maiúsculas e minúsculas dos identificadores são preservadas.
+
+## Embeddings e conexões personalizados
+
+Forneça `embedding_function` para usar uma função que recebe uma string e retorna uma lista de floats. Esse caminho não exige chave do OpenAI. O exemplo usa o [provedor de embeddings Oracle](/pt-BR/concepts/memory) com uma conexão gerenciada pelo chamador.
+
+Importe um modelo de embeddings no Oracle Database antes de executar este exemplo, defina `ORACLE_EMBEDDING_MODEL` com seu nome e `ORACLE_EMBEDDING_DIMENSIONS` com sua dimensão de saída. Instalar `oracledb` não instala um modelo. A conta precisa de permissão para usar `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS` e o modelo escolhido. Cada documento enviado ao provedor Oracle deve ter no máximo 4000 caracteres.
+
+```python
+import os
+
+import oracledb
+from crewai.rag.embeddings.factory import build_embedder
+from crewai_tools import OracleVectorSearchConfig, OracleVectorSearchTool
+
+with oracledb.connect(
+    user=os.environ["ORACLE_DB_USERNAME"],
+    password=os.environ["ORACLE_DB_SECRET"],
+    dsn=os.environ["ORACLE_DB_DSN"],
+) as connection:
+    oracle_embedder = build_embedder({
+        "provider": "oracle",
+        "config": {
+            "conn": connection,
+            "embedding_params": {
+                "provider": "database",
+                "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+            },
+        },
+    })
+
+    def embed_text(text: str) -> list[float]:
+        if not isinstance(text, str):
+            raise TypeError("embed_text expects a single string")
+        return oracle_embedder([text])[0].tolist()
+
+    oracle_tool = OracleVectorSearchTool(
+        oracle_config=OracleVectorSearchConfig(table_name="CREWAI_ORACLE_DOCS"),
+        client=connection,
+        embedding_function=embed_text,
+        dimensions=int(os.environ["ORACLE_EMBEDDING_DIMENSIONS"]),
+    )
+    oracle_tool.create_table()
+    oracle_tool.add_texts(["Oracle Database generates document embeddings."])
+    print(oracle_tool.run(query="Where are embeddings generated?"))
+```
+
+`client` também aceita um `oracledb.ConnectionPool` gerenciado pelo chamador. A ferramenta obtém uma conexão para cada operação no banco. Mantenha conexões e pools abertos durante o uso e feche-os ao terminar. `connection_kwargs` encaminha opções adicionais, como configuração de wallet, para `oracledb.connect()` quando a ferramenta cria sua conexão.
+
+## Configuração
+
+| Argumento | Finalidade |
+| --- | --- |
+| `oracle_config` | Configurações de conexão e pesquisa. `table_name` é obrigatório; forneça credenciais quando não passar `client`. Outros campos incluem `connection_kwargs`, `limit`, `score_threshold`, `distance_strategy` e `index_name`. |
+| `query_config` | Valores padrão opcionais de `filter`, `limit` e `score_threshold`. Limites e limiares por chamada substituem os padrões. |
+| `client` | Conexão Oracle ou pool de conexões existente. |
+| `embedding_function` | Função opcional de embedding para um único texto. |
+| `embedding_model` | Modelo do caminho padrão de embeddings OpenAI. O padrão é `text-embedding-3-large`. |
+| `dimensions` | Dimensão vetorial para criação de tabelas e solicitações de embeddings. O padrão é `3072`. |
+
+## Resultados e erros
+
+`run()` retorna uma string JSON com uma lista de resultados. Cada resultado contém `context`, `metadata`, `distance` e `score`. Atualmente, `score` equivale à distância bruta; não é uma pontuação de similaridade normalizada. Uma pesquisa bem-sucedida sem resultados retorna `"[]"`. Erros são registrados nos logs e retornam uma string vazia (`""`); consulte os logs antes de interpretar isso como ausência de resultados.
