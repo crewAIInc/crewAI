@@ -207,3 +207,30 @@ class TestExperimentRunner:
         assert isinstance(result.expected_score, dict)
         assert "unknown_metric" in result.expected_score.keys()
         assert result.passed is False
+
+    @patch("crewai.experimental.evaluation.experiment.runner.create_default_evaluator")
+    def test_run_fails_when_expected_score_is_empty(
+        self, mock_create_evaluator, mock_crew, mock_evaluator_results
+    ):
+        dataset = [
+            {
+                "identifier": "empty-expected-case",
+                "inputs": {"query": "Test query"},
+                "expected_score": {},
+            }
+        ]
+
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_agent_evaluation.return_value = mock_evaluator_results
+        mock_evaluator.reset_iterations_results = MagicMock()
+        mock_create_evaluator.return_value = mock_evaluator
+
+        runner = ExperimentRunner(dataset=dataset)
+
+        results = runner.run(crew=mock_crew)
+        (result,) = results.results
+
+        assert result.identifier == "empty-expected-case"
+        assert result.passed is False
+        assert runner._assert_scores({}, 5.0) is False
+        assert runner._assert_scores({}, {"goal_alignment": 8.0}) is False

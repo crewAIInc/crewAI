@@ -143,6 +143,9 @@ class ExperimentRunner:
         if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
             return actual >= expected
 
+        if isinstance(expected, dict) and not expected:
+            return False
+
         if isinstance(expected, dict) and isinstance(actual, (int, float)):
             return all(actual >= exp_score for exp_score in expected.values())
 
@@ -153,8 +156,6 @@ class ExperimentRunner:
             return avg_score >= expected
 
         if isinstance(expected, dict) and isinstance(actual, dict):
-            if not expected:
-                return True
             matching_keys = set(expected.keys()) & set(actual.keys())
             if not matching_keys:
                 return False
