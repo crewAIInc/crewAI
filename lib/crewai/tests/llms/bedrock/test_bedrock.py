@@ -1308,3 +1308,64 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+def test_bedrock_converse_multimodal_content_collapsed():
+    """Multimodal content parts collapse to text, never a Python repr.
+
+    Regression test for #7920: system and tool messages whose content is a
+    parts list were stringified with the list repr into the Converse payload.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    parts = [
+        {"type": "text", "text": "You are helpful."},
+        {"type": "text", "text": "Be concise."},
+    ]
+
+    # Lone system message with parts list
+    _, system_message = llm._format_messages_for_converse(
+        [
+            {"role": "system", "content": parts},
+            {"role": "user", "content": "hi"},
+        ]
+    )
+    assert system_message == "You are helpful. Be concise."
+
+    # Second system message appended to an existing one
+    _, system_message = llm._format_messages_for_converse(
+        [
+            {"role": "system", "content": "First."},
+            {"role": "system", "content": parts},
+            {"role": "user", "content": "hi"},
+        ]
+    )
+    assert system_message == "First.\n\nYou are helpful. Be concise."
+
+    # Tool message with parts list
+    messages = [
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {"name": "t", "arguments": "{}"},
+                },
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_1", "content": parts},
+    ]
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+    tool_msgs = [
+        m
+        for m in converse_msgs
+        if m.get("role") == "user"
+        and any("toolResult" in b for b in m.get("content", []))
+    ]
+    assert len(tool_msgs) == 1
+    assert (
+        tool_msgs[0]["content"][0]["toolResult"]["content"][0]["text"]
+        == "You are helpful. Be concise."
+    )
