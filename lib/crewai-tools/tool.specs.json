@@ -3624,6 +3624,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -3667,6 +3709,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -4750,6 +4795,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -4793,6 +4880,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -6787,6 +6877,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -6830,6 +6962,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -9199,6 +9334,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -9242,6 +9419,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -12046,6 +12226,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -12089,6 +12311,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -13419,6 +13644,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -13462,6 +13729,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -14798,6 +15068,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -14841,6 +15153,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -16360,6 +16675,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -16403,6 +16760,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -17419,6 +17779,336 @@
           "image_path_url"
         ],
         "title": "OCRToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search Oracle AI Vector Search tables for semantically relevant documents.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for default OpenAI embeddings when embedding_function is not provided",
+          "name": "OPENAI_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "OracleVectorSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "OracleVectorSearchConfig": {
+            "description": "Oracle connection and vector search settings.",
+            "properties": {
+              "connection_kwargs": {
+                "additionalProperties": true,
+                "title": "Connection Kwargs",
+                "type": "object"
+              },
+              "distance_strategy": {
+                "default": "COSINE",
+                "enum": [
+                  "COSINE",
+                  "EUCLIDEAN",
+                  "DOT"
+                ],
+                "title": "Distance Strategy",
+                "type": "string"
+              },
+              "dsn": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Dsn"
+              },
+              "index_name": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Index Name"
+              },
+              "limit": {
+                "default": 3,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              },
+              "password": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Password"
+              },
+              "score_threshold": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Score Threshold"
+              },
+              "table_name": {
+                "title": "Table Name",
+                "type": "string"
+              },
+              "user": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "User"
+              }
+            },
+            "required": [
+              "table_name"
+            ],
+            "title": "OracleVectorSearchConfig",
+            "type": "object"
+          },
+          "OracleVectorSearchQueryConfig": {
+            "description": "Default query behavior for Oracle vector search.",
+            "properties": {
+              "filter": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Optional Oracle-style metadata filter dictionary.",
+                "title": "Filter"
+              },
+              "limit": {
+                "anyOf": [
+                  {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Limit"
+              },
+              "score_threshold": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Score Threshold"
+              }
+            },
+            "title": "OracleVectorSearchQueryConfig",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search Oracle AI Vector Search tables for relevant documents.",
+        "properties": {
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional pre-configured Oracle connection.",
+            "title": "Client"
+          },
+          "dimensions": {
+            "default": 3072,
+            "description": "Embedding dimension used when creating Oracle vector tables and indexes.",
+            "title": "Dimensions",
+            "type": "integer"
+          },
+          "embedding_model": {
+            "default": "text-embedding-3-large",
+            "description": "OpenAI embedding model used when embedding_function is not provided.",
+            "title": "Embedding Model",
+            "type": "string"
+          },
+          "oracle_config": {
+            "$ref": "#/$defs/OracleVectorSearchConfig"
+          },
+          "query_config": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/OracleVectorSearchQueryConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional default query behavior including filters and maximum distance threshold."
+          }
+        },
+        "required": [
+          "oracle_config"
+        ],
+        "title": "OracleVectorSearchTool",
+        "type": "object"
+      },
+      "name": "OracleVectorSearchTool",
+      "package_dependencies": [
+        "oracledb"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "filter_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata field path to filter by, for example 'source' or 'department.region'.",
+            "title": "Filter By"
+          },
+          "filter_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata value to filter by. Must be used together with filter_by.",
+            "title": "Filter Value"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON string with Oracle-style metadata filters using operators like $and, $or, $eq, $gt, $in, or $exists.",
+            "title": "Filters"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional result limit overriding the tool default for this search.",
+            "title": "Limit"
+          },
+          "query": {
+            "description": "Query to search in the Oracle vector store - always required.",
+            "title": "Query",
+            "type": "string"
+          },
+          "score_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional maximum vector distance. Only rows with distance less than or equal to this value are returned.",
+            "title": "Score Threshold"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "OracleToolSchema",
         "type": "object"
       }
     },
@@ -18917,6 +19607,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -18960,6 +19692,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -20740,6 +21475,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -20783,6 +21560,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -22992,6 +23772,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -23035,6 +23857,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -24564,6 +25389,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -24607,6 +25474,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -26523,6 +27393,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -26566,6 +27478,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -28834,6 +29749,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -28877,6 +29834,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -29960,6 +30920,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -30003,6 +31005,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -31086,6 +32091,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -31129,6 +32176,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"
@@ -32212,6 +33262,48 @@
             "title": "OpenRouterProviderSpec",
             "type": "object"
           },
+          "OracleProviderConfig": {
+            "description": "Configuration for Oracle provider.",
+            "properties": {
+              "conn": {
+                "title": "Conn"
+              },
+              "connection_params": {
+                "additionalProperties": true,
+                "title": "Connection Params",
+                "type": "object"
+              },
+              "embedding_params": {
+                "additionalProperties": true,
+                "title": "Embedding Params",
+                "type": "object"
+              },
+              "proxy": {
+                "title": "Proxy",
+                "type": "string"
+              }
+            },
+            "title": "OracleProviderConfig",
+            "type": "object"
+          },
+          "OracleProviderSpec": {
+            "description": "Oracle provider specification.",
+            "properties": {
+              "config": {
+                "$ref": "#/$defs/OracleProviderConfig"
+              },
+              "provider": {
+                "const": "oracle",
+                "title": "Provider",
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider"
+            ],
+            "title": "OracleProviderSpec",
+            "type": "object"
+          },
           "RagToolConfig": {
             "description": "Configuration accepted by RAG tools.\n\nSupports embedding model and vector database configuration.\n\nAttributes:\n    embedding_model: Embedding model configuration accepted by RAG tools.\n    vectordb: Vector database configuration accepted by RAG tools.",
             "properties": {
@@ -32255,6 +33347,9 @@
                   },
                   {
                     "$ref": "#/$defs/OpenRouterProviderSpec"
+                  },
+                  {
+                    "$ref": "#/$defs/OracleProviderSpec"
                   },
                   {
                     "$ref": "#/$defs/RoboflowProviderSpec"

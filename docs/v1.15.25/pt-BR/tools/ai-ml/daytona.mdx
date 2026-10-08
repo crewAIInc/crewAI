@@ -1,0 +1,230 @@
+---
+title: Daytona Sandbox Tools
+description: Run shell commands, execute Python, and manage files inside isolated [Daytona](https://www.daytona.io/) sandboxes.
+icon: box
+mode: "wide"
+---
+
+# Daytona Sandbox Tools
+
+## Description
+
+The Daytona sandbox tools give CrewAI agents access to isolated, ephemeral compute environments powered by [Daytona](https://www.daytona.io/). Three tools are available so you can give an agent exactly the capabilities it needs:
+
+- **`DaytonaExecTool`** — run any shell command inside a sandbox.
+- **`DaytonaPythonTool`** — execute a block of Python source code inside a sandbox.
+- **`DaytonaFileTool`** — read, write, append, list, delete, and inspect files inside a sandbox; also supports `move`, `find` (content grep), `search` (filename glob), `chmod` (permissions), `replace` (bulk find-and-replace), and `exists`.
+
+All three tools share the same sandbox lifecycle controls, so you can mix and match them while keeping state in a single persistent sandbox.
+
+## Installation
+
+```shell
+uv add "crewai-tools[daytona]"
+# or
+pip install "crewai-tools[daytona]"
+```
+
+Set your API key:
+
+```shell
+export DAYTONA_API_KEY="your-api-key"
+```
+
+`DAYTONA_API_URL` and `DAYTONA_TARGET` are also respected if set.
+
+## Sandbox Lifecycle
+
+All three tools inherit lifecycle controls from `DaytonaBaseTool`:
+
+| Mode | How to enable | Sandbox created | Sandbox deleted |
+|------|--------------|-----------------|-----------------|
+| **Ephemeral** (default) | `persistent=False` (default) | On every `_run` call | At the end of that same call |
+| **Persistent** | `persistent=True` | Lazily on first use | At process exit (via `atexit`), or manually via `tool.close()` |
+| **Attach** | `sandbox_id="<id>"` | Never — attaches to an existing sandbox | Never — the tool will not delete a sandbox it did not create |
+
+Ephemeral mode is the safe default: nothing leaks if the agent forgets to clean up. Use persistent mode when you want filesystem state or installed packages to carry across multiple tool calls — this is typical when pairing `DaytonaFileTool` with `DaytonaExecTool`.
+
+## Examples
+
+### One-shot Python execution (ephemeral)
+
+```python Code
+from crewai_tools import DaytonaPythonTool
+
+tool = DaytonaPythonTool()
+result = tool.run(code="print(sum(range(10)))")
+print(result)
+# {"exit_code": 0, "result": "45\n", "artifacts": ExecutionArtifacts(stdout="45\n", charts=[])}
+```
+
+### Multi-step shell session (persistent)
+
+```python Code
+from crewai_tools import DaytonaExecTool, DaytonaFileTool
+
+# Create the persistent sandbox via the first tool, then attach the second
+# tool to it so both share state (installed packages, files, env vars).
+exec_tool = DaytonaExecTool(persistent=True)
+exec_tool.run(command="pip install httpx -q")
+file_tool = DaytonaFileTool(sandbox_id=exec_tool.active_sandbox_id)
+
+file_tool.run(
+    action="write",
+    path="workspace/script.py",
+    content="import httpx; print(f'httpx loaded, version {httpx.__version__}')",
+)
+exec_tool.run(command="python workspace/script.py")
+```
+
+<Note>
+By default, each tool with `persistent=True` lazily creates its **own** sandbox on first use. The pattern above shares a single sandbox across multiple tools by reading the first tool's `active_sandbox_id` after a `.run()` call and passing it to the others via `sandbox_id=...`. With `persistent=False` (the default), every `.run()` call gets a fresh sandbox that's deleted at the end of that call.
+</Note>
+
+### Attach to an existing sandbox
+
+```python Code
+from crewai_tools import DaytonaExecTool
+
+tool = DaytonaExecTool(sandbox_id="my-long-lived-sandbox")
+result = tool.run(command="ls workspace")
+```
+
+### Custom sandbox parameters
+
+Pass Daytona's `CreateSandboxFromSnapshotParams` kwargs via `create_params`:
+
+```python Code
+from crewai_tools import DaytonaExecTool
+
+tool = DaytonaExecTool(
+    persistent=True,
+    create_params={
+        "language": "python",
+        "env_vars": {"MY_FLAG": "1"},
+        "labels": {"owner": "crewai-agent"},
+    },
+)
+```
+
+### Searching, moving, and modifying files
+
+```python Code
+from crewai_tools import DaytonaFileTool
+
+file_tool = DaytonaFileTool(persistent=True)
+
+# Find every TODO in the source tree (grep file contents recursively)
+file_tool.run(action="find", path="workspace/src", pattern="TODO:")
+
+# Find all Python files (glob match on filenames)
+file_tool.run(action="search", path="workspace", pattern="*.py")
+
+# Make a script executable
+file_tool.run(action="chmod", path="workspace/run.sh", mode="755")
+
+# Rename or move a file
+file_tool.run(
+    action="move",
+    path="workspace/draft.md",
+    destination="workspace/final.md",
+)
+
+# Bulk find-and-replace across multiple files
+file_tool.run(
+    action="replace",
+    paths=["workspace/src/a.py", "workspace/src/b.py"],
+    pattern="old_function",
+    replacement="new_function",
+)
+
+# Quick existence check before a destructive op
+file_tool.run(action="exists", path="workspace/cache.db")
+```
+
+### Agent integration
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import DaytonaExecTool, DaytonaPythonTool, DaytonaFileTool
+
+exec_tool = DaytonaExecTool(persistent=True)
+python_tool = DaytonaPythonTool(persistent=True)
+file_tool = DaytonaFileTool(persistent=True)
+
+coder = Agent(
+    role="Sandbox Engineer",
+    goal="Write and run code in an isolated environment",
+    backstory="An engineer who uses Daytona sandboxes to safely execute code and manage files.",
+    tools=[exec_tool, python_tool, file_tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Write a Python script that prints the first 10 Fibonacci numbers, save it to workspace/fib.py, and run it.",
+    expected_output="The first 10 Fibonacci numbers printed to stdout.",
+    agent=coder,
+)
+
+crew = Crew(agents=[coder], tasks=[task])
+result = crew.kickoff()
+```
+
+## Parameters
+
+### Shared (`DaytonaBaseTool`)
+
+All three tools accept these parameters at initialization:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `api_key` | `str \| None` | `$DAYTONA_API_KEY` | Daytona API key. Falls back to the `DAYTONA_API_KEY` env var. |
+| `api_url` | `str \| None` | `$DAYTONA_API_URL` | Daytona API URL override. |
+| `target` | `str \| None` | `$DAYTONA_TARGET` | Daytona target region. |
+| `persistent` | `bool` | `False` | Reuse one sandbox across all calls and delete it at process exit. |
+| `sandbox_id` | `str \| None` | `None` | Attach to an existing sandbox by id or name. |
+| `create_params` | `dict \| None` | `None` | Extra kwargs forwarded to `CreateSandboxFromSnapshotParams` (e.g. `language`, `env_vars`, `labels`). |
+| `sandbox_timeout` | `float` | `60.0` | Timeout in seconds for sandbox create/delete operations. |
+
+### `DaytonaExecTool`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `command` | `str` | ✓ | Shell command to execute. |
+| `cwd` | `str \| None` | | Working directory inside the sandbox. |
+| `env` | `dict[str, str] \| None` | | Extra environment variables for this command. |
+| `timeout` | `int \| None` | | Maximum seconds to wait for the command. |
+
+### `DaytonaPythonTool`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code` | `str` | ✓ | Python source code to execute. |
+| `argv` | `list[str] \| None` | | Argument vector forwarded via `CodeRunParams`. |
+| `env` | `dict[str, str] \| None` | | Environment variables forwarded via `CodeRunParams`. |
+| `timeout` | `int \| None` | | Maximum seconds to wait for execution. |
+
+### `DaytonaFileTool`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | `str` | ✓ | One of: `read`, `write`, `append`, `list`, `delete`, `mkdir`, `info`, `exists`, `move`, `find`, `search`, `chmod`, `replace`. |
+| `path` | `str \| None` | ✓ for all actions except `replace` | Absolute path inside the sandbox. |
+| `content` | `str \| None` | ✓ for `append` | Content to write or append. |
+| `binary` | `bool` | | If `True`, `content` is base64 on write; returns base64 on read. |
+| `recursive` | `bool` | | For `delete`: remove directories recursively. |
+| `mode` | `str \| None` | | For `mkdir`: octal permissions for the new directory (defaults to `"0755"`). For `chmod`: octal permissions to apply to the target. |
+| `destination` | `str \| None` | ✓ for `move` | Destination path for `move`. |
+| `pattern` | `str \| None` | ✓ for `find`, `search`, `replace` | For `find`: substring matched against file CONTENTS. For `search`: glob matched against file NAMES (e.g. `*.py`). For `replace`: text to replace inside files. |
+| `replacement` | `str \| None` | ✓ for `replace` | Replacement text for `pattern`. |
+| `paths` | `list[str] \| None` | ✓ for `replace` | List of file paths in which to replace text. |
+| `owner` | `str \| None` | | For `chmod`: new file owner. |
+| `group` | `str \| None` | | For `chmod`: new file group. |
+
+<Note>
+For `chmod`, pass at least one of `mode`, `owner`, or `group` — any field left as `None` is left unchanged on the target.
+</Note>
+
+<Tip>
+For files larger than a few KB, create the file first with `action="write"` and empty content, then send the body via multiple `action="append"` calls of ~4 KB each to stay within tool-call payload limits.
+</Tip>
