@@ -146,6 +146,7 @@ class ReplyQueue:
             job is None
             or job.session_id != self.state.id
             or job.status != "completed"
+            or job.delivery_suppressed
             or (job.revision, job.attempt, job.last_update_seq)
             != (coverage.revision, coverage.attempt, coverage.seq)
             or not self.is_relevant(job.model_copy(deep=True))

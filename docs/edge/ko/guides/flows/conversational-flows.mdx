@@ -686,7 +686,41 @@ async def run_job():
 
 Session 종료 시 foreground 실행을 정리하기 전에 소유 loop에서 `runner.request_close()`를 호출하고 이후 `await runner.aclose()`를 실행합니다. 새 작업 등록과 publication을 닫고 각 worker에 신호를 보내며 대기 중인 publisher를 해제하고 소유 task를 정리합니다. Work method는 단계 경계에서 `check_open()`을 호출해야 합니다. 진행 중인 provider 작업은 강제로 중단되지 않습니다. Subscriber 실패 시 publisher가 무한히 기다리지 않도록 runner가 닫힙니다. 음성 재생만 중지할 때는 runner를 닫지 않습니다.
 
-초기 lifecycle은 `queued → running → completed/failed`입니다. Pause/resume, replacement, 자동 응답 전달과 분산 recovery는 제공하지 않습니다. 기존 state 기능으로 record를 직렬화할 수 있지만, 복원은 live worker를 다시 만들거나 외부 작업의 exactly-once 실행을 보장하지 않습니다.
+정상 lifecycle은 `queued → running → completed/failed`로 유지됩니다. 실험적 제어는 협력적 pause, cancel과 새 실행 attempt를 추가합니다. replacement와 분산 recovery는 애플리케이션의 책임입니다. 기존 state 기능으로 record를 직렬화할 수 있지만, 복원은 live worker를 다시 만들거나 외부 작업의 exactly-once 실행을 보장하지 않습니다.
+
+### 수락 여부를 확인하는 job 제어
+
+Job 제어는 입력과 transport에 독립적입니다. 텍스트, 음성, UI 버튼과 API client가 같은 계약을 사용합니다. 발화 중지는 reply delivery에만 영향을 주며 job을 pause하거나 cancel하지 않습니다. 애플리케이션이 자연어 의도와 명확한 대상을 결정한 뒤 `JobControl`을 제출합니다. SDK는 발화를 해석하거나 HTTP endpoint를 제공하지 않습니다.
+
+```python
+from crewai.experimental.flow_jobs import JobControl
+
+async def control_job(runner, job, action, request_id):
+    command = JobControl(
+        request_id=request_id,
+        session_id=job.session_id,
+        job_id=job.job_id,
+        revision=job.revision,
+        attempt=job.attempt,
+        action=action,  # "pause", "cancel", or "resume"
+    )
+    # Call outside runner.state_lock; the runner acquires it internally.
+    receipt = await runner.request_job_control(command)
+    return receipt.model_dump(mode="json")
+```
+
+
+`JobControl`에는 session/job/revision/attempt identity가 필요합니다. `request_id`의 기본값은 UUID이며 **동일한 명령**을 재시도할 때 보존해야 합니다. 수락한 명령은 `JobState.job_controls`에 `JobControlReceipt`로 저장됩니다. 재시도는 resume으로 attempt가 증가한 뒤에도 원래 수락 시점의 receipt를 반환하며 작업을 다시 시작하지 않습니다. 다른 명령에 같은 ID 사용, 오래된 version, 다른 session 및 잘못된 transition은 거부됩니다. 제어가 완료되었는지는 현재 job snapshot으로 확인하세요. `pause_requested`는 작업이 멈췄다는 증거가 아닙니다.
+
+* Queued 작업은 즉시 pause 또는 cancel됩니다. Running 작업은 `pause_requested` 또는 `cancel_requested`가 되며 worker가 경계에 도달하고 종료한 뒤에만 안정된 상태가 됩니다. Cancel은 대기 중인 pause보다 우선합니다.
+* 이미 승인한 작업은 제어 요청 중에도 완료되어 typed output을 commit할 수 있습니다. 다음 `stage_started`와 성공한 `completed` update는 거부됩니다. 임의의 동기/threaded provider 호출을 강제로 중단하지 않습니다.
+* Pause 중 작업 실패는 `failed`가 됩니다. Cancel 중 실패는 작업 error를 보존한 `cancelled`가 됩니다. 이전에 commit한 output은 유지됩니다.
+* Resume은 `paused` 작업에서만 유효합니다. Job ID/revision, 입력과 commit한 output을 보존하고 `attempt`를 증가시키며 update sequence를 초기화합니다. 이전 worker가 종료한 뒤 하나의 새 worker를 제출합니다. 이전 attempt의 update는 거부됩니다.
+* 직렬화된 경쟁에서 성공 완료가 먼저라면 pause/cancel은 `completed`와 output을 유지하고 `delivery_suppressed`를 설정합니다. `ReplyQueue`는 enqueue, prepare 및 output handoff 전에 이를 확인합니다. 이미 buffer에 들어간 audio는 transport가 별도로 중지해야 합니다. Completed, cancelled 또는 failed 작업은 resume할 수 없습니다.
+
+Worker는 경계에서 `check_open()`을 호출하고 첫 작업 전에 `started`를 publish하며 이후 작업 전에 `stage_started` 수락을 받아야 합니다. 재개한 attempt에서는 `stage_committed("stage_name")`으로 완료한 작업을 건너뛰고 `self.state.job`에서 output을 읽으세요. 필요한 모든 stage 후 `completed`를 publish하세요. Executor는 어떤 애플리케이션 method나 외부 효과를 안전하게 건너뛸 수 있는지 추론할 수 없습니다.
+
+`JobRunner.request_job_control()`은 worker에 신호를 보내고 state snapshot을 publish하며 live runner에 보존한 admission input 복사본으로 resume합니다. Runner 소유 loop에서 foreground `state_lock` 범위 밖에서 호출하세요. 긴 foreground turn이 lock을 잡고 있다면 제어가 공유 state를 변경하기 전에 turn이 종료되어야 합니다. 제어가 기다리는 동안에도 transport는 interruption 메시지를 계속 읽어야 합니다. Subscriber 실패는 runner를 닫습니다. 동기 reducer `request_job_control(state, command)`는 사용자 정의 직렬 executor용이며 worker 신호나 resume 실행을 제공하지 않습니다. 해당 executor는 실행 종료 후 `control_settled` 또는 `failed` update로 상태 확정을 확인해야 합니다. Snapshot 복원은 command receipt를 보존하지만 resume input이나 실행 handle은 복원하지 않습니다. Restart recovery는 별도 계약입니다.
 
 ## 실험적 턴 및 공개 응답 식별자
 
