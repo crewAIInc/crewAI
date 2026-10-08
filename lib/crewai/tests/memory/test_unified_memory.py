@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 import threading
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -1212,3 +1213,145 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+def test_forget_drains_pending_saves(
+    tmp_path: Path, mock_embedder: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """forget() must drain pending background saves before deleting records.
+
+    A save submitted by remember_many() but still in flight must not land
+    after the delete and resurrect the forgotten content (#7290).
+    """
+    from crewai.memory.unified_memory import Memory
+
+    save_parked = threading.Event()
+    release_save = threading.Event()
+
+    def gated_embed(texts: list[str]) -> list[list[float]]:
+        save_parked.set()
+        assert release_save.wait(timeout=5)
+        return [[0.1] * 1536 for _ in texts]
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=MagicMock(side_effect=gated_embed),
+    )
+
+    mem.remember_many(
+        ["Project Falcon ships on Friday. FORGET_RACE_CANARY"],
+        scope="/crew",
+        categories=["projects"],
+        metadata={"marker": "canary"},
+        importance=0.5,
+        source="s1",
+    )
+    with mem._pending_lock:
+        assert len(mem._pending_saves) == 1
+    assert save_parked.wait(timeout=5)
+
+    original_drain = Memory.drain_writes
+    drain_entered = threading.Event()
+
+    def drain_wrapper(memory: Any) -> None:
+        drain_entered.set()
+        original_drain(memory)
+
+    monkeypatch.setattr(Memory, "drain_writes", drain_wrapper)
+
+    results: list[int] = []
+    forget_thread = threading.Thread(
+        target=lambda: results.append(
+            mem.forget(scope="/crew", metadata_filter={"marker": "canary"})
+        )
+    )
+    forget_thread.start()
+    entered_drain = drain_entered.wait(timeout=5)
+
+    release_save.set()
+    forget_thread.join(timeout=5)
+
+    assert entered_drain, "forget() deleted without draining pending writes"
+    assert not forget_thread.is_alive()
+    assert results == [1]
+    assert mem.recall("Falcon", scope="/crew", limit=5, depth="shallow") == []
+
+
+def test_forget_after_sync_remember_unchanged(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Control: the synchronous remember()/forget() flow keeps working."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember("Remember then forget", scope="/y", categories=[], importance=0.5)
+    deleted = mem.forget(scope="/y")
+    assert deleted >= 1
+    assert mem._storage.count("/y") == 0
+
+
+def test_forget_blocks_save_submission_until_delete_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A save cannot be submitted between draining writes and deleting records.
+
+    ``_submit_save()`` registers new saves under ``_reset_lock``, so forget()
+    must hold that lock across the drain AND the delete; otherwise a save
+    could register after the drain snapshot and land after the deletion.
+    """
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+    delete_started = threading.Event()
+    release_delete = threading.Event()
+    submission_returned = threading.Event()
+    order: list[str] = []
+    original_delete = mem._storage.delete
+
+    def blocking_delete(
+        scope_prefix: str | None = None,
+        categories: list[str] | None = None,
+        record_ids: list[str] | None = None,
+        older_than: datetime | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+    ) -> int:
+        order.append("delete-start")
+        delete_started.set()
+        assert release_delete.wait(timeout=2)
+        result = original_delete(
+            scope_prefix=scope_prefix,
+            categories=categories,
+            record_ids=record_ids,
+            older_than=older_than,
+            metadata_filter=metadata_filter,
+        )
+        order.append("delete-end")
+        return result
+
+    def submit_save() -> None:
+        mem._submit_save(lambda: order.append("save"))
+        order.append("submit-returned")
+        submission_returned.set()
+
+    monkeypatch.setattr(mem._storage, "delete", blocking_delete)
+
+    forget_thread = threading.Thread(target=mem.forget, kwargs={"scope": "/x"})
+    forget_thread.start()
+    assert delete_started.wait(timeout=2)
+
+    submit_thread = threading.Thread(target=submit_save)
+    submit_thread.start()
+    assert not submission_returned.wait(timeout=0.1)
+
+    release_delete.set()
+    forget_thread.join(timeout=2)
+    submit_thread.join(timeout=2)
+
+    assert not forget_thread.is_alive()
+    assert not submit_thread.is_alive()
+    assert order.index("delete-end") < order.index("submit-returned")
