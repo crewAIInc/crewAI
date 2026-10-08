@@ -43,6 +43,7 @@ from crewai_cli.crew_run_tui import (
     _format_json_in_text,
     _try_parse_structured,
 )
+import httpx
 import pytest
 from rich.text import Text
 
@@ -2231,3 +2232,123 @@ def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
     assert _format_json_in_text('data: {"a": 1} and [...]') == (
         "data: " + '{\n  "a": 1\n}' + " and [...]"
     )
+
+
+# --- what the run app's Deploy met before a deployment attempt ---------------
+
+
+@pytest.fixture
+def deploy_usage(monkeypatch) -> list[str]:
+    features: list[str] = []
+
+    class FakeTelemetry:
+        def set_tracer(self) -> None:
+            pass
+
+        def feature_usage_span(self, feature, attributes=None) -> None:
+            features.append(feature)
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
+    return features
+
+
+def _deploy_doubles(monkeypatch, *, creates, login):
+    calls: list[str] = []
+
+    class FakeDeployCommand:
+        def create_crew(self, **kwargs) -> None:
+            calls.append("create")
+            outcome = creates.pop(0)
+            if outcome is not None:
+                raise outcome
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+            if login is not None:
+                raise login
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+    return calls
+
+
+def test_a_logged_in_deploy_counts_no_hurdle(monkeypatch, deploy_usage) -> None:
+    calls = _deploy_doubles(monkeypatch, creates=[None], login=None)
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create"]
+    assert deploy_usage == []
+
+
+def test_a_login_prompt_that_succeeds_counts_the_prompt_only(monkeypatch, deploy_usage) -> None:
+    calls = _deploy_doubles(
+        monkeypatch, creates=[AuthenticationRequiredError(), None], login=None
+    )
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == ["cli_usage:deploy_login_prompted"]
+
+
+def test_still_not_logged_in_after_the_prompt_counts_why_and_says_so(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    _deploy_doubles(
+        monkeypatch,
+        creates=[AuthenticationRequiredError(), AuthenticationRequiredError()],
+        login=None,
+    )
+
+    run_crew._chain_deploy()
+
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
+    assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason"),
+    [(KeyboardInterrupt(), "login_abandoned"), (httpx.HTTPError("access_denied"), "login_failed")],
+)
+def test_a_login_that_ends_badly_is_counted_and_still_raised(
+    monkeypatch, deploy_usage, raised, reason
+) -> None:
+    """Counting must not change what the user sees: the error still escapes."""
+    calls = _deploy_doubles(
+        monkeypatch, creates=[AuthenticationRequiredError()], login=raised
+    )
+
+    with pytest.raises(type(raised)):
+        run_crew._chain_deploy()
+
+    assert calls == ["create", "login"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        f"cli_usage:deploy_stopped:{reason}",
+    ]
+
+
+def test_a_failing_usage_count_never_changes_the_deploy(monkeypatch, capsys) -> None:
+    class BrokenTelemetry:
+        def set_tracer(self) -> None:
+            raise RuntimeError("exporter is down")
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", BrokenTelemetry)
+    calls = _deploy_doubles(
+        monkeypatch,
+        creates=[AuthenticationRequiredError(), AuthenticationRequiredError()],
+        login=None,
+    )
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert "Deploy failed: authentication is still required." in capsys.readouterr().out
