@@ -207,3 +207,36 @@ class TestExperimentRunner:
         assert isinstance(result.expected_score, dict)
         assert "unknown_metric" in result.expected_score.keys()
         assert result.passed is False
+
+    def test_assert_scores_empty_expected_fails(self):
+        """An empty expected_score must not be recorded as a pass.
+
+        Returning True when no scoring criteria were provided would mark a
+        case as passed with zero criteria evaluated, hiding a real regression.
+        """
+        runner = ExperimentRunner(dataset=[])
+
+        # expected dict, actual scalar -> empty criteria must fail
+        assert runner._assert_scores({}, 0) is False
+        assert runner._assert_scores({}, 100) is False
+
+        # both dicts, expected empty -> must fail
+        assert runner._assert_scores({}, {"accuracy": 0.9}) is False
+
+    def test_assert_scores_nonempty_expected_unchanged(self):
+        """Non-empty criteria still behave as before."""
+        runner = ExperimentRunner(dataset=[])
+
+        # both scalars
+        assert runner._assert_scores(5, 7) is True
+        assert runner._assert_scores(5, 5) is True
+        assert runner._assert_scores(7, 5) is False
+
+        # expected dict, actual scalar
+        assert runner._assert_scores({"a": 3, "b": 4}, 5) is True
+        assert runner._assert_scores({"a": 3, "b": 7}, 5) is True
+        assert runner._assert_scores({"a": 3, "b": 7}, 1) is False
+
+        # both dicts
+        assert runner._assert_scores({"a": 3, "b": 4}, {"a": 5, "b": 6}) is True
+        assert runner._assert_scores({"a": 3, "b": 4}, {"a": 1, "b": 6}) is False
