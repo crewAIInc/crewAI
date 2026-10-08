@@ -12,6 +12,7 @@ from requests import Response
     ["https://docs.example.com/guide", "https://example.com/docs/guide?version=2"],
 )
 def test_load_preserves_document_source(docs_url: str) -> None:
+    """Keep the original URL available for document attribution and replacement."""
     response = Response()
     response.status_code = 200
     response.url = docs_url
