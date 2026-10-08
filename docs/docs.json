@@ -242,6 +242,7 @@
                           "edge/en/tools/web-scraping/scrapflyscrapetool",
                           "edge/en/tools/web-scraping/seleniumscrapingtool",
                           "edge/en/tools/web-scraping/scrapegraphscrapetool",
+                          "edge/en/tools/web-scraping/scrapewiseproductdatatool",
                           "edge/en/tools/web-scraping/spidertool",
                           "edge/en/tools/web-scraping/browserbaseloadtool",
                           "edge/en/tools/web-scraping/hyperbrowserloadtool",

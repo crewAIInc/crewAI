@@ -152,6 +152,10 @@ from crewai_tools.tools.scrapegraph_scrape_tool.scrapegraph_scrape_tool import (
     ScrapegraphScrapeTool,
     ScrapegraphScrapeToolSchema,
 )
+from crewai_tools.tools.scrapewise_tool.scrapewise_tool import (
+    ScrapewiseProductDataTool,
+    ScrapewiseProductDataToolSchema,
+)
 from crewai_tools.tools.scrapfly_scrape_website_tool.scrapfly_scrape_website_tool import (
     ScrapflyScrapeWebsiteTool,
 )
@@ -299,6 +303,8 @@ __all__ = [
     "ScrapeWebsiteTool",
     "ScrapegraphScrapeTool",
     "ScrapegraphScrapeToolSchema",
+    "ScrapewiseProductDataTool",
+    "ScrapewiseProductDataToolSchema",
     "ScrapflyScrapeWebsiteTool",
     "SeleniumScrapingTool",
     "SerpApiGoogleSearchTool",
