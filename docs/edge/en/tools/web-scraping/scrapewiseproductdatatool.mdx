@@ -102,6 +102,7 @@ The ScrapeWise sample-data endpoint returns at most 100 rows per call, so `max_r
 
 The tool returns errors as text rather than raising, so a failed read does not abort the crew:
 
+- A missing `scrapewise` package raises `ImportError` at construction time, carrying the install command.
 - A missing API key raises `ValueError` at construction time.
 - A `max_rows` value outside 1–100 is rejected by the input schema.
 - API and transport failures are returned as `Error reading ScrapeWise product data: ...`.

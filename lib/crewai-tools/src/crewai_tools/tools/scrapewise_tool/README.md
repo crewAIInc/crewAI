@@ -62,7 +62,9 @@ Constructor arguments:
 - `scraper_id`: Optional. Pins the tool to one scraper.
 - `api_key`: Optional. Falls back to `SCRAPEWISE_API_KEY`.
 - `base_url`: Optional. Points the tool at a staging or self-hosted deployment.
-- `timeout`: Optional. Per-request timeout in seconds, default 60.
+- `timeout`: Optional. Per-request timeout in seconds. The tool does not set one
+  of its own — when omitted, the `scrapewise` client's own default applies
+  (60 seconds, as of `scrapewise` 0.1.0).
 
 ## Environment Variables
 
@@ -87,9 +89,10 @@ does not abort the crew:
   stored for this scraper yet" message rather than an empty result, so the agent
   does not read silence as "the competitor has no products".
 
-Two failures are raised rather than returned, because they are configuration
-problems and no retry will fix them: a missing API key (`ValueError`) and a
-`max_rows` outside 1–100 (`ValueError` from the input schema).
+Three failures are raised rather than returned, because they are configuration
+problems and no retry will fix them: a missing `scrapewise` package
+(`ImportError`, carrying the install command), a missing API key (`ValueError`)
+and a `max_rows` outside 1–100 (`ValueError` from the input schema).
 
 ## Best Practices
 

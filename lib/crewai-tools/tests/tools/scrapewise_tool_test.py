@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -33,6 +34,21 @@ SAMPLE_ROWS = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def stub_scrapewise_sdk():
+    """Stub the SDK so the suite runs without the optional `scrapewise` extra.
+
+    `scrapewise` is an optional dependency, so it is absent from a default
+    install. Every test here mocks the client anyway, so the real package is
+    never needed -- stubbing the module keeps the whole suite running either
+    way, rather than skipping it when the extra is not installed.
+    """
+    module = MagicMock()
+    module.ScrapewiseClient = MagicMock()
+    with patch.dict(sys.modules, {"scrapewise": module}):
+        yield module
+
+
 def initialize_tool_with(mock_client, scraper_id=None):
     with patch.dict("os.environ", {"SCRAPEWISE_API_KEY": "test_api_key"}):
         tool = ScrapewiseProductDataTool(scraper_id=scraper_id)
@@ -66,6 +82,15 @@ def test_tool_declares_its_required_env_var(tool):
 @patch.dict("os.environ", {}, clear=True)
 def test_tool_initialization_without_api_key_raises():
     with pytest.raises(ValueError, match="ScrapeWise API key is required"):
+        ScrapewiseProductDataTool()
+
+
+@patch.dict("os.environ", {"SCRAPEWISE_API_KEY": "test_api_key"})
+def test_tool_initialization_without_the_package_raises_import_error():
+    with (
+        patch.dict(sys.modules, {"scrapewise": None}),
+        pytest.raises(ImportError, match="uv add scrapewise"),
+    ):
         ScrapewiseProductDataTool()
 
 

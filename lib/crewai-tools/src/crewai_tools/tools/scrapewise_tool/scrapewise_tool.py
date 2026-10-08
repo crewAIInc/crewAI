@@ -97,22 +97,10 @@ class ScrapewiseProductDataTool(BaseTool):
         super().__init__(**kwargs)
         try:
             from scrapewise import ScrapewiseClient
-
-        except ImportError:
-            import click
-
-            if click.confirm(
-                "You are missing the 'scrapewise' package. Would you like to install it?"
-            ):
-                import subprocess
-
-                subprocess.run(["uv", "add", "scrapewise"], check=True)  # noqa: S607
-                from scrapewise import ScrapewiseClient
-
-            else:
-                raise ImportError(
-                    "`scrapewise` package not found, please run `uv add scrapewise`"
-                ) from None
+        except ImportError as e:
+            raise ImportError(
+                "`scrapewise` package not found, please run `uv add scrapewise`"
+            ) from e
 
         self.api_key = api_key or os.getenv("SCRAPEWISE_API_KEY")
 
