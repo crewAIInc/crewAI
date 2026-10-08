@@ -755,6 +755,37 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="FlexAI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    FLEXAI_API_KEY=<your-api-key>
+
+    # Optional
+    FLEXAI_BASE_URL=https://api.flex.ai/v1
+    ```
+
+    FlexAI는 CrewAI에 내장된 OpenAI 호환 제공자를 사용하므로 추가 설치가 필요하지 않습니다(`crewai[litellm]`을 사용하지 않습니다).
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="flexai/DeepSeek-V4-Flash-0731",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      FlexAI 특징:
+      - OpenAI 호환 단일 API로 제공되는 오픈 웨이트 모델
+      - 채팅, 임베딩, 비전, 이미지, 음성, 전사 엔드포인트
+      - 도구 호출 지원
+      - 경쟁력 있는 가격
+    </Info>
+
+    FlexAI가 제공하는 모델은 시간이 지남에 따라 변경됩니다. 배포 전에 [FlexAI 문서](https://docs.flex.ai)와 `/v1/models` 엔드포인트에서 현재 모델 ID와 컨텍스트 길이를 확인하십시오.
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답

@@ -728,6 +728,37 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="FlexAI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    FLEXAI_API_KEY=<your-api-key>
+
+    # Optional
+    FLEXAI_BASE_URL=https://api.flex.ai/v1
+    ```
+
+    O FlexAI usa o provedor nativo compatível com OpenAI do CrewAI, portanto não requer instalação extra (não usa `crewai[litellm]`).
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="flexai/DeepSeek-V4-Flash-0731",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Recursos do FlexAI:
+      - Modelos de pesos abertos em uma única API compatível com OpenAI
+      - Endpoints de chat, embedding, visão, imagem, fala e transcrição
+      - Suporte a chamada de ferramentas
+      - Preços competitivos
+    </Info>
+
+    Os modelos servidos pela FlexAI mudam com o tempo. Consulte a [documentação da FlexAI](https://docs.flex.ai) e o endpoint `/v1/models` para obter os IDs de modelo atuais e seus comprimentos de contexto antes da implantação.
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming
