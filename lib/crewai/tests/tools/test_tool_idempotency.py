@@ -411,13 +411,13 @@ async def test_concurrent_tool_calls_do_not_repeat_an_in_progress_side_effect():
     try:
         # A duplicate call must stop before invoking the side effect, for both
         # entry points, while the original execution retains its claim.
-        with pytest.raises(IdempotencyInProgressError, match="already in progress"):
-            await asyncio.wait_for(
-                make_usage()._ause(tool_string="", tool=tool, calling=calling),
-                timeout=0.2,
-            )
-        with pytest.raises(IdempotencyInProgressError, match="already in progress"):
-            make_usage()._use(tool_string="", tool=tool, calling=calling)
+        duplicate = await asyncio.wait_for(
+            make_usage()._ause(tool_string="", tool=tool, calling=calling), timeout=0.2
+        )
+        assert "already in progress" in duplicate
+        assert "already in progress" in make_usage()._use(
+            tool_string="", tool=tool, calling=calling
+        )
         tool.invoke.assert_not_called()
         assert tool.ainvoke.call_count == 1
     finally:
@@ -428,3 +428,144 @@ async def test_concurrent_tool_calls_do_not_repeat_an_in_progress_side_effect():
     handler.last_used_tool = None
     assert await make_usage()._ause(tool_string="", tool=tool, calling=calling) == "payment-sent"
     assert tool.ainvoke.call_count == 1
+
+
+def _formal_tool_usage(func, handler):
+    from crewai.tools.structured_tool import CrewStructuredTool
+    from crewai.tools.tool_calling import ToolCalling
+
+    tool = CrewStructuredTool.from_function(func, name="pay", description="Submit payment")
+    usage = ToolUsage(tools_handler=handler, tools=[tool], task=None, function_calling_llm=MagicMock())
+    usage.action = MagicMock(tool="pay", tool_input={"amount": 10})
+    calling = ToolCalling(tool_name="pay", arguments={"amount": 10})
+    return usage, tool, calling
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_claim_lifecycle_cache_and_usage_limit(asynchronous):
+    from crewai.agents.cache.cache_handler import CacheHandler
+
+    def pay(amount: int) -> str:
+        return "payment-sent"
+
+    handler = ToolsHandler(cache=CacheHandler())
+    handler.cache.add(tool="pay", input='{"amount": 10}', output="cached-payment")
+    usage, tool, calling = _formal_tool_usage(pay, handler)
+    async def execute():
+        return await usage.ause(calling, "") if asynchronous else usage.use(calling, "")
+    assert await execute() == "cached-payment"
+    assert handler.claim_idempotent_result("pay", {"amount": 10}) == "cached-payment"
+
+    handler = ToolsHandler()
+    usage, tool, calling = _formal_tool_usage(pay, handler)
+    tool.max_usage_count = 0
+    assert "usage limit" in await execute()
+    tool.max_usage_count = None
+    assert await execute() == "payment-sent"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_unknown_tool_outcome_is_reported_without_duplicate_execution(asynchronous):
+    calls = []
+    def pay(amount: int) -> str:
+        calls.append(amount)
+        raise RuntimeError("response lost after side effect")
+    handler = ToolsHandler()
+    usage, tool, calling = _formal_tool_usage(pay, handler)
+    result = await usage.ause(calling, "") if asynchronous else usage.use(calling, "")
+    assert "outcome" in result
+    assert calls == [10]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_declared_retryable_failure_does_not_become_success(asynchronous):
+    from crewai.tools.tool_failure import ToolFailure
+    calls = []
+    def pay(amount: int):
+        calls.append(amount)
+        if len(calls) == 1:
+            return ToolFailure(message="unavailable before payment", retryable=True)
+        return "payment-sent"
+    handler = ToolsHandler()
+    usage, tool, calling = _formal_tool_usage(pay, handler)
+    async def execute():
+        return await usage.ause(calling, "") if asynchronous else usage.use(calling, "")
+    assert await execute() == "unavailable before payment"
+    handler.last_used_tool = None
+    assert await execute() == "payment-sent"
+    assert calls == [10, 10]
+
+
+def test_native_entry_reuses_successful_tool_outcome():
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    calls = []
+    def pay(amount: int) -> str:
+        calls.append(amount)
+        return "payment-sent"
+    handler = ToolsHandler()
+    _, tool, _ = _formal_tool_usage(pay, handler)
+    executor = CrewAgentExecutor(tools=[tool], original_tools=[], tools_handler=handler)
+    for call_id in ("first", "retry"):
+        result = executor._execute_single_native_tool_call(
+            call_id=call_id, func_name="pay", func_args={"amount": 10},
+            available_functions={"pay": pay}, original_tool=tool,
+        )
+        assert result["result"] == "payment-sent"
+    assert calls == [10]
+
+
+def test_task_preparation_retains_retries_but_isolates_distinct_tasks():
+    from crewai import Agent, Task
+    from crewai.llm import LLM
+    agent = Agent(role="r", goal="g", backstory="b", llm=LLM(model="gpt-4o-mini", api_key="test"))
+    task = Task(description="pay", expected_output="receipt")
+    next_task = Task(description="pay again", expected_output="another receipt")
+    agent._prepare_task_execution(task, None)
+    handler = agent.tools_handler
+    handler.set_idempotent_result("pay", {"amount": 10}, "first-receipt")
+    agent._prepare_task_execution(task, None)
+    assert handler.get_idempotent_result("pay", {"amount": 10}) == "first-receipt"
+    agent._prepare_task_execution(next_task, None)
+    assert handler.get_idempotent_result("pay", {"amount": 10}) is None
+
+
+def test_agent_task_retry_does_not_repeat_a_successful_side_effect():
+    from crewai import Agent, Task
+    from crewai.llm import LLM
+    from crewai.tools.base_tool import BaseTool
+
+    calls = []
+    class PaymentTool(BaseTool):
+        name: str = "pay"
+        description: str = "Submit a payment."
+        def _run(self, amount: int) -> str:
+            calls.append(amount)
+            return "payment-sent"
+
+    class RetryLLM(LLM):
+        def __new__(cls):
+            return object.__new__(cls)
+        def __init__(self):
+            super().__init__(model="gpt-4o")
+            self.steps = iter([
+                'Thought: pay\nAction: pay\nAction Input: {"amount": 10}',
+                RuntimeError("interrupted after payment"),
+                'Thought: retry task\nAction: pay\nAction Input: {"amount": 10}',
+                "Thought: done\nFinal Answer: receipt",
+            ])
+        def call(self, messages, **kwargs):
+            step = next(self.steps)
+            if isinstance(step, Exception):
+                raise step
+            return step
+        def supports_function_calling(self):
+            return False
+
+    agent = Agent(role="payer", goal="pay", backstory="b", llm=RetryLLM(),
+                  tools=[PaymentTool()], max_retry_limit=1)
+    task = Task(description="pay ten", expected_output="receipt", agent=agent)
+    assert agent.execute_task(task) == "receipt"
+    assert calls == [10]

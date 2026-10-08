@@ -31,6 +31,7 @@ from crewai.tools.structured_tool import (
     CrewStructuredTool,
     strip_composite_description_prefix,
 )
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_failure import (
     ToolFailure,
     ToolFailureReason,
@@ -1665,6 +1666,11 @@ def execute_single_native_tool_call(
             result = format_native_tool_output_for_agent(output_tool, cached_result)
             tool_failure = detect_tool_failure(cached_result)
             from_cache = True
+            tools_handler.on_tool_use(
+                ToolCalling(tool_name=func_name, arguments=args_dict),
+                cached_result,
+                should_cache=False,
+            )
 
     started_at = datetime.now()
     crewai_event_bus.emit(
@@ -1702,9 +1708,23 @@ def execute_single_native_tool_call(
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
-                tool_func = available_functions[func_name]
-                raw_result = tool_func(**args_dict)
+                raw_result = (
+                    tools_handler.claim_idempotent_result(func_name, args_dict)
+                    if tools_handler
+                    else None
+                )
+                if raw_result is None:
+                    tool_func = available_functions[func_name]
+                    raw_result = tool_func(**args_dict)
+                else:
+                    from_cache = True
                 raw_tool_result = raw_result
+                if tools_handler:
+                    tools_handler.on_tool_use(
+                        ToolCalling(tool_name=func_name, arguments=args_dict),
+                        raw_result,
+                        should_cache=False,
+                    )
 
                 if tools_handler and tools_handler.cache:
                     should_cache = True

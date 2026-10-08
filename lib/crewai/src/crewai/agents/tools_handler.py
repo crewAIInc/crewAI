@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.tools.cache_tools.cache_tools import CacheTools
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+from crewai.tools.tool_failure import ToolFailure, ToolFailureReason
 from crewai.utilities.idempotency_backend import (
     IdempotencyBackend,
     IdempotencyInProgressError,
@@ -39,6 +40,12 @@ class ToolsHandler(BaseModel):
         default_factory=MemoryIdempotencyBackend
     )
 
+    _idempotency_task_id: str | None = PrivateAttr(default=None)
+
+    def begin_task(self, task_id: str) -> None:
+        """Reuse claims for a task retry without sharing them with other tasks."""
+        self._idempotency_task_id = task_id
+
     def _get_backend(self) -> IdempotencyBackend:
         """Return the backend shared by all calls using this handler."""
         return self._idempotency_backend
@@ -54,7 +61,10 @@ class ToolsHandler(BaseModel):
         """Build a stable key from sanitised tool name and serialised arguments."""
         args_json = json.dumps(arguments, sort_keys=True, default=str)
         args_hash = hashlib.sha256(args_json.encode()).hexdigest()
-        return f"{sanitize_tool_name(tool_name)}:{args_hash}"
+        key = f"{sanitize_tool_name(tool_name)}:{args_hash}"
+        return (
+            f"{self._idempotency_task_id}:{key}" if self._idempotency_task_id else key
+        )
 
     def get_idempotent_result(
         self, tool_name: str, arguments: dict[str, object]
@@ -104,11 +114,17 @@ class ToolsHandler(BaseModel):
         key = self._idempotency_key(tool_name, arguments)
         self._get_backend().set(key, result)
 
+    def release_idempotent_result(
+        self, tool_name: str, arguments: dict[str, object]
+    ) -> None:
+        """Release when execution did not start or the tool explicitly permits retry."""
+        self._get_backend().release(self._idempotency_key(tool_name, arguments))
+
     def reset_idempotency_store(self) -> None:
         """Clear the idempotency store.
 
-        Call this at the start of a fresh task execution to avoid stale
-        entries from a previous unrelated task.
+        Explicitly discard all claims and completed results in this backend.
+        Use begin_task for task isolation without discarding retry state.
         """
         self._idempotency_backend.clear()
 
@@ -133,7 +149,11 @@ class ToolsHandler(BaseModel):
             arguments: dict[str, object] = (
                 calling.arguments if isinstance(calling.arguments, dict) else {}
             )
-            self.set_idempotent_result(calling.tool_name, arguments, output)
+            if isinstance(output, ToolFailure):
+                if output.retryable or output.reason is ToolFailureReason.USAGE_LIMIT:
+                    self.release_idempotent_result(calling.tool_name, arguments)
+            else:
+                self.set_idempotent_result(calling.tool_name, arguments, output)
 
         if self.cache and should_cache and calling.tool_name != CacheTools().name:
             input_str = ""

@@ -73,6 +73,7 @@ from crewai.hooks.types import (
 )
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_failure import (
     ToolExecutionFailedError,
     ToolFailure,
@@ -1995,6 +1996,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 result = format_native_tool_output_for_agent(output_tool, cached_result)
                 tool_failure = detect_tool_failure(cached_result)
                 from_cache = True
+                self.tools_handler.on_tool_use(
+                    ToolCalling(tool_name=func_name, arguments=args_dict),
+                    cached_result,
+                    should_cache=False,
+                )
 
         # Emit tool usage started event
         started_at = datetime.now()
@@ -2031,9 +2037,23 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
-                    tool_func = self._available_functions[func_name]
-                    raw_result = tool_func(**args_dict)
+                    raw_result = (
+                        self.tools_handler.claim_idempotent_result(func_name, args_dict)
+                        if self.tools_handler
+                        else None
+                    )
+                    if raw_result is None:
+                        tool_func = self._available_functions[func_name]
+                        raw_result = tool_func(**args_dict)
+                    else:
+                        from_cache = True
                     raw_tool_result = raw_result
+                    if self.tools_handler:
+                        self.tools_handler.on_tool_use(
+                            ToolCalling(tool_name=func_name, arguments=args_dict),
+                            raw_result,
+                            should_cache=False,
+                        )
 
                     # Add to cache after successful execution (before string conversion)
                     if self.tools_handler and self.tools_handler.cache:

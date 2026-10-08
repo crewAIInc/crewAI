@@ -37,6 +37,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.idempotency_backend import IdempotencyInProgressError
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -296,6 +297,7 @@ class ToolUsage:
         should_retry = False
         available_tool = None
         error_event_emitted = False
+        owned_claim = False
 
         try:
             # Check cross-retry idempotency store (independent of cache config).
@@ -303,14 +305,13 @@ class ToolUsage:
             # prevent duplicate execution from overlapping retries.
             if self.tools_handler and calling.arguments is not None:
                 idem_args: dict[str, object] = (
-                    calling.arguments
-                    if isinstance(calling.arguments, dict)
-                    else {}
+                    calling.arguments if isinstance(calling.arguments, dict) else {}
                 )
                 result = self.tools_handler.claim_idempotent_result(
                     calling.tool_name, idem_args
                 )
                 from_cache = result is not None
+                owned_claim = result is None
 
             # Fall back to cache handler if configured
             if result is None and self.tools_handler and self.tools_handler.cache:
@@ -325,6 +326,11 @@ class ToolUsage:
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
                 from_cache = result is not None
+                if owned_claim and from_cache:
+                    self.tools_handler.set_idempotent_result(
+                        calling.tool_name, idem_args, result
+                    )
+                    owned_claim = False
 
             available_tool = next(
                 (
@@ -340,6 +346,10 @@ class ToolUsage:
                 available_tool, sanitize_tool_name(tool.name)
             )
             if usage_limit_error:
+                if owned_claim and self.tools_handler:
+                    self.tools_handler.release_idempotent_result(
+                        calling.tool_name, idem_args
+                    )
                 result = usage_limit_error
                 self.last_raw_result = result
                 self.last_failure = ToolFailure(
@@ -374,14 +384,11 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
-                            )
                         except Exception:
                             arguments = calling.arguments
-                            result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                        result = await tool.ainvoke(
+                            input=arguments, config=fingerprint_config
+                        )
                     else:
                         result = await tool.ainvoke(input={}, config=fingerprint_config)
 
@@ -493,6 +500,12 @@ class ToolUsage:
                     result=tool.format_output_for_agent(result)
                 )
 
+        except IdempotencyInProgressError as error:
+            self.on_tool_error(tool=tool, tool_calling=calling, e=error)
+            error_event_emitted = True
+            self.last_failure = failure_from_exception(error)
+            self.last_raw_result = str(error)
+            result = self._format_result(result=str(error))
         finally:
             if started_event_emitted and not error_event_emitted:
                 self.on_tool_use_finished(
@@ -562,6 +575,7 @@ class ToolUsage:
         should_retry = False
         available_tool = None
         error_event_emitted = False
+        owned_claim = False
 
         try:
             # Check cross-retry idempotency store (independent of cache config).
@@ -569,14 +583,13 @@ class ToolUsage:
             # prevent duplicate execution from overlapping retries.
             if self.tools_handler and calling.arguments is not None:
                 idem_args: dict[str, object] = (
-                    calling.arguments
-                    if isinstance(calling.arguments, dict)
-                    else {}
+                    calling.arguments if isinstance(calling.arguments, dict) else {}
                 )
                 result = self.tools_handler.claim_idempotent_result(
                     calling.tool_name, idem_args
                 )
                 from_cache = result is not None
+                owned_claim = result is None
 
             # Fall back to cache handler if configured
             if result is None and self.tools_handler and self.tools_handler.cache:
@@ -591,6 +604,11 @@ class ToolUsage:
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
                 from_cache = result is not None
+                if owned_claim and from_cache:
+                    self.tools_handler.set_idempotent_result(
+                        calling.tool_name, idem_args, result
+                    )
+                    owned_claim = False
 
             available_tool = next(
                 (
@@ -606,6 +624,10 @@ class ToolUsage:
                 available_tool, sanitize_tool_name(tool.name)
             )
             if usage_limit_error:
+                if owned_claim and self.tools_handler:
+                    self.tools_handler.release_idempotent_result(
+                        calling.tool_name, idem_args
+                    )
                 result = usage_limit_error
                 self.last_raw_result = result
                 self.last_failure = ToolFailure(
@@ -640,14 +662,9 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            result = tool.invoke(
-                                input=arguments, config=fingerprint_config
-                            )
                         except Exception:
                             arguments = calling.arguments
-                            result = tool.invoke(
-                                input=arguments, config=fingerprint_config
-                            )
+                        result = tool.invoke(input=arguments, config=fingerprint_config)
                     else:
                         result = tool.invoke(input={}, config=fingerprint_config)
 
@@ -759,6 +776,12 @@ class ToolUsage:
                     result=tool.format_output_for_agent(result)
                 )
 
+        except IdempotencyInProgressError as error:
+            self.on_tool_error(tool=tool, tool_calling=calling, e=error)
+            error_event_emitted = True
+            self.last_failure = failure_from_exception(error)
+            self.last_raw_result = str(error)
+            result = self._format_result(result=str(error))
         finally:
             if started_event_emitted and not error_event_emitted:
                 self.on_tool_use_finished(

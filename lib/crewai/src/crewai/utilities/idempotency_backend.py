@@ -62,9 +62,10 @@ class IdempotencyBackend(ABC):
     def release(self, key: str) -> None:
         """Release an in-progress claim without publishing a result.
 
-        Only release when the owner can establish that the side effect did
-        not occur. A timeout, cancellation, or lost response leaves an unknown
-        outcome and must not automatically permit another execution.
+        Release when execution did not start or the tool explicitly permits
+        retry through a retryable failure. Retryability is the tool's contract,
+        not proof that no side effect occurred. A timeout, cancellation, or
+        lost response must not automatically permit another execution.
         """
         ...
 
