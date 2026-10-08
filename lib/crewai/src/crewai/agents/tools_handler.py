@@ -68,14 +68,14 @@ class ToolsHandler(BaseModel):
 
     def get_idempotent_result(
         self, tool_name: str, arguments: dict[str, object]
-    ) -> str | None:
+    ) -> Any:
         """Return a previously stored result if this tool call already completed."""
         key = self._idempotency_key(tool_name, arguments)
         return self._get_backend().get(key)
 
     def claim_idempotent_result(
         self, tool_name: str, arguments: dict[str, object]
-    ) -> str | None:
+    ) -> Any:
         """Atomically try to claim the execution slot for this tool call.
 
         There are three possible outcomes based on the backend's ``claim()``
@@ -108,7 +108,7 @@ class ToolsHandler(BaseModel):
         return result
 
     def set_idempotent_result(
-        self, tool_name: str, arguments: dict[str, object], result: str
+        self, tool_name: str, arguments: dict[str, object], result: object
     ) -> None:
         """Store a tool result so that future retries can reuse it."""
         key = self._idempotency_key(tool_name, arguments)
@@ -152,6 +152,8 @@ class ToolsHandler(BaseModel):
             if isinstance(output, ToolFailure):
                 if output.retryable or output.reason is ToolFailureReason.USAGE_LIMIT:
                     self.release_idempotent_result(calling.tool_name, arguments)
+                else:
+                    self.set_idempotent_result(calling.tool_name, arguments, output)
             else:
                 self.set_idempotent_result(calling.tool_name, arguments, output)
 

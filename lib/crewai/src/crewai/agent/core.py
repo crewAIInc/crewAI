@@ -115,6 +115,7 @@ from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.idempotency_backend import MemoryIdempotencyBackend
 from crewai.utilities.llm_utils import create_llm, overlay_llm_for
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -1660,6 +1661,13 @@ class Agent(BaseAgent):
                 self.tools_handler.model_copy() if self.tools_handler else None
             )
             if kickoff_tools_handler:
+                if (
+                    type(kickoff_tools_handler._get_backend())
+                    is MemoryIdempotencyBackend
+                ):
+                    kickoff_tools_handler.set_idempotency_backend(
+                        MemoryIdempotencyBackend()
+                    )
                 kickoff_tools_handler.begin_task(str(uuid4()))
                 kickoff_tools_handler.last_used_tool = None
             executor = AgentExecutor(

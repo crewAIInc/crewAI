@@ -467,11 +467,12 @@ async def test_claim_lifecycle_cache_and_usage_limit(asynchronous):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("asynchronous", [False, True])
-async def test_unknown_tool_outcome_is_reported_without_duplicate_execution(asynchronous):
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
+async def test_unknown_tool_outcome_is_reported_without_duplicate_execution(asynchronous, error_type):
     calls = []
     def pay(amount: int) -> str:
         calls.append(amount)
-        raise RuntimeError("response lost after side effect")
+        raise error_type("response lost after side effect")
     handler = ToolsHandler()
     usage, tool, calling = _formal_tool_usage(pay, handler)
     result = await usage.ause(calling, "") if asynchronous else usage.use(calling, "")
@@ -569,3 +570,41 @@ def test_agent_task_retry_does_not_repeat_a_successful_side_effect():
     task = Task(description="pay ten", expected_output="receipt", agent=agent)
     assert agent.execute_task(task) == "receipt"
     assert calls == [10]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_terminal_tool_failure_keeps_its_original_result(asynchronous):
+    from crewai.tools.tool_failure import ToolFailure
+
+    calls = []
+    failure = ToolFailure(message="payment refused", retryable=False)
+    def pay(amount: int):
+        calls.append(amount)
+        return failure
+    handler = ToolsHandler()
+    usage, tool, calling = _formal_tool_usage(pay, handler)
+    async def execute():
+        handler.last_used_tool = None
+        return await usage.ause(calling, "") if asynchronous else usage.use(calling, "")
+    assert await execute() == "payment refused"
+    assert await execute() == "payment refused"
+    assert usage.last_failure is failure
+    assert calls == [10]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_invalid_tool_arguments_leave_no_execution_in_progress(asynchronous):
+    calls = []
+    def pay(amount: int) -> str:
+        calls.append(amount)
+        return "payment-sent"
+    handler = ToolsHandler()
+    usage, tool, calling = _formal_tool_usage(pay, handler)
+    calling.arguments = {"amount": "not-an-integer"}
+    result = await usage.ause(calling, "") if asynchronous else usage.use(calling, "")
+    assert "Arguments validation failed" in result
+    assert "already in progress" not in result
+    assert calls == []
+    assert handler.claim_idempotent_result("pay", calling.arguments) is None

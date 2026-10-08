@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from threading import Lock
-from typing import Final
+from typing import Any, Final
 
 
 # Sentinel stored by claim() to mark an in-progress execution.
@@ -33,17 +33,17 @@ class IdempotencyBackend(ABC):
     """
 
     @abstractmethod
-    def get(self, key: str) -> str | None:
+    def get(self, key: str) -> Any:
         """Return a previously stored result, or None."""
         ...
 
     @abstractmethod
-    def set(self, key: str, value: str) -> None:
+    def set(self, key: str, value: object) -> None:
         """Store a result for the given key."""
         ...
 
     @abstractmethod
-    def claim(self, key: str) -> tuple[bool, str | None]:
+    def claim(self, key: str) -> tuple[bool, Any]:
         """Atomically try to claim execution rights for *key*.
 
         Returns a ``(claimed, result)`` tuple:
@@ -86,21 +86,21 @@ class MemoryIdempotencyBackend(IdempotencyBackend):
     """
 
     def __init__(self) -> None:
-        self._store: dict[str, str] = {}
+        self._store: dict[str, object] = {}
         self._lock = Lock()
 
-    def get(self, key: str) -> str | None:
+    def get(self, key: str) -> Any:
         with self._lock:
             value = self._store.get(key)
             if value == _IN_PROGRESS:
                 return None  # treat in-progress as "not yet available"
             return value
 
-    def set(self, key: str, value: str) -> None:
+    def set(self, key: str, value: object) -> None:
         with self._lock:
             self._store[key] = value
 
-    def claim(self, key: str) -> tuple[bool, str | None]:
+    def claim(self, key: str) -> tuple[bool, Any]:
         with self._lock:
             existing = self._store.get(key)
             if existing is not None:

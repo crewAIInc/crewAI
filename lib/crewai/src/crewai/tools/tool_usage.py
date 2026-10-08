@@ -22,7 +22,10 @@ from crewai.events.types.tool_usage_events import (
     ToolValidateInputErrorEvent,
 )
 from crewai.telemetry.telemetry import Telemetry
-from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.structured_tool import (
+    CrewStructuredTool,
+    ToolArgumentsValidationError,
+)
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_failure import (
     ToolFailure,
@@ -324,7 +327,7 @@ class ToolUsage:
 
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
-                )  # type: ignore
+                )
                 from_cache = result is not None
                 if owned_claim and from_cache:
                     self.tools_handler.set_idempotent_result(
@@ -471,6 +474,14 @@ class ToolUsage:
                             )
 
                 except Exception as e:
+                    if (
+                        isinstance(e, ToolArgumentsValidationError)
+                        and owned_claim
+                        and self.tools_handler
+                    ):
+                        self.tools_handler.release_idempotent_result(
+                            calling.tool_name, idem_args
+                        )
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                     error_event_emitted = True
                     self._run_attempts += 1
@@ -608,7 +619,7 @@ class ToolUsage:
 
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
-                )  # type: ignore
+                )
                 from_cache = result is not None
                 if owned_claim and from_cache:
                     self.tools_handler.set_idempotent_result(
@@ -753,6 +764,14 @@ class ToolUsage:
                             )
 
                 except Exception as e:
+                    if (
+                        isinstance(e, ToolArgumentsValidationError)
+                        and owned_claim
+                        and self.tools_handler
+                    ):
+                        self.tools_handler.release_idempotent_result(
+                            calling.tool_name, idem_args
+                        )
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                     error_event_emitted = True
                     self._run_attempts += 1
