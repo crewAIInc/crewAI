@@ -23,6 +23,7 @@ exclude-newer-span = "P3D"
 [options.exclude-newer-package]
 msgpack = "2026-06-20T00:00:00Z"
 langsmith = "2026-06-20T00:00:00Z"
+oauthlib = "2026-09-29T00:00:00Z"
 pydantic-settings = "2026-06-20T00:00:00Z"
 
 [manifest]
@@ -1448,6 +1449,7 @@ dependencies = [
     { name = "jsonref" },
     { name = "lancedb" },
     { name = "mcp" },
+    { name = "oauthlib" },
     { name = "openai" },
     { name = "openpyxl" },
     { name = "opentelemetry-api" },
@@ -1565,6 +1567,7 @@ requires-dist = [
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.88.6,<2" },
     { name = "mcp", specifier = "~=1.28.1" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.0,<3" },
+    { name = "oauthlib", specifier = ">=4.0.0,<5" },
     { name = "openai", specifier = ">=2.30.0,<3" },
     { name = "openpyxl", specifier = "~=3.1.5" },
     { name = "openpyxl", marker = "extra == 'openpyxl'", specifier = "~=3.1.5" },
