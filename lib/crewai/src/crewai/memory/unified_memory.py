@@ -6,7 +6,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import suppress
 import contextvars
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -754,9 +754,12 @@ class Memory(BaseModel):
                             for r, s in raw
                             if not r.private or r.source == source
                         ]
+                    now = datetime.now(timezone.utc)
                     results = []
                     for r, s in raw:
-                        composite, reasons = compute_composite_score(r, s, self._config)
+                        composite, reasons = compute_composite_score(
+                            r, s, self._config, now=now
+                        )
                         results.append(
                             MemoryMatch(
                                 record=r,
