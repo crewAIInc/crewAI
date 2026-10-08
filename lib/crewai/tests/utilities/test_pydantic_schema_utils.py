@@ -718,6 +718,74 @@ class TestAllOfMerging:
         Model = create_model_from_schema(schema)
         assert Model(d="2026-01-01").d == _dt.date(2026, 1, 1)
 
+    def test_single_allof_nullable_string_sibling_string_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner member is a nullable list-form
+        string, e.g. `{"allOf":[{"type":["string","null"]}],"pattern":...}`,
+        resolves to `Optional[str]`. With no local `type` key the resolved
+        annotation is a Union, so the earlier concrete-type fallback saw nothing
+        and dropped `pattern`/`minLength`. The fallback now inspects the
+        non-None union members and mounts the string constraints per-member.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "allOf": [{"type": ["string", "null"]}],
+                    "pattern": "^[a-z]+$",
+                    "minLength": 2,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        assert Model(code=None).code is None
+        with pytest.raises(Exception):
+            Model(code="123")  # fails pattern and minLength
+
+    def test_single_allof_nullable_integer_sibling_numeric_constraints_enforced(self) -> None:
+        """The numeric mirror of the nullable allOf string case:
+        `{"allOf":[{"type":["integer","null"]}],"minimum":0,"maximum":100}`
+        resolves to `Optional[int]`; `minimum`/`maximum` must attach to the
+        `int` member while `null` stays accepted.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "allOf": [{"type": ["integer", "null"]}],
+                    "minimum": 0,
+                    "maximum": 100,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(age=50).age == 50
+        assert Model(age=None).age is None
+        with pytest.raises(Exception):
+            Model(age=-5)  # below minimum
+
+    def test_single_allof_nullable_string_format_does_not_apply_lexical_constraint(self) -> None:
+        """`{"allOf":[{"type":["string","null"]}],"format":"date","pattern":...}`:
+        the string member is narrowed to `datetime.date`, so the union-member
+        fallback must not match it as `str` and attach a lexical `pattern`. No
+        raw TypeError may escape.
+        """
+        import datetime as _dt
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "d": {
+                    "allOf": [{"type": ["string", "null"]}],
+                    "format": "date",
+                    "pattern": r"^\d{4}-",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(d="2026-01-01").d == _dt.date(2026, 1, 1)
+        assert Model(d=None).d is None
+
 
 # $ref resolution
 
@@ -910,7 +978,7 @@ class TestBuildRichFieldDescription:
         assert "Examples:" in desc
         assert "'foo'" in desc
         assert "'baz'" in desc
-        assert "'extra'" not in desc
+        assert "'extra' not in desc
 
     def test_combined_constraints(self) -> None:
         desc = build_rich_field_description({
@@ -1301,7 +1369,7 @@ class TestResolveRefsRecursive:
             "$defs": {"Foo": {"type": "object", "properties": {"x": {"type": "integer"}}}},
             "$ref": "#/$defs/Foo",
         }
-        resolved = resolve_refs(schema)
+        resolved = resolve_refs(deepcopy(schema))
         assert resolved["properties"]["x"]["type"] == "integer"
 
 
