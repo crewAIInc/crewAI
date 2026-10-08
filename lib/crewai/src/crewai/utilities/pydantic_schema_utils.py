@@ -1035,19 +1035,6 @@ def _json_schema_to_pydantic_field(
     else:
         declared_types = set()
 
-    num_kwargs: dict[str, Any] = {}
-    if declared_types & {"integer", "number"}:
-        if "minimum" in json_schema:
-            num_kwargs["ge"] = json_schema["minimum"]
-        if "exclusiveMinimum" in json_schema:
-            num_kwargs["gt"] = json_schema["exclusiveMinimum"]
-        if "maximum" in json_schema:
-            num_kwargs["le"] = json_schema["maximum"]
-        if "exclusiveMaximum" in json_schema:
-            num_kwargs["lt"] = json_schema["exclusiveMaximum"]
-        if "multipleOf" in json_schema:
-            num_kwargs["multiple_of"] = json_schema["multipleOf"]
-
     format_ = json_schema.get("format")
     if format_ in FORMAT_TYPE_MAP:
         pydantic_type = FORMAT_TYPE_MAP[format_]
@@ -1077,6 +1064,38 @@ def _json_schema_to_pydantic_field(
                     for member in get_args(type_)
                 )
             ]
+
+    # Some schemas carry their type through a composed keyword instead of a
+    # local `type` key, e.g. `{"allOf":[{"type":"integer"}],"minimum":5}`. The
+    # resolved annotation (`type_`) already reflects that composed type, so
+    # when no local type was declared we fall back to it: numeric constraints
+    # attach only to a resolved `int`/`float` and string constraints only to a
+    # resolved `str`. This runs after `format` narrowing, so a string member
+    # narrowed to `date`/`datetime`/`Url` correctly receives no lexical string
+    # constraint; a `Union` (anyOf/list-form) field keeps the declared-types
+    # driven per-member behavior above.
+    if not declared_types:
+        if type_ is str:
+            declared_types = {"string"}
+        elif (
+            isinstance(type_, type)
+            and issubclass(type_, (int, float))
+            and not issubclass(type_, bool)
+        ):
+            declared_types = {"integer"}
+
+    num_kwargs: dict[str, Any] = {}
+    if declared_types & {"integer", "number"}:
+        if "minimum" in json_schema:
+            num_kwargs["ge"] = json_schema["minimum"]
+        if "exclusiveMinimum" in json_schema:
+            num_kwargs["gt"] = json_schema["exclusiveMinimum"]
+        if "maximum" in json_schema:
+            num_kwargs["le"] = json_schema["maximum"]
+        if "exclusiveMaximum" in json_schema:
+            num_kwargs["lt"] = json_schema["exclusiveMaximum"]
+        if "multipleOf" in json_schema:
+            num_kwargs["multiple_of"] = json_schema["multipleOf"]
 
     str_kwargs: dict[str, Any] = {}
     if declared_types & {"string"}:
