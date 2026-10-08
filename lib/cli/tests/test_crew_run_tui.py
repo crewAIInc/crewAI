@@ -2352,3 +2352,99 @@ def test_a_failing_usage_count_never_changes_the_deploy(monkeypatch, capsys) -> 
 
     assert calls == ["create", "login", "create"]
     assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
+# --- why an evaluation asked for on this screen never reached a verdict ------
+
+
+@pytest.fixture
+def stops(monkeypatch) -> list[str]:
+    """The `cli_usage:eval_stopped:*` features counted, in order."""
+    features: list[str] = []
+
+    class FakeTelemetry:
+        def set_tracer(self) -> None:
+            pass
+
+        def feature_usage_span(self, feature, attributes=None) -> None:
+            features.append(feature)
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
+    return features
+
+
+def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_why_it_stopped(
+    monkeypatch, stops
+) -> None:
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
+
+    app.action_evaluate_crew()
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
+    assert stops == ["cli_usage:eval_stopped:untraced"]
+
+
+def test_a_run_started_by_crewai_eval_leaves_the_untraced_count_to_the_command(
+    monkeypatch, stops
+) -> None:
+    """The command waiting behind this screen says "not traced" and counts it;
+    counting it here as well would count one stop twice."""
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
+    with crew_run_tui.evaluating_after_run():
+        app = CrewRunApp()
+        app._execution_uuid = "run-this-app"
+        app._evaluate_if_one_is_waiting()
+
+    assert stops == []
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason"),
+    [
+        ("amp_403", "amp_403"),
+        (SystemExit(1), "unexpected"),
+        (RuntimeError("client bug"), "unexpected"),
+    ],
+)
+def test_an_evaluation_that_stops_on_this_screen_counts_why(
+    monkeypatch, stops, raised, reason
+) -> None:
+    from crewai_cli.experimental.eval_crew import EvaluationStoppedError
+
+    if isinstance(raised, str):
+        raised = EvaluationStoppedError("AMP answered 403.", reason=raised)
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.evaluate_run", Mock(side_effect=raised)
+    )
+
+    app._evaluate_now("run-this-app")
+
+    assert app._evaluation["state"] == "failed"
+    assert stops == [f"cli_usage:eval_stopped:{reason}"]
+
+
+def test_an_evaluation_that_finishes_counts_no_stop(monkeypatch, stops) -> None:
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.evaluate_run",
+        Mock(return_value={"status": "done", "verdict": {"gate": "passed"}}),
+    )
+
+    app._evaluate_now("run-this-app")
+
+    assert stops == []

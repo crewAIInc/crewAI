@@ -1355,6 +1355,9 @@ FooterKey .footer-key--key {
         self._record_tui_button_click("evaluate")
         traced = self._traced_execution_id()
         if traced is None:
+            from crewai_cli.experimental.eval_crew import record_stop
+
+            record_stop("untraced")
             self.notify(
                 "This run was not traced, so there is nothing to evaluate. "
                 "Turn tracing on and run it again.",
@@ -1387,6 +1390,7 @@ FooterKey .footer-key--key {
         from crewai_cli.experimental.eval_crew import (
             EvaluationStoppedError,
             evaluate_run,
+            record_stop,
         )
 
         def back(handler: Callable[..., Any], *args: Any) -> None:
@@ -1401,9 +1405,11 @@ FooterKey .footer-key--key {
                 note=lambda text: back(self._evaluation_note, text),
             )
         except EvaluationStoppedError as stopped:
+            record_stop(stopped.reason)
             back(self._evaluation_failed, str(stopped))
             return
         except SystemExit as exit_:
+            record_stop("unexpected")
             # Nothing on this path should exit any more — a stop is a value
             # now — but an exit carries a code, not a reason, and "1" on screen
             # is worse than saying plainly that the reason did not survive.
@@ -1413,6 +1419,7 @@ FooterKey .footer-key--key {
             )
             return
         except Exception as error:  # a client bug is still an answer to show
+            record_stop("unexpected")
             back(self._evaluation_failed, f"{type(error).__name__}: {error}")
             return
         back(self._evaluation_finished, finished)
