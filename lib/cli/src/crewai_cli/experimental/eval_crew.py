@@ -110,6 +110,7 @@ StopReason = Literal[
     "amp_4xx",
     "amp_5xx",
     "invalid_response",
+    "evaluation_failed",
     "unexpected",
 ]
 
@@ -219,6 +220,8 @@ def eval_crew(run_id: str | None = None) -> None:
             Text(f"\nStill running{f' at {url}' if url else ''}."), style="yellow"
         )
         raise SystemExit(130) from None
+    if finished.get("status") == "failed":
+        record_stop("evaluation_failed")
     _print_verdict(finished, url)
     _print_brief(finished)
     _say_where_the_criteria_live(write_eval_config(finished))
@@ -401,6 +404,8 @@ def evaluate_run(
     record_evaluation_outcome(execution_id)
     on_started(started)
     finished = _wait(client, started["id"], started.get("url"), on_status=on_status)
+    if finished.get("status") == "failed":
+        record_stop("evaluation_failed")
     written = write_eval_config(finished)
     if written is not None:
         finished = {**finished, "wrote_eval_config": written.name}
@@ -579,8 +584,9 @@ def _run_and_let_the_app_evaluate() -> str | None:
     if is_dmn_mode_enabled() or not sys.stdin.isatty():
         # `Text`, never markup: the reason may be an OS error's own words, and
         # its `[Errno 13]` would be read as a style tag.
-        record_stop("untraced")
-        console.print(Text(_nothing_traced_unattended() or steps), style="yellow")
+        reason, message = _nothing_traced_unattended() or ("untraced", steps)
+        record_stop(reason)
+        console.print(Text(message), style="yellow")
         raise SystemExit(1)
     if not click.confirm(
         "No traced run is recorded in this project. Turn tracing on and run the crew now? "
@@ -644,7 +650,7 @@ def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
     return when >= began - timedelta(seconds=1)
 
 
-def _nothing_traced_unattended() -> str | None:
+def _nothing_traced_unattended() -> tuple[StopReason, str] | None:
     """Why a run with tracing on left nothing to evaluate, when nobody was there.
 
     An anonymous run asks before its trace leaves the machine, and a process with
@@ -652,7 +658,7 @@ def _nothing_traced_unattended() -> str | None:
     not. Telling that user to turn tracing on sends them round the same loop;
     logging in is what makes an unattended run traced. None when tracing is off
     or there is a login: the ordinary steps are the right ones then. A login
-    that cannot be read says so instead.
+    that cannot be read says so instead, and is counted as that.
     """
     if os.environ.get(TRACING_ENV_VAR, "").strip().lower() not in ("true", "1"):
         return None
@@ -662,8 +668,8 @@ def _nothing_traced_unattended() -> str | None:
     except EvaluationStoppedError as unreadable:
         # A login that exists and cannot be read is the reason, and its
         # sentence says what to do about it.
-        return str(unreadable)
-    return (
+        return unreadable.reason, str(unreadable)
+    return "untraced", (
         "No traced run is recorded in this project. Tracing is on, but a run nobody is "
         "watching is only traced when you are logged in: run `crewai login`, then "
         "`crewai run` and `crewai eval` again."

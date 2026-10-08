@@ -1456,7 +1456,7 @@ def test_a_model_without_its_provider_exits_one_before_anything_is_sent(deployed
     assert "provider/model" in capsys.readouterr().out
 
 
-def test_a_failed_comparison_exits_one_with_the_reason(deployed, monkeypatch, capsys):
+def test_a_failed_comparison_exits_one_with_the_reason(deployed, monkeypatch, capsys, usage):
     failed = httpx.Response(200, json={"id": "ev-9", "status": "failed", "error": "the deployment answered 500"})
     install(monkeypatch, FakeModelsAMP(statuses=[failed]))
 
@@ -1465,6 +1465,8 @@ def test_a_failed_comparison_exits_one_with_the_reason(deployed, monkeypatch, ca
 
     assert stopped.value.code == 1
     assert "Comparison failed: the deployment answered 500" in capsys.readouterr().out
+    # `--models` compares models; it is not the evaluation the stop count is about
+    assert not [feature for feature in usage if "eval_stopped" in feature]
 
 
 def test_done_without_a_comparison_is_a_protocol_error(deployed, monkeypatch, capsys):
@@ -1833,6 +1835,98 @@ def test_a_saved_login_that_cannot_be_read_counts_as_such(project, monkeypatch, 
         eval_module.eval_crew()
 
     assert usage == ["cli_usage:eval_stopped:login_unreadable"]
+
+
+def test_an_evaluation_amp_failed_is_counted_and_says_what_it_always_said(
+    project, monkeypatch, capsys, usage
+):
+    directory, _ = project
+    record_last_run(directory)
+    failed = httpx.Response(200, json={"id": "ev-1", "status": "failed", "error": "the judge was unreachable"})
+    install(monkeypatch, FakeAMP(statuses=[failed]))
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert usage == ["cli_usage:eval", "cli_usage:eval_stopped:evaluation_failed"]
+    assert "Evaluation failed: the judge was unreachable" in capsys.readouterr().out
+
+
+def test_an_evaluation_amp_failed_in_the_run_app_is_counted_and_still_returned(
+    project, monkeypatch, usage
+):
+    failed = httpx.Response(200, json={"id": "ev-1", "status": "failed", "error": "the judge was unreachable"})
+    install(monkeypatch, FakeAMP(statuses=[failed]))
+
+    finished = eval_module.evaluate_run(EXECUTION_ID, on_started=lambda started: None)
+
+    assert finished["status"] == "failed"  # the app still shows AMP's reason
+    assert usage == ["cli_usage:eval", "cli_usage:eval_stopped:evaluation_failed"]
+
+
+def test_an_unreadable_login_with_nobody_to_ask_counts_as_such(
+    project, monkeypatch, capsys, usage
+):
+    """Tracing on, no terminal, and a saved login that cannot be read: the login
+    is the reason shown, so it is the reason counted — not "untraced"."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    monkeypatch.setattr(eval_module, "saved_login", _REAL_SAVED_LOGIN)
+
+    def broken_store():
+        raise OSError("permission denied")
+
+    monkeypatch.setattr(eval_module, "get_auth_token", broken_store)
+
+    with pytest.raises(SystemExit, match="1"):
+        eval_module.eval_crew()
+
+    assert usage == ["cli_usage:eval_stopped:login_unreadable"]
+    assert "crewai login" in capsys.readouterr().out
+
+
+def test_a_start_the_run_app_was_refused_is_not_tried_again_by_the_command(
+    project, monkeypatch, usage
+):
+    """`crewai eval` runs the crew, the app it opens tries the evaluation and AMP
+    refuses the start. The app has shown the refusal and counted it once; the
+    command waiting behind it must not start the same run again."""
+    import contextlib
+
+    from crewai_cli.crew_run_tui import CrewRunApp
+
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *args, **kwargs: True)
+    monkeypatch.setattr(eval_module, "_enable_tracing", lambda: None)
+    amp = install(monkeypatch, FakeAMP(create=httpx.Response(401, json={"detail": "Bad credentials"})))
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    shown: list[str] = []
+    monkeypatch.setattr(CrewRunApp, "_evaluation_failed", lambda self, message: shown.append(message))
+    holder: dict[str, str | None] = {"execution_id": None}
+
+    @contextlib.contextmanager
+    def watched():
+        yield holder
+
+    def the_app_runs_and_evaluates() -> None:
+        holder["execution_id"] = EXECUTION_ID  # the app saw the run traced
+        CrewRunApp()._evaluate_now(EXECUTION_ID)
+
+    monkeypatch.setattr("crewai_cli.crew_run_tui.evaluating_after_run", watched)
+    monkeypatch.setattr(run_crew_module, "run_crew", the_app_runs_and_evaluates)
+
+    eval_module.eval_crew()
+
+    assert [call for call in amp.calls if call[0] == "create"] == [("create", EXECUTION_ID)]
+    assert usage == ["cli_usage:eval_stopped:amp_401"]
+    assert len(shown) == 1
 
 
 def test_outside_a_project_counts_as_no_project(project, usage):

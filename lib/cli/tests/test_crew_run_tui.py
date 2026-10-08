@@ -1,5 +1,5 @@
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -2412,10 +2412,15 @@ def test_a_run_started_by_crewai_eval_leaves_the_untraced_count_to_the_command(
         (RuntimeError("client bug"), "unexpected"),
     ],
 )
-def test_an_evaluation_that_stops_on_this_screen_counts_why(
-    monkeypatch, stops, raised, reason
+def test_an_evaluation_that_stops_on_this_screen_counts_why_and_answers_for_the_run(
+    monkeypatch, tmp_path, stops, raised, reason
 ) -> None:
-    from crewai_cli.experimental.eval_crew import EvaluationStoppedError
+    """The marker tells a `crewai eval` waiting behind this screen that the run
+    was answered for, so it neither starts it again nor counts the stop twice."""
+    from crewai_cli.experimental.eval_crew import (
+        EvaluationStoppedError,
+        evaluation_marker,
+    )
 
     if isinstance(raised, str):
         raised = EvaluationStoppedError("AMP answered 403.", reason=raised)
@@ -2428,10 +2433,15 @@ def test_an_evaluation_that_stops_on_this_screen_counts_why(
         "crewai_cli.experimental.eval_crew.evaluate_run", Mock(side_effect=raised)
     )
 
+    monkeypatch.chdir(tmp_path)
+    began = datetime.now(timezone.utc)
+
     app._evaluate_now("run-this-app")
 
     assert app._evaluation["state"] == "failed"
     assert stops == [f"cli_usage:eval_stopped:{reason}"]
+    marker = evaluation_marker(after=began)
+    assert marker is not None and marker["execution_id"] == "run-this-app"
 
 
 def test_an_evaluation_that_finishes_counts_no_stop(monkeypatch, stops) -> None:
