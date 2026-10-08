@@ -1157,6 +1157,14 @@ def _print_comparison(finished: dict[str, Any], url: str | None) -> None:
         )
         table.add_row(*cells)
     console.print(table)
+    # A dash is a model the service could not price, or a setup with no time
+    # recorded — said once, so a `/ run` column with a gap is not a mystery.
+    if any(cost is None for cost in costs):
+        console.print(Text("— in cost: no price is known for that model", style="dim"))
+    if any(took is None for took in seconds):
+        console.print(
+            Text("— in time: no time was recorded for that setup", style="dim")
+        )
 
     suggestions = _top_suggestions(comparison.get("suggestions"))
     if suggestions:
@@ -1185,7 +1193,10 @@ def _per_run(
 ) -> tuple[list[float | None], str]:
     """One column's values and header: the per-run figure when every row that
     has a value has one (`noun / run`), else every row's total (`noun`) — never
-    a column that mixes the two."""
+    a column that mixes the two. A row with neither (a model the service could
+    not price) does not decide the unit: one unpriced model would otherwise turn
+    the whole column back into totals, which the brief beside it does not use.
+    Its dash is explained under the table."""
     totals = [_number(row.get(total)) for row in rows]
     runs = [_number(row.get(per_run)) for row in rows]
     if any(value is not None for value in runs) and all(

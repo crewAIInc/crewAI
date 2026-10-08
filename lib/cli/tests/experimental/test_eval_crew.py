@@ -1363,6 +1363,23 @@ def test_a_column_never_mixes_per_run_and_totals(deployed, monkeypatch, capsys):
     assert "$0.0012 ★" in out and "$0.0004" not in out
 
 
+def test_an_unpriced_model_keeps_the_per_run_unit_and_its_dash_is_explained(deployed, monkeypatch, capsys):
+    unpriced = comparison()
+    unpriced["models"][0].update(cost_per_run=0.0020, seconds_per_run=4.5)
+    unpriced["models"][1].update(cost_usd=None, cost_per_run=None, seconds_per_run=2.5)
+    install(monkeypatch, FakeModelsAMP(statuses=[httpx.Response(
+        200, json={"id": "ev-9", "status": "done", "url": URL, "comparison": unpriced})]))
+
+    eval_module.eval_models(MODELS)
+
+    out = capsys.readouterr().out
+    assert "cost / run" in out and "time / run" in out
+    mini = next(line for line in out.splitlines() if "Poem composer: openai/gpt-4o-mini" in line)
+    assert "—" in mini and "$0.0020" in out
+    assert "— in cost: no price is known for that model" in out
+    assert "— in time" not in out
+
+
 def test_a_progress_line_is_said_once_even_when_parallel_setups_alternate(deployed, monkeypatch, capsys):
     def at(message):
         return httpx.Response(200, json={"id": "ev-9", "status": "running", "progress": {"message": message}})
