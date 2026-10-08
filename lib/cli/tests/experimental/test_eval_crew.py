@@ -1331,6 +1331,53 @@ def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, m
     assert "a fourth" not in out
 
 
+def test_cost_and_time_are_per_run_when_the_service_sends_them(deployed, monkeypatch, capsys):
+    per_run = comparison()
+    per_run["models"][0].update(cost_per_run=0.0020, seconds_per_run=4.5)
+    per_run["models"][1].update(cost_per_run=0.0004, seconds_per_run=2.5)
+    install(monkeypatch, FakeModelsAMP(statuses=[httpx.Response(
+        200, json={"id": "ev-9", "status": "done", "url": URL, "comparison": per_run})]))
+
+    eval_module.eval_models(MODELS)
+
+    out = capsys.readouterr().out
+    assert "cost / run" in out and "time / run" in out
+    mini = next(line for line in out.splitlines() if "Poem composer: openai/gpt-4o-mini" in line)
+    base = next(line for line in out.splitlines() if "gpt-5.6-sol" in line)
+    assert "$0.0004 ★" in mini and "2.5s ★" in mini
+    assert "$0.0020" in base and "4.5s" in base
+    # the totals are not what the column says
+    assert "$0.0012" not in out and "9.5s" not in out
+
+
+def test_a_column_never_mixes_per_run_and_totals(deployed, monkeypatch, capsys):
+    partial = comparison()
+    partial["models"][1].update(cost_per_run=0.0004)  # one row only: the totals stand
+    install(monkeypatch, FakeModelsAMP(statuses=[httpx.Response(
+        200, json={"id": "ev-9", "status": "done", "url": URL, "comparison": partial})]))
+
+    eval_module.eval_models(MODELS)
+
+    out = capsys.readouterr().out
+    assert "cost / run" not in out and "time / run" not in out
+    assert "$0.0012 ★" in out and "$0.0004" not in out
+
+
+def test_a_progress_line_is_said_once_even_when_parallel_setups_alternate(deployed, monkeypatch, capsys):
+    def at(message):
+        return httpx.Response(200, json={"id": "ev-9", "status": "running", "progress": {"message": message}})
+
+    alternating = [at("judging the final output"), at("0 of 3 setups done")] * 4
+    install(monkeypatch, FakeModelsAMP(statuses=[*alternating, at("1 of 3 setups done"), compared()]))
+
+    eval_module.eval_models(MODELS)
+
+    out = capsys.readouterr().out
+    assert out.count("judging the final output") == 1
+    assert out.count("0 of 3 setups done") == 1
+    assert out.index("0 of 3 setups done") < out.index("1 of 3 setups done")
+
+
 def test_the_comparison_is_counted_with_the_models_and_nothing_that_names_it(deployed, monkeypatch):
     spans: list[tuple[str, dict[str, str]]] = []
 
