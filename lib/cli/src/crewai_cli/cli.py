@@ -428,7 +428,10 @@ def log_tasks_outputs() -> None:
         for index, task in enumerate(tasks, 1):
             click.echo(f"Task {index}: {task['task_id']}")
             click.echo(f"Expected output: {task['expected_output']}")
-            click.echo(f"Output: {task['output']}")
+            output = task["output"]
+            if isinstance(output, dict):
+                output = output.get("raw", output)
+            click.echo(f"Output: {output}")
             click.echo("------")
 
     except Exception as e:
