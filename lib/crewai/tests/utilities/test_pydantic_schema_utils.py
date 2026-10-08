@@ -11,12 +11,9 @@ Covers:
 
 from __future__ import annotations
 
-import datetime
 from copy import deepcopy
+import datetime
 from typing import Any
-
-import pytest
-from pydantic import BaseModel
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -29,6 +26,8 @@ from crewai.utilities.pydantic_schema_utils import (
     strip_null_from_types,
     strip_unsupported_formats,
 )
+from pydantic import BaseModel
+import pytest
 
 
 class TestSimpleTypes:
@@ -443,6 +442,7 @@ class TestUnionTypes:
             Model(code="123")
 
     def test_type_array_nullable_string_length_bounds_enforced(self) -> None:
+        """A list-form nullable string field enforces `minLength`/`maxLength`."""
         schema = {
             "type": "object",
             "properties": {
@@ -485,6 +485,7 @@ class TestUnionTypes:
             Model(age=200)  # above maximum
 
     def test_type_array_nullable_number_multiple_of_enforced(self) -> None:
+        """A list-form nullable number field enforces `minimum`/`multipleOf`."""
         schema = {
             "type": "object",
             "properties": {
@@ -625,6 +626,97 @@ class TestAllOfMerging:
         Model = create_model_from_schema(schema)
         obj = Model(item={"id": 1})
         assert obj.item.id == 1
+
+    def test_single_allof_integer_sibling_numeric_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner type is `integer` keeps its
+        sibling numeric constraints.
+
+        `{"allOf":[{"type":"integer"}],"minimum":5}` resolves to a plain `int`,
+        but the property has no local `type` key, so the earlier
+        `declared_types`-only check saw an empty type set and dropped
+        `minimum`/`maximum` -- a value below the bound was accepted and forwarded
+        to the tool. The resolved annotation now drives constraint application.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "age": {"allOf": [{"type": "integer"}], "minimum": 5, "maximum": 50},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(age=10).age == 10
+        with pytest.raises(Exception):
+            Model(age=1)  # below minimum
+        with pytest.raises(Exception):
+            Model(age=100)  # above maximum
+
+    def test_single_allof_string_sibling_string_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner type is `string` keeps its sibling
+        `pattern`/`minLength` constraints (the draft-07 way to add constraints
+        beside a composed string)."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "allOf": [{"type": "string"}],
+                    "pattern": "^[a-z]+$",
+                    "minLength": 2,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        with pytest.raises(Exception):
+            Model(code="1")  # fails pattern and minLength
+
+    def test_single_allof_ref_sibling_numeric_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner member is a `$ref` to an integer
+        keeps its sibling `minimum` (the usual draft-07 shape for constraining a
+        referenced type)."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "n": {"allOf": [{"$ref": "#/$defs/Count"}], "minimum": 5},
+            },
+            "$defs": {"Count": {"type": "integer"}},
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(n=10).n == 10
+        with pytest.raises(Exception):
+            Model(n=1)
+
+    def test_single_allof_string_does_not_apply_numeric_constraints(self) -> None:
+        """Cross-kind hygiene: an allOf string field must not receive sibling
+        numeric bounds."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {"allOf": [{"type": "string"}], "minimum": 0, "maximum": 5},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        # Long string is fine: numeric bounds never attach to a string member.
+        assert Model(code="a much longer string").code == "a much longer string"
+
+    def test_single_allof_string_with_format_does_not_raise(self) -> None:
+        """`{"allOf":[{"type":"string"}],"format":"date"}`: the resolved string
+        member is narrowed to `datetime.date`; a lexical string constraint must
+        not be applied to the converted date (it used to raise a raw TypeError).
+        """
+        import datetime as _dt
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "d": {
+                    "allOf": [{"type": "string"}],
+                    "format": "date",
+                    "pattern": r"^\d{4}-",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(d="2026-01-01").d == _dt.date(2026, 1, 1)
 
 
 # $ref resolution
@@ -1215,7 +1307,9 @@ class TestResolveRefsRecursive:
 
 class TestSanitizeStrictSchemas:
     def test_openai_strict_preserves_property_named_title(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_openai_strict,
+        )
 
         schema = {
             "type": "object",
@@ -1233,7 +1327,9 @@ class TestSanitizeStrictSchemas:
         assert "title" not in san["properties"]["title"]
 
     def test_openai_strict_preserves_nested_property_named_title(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_openai_strict,
+        )
 
         schema = {
             "type": "object",
@@ -1257,7 +1353,9 @@ class TestSanitizeStrictSchemas:
         assert "title" not in payload["properties"]["title"]
 
     def test_anthropic_strict_preserves_recursive_type(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_anthropic_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_anthropic_strict,
+        )
 
         san = sanitize_tool_params_for_anthropic_strict(deepcopy(RECURSIVE_NODE_SCHEMA))
         items = san["properties"]["children"]["items"]
@@ -1265,7 +1363,9 @@ class TestSanitizeStrictSchemas:
         assert items.get("type") == "object"
 
     def test_openai_strict_preserves_recursive_type(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_openai_strict,
+        )
 
         san = sanitize_tool_params_for_openai_strict(deepcopy(RECURSIVE_NODE_SCHEMA))
         items = san["properties"]["children"]["items"]
