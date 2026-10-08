@@ -1066,17 +1066,36 @@ def _json_schema_to_pydantic_field(
             ]
 
     # Some schemas carry their type through a composed keyword instead of a
-    # local `type` key, e.g. `{"allOf":[{"type":"integer"}],"minimum":5}`. The
-    # resolved annotation (`type_`) already reflects that composed type, so
-    # when no local type was declared we fall back to it: numeric constraints
-    # attach only to a resolved `int`/`float` and string constraints only to a
-    # resolved `str`. This runs after `format` narrowing, so a string member
-    # narrowed to `date`/`datetime`/`Url` correctly receives no lexical string
-    # constraint; a `Union` (anyOf/list-form) field keeps the declared-types
-    # driven per-member behavior above.
+    # local `type` key, e.g. `{"allOf":[{"type":"integer"}],"minimum":5}` or a
+    # composed nullable member `{"allOf":[{"type":["string","null"]}],...}`. The
+    # resolved annotation (`type_`) already reflects that composed type, so when
+    # no local type was declared we fall back to it: numeric constraints attach
+    # only to resolved `int`/`float` members and string constraints only to a
+    # resolved `str` member. This runs after `format` narrowing, so a string
+    # member narrowed to `date`/`datetime`/`Url` is no longer `str` and
+    # correctly receives no lexical string constraint; `None` and `bool` are
+    # excluded. For a composed nullable/unioned type (e.g. `Union[str, None]`)
+    # we inspect the non-None members rather than requiring a concrete type, so
+    # constraints still attach per-member downstream.
     if not declared_types:
         if type_ is str:
             declared_types = {"string"}
+        elif get_origin(type_) is Union:
+            for member in get_args(type_):
+                if member is str:
+                    declared_types.add("string")
+                elif (
+                    isinstance(member, type)
+                    and issubclass(member, int)
+                    and not issubclass(member, bool)
+                ):
+                    declared_types.add("integer")
+                elif (
+                    isinstance(member, type)
+                    and issubclass(member, float)
+                    and not issubclass(member, int)
+                ):
+                    declared_types.add("number")
         elif (
             isinstance(type_, type)
             and issubclass(type_, (int, float))
