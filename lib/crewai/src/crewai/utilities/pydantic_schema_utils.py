@@ -1017,7 +1017,25 @@ def _json_schema_to_pydantic_field(
         else (... if is_required else None)
     )
 
-    if isinstance(type_, type) and issubclass(type_, (int, float)):
+    # Which primitive kinds does this schema declare, ignoring `null`?
+    # A list-form type such as `{"type": ["string", "null"]}` resolves to a
+    # Union, so the historical `isinstance(type_, type)` guards below skipped
+    # *every* constraint for nullable fields -- `pattern`/`minimum`/... were
+    # silently dropped and invalid values reached the tool. Drive the
+    # constraints off the declared JSON types instead: numeric constraints
+    # attach only when a number-ish type is declared, string constraints only
+    # when `string` is declared, never cross-applied. Pydantic then applies a
+    # field-level constraint only to the matching union member, leaving `null`
+    # accepted.
+    raw_type = json_schema.get("type")
+    if isinstance(raw_type, list):
+        declared_types = {t for t in raw_type if t != "null"}
+    elif isinstance(raw_type, str):
+        declared_types = {raw_type}
+    else:
+        declared_types = set()
+
+    if declared_types & {"integer", "number"}:
         if "minimum" in json_schema:
             field_params["ge"] = json_schema["minimum"]
         if "exclusiveMinimum" in json_schema:
@@ -1059,7 +1077,7 @@ def _json_schema_to_pydantic_field(
                 )
             ]
 
-    if isinstance(type_, type) and issubclass(type_, str):
+    if declared_types & {"string"}:
         if "minLength" in json_schema:
             field_params["min_length"] = json_schema["minLength"]
         if "maxLength" in json_schema:

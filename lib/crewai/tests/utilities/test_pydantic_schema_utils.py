@@ -419,6 +419,106 @@ class TestUnionTypes:
         assert Model(value=42).value == 42
         assert Model(value=None).value is None
 
+    def test_type_array_nullable_string_pattern_enforced(self) -> None:
+        """A list-form nullable string field still carries its string
+        constraints. `{"type": ["string", "null"], "pattern": ...}` used to
+        produce `Optional[str]` with no pattern, because constraint application
+        was gated on `isinstance(type_, type)` and a Union fails that check --
+        so a value violating the pattern was accepted and passed straight
+        through to the (MCP) tool.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": ["string", "null"],
+                    "pattern": "^[a-z]+$",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        assert Model(code=None).code is None
+        with pytest.raises(Exception):
+            Model(code="123")
+
+    def test_type_array_nullable_string_length_bounds_enforced(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": ["string", "null"],
+                    "minLength": 2,
+                    "maxLength": 4,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        assert Model(code=None).code is None
+        with pytest.raises(Exception):
+            Model(code="a")  # too short
+        with pytest.raises(Exception):
+            Model(code="abcde")  # too long
+
+    def test_type_array_nullable_integer_bounds_enforced(self) -> None:
+        """A list-form nullable integer field keeps its numeric constraints.
+        `{"type": ["integer", "null"], "minimum": 0}` used to drop `minimum`,
+        so a negative number was accepted despite the schema forbidding it.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "type": ["integer", "null"],
+                    "minimum": 0,
+                    "maximum": 150,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(age=5).age == 5
+        assert Model(age=None).age is None
+        with pytest.raises(Exception):
+            Model(age=-1)  # below minimum
+        with pytest.raises(Exception):
+            Model(age=200)  # above maximum
+
+    def test_type_array_nullable_number_multiple_of_enforced(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": ["number", "null"],
+                    "minimum": 0,
+                    "multipleOf": 0.5,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(amount=2.5).amount == 2.5
+        assert Model(amount=None).amount is None
+        with pytest.raises(Exception):
+            Model(amount=0.25)  # not a multiple of 0.5
+
+    def test_type_array_nullable_string_does_not_apply_numeric_constraints(self) -> None:
+        """Cross-kind hygiene: a string field must not receive numeric bounds.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": ["string", "null"],
+                    "minimum": 0,
+                    "maximum": 5,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        # Long string is fine: numeric bounds never attach to a string member.
+        assert Model(code="a much longer string").code == "a much longer string"
+        assert Model(code=None).code is None
+
 
 class TestAllOfMerging:
     def test_allof_merges_properties(self) -> None:
