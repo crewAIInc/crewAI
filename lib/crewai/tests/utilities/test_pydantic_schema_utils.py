@@ -978,7 +978,7 @@ class TestBuildRichFieldDescription:
         assert "Examples:" in desc
         assert "'foo'" in desc
         assert "'baz'" in desc
-        assert "'extra' not in desc
+        assert "'extra'" not in desc
 
     def test_combined_constraints(self) -> None:
         desc = build_rich_field_description({
@@ -1369,7 +1369,7 @@ class TestResolveRefsRecursive:
             "$defs": {"Foo": {"type": "object", "properties": {"x": {"type": "integer"}}}},
             "$ref": "#/$defs/Foo",
         }
-        resolved = resolve_refs(deepcopy(schema))
+        resolved = resolve_refs(schema)
         assert resolved["properties"]["x"]["type"] == "integer"
 
 
