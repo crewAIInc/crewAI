@@ -1600,3 +1600,112 @@ def test_without_crewais_catalog_every_model_is_other(monkeypatch):
     monkeypatch.setattr(eval_module, "_known_models_and_providers", lambda: (frozenset(), frozenset()))
 
     assert eval_module.telemetry_model_name("openai/gpt-4o-mini") == "other/other"
+
+
+# ── the brief for a coding agent ─────────────────────────────────────────────
+
+BRIEF = (
+    "# What failed\n\n"
+    "1. task write — [Errno 13] the poem ignores [red]the topic[/red]\n"
+    "   change: set `expected_output` to \"Four lines about {topic}.\"\n"
+)
+BRIEF_URL = "https://evolve.crewai.test/e/ev-1.md"
+
+
+def _done_with(**fields):
+    return httpx.Response(200, json={**done(gate="failed").json(), **fields})
+
+
+def test_with_nobody_watching_the_brief_follows_the_verdict_and_the_link_literally(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    install(monkeypatch, FakeAMP(statuses=[_done_with(brief_markdown=BRIEF, brief_url=BRIEF_URL)]))
+
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert exit_.value.code == 1  # the gate's, unchanged
+    assert BRIEF in out  # brackets and all: never read as markup
+    assert out.index("Goal gate: FAILED") < out.index(f"Full report: {URL}") < out.index(BRIEF)
+    assert "Brief (markdown)" not in out
+
+
+def test_with_only_the_briefs_url_the_link_is_printed(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    install(monkeypatch, FakeAMP(statuses=[_done_with(brief_url=BRIEF_URL)]))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    assert f"Brief (markdown): {BRIEF_URL}\n" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("brief_url", [None, "javascript:alert(1)"])
+def test_an_older_server_adds_nothing_after_the_link(project, monkeypatch, capsys, brief_url):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+    fields = {"brief_url": brief_url} if brief_url else {}
+    install(monkeypatch, FakeAMP(statuses=[_done_with(**fields)]))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert out.endswith(f"Full report: {URL}\n") and "Brief" not in out
+
+
+def test_in_a_terminal_the_brief_is_not_printed(project, monkeypatch, capsys):
+    directory, _ = project
+    record_last_run(directory)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: False)
+    install(monkeypatch, FakeAMP(statuses=[_done_with(brief_markdown=BRIEF, brief_url=BRIEF_URL)]))
+
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "What failed" not in out and "Brief" not in out
+    assert out.endswith(f"Full report: {URL}\n")
+
+
+def test_nobody_is_watching_when_stdout_is_not_a_terminal(monkeypatch):
+    monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: False)
+    monkeypatch.setattr(eval_module.sys, "stdout", SimpleNamespace(isatty=lambda: True))
+    assert eval_module.nobody_watching() is False
+    monkeypatch.setattr(eval_module.sys, "stdout", SimpleNamespace(isatty=lambda: False))
+    assert eval_module.nobody_watching() is True
+    monkeypatch.setattr(eval_module.sys, "stdout", SimpleNamespace())  # no isatty at all
+    assert eval_module.nobody_watching() is True
+    monkeypatch.setattr(eval_module.sys, "stdout", SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr(eval_module, "is_dmn_mode_enabled", lambda: True)
+    assert eval_module.nobody_watching() is True
+
+
+@pytest.mark.parametrize("watching", [False, True])
+def test_a_comparison_prints_its_brief_only_when_nobody_is_watching(deployed, monkeypatch, capsys, watching):
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: not watching)
+    body = {**compared().json(), "brief_markdown": BRIEF, "brief_url": BRIEF_URL}
+    install(monkeypatch, FakeModelsAMP(statuses=[httpx.Response(200, json=body)]))
+
+    eval_module.eval_models(MODELS)  # a finished comparison exits 0, as before
+
+    out = capsys.readouterr().out
+    if watching:
+        assert "What failed" not in out and out.endswith(f"Full report: {URL}\n")
+    else:
+        assert out.index(f"Full report: {URL}") < out.index(BRIEF)
+
+
+def test_the_help_tells_an_agent_it_gets_a_brief():
+    help_text = " ".join(CliRunner().invoke(eval_command, ["--help"]).output.split())
+    assert (
+        "Run by a script or coding agent (no terminal), it prints a markdown brief "
+        "after the verdict — what failed and the change to make — so an agent can act on it directly"
+    ) in help_text
+    assert "That is when AMP provides the brief: otherwise its link, when AMP sends only that, else nothing more" in help_text
+    assert "it prints a markdown brief after the comparison when AMP provides one" in help_text

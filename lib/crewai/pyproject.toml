@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.15.23",
-    "crewai-cli==1.15.23",
+    "crewai-core==1.15.25",
+    "crewai-cli==1.15.25",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -57,7 +57,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.15.23",
+    "crewai-tools==1.15.25",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"
@@ -70,11 +70,16 @@ openpyxl = [
 ]
 mem0 = ["mem0ai>=2.0.0,<3"]
 docling = [
-    "docling~=2.97.0",
+    # <2.118.1 has GHSA-q43m-vhcp-mhvm (enable_local_fetch is not enforced in
+    # HTML browser-rendering mode). 2.132.0 is the newest release outside the
+    # 3-day supply-chain cutoff.
+    "docling~=2.132.0",
     # docling 2.97 split into docling-slim; the chunker package (HierarchicalChunker)
     # now eagerly imports code-chunking submodules that need tree-sitter/semchunk,
     # which only the docling-core[chunking] extra provides.
-    "docling-core[chunking]>=2.74.1",
+    # docling-slim 2.132 requires docling-core>=2.98,<3. The root uv override
+    # replaces that requirement, so the floor has to live here too.
+    "docling-core[chunking]>=2.98.0,<3",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
