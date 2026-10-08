@@ -519,6 +519,70 @@ class TestUnionTypes:
         assert Model(code="a much longer string").code == "a much longer string"
         assert Model(code=None).code is None
 
+    def test_type_array_mixed_string_number_constraints_scoped_per_member(self) -> None:
+        """A mixed union `["string","number","null"]` carrying BOTH a string
+        constraint (`pattern`) and a numeric constraint (`minimum`). Constraints
+        must attach per-member: `pattern` only to the string member, `minimum`
+        only to the number member. Attaching them at the field level raised a
+        raw `TypeError` (e.g. `ge` applied to a string value) instead of a clean
+        validation error, even for otherwise-valid values."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "v": {
+                    "type": ["string", "number", "null"],
+                    "pattern": "^[a-z]+$",
+                    "minimum": 0,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        # valid members
+        assert Model(v="abc").v == "abc"
+        assert Model(v=5.5).v == 5.5
+        assert Model(v=None).v is None
+        # invalid string (non-numeric, fails pattern) -> clean ValidationError
+        with pytest.raises(Exception):
+            Model(v="!!!")
+        # invalid number (below minimum) -> clean ValidationError
+        with pytest.raises(Exception):
+            Model(v=-3)
+
+    def test_type_array_date_format_with_pattern_does_not_raise(self) -> None:
+        """`{"type": ["string","null"], "format": "date", "pattern": ...}`:
+        the string member is narrowed to `datetime.date`. A lexical `pattern`
+        cannot be safely applied to a converted date object (it raised a raw
+        `TypeError`). Compatible semantics: the pattern is simply not applied to
+        the date member (the pre-fix behavior), and no raw TypeError escapes."""
+        import datetime as _dt
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "d": {
+                    "type": ["string", "null"],
+                    "format": "date",
+                    "pattern": r"^\d{4}-",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(d="2026-01-01").d == _dt.date(2026, 1, 1)
+        assert Model(d=None).d is None
+
+    def test_non_nullable_string_pattern_control(self) -> None:
+        """Non-nullable control: a required plain string field still enforces
+        its pattern both ways."""
+        schema = {
+            "type": "object",
+            "properties": {"code": {"type": "string", "pattern": "^[a-z]+$"}},
+            "required": ["code"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        with pytest.raises(Exception):
+            Model(code="123")
+
 
 class TestAllOfMerging:
     def test_allof_merges_properties(self) -> None:

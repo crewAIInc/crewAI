@@ -1035,17 +1035,18 @@ def _json_schema_to_pydantic_field(
     else:
         declared_types = set()
 
+    num_kwargs: dict[str, Any] = {}
     if declared_types & {"integer", "number"}:
         if "minimum" in json_schema:
-            field_params["ge"] = json_schema["minimum"]
+            num_kwargs["ge"] = json_schema["minimum"]
         if "exclusiveMinimum" in json_schema:
-            field_params["gt"] = json_schema["exclusiveMinimum"]
+            num_kwargs["gt"] = json_schema["exclusiveMinimum"]
         if "maximum" in json_schema:
-            field_params["le"] = json_schema["maximum"]
+            num_kwargs["le"] = json_schema["maximum"]
         if "exclusiveMaximum" in json_schema:
-            field_params["lt"] = json_schema["exclusiveMaximum"]
+            num_kwargs["lt"] = json_schema["exclusiveMaximum"]
         if "multipleOf" in json_schema:
-            field_params["multiple_of"] = json_schema["multipleOf"]
+            num_kwargs["multiple_of"] = json_schema["multipleOf"]
 
     format_ = json_schema.get("format")
     if format_ in FORMAT_TYPE_MAP:
@@ -1077,13 +1078,49 @@ def _json_schema_to_pydantic_field(
                 )
             ]
 
+    str_kwargs: dict[str, Any] = {}
     if declared_types & {"string"}:
         if "minLength" in json_schema:
-            field_params["min_length"] = json_schema["minLength"]
+            str_kwargs["min_length"] = json_schema["minLength"]
         if "maxLength" in json_schema:
-            field_params["max_length"] = json_schema["maxLength"]
+            str_kwargs["max_length"] = json_schema["maxLength"]
         if "pattern" in json_schema:
-            field_params["pattern"] = json_schema["pattern"]
+            str_kwargs["pattern"] = json_schema["pattern"]
+
+    # Attach each constraint only to the matching concrete member. A field-level
+    # constraint on a Union is applied to *every* member, which makes Pydantic
+    # raise a raw `TypeError` (e.g. `ge` on a string value, or `pattern` on a
+    # converted date). So for unions we wrap each member in
+    # `Annotated[member, Field(...)]`: the string member gets the string
+    # constraints, a numeric member gets the numeric ones, and anything else
+    # (None, date/datetime, Url, ...) keeps the old unconstrained behavior.
+    if get_origin(type_) is Union:
+        members = get_args(type_)
+        wrapped: list[Any] = []
+        for member in members:
+            member_kwargs: dict[str, Any] = {}
+            if member is str:
+                member_kwargs.update(str_kwargs)
+            elif (
+                isinstance(member, type)
+                and issubclass(member, (int, float))
+                and not issubclass(member, bool)
+            ):
+                member_kwargs.update(num_kwargs)
+            if member_kwargs:
+                wrapped.append(Annotated[member, Field(**member_kwargs)])
+            else:
+                wrapped.append(member)
+        type_ = Union[tuple(wrapped)]  # noqa: UP007
+    else:
+        if type_ is str:
+            field_params.update(str_kwargs)
+        elif (
+            isinstance(type_, type)
+            and issubclass(type_, (int, float))
+            and not issubclass(type_, bool)
+        ):
+            field_params.update(num_kwargs)
 
     if not is_required:
         type_ = Optional[type_]  # noqa: UP045 - ForwardRef does not support `|`
