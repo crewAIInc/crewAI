@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.tools.cache_tools.cache_tools import CacheTools
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+from crewai.utilities.idempotency_backend import (
+    IdempotencyBackend,
+    IdempotencyInProgressError,
+    MemoryIdempotencyBackend,
+)
 from crewai.utilities.string_utils import sanitize_tool_name
-
-if TYPE_CHECKING:
-    from crewai.utilities.idempotency_backend import IdempotencyBackend
 
 
 class ToolsHandler(BaseModel):
@@ -33,14 +35,12 @@ class ToolsHandler(BaseModel):
     # Uses a pluggable backend (default: MemoryIdempotencyBackend).
     # Inject a persistent backend for cross-process / cross-worker safety.
     # ------------------------------------------------------------------
-    _idempotency_backend: IdempotencyBackend | None = PrivateAttr(default=None)
+    _idempotency_backend: IdempotencyBackend = PrivateAttr(
+        default_factory=MemoryIdempotencyBackend
+    )
 
     def _get_backend(self) -> IdempotencyBackend:
-        """Lazily initialise the default in-memory backend."""
-        if self._idempotency_backend is None:
-            from crewai.utilities.idempotency_backend import MemoryIdempotencyBackend
-
-            self._idempotency_backend = MemoryIdempotencyBackend()
+        """Return the backend shared by all calls using this handler."""
         return self._idempotency_backend
 
     def set_idempotency_backend(self, backend: IdempotencyBackend) -> None:
@@ -79,9 +79,8 @@ class ToolsHandler(BaseModel):
           returns the stored result so the caller can skip execution.
         * **(claimed, result) == (False, None)** — another caller has claimed
           the key but has not yet published a result (still in progress).
-          This method returns ``None`` so the caller falls through to normal
-          execution; the race window is narrowed to a brief in-progress
-          interval.
+          This method raises :class:`IdempotencyInProgressError` so another
+          caller cannot repeat a side effect before its outcome is known.
 
         Returns:
             The previously stored result if this tool call already completed,
@@ -91,10 +90,11 @@ class ToolsHandler(BaseModel):
         claimed, result = self._get_backend().claim(key)
         if claimed:
             return None  # caller must execute
-        # Not claimed: either completed (result is the output) or in-progress
-        # (result is None).  In the in-progress case we return None so the
-        # caller falls through to normal execution — the race window is
-        # narrowed to a brief in-progress interval.
+        if result is None:
+            raise IdempotencyInProgressError(
+                f"Tool call {sanitize_tool_name(tool_name)!r} is already in progress; "
+                "its outcome must be confirmed before retrying."
+            )
         return result
 
     def set_idempotent_result(
@@ -110,8 +110,7 @@ class ToolsHandler(BaseModel):
         Call this at the start of a fresh task execution to avoid stale
         entries from a previous unrelated task.
         """
-        if self._idempotency_backend is not None:
-            self._idempotency_backend.clear()
+        self._idempotency_backend.clear()
 
     def on_tool_use(
         self,
@@ -132,9 +131,7 @@ class ToolsHandler(BaseModel):
         # Use the same sanitised name as the read path for consistency.
         if calling.arguments is not None:
             arguments: dict[str, object] = (
-                calling.arguments
-                if isinstance(calling.arguments, dict)
-                else {}
+                calling.arguments if isinstance(calling.arguments, dict) else {}
             )
             self.set_idempotent_result(calling.tool_name, arguments, output)
 

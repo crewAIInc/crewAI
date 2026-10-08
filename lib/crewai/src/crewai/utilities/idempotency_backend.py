@@ -20,6 +20,10 @@ from typing import Final
 _IN_PROGRESS: Final[str] = "__idempotency_in_progress__"
 
 
+class IdempotencyInProgressError(RuntimeError):
+    """A claimed tool call has no confirmed outcome and must not execute again."""
+
+
 class IdempotencyBackend(ABC):
     """Abstract interface for an idempotency store.
 
@@ -49,8 +53,8 @@ class IdempotencyBackend(ABC):
         * ``(False, result)`` — another caller already claimed or completed
           this key.  If *result* is not ``None`` it is the final result that
           can be returned immediately.  If *result* is ``None`` the other
-          caller is still in progress; the current caller should wait/retry
-          or fall back to normal execution.
+          caller is still in progress; the current caller must not execute
+          the tool again until the outcome is known.
         """
         ...
 
@@ -58,9 +62,9 @@ class IdempotencyBackend(ABC):
     def release(self, key: str) -> None:
         """Release an in-progress claim without publishing a result.
 
-        Call this when the caller that won the claim fails before calling
-        :meth:`set`, so that subsequent callers are not blocked by a stale
-        in-progress marker.
+        Only release when the owner can establish that the side effect did
+        not occur. A timeout, cancellation, or lost response leaves an unknown
+        outcome and must not automatically permit another execution.
         """
         ...
 
@@ -100,8 +104,7 @@ class MemoryIdempotencyBackend(IdempotencyBackend):
             existing = self._store.get(key)
             if existing is not None:
                 if existing == _IN_PROGRESS:
-                    # Another caller is still executing — tell caller to
-                    # wait or proceed normally.
+                    # Another caller owns execution; do not repeat it.
                     return (False, None)
                 # Already completed — return the stored result.
                 return (False, existing)

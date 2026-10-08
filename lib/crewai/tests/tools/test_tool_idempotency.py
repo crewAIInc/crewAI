@@ -9,6 +9,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.idempotency_backend import (
     IdempotencyBackend,
+    IdempotencyInProgressError,
     MemoryIdempotencyBackend,
 )
 
@@ -134,16 +135,13 @@ class TestToolsHandlerIdempotency:
         result = handler.claim_idempotent_result("add", {"x": 1})
         assert result is None  # claim succeeded, caller must execute
 
-    def test_claim_idempotent_narrows_race_window(self) -> None:
+    def test_claim_idempotent_blocks_in_progress_execution(self) -> None:
         handler = ToolsHandler()
         # First claim succeeds (caller must execute)
         result1 = handler.claim_idempotent_result("add", {"x": 1})
         assert result1 is None
-        # Second claim sees in-progress, returns None (falls through to execution).
-        # This narrows the race window rather than strictly preventing double
-        # execution — both callers receive None so both may execute.
-        result2 = handler.claim_idempotent_result("add", {"x": 1})
-        assert result2 is None  # not yet completed
+        with pytest.raises(IdempotencyInProgressError, match="already in progress"):
+            handler.claim_idempotent_result("add", {"x": 1})
 
     def test_tool_name_sanitization_consistency(self) -> None:
         """Write and read paths must use the same sanitised tool name."""
@@ -367,3 +365,66 @@ class TestToolUsageIdempotency:
         result = await tool_usage._ause(tool_string="", tool=tool, calling=calling)
         assert result == "fresh"  # executed fresh, not from idempotency
         tool.ainvoke.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_tool_calls_do_not_repeat_an_in_progress_side_effect():
+    import asyncio
+
+    from crewai.tools.tool_calling import ToolCalling
+
+    handler = ToolsHandler()
+    started = asyncio.Event()
+    release = asyncio.Event()
+    tool = MagicMock()
+    tool.name = "pay"
+    tool.description = "Submit a payment"
+    tool.max_usage_count = None
+    tool.current_usage_count = 0
+    tool.format_output_for_agent.side_effect = str
+    tool.args_schema.model_json_schema.return_value = {"properties": {"amount": {}}}
+
+    async def submit_payment(**kwargs):
+        started.set()
+        await release.wait()
+        return "payment-sent"
+
+    tool.ainvoke = AsyncMock(side_effect=submit_payment)
+    calling = ToolCalling(tool_name="pay", arguments={"amount": 10})
+
+    def make_usage():
+        usage = ToolUsage(
+            tools_handler=handler,
+            tools=[tool],
+            task=None,
+            function_calling_llm=MagicMock(),
+        )
+        usage.action = MagicMock()
+        usage.action.tool = "pay"
+        usage.action.tool_input = {"amount": 10}
+        return usage
+
+    owner = asyncio.create_task(
+        make_usage()._ause(tool_string="", tool=tool, calling=calling)
+    )
+    await asyncio.wait_for(started.wait(), timeout=1)
+    try:
+        # A duplicate call must stop before invoking the side effect, for both
+        # entry points, while the original execution retains its claim.
+        with pytest.raises(IdempotencyInProgressError, match="already in progress"):
+            await asyncio.wait_for(
+                make_usage()._ause(tool_string="", tool=tool, calling=calling),
+                timeout=0.2,
+            )
+        with pytest.raises(IdempotencyInProgressError, match="already in progress"):
+            make_usage()._use(tool_string="", tool=tool, calling=calling)
+        tool.invoke.assert_not_called()
+        assert tool.ainvoke.call_count == 1
+    finally:
+        release.set()
+        await owner
+
+    # A task retry starts a new action sequence while reusing the backend.
+    handler.last_used_tool = None
+    assert await make_usage()._ause(tool_string="", tool=tool, calling=calling) == "payment-sent"
+    assert tool.ainvoke.call_count == 1
