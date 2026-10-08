@@ -873,12 +873,18 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
     effective_root = force_additional_properties_false(effective_root)
 
     in_progress: dict[int, Any] = {}
+    # ``in_progress`` is keyed by ``id(schema_dict)``, so every registered
+    # dict must stay referenced for the whole build; otherwise CPython can
+    # hand a brand-new dict the same address and a lookup would return an
+    # unrelated model (issue #7908). Registered dicts are parked here.
+    schema_keepalive: list[Any] = []
     model = _build_model_from_schema(
         json_schema,
         effective_root,
         model_name=model_name,
         enrich_descriptions=enrich_descriptions,
         in_progress=in_progress,
+        schema_keepalive=schema_keepalive,
         __config__=__config__,
         __base__=__base__,
         __module__=__module__,
@@ -901,6 +907,9 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
                 entry.model_rebuild(_types_namespace=types_namespace)
             except Exception as e:
                 logger.debug("model_rebuild failed for %s: %s", entry.__name__, e)
+    # The id()-keyed cache is only meaningful while the build runs; drop it
+    # once the namespace pass is done so no entries outlive this call.
+    in_progress.clear()
     return model
 
 
@@ -911,6 +920,7 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     model_name: str | None,
     enrich_descriptions: bool,
     in_progress: dict[int, Any],
+    schema_keepalive: list[Any],
     __config__: ConfigDict | None = None,
     __base__: type[BaseModel] | None = None,
     __module__: str = __name__,
@@ -924,8 +934,15 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     schema and emits Pydantic models. ``in_progress`` maps ``id(schema)`` to
     the model being built for that schema, so a cyclic ``$ref`` graph
     degrades to a ``ForwardRef`` back-edge instead of blowing the stack.
+    ``schema_keepalive`` holds every dict whose ``id()`` is registered in
+    ``in_progress`` so the dicts cannot be garbage-collected (and their
+    addresses reused) while the build is running.
     """
     original_id = id(json_schema)
+    # The cache is keyed by id(), so the dict being registered must outlive
+    # the build -- a freed dict's address can be handed to a brand-new dict,
+    # whose lookup would then wrongly return this model (issue #7908).
+    schema_keepalive.append(json_schema)
     if "allOf" in json_schema:
         json_schema = _merge_all_of_schemas(json_schema["allOf"], effective_root)
 
@@ -935,6 +952,7 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     in_progress[original_id] = effective_name
     if schema_id != original_id:
         in_progress[schema_id] = effective_name
+        schema_keepalive.append(json_schema)
 
     field_definitions = {
         name: _json_schema_to_pydantic_field(
@@ -944,6 +962,7 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
             effective_root,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            schema_keepalive=schema_keepalive,
         )
         for name, prop in (json_schema.get("properties", {}) or {}).items()
     }
@@ -973,6 +992,7 @@ def _json_schema_to_pydantic_field(
     *,
     enrich_descriptions: bool = False,
     in_progress: dict[int, Any] | None = None,
+    schema_keepalive: list[Any] | None = None,
 ) -> Any:
     """Convert a JSON schema property to a Pydantic field definition.
 
@@ -982,6 +1002,8 @@ def _json_schema_to_pydantic_field(
         required: List of required field names.
         root_schema: The root schema for resolving $ref.
         enrich_descriptions: When True, embed constraints in the description.
+        schema_keepalive: Build-wide pin list for the ``in_progress`` cycle
+            cache; pass whatever was passed as ``in_progress``'s companion.
 
     Returns:
         A tuple of (type, Field) for use with create_model.
@@ -992,6 +1014,7 @@ def _json_schema_to_pydantic_field(
         name_=name.title(),
         enrich_descriptions=enrich_descriptions,
         in_progress=in_progress,
+        schema_keepalive=schema_keepalive,
     )
     is_required = name in required
 
@@ -1142,6 +1165,7 @@ def _json_schema_to_pydantic_type(
     name_: str | None = None,
     enrich_descriptions: bool = False,
     in_progress: dict[int, Any] | None = None,
+    schema_keepalive: list[Any] | None = None,
 ) -> Any:
     """Convert a JSON schema to a Python/Pydantic type.
 
@@ -1156,6 +1180,9 @@ def _json_schema_to_pydantic_type(
             Populated by :func:`_build_model_from_schema`. Enables cycle
             detection so a self-referential ``$ref`` graph resolves to a
             :class:`ForwardRef` back-edge rather than recursing forever.
+        schema_keepalive: Build-wide list pinning every dict registered in
+            ``in_progress`` so its ``id()`` key stays valid; pass it
+            whenever ``in_progress`` is passed.
 
     Returns:
         A Python type corresponding to the JSON schema.
@@ -1176,6 +1203,7 @@ def _json_schema_to_pydantic_type(
             name_=name_,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            schema_keepalive=schema_keepalive,
         )
 
     enum_values = json_schema.get("enum")
@@ -1196,6 +1224,7 @@ def _json_schema_to_pydantic_type(
                 name_=f"{name_ or 'Union'}Option{i}",
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                schema_keepalive=schema_keepalive,
             )
             for i, schema in enumerate(any_of_schemas)
         ]
@@ -1210,14 +1239,16 @@ def _json_schema_to_pydantic_type(
                 name_=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                schema_keepalive=schema_keepalive,
             )
-        if in_progress is not None:
+        if in_progress is not None and schema_keepalive is not None:
             return _build_model_from_schema(
                 json_schema,
                 root_schema,
                 model_name=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                schema_keepalive=schema_keepalive,
             )
         merged = _merge_all_of_schemas(all_of_schemas, root_schema)
         return _json_schema_to_pydantic_type(
@@ -1226,6 +1257,7 @@ def _json_schema_to_pydantic_type(
             name_=name_,
             enrich_descriptions=enrich_descriptions,
             in_progress=in_progress,
+            schema_keepalive=schema_keepalive,
         )
 
     type_ = json_schema.get("type")
@@ -1247,6 +1279,7 @@ def _json_schema_to_pydantic_type(
                 name_=f"{name_ or 'Union'}Option{i}",
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                schema_keepalive=schema_keepalive,
             )
             for i, member in enumerate(type_)
         ]
@@ -1269,19 +1302,21 @@ def _json_schema_to_pydantic_type(
                 name_=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
+                schema_keepalive=schema_keepalive,
             )
             return list[item_type]  # type: ignore[valid-type]
         return list
     if type_ == "object":
         properties = json_schema.get("properties")
         if properties:
-            if in_progress is not None:
+            if in_progress is not None and schema_keepalive is not None:
                 return _build_model_from_schema(
                     json_schema,
                     root_schema,
                     model_name=name_,
                     enrich_descriptions=enrich_descriptions,
                     in_progress=in_progress,
+                    schema_keepalive=schema_keepalive,
                 )
             json_schema_ = json_schema.copy()
             if json_schema_.get("title") is None:
