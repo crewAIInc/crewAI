@@ -119,7 +119,7 @@ github = [
     # GHSA-wvpp-8hx9-p66j and GHSA-jm78-9fvv-mhgr (further unguarded git
     # option forwarding / arbitrary file read); force 3.1.58+. 3.1.58 then has
     # PYSEC-2026-3785 through -3788; force 3.1.59+.
-    "gitpython>=3.1.59,<4",
+    "gitpython>=3.1.62,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
