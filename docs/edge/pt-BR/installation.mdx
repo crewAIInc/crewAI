@@ -5,6 +5,125 @@ icon: wrench
 mode: "wide"
 ---
 
+<div
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    gap: 18,
+    padding: "24px",
+    marginBottom: 32,
+    borderRadius: 12,
+    border: "1px solid rgba(235,102,88,0.28)",
+    background: "linear-gradient(180deg, rgba(235,102,88,0.14) 0%, rgba(235,102,88,0.06) 100%)"
+  }}
+>
+  <div>
+    <p style={{ margin: 0, color: "#EB6658", fontSize: 13, fontWeight: 700, textTransform: "uppercase" }}>
+      Configuração do Agent de programação
+    </p>
+    <h2 style={{ margin: "6px 0 8px" }}>Configure o CrewAI no seu Agent de programação</h2>
+    <p style={{ margin: 0, color: "var(--mint-text-2)", maxWidth: 760 }}>
+      Copie um prompt de configuração pronto para colar no Claude Code, Codex, Cursor ou em qualquer Agent de programação. Ele instala as skills oficiais do CrewAI, verifica o CLI e orienta o Agent a consultar a documentação correta antes de editar o código.
+    </p>
+  </div>
+
+  <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+    <button
+      type="button"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid #EB6658",
+        background: "#EB6658",
+        color: "#FFFFFF",
+        fontSize: 15,
+        fontWeight: 700,
+        lineHeight: 1,
+        cursor: "pointer",
+        boxShadow: "0 10px 24px rgba(235,102,88,0.22)"
+      }}
+      onClick={async (event) => {
+        const prompt = `Set up this environment so I can build with CrewAI.
+
+First install the official CrewAI coding-agent skills if this environment supports npx:
+
+npx skills add crewaiinc/skills
+
+If npx is missing or the current agent cannot load skills, do not fail the whole setup. Report the exact issue and continue using the CrewAI docs directly.
+
+Use these CrewAI docs as source of truth before making assumptions:
+- https://skills.crewai.com
+- https://docs.crewai.com/llms.txt
+- https://docs.crewai.com/en/installation
+- https://docs.crewai.com/en/guides/coding-tools/build-with-ai
+
+Setup steps:
+1. Check python3 --version. CrewAI requires Python >=3.10 and <3.14.
+2. Install uv if missing:
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+3. Source the uv environment if needed:
+   source "$HOME/.local/bin/env"
+4. Install the CrewAI CLI:
+   uv tool install crewai
+5. Verify the CLI:
+   crewai version
+   crewai create --help
+6. Create a project:
+   CREWAI_DMN=true crewai create crew <project_name>
+7. After project creation, inspect the generated files before editing.
+8. Run:
+   crewai install
+   crewai run
+
+Do not hardcode API keys. Use .env.
+Do not invent CLI flags. Validate with crewai --help or crewai create --help.
+If a command fails, show the exact command and error, explain the likely cause, fix what you can safely fix, and retry once.`;
+        const button = event.currentTarget;
+        const resetTimeout = button.dataset.resetTimeout;
+        if (resetTimeout) {
+          window.clearTimeout(Number(resetTimeout));
+        }
+        try {
+          await navigator.clipboard.writeText(prompt);
+          button.textContent = "Copiado";
+        } catch {
+          button.textContent = "Falha ao copiar";
+        } finally {
+          button.dataset.resetTimeout = String(window.setTimeout(() => {
+            button.textContent = "Copiar prompt de configuração do Agent";
+            delete button.dataset.resetTimeout;
+          }, 1600));
+        }
+      }}
+    >
+      Copiar prompt de configuração do Agent
+    </button>
+    <a
+      href="/pt-BR/guides/coding-tools/build-with-ai"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid rgba(235,102,88,0.36)",
+        color: "#EB6658",
+        fontSize: 15,
+        fontWeight: 700,
+        lineHeight: 1,
+        textDecoration: "none"
+      }}
+    >
+      Ver guia do Agent de programação
+    </a>
+  </div>
+</div>
+
 ### Assista: Construindo Agents e Flows CrewAI com Coding Agent Skills
 
 Instale nossas coding agent skills (Claude Code, Codex, ...) para colocar seus agentes de código para funcionar rapidamente com o CrewAI.
