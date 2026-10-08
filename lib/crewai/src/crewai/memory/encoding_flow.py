@@ -15,7 +15,7 @@ import contextvars
 from datetime import datetime
 import logging
 import math
-from typing import Any
+from typing import Any, ClassVar
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -81,6 +81,8 @@ class EncodingFlow(Flow[EncodingState]):
     - N concurrent individual LLM calls (field resolution + consolidation)
     - ONE batch re-embed for updates + ONE bulk storage write
     """
+
+    is_crewai_internal: ClassVar[bool] = True
 
     _skip_auto_memory: bool = True
 

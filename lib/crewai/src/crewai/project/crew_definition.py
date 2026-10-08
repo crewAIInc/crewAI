@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -222,9 +223,16 @@ class AgentDefinition(CrewAgentDefinition):
         description="Additional agent settings passed to the loader.",
         examples=[{"llm": "openai/gpt-4o-mini"}],
     )
-    input: str = Field(
-        description="Input passed to the individual agent kickoff outside of a crew.",
-        examples=["${state.ticket.body}"],
+    input: str | list[dict[str, Any]] = Field(
+        description=(
+            "Input passed to the individual agent kickoff outside of a crew. "
+            "A string, or a list of {role, content} messages to give the agent "
+            "a conversation instead of a single prompt."
+        ),
+        examples=[
+            "${state.ticket.body}",
+            "${state.messages.map(m, {'role': m.role, 'content': m.content})}",
+        ],
     )
     response_format: PythonReferenceDefinition | None = Field(
         default=None,
@@ -235,9 +243,11 @@ class AgentDefinition(CrewAgentDefinition):
     @field_validator("input", mode="before")
     @classmethod
     def _validate_input(cls, value: Any) -> Any:
-        if not isinstance(value, str):
-            raise ValueError("agent.input must be a string")
-        return value
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list) and all(isinstance(item, Mapping) for item in value):
+            return value
+        raise ValueError("agent.input must be a string or a list of messages")
 
 
 class CrewTaskDefinition(BaseModel):

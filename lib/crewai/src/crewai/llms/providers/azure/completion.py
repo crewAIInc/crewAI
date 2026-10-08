@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -42,7 +43,12 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM, call_stream_override, llm_call_context
+    from crewai.llms.base_llm import (
+        BaseLLM,
+        LLMCallBlockedError,
+        call_stream_override,
+        llm_call_context,
+    )
 
 except ImportError:
     raise ImportError(
@@ -521,10 +527,7 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
@@ -547,6 +550,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
 
@@ -603,6 +609,8 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
                 )
@@ -624,6 +632,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 self._handle_api_error(e, from_task, from_agent)
 
@@ -987,19 +998,25 @@ class AzureCompletion(BaseLLM):
 
             if choice.delta and choice.delta.tool_calls:
                 for idx, tool_call in enumerate(choice.delta.tool_calls):
-                    if idx not in tool_calls:
-                        tool_calls[idx] = {
+                    tool_index = tool_call.get("index")
+                    if tool_index is None:
+                        tool_index = idx
+
+                    if tool_index not in tool_calls:
+                        tool_calls[tool_index] = {
                             "id": tool_call.id,
                             "name": "",
                             "arguments": "",
                         }
-                    elif tool_call.id and not tool_calls[idx]["id"]:
-                        tool_calls[idx]["id"] = tool_call.id
+                    elif tool_call.id and not tool_calls[tool_index]["id"]:
+                        tool_calls[tool_index]["id"] = tool_call.id
 
                     if tool_call.function and tool_call.function.name:
-                        tool_calls[idx]["name"] = tool_call.function.name
+                        tool_calls[tool_index]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
-                        tool_calls[idx]["arguments"] += tool_call.function.arguments
+                        tool_calls[tool_index]["arguments"] += (
+                            tool_call.function.arguments
+                        )
 
                     self._emit_stream_chunk_event(
                         chunk=tool_call.function.arguments
@@ -1008,13 +1025,13 @@ class AzureCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         tool_call={
-                            "id": tool_calls[idx]["id"],
+                            "id": tool_calls[tool_index]["id"],
                             "function": {
-                                "name": tool_calls[idx]["name"],
-                                "arguments": tool_calls[idx]["arguments"],
+                                "name": tool_calls[tool_index]["name"],
+                                "arguments": tool_calls[tool_index]["arguments"],
                             },
                             "type": "function",
-                            "index": idx,
+                            "index": tool_index,
                         },
                         call_type=LLMCallType.TOOL_CALL,
                         response_id=response_id,
@@ -1291,35 +1308,17 @@ class AzureCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            AZURE_OPENAI_CONTEXT_WINDOWS,
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-35-turbo": 16385,
-            "gpt-3.5-turbo": 16385,
-            "text-embedding": 8191,
-        }
-
-        for model_prefix, size in sorted(
-            context_windows.items(), key=lambda x: len(x[0]), reverse=True
-        ):
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model,
+            AZURE_OPENAI_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""

@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import os
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import model_validator
 
@@ -91,23 +92,39 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
     ),
 }
 
+_OLLAMA_DEFAULT_PORT = 11434
+
 
 def _normalize_ollama_base_url(base_url: str) -> str:
-    """Normalize Ollama base URL to ensure it ends with /v1.
+    """Normalize an Ollama base URL into a full OpenAI-compatible endpoint.
 
-    Ollama uses OLLAMA_HOST which may not include the /v1 suffix,
-    but the OpenAI-compatible endpoint requires it.
+    ``OLLAMA_HOST`` follows Ollama's own convention and may be a bare host
+    (``0.0.0.0``), a ``host:port`` pair (``127.0.0.1:11434``), or a full URL.
+    Whichever parts are missing are filled in: ``http://`` when no scheme is
+    given, the default Ollama port when none is given and the scheme is
+    ``http`` (``https`` implies 443), and the ``/v1`` suffix that the
+    OpenAI-compatible endpoint requires.
 
     Args:
-        base_url: The base URL, potentially without /v1 suffix.
+        base_url: The base URL, potentially missing scheme, port or /v1.
 
     Returns:
-        The base URL with /v1 suffix if needed.
+        A fully-qualified base URL ending in /v1.
     """
-    base_url = base_url.rstrip("/")
-    if not base_url.endswith("/v1"):
-        return f"{base_url}/v1"
-    return base_url
+    if "://" not in base_url:
+        base_url = f"http://{base_url}"
+
+    parts = urlsplit(base_url)
+
+    netloc = parts.netloc
+    if parts.scheme == "http" and parts.port is None:
+        netloc = f"{netloc}:{_OLLAMA_DEFAULT_PORT}"
+
+    path = parts.path.rstrip("/")
+    if not path.endswith("/v1"):
+        path = f"{path}/v1"
+
+    return urlunsplit((parts.scheme, netloc, path, parts.query, parts.fragment))
 
 
 class OpenAICompatibleCompletion(OpenAICompletion):

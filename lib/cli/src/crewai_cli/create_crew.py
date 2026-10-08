@@ -3,6 +3,7 @@ import shutil
 import sys
 
 import click
+from crewai_core.telemetry import Telemetry
 import tomli
 
 from crewai_cli.constants import ENV_VARS, MODELS
@@ -13,7 +14,9 @@ from crewai_cli.provider import (
     select_provider,
 )
 from crewai_cli.utils import (
+    copy_assistant_instructions,
     copy_template,
+    get_or_create_project_id,
     is_dmn_mode_enabled,
     load_env_vars,
     write_env_file,
@@ -149,11 +152,7 @@ def create_folder_structure(
         (folder_path / "src" / folder_name).mkdir(parents=True)
         (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
         (folder_path / "src" / folder_name / "config").mkdir(parents=True)
-
-        package_dir = Path(__file__).parent
-        agents_md_src = package_dir / "templates" / "AGENTS.md"
-        if agents_md_src.exists():
-            shutil.copy2(agents_md_src, folder_path / "AGENTS.md")
+        copy_assistant_instructions(folder_path)
 
     return folder_path, folder_name, class_name
 
@@ -320,6 +319,11 @@ def create_crew(
             copy_template(src_file, dst_file, name, class_name, folder_name)
 
     if not parent_folder:
+        # Minted at creation so the project has a stable identity from run one.
+        project_id = get_or_create_project_id(folder_path / "pyproject.toml")
+        # Emitted only here, not in the parent_folder branch: that branch adds a crew to
+        # an existing project, which is not an acquisition and mints no id.
+        Telemetry().project_created_span("crew", project_id)
         initialize_if_git_available(folder_path)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)

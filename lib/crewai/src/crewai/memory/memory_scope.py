@@ -26,6 +26,7 @@ def _ensure_memory_kind(value: Any) -> Any:
     Pass-through for non-dict values (instances, ``bool``, ``None``).
     """
     if isinstance(value, dict) and "memory_kind" not in value:
+        value = dict(value)
         if "scopes" in value:
             value["memory_kind"] = "slice"
         elif "root_path" in value:
@@ -55,6 +56,7 @@ class MemoryScope(BaseModel):
             return data
         if not isinstance(data, dict):
             raise ValueError(f"Expected dict or MemoryScope, got {type(data).__name__}")
+        data = dict(data)
         memory = data.pop("memory", None)
         instance: MemoryScope = handler(data)
         if memory is not None:
@@ -245,6 +247,7 @@ class MemorySlice(BaseModel):
             return data
         if not isinstance(data, dict):
             raise ValueError(f"Expected dict or MemorySlice, got {type(data).__name__}")
+        data = dict(data)
         memory = data.pop("memory", None)
         data["scopes"] = [s.rstrip("/") or "/" for s in data.get("scopes", [])]
         instance: MemorySlice = handler(data)

@@ -95,5 +95,5 @@ class TestResolveNativeRuntimeError:
     ):
         mock_asyncio_run.side_effect = RuntimeError("some other failure")
 
-        with pytest.raises(RuntimeError, match="Failed to get native MCP tools"):
+        with pytest.raises(ConnectionError, match="Failed to get native MCP tools"):
             resolver._resolve_native(http_config)

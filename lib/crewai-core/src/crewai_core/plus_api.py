@@ -62,6 +62,9 @@ class CrewDeploymentSpec(TypedDict):
 
 class CreateCrewPayload(TypedDict):
     deploy: CrewDeploymentSpec
+    # ``[tool.crewai].project_id``, at the top level as every other deploy
+    # request sends it (AMP reads it there on every route); only when set.
+    project_id: NotRequired[str]
 
 
 class _WithUserIdentifier(TypedDict):
@@ -69,7 +72,7 @@ class _WithUserIdentifier(TypedDict):
 
 
 class LoginPayload(_WithUserIdentifier):
-    pass
+    project_id: NotRequired[str]
 
 
 class TraceExecutionContext(TypedDict):
@@ -78,6 +81,7 @@ class TraceExecutionContext(TypedDict):
     flow_name: str | None
     crewai_version: str
     privacy_level: str
+    project_id: NotRequired[str | None]
 
 
 class TraceExecutionMetadata(TypedDict):
@@ -229,11 +233,24 @@ class PlusAPI:
             return client.request(method, url, files=files, **request_kwargs)
 
     def login_to_tool_repository(
-        self, user_identifier: str | None = None
+        self, user_identifier: str | None = None, project_id: str | None = None
     ) -> httpx.Response:
+        """Log in to the tool repository.
+
+        This request is authenticated, so sending user_identifier and project_id
+        alongside it links the account to the local pseudonymous user id and to
+        the project the command was run from - letting prior anonymous usage of
+        that project be attributed after signup.
+
+        Args:
+            user_identifier: Local pseudonymous user id.
+            project_id: ``[tool.crewai].project_id`` of the current project.
+        """
         payload: LoginPayload = {}
         if user_identifier:
             payload["user_identifier"] = user_identifier
+        if project_id:
+            payload["project_id"] = project_id
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
 
     def get_tool(self, handle: str) -> httpx.Response:
@@ -306,13 +323,29 @@ class PlusAPI:
             params=params or None,
         )
 
-    def deploy_by_name(self, project_name: str) -> httpx.Response:
-        return self._make_request(
-            "POST", f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
-        )
+    def deploy_by_name(
+        self, project_name: str, *, project_id: str | None = None
+    ) -> httpx.Response:
+        """Redeploy by name, with PROJECT_ID (`[tool.crewai].project_id`) when set.
 
-    def deploy_by_uuid(self, uuid: str) -> httpx.Response:
-        return self._make_request("POST", f"{self.CREWS_RESOURCE}/{uuid}/deploy")
+        The body is sent only when there is a project id. An AMP that predates
+        project ids ignores it: this route has read its body through Rails'
+        ``params.permit`` since the v1 API (2024-08), which drops a key it does
+        not name, and AMP never made unpermitted keys an error.
+        """
+        endpoint = f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
+        if project_id:
+            return self._make_request("POST", endpoint, json={"project_id": project_id})
+        return self._make_request("POST", endpoint)
+
+    def deploy_by_uuid(
+        self, uuid: str, *, project_id: str | None = None
+    ) -> httpx.Response:
+        """Redeploy by uuid, with PROJECT_ID as for `deploy_by_name`."""
+        endpoint = f"{self.CREWS_RESOURCE}/{uuid}/deploy"
+        if project_id:
+            return self._make_request("POST", endpoint, json={"project_id": project_id})
+        return self._make_request("POST", endpoint)
 
     def crew_status_by_name(self, project_name: str) -> httpx.Response:
         return self._make_request(
@@ -354,11 +387,18 @@ class PlusAPI:
         *,
         name: str | None = None,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Create a crew deployment from a local project ZIP archive."""
+        """Create a crew deployment from a local project ZIP archive.
+
+        PROJECT_ID is `[tool.crewai].project_id`, so AMP knows which project the
+        deployment runs; sent only when the project has one.
+        """
         data: dict[str, str] = {}
         if name:
             data["name"] = name
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(
@@ -375,9 +415,15 @@ class PlusAPI:
         zip_file_path: str | Path,
         *,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Update an existing crew deployment from a local project ZIP archive."""
+        """Update an existing crew deployment from a local project ZIP archive.
+
+        PROJECT_ID as for `create_crew_from_zip`.
+        """
         data: dict[str, str] = {}
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(

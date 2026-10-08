@@ -92,6 +92,10 @@ from crewai.events.types.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
+from crewai.execution import (
+    begin_execution,
+    end_execution,
+)
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -203,6 +207,9 @@ class Crew(FlowTrackable, BaseModel):
 
     __hash__ = object.__hash__
     _execution_span: Span | None = PrivateAttr()
+    # Monotonic stamp for the ungated "Crew Completed" span. A PrivateAttr
+    # because Crew is a BaseModel, unlike Flow which takes a plain attribute.
+    _telemetry_started_at: float | None = PrivateAttr(default=None)
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
@@ -1038,8 +1045,11 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        execution_token = None
+
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
+            execution_token = begin_execution(tracing=self.tracing)
             inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
@@ -1060,6 +1070,10 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
@@ -1076,6 +1090,7 @@ class Crew(FlowTrackable, BaseModel):
             self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
+            end_execution(execution_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
@@ -1252,8 +1267,11 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        execution_token = None
+
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
+            execution_token = begin_execution(tracing=self.tracing)
             inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
@@ -1274,6 +1292,10 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            from crewai.telemetry.tracing.grants import TraceGrantError
+
+            if execution_token is None and isinstance(e, TraceGrantError):
+                raise
             self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
@@ -1290,6 +1312,7 @@ class Crew(FlowTrackable, BaseModel):
             self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
+            end_execution(execution_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def akickoff_for_each(
@@ -2018,6 +2041,63 @@ class Crew(FlowTrackable, BaseModel):
             None,
         )
 
+    def _validate_replay_tasks(
+        self, stored_outputs: list[Any], start_index: int
+    ) -> None:
+        """Ensure stored outputs still correspond to the tasks that will receive them."""
+        if len(self.tasks) <= start_index:
+            raise ValueError(
+                "Cannot replay because the current crew does not match the stored task outputs."
+            )
+
+        stored_prefix = stored_outputs[: start_index + 1]
+        stored_task_keys = [
+            stored_output.get("task_key") for stored_output in stored_prefix
+        ]
+        current_task_keys = [task.key for task in self.tasks[: start_index + 1]]
+        if all(stored_task_keys):
+            if len(set(stored_task_keys)) != len(stored_task_keys) or len(
+                set(current_task_keys)
+            ) != len(current_task_keys):
+                raise ValueError(
+                    "Cannot replay because the stored task identities are ambiguous."
+                )
+            if stored_task_keys != current_task_keys:
+                raise ValueError(
+                    "Cannot replay because the current crew does not match the stored task outputs."
+                )
+            return
+
+        stored_identities = [
+            (
+                stored_output["output"].get("description"),
+                stored_output.get("expected_output"),
+            )
+            for stored_output in stored_prefix
+        ]
+        current_identities = [
+            (task.description, task.expected_output)
+            for task in self.tasks[: start_index + 1]
+        ]
+        if len(set(stored_identities)) != len(stored_identities) or len(
+            set(current_identities)
+        ) != len(current_identities):
+            raise ValueError(
+                "Cannot replay because the stored task identities are ambiguous."
+            )
+
+        for index, stored_output in enumerate(stored_prefix):
+            task = self.tasks[index]
+            output = stored_output["output"]
+            stored_expected_output = stored_output.get("expected_output")
+            if task.description != output.get("description") or (
+                stored_expected_output is not None
+                and task.expected_output != stored_expected_output
+            ):
+                raise ValueError(
+                    "Cannot replay because the current crew does not match the stored task outputs."
+                )
+
     def replay(self, task_id: str, inputs: dict[str, Any] | None = None) -> CrewOutput:
         """Replay the crew execution from a specific task."""
         stored_outputs = self._task_output_handler.load()
@@ -2028,6 +2108,8 @@ class Crew(FlowTrackable, BaseModel):
 
         if start_index is None:
             raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
+
+        self._validate_replay_tasks(stored_outputs, start_index)
 
         replay_inputs = (
             inputs if inputs is not None else stored_outputs[start_index]["inputs"]

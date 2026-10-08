@@ -2,13 +2,17 @@
 
 import os
 from pathlib import Path
-import tempfile
 from typing import Any
 from urllib.parse import urlparse
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
-from crewai_tools.security.safe_requests import safe_get
+from crewai_tools.security.safe_requests import safe_get_bounded
+
+
+# Remote PDFs are held in memory for the whole extraction, so the download needs
+# a ceiling. Override per call with the ``max_bytes`` kwarg to ``load``.
+DEFAULT_MAX_PDF_BYTES = 50 * 1024 * 1024
 
 
 class PDFLoader(BaseLoader):
@@ -24,18 +28,24 @@ class PDFLoader(BaseLoader):
             return False
 
     @staticmethod
-    def _download_from_url(url: str, kwargs: dict[str, Any]) -> str:
-        """Download PDF from a URL to a temporary file and return its path.
+    def _fetch_from_url(url: str, kwargs: dict[str, Any]) -> bytes:
+        """Download a PDF from a URL and return its bytes.
+
+        The content stays in memory rather than going to a temporary file: the
+        whole body has to be buffered either way, and a temp file would need
+        unlinking on every error path to avoid leaving files behind. Because it
+        is held in memory, the download is capped.
 
         Args:
             url: The URL to download from.
-            kwargs: Optional dict that may contain custom headers.
+            kwargs: Optional dict that may contain custom ``headers`` and a
+                ``max_bytes`` ceiling for the download.
 
         Returns:
-            Path to the temporary file containing the PDF.
+            The raw PDF content.
 
         Raises:
-            ValueError: If the download fails.
+            ValueError: If the download fails or exceeds the size ceiling.
         """
         headers = kwargs.get(
             "headers",
@@ -46,12 +56,13 @@ class PDFLoader(BaseLoader):
         )
 
         try:
-            response = safe_get(url, headers=headers, timeout=30)
-            response.raise_for_status()
-
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
-                temp_file.write(response.content)
-                return temp_file.name
+            body, _content_type, _final_url = safe_get_bounded(
+                url,
+                max_bytes=kwargs.get("max_bytes", DEFAULT_MAX_PDF_BYTES),
+                headers=headers,
+                timeout=30,
+            )
+            return body
         except Exception as e:
             raise ValueError(f"Failed to download PDF from {url}: {e!s}") from e
 
@@ -93,21 +104,25 @@ class PDFLoader(BaseLoader):
 
         try:
             if is_url:
-                local_path = self._download_from_url(file_path, kwargs)
-                doc = pymupdf.open(local_path)
+                doc = pymupdf.open(
+                    stream=self._fetch_from_url(file_path, kwargs), filetype="pdf"
+                )
             else:
                 if not os.path.isfile(file_path):
                     raise FileNotFoundError(f"PDF file not found: {file_path}")
                 doc = pymupdf.open(file_path)
 
-            metadata["num_pages"] = len(doc)
+            # Closed in a finally so a failure mid-extraction still releases the
+            # document handle.
+            try:
+                metadata["num_pages"] = len(doc)
 
-            for page_num, page in enumerate(doc, 1):
-                page_text = page.get_text()
-                if page_text.strip():
-                    text_content.append(f"Page {page_num}:\n{page_text}")
-
-            doc.close()
+                for page_num, page in enumerate(doc, 1):
+                    page_text = page.get_text()
+                    if page_text.strip():
+                        text_content.append(f"Page {page_num}:\n{page_text}")
+            finally:
+                doc.close()
         except FileNotFoundError:
             raise
         except Exception as e:

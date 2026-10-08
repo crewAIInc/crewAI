@@ -77,7 +77,37 @@ logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-__all__ = ["HumanFeedbackResult", "human_feedback"]
+__all__ = ["HumanFeedbackCollapseError", "HumanFeedbackResult", "human_feedback"]
+
+
+class HumanFeedbackCollapseError(ValueError):
+    """Raised when human feedback cannot be mapped to an emit outcome."""
+
+
+def _match_collapse_outcome(response_text: str, outcomes: Sequence[str]) -> str | None:
+    """Return the emit label that best matches ``response_text``, or None."""
+    response_clean = response_text.strip()
+    for outcome in outcomes:
+        if outcome.lower() == response_clean.lower():
+            return outcome
+    response_lower = response_clean.lower()
+    best_outcome: str | None = None
+    best_len = -1
+    for outcome in outcomes:
+        if outcome.lower() in response_lower and len(outcome) > best_len:
+            best_outcome = outcome
+            best_len = len(outcome)
+    return best_outcome
+
+
+def _require_collapse_outcome(response_text: str, outcomes: Sequence[str]) -> str:
+    matched = _match_collapse_outcome(response_text, outcomes)
+    if matched is None:
+        raise HumanFeedbackCollapseError(
+            f"Could not match LLM response {response_text!r} to outcomes "
+            f"{list(outcomes)}."
+        )
+    return matched
 
 
 def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
@@ -165,7 +195,10 @@ class HumanFeedbackConfig:
     Attributes:
         message: The message shown to the human when requesting feedback.
         emit: Optional sequence of outcome strings for routing.
-        llm: The LLM model to use for collapsing feedback to outcomes.
+        llm: The LLM used to collapse feedback to an emit outcome.
+            None means resolve at runtime via create_llm (decorator
+            value, then MODEL / MODEL_NAME / OPENAI_MODEL_NAME, then
+            DEFAULT_LLM_MODEL).
         default_outcome: The outcome to use when no feedback is provided.
         metadata: Optional metadata for enterprise integrations.
         provider: Optional custom feedback provider for async workflows.
@@ -173,7 +206,7 @@ class HumanFeedbackConfig:
 
     message: str
     emit: Sequence[str] | None = None
-    llm: str | BaseLLM | None = "gpt-5.4-mini"
+    llm: str | BaseLLM | None = None
     default_outcome: str | None = None
     metadata: dict[str, Any] | None = None
     provider: HumanFeedbackProvider | None = None
@@ -205,17 +238,9 @@ class DistilledLessons(BaseModel):
 
 def _validate_human_feedback_options(
     emit: Sequence[str] | None,
-    llm: Any,
     default_outcome: str | None,
 ) -> None:
     if emit is not None:
-        if not llm:
-            raise ValueError(
-                "llm is required when emit is specified. "
-                "Provide an LLM model string (e.g., 'gpt-5.4-mini') or a BaseLLM instance. "
-                "See the CrewAI Human-in-the-Loop (HITL) documentation for more information: "
-                "https://docs.crewai.com/en/learn/human-feedback-in-flows"
-            )
         if default_outcome is not None and default_outcome not in emit:
             raise ValueError(
                 f"default_outcome '{default_outcome}' must be one of the "
@@ -232,16 +257,23 @@ def _get_hitl_prompt(key: str) -> str:
 
 
 def _resolve_llm_instance(llm: Any) -> Any:
+    """Resolve a collapse/learn LLM the same way agents resolve theirs.
+
+    Explicit decorator values win. ``None`` follows ``create_llm``:
+    ``MODEL`` / ``MODEL_NAME`` / ``OPENAI_MODEL_NAME``, then
+    ``DEFAULT_LLM_MODEL``.
+    """
     from crewai.llm import LLM
+    from crewai.utilities.llm_utils import create_llm
 
     if llm is None:
-        return LLM(model="gpt-5.4-mini")
+        return create_llm(None)
     if isinstance(llm, str):
         return LLM(model=llm)
     if isinstance(llm, dict):
         deserialized = _deserialize_llm_from_context(llm)
-        return deserialized if deserialized is not None else LLM(model="gpt-5.4-mini")
-    return llm  # already a BaseLLM instance
+        return deserialized if deserialized is not None else create_llm(None)
+    return llm
 
 
 def _pre_review_with_lessons(
@@ -253,6 +285,8 @@ def _pre_review_with_lessons(
     learn_source: str,
     learn_strict: bool,
 ) -> Any:
+    from crewai.hooks.dispatch import HookAborted
+
     try:
         mem = flow_instance.memory
         if mem is None:
@@ -282,6 +316,8 @@ def _pre_review_with_lessons(
             return PreReviewResult.model_validate(response).improved_output
         reviewed = llm_inst.call(messages)
         return reviewed if isinstance(reviewed, str) else str(reviewed)
+    except HookAborted:
+        raise
     except Exception:
         if learn_strict:
             logger.warning(
@@ -308,6 +344,8 @@ def _distill_and_store_lessons(
     learn_source: str,
     learn_strict: bool,
 ) -> None:
+    from crewai.hooks.dispatch import HookAborted
+
     try:
         mem = flow_instance.memory
         if mem is None:
@@ -344,6 +382,8 @@ def _distill_and_store_lessons(
 
         if lessons:
             mem.remember_many(lessons, source=learn_source)  # type: ignore[union-attr]
+    except HookAborted:
+        raise
     except Exception:
         if learn_strict:
             logger.warning(
@@ -362,7 +402,7 @@ def _distill_and_store_lessons(
 def human_feedback(
     message: str,
     emit: Sequence[str] | None = None,
-    llm: str | BaseLLM | None = "gpt-5.4-mini",
+    llm: str | BaseLLM | None = None,
     default_outcome: str | None = None,
     metadata: dict[str, Any] | None = None,
     provider: HumanFeedbackProvider | None = None,

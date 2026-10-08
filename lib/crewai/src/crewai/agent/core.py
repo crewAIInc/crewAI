@@ -6,7 +6,6 @@ import asyncio
 from collections.abc import Callable, Coroutine, Sequence
 import concurrent.futures
 import contextvars
-from datetime import datetime
 import inspect
 import json
 import os
@@ -75,10 +74,13 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
 )
 from crewai.events.types.skill_events import SkillUsedEvent
+from crewai.execution import begin_execution, end_execution
 from crewai.experimental.agent_executor import AgentExecutor
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
+from crewai.llm_overlay import active as overlay_active
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -99,6 +101,7 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
     load_agent_from_repository,
+    message_content_text,
     parse_tools,
     render_text_description_and_args,
 )
@@ -112,7 +115,7 @@ from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_llm, overlay_llm_for
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -140,7 +143,10 @@ if TYPE_CHECKING:
 
 # Deliberate stops, not transient errors: never swallowed into the
 # max_retry_limit loop.
-_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
+_passthrough_exceptions: tuple[type[Exception], ...] = (
+    ToolExecutionFailedError,
+    HookAborted,
+)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
@@ -178,6 +184,38 @@ def _serialize_executor_class(value: Any) -> str:
     return value.__name__ if isinstance(value, type) else str(value)
 
 
+def _request_index(carried: list[LLMMessage]) -> int:
+    """Index of the message that is this turn's request.
+
+    The last ``user`` message, not simply the last one: a caller can hand over
+    a conversation that ends in assistant or tool messages -- notably
+    ``build_agent_context()``, which appends an agent's private thread after
+    the current user turn -- and promoting that tail would make the agent's own
+    scratch the task while demoting the real question to history. With no user
+    message at all the last one stands in, which is what a single-message
+    caller has always got.
+    """
+    for index in range(len(carried) - 1, -1, -1):
+        if carried[index].get("role") == "user":
+            return index
+    return len(carried) - 1
+
+
+def _carries_payload(message: LLMMessage) -> bool:
+    """Whether a message says anything the provider needs.
+
+    Text is the usual case, but an assistant turn that only requests tool
+    calls, the tool result that answers it, and a turn whose payload is an
+    attachment all matter.
+    """
+    return bool(
+        message.get("content")
+        or message.get("tool_calls")
+        or message.get("tool_call_id")
+        or message.get("files")
+    )
+
+
 class Agent(BaseAgent):
     """Represents an agent in a system.
 
@@ -208,6 +246,14 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
+    # The construction-time ``llm_overlay`` read happened; see post_init_setup.
+    _overlay_read: bool = PrivateAttr(default=False)
+    # The llm the agent was declared with, resolved before any overlay read: what
+    # an overlay swap is configured like, and what a role outside it runs on.
+    _declared_llm: BaseLLM | None = PrivateAttr(default=None)
+    # The instance the overlay built and put on ``llm``; any other ``llm`` found
+    # there later was assigned by the caller and is the declared one from then on.
+    _overlay_built: BaseLLM | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
@@ -265,7 +311,7 @@ class Agent(BaseAgent):
     )
     inject_date: bool = Field(
         default=False,
-        description="Whether to automatically inject the current date into tasks.",
+        description="Whether to automatically inject the current date into the agent's prompt.",
     )
     date_format: str = Field(
         default="%Y-%m-%d",
@@ -364,7 +410,19 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
         """Initialize LLM, executor, code tools, and skills after model creation."""
-        self.llm = create_llm(self.llm)
+        if self._overlay_read:
+            # A re-validation of an existing instance — the event bus registers
+            # an agent in its RuntimeState the first time it emits, which runs
+            # this validator again on the same object. The overlay was read when
+            # the agent was built (and again by interpolate_inputs if its role
+            # changed); reading it once more here would replace an llm the agent
+            # already runs on, and drop state set on it such as ``stream``.
+            self.llm = create_llm(self.llm)
+        else:
+            declared = create_llm(self.llm)
+            self._declared_llm = declared
+            self.llm = self._resolved_overlay(declared)
+            self._overlay_read = True
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
@@ -409,6 +467,85 @@ class Agent(BaseAgent):
     def planning_enabled(self) -> bool:
         """Check if planning is enabled for this agent."""
         return self.planning_config is not None or self.planning
+
+    def _llm_for_copy(self) -> Any:
+        """Inside an ``llm_overlay`` block a copy is built from the declared llm.
+
+        ``Crew.copy`` — ``kickoff_for_each``, ``train``, ``test`` — copies every
+        agent before its input is interpolated. Built from the llm this agent
+        currently runs on, a copy would record a model the overlay mapped as its
+        declared one and never revert on a miss; built from the declared llm, its
+        construction resolves the overlay for its own role like any agent built
+        inside the block. Outside any block a copy keeps the llm this agent runs
+        on.
+        """
+        if overlay_active.get() is not None:
+            declared = self._declared_now()
+            if declared is not None:
+                return declared
+        return self.llm
+
+    def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
+        """Interpolate inputs, then re-resolve the ``llm_overlay`` if the role changed.
+
+        A role declared as a template (``"Researcher for {repo}"``) is not a
+        key of an overlay written for the text a trace records until a kickoff
+        fills the placeholders in, and that happens after ``post_init_setup``
+        resolved ``llm``. So when interpolation rewrites the role inside an
+        active overlay, the overlay is looked up again with the new text: a
+        key sets ``llm`` to the mapped model, built with the declared llm's
+        configuration (``create_llm_like``); a miss puts the declared ``llm``
+        instance back, so a ``Crew`` reused for another input never keeps a
+        previous role's model. Outside any block the rewrite changes nothing.
+        A role the rewrite did not change is not looked up again —
+        construction's resolution stands, and its ``llm`` instance is kept.
+
+        The ``llm`` the agent ends up on inherits the streaming flag of the
+        one it replaces: ``Crew.kickoff(stream=True)`` sets ``agent.llm.stream``
+        before it interpolates. Two things resolved from ``llm`` before kickoff
+        do NOT follow the swap — a task's string guardrail LLM (built with the
+        Task) and the crew_creation telemetry span; a crew ``Memory`` built at
+        kickoff does.
+
+        The executor sees the new ``llm`` because it binds ``self.llm`` when a
+        task runs, after kickoff has interpolated: ``execute_task`` ->
+        ``_finalize_task_prompt`` -> ``prepare_tools`` ->
+        ``create_agent_executor``, which assigns ``self.llm`` to the executor
+        on every task (``_update_executor_parameters`` once it exists).
+        """
+        role_before = self.role
+        super().interpolate_inputs(inputs)
+        if self.role == role_before or overlay_active.get() is None:
+            return
+        previous = self.llm
+        self.llm = self._resolved_overlay(self._declared_now())
+        if isinstance(previous, BaseLLM) and isinstance(self.llm, BaseLLM):
+            self.llm.stream = previous.stream
+
+    def _resolved_overlay(self, declared: BaseLLM | None) -> BaseLLM | None:
+        """The llm ``llm_overlay`` puts this agent on, given its ``declared`` one.
+
+        The role's key wins over the model keys; with neither, ``declared``.
+        What the overlay built is remembered, so a later miss can tell it from
+        an llm the caller assigned.
+        """
+        resolved = overlay_llm_for(self.role, declared)
+        if resolved is not declared:
+            self._overlay_built = resolved
+        return resolved
+
+    def _declared_now(self) -> BaseLLM | None:
+        """The llm this agent is declared with, as of now.
+
+        Construction's ``create_llm(self.llm)`` unless the caller assigned
+        another ``llm`` since: whatever is on ``llm`` that the overlay did not
+        put there is the caller's, and a miss reverts to it. ``llm`` is a plain
+        field, so what the caller assigned may be a model string or ``None``;
+        it is resolved the way construction resolves it.
+        """
+        if self.llm is None or self.llm is not self._overlay_built:
+            self._declared_llm = create_llm(self.llm)
+        return self._declared_llm
 
     def _setup_agent_executor(self) -> None:
         """Initialize the agent's tools handler and optional tool cache.
@@ -546,7 +683,7 @@ class Agent(BaseAgent):
     ) -> str:
         """Prepare common setup for task execution shared by sync and async paths.
 
-        Handles reasoning, date injection, prompt building, and memory retrieval.
+        Handles reasoning, prompt building, and memory retrieval.
 
         Args:
             task: Task to execute.
@@ -556,8 +693,6 @@ class Agent(BaseAgent):
             The task prompt after memory retrieval, ready for knowledge lookup.
         """
         get_env_context()
-
-        self._inject_date_to_task(task)
 
         self.reset_tool_failures()
 
@@ -683,6 +818,9 @@ class Agent(BaseAgent):
                     error=str(e),
                 ),
             )
+            # a deny aborts the task; any other failure degrades to no memory
+            if isinstance(e, HookAborted):
+                raise
 
         return task_prompt
 
@@ -733,28 +871,22 @@ class Agent(BaseAgent):
         Raises:
             Exception: If the error is from litellm, a passthrough, or retries are exhausted.
         """
-        if e.__class__.__module__.startswith("litellm"):
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
-            raise e
         if isinstance(e, _passthrough_exceptions):
             raise
+        # A retry re-enters execute_task, which opens a new agent_execution_started
+        # scope, so every failed attempt has to close its own.
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionErrorEvent(
+                agent=self,
+                task=task,
+                error=str(e),
+            ),
+        )
+        if e.__class__.__module__.startswith("litellm"):
+            raise e
         self._times_executed += 1
         if self._times_executed > self.max_retry_limit:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
             raise e
 
     def _handle_execution_error(
@@ -891,7 +1023,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = self._handle_execution_error(e, task, context, tools)
+            # The retry runs a whole execute_task of its own, result already finalized.
+            return self._handle_execution_error(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
@@ -1025,7 +1158,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = await self._handle_execution_error_async(e, task, context, tools)
+            # The retry runs a whole aexecute_task of its own, result already finalized.
+            return await self._handle_execution_error_async(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
@@ -1334,32 +1468,6 @@ class Agent(BaseAgent):
             ]
         )
 
-    def _inject_date_to_task(self, task: Task) -> None:
-        """Inject the current date into the task description if inject_date is enabled."""
-        if self.inject_date:
-            try:
-                valid_format_codes = [
-                    "%Y",
-                    "%m",
-                    "%d",
-                    "%H",
-                    "%M",
-                    "%S",
-                    "%B",
-                    "%b",
-                    "%A",
-                    "%a",
-                ]
-                is_valid = any(code in self.date_format for code in valid_format_codes)
-
-                if not is_valid:
-                    raise ValueError(f"Invalid date format: {self.date_format}")
-
-                current_date = datetime.now().strftime(self.date_format)
-                task.description += f"\n\nCurrent Date: {current_date}"
-            except Exception as e:
-                self._logger.log("warning", f"Failed to inject date: {e!s}")
-
     def _validate_docker_installation(self) -> None:
         """Deprecated: No-op. CodeInterpreterTool is no longer available."""
         warnings.warn(
@@ -1440,6 +1548,18 @@ class Agent(BaseAgent):
                 ),
             )
             return rewritten_query
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the fallback to no query is skipped.
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryFailedEvent(
+                    error=str(e),
+                    from_task=task,
+                    from_agent=self,
+                ),
+            )
+            raise
         except Exception as e:
             crewai_event_bus.emit(
                 self,
@@ -1562,15 +1682,38 @@ class Agent(BaseAgent):
             )
 
         all_files: dict[str, Any] = {}
+        history: list[LLMMessage] = []
+        trailing: list[LLMMessage] = []
         if isinstance(messages, str):
             formatted_messages = messages
+            recall_text = messages
         else:
-            formatted_messages = "\n".join(
-                str(msg.get("content", "")) for msg in messages if msg.get("content")
+            # A message with no text still carries meaning when it holds tool
+            # calls or is a tool result; dropping those leaves a `tool` message
+            # with no preceding `assistant` tool_calls, which providers reject.
+            carried = [msg for msg in messages if _carries_payload(msg)]
+            # The executor's prompt needs one request string, so exactly one
+            # message is promoted to it and the rest keep their roles as
+            # history. Joining them all into one string told the model the
+            # assistant's own replies were the user's.
+            request_index = _request_index(carried)
+            request = carried[request_index] if carried else None
+            formatted_messages = message_content_text(request) if request else ""
+            # Split, rather than one history list: the promoted request keeps
+            # its position in the conversation. Sending everything before it
+            # would hoist a trailing tool pair above the question it answers,
+            # which is the wrong chronology even where a provider tolerates it.
+            if request is not None:
+                history = carried[:request_index]
+                trailing = carried[request_index + 1 :]
+            recall_text = "\n".join(
+                message_content_text(msg) for msg in carried if msg.get("content")
             )
-            for msg in messages:
-                if msg.get("files"):
-                    all_files.update(msg["files"])
+            # Only the request's attachments go on the current turn; a history
+            # message keeps its own, so unioning them all would send prior
+            # attachments twice.
+            if request is not None and request.get("files"):
+                all_files.update(request["files"])
 
         if input_files:
             all_files.update(input_files)
@@ -1586,7 +1729,7 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=20)
+                matches = agent_memory.recall(recall_text, limit=20)
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(
@@ -1616,6 +1759,9 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
+                # a deny aborts the kickoff; any other failure degrades to no memory
+                if isinstance(e, HookAborted):
+                    raise
 
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1624,6 +1770,10 @@ class Agent(BaseAgent):
         }
         if all_files:
             inputs["files"] = all_files
+        if history:
+            inputs["history"] = history
+        if trailing:
+            inputs["trailing"] = trailing
 
         return executor, inputs, agent_info, parsed_tools
 
@@ -1648,6 +1798,12 @@ class Agent(BaseAgent):
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
+                     The last ``user`` message is the request the agent answers;
+                     every other message keeps its role and its place around it,
+                     so a list that trails off in assistant or tool messages
+                     still asks the user's question and still delivers those
+                     turns after it. With no ``user`` message the last one is
+                     the request.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
@@ -1673,39 +1829,43 @@ class Agent(BaseAgent):
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
-        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, input_files
-        )
-
+        execution_token = begin_execution()
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
+            executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+                messages, response_format, input_files
+            )
+
+            try:
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
+
+                usage_baseline = self._current_usage_summary()
+                output = self._execute_and_build_output(
+                    executor, inputs, response_format, usage_baseline
                 )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+                return self._finalize_kickoff(
+                    output,
+                    executor,
+                    inputs,
+                    response_format,
+                    messages,
+                    agent_info,
+                    usage_baseline,
+                )
 
-            usage_baseline = self._current_usage_summary()
-            output = self._execute_and_build_output(
-                executor, inputs, response_format, usage_baseline
-            )
-            return self._finalize_kickoff(
-                output,
-                executor,
-                inputs,
-                response_format,
-                messages,
-                agent_info,
-                usage_baseline,
-            )
-
-        except Exception as e:
-            self._emit_kickoff_error(agent_info, e)
+            except Exception as e:
+                self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     def _finalize_kickoff(
         self,
@@ -1777,7 +1937,7 @@ class Agent(BaseAgent):
             else:
                 input_str = (
                     "\n".join(
-                        str(msg.get("content", ""))
+                        message_content_text(msg)
                         for msg in messages
                         if msg.get("content")
                     )
@@ -1787,6 +1947,8 @@ class Agent(BaseAgent):
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)
+        except HookAborted:
+            raise
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
@@ -2022,6 +2184,12 @@ class Agent(BaseAgent):
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
+                     The last ``user`` message is the request the agent answers;
+                     every other message keeps its role and its place around it,
+                     so a list that trails off in assistant or tool messages
+                     still asks the user's question and still delivers those
+                     turns after it. With no ``user`` message the last one is
+                     the request.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
@@ -2039,39 +2207,43 @@ class Agent(BaseAgent):
                 input_files=input_files,
             )
 
-        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, input_files
-        )
-
+        execution_token = begin_execution()
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
+            executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+                messages, response_format, input_files
+            )
+
+            try:
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
+
+                usage_baseline = self._current_usage_summary()
+                output = await self._execute_and_build_output_async(
+                    executor, inputs, response_format, usage_baseline
                 )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+                return self._finalize_kickoff(
+                    output,
+                    executor,
+                    inputs,
+                    response_format,
+                    messages,
+                    agent_info,
+                    usage_baseline,
+                )
 
-            usage_baseline = self._current_usage_summary()
-            output = await self._execute_and_build_output_async(
-                executor, inputs, response_format, usage_baseline
-            )
-            return self._finalize_kickoff(
-                output,
-                executor,
-                inputs,
-                response_format,
-                messages,
-                agent_info,
-                usage_baseline,
-            )
-
-        except Exception as e:
-            self._emit_kickoff_error(agent_info, e)
+            except Exception as e:
+                self._emit_kickoff_error(agent_info, e)
+        finally:
+            end_execution(execution_token)
 
     async def akickoff(
         self,

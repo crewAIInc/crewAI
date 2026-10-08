@@ -37,6 +37,12 @@ def test_create_flow_declarative_project_can_run(
     assert "call: script" not in agents_md
     assert "call: each" not in agents_md
     assert "human_feedback" not in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    cursor_md = (project_root / "CURSOR.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in cursor_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
 
     monkeypatch.chdir(project_root)
     result = CliRunner().invoke(crewai, ["run"], env={"UV_RUN_RECURSION_DEPTH": "1"})
@@ -44,3 +50,36 @@ def test_create_flow_declarative_project_can_run(
     assert result.exit_code == 0
     assert "Running the Flow" not in result.output
     assert "AI agents" in result.output
+
+
+def test_create_flow_scaffolds_assistant_instructions(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+
+    project_root = tmp_path / "research_flow"
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
+    claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "@AGENTS.md" in claude_md.splitlines()
+    gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
+    assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_flow_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+    create_flow("Declared Flow", declarative=True)
+
+    for project in ("research_flow", "declared_flow"):
+        agents_md = (tmp_path / project / "AGENTS.md").read_text(encoding="utf-8")
+        assert "## Evaluating this" in agents_md
+        assert "Run `crewai eval` after a change" in agents_md
+        assert "it prints a **markdown brief** after the verdict" in agents_md
+        assert 'crewai eval --models "provider/model,…"' in agents_md
+        assert "{{name}}" not in agents_md
+        assert "crewai-eval:" not in agents_md

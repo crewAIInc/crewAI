@@ -39,9 +39,13 @@ devtools release 1.10.3 --skip-enterprise  # skip enterprise release phase
 7. Opens a `[docs-freeze]` PR against main, polls until merged
 8. Tags main and creates GitHub release
 9. Triggers PyPI publish workflow
-10. Clones enterprise repo, bumps versions and `crewai[tools]` dep, runs `uv sync`
-11. Creates enterprise bump PR, polls until merged
-12. Tags and creates GitHub release on enterprise repo
+10. Updates `crewAIInc/crew_deployment_test` to the exact CrewAI version,
+    creates a bump PR, and waits for it to merge
+11. Updates `crewAIInc/flow_deployment_test` to the exact CrewAI version,
+    creates a bump PR, and waits for it to merge
+12. Clones enterprise repo, bumps versions and `crewai[tools]` dep, runs `uv sync`
+13. Creates enterprise bump PR, polls until merged
+14. Tags and creates GitHub release on enterprise repo
 
 > The `docs-snapshots` CI guard rejects writes under `docs/v*/` and deletions/renames in `docs/images/` unless the PR title starts with `[docs-freeze]`. The release CLI sets that prefix automatically; manual edits to a frozen snapshot need the same prefix to land.
 >

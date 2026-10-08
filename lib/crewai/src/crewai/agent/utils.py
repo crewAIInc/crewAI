@@ -15,6 +15,7 @@ from crewai.events.types.knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeSearchQueryFailedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
@@ -53,6 +54,8 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
             planning_handler.handle_agent_reasoning()
         )
         task.description += f"\n\nPlanning:\n{planning_output.plan.plan}"
+    except HookAborted:
+        raise
     except Exception as e:
         agent._logger.log("error", f"Error during planning: {e!s}")
 
@@ -71,13 +74,17 @@ def build_task_prompt_with_schema(task: Task, task_prompt: str) -> str:
 
     if (task.output_json or task.output_pydantic) and not task.response_model:
         if task.output_json:
-            schema_dict = generate_model_description(task.output_json)
+            schema_dict = generate_model_description(
+                task.output_json, strip_null_types=False
+            )
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
             task_prompt += "\n" + I18N_DEFAULT.slice(
                 "formatted_task_instructions"
             ).format(output_format=schema)
         elif task.output_pydantic:
-            schema_dict = generate_model_description(task.output_pydantic)
+            schema_dict = generate_model_description(
+                task.output_pydantic, strip_null_types=False
+            )
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
             task_prompt += "\n" + I18N_DEFAULT.slice(
                 "formatted_task_instructions"
@@ -195,6 +202,9 @@ def handle_knowledge_retrieval(
                 from_agent=agent,
             ),
         )
+        # a deny aborts the task; any other failure degrades to no knowledge
+        if isinstance(e, HookAborted):
+            raise
     return task_prompt
 
 
@@ -391,4 +401,7 @@ async def ahandle_knowledge_retrieval(
                 from_agent=agent,
             ),
         )
+        # a deny aborts the task; any other failure degrades to no knowledge
+        if isinstance(e, HookAborted):
+            raise
     return task_prompt

@@ -1,0 +1,363 @@
+---
+title: التعاون
+description: كيفية تمكين الوكلاء من العمل معًا وتفويض المهام والتواصل بفعالية داخل فرق CrewAI.
+icon: screen-users
+mode: "wide"
+---
+
+## نظرة عامة
+
+يُمكّن التعاون في CrewAI الوكلاء من العمل معًا كفريق عن طريق تفويض المهام وطرح الأسئلة للاستفادة من خبرات بعضهم البعض. عندما يكون `allow_delegation=True`، يحصل الوكلاء تلقائيًا على أدوات تعاون قوية.
+
+## البدء السريع: تفعيل التعاون
+
+```python
+from crewai import Agent, Crew, Task
+
+# تفعيل التعاون للوكلاء
+researcher = Agent(
+    role="Research Specialist",
+    goal="Conduct thorough research on any topic",
+    backstory="Expert researcher with access to various sources",
+    allow_delegation=True,  # الإعداد الرئيسي للتعاون
+    verbose=True
+)
+
+writer = Agent(
+    role="Content Writer",
+    goal="Create engaging content based on research",
+    backstory="Skilled writer who transforms research into compelling content",
+    allow_delegation=True,  # يُمكّن طرح الأسئلة على الوكلاء الآخرين
+    verbose=True
+)
+
+# يمكن للوكلاء الآن التعاون تلقائيًا
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[...],
+    verbose=True
+)
+```
+
+## كيف يعمل تعاون الوكلاء
+
+عندما يكون `allow_delegation=True`، يوفر CrewAI تلقائيًا للوكلاء أداتين قويتين:
+
+### 1. **أداة تفويض العمل**
+تسمح للوكلاء بتعيين مهام لزملاء الفريق ذوي الخبرة المحددة.
+
+```python
+# يحصل الوكيل تلقائيًا على هذه الأداة:
+# Delegate work to coworker(task: str, context: str, coworker: str)
+```
+
+### 2. **أداة طرح الأسئلة**
+تُمكّن الوكلاء من طرح أسئلة محددة لجمع المعلومات من الزملاء.
+
+```python
+# يحصل الوكيل تلقائيًا على هذه الأداة:
+# Ask question to coworker(question: str, context: str, coworker: str)
+```
+
+## التعاون في الممارسة
+
+إليك مثالًا كاملًا يوضح تعاون الوكلاء في مهمة إنشاء المحتوى:
+
+```python
+from crewai import Agent, Crew, Task, Process
+
+# إنشاء وكلاء تعاونيين
+researcher = Agent(
+    role="Research Specialist",
+    goal="Find accurate, up-to-date information on any topic",
+    backstory="""You're a meticulous researcher with expertise in finding
+    reliable sources and fact-checking information across various domains.""",
+    allow_delegation=True,
+    verbose=True
+)
+
+writer = Agent(
+    role="Content Writer",
+    goal="Create engaging, well-structured content",
+    backstory="""You're a skilled content writer who excels at transforming
+    research into compelling, readable content for different audiences.""",
+    allow_delegation=True,
+    verbose=True
+)
+
+editor = Agent(
+    role="Content Editor",
+    goal="Ensure content quality and consistency",
+    backstory="""You're an experienced editor with an eye for detail,
+    ensuring content meets high standards for clarity and accuracy.""",
+    allow_delegation=True,
+    verbose=True
+)
+
+# إنشاء مهمة تشجع التعاون
+article_task = Task(
+    description="""Write a comprehensive 1000-word article about 'The Future of AI in Healthcare'.
+
+    The article should include:
+    - Current AI applications in healthcare
+    - Emerging trends and technologies
+    - Potential challenges and ethical considerations
+    - Expert predictions for the next 5 years
+
+    Collaborate with your teammates to ensure accuracy and quality.""",
+    expected_output="A well-researched, engaging 1000-word article with proper structure and citations",
+    agent=writer  # الكاتب يقود، لكن يمكنه تفويض البحث إلى الباحث
+)
+
+# إنشاء طاقم تعاوني
+crew = Crew(
+    agents=[researcher, writer, editor],
+    tasks=[article_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+## أنماط التعاون
+
+### النمط 1: بحث ← كتابة ← تحرير
+```python
+research_task = Task(
+    description="Research the latest developments in quantum computing",
+    expected_output="Comprehensive research summary with key findings and sources",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="Write an article based on the research findings",
+    expected_output="Engaging 800-word article about quantum computing",
+    agent=writer,
+    context=[research_task]  # يحصل على مخرجات البحث كسياق
+)
+
+editing_task = Task(
+    description="Edit and polish the article for publication",
+    expected_output="Publication-ready article with improved clarity and flow",
+    agent=editor,
+    context=[writing_task]  # يحصل على مسودة المقال كسياق
+)
+```
+
+### النمط 2: مهمة واحدة تعاونية
+```python
+collaborative_task = Task(
+    description="""Create a marketing strategy for a new AI product.
+
+    Writer: Focus on messaging and content strategy
+    Researcher: Provide market analysis and competitor insights
+
+    Work together to create a comprehensive strategy.""",
+    expected_output="Complete marketing strategy with research backing",
+    agent=writer  # الوكيل القائد، لكن يمكنه التفويض إلى الباحث
+)
+```
+
+## التعاون الهرمي
+
+للمشاريع المعقدة، استخدم عملية هرمية مع وكيل مدير:
+
+```python
+from crewai import Agent, Crew, Task, Process
+
+# وكيل المدير ينسق الفريق
+manager = Agent(
+    role="Project Manager",
+    goal="Coordinate team efforts and ensure project success",
+    backstory="Experienced project manager skilled at delegation and quality control",
+    allow_delegation=True,
+    verbose=True
+)
+
+# وكلاء متخصصون
+researcher = Agent(
+    role="Researcher",
+    goal="Provide accurate research and analysis",
+    backstory="Expert researcher with deep analytical skills",
+    allow_delegation=False,  # المتخصصون يركزون على خبرتهم
+    verbose=True
+)
+
+writer = Agent(
+    role="Writer",
+    goal="Create compelling content",
+    backstory="Skilled writer who creates engaging content",
+    allow_delegation=False,
+    verbose=True
+)
+
+# مهمة يقودها المدير
+project_task = Task(
+    description="Create a comprehensive market analysis report with recommendations",
+    expected_output="Executive summary, detailed analysis, and strategic recommendations",
+    agent=manager  # المدير سيفوّض إلى المتخصصين
+)
+
+# طاقم هرمي
+crew = Crew(
+    agents=[manager, researcher, writer],
+    tasks=[project_task],
+    process=Process.hierarchical,  # المدير ينسق كل شيء
+    manager_llm="gpt-4o",  # تحديد LLM للمدير
+    verbose=True
+)
+```
+
+## أفضل ممارسات التعاون
+
+### 1. **تحديد الأدوار بوضوح**
+```python
+# جيد: أدوار محددة ومتكاملة
+researcher = Agent(role="Market Research Analyst", ...)
+writer = Agent(role="Technical Content Writer", ...)
+
+# تجنب: أدوار متداخلة أو غامضة
+agent1 = Agent(role="General Assistant", ...)
+agent2 = Agent(role="Helper", ...)
+```
+
+### 2. **تفعيل التفويض الاستراتيجي**
+```python
+# فعّل التفويض للمنسقين والعامين
+lead_agent = Agent(
+    role="Content Lead",
+    allow_delegation=True,  # يمكنه التفويض إلى المتخصصين
+    ...
+)
+
+# عطّل للمتخصصين المركّزين (اختياري)
+specialist_agent = Agent(
+    role="Data Analyst",
+    allow_delegation=False,  # يركز على الخبرة الأساسية
+    ...
+)
+```
+
+### 3. **مشاركة السياق**
+```python
+# استخدم معامل context لاعتماديات المهام
+writing_task = Task(
+    description="Write article based on research",
+    agent=writer,
+    context=[research_task],  # يشارك نتائج البحث
+    ...
+)
+```
+
+### 4. **أوصاف المهام الواضحة**
+```python
+# أوصاف محددة وقابلة للتنفيذ
+Task(
+    description="""Research competitors in the AI chatbot space.
+    Focus on: pricing models, key features, target markets.
+    Provide data in a structured format.""",
+    ...
+)
+
+# تجنب: أوصاف غامضة لا توجه التعاون
+Task(description="Do some research about chatbots", ...)
+```
+
+## استكشاف أخطاء التعاون وإصلاحها
+
+### المشكلة: الوكلاء لا يتعاونون
+**الأعراض:** يعمل الوكلاء بمعزل، لا يحدث تفويض
+```python
+# الحل: تأكد من تفعيل التفويض
+agent = Agent(
+    role="...",
+    allow_delegation=True,  # هذا مطلوب!
+    ...
+)
+```
+
+### المشكلة: كثرة الذهاب والإياب
+**الأعراض:** يطرح الوكلاء أسئلة مفرطة، تقدم بطيء
+```python
+# الحل: وفّر سياقًا أفضل وأدوارًا محددة
+Task(
+    description="""Write a technical blog post about machine learning.
+
+    Context: Target audience is software developers with basic ML knowledge.
+    Length: 1200 words
+    Include: code examples, practical applications, best practices
+
+    If you need specific technical details, delegate research to the researcher.""",
+    ...
+)
+```
+
+### المشكلة: حلقات التفويض
+**الأعراض:** يفوّض الوكلاء ذهابًا وإيابًا بلا نهاية
+```python
+# الحل: تسلسل هرمي واضح ومسؤوليات
+manager = Agent(role="Manager", allow_delegation=True)
+specialist1 = Agent(role="Specialist A", allow_delegation=False)  # لا إعادة تفويض
+specialist2 = Agent(role="Specialist B", allow_delegation=False)
+```
+
+## ميزات التعاون المتقدمة
+
+### قواعد التعاون المخصصة
+```python
+# تعيين إرشادات تعاون محددة في خلفية الوكيل
+agent = Agent(
+    role="Senior Developer",
+    backstory="""You lead development projects and coordinate with team members.
+
+    Collaboration guidelines:
+    - Delegate research tasks to the Research Analyst
+    - Ask the Designer for UI/UX guidance
+    - Consult the QA Engineer for testing strategies
+    - Only escalate blocking issues to the Project Manager""",
+    allow_delegation=True
+)
+```
+
+### مراقبة التعاون
+```python
+def track_collaboration(output):
+    """تتبع أنماط التعاون"""
+    if "Delegate work to coworker" in output.raw:
+        print("Delegation occurred")
+    if "Ask question to coworker" in output.raw:
+        print("Question asked")
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    step_callback=track_collaboration,  # مراقبة التعاون
+    verbose=True
+)
+```
+
+## الذاكرة والتعلم
+
+تمكين الوكلاء من تذكر التعاونات السابقة:
+
+```python
+agent = Agent(
+    role="Content Lead",
+    memory=True,  # يتذكر التفاعلات السابقة
+    allow_delegation=True,
+    verbose=True
+)
+```
+
+مع تفعيل الذاكرة، يتعلم الوكلاء من التعاونات السابقة ويحسّنون قرارات التفويض بمرور الوقت.
+
+## الخطوات التالية
+
+- **جرّب الأمثلة**: ابدأ بمثال التعاون الأساسي
+- **جرّب أدوارًا مختلفة**: اختبر تركيبات أدوار وكلاء مختلفة
+- **راقب التفاعلات**: استخدم `verbose=True` لرؤية التعاون في العمل
+- **حسّن أوصاف المهام**: المهام الواضحة تؤدي إلى تعاون أفضل
+- **وسّع النطاق**: جرّب العمليات الهرمية للمشاريع المعقدة
+
+يحوّل التعاون وكلاء الذكاء الاصطناعي الفرديين إلى فرق قوية يمكنها معالجة التحديات المعقدة ومتعددة الأوجه معًا.

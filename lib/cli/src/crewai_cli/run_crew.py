@@ -20,6 +20,7 @@ from crewai_cli.input_prompt import (
 )
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
+    get_or_create_project_id,
     is_dmn_mode_enabled,
 )
 from crewai_cli.version import get_crewai_tools_dependency, get_crewai_version
@@ -511,14 +512,14 @@ def _chain_deploy() -> None:
         from crewai_cli.deploy.main import DeployCommand
 
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
-        DeployCommand().create_crew(confirm=True, skip_validate=True)
+        DeployCommand().create_crew(confirm=True, skip_validate=True, source="tui")
     except AuthenticationRequiredError:
         from crewai_cli.authentication.main import AuthenticationCommand
 
         console.print()
         AuthenticationCommand().login()
         try:
-            DeployCommand().create_crew(confirm=True, skip_validate=True)
+            DeployCommand().create_crew(confirm=True, skip_validate=True, source="tui")
         except AuthenticationRequiredError:
             console.print(
                 "\nDeploy failed: authentication is still required.\n",
@@ -599,6 +600,48 @@ def _print_post_tui_summary(app: CrewRunApp) -> None:
             )
         )
 
+    _print_evaluation_line(app, console, crewai_teal)
+
+
+def _print_evaluation_line(app: CrewRunApp, console: Any, teal: str) -> None:
+    """The evaluation's link, once the app that showed it has gone.
+
+    An evaluation started inside the app is read there; the terminal is what is
+    left afterwards, and a link that only ever existed on a screen that is now
+    closed is a link nobody can open again.
+    """
+    evaluation = getattr(app, "_evaluation", None) or {}
+    url = str(evaluation.get("url") or "")
+    if not url:
+        return
+
+    from rich.text import Text
+
+    state = str(evaluation.get("state"))
+    line = Text("\n  ")
+    if state == "done":
+        verdict = evaluation.get("verdict") or {}
+        line.append("Evaluated: ", style="dim")
+        line.append(
+            f"goal gate {str(verdict.get('gate') or '').upper()}  ", style="bold"
+        )
+    elif state == "failed":
+        line.append("Evaluation stopped — the report has what it got: ", style="dim")
+    else:
+        line.append("Evaluation still running at ", style="dim")
+    line.append(url, style=f"{teal} underline")
+    console.print(line)
+
+    wrote = evaluation.get("wrote_config")
+    if wrote:
+        note = Text("  ")
+        note.append(f"Wrote {wrote}", style="bold")
+        note.append(
+            " — say what good means for this crew there, and the next evaluation is graded on it.",
+            style="dim",
+        )
+        console.print(note)
+
 
 def run_crew(
     trained_agents_file: str | None = None,
@@ -627,6 +670,15 @@ def run_crew(
         return
 
     pyproject_data = read_toml()
+
+    # Backfills projects created before project_id existed. Only here, in a
+    # command the user explicitly invoked - never from the SDK during kickoff.
+    # Placed after the --definition early return so an explicit-flow run does
+    # not touch the cwd; get_or_create_project_id itself refuses to act unless
+    # [tool.crewai] is already present, so an unrelated project is never
+    # rewritten.
+    get_or_create_project_id()
+
     if json_crew_definition := configured_project_json_crew(pyproject_data):
         # Declarative (JSON) crews resolve inputs the same way flows do: --inputs
         # layers over the crew's declared defaults, missing {placeholder}s are

@@ -39,8 +39,8 @@ Pick the simplest action that does the job.
 - `state` is the initial shared data shape. Action results do not automatically merge into `state`.
 - Read method results with `outputs.method_name` after that method can run.
 - `listen` targets a method name or a router-emitted event name.
-- Methods must not listen to their own method name.
-- Method names and emitted event names share one namespace. Avoid reusing the same string for both unless the user explicitly wants that.
+- Methods must not listen to their own method name — including when the `listen` value is a route label that matches the method name (e.g. `listen: create_video` on method `create_video`).
+- Method names and emitted event names share one namespace. Do not reuse the same string for a method's `listen` target and its method name.
 - Use `router: true` plus `emit` when one method chooses between named branches.
 - A router action must return exactly one emitted event string. It must not return JSON, a list, or an explanation.
 - Use `start: true` for the single entrypoint.
@@ -107,12 +107,20 @@ Dynamic value rules:
 - Do not make `do` a list.
 - Do not use CEL `+` to build text in action mappings. Keep the text literal and insert each dynamic value with `${...}`.
 - Do not reference `outputs.some_method` before `some_method` can run.
-- Do not set a method's `listen` to its own method name.
-- Do not use the same string for an emitted event and a method name unless the user asks for it.
+- Do not set a method's `listen` to its own method name (including matching route labels such as `listen: create_video` on method `create_video`).
+- Do not use the same string for a method's `listen` target and its method name.
 - Do not use `emit` without `router: true`.
 - Do not rely on crew action-level `inputs` alone to ground agent behavior. Inputs that do not match placeholders are effectively unused by the prompt.
 - Do not ask agents to infer missing facts when accuracy matters. Tell them to mark missing dates, amounts, offers, logs, or constraints as unknown.
 - Do not set `config.stream: true` unless the caller is expected to consume a streaming result. For normal generated flows and CLI smoke tests, omit it.
+
+## Evaluating this flow
+
+Run `crewai eval` after a change: it grades the project's last traced run — a goal gate, a 1–5 grade per area, and a link to the full report. It grades a run that already happened, so after changing code run the flow again first (`crewai run`, with `CREWAI_TRACING_ENABLED=true` in `.env`; a run with no terminal is only traced when logged in with `crewai login`), then `crewai eval`. In a terminal with no traced run recorded, it offers to run the flow once with tracing on.
+
+- Run by a coding agent or script (no terminal), it prints a **markdown brief** after the verdict: what failed and the change to make. Act on its "what failed" changes, then `crewai run` and `crewai eval` again. (An older AMP may print only a link to the brief, or nothing.)
+- `crewai eval --models "provider/model,…"` compares models on the deployed project (needs `crewai login` and a deployment); the brief then names the model for each part and how sure each difference is.
+- Exit codes: `crewai eval` exits 0 only when the goal gate passed; `--models` exits 0 when the comparison finished, whatever each model's grades. Criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.
 
 ## Examples
 

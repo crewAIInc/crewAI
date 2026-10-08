@@ -1332,6 +1332,55 @@ methods:
     }
 
 
+def test_agent_action_delivers_a_rendered_conversation_to_the_agent(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The whole path: `${state.messages}` -> normalization -> `kickoff_async`."""
+    from crewai import Agent
+
+    received: list[Any] = []
+
+    async def fake_kickoff_async(self: Agent, messages: Any, **_kwargs: Any) -> str:
+        received.append(messages)
+        return "answered"
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: HistoryAgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${state.messages}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+    result = flow.kickoff(
+        inputs={
+            "messages": [
+                {"role": "user", "content": "my order id is 42", "name": None},
+                {"role": "assistant", "content": "thanks, checking"},
+            ]
+        }
+    )
+
+    assert result == "answered"
+    # A list, not a stringified blob, and the serialization noise is gone.
+    assert received == [
+        [
+            {"role": "user", "content": "my order id is 42"},
+            {"role": "assistant", "content": "thanks, checking"},
+        ]
+    ]
+
+
 def test_agent_action_runs_inside_each(monkeypatch: pytest.MonkeyPatch):
     from crewai import Agent
 
@@ -2952,6 +3001,140 @@ def test_expression_template_empty_context_overrides_stored_context():
         expression.render_template({})
 
 
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "{'a': 1/0}",
+        "{'a': 1, 'b': state.missing}",
+        "{'a': {'b': 1/0}}",
+        "{'a': [1/0]}",
+    ],
+)
+def test_expression_raises_for_cel_eval_error_returned_as_data(expression):
+    """celpy returns a map literal holding a CELEvalError instead of raising it."""
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    with pytest.raises(ExpressionError, match="failed to evaluate CEL expression"):
+        Expression(expression, context={"state": {"score": 90}}).evaluate()
+
+
+def test_expression_nested_cel_eval_error_reports_underlying_cause():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression("{'a': 1/0}", context={"state": {}})
+
+    with pytest.raises(ExpressionError, match="modulus or divide by zero"):
+        expression.evaluate()
+
+
+def test_expression_keeps_short_circuited_cel_errors():
+    """Errors that CEL logic intentionally silences must still evaluate."""
+    from crewai.flow.expressions import Expression
+
+    context = {"state": {"tags": ["a", "b"]}}
+
+    assert Expression("{'ok': false && 1/0 == 1}", context=context).evaluate() == {
+        "ok": False
+    }
+    assert Expression("{'ok': true || 1/0 == 1}", context=context).evaluate() == {
+        "ok": True
+    }
+    assert (
+        Expression(
+            "state.tags.exists(t, t == 'a' || 1/0 == 1)", context=context
+        ).evaluate()
+        is True
+    )
+
+
+def test_expression_now_evaluates_with_frozen_timestamp():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, 12, 30, tzinfo=timezone.utc)
+
+    assert Expression("now().getFullYear()", context={}, now=frozen).evaluate() == 2026
+    assert (
+        Expression("string(now())", context={}, now=frozen).evaluate()
+        == "2026-01-15T12:30:00Z"
+    )
+    assert (
+        Expression("string(now() - duration('24h'))", context={}, now=frozen).evaluate()
+        == "2026-01-14T12:30:00Z"
+    )
+
+
+def test_expression_now_defaults_to_current_time():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    year = Expression("now().getFullYear()", context={}).evaluate()
+
+    assert year == datetime.now(timezone.utc).year
+
+
+def test_expression_now_renders_in_templates():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, tzinfo=timezone.utc)
+    rendered = Expression(
+        {"query": "News from ${string(now().getFullYear())}"},
+        context={},
+        now=frozen,
+    ).render_template()
+
+    assert rendered == {"query": "News from 2026"}
+
+
+def test_expression_now_passes_root_validation():
+    from crewai.flow.expressions import Expression
+
+    Expression("string(now().getFullYear())").validate_expression(
+        allowed_roots=["state", "outputs"]
+    )
+
+
+def test_expression_from_flow_uses_run_frozen_now():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    flow = Flow()
+    flow._cel_now = datetime(2026, 1, 15, tzinfo=timezone.utc)
+
+    assert (
+        Expression.from_flow("now().getFullYear()", flow).evaluate() == 2026
+    )
+
+
+def test_expression_action_can_use_now():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "NowFlow",
+            "methods": {
+                "today": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "string(now().getFullYear())",
+                    },
+                }
+            },
+        }
+    )
+
+    from datetime import datetime, timezone
+
+    result = Flow.from_declaration(contents=definition).kickoff()
+
+    assert result == str(datetime.now(timezone.utc).year)
+
+
 def test_expression_action_can_route_like_if_else():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -3643,6 +3826,41 @@ def test_resume_synthetic_completion_persists():
     assert _saved_methods("resume-synthetic") == ["generate"]
 
 
+def test_resume_freezes_fresh_cel_now():
+    from crewai.flow.expressions import Expression
+
+    backend = DefinitionStoreBackend(store="resume-cel-now")
+    frozen_at_listener: list[Any] = []
+
+    class NowResumableFlow(Flow):
+        @start()
+        @human_feedback(message="Review:")
+        def generate(self):
+            return "content"
+
+        @listen(generate)
+        def process(self, result):
+            frozen_at_listener.append(self._cel_now)
+            return Expression.from_flow("string(now())", self).evaluate()
+
+    context = PendingFeedbackContext(
+        flow_id="resume-cel-now-1",
+        flow_class="NowResumableFlow",
+        method_name="generate",
+        method_output="content",
+        message="Review:",
+    )
+    backend.save_pending_feedback("resume-cel-now-1", context, {"id": "resume-cel-now-1"})
+
+    flow = NowResumableFlow.from_pending("resume-cel-now-1", backend)
+    assert flow._cel_now is None
+
+    result = flow.resume("looks good")
+
+    assert frozen_at_listener[0] is not None
+    assert result == frozen_at_listener[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 class ReviewFlow(Flow):
     @start()
     @human_feedback(
@@ -3786,6 +4004,200 @@ def test_human_feedback_pending_and_resume_from_declaration():
     assert result == "resumed:looks good"
     assert resumed.last_human_feedback.feedback == "looks good"
     assert flow_id not in DefinitionStoreBackend.pending
+
+
+EMIT_REVIEW_EXPR_YAML = """
+schema: crewai.flow/v1
+name: EmitReviewExprFlow
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review the draft:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      default_outcome: rejected
+  rewrite:
+    do:
+      call: expression
+      expr: "outputs.draft.feedback + '|' + outputs.draft.outcome + '|' + outputs.draft.output"
+    listen: rejected
+"""
+
+
+def test_human_feedback_emit_exposes_feedback_in_outputs():
+    flow = Flow.from_declaration(contents=EMIT_REVIEW_EXPR_YAML)
+
+    with (
+        patch.object(flow, "_request_human_feedback", return_value="make it shorter"),
+        patch.object(flow, "_collapse_to_outcome", return_value="rejected"),
+    ):
+        result = flow.kickoff()
+
+    assert result == "make it shorter|rejected|draft-content"
+    assert flow.method_outputs[0] == "draft-content"
+
+
+def test_human_feedback_emit_feedback_renders_in_action_templates():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EmitFeedbackTemplateFlow
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review the draft:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+  rewrite:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "Draft: ${{outputs.draft.output}}. Reason: ${{outputs.draft.feedback}}"
+        prefix: rewrite
+    listen: rejected
+"""
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    with (
+        patch.object(flow, "_request_human_feedback", return_value="too long"),
+        patch.object(flow, "_collapse_to_outcome", return_value="rejected"),
+    ):
+        result = flow.kickoff()
+
+    assert result == "rewrite:Draft: draft-content. Reason: too long"
+
+
+PENDING_EMIT_REVIEW_YAML = f"""
+schema: crewai.flow/v1
+name: PendingEmitReviewFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: hitl-pending-emit
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    human_feedback:
+      message: "Review:"
+      emit: [approved, rejected]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  rewrite:
+    do:
+      call: expression
+      expr: "outputs.draft.feedback + '|' + outputs.draft.output"
+    listen: rejected
+"""
+
+
+def test_human_feedback_emit_exposes_feedback_in_outputs_after_resume():
+    definition = FlowDefinition.from_declaration(contents=PENDING_EMIT_REVIEW_YAML)
+    pending = Flow.from_declaration(contents=definition).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    resumed = Flow.from_pending(
+        pending.context.flow_id,
+        DefinitionStoreBackend(store="hitl-pending-emit"),
+        definition=definition,
+    )
+    with patch.object(resumed, "_collapse_to_outcome", return_value="rejected"):
+        result = resumed.resume("make it shorter")
+
+    assert result == "make it shorter|draft-content"
+    assert resumed.method_outputs[0] == "draft-content"
+
+
+PENDING_REVISE_LOOP_YAML = f"""
+schema: crewai.flow/v1
+name: PendingReviseLoopFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: hitl-revise-loop
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    listen: request_changes
+    human_feedback:
+      message: "Review:"
+      emit: [approved, request_changes]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  publish:
+    do:
+      call: expression
+      expr: "'published:' + outputs.draft.feedback"
+    listen: approved
+"""
+
+
+def test_start_step_listening_to_its_own_outcome_reruns_after_resume():
+    definition = FlowDefinition.from_declaration(contents=PENDING_REVISE_LOOP_YAML)
+    backend = DefinitionStoreBackend(store="hitl-revise-loop")
+    pending = Flow.from_declaration(contents=definition).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    revising = Flow.from_pending(pending.context.flow_id, backend, definition=definition)
+    with patch.object(revising, "_collapse_to_outcome", return_value="request_changes"):
+        repaused = revising.resume("make it shorter")
+
+    assert isinstance(repaused, HumanFeedbackPending)
+    assert repaused.context.method_name == "draft"
+
+    approving = Flow.from_pending(repaused.context.flow_id, backend, definition=definition)
+    with patch.object(approving, "_collapse_to_outcome", return_value="approved"):
+        result = approving.resume("ship it")
+
+    assert result == "published:ship it"
+
+
+@pytest.mark.parametrize("router", [False, True])
+def test_conditional_start_that_also_listens_runs_once_per_event(router):
+    handler_routing = "router: true\n    emit: [done]" if router else ""
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ConditionalStartListenFlow
+methods:
+  seed:
+    do:
+      call: expression
+      expr: "'x'"
+    start: true
+  route:
+    do:
+      call: expression
+      expr: "'go'"
+    listen: seed
+    router: true
+    emit: [go]
+  handler:
+    do:
+      call: expression
+      expr: "'done'"
+    start: go
+    listen: go
+    {handler_routing}
+"""
+    flow = Flow.from_declaration(contents=yaml_str)
+    flow.kickoff()
+
+    assert flow._method_execution_counts["handler"] == 1
 
 
 def test_flow_config_provider_fallback_from_declaration():
@@ -3991,6 +4403,95 @@ methods: {}
 """
     with pytest.raises(ValidationError, match="default"):
         FlowDefinition.from_declaration(contents=yaml_str)
+
+
+
+def test_agent_action_accepts_a_rendered_message_list():
+    """A chat handler can hand the agent the conversation, not just a string."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    rendered = [
+        {"role": "user", "content": "my order id is 42"},
+        {"role": "assistant", "content": "thanks, checking"},
+    ]
+
+    assert _normalize_agent_input(rendered) == rendered
+
+
+def test_agent_action_strips_serialized_message_metadata():
+    """A raw `${state.messages}` render carries None keys the event rejects."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [{"role": "user", "content": "hi", "name": None, "metadata": {}}]
+    )
+
+    assert normalized == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_action_keeps_a_none_content_tool_call_message():
+    """A tool-call turn has no content; dropping the key breaks the sequence."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+                "name": None,
+            }
+        ]
+    )
+
+    assert normalized == [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+        }
+    ]
+
+
+def test_agent_action_still_accepts_a_string():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    assert _normalize_agent_input("just a prompt") == "just a prompt"
+
+
+def test_agent_action_rejects_a_shape_that_is_neither():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    with pytest.raises(
+        ValueError, match="must render to a string or a list of messages"
+    ):
+        _normalize_agent_input(1234)
+
+
+def test_agent_definition_accepts_a_message_list_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    definition = AgentDefinition.model_validate(
+        {
+            "role": "R",
+            "goal": "G",
+            "backstory": "B",
+            "input": [{"role": "user", "content": "hi"}],
+        }
+    )
+
+    assert definition.input == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_definition_rejects_a_non_message_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    with pytest.raises(
+        ValidationError, match="must be a string or a list of messages"
+    ):
+        AgentDefinition.model_validate(
+            {"role": "R", "goal": "G", "backstory": "B", "input": [1, 2]}
+        )
 
 
 def test_definition_method_missing_from_class_fails_loudly():

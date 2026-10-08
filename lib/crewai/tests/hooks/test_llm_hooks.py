@@ -646,11 +646,27 @@ class TestDirectLLMScopedHooks:
 
         with scoped_hooks():
             register_scoped(InterceptionPoint.PRE_MODEL_CALL, block)
-            proceed = llm._invoke_before_llm_call_hooks(
-                [{"role": "user", "content": "hi"}], from_agent=None
-            )
+            with pytest.raises(HookAborted, match="blocked by scoped hook"):
+                llm._invoke_before_llm_call_hooks(
+                    [{"role": "user", "content": "hi"}], from_agent=None
+                )
 
-        assert proceed is False
+    def test_a_scoped_hook_returning_false_blocks_the_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+        from crewai.llms.base_llm import LLMCallBlockedError
+
+        llm = self._stub_llm()
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.PRE_MODEL_CALL, lambda _ctx: False)
+            with pytest.raises(LLMCallBlockedError) as blocked:
+                llm._invoke_before_llm_call_hooks(
+                    [{"role": "user", "content": "hi"}], from_agent=None
+                )
+
+        # a ValueError so the fail-open handlers around internal calls still absorb it
+        assert isinstance(blocked.value, ValueError)
 
     def test_scoped_after_hook_modifies_direct_response(self):
         from crewai.hooks import InterceptionPoint

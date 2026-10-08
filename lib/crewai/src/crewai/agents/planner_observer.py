@@ -131,7 +131,13 @@ class PlannerObserver:
             StepObservation with the Planner's analysis. Any suggested
             refinements are structured StepRefinement objects ready for
             direct application — no second LLM call needed.
+
+        Raises:
+            HookAborted: A `pre_model_call` hook denied the observation call.
+                Every other failure degrades to a conservative observation.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         agent_role = self.agent.role
 
         crewai_event_bus.emit(
@@ -188,6 +194,21 @@ class PlannerObserver:
 
             return observation
 
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the conservative-replan fallback is skipped.
+            crewai_event_bus.emit(
+                self.agent,
+                event=StepObservationFailedEvent(
+                    agent_role=agent_role,
+                    step_number=completed_step.step_number,
+                    step_description=completed_step.description,
+                    error=str(e),
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
+            raise
         except Exception as e:
             logger.warning(
                 f"Observation LLM call failed: {e}. Defaulting to conservative replan."
