@@ -1308,3 +1308,119 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+_CONVERSE_HANDLERS = ["_handle_converse", "_handle_streaming_converse",
+                      "_ahandle_converse", "_ahandle_streaming_converse"]
+
+
+def _city_model():
+    from pydantic import BaseModel
+
+    class City(BaseModel):
+        name: str
+        country: str
+
+    return City
+
+
+def _run_converse_handler(llm, handler, block, response_model):
+    """Run one Converse handler on a single mocked content block."""
+    import asyncio
+    import json
+
+    requests = []
+
+    def converse(**kwargs):
+        requests.append(kwargs)
+        return {'output': {'message': {'role': 'assistant', 'content': [block]}}}
+
+    def converse_stream(**kwargs):
+        requests.append(kwargs)
+        if 'text' in block:
+            return {'stream': [{'contentBlockDelta': {'delta': {'text': block['text']}}}]}
+        tool_use = block['toolUse']
+        return {'stream': [
+            {'contentBlockStart': {'start': {'toolUse': {k: tool_use[k] for k in ('toolUseId', 'name')}}}},
+            {'contentBlockDelta': {'delta': {'toolUse': {'input': json.dumps(tool_use['input'])}}}},
+            {'contentBlockStop': {}},
+        ]}
+
+    async def aconverse(**kwargs):
+        return converse(**kwargs)
+
+    async def aconverse_stream(**kwargs):
+        async def events():
+            for event in converse_stream(**kwargs)['stream']:
+                yield event
+        return {'stream': events()}
+
+    sync_client = MagicMock(converse=converse, converse_stream=converse_stream)
+    async_client = MagicMock(converse=aconverse, converse_stream=aconverse_stream)
+    with patch.object(llm, '_get_sync_client', return_value=sync_client), \
+            patch.object(llm, '_ensure_async_client', return_value=async_client):
+        result = getattr(llm, handler)(
+            [{'role': 'user', 'content': [{'text': 'Paris'}]}], {}, response_model=response_model
+        )
+        if asyncio.iscoroutine(result):
+            result = asyncio.run(result)
+    return result, requests[0]
+
+
+@pytest.mark.parametrize("handler", _CONVERSE_HANDLERS)
+@pytest.mark.parametrize(
+    "model,expect_forced",
+    [
+        ("us.anthropic.claude-opus-5-5", False),
+        ("global.anthropic.claude-opus-5-5", False),
+        ("us.anthropic.claude-sonnet-5-5", False),
+        ("us.anthropic.claude-fable-5-1", False),
+        ("us.anthropic.claude-opus-5", True),
+    ],
+)
+def test_bedrock_structured_output_tool_choice_for_models_rejecting_forced_tools(
+    model, expect_forced, handler
+):
+    """Models that reject a forced toolChoice get structured_output without toolChoice."""
+    City = _city_model()
+    block = {'toolUse': {'toolUseId': 'tool-1', 'name': 'structured_output',
+                         'input': {'name': 'Paris', 'country': 'France'}}}
+    result, request = _run_converse_handler(LLM(model=f"bedrock/{model}"), handler, block, City)
+
+    tool_config = request["toolConfig"]
+    assert [t["toolSpec"]["name"] for t in tool_config["tools"]] == ["structured_output"]
+    assert ("toolChoice" in tool_config) is expect_forced
+    assert result == City(name="Paris", country="France")
+
+
+@pytest.mark.parametrize("handler", _CONVERSE_HANDLERS)
+@pytest.mark.parametrize(
+    "text,parsed",
+    [('{"name": "Paris", "country": "France"}', True), ("Paris is in France.", False)],
+)
+def test_bedrock_structured_output_text_reply(handler, text, parsed):
+    """A text reply instead of a structured_output call is parsed, or returned as text."""
+    City = _city_model()
+    llm = LLM(model="bedrock/us.anthropic.claude-opus-5-5")
+    result, _ = _run_converse_handler(llm, handler, {'text': text}, City)
+
+    assert result == (City(name="Paris", country="France") if parsed else text)
+
+
+# The other two handlers don't call the after_llm_call hooks (same as main).
+@pytest.mark.parametrize("handler", ["_handle_converse", "_ahandle_streaming_converse"])
+def test_bedrock_structured_output_text_reply_runs_after_llm_call_hooks(handler):
+    """after_llm_call hooks see a text reply before it is parsed into the response model."""
+    from crewai.hooks import InterceptionPoint
+    from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+    City = _city_model()
+    llm = LLM(model="bedrock/us.anthropic.claude-opus-5-5")
+    with scoped_hooks():
+        register_scoped(InterceptionPoint.POST_MODEL_CALL,
+                        lambda ctx: ctx.response.replace("SECRET", "[REDACTED]"))
+        result, _ = _run_converse_handler(
+            llm, handler, {'text': '{"name": "SECRET", "country": "France"}'}, City
+        )
+
+    assert result == City(name="[REDACTED]", country="France")
