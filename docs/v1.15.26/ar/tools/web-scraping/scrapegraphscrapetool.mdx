@@ -1,0 +1,197 @@
+---
+title: أداة استخراج Scrapegraph
+description: أداة `ScrapegraphScrapeTool` تستفيد من SmartScraper API من Scrapegraph AI لاستخراج المحتوى من المواقع بذكاء.
+icon: chart-area
+mode: "wide"
+---
+
+# `ScrapegraphScrapeTool`
+
+## الوصف
+
+أداة `ScrapegraphScrapeTool` مصممة للاستفادة من SmartScraper API من Scrapegraph AI لاستخراج المحتوى من المواقع بذكاء. توفر هذه الأداة قدرات متقدمة لاستخراج البيانات من الويب مع استخراج محتوى مدعوم بالذكاء الاصطناعي، مما يجعلها مثالية لمهام جمع البيانات المستهدفة وتحليل المحتوى. على عكس أدوات الاستخراج التقليدية، يمكنها فهم سياق وبنية صفحات الويب لاستخراج المعلومات الأكثر صلة بناءً على موجّهات اللغة الطبيعية.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت عميل Scrapegraph لـ Python:
+
+```shell
+uv add scrapegraph-py
+```
+
+ستحتاج أيضاً إلى إعداد مفتاح Scrapegraph API كمتغير بيئة:
+
+```shell
+export SCRAPEGRAPH_API_KEY="your_api_key"
+```
+
+يمكنك الحصول على مفتاح API من [Scrapegraph AI](https://scrapegraphai.com).
+
+## خطوات البدء
+
+لاستخدام `ScrapegraphScrapeTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت التبعيات**: ثبّت الحزمة المطلوبة باستخدام الأمر أعلاه.
+2. **إعداد مفتاح API**: عيّن مفتاح Scrapegraph API كمتغير بيئة أو قدمه أثناء التهيئة.
+3. **تهيئة الأداة**: أنشئ نسخة من الأداة بالمعاملات اللازمة.
+4. **تحديد موجّهات الاستخراج**: أنشئ موجّهات بلغة طبيعية لتوجيه استخراج محتوى محدد.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `ScrapegraphScrapeTool` لاستخراج المحتوى من موقع:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapegraphScrapeTool
+
+# Initialize the tool
+scrape_tool = ScrapegraphScrapeTool(api_key="your_api_key")
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific information from websites",
+    backstory="An expert in web scraping who can extract targeted content from web pages.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract product information from an e-commerce site
+scrape_task = Task(
+    description="Extract product names, prices, and descriptions from the featured products section of example.com.",
+    expected_output="A structured list of product information including names, prices, and descriptions.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+يمكنك أيضاً تهيئة الأداة بمعاملات محددة مسبقاً:
+
+```python Code
+# Initialize the tool with predefined parameters
+scrape_tool = ScrapegraphScrapeTool(
+    website_url="https://www.example.com",
+    user_prompt="Extract all product prices and descriptions",
+    api_key="your_api_key"
+)
+```
+
+## المعاملات
+
+تقبل أداة `ScrapegraphScrapeTool` المعاملات التالية أثناء التهيئة:
+
+- **api_key**: اختياري. مفتاح Scrapegraph API الخاص بك. إذا لم يتم تقديمه، سيبحث عن متغير البيئة `SCRAPEGRAPH_API_KEY`.
+- **website_url**: اختياري. عنوان URL للموقع المراد استخراجه. إذا تم تقديمه أثناء التهيئة، لن يحتاج الوكيل إلى تحديده عند استخدام الأداة.
+- **user_prompt**: اختياري. تعليمات مخصصة لاستخراج المحتوى. إذا تم تقديمه أثناء التهيئة، لن يحتاج الوكيل إلى تحديده عند استخدام الأداة.
+- **enable_logging**: اختياري. ما إذا كان يجب تفعيل التسجيل لعميل Scrapegraph. الافتراضي هو `False`.
+
+## الاستخدام
+
+عند استخدام `ScrapegraphScrapeTool` مع وكيل، سيحتاج الوكيل إلى تقديم المعاملات التالية (ما لم يتم تحديدها أثناء التهيئة):
+
+- **website_url**: عنوان URL للموقع المراد استخراجه.
+- **user_prompt**: اختياري. تعليمات مخصصة لاستخراج المحتوى. الافتراضي هو "Extract the main content of the webpage".
+
+ستُرجع الأداة المحتوى المستخرج بناءً على الموجّه المقدم.
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific information from websites",
+    backstory="An expert in web scraping who can extract targeted content from web pages.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to extract specific content
+extract_task = Task(
+    description="Extract the main heading and summary from example.com",
+    expected_output="The main heading and summary from the website",
+    agent=web_scraper_agent,
+)
+
+# Run the task
+crew = Crew(agents=[web_scraper_agent], tasks=[extract_task])
+result = crew.kickoff()
+```
+
+## معالجة الأخطاء
+
+قد تُثير أداة `ScrapegraphScrapeTool` الاستثناءات التالية:
+
+- **ValueError**: عندما يكون مفتاح API مفقوداً أو تنسيق URL غير صالح.
+- **RateLimitError**: عند تجاوز حدود معدل API.
+- **RuntimeError**: عند فشل عملية الاستخراج (مشاكل شبكة، أخطاء API).
+
+يُوصى بتوجيه الوكلاء للتعامل مع الأخطاء المحتملة بسلاسة:
+
+```python Code
+# Create a task that includes error handling instructions
+robust_extract_task = Task(
+    description="""
+    Extract the main heading from example.com.
+    Be aware that you might encounter errors such as:
+    - Invalid URL format
+    - Missing API key
+    - Rate limit exceeded
+    - Network or API errors
+
+    If you encounter any errors, provide a clear explanation of what went wrong
+    and suggest possible solutions.
+    """,
+    expected_output="Either the extracted heading or a clear error explanation",
+    agent=web_scraper_agent,
+)
+```
+
+## تحديد المعدل
+
+لدى Scrapegraph API حدود معدل تختلف حسب خطة اشتراكك. ضع في الاعتبار أفضل الممارسات التالية:
+
+- نفّذ تأخيرات مناسبة بين الطلبات عند معالجة عناوين URL متعددة.
+- تعامل مع أخطاء تحديد المعدل بسلاسة في تطبيقك.
+- تحقق من حدود خطة API الخاصة بك على لوحة تحكم Scrapegraph.
+
+## تفاصيل التنفيذ
+
+تستخدم أداة `ScrapegraphScrapeTool` عميل Scrapegraph لـ Python للتفاعل مع SmartScraper API:
+
+```python Code
+class ScrapegraphScrapeTool(BaseTool):
+    """
+    A tool that uses Scrapegraph AI to intelligently scrape website content.
+    """
+
+    # Implementation details...
+
+    def _run(self, **kwargs: Any) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        user_prompt = (
+            kwargs.get("user_prompt", self.user_prompt)
+            or "Extract the main content of the webpage"
+        )
+
+        if not website_url:
+            raise ValueError("website_url is required")
+
+        # Validate URL format
+        self._validate_url(website_url)
+
+        try:
+            # Make the SmartScraper request
+            response = self._client.smartscraper(
+                website_url=website_url,
+                user_prompt=user_prompt,
+            )
+
+            return response
+        # Error handling...
+```
+
+## الخلاصة
+
+توفر أداة `ScrapegraphScrapeTool` طريقة قوية لاستخراج المحتوى من المواقع باستخدام فهم مدعوم بالذكاء الاصطناعي لبنية صفحات الويب. من خلال تمكين الوكلاء من استهداف معلومات محددة باستخدام موجّهات اللغة الطبيعية، تجعل مهام استخراج البيانات من الويب أكثر كفاءة وتركيزاً. هذه الأداة مفيدة بشكل خاص لاستخراج البيانات ومراقبة المحتوى ومهام البحث حيث تحتاج معلومات محددة إلى استخراجها من صفحات الويب.

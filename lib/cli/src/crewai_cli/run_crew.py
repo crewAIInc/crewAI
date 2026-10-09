@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
@@ -493,6 +493,30 @@ def _run_json_crew_in_project_env(
     return None
 
 
+DeployButtonEvent = Literal[
+    "deploy_login_prompted",
+    "deploy_stopped:login_still_required",
+    "deploy_stopped:login_abandoned",
+    "deploy_stopped:login_failed",
+]
+
+
+def _record_deploy_button(event: DeployButtonEvent) -> None:
+    """Count what the run app's Deploy met before a deployment attempt.
+
+    `cli_usage:deploy` counts the press and `Create Crew Deployment` the
+    attempt; a press that never became an attempt said nothing about why.
+    """
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span(f"cli_usage:{event}")
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
+
+
 def _chain_deploy() -> None:
     from rich.console import Console
 
@@ -516,11 +540,20 @@ def _chain_deploy() -> None:
     except AuthenticationRequiredError:
         from crewai_cli.authentication.main import AuthenticationCommand
 
+        _record_deploy_button("deploy_login_prompted")
         console.print()
-        AuthenticationCommand().login()
+        try:
+            AuthenticationCommand().login()
+        except KeyboardInterrupt:
+            _record_deploy_button("deploy_stopped:login_abandoned")
+            raise
+        except Exception:
+            _record_deploy_button("deploy_stopped:login_failed")
+            raise
         try:
             DeployCommand().create_crew(confirm=True, skip_validate=True, source="tui")
         except AuthenticationRequiredError:
+            _record_deploy_button("deploy_stopped:login_still_required")
             console.print(
                 "\nDeploy failed: authentication is still required.\n",
                 style="bold red",
@@ -599,6 +632,48 @@ def _print_post_tui_summary(app: CrewRunApp) -> None:
                 padding=(0, 1),
             )
         )
+
+    _print_evaluation_line(app, console, crewai_teal)
+
+
+def _print_evaluation_line(app: CrewRunApp, console: Any, teal: str) -> None:
+    """The evaluation's link, once the app that showed it has gone.
+
+    An evaluation started inside the app is read there; the terminal is what is
+    left afterwards, and a link that only ever existed on a screen that is now
+    closed is a link nobody can open again.
+    """
+    evaluation = getattr(app, "_evaluation", None) or {}
+    url = str(evaluation.get("url") or "")
+    if not url:
+        return
+
+    from rich.text import Text
+
+    state = str(evaluation.get("state"))
+    line = Text("\n  ")
+    if state == "done":
+        verdict = evaluation.get("verdict") or {}
+        line.append("Evaluated: ", style="dim")
+        line.append(
+            f"goal gate {str(verdict.get('gate') or '').upper()}  ", style="bold"
+        )
+    elif state == "failed":
+        line.append("Evaluation stopped — the report has what it got: ", style="dim")
+    else:
+        line.append("Evaluation still running at ", style="dim")
+    line.append(url, style=f"{teal} underline")
+    console.print(line)
+
+    wrote = evaluation.get("wrote_config")
+    if wrote:
+        note = Text("  ")
+        note.append(f"Wrote {wrote}", style="bold")
+        note.append(
+            " — say what good means for this crew there, and the next evaluation is graded on it.",
+            style="dim",
+        )
+        console.print(note)
 
 
 def run_crew(

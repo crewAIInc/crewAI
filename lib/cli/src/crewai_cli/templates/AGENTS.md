@@ -101,6 +101,16 @@ Two rules:
 
 Full details: [Observability & Traces](#observability--traces) and [Deployment](#deployment).
 
+<!-- crewai-eval:start -->
+## Evaluating this crew/flow
+
+Run `crewai eval` after a change: it grades the project's last traced run — a goal gate, a 1–5 grade per area, and a link to the full report. It grades a run that already happened, so after changing code run the project again first (`crewai run`, with `CREWAI_TRACING_ENABLED=true` in `.env`; a run with no terminal is only traced when logged in with `crewai login`), then `crewai eval`. In a terminal with no traced run recorded, it offers to run the project once with tracing on.
+
+- Run by a coding agent or script (no terminal), it prints a **markdown brief** after the verdict: what failed and the change to make. Act on its "what failed" changes, then `crewai run` and `crewai eval` again. (An older AMP may print only a link to the brief, or nothing.)
+- `crewai eval --models "provider/model,…"` compares models on the deployed project (needs `crewai login` and a deployment); the brief then names the model for each part and how sure each difference is.
+- Exit codes: `crewai eval` exits 0 only when the goal gate passed; `--models` exits 0 when the comparison finished, whatever each model's grades. Criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.
+
+<!-- crewai-eval:end -->
 ## Quick Reference
 
 ```bash
@@ -135,6 +145,12 @@ crewai template list
 crewai run                  # Run crew or flow (auto-detects from pyproject.toml)
 crewai flow kickoff         # Deprecated compatibility alias for crewai run
 
+<!-- crewai-eval:start -->
+# Evaluation
+crewai eval                           # Grade the last traced run; prints a markdown brief when run by an agent
+crewai eval --models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"  # Compare models on the deployment
+
+<!-- crewai-eval:end -->
 # Testing & training
 crewai test                           # Test crew (default: 2 iterations, gpt-4o-mini)
 crewai test -n 5 -m gpt-4o           # Custom iterations and model
@@ -853,6 +869,41 @@ flow.plot("my_flow")           # Generates my_flow.html
 ---
 
 ## Custom Tools
+
+### CrewAI Platform Tools
+CrewAI AMP provides integrations for supported applications, exposing the actions
+available through each connected application as CrewAI tools. Before selecting an
+integration, use your file-read or search tools to read the installed
+`crewai_core/platform_apps.py` module. Its `PLATFORM_APPS` catalog is the source
+of truth for supported application selectors; do not hard-code that list.
+For how to connect applications and use their actions in AMP, see
+[CrewAI Platform Tools and Integrations](https://docs-platform.crewai.com/platform/en/features/tools-and-integrations).
+
+Connect the required application in CrewAI AMP before using it. Then pass its
+selector to `CrewaiPlatformTools`; the factory returns the action tools available
+for that application, which can be assigned directly to an agent:
+
+```python
+from crewai_tools import CrewaiPlatformTools
+
+gmail_tools = CrewaiPlatformTools(apps=["gmail"])
+agent = Agent(..., tools=gmail_tools)
+```
+
+Multiple connected applications can be requested together:
+
+```python
+platform_tools = CrewaiPlatformTools(apps=["gmail", "slack"])
+```
+
+In JSON crew projects, use the equivalent `platform:<app>` selector in the
+agent's `tools` list:
+```jsonc
+{ "tools": ["platform:gmail"] }
+```
+
+If an application or action is not listed in `PLATFORM_APPS`, do not invent a
+selector; use an appropriate built-in or custom tool instead.
 
 ### Using BaseTool
 ```python
