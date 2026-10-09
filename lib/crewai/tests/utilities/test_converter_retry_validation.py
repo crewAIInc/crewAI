@@ -29,6 +29,45 @@ class OfflineLLM(BaseLLM):
 
 
 @pytest.mark.asyncio
+async def test_async_retry_never_calls_sync_llm() -> None:
+    class AsyncOnlyLLM(OfflineLLM):
+        def call(self, messages: Any, **kwargs: Any) -> str:
+            raise AssertionError("Async conversion called the synchronous LLM")
+
+        async def acall(self, messages: Any, **kwargs: Any) -> str:
+            self.calls += 1
+            return "invalid" if self.calls == 1 else '{"summary":"recovered"}'
+
+    llm = AsyncOnlyLLM([])
+    converter = Converter(llm=llm, text="input", model=Summary, instructions="JSON")
+    assert await converter.ato_pydantic() == Summary(summary="recovered")
+    assert llm.calls == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_hook_abort_is_not_retried(asynchronous: bool) -> None:
+    from crewai.hooks.dispatch import HookAborted
+
+    error = HookAborted("controlled abort")
+
+    class AbortedLLM(OfflineLLM):
+        def call(self, messages: Any, **kwargs: Any) -> str:
+            self.calls += 1
+            raise error
+
+    llm = AbortedLLM([])
+    converter = Converter(llm=llm, text="input", model=Summary, instructions="JSON")
+    with pytest.raises(HookAborted) as caught:
+        if asynchronous:
+            await converter.ato_pydantic()
+        else:
+            converter.to_pydantic()
+    assert caught.value is error
+    assert llm.calls == 1
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("asynchronous", [False, True])
 @pytest.mark.parametrize("response", ["not JSON", '{"wrong":"field"}', "text {broken}"])
 async def test_exhausted_retries_preserve_validation_cause(
