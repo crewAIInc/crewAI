@@ -504,6 +504,17 @@ def _recording_llm(model: str, requests: list[httpx.Request]) -> Any:
     return llm
 
 
+def _assert_sent(
+    result: Any, requests: list[httpx.Request], base_url: str, model_id: str
+) -> None:
+    """One request went to the provider's endpoint, with its key and model id."""
+    assert result == "Hello from the provider"
+    (request,) = requests
+    assert str(request.url) == f"{base_url}/chat/completions"
+    assert request.headers["authorization"] == "Bearer provider-key"
+    assert json.loads(request.content)["model"] == model_id
+
+
 @pytest.mark.parametrize(
     ("provider", "model", "model_id", "base_url", "key_env", "url_env"),
     HOSTED_PROVIDER_CASES,
@@ -596,13 +607,11 @@ class TestHostedProviders:
     ):
         requests: list[httpx.Request] = []
         with patch.dict(os.environ, {key_env: "provider-key"}, clear=True):
-            result = _recording_llm(model, requests).call("Hi")
+            llm = _recording_llm(model, requests)
+            result = llm.call("Hi")
+        llm._client.close()
 
-        assert result == "Hello from the provider"
-        (request,) = requests
-        assert str(request.url) == f"{base_url}/chat/completions"
-        assert request.headers["authorization"] == "Bearer provider-key"
-        assert json.loads(request.content)["model"] == model_id
+        _assert_sent(result, requests, base_url, model_id)
 
     @pytest.mark.asyncio
     async def test_acall_sends_model_id_to_provider(
@@ -610,10 +619,8 @@ class TestHostedProviders:
     ):
         requests: list[httpx.Request] = []
         with patch.dict(os.environ, {key_env: "provider-key"}, clear=True):
-            result = await _recording_llm(model, requests).acall("Hi")
+            llm = _recording_llm(model, requests)
+            result = await llm.acall("Hi")
+        await llm._async_client.close()
 
-        assert result == "Hello from the provider"
-        (request,) = requests
-        assert str(request.url) == f"{base_url}/chat/completions"
-        assert request.headers["authorization"] == "Bearer provider-key"
-        assert json.loads(request.content)["model"] == model_id
+        _assert_sent(result, requests, base_url, model_id)
