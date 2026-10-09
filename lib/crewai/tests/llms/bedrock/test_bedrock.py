@@ -1308,3 +1308,85 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+# ---------------------------------------------------------------------------
+# Converse formatter: system and tool messages with multimodal parts content
+# ---------------------------------------------------------------------------
+
+
+def _formatter_completion():
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    return BedrockCompletion(
+        model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_access_key_id="testing",
+        aws_secret_access_key="testing",
+        region_name="us-east-1",
+    )
+
+
+def test_converse_lone_system_message_with_parts_collapses_to_text():
+    """A lone system message whose content is a parts list must put its text
+    into the system text block, not the list repr (botocore rejects a list)."""
+    llm = _formatter_completion()
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": "be terse and polite"}]},
+        {"role": "user", "content": "hi"},
+    ]
+    _, system_message = llm._format_messages_for_converse(messages)
+    assert system_message == "be terse and polite"
+
+
+def test_converse_second_system_message_with_parts_joins_with_newlines():
+    """A system message following another one must append its collapsed text
+    after the \\n\\n separator, not the f-stringified list repr."""
+    llm = _formatter_completion()
+    messages = [
+        {"role": "system", "content": "A"},
+        {"role": "system", "content": [{"type": "text", "text": "be terse and polite"}]},
+        {"role": "user", "content": "hi"},
+    ]
+    _, system_message = llm._format_messages_for_converse(messages)
+    assert system_message == "A\n\nbe terse and polite"
+
+
+def test_converse_tool_message_with_parts_collapses_to_text():
+    """A tool message whose content is a parts list must put the collapsed
+    text into toolResult.content[0].text, not the list repr."""
+    llm = _formatter_completion()
+    messages = [
+        {"role": "user", "content": "run it"},
+        {
+            "role": "tool",
+            "tool_call_id": "call_1",
+            "content": [{"type": "text", "text": "result payload"}],
+        },
+    ]
+    converse_messages, _ = llm._format_messages_for_converse(messages)
+    tool_results = [
+        block["toolResult"]
+        for message in converse_messages
+        for block in message["content"]
+        if isinstance(block, dict) and "toolResult" in block
+    ]
+    assert tool_results[0]["content"] == [{"text": "result payload"}]
+
+
+def test_converse_string_system_and_tool_content_unchanged():
+    """Plain string system and tool content keep their existing behaviour."""
+    llm = _formatter_completion()
+    messages = [
+        {"role": "system", "content": "be terse"},
+        {"role": "user", "content": "run it"},
+        {"role": "tool", "tool_call_id": "call_1", "content": "string result"},
+    ]
+    converse_messages, system_message = llm._format_messages_for_converse(messages)
+    assert system_message == "be terse"
+    tool_results = [
+        block["toolResult"]
+        for message in converse_messages
+        for block in message["content"]
+        if isinstance(block, dict) and "toolResult" in block
+    ]
+    assert tool_results[0]["content"] == [{"text": "string result"}]
