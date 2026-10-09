@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import pytest
@@ -348,3 +349,23 @@ def test_timeout_handling_llm():
     with pytest.raises(TimeoutError, match="LLM request failed after 2 attempts"):
         llm.call("Test message")
     assert len(llm.calls) == 2  # Initial call + failed retry attempt
+
+
+def _offline_guide_blocks() -> tuple[str, str]:
+    """The example code and expected output from the custom LLM guide's offline section."""
+    guide = Path(__file__).parents[3] / "docs/edge/en/learn/custom-llm.mdx"
+    section = guide.read_text().split("## Try It Offline First", 1)[1].split("\n## ", 1)[0]
+    code = section.split("```python\n", 1)[1].split("```", 1)[0]
+    output = section.split("```text\n", 1)[1].split("```", 1)[0]
+    return code, output
+
+
+def test_offline_custom_llm_guide_example_runs(monkeypatch, capsys):
+    """The guide's offline example runs with no API key and prints what the guide says."""
+    for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    code, expected_output = _offline_guide_blocks()
+
+    exec(compile(code, "echo_llm.py", "exec"), {"__name__": "__main__"})
+
+    assert capsys.readouterr().out == expected_output
