@@ -1,0 +1,99 @@
+---
+title: Instant Expert
+description: تتيح لطاقم الوكلاء الدفع لشخص محدد، مثل مسؤول تنفيذي أو خبير في مجال ما، مقابل مكالمة قصيرة أو إجابة مكتوبة
+icon: user-tie
+mode: "wide"
+---
+
+# Instant Expert
+
+تتيح [Instant Expert](https://instant.expert) للوكيل الحصول على إجابات من أشخاص محددين يستحقون الدفع لهم: مسؤولون تنفيذيون ومديرو عمليات وخبراء في مجالاتهم. تعثر الخدمة على الأشخاص المطابقين لوصف ما (أو تستخدم الأشخاص الذين تحددهم)، وترسل إلى كل منهم دعوة مدفوعة لمكالمة قصيرة أو إجابة مكتوبة، ولا تفرض أي رسوم إلا إذا حجز الشخص موعدًا أو أجاب. وهي خادم MCP بعيد، لذا يتصل بها CrewAI عبر `MCPServerHTTP` دون الحاجة إلى أي حزمة إضافية.
+
+## المتطلبات
+
+- مفتاح API لنموذج LLM، مثل `OPENAI_API_KEY`
+- لا يلزم حساب Instant Expert لوضع الاختبار
+
+## الحصول على رمز لوضع الاختبار
+
+يستخدم وضع الاختبار أشخاصًا وهميين، ويسجل كل بريد إلكتروني بدلًا من إرساله، ويستخدم بطاقة اختبار من Stripe. يعيد طلب واحد رمزًا صالحًا لمدة 24 ساعة:
+
+```bash
+curl -X POST https://instant.expert/api/sandbox
+export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
+```
+
+## الاستخدام
+
+يوقف خطاف `before_tool_call` الطاقم عند `send_requests`، وهي الأداة التي تنفذ الطلب، إلى أن يوافق عليه شخص.
+
+```python
+import os
+
+from crewai import Agent, Crew, Task
+from crewai.hooks import ToolCallHookContext, before_tool_call
+from crewai.mcp import MCPServerHTTP
+
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp/test",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_SANDBOX_TOKEN']}"},
+)
+
+
+@before_tool_call
+def approve_paid_send(context: ToolCallHookContext) -> bool | None:
+    # CrewAI prefixes MCP tool names with the server, so match the suffix.
+    if not context.tool_name.endswith("send_requests"):
+        return None
+    answer = context.request_human_input(
+        prompt=f"Place this order? {context.tool_input}",
+        default_message="Type y to send:",
+    )
+    return None if answer.strip().lower() == "y" else False  # False blocks the call
+
+
+coordinator = Agent(
+    role="Outreach coordinator",
+    goal="Get answers from the right executives and report each person's outcome",
+    backstory="You find the right people through Instant Expert and only spend within budget.",
+    mcps=[instant_expert],
+)
+outreach = Task(
+    description=(
+        "Find 3 product leaders at SaaS companies. Offer each of them $40 for a "
+        "15-minute call about how they choose analytics tools, with a $150 total "
+        "budget. Search, wait for the job with get_job, read the people with "
+        "get_search, draft with queue_requests, then preview with "
+        "prepare_request_order. Then call send_requests right away with the "
+        "preview's details and confirmed=true. Don't ask for approval in chat: "
+        "the crew pauses at send_requests and shows the founder the order. "
+        "Finally, report who booked, replied or declined."
+    ),
+    expected_output="Who was invited, the price, and each person's status",
+    agent=coordinator,
+)
+print(Crew(agents=[coordinator], tasks=[outreach]).kickoff().raw)
+```
+
+في وضع الاختبار، يرد كل شخص وهمي من تلقاء نفسه بعد تسليم الدعوة: بعضهم يحجز موعدًا، وبعضهم يرد بسؤال، وبعضهم يرفض، وبعضهم لا يرد أبدًا.
+
+## الأدوات المتاحة
+
+| الأداة                                              | الوظيفة                                                                   |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| `plan_outreach`                                     | تقترح فئات تستحق التواصل معها لشركة أو سؤال بحثي                          |
+| `search_people`, `get_job`, `get_search`            | تعثر على الأشخاص المطابقين لوصف ما، كمهمة في الخلفية                      |
+| `import_people`                                     | تحفظ أشخاصًا تعرفهم عبر رابط LinkedIn أو البريد الإلكتروني أو الاسم والشركة |
+| `queue_requests`, `get_request_draft`               | تُعد مسودة الدعوات المدفوعة: الرسالة والمبلغ لكل شخص والميزانية الإجمالية  |
+| `prepare_request_order`, `send_requests`            | تعرض معاينة الطلب ثم تنفذه                                                |
+| `get_request_order`, `list_requests`, `get_request` | تتابع التسليم ورد كل شخص                                                  |
+| `simulate_response`                                 | في وضع الاختبار فقط: تفرض نتيجة لشخص وهمي                                 |
+
+## استخدام حساب حقيقي
+
+اتصل بـ `https://instant.expert/mcp` باستخدام رمز وصول OAuth لحساب حقيقي، إذ لا توجد مفاتيح API. ولكي ينفذ الوكيل الطلبات، يجب أيضًا تفعيل الإرسال المدفوع لهذا الاتصال وحفظ بطاقة. راجع [وثائق MCP الخاصة بـ Instant Expert](https://instant.expert/docs/mcp).
+
+## ملاحظات
+
+- يعيد CrewAI محاولة استدعاء الأداة الذي يستغرق أكثر من 30 ثانية. وهذا آمن هنا: فالأدوات التي تبدأ مهمة أو تنفذ طلبًا تأخذ مفتاح عدم تكرار (idempotency key)، وإعادة المحاولة بالوسائط نفسها تعيد المهمة أو الطلب الأصلي.
+- تضيف حزمة [`crewai-instant-expert`](https://github.com/Instant-Expert/integrations/tree/main/python/crewai-instant-expert) تعليمات سير العمل الخاصة بالخادم إلى backstory الوكيل، وأداة تنتظر انتهاء المهام دون استهلاك تكرارات الوكيل.
