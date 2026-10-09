@@ -83,12 +83,28 @@ def _display_git_remote_help() -> None:
     )
 
 
+# AMP's `source_type` for a deployment's code, and whether a push updates it by
+# uploading a ZIP. A Studio install is an archive too (AMP sets it as a ZIP crew).
+_ZIP_SOURCE_TYPES = {"zip": True, "studio": True, "github": False, "any_git": False}
+
+
 def _zip_deployment_flag(status: dict[str, Any] | None) -> bool | None:
-    """Return the AMP zip_deployment flag, or None when it cannot be used."""
-    if not status or "zip_deployment" not in status:
+    """Whether AMP holds this deployment's code as a ZIP, or None when the status
+    does not say.
+
+    AMP's status sends `source_type` ("zip", "studio", "github", "any_git");
+    `zip_deployment`, a boolean, is read first when present. Without either the
+    caller falls back to the local origin remote — which is wrong for a ZIP
+    deployment whose project has since gained a remote: it redeploys the ZIP AMP
+    already holds instead of the code being pushed.
+    """
+    if not status:
         return None
-    value = status["zip_deployment"]
-    return value if isinstance(value, bool) else None
+    value = status.get("zip_deployment")
+    if isinstance(value, bool):
+        return value
+    source = status.get("source_type")
+    return _ZIP_SOURCE_TYPES.get(source) if isinstance(source, str) else None
 
 
 def _env_summary(env_vars: dict[str, str]) -> str:
@@ -415,7 +431,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         project_name: str | None,
         status: dict[str, Any] | None,
     ) -> bool:
-        """Return True when AMP reported a usable zip_deployment flag."""
+        """Return True when AMP's status says how it holds the code."""
         zip_deployment = _zip_deployment_flag(status)
         if zip_deployment is None:
             return False
@@ -430,7 +446,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         repository: git.Repository | None,
         status: dict[str, Any],
     ) -> Any:
-        """Deploy using AMP zip_deployment."""
+        """Deploy the way AMP holds the code: a ZIP upload, or a redeploy of its git source."""
         if _zip_deployment_flag(status):
             deployment_uuid = uuid or str(status["uuid"])
             env_vars = fetch_and_json_env_file()
