@@ -6,7 +6,11 @@ from typing_extensions import Required, TypedDict
 
 
 class DeepInfraProviderConfig(TypedDict, total=False):
-    """Configuration for DeepInfra provider."""
+    """Configuration for DeepInfra provider.
+
+    Without ``model_name`` (or its ``model`` alias) the embedding model DeepInfra
+    currently recommends is read from its catalog; pin it for persisted stores.
+    """
 
     api_key: str
     model: str
