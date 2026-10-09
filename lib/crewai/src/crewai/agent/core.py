@@ -2011,6 +2011,7 @@ class Agent(BaseAgent):
                         text=raw_output,
                         model=response_format,
                         instructions=instructions,
+                        agent=self,
                     )
 
                     conversion_result = converter.to_pydantic()

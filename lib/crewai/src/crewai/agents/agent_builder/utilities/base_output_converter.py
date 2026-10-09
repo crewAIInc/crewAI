@@ -28,6 +28,10 @@ class OutputConverter(BaseModel, ABC):
         description="The model to be used to convert the text."
     )
     instructions: str = Field(description="Conversion instructions to the LLM.")
+    agent: Any = Field(
+        default=None,
+        description="The agent instance used for retry conversions via instructions.",
+    )
     max_attempts: int = Field(
         description="Max number of attempts to try to get the output formatted.",
         default=3,
