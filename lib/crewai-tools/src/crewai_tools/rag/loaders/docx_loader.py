@@ -4,7 +4,10 @@ from typing import Any
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
-from crewai_tools.security.safe_requests import safe_get
+from crewai_tools.security.safe_requests import safe_get_bounded
+
+
+DEFAULT_MAX_DOCX_BYTES = 50 * 1024 * 1024
 
 
 class DOCXLoader(BaseLoader):
@@ -42,12 +45,26 @@ class DOCXLoader(BaseLoader):
         )
 
         try:
-            response = safe_get(url, headers=headers, timeout=30)
-            response.raise_for_status()
+            max_bytes = kwargs.get("max_bytes", DEFAULT_MAX_DOCX_BYTES)
+            if (
+                isinstance(max_bytes, bool)
+                or not isinstance(max_bytes, int)
+                or max_bytes <= 0
+            ):
+                raise ValueError(
+                    f"max_bytes must be a positive integer, got {max_bytes!r}."
+                )
+
+            body, _content_type, _final_url = safe_get_bounded(
+                url,
+                max_bytes=max_bytes,
+                headers=headers,
+                timeout=30,
+            )
 
             # Create temporary file to save the DOCX content
             with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as temp_file:
-                temp_file.write(response.content)
+                temp_file.write(body)
                 return temp_file.name
         except Exception as e:
             raise ValueError(f"Error fetching content from URL {url}: {e!s}") from e
