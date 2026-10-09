@@ -15,6 +15,7 @@ _CORAL = "\033[38;2;255;90;80m"  # #FF5A50
 _TEAL = "\033[38;2;31;121;130m"  # #1F7982
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
+_GREEN = "\033[1;32m"
 _RESET = "\033[0m"
 _HIDE_CURSOR = "\033[?25l"
 _SHOW_CURSOR = "\033[?25h"
@@ -123,10 +124,15 @@ def _draw_multi(
         # otherwise leave the old rows visible underneath the matches.
         _clear_lines(previous_line_count or 1)
     extra_lines = 0
-    if searchable:
-        sys.stdout.write(f"\033[2K  {_DIM}Search:{_RESET} {query}\n")
-        extra_lines += 1
     sys.stdout.write(f"\033[2K{hint}\n")
+    if searchable:
+        match_count = ""
+        if query:
+            count = len(rows)
+            noun = "match" if count == 1 else "matches"
+            match_count = f"  ·  {count} {noun}"
+        sys.stdout.write(f"\033[2K  {_GREEN}Search: {query}{match_count}{_RESET}\n")
+        extra_lines += 1
     if searchable and query and not rows:
         sys.stdout.write(f"\033[2K    {_DIM}No matching actions{_RESET}\n")
         extra_lines += 1
