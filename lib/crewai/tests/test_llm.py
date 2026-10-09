@@ -1439,3 +1439,13 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_anthropic_prefix_covers_custom_deployments():
+    """Issue #5893: self-hosted `anthropic--` models must route to Anthropic."""
+    assert LLM._matches_provider_pattern("anthropic--claude-xyz", "anthropic")
+    assert LLM._matches_provider_pattern("anthropic.claude-3", "anthropic")
+    assert LLM._matches_provider_pattern("anthropic/claude-3", "anthropic")
+    assert LLM._matches_provider_pattern("claude-3-opus", "anthropic")
+    assert not LLM._matches_provider_pattern("gpt-4o", "anthropic")
+    assert LLM._is_anthropic_model("anthropic--claude-xyz")

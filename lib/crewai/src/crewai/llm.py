@@ -401,8 +401,14 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+            return model_lower.startswith(
+                (
+                    *ANTHROPIC_PREFIXES,
+                    "anthropic.",
+                    "anthropic--",
+                    "anthropic:",
+                    "claude--",
+                )
             )
 
         if provider == "gemini" or provider == "google":
@@ -688,7 +694,13 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
+        anthropic_prefixes = (
+            *ANTHROPIC_PREFIXES,
+            "anthropic.",
+            "anthropic--",
+            "anthropic:",
+            "claude--",
+        )
         return any(prefix in model.lower() for prefix in anthropic_prefixes)
 
     def _prepare_completion_params(
