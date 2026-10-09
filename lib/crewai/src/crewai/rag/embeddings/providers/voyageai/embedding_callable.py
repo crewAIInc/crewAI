@@ -50,9 +50,25 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         if isinstance(input, str):
             input = [input]
 
+        model = self._config.get("model", "voyage-2")
+
+        if model.startswith("voyage-context"):
+            inputs = [[s] for s in input]
+            ctx_result = self._client.contextualized_embed(
+                inputs=inputs,
+                model=model,
+                input_type=self._config.get("input_type", "document"),
+                output_dtype=self._config.get("output_dtype"),
+                output_dimension=self._config.get("output_dimension"),
+            )
+            return cast(
+                Embeddings,
+                [r.embeddings[0] for r in ctx_result.results],
+            )
+
         result = self._client.embed(
             texts=input,
-            model=self._config.get("model", "voyage-2"),
+            model=model,
             input_type=self._config.get("input_type"),
             truncation=self._config.get("truncation", True),
             output_dtype=self._config.get("output_dtype"),
