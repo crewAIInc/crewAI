@@ -79,7 +79,15 @@ class EmbeddingService:
             if provider == "openrouter":
                 model = "openai/text-embedding-3-small"
             elif provider == "deepinfra":
-                model = "Qwen/Qwen3-Embedding-8B"
+                from crewai.rag.embeddings.providers.deepinfra.deepinfra_provider import (
+                    effective_api_base,
+                    resolve_default_model,
+                )
+
+                extra_config = kwargs.get("extra_config") or {}
+                model = resolve_default_model(
+                    effective_api_base(extra_config.get("api_base"))
+                )
             else:
                 model = "text-embedding-3-small"
 
@@ -425,11 +433,14 @@ class EmbeddingService:
     @classmethod
     def create_deepinfra_service(
         cls,
-        model: str = "Qwen/Qwen3-Embedding-8B",
+        model: str | None = None,
         api_key: str | None = None,
         **kwargs: Any,
     ) -> EmbeddingService:
-        """Create a DeepInfra embedding service."""
+        """Create a DeepInfra embedding service.
+
+        Without ``model`` the embedding model DeepInfra currently recommends is used.
+        """
         return cls(provider="deepinfra", model=model, api_key=api_key, **kwargs)
 
     @classmethod
