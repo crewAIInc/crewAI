@@ -937,13 +937,17 @@ class SummarizeMessages:
         async def _summarize_one(chunk: list[LLMMessage], level_index: int) -> str:
             """Summarize one chunk; only reachable from ``_summarize_all`` or itself."""
             llm = cast("LLM | BaseLLM", self.llm)
+            prompt = self._build_summary_prompt(chunk)
 
             try:
-                summary = str(
-                    await llm.acall(
-                        self._build_summary_prompt(chunk), callbacks=self.callbacks
+                if getattr(type(llm), "acall", None) is BaseLLM.acall:
+                    # Custom LLMs may implement only the sync `call`.
+                    response = await asyncio.to_thread(
+                        llm.call, prompt, callbacks=self.callbacks
                     )
-                )
+                else:
+                    response = await llm.acall(prompt, callbacks=self.callbacks)
+                summary = str(response)
             except LLMContextLengthExceededError:
                 pass
             except Exception as error:
