@@ -32,6 +32,24 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
             data.setdefault("model_name", model)
         return data
 
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_dimensions(cls, data: Any) -> Any:
+        """Refuse ``dimensions`` rather than accept a value that never reaches the API.
+
+        chromadb's ``OpenAIEmbeddingFunction`` only sends ``dimensions`` for OpenAI
+        ``text-embedding-3`` models, so for a DeepInfra model the vectors would
+        silently keep the model's full size.
+        """
+        if isinstance(data, dict) and data.get("dimensions") is not None:
+            raise ValueError(
+                "dimensions is not supported by the deepinfra embedding provider: "
+                "chromadb's OpenAIEmbeddingFunction only forwards it for OpenAI "
+                "text-embedding-3 models, so the vectors would keep the model's "
+                "full size. Choose a model with the size you need instead."
+            )
+        return data
+
     embedding_callable: type[OpenAIEmbeddingFunction] = Field(
         default=OpenAIEmbeddingFunction,
         description="OpenAI-compatible embedding function class",
@@ -59,12 +77,4 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     )
     default_headers: dict[str, Any] | None = Field(
         default=None, description="Default headers for API requests"
-    )
-    dimensions: int | None = Field(
-        default=None,
-        description="Embedding dimensions",
-        validation_alias=AliasChoices(
-            "DEEPINFRA_DIMENSIONS",
-            "dimensions",
-        ),
     )

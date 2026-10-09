@@ -13,7 +13,6 @@ class DeepInfraProviderConfig(TypedDict, total=False):
     model_name: Annotated[str, "Qwen/Qwen3-Embedding-8B"]
     api_base: str
     default_headers: dict[str, Any] | None
-    dimensions: int | None
 
 
 class DeepInfraProviderSpec(TypedDict, total=False):

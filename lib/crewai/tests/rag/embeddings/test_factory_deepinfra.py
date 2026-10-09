@@ -34,7 +34,7 @@ class TestDeepInfraEmbedderFactory:
                 "api_key": "test-deepinfra-key",
                 "model_name": "Qwen/Qwen3-Embedding-4B",
                 "api_base": "https://api.deepinfra.com/v1/openai",
-                "dimensions": 1024,
+                "default_headers": {"X-Test": "crewai"},
             },
         }
 
@@ -48,7 +48,7 @@ class TestDeepInfraEmbedderFactory:
         assert call_kwargs["api_key"] == "test-deepinfra-key"
         assert call_kwargs["model_name"] == "Qwen/Qwen3-Embedding-4B"
         assert call_kwargs["api_base"] == "https://api.deepinfra.com/v1/openai"
-        assert call_kwargs["dimensions"] == 1024
+        assert call_kwargs["default_headers"] == {"X-Test": "crewai"}
 
         assert result == mock_embedding_function
 
@@ -121,7 +121,6 @@ class TestDeepInfraProviderDirect:
         assert provider.api_key == "test-key"
         assert provider.model_name == "Qwen/Qwen3-Embedding-8B"
         assert provider.api_base == "https://api.deepinfra.com/v1/openai"
-        assert provider.dimensions is None
         assert provider.default_headers is None
 
     def test_custom_values(self):
@@ -130,15 +129,34 @@ class TestDeepInfraProviderDirect:
             api_key="test-custom-key",
             model="Qwen/Qwen3-Embedding-4B",
             api_base="https://proxy.example.com/v1/openai",
-            dimensions=4096,
             default_headers={"X-Test": "crewai"},
         )
 
         assert provider.api_key == "test-custom-key"
         assert provider.model_name == "Qwen/Qwen3-Embedding-4B"
         assert provider.api_base == "https://proxy.example.com/v1/openai"
-        assert provider.dimensions == 4096
         assert provider.default_headers == {"X-Test": "crewai"}
+
+    def test_dimensions_is_rejected(self):
+        """Test dimensions fails loudly instead of being dropped by the embedding function."""
+        with pytest.raises(ValidationError, match="dimensions is not supported"):
+            DeepInfraProvider(api_key="test-key", dimensions=1024)
+
+    def test_dimensions_is_rejected_through_factory(self):
+        """Test an embedder config with dimensions fails at build time with the reason."""
+        with pytest.raises(ValidationError, match="text-embedding-3"):
+            build_embedder(
+                {
+                    "provider": "deepinfra",
+                    "config": {"api_key": "test-key", "dimensions": 1024},
+                }
+            )
+
+    def test_dimensions_none_is_accepted(self):
+        """Test an explicit None for dimensions is a no-op."""
+        provider = DeepInfraProvider(api_key="test-key", dimensions=None)
+
+        assert provider.model_name == "Qwen/Qwen3-Embedding-8B"
 
     def test_missing_api_key_raises_validation_error(self, monkeypatch):
         """Test that missing API key raises ValidationError when no env vars set."""
