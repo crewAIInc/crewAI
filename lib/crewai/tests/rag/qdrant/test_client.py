@@ -8,6 +8,7 @@ from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.types import BaseRecord
 from qdrant_client import AsyncQdrantClient
 from qdrant_client import QdrantClient as SyncQdrantClient
+from qdrant_client.models import Distance, VectorParams
 
 
 @pytest.fixture
@@ -488,7 +489,40 @@ class TestQdrantClient:
 
         call_args = mock_qdrant_client.query_points.call_args
         assert call_args.kwargs["limit"] == 5
-        assert call_args.kwargs["score_threshold"] == 0.8
+        assert call_args.kwargs["score_threshold"] == pytest.approx(0.6)
+
+    def test_search_applies_score_threshold_to_reported_scores(self):
+        """Test that score_threshold filters on the same 0-1 scale as result scores."""
+        # Cosine similarity to the query: 1.0, 0.28, -0.28 -> scores 1.0, 0.64, 0.36
+        vectors = {
+            "query": [1.0, 0.0],
+            "exact": [1.0, 0.0],
+            "related": [0.28, 0.96],
+            "unrelated": [-0.28, 0.96],
+        }
+        client = QdrantClient(
+            client=SyncQdrantClient(location=":memory:"),
+            embedding_function=lambda text: vectors[text],
+        )
+        client.create_collection(
+            collection_name="test_collection",
+            vectors_config=VectorParams(size=2, distance=Distance.COSINE),
+        )
+        documents: list[BaseRecord] = [
+            {"content": "exact"},
+            {"content": "related"},
+            {"content": "unrelated"},
+        ]
+        client.add_documents(collection_name="test_collection", documents=documents)
+
+        results = client.search(
+            collection_name="test_collection", query="query", score_threshold=0.6
+        )
+
+        assert [(r["content"], round(r["score"], 2)) for r in results] == [
+            ("exact", 1.0),
+            ("related", 0.64),
+        ]
 
     def test_search_collection_not_exists(self, client, mock_qdrant_client):
         """Test that search raises error if collection doesn't exist."""
