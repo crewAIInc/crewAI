@@ -67,6 +67,7 @@ def test_search_redraw_shows_only_matching_rows(monkeypatch) -> None:
 
     rendered = output.getvalue()
     assert "Create email draft" in rendered
+    assert "1 match" in rendered
     assert "Send an email" not in rendered
     assert rendered.count("\033[2K") >= 6
 
@@ -89,6 +90,7 @@ def test_searchable_draw_shows_the_query_and_an_empty_match(monkeypatch) -> None
     assert "missing" in rendered
     assert "type to filter" in rendered
     assert "No matching actions" in rendered
+    assert "0 matches" in rendered
     assert "Send an email" not in rendered
 
 
