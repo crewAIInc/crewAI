@@ -1,5 +1,5 @@
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -43,6 +43,7 @@ from crewai_cli.crew_run_tui import (
     _format_json_in_text,
     _try_parse_structured,
 )
+import httpx
 import pytest
 from rich.text import Text
 
@@ -2275,3 +2276,229 @@ def test_format_json_in_text_still_pretty_prints_valid_json() -> None:
     assert _format_json_in_text('data: {"a": 1} and [...]') == (
         "data: " + '{\n  "a": 1\n}' + " and [...]"
     )
+
+
+# --- what the run app's Deploy met before a deployment attempt ---------------
+
+
+@pytest.fixture
+def deploy_usage(monkeypatch) -> list[str]:
+    features: list[str] = []
+
+    class FakeTelemetry:
+        def set_tracer(self) -> None:
+            pass
+
+        def feature_usage_span(self, feature, attributes=None) -> None:
+            features.append(feature)
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
+    return features
+
+
+def _deploy_doubles(monkeypatch, *, creates, login):
+    calls: list[str] = []
+
+    class FakeDeployCommand:
+        def create_crew(self, **kwargs) -> None:
+            calls.append("create")
+            outcome = creates.pop(0)
+            if outcome is not None:
+                raise outcome
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            calls.append("login")
+            if login is not None:
+                raise login
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+    return calls
+
+
+def test_a_logged_in_deploy_counts_no_hurdle(monkeypatch, deploy_usage) -> None:
+    calls = _deploy_doubles(monkeypatch, creates=[None], login=None)
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create"]
+    assert deploy_usage == []
+
+
+def test_a_login_prompt_that_succeeds_counts_the_prompt_only(monkeypatch, deploy_usage) -> None:
+    calls = _deploy_doubles(
+        monkeypatch, creates=[AuthenticationRequiredError(), None], login=None
+    )
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert deploy_usage == ["cli_usage:deploy_login_prompted"]
+
+
+def test_still_not_logged_in_after_the_prompt_counts_why_and_says_so(
+    monkeypatch, capsys, deploy_usage
+) -> None:
+    _deploy_doubles(
+        monkeypatch,
+        creates=[AuthenticationRequiredError(), AuthenticationRequiredError()],
+        login=None,
+    )
+
+    run_crew._chain_deploy()
+
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        "cli_usage:deploy_stopped:login_still_required",
+    ]
+    assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason"),
+    [(KeyboardInterrupt(), "login_abandoned"), (httpx.HTTPError("access_denied"), "login_failed")],
+)
+def test_a_login_that_ends_badly_is_counted_and_still_raised(
+    monkeypatch, deploy_usage, raised, reason
+) -> None:
+    """Counting must not change what the user sees: the error still escapes."""
+    calls = _deploy_doubles(
+        monkeypatch, creates=[AuthenticationRequiredError()], login=raised
+    )
+
+    with pytest.raises(type(raised)):
+        run_crew._chain_deploy()
+
+    assert calls == ["create", "login"]
+    assert deploy_usage == [
+        "cli_usage:deploy_login_prompted",
+        f"cli_usage:deploy_stopped:{reason}",
+    ]
+
+
+def test_a_failing_usage_count_never_changes_the_deploy(monkeypatch, capsys) -> None:
+    class BrokenTelemetry:
+        def set_tracer(self) -> None:
+            raise RuntimeError("exporter is down")
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", BrokenTelemetry)
+    calls = _deploy_doubles(
+        monkeypatch,
+        creates=[AuthenticationRequiredError(), AuthenticationRequiredError()],
+        login=None,
+    )
+
+    run_crew._chain_deploy()
+
+    assert calls == ["create", "login", "create"]
+    assert "Deploy failed: authentication is still required." in capsys.readouterr().out
+
+
+# --- why an evaluation asked for on this screen never reached a verdict ------
+
+
+@pytest.fixture
+def stops(monkeypatch) -> list[str]:
+    """The `cli_usage:eval_stopped:*` features counted, in order."""
+    features: list[str] = []
+
+    class FakeTelemetry:
+        def set_tracer(self) -> None:
+            pass
+
+        def feature_usage_span(self, feature, attributes=None) -> None:
+            features.append(feature)
+
+    monkeypatch.setattr("crewai_core.telemetry.Telemetry", FakeTelemetry)
+    return features
+
+
+def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_why_it_stopped(
+    monkeypatch, stops
+) -> None:
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
+
+    app.action_evaluate_crew()
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
+    assert stops == ["cli_usage:eval_stopped:untraced"]
+
+
+def test_a_run_started_by_crewai_eval_leaves_the_untraced_count_to_the_command(
+    monkeypatch, stops
+) -> None:
+    """The command waiting behind this screen says "not traced" and counts it;
+    counting it here as well would count one stop twice."""
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+    monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
+    with crew_run_tui.evaluating_after_run():
+        app = CrewRunApp()
+        app._execution_uuid = "run-this-app"
+        app._evaluate_if_one_is_waiting()
+
+    assert stops == []
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason"),
+    [
+        ("amp_403", "amp_403"),
+        (SystemExit(1), "unexpected"),
+        (RuntimeError("client bug"), "unexpected"),
+    ],
+)
+def test_an_evaluation_that_stops_on_this_screen_counts_why_and_answers_for_the_run(
+    monkeypatch, tmp_path, stops, raised, reason
+) -> None:
+    """The marker tells a `crewai eval` waiting behind this screen that the run
+    was answered for, so it neither starts it again nor counts the stop twice."""
+    from crewai_cli.experimental.eval_crew import (
+        EvaluationStoppedError,
+        evaluation_marker,
+    )
+
+    if isinstance(raised, str):
+        raised = EvaluationStoppedError("AMP answered 403.", reason=raised)
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.evaluate_run", Mock(side_effect=raised)
+    )
+
+    monkeypatch.chdir(tmp_path)
+    began = datetime.now(timezone.utc)
+
+    app._evaluate_now("run-this-app")
+
+    assert app._evaluation["state"] == "failed"
+    assert stops == [f"cli_usage:eval_stopped:{reason}"]
+    marker = evaluation_marker(after=began)
+    assert marker is not None and marker["execution_id"] == "run-this-app"
+
+
+def test_an_evaluation_that_finishes_counts_no_stop(monkeypatch, stops) -> None:
+    app = CrewRunApp()
+    app._evaluation = {"state": "starting"}
+    monkeypatch.setattr(
+        CrewRunApp, "call_from_thread", lambda self, handler, *args: handler(*args)
+    )
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.evaluate_run",
+        Mock(return_value={"status": "done", "verdict": {"gate": "passed"}}),
+    )
+
+    app._evaluate_now("run-this-app")
+
+    assert stops == []
