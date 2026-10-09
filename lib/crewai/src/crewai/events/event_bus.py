@@ -49,6 +49,12 @@ from crewai.events.types.event_bus_types import (
     SyncHandler,
     SyncHandlerSet,
 )
+from crewai.events.types.flow_events import (
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
+    MethodExecutionStartedEvent,
+)
 from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.events.utils.handlers import (
@@ -89,6 +95,14 @@ _registered_entity_ids_var: contextvars.ContextVar[set[int] | None] = (
 )
 _runtime_scope_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
     "crewai_runtime_scope_depth", default=0
+)
+
+ORDERED_SYNC_EVENT_TYPES: Final = (
+    LLMStreamChunkEvent,
+    MethodExecutionStartedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionPausedEvent,
 )
 
 
@@ -507,7 +521,7 @@ class CrewAIEventsBus:
             level_async = frozenset(h for h in level if h in async_handlers)
 
             if level_sync:
-                if event_type is LLMStreamChunkEvent:
+                if event_type in ORDERED_SYNC_EVENT_TYPES:
                     self._call_handlers(source, event, level_sync, state)
                 else:
                     ctx = contextvars.copy_context()
@@ -612,12 +626,11 @@ class CrewAIEventsBus:
         if not sync_handlers and not async_handlers:
             return None
 
-        self._ensure_executor_initialized()
-        self._has_pending_events = True
-
         state = self._runtime_state
 
         if has_dependencies:
+            self._ensure_executor_initialized()
+            self._has_pending_events = True
             return self._track_future(
                 asyncio.run_coroutine_threadsafe(
                     self._emit_with_dependencies(source, event, state),
@@ -626,9 +639,13 @@ class CrewAIEventsBus:
             )
 
         if sync_handlers:
-            if event_type is LLMStreamChunkEvent:
+            if event_type in ORDERED_SYNC_EVENT_TYPES:
                 self._call_handlers(source, event, sync_handlers, state)
+                if not async_handlers:
+                    return None
             else:
+                self._ensure_executor_initialized()
+                self._has_pending_events = True
                 ctx = contextvars.copy_context()
                 sync_future = self._sync_executor.submit(
                     ctx.run, self._call_handlers, source, event, sync_handlers, state
@@ -637,6 +654,8 @@ class CrewAIEventsBus:
                     return self._track_future(sync_future)
 
         if async_handlers:
+            self._ensure_executor_initialized()
+            self._has_pending_events = True
             return self._track_future(
                 asyncio.run_coroutine_threadsafe(
                     self._acall_handlers(source, event, async_handlers, state),
