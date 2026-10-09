@@ -96,7 +96,7 @@ class TestModelKeyBackwardCompatibility:
 
         provider = DeepInfraProvider(api_key="test-key")
 
-        assert provider.model_name == "BAAI/bge-m3"
+        assert provider.model_name == "Qwen/Qwen3-Embedding-8B"
 
     def test_azure_provider_ignores_openai_chat_model_env(self, monkeypatch):
         """Test Azure embeddings don't inherit the OpenAI chat model env var."""

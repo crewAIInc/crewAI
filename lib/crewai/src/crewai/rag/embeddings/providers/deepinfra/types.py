@@ -10,7 +10,7 @@ class DeepInfraProviderConfig(TypedDict, total=False):
 
     api_key: str
     model: str
-    model_name: Annotated[str, "BAAI/bge-m3"]
+    model_name: Annotated[str, "Qwen/Qwen3-Embedding-8B"]
     api_base: str
     default_headers: dict[str, Any] | None
     dimensions: int | None
