@@ -6,6 +6,7 @@ import os
 import pickle
 import secrets
 import stat
+import tempfile
 from typing import Any, TypedDict
 
 from crewai_core.lock_store import lock as store_lock
@@ -203,8 +204,13 @@ class PickleHandler:
         # Atomic no-clobber creation: O_CREAT|O_EXCL prevents two processes
         # from writing different keys simultaneously. If another process won,
         # load its key instead of using our in-memory copy.
+        #
+        # O_BINARY keeps the Windows CRT from translating 0x0A bytes to CRLF
+        # on write, which would corrupt the fixed 32-byte key length on read.
+        # It does not exist on POSIX; the getattr guard yields 0 there.
+        open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_BINARY", 0)
         try:
-            fd = os.open(key_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            fd = os.open(key_path, open_flags, 0o600)
         except FileExistsError:
             # Another process created the key between our check and create.
             # Validate and load the installed key.
@@ -274,9 +280,24 @@ class PickleHandler:
             dir_mode = stat.S_IMODE(dir_stat.st_mode)
 
             if dir_mode & 0o077:
-                raise PermissionError(
-                    f"HMAC key directory {key_dir} has insecure mode {oct(dir_mode)}; expected 0700"
-                )
+                # A pre-existing directory (e.g. ~/.crewai created at 0755 by
+                # the skills cache or CLI provider/model caches) must not lock
+                # existing users out: tighten it to 0700 instead of raising.
+                # Ownership was verified above, so the chmod is ours to make.
+                # Fail closed only when hardening is impossible.
+                try:
+                    os.chmod(key_dir, 0o700)
+                except OSError as e:
+                    raise PermissionError(
+                        f"HMAC key directory {key_dir} has insecure mode "
+                        f"{oct(dir_mode)} and could not be hardened: {e}"
+                    ) from e
+                dir_mode = stat.S_IMODE(os.lstat(key_dir).st_mode)
+                if dir_mode & 0o077:
+                    raise PermissionError(
+                        f"HMAC key directory {key_dir} has insecure mode "
+                        f"{oct(dir_mode)}; expected 0700"
+                    )
 
         # Validate key file only if it exists (it may not during first creation).
         if os.path.exists(key_path):
@@ -306,18 +327,79 @@ class PickleHandler:
     def save(self, data: Any) -> None:
         """Save the data to the specified file using pickle with HMAC signature.
 
+        The payload is serialized exactly once into a buffer; the signature
+        covers those same bytes. Both files are written atomically (temp file
+        in the destination directory + fsync + rename) so a concurrent reader
+        never observes a torn write and a symlink planted at the destination
+        is replaced rather than followed.
+
         Args:
             data: The data to be saved to the file.
         """
+        payload = pickle.dumps(data)
+        signature = hmac.new(self._key, payload, hashlib.sha256).digest()
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            with open(self.file_path, "wb") as f:
-                pickle.dump(obj=data, file=f)
+            self._atomic_write(self.file_path, payload)
+            self._atomic_write(self._sig_path, signature)
 
-            with open(self.file_path, "rb") as f:
-                payload = f.read()
-            signature = hmac.new(self._key, payload, hashlib.sha256).digest()
-            with open(self._sig_path, "wb") as f:
-                f.write(signature)
+    @staticmethod
+    def _atomic_write(path: str, data: bytes) -> None:
+        """Write bytes to path atomically via temp file + fsync + rename.
+
+        The temp file lives in the destination directory (same filesystem, so
+        the rename is atomic) and is created 0600 by mkstemp.
+        """
+        dest_dir = os.path.dirname(os.path.abspath(path)) or os.curdir
+        fd, tmp_path = tempfile.mkstemp(dir=dest_dir, prefix=".crewai_pkl_tmp_")
+        try:
+            try:
+                offset = 0
+                while offset < len(data):
+                    offset += os.write(fd, data[offset:])
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            os.replace(tmp_path, path)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+    @staticmethod
+    def _read_regular_file(path: str) -> bytes:
+        """Read a file that must be a regular file, refusing symlinks.
+
+        The open uses O_NOFOLLOW where the platform provides it, so a symlink
+        planted at a predictable path cannot redirect the read, and O_NONBLOCK
+        so a planted FIFO cannot block the open; the fstat check then rejects
+        anything that is not a regular file (FIFO, socket, device).
+
+        Raises:
+            FileNotFoundError: If the path does not exist.
+            ValueError: If the path is a symlink or not a regular file.
+        """
+        flags = (
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        )
+        try:
+            fd = os.open(path, flags)
+        except FileNotFoundError:
+            raise
+        except OSError as e:
+            raise ValueError(
+                f"Refusing to read {path}: not accessible as a regular file ({e})"
+            ) from e
+        try:
+            file_obj = os.fdopen(fd, "rb")
+        except BaseException:
+            os.close(fd)
+            raise
+        with file_obj:
+            if not stat.S_ISREG(os.fstat(file_obj.fileno()).st_mode):
+                raise ValueError(f"Refusing to read {path}: not a regular file")
+            return file_obj.read()
 
     def load(self) -> Any:
         """Load the data from the specified file with HMAC integrity verification.
@@ -335,8 +417,7 @@ class PickleHandler:
             return {}
 
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            with open(self.file_path, "rb") as file:
-                payload = file.read()
+            payload = self._read_regular_file(self.file_path)
 
             if not os.path.exists(self._sig_path):
                 raise ValueError(
@@ -345,8 +426,7 @@ class PickleHandler:
                 )
 
             try:
-                with open(self._sig_path, "rb") as f:
-                    stored_sig = f.read()
+                stored_sig = self._read_regular_file(self._sig_path)
             except FileNotFoundError:
                 raise ValueError(
                     f"Integrity check failed for {self.file_path}: "
