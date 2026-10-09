@@ -32,6 +32,9 @@ class CrewEvaluator:
     Attributes:
         crew: The crew of agents to evaluate.
         tasks_scores: A dictionary to store the scores of the agents for each task.
+            Scores are stored per task position; a skipped task (e.g. a
+            ConditionalTask whose condition was not met) leaves a ``None``
+            placeholder at its position.
         run_execution_times: A dictionary to store execution times for each run.
         iteration: The current iteration of the evaluation.
     """
@@ -45,7 +48,7 @@ class CrewEvaluator:
     ) -> None:
         self.crew = crew
         self.llm = eval_llm
-        self.tasks_scores: defaultdict[int, list[float]] = defaultdict(list)
+        self.tasks_scores: defaultdict[int, list[float | None]] = defaultdict(list)
         self.run_execution_times: defaultdict[int, list[float]] = defaultdict(list)
         self.iteration: int = 0
         self._setup_for_evaluating()
@@ -114,33 +117,55 @@ class CrewEvaluator:
         │ Crew               │ 9.0   │ 9.5   │ 9.0   │ 9.2        │                              │
         │ Execution Time (s) │ 42    │ 79    │ 52    │ 57         │                              │
         └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
+
+        Tasks skipped in a run (e.g. a ConditionalTask whose condition was not
+        met) are shown as ``-`` and are excluded from averages.
         """
-        task_averages = [
-            sum(scores) / len(scores)
-            for scores in zip(*self.tasks_scores.values(), strict=False)
-        ]
-        crew_average = sum(task_averages) / len(task_averages)
+        runs = sorted(self.tasks_scores)
+        run_scores_by_run = [self.tasks_scores[run] for run in runs]
+
+        task_averages: list[float | None] = []
+        for task_index in range(len(self.crew.tasks)):
+            scores_at_position = (
+                run_scores[task_index]
+                for run_scores in run_scores_by_run
+                if task_index < len(run_scores)
+            )
+            scores = [score for score in scores_at_position if score is not None]
+            task_averages.append(
+                sum(scores) / len(scores) if scores else None,
+            )
+
+        valid_task_averages = [avg for avg in task_averages if avg is not None]
+        crew_average = (
+            sum(valid_task_averages) / len(valid_task_averages)
+            if valid_task_averages
+            else None
+        )
 
         table = Table(title="Tasks Scores \n (1-10 Higher is better)", box=HEAVY_EDGE)
 
         table.add_column("Tasks/Crew/Agents", style="cyan")
-        for run in range(1, len(self.tasks_scores) + 1):
-            table.add_column(f"Run {run}", justify="center")
+        for run_index in range(1, len(runs) + 1):
+            table.add_column(f"Run {run_index}", justify="center")
         table.add_column("Avg. Total", justify="center")
         table.add_column("Agents", style="green")
 
         for task_index, task in enumerate(self.crew.tasks):
             task_scores = [
-                self.tasks_scores[run][task_index]
-                for run in range(1, len(self.tasks_scores) + 1)
+                run_scores[task_index] if task_index < len(run_scores) else None
+                for run_scores in run_scores_by_run
             ]
             avg_score = task_averages[task_index]
             agents = list(task.processed_by_agents)
 
             table.add_row(
                 f"Task {task_index + 1}",
-                *[f"{score:.1f}" for score in task_scores],
-                f"{avg_score:.1f}",
+                *[
+                    f"{score:.1f}" if score is not None else "-"
+                    for score in task_scores
+                ],
+                f"{avg_score:.1f}" if avg_score is not None else "-",
                 f"- {agents[0]}" if agents else "",
             )
 
@@ -150,14 +175,16 @@ class CrewEvaluator:
             if task_index < len(self.crew.tasks) - 1:
                 table.add_row("", "", "", "", "", "")
 
-        crew_scores = [
-            sum(self.tasks_scores[run]) / len(self.tasks_scores[run])
-            for run in range(1, len(self.tasks_scores) + 1)
-        ]
+        crew_scores: list[float | None] = []
+        for run_scores in run_scores_by_run:
+            valid_scores = [score for score in run_scores if score is not None]
+            crew_scores.append(
+                sum(valid_scores) / len(valid_scores) if valid_scores else None
+            )
         table.add_row(
             "Crew",
-            *[f"{score:.2f}" for score in crew_scores],
-            f"{crew_average:.1f}",
+            *[f"{score:.2f}" if score is not None else "-" for score in crew_scores],
+            f"{crew_average:.1f}" if crew_average is not None else "-",
             "",
         )
 
@@ -165,7 +192,9 @@ class CrewEvaluator:
             int(sum(tasks_exec_times))
             for _, tasks_exec_times in self.run_execution_times.items()
         ]
-        execution_time_avg = int(sum(run_exec_times) / len(run_exec_times))
+        execution_time_avg = (
+            int(sum(run_exec_times) / len(run_exec_times)) if run_exec_times else 0
+        )
         table.add_row(
             "Execution Time (s)", *map(str, run_exec_times), f"{execution_time_avg}", ""
         )
@@ -181,9 +210,11 @@ class CrewEvaluator:
             task_output: The output of the task to evaluate.
         """
         current_task = None
-        for task in self.crew.tasks:
+        current_task_index = -1
+        for task_index, task in enumerate(self.crew.tasks):
             if task.description == task_output.description:
                 current_task = task
+                current_task_index = task_index
                 break
 
         if not current_task or not task_output:
@@ -213,7 +244,13 @@ class CrewEvaluator:
                     crew=self.crew,
                 ),
             )
-            self.tasks_scores[self.iteration].append(quality_score)
+            # Store the score at the task's position so tasks skipped in this
+            # run (which never invoke this callback) don't shift the scores
+            # of the tasks that did execute.
+            run_scores = self.tasks_scores[self.iteration]
+            while len(run_scores) <= current_task_index:
+                run_scores.append(None)
+            run_scores[current_task_index] = quality_score
             if current_task.execution_duration is not None:
                 self.run_execution_times[self.iteration].append(
                     current_task.execution_duration
