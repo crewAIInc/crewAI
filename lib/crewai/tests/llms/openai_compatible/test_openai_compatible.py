@@ -1,8 +1,12 @@
 """Tests for OpenAI-compatible providers."""
 
+import json
 import os
+from typing import Any
 from unittest.mock import patch
 
+import httpx
+import openai
 import pytest
 
 from crewai.llm import LLM
@@ -446,3 +450,177 @@ class TestCallMocking:
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert hasattr(completion, "acall")
         assert callable(completion.acall)
+
+
+# Hosted providers that route natively instead of through LiteLLM. Each case is
+# (provider, prefixed model, model id the SDK receives, endpoint, key env var,
+# base URL env var).
+HOSTED_PROVIDER_CASES = [
+    pytest.param(
+        "groq",
+        "groq/openai/gpt-oss-120b",
+        "openai/gpt-oss-120b",
+        "https://api.groq.com/openai/v1",
+        "GROQ_API_KEY",
+        "GROQ_BASE_URL",
+        id="groq",
+    ),
+]
+
+_CHAT_COMPLETION = {
+    "id": "chatcmpl-1",
+    "object": "chat.completion",
+    "created": 0,
+    "model": "served-model",
+    "choices": [
+        {
+            "index": 0,
+            "message": {"role": "assistant", "content": "Hello from the provider"},
+            "finish_reason": "stop",
+        }
+    ],
+    "usage": {"prompt_tokens": 3, "completion_tokens": 4, "total_tokens": 7},
+}
+
+
+def _recording_llm(model: str, requests: list[httpx.Request]) -> Any:
+    """Build ``LLM(model)`` with SDK clients that record requests instead of sending them.
+
+    The clients get the LLM's own resolved parameters, so the URL and key under
+    test are the ones the provider configuration produced.
+    """
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=_CHAT_COMPLETION)
+
+    llm = LLM(model=model)
+    params = llm._get_client_params()
+    transport = httpx.MockTransport(respond)
+    llm._client = openai.OpenAI(**params, http_client=httpx.Client(transport=transport))
+    llm._async_client = openai.AsyncOpenAI(
+        **params, http_client=httpx.AsyncClient(transport=transport)
+    )
+    return llm
+
+
+def _assert_sent(
+    result: Any, requests: list[httpx.Request], base_url: str, model_id: str
+) -> None:
+    """One request went to the provider's endpoint, with its key and model id."""
+    assert result == "Hello from the provider"
+    (request,) = requests
+    assert str(request.url) == f"{base_url}/chat/completions"
+    assert request.headers["authorization"] == "Bearer provider-key"
+    assert json.loads(request.content)["model"] == model_id
+
+
+@pytest.mark.parametrize(
+    ("provider", "model", "model_id", "base_url", "key_env", "url_env"),
+    HOSTED_PROVIDER_CASES,
+)
+class TestHostedProviders:
+    """Hosted OpenAI-compatible providers route natively, with their own key and endpoint."""
+
+    def test_config(self, provider, model, model_id, base_url, key_env, url_env):
+        config = OPENAI_COMPATIBLE_PROVIDERS[provider]
+        assert config.base_url == base_url
+        assert config.api_key_env == key_env
+        assert config.base_url_env == url_env
+        assert config.api_key_required is True
+
+    def test_prefixed_model_routes_natively(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        """Only the provider prefix is removed; the rest of the id reaches the SDK."""
+        route = LLM._resolve_route(model, {})
+        assert route.native_class is OpenAICompatibleCompletion
+        with patch.dict(os.environ, {key_env: "provider-key"}, clear=True):
+            llm = LLM(model=model)
+        assert isinstance(llm, OpenAICompatibleCompletion)
+        assert llm.is_litellm is False
+        assert llm.provider == provider
+        assert llm.model == model_id
+        assert llm.base_url == base_url
+        assert llm.api_key == "provider-key"
+
+    def test_explicit_provider_routes_natively(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        with patch.dict(os.environ, {key_env: "provider-key"}, clear=True):
+            llm = LLM(model=model_id, provider=provider)
+        assert isinstance(llm, OpenAICompatibleCompletion)
+        assert llm.provider == provider
+        assert llm.model == model_id
+
+    def test_never_uses_openai_key_or_endpoint(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        """OPENAI_* settings belong to OpenAI and must not leak into this provider."""
+        openai_env = {
+            "OPENAI_API_KEY": "openai-key",
+            "OPENAI_BASE_URL": "https://openai.example.com/v1",
+        }
+        with patch.dict(os.environ, {**openai_env, key_env: "provider-key"}, clear=True):
+            llm = LLM(model=model)
+            params = llm._get_client_params()
+        assert params["api_key"] == "provider-key"
+        assert params["base_url"] == base_url
+
+        with patch.dict(os.environ, openai_env, clear=True), pytest.raises(
+            ValueError, match=key_env
+        ):
+            OpenAICompatibleCompletion(model=model_id, provider=provider)
+
+    def test_base_url_env_overrides_default(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        env = {key_env: "provider-key", url_env: "https://proxy.example.com/v1"}
+        with patch.dict(os.environ, env, clear=True):
+            llm = LLM(model=model)
+        assert llm.base_url == "https://proxy.example.com/v1"
+
+    def test_explicit_values_take_precedence_over_env(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        env = {key_env: "env-key", url_env: "https://env.example.com/v1"}
+        with patch.dict(os.environ, env, clear=True):
+            llm = LLM(
+                model=model,
+                api_key="explicit-key",
+                base_url="https://explicit.example.com/v1",
+            )
+        assert llm.api_key == "explicit-key"
+        assert llm.base_url == "https://explicit.example.com/v1"
+
+    def test_is_litellm_keeps_the_legacy_path(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        pytest.importorskip("litellm")
+        llm = LLM(model=model, is_litellm=True)
+        assert not isinstance(llm, OpenAICompatibleCompletion)
+        assert llm.is_litellm is True
+        assert llm.model == model
+
+    def test_call_sends_model_id_to_provider(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        requests: list[httpx.Request] = []
+        with patch.dict(os.environ, {key_env: "provider-key"}, clear=True):
+            llm = _recording_llm(model, requests)
+            result = llm.call("Hi")
+        llm._client.close()
+
+        _assert_sent(result, requests, base_url, model_id)
+
+    @pytest.mark.asyncio
+    async def test_acall_sends_model_id_to_provider(
+        self, provider, model, model_id, base_url, key_env, url_env
+    ):
+        requests: list[httpx.Request] = []
+        with patch.dict(os.environ, {key_env: "provider-key"}, clear=True):
+            llm = _recording_llm(model, requests)
+            result = await llm.acall("Hi")
+        await llm._async_client.close()
+
+        _assert_sent(result, requests, base_url, model_id)
