@@ -1,0 +1,99 @@
+---
+title: Instant Expert
+description: Let a crew pay a specific person, such as an executive or domain expert, for a short call or a written answer
+icon: user-tie
+mode: "wide"
+---
+
+# Instant Expert
+
+[Instant Expert](https://instant.expert) lets an agent get answers from specific people worth paying: executives, operators and domain experts. It finds people who match a description (or takes the ones you name), sends each a paid invitation for a short call or a written answer, and charges only if they book or answer. It's a remote MCP server, so CrewAI connects to it with `MCPServerHTTP` and needs no extra package.
+
+## Requirements
+
+- An LLM API key, for example `OPENAI_API_KEY`
+- No Instant Expert account for test mode
+
+## Get a test-mode token
+
+Test mode uses fictional people, records each email instead of sending it, and charges a Stripe test card. One request returns a token that lasts 24 hours:
+
+```bash
+curl -X POST https://instant.expert/api/sandbox
+export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
+```
+
+## Usage
+
+A `before_tool_call` hook stops the crew at `send_requests`, the tool that places the order, until a person approves it.
+
+```python
+import os
+
+from crewai import Agent, Crew, Task
+from crewai.hooks import ToolCallHookContext, before_tool_call
+from crewai.mcp import MCPServerHTTP
+
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp/test",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_SANDBOX_TOKEN']}"},
+)
+
+
+@before_tool_call
+def approve_paid_send(context: ToolCallHookContext) -> bool | None:
+    # CrewAI prefixes MCP tool names with the server, so match the suffix.
+    if not context.tool_name.endswith("send_requests"):
+        return None
+    answer = context.request_human_input(
+        prompt=f"Place this order? {context.tool_input}",
+        default_message="Type y to send:",
+    )
+    return None if answer.strip().lower() == "y" else False  # False blocks the call
+
+
+coordinator = Agent(
+    role="Outreach coordinator",
+    goal="Get answers from the right executives and report each person's outcome",
+    backstory="You find the right people through Instant Expert and only spend within budget.",
+    mcps=[instant_expert],
+)
+outreach = Task(
+    description=(
+        "Find 3 product leaders at SaaS companies. Offer each of them $40 for a "
+        "15-minute call about how they choose analytics tools, with a $150 total "
+        "budget. Search, wait for the job with get_job, read the people with "
+        "get_search, draft with queue_requests, then preview with "
+        "prepare_request_order. Then call send_requests right away with the "
+        "preview's details and confirmed=true. Don't ask for approval in chat: "
+        "the crew pauses at send_requests and shows the founder the order. "
+        "Finally, report who booked, replied or declined."
+    ),
+    expected_output="Who was invited, the price, and each person's status",
+    agent=coordinator,
+)
+print(Crew(agents=[coordinator], tasks=[outreach]).kickoff().raw)
+```
+
+In test mode, each fictional person responds on their own after delivery: some book, some reply with a question, some decline and some never answer.
+
+## Available tools
+
+| Tool                                                | What it does                                                                      |
+| --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `plan_outreach`                                     | Suggests audiences worth reaching for a company or research question             |
+| `search_people`, `get_job`, `get_search`            | Finds people who match a description, as a background job                       |
+| `import_people`                                     | Saves people you already know by LinkedIn URL, email, or name and company        |
+| `queue_requests`, `get_request_draft`               | Drafts the paid invitations: message, price per person and total budget          |
+| `prepare_request_order`, `send_requests`            | Previews the order, then places it                                               |
+| `get_request_order`, `list_requests`, `get_request` | Tracks delivery and each person's response                                       |
+| `simulate_response`                                 | Test mode only: forces a fictional person's outcome                              |
+
+## Going live
+
+Connect to `https://instant.expert/mcp` with an OAuth access token for a real account; there are no API keys. Placing orders from an agent also needs paid sending turned on for that connection and a saved card. See the [Instant Expert MCP docs](https://instant.expert/docs/mcp).
+
+## Notes
+
+- CrewAI retries a tool call that runs longer than 30 seconds. That's safe here: tools that start a job or place an order take an idempotency key, and a retry with the same arguments returns the original job or order.
+- [`crewai-instant-expert`](https://github.com/Instant-Expert/integrations/tree/main/python/crewai-instant-expert) adds the server's workflow instructions for the agent's backstory and a tool that waits for jobs without spending agent iterations.

@@ -1,0 +1,99 @@
+---
+title: Instant Expert
+description: 크루가 임원이나 도메인 전문가 같은 특정 인물에게 비용을 지불하고 짧은 통화나 서면 답변을 받을 수 있게 합니다
+icon: user-tie
+mode: "wide"
+---
+
+# Instant Expert
+
+[Instant Expert](https://instant.expert)를 사용하면 에이전트가 비용을 지불할 가치가 있는 특정 인물, 즉 임원, 실무 책임자, 도메인 전문가에게서 답을 얻을 수 있습니다. 설명에 맞는 사람을 찾거나 지정한 사람을 그대로 사용하고, 각 사람에게 짧은 통화나 서면 답변을 요청하는 유료 초대를 보내며, 상대가 예약하거나 답변한 경우에만 요금이 청구됩니다. 원격 MCP 서버이므로 CrewAI는 `MCPServerHTTP`로 연결하며 별도의 패키지가 필요하지 않습니다.
+
+## 요구 사항
+
+- LLM API 키 (예: `OPENAI_API_KEY`)
+- 테스트 모드에는 Instant Expert 계정이 필요하지 않습니다
+
+## 테스트 모드 토큰 받기
+
+테스트 모드는 가상의 인물을 사용하고, 이메일을 보내는 대신 기록하며, Stripe 테스트 카드로 결제합니다. 요청 한 번으로 24시간 동안 유효한 토큰을 받을 수 있습니다:
+
+```bash
+curl -X POST https://instant.expert/api/sandbox
+export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
+```
+
+## 사용법
+
+`before_tool_call` 훅은 주문을 실행하는 도구인 `send_requests`에서 크루를 멈추고, 사람이 승인할 때까지 기다립니다.
+
+```python
+import os
+
+from crewai import Agent, Crew, Task
+from crewai.hooks import ToolCallHookContext, before_tool_call
+from crewai.mcp import MCPServerHTTP
+
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp/test",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_SANDBOX_TOKEN']}"},
+)
+
+
+@before_tool_call
+def approve_paid_send(context: ToolCallHookContext) -> bool | None:
+    # CrewAI prefixes MCP tool names with the server, so match the suffix.
+    if not context.tool_name.endswith("send_requests"):
+        return None
+    answer = context.request_human_input(
+        prompt=f"Place this order? {context.tool_input}",
+        default_message="Type y to send:",
+    )
+    return None if answer.strip().lower() == "y" else False  # False blocks the call
+
+
+coordinator = Agent(
+    role="Outreach coordinator",
+    goal="Get answers from the right executives and report each person's outcome",
+    backstory="You find the right people through Instant Expert and only spend within budget.",
+    mcps=[instant_expert],
+)
+outreach = Task(
+    description=(
+        "Find 3 product leaders at SaaS companies. Offer each of them $40 for a "
+        "15-minute call about how they choose analytics tools, with a $150 total "
+        "budget. Search, wait for the job with get_job, read the people with "
+        "get_search, draft with queue_requests, then preview with "
+        "prepare_request_order. Then call send_requests right away with the "
+        "preview's details and confirmed=true. Don't ask for approval in chat: "
+        "the crew pauses at send_requests and shows the founder the order. "
+        "Finally, report who booked, replied or declined."
+    ),
+    expected_output="Who was invited, the price, and each person's status",
+    agent=coordinator,
+)
+print(Crew(agents=[coordinator], tasks=[outreach]).kickoff().raw)
+```
+
+테스트 모드에서는 초대가 전달된 뒤 각 가상 인물이 스스로 응답합니다. 일부는 예약하고, 일부는 질문으로 답장하고, 일부는 거절하며, 일부는 끝내 답하지 않습니다.
+
+## 사용 가능한 도구
+
+| 도구                                                | 기능                                                                  |
+| --------------------------------------------------- | --------------------------------------------------------------------- |
+| `plan_outreach`                                     | 회사나 리서치 질문에 맞는, 연락할 가치가 있는 대상 그룹을 제안합니다  |
+| `search_people`, `get_job`, `get_search`            | 설명에 맞는 사람을 백그라운드 작업으로 찾습니다                       |
+| `import_people`                                     | 이미 아는 사람을 LinkedIn URL, 이메일 또는 이름과 회사로 저장합니다   |
+| `queue_requests`, `get_request_draft`               | 메시지, 1인당 금액, 총예산을 담은 유료 초대 초안을 작성합니다         |
+| `prepare_request_order`, `send_requests`            | 주문을 미리 보고 실행합니다                                           |
+| `get_request_order`, `list_requests`, `get_request` | 전달 상태와 각 사람의 응답을 추적합니다                               |
+| `simulate_response`                                 | 테스트 모드 전용: 가상 인물의 결과를 강제로 지정합니다                |
+
+## 실제 계정으로 전환
+
+실제 계정에서는 OAuth 액세스 토큰으로 `https://instant.expert/mcp`에 연결합니다. API 키는 없습니다. 에이전트가 주문을 실행하려면 해당 연결에서 유료 발송을 켜고 카드를 저장해 두어야 합니다. 자세한 내용은 [Instant Expert MCP 문서](https://instant.expert/docs/mcp)를 참고하세요.
+
+## 참고
+
+- CrewAI는 30초 넘게 실행되는 도구 호출을 재시도합니다. 작업을 시작하거나 주문을 실행하는 도구는 멱등성 키를 받으며, 같은 인수로 재시도하면 원래의 작업이나 주문이 반환되므로 안전합니다.
+- [`crewai-instant-expert`](https://github.com/Instant-Expert/integrations/tree/main/python/crewai-instant-expert)는 에이전트 backstory에 넣을 서버의 워크플로 지침과, 에이전트 반복 횟수를 쓰지 않고 작업 완료를 기다리는 도구를 제공합니다.
