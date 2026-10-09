@@ -50,9 +50,11 @@ def test_local_shell_exec_does_not_select_cloud_from_environment(sdk, monkeypatc
     machine.delete.assert_called_once_with()
 
 
-def test_persistent_shell_and_attached_files_share_vm_without_double_delete(sdk):
+def test_persistent_shell_and_attached_files_share_vm_without_double_delete(sdk, tmp_path):
     client, machine = sdk
-    shell = SmolExecTool(persistent=True, network=False)
+    offline_image = tmp_path / "rootfs"
+    offline_image.mkdir()
+    shell = SmolExecTool(persistent=True, network=False, image=str(offline_image))
     try:
         shell.run(command="echo first")
         shell.run(command="echo second")
@@ -132,4 +134,26 @@ def test_invalid_file_payload_never_creates_a_cloud_vm(sdk):
         tool.run(action="write", path="/workspace/a", content="not base64!", binary=True)
     with pytest.raises(UnicodeEncodeError):
         tool.run(action="write", path="/workspace/a", content="\ud800")
+    client.Machine.create.assert_not_called()
+
+
+def test_offline_local_registry_image_rejected_before_provisioning(sdk):
+    client, _ = sdk
+    with pytest.raises(ValueError, match="local image archive"):
+        SmolExecTool(network=False).run(command="echo should-not-run")
+    client.Machine.create.assert_not_called()
+
+
+def test_offline_cloud_image_is_left_to_cloud_scheduler(sdk):
+    client, _ = sdk
+    SmolExecTool(target="cloud", network=False).run(command="echo allowed")
+    assert client.Machine.create.call_args.args[0].network is False
+
+
+def test_missing_local_offline_image_rejected_before_provisioning(sdk):
+    client, _ = sdk
+    with pytest.raises(ValueError, match="does not exist"):
+        SmolExecTool(network=False, image="./missing-image.tar").run(
+            command="echo should-not-run"
+        )
     client.Machine.create.assert_not_called()

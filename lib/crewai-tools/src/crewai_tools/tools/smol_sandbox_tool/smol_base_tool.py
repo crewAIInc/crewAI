@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+from pathlib import Path
 import threading
 from typing import Any, Literal
 
@@ -65,6 +66,25 @@ class SmolBaseTool(BaseTool):
         )
 
     def _create_machine(self, sdk: Any) -> Any:
+        if self.target == "local" and not self.network:
+            image = self.image
+            local_path = image.startswith(("/", "./", "../")) or image.endswith(
+                (".tar", ".tar.gz", ".tgz")
+            )
+            windows_path = (
+                len(image) >= 3
+                and image[0].isalpha()
+                and image[1] == ":"
+                and image[2] in ("/", "\\")
+            )
+            if not local_path and not windows_path:
+                raise ValueError(
+                    "Local VMs with network=False need a local image archive or "
+                    "rootfs directory; registry images require network access. "
+                    "Set image='./image.tar' or network=True."
+                )
+            if not Path(image).exists():
+                raise ValueError(f"Local offline image source does not exist: {image}")
         return sdk.Machine.create(
             sdk.MachineConfig(
                 image=self.image, network=self.network, persistent=self.persistent

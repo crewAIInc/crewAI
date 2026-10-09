@@ -48,3 +48,5 @@ finally:
 The attached file tool never deletes the VM owned by `shell`. `SmolPythonTool` accepts `code` and optional `argv`, `env`, and `timeout`. The file tool accepts `read` and `write`; use `binary=True` for base64 data.
 
 Guest networking is enabled by default to allow cold image pulls and package installs. Set `network=False` to block it; a blocked Cloud VM needs an image already cached on its chosen node. The local target remains local even when Cloud credentials are present. See the tool package README for additional lifecycle examples.
+
+For a network-disabled local VM, supply a local rootfs directory or a `docker save` archive through `image`, since registry images require guest networking.
