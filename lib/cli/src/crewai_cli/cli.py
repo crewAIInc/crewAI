@@ -385,17 +385,44 @@ def train(
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
+@click.option(
+    "--list",
+    "list_tasks",
+    is_flag=True,
+    help="List stored tasks available for replay without running the crew.",
+)
 def replay(
     task_id: str | None,
     deprecated_task_id: str | None,
     trained_agents_file: str | None,
+    list_tasks: bool,
 ) -> None:
-    """Replay the crew execution from a specific task.
+    """Replay the crew execution from a specific task, or list stored tasks.
 
     Args:
         task_id: The ID of the task to replay from.
         trained_agents_file: Optional trained-agents pickle path.
+        list_tasks: List stored tasks instead of replaying, even with a task ID.
     """
+    if list_tasks:
+        try:
+            from crewai_cli.task_outputs import load_task_outputs
+
+            tasks = load_task_outputs()
+            if not tasks:
+                click.echo(
+                    "No task outputs found. Only crew kickoff task outputs are logged."
+                )
+                return
+
+            for index, task in enumerate(tasks, 1):
+                click.echo(f"Task {index}: {task['task_id']}")
+                click.echo(f"Expected output: {task['expected_output']}")
+                click.echo("------")
+        except Exception as e:
+            click.echo(f"An error occurred while listing replay tasks: {e}", err=True)
+        return
+
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.
     # Safe in every command the user explicitly invoked: get_or_create_project_id
     # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it

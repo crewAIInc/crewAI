@@ -1,8 +1,8 @@
 """Lightweight SQLite reader for kickoff task outputs.
 
-Only used by the ``crewai log-tasks-outputs`` CLI command.  Depends solely on
-the standard library + *appdirs* so crewai-cli can read stored outputs without
-importing the full crewai framework.
+Used by the ``crewai log-tasks-outputs`` and ``crewai replay --list`` commands.
+Depends solely on the standard library + *appdirs* so crewai-cli can read stored
+outputs without importing the full crewai framework.
 """
 
 from __future__ import annotations
