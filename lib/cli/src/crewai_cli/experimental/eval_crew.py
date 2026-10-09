@@ -30,7 +30,7 @@ import os
 from pathlib import Path
 import sys
 import time
-from typing import Any, NoReturn, cast
+from typing import Any, Literal, NoReturn, cast
 from urllib.parse import urlparse
 import uuid
 import webbrowser
@@ -98,6 +98,41 @@ def _record_usage(*, logged_in: bool) -> None:
         pass
 
 
+StopReason = Literal[
+    "untraced",
+    "declined",
+    "no_project",
+    "login_unreadable",
+    "network_error",
+    "amp_401",
+    "amp_403",
+    "amp_404",
+    "amp_4xx",
+    "amp_5xx",
+    "invalid_response",
+    "evaluation_failed",
+    "unexpected",
+]
+
+
+def record_stop(reason: StopReason) -> None:
+    """Count an evaluation that was asked for and did not reach a verdict, and why.
+
+    `cli_usage:eval` counts the evaluations that started; this is the other
+    side, so the gap between pressing Evaluate and seeing a verdict has a cause.
+    The reason is a word from a closed list and never the message, which can
+    carry AMP's own words or a local path.
+    """
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span(f"cli_usage:eval_stopped:{reason}")
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
+
+
 NOT_TRACED = (
     "The run finished but no trace was recorded: the run may have failed, sharing the "
     "trace was declined, or this project's crewai is older than the version that records "
@@ -110,8 +145,13 @@ class EvaluationStoppedError(RuntimeError):
 
     Raised rather than printed-and-exited, because the same two functions serve
     the terminal and the run app: one of them owns the screen, and a line
-    printed underneath it is a smear nobody asked for.
+    printed underneath it is a smear nobody asked for. REASON says why in one
+    word, for the usage count; an unclassified stop is "unexpected".
     """
+
+    def __init__(self, message: str, *, reason: StopReason = "unexpected") -> None:
+        super().__init__(message)
+        self.reason: StopReason = reason
 
 
 def _note(text: str, style: str = "dim") -> None:
@@ -139,7 +179,7 @@ def eval_crew(run_id: str | None = None) -> None:
     try:
         client = _amp_client(trusted)
     except EvaluationStoppedError as stopped:
-        _fail(str(stopped))
+        _stop(stopped)
     recorded_amp = str(record.get("amp_base_url") or "").rstrip("/")
     if not run_id and recorded_amp and recorded_amp != client.base_url.rstrip("/"):
         console.print(
@@ -156,7 +196,7 @@ def eval_crew(run_id: str | None = None) -> None:
             project_id=project_id,
         )
     except EvaluationStoppedError as stopped:
-        _fail(str(stopped))
+        _stop(stopped)
     # After, not before: `cli_usage:eval` counts an evaluation, and a refused
     # request — a run AMP does not hold, a credential it will not take — is not
     # one. `_start_evaluation` raises rather than returning on those.
@@ -174,12 +214,14 @@ def eval_crew(run_id: str | None = None) -> None:
     try:
         finished = _wait(client, started["id"], url)
     except EvaluationStoppedError as stopped:
-        _fail(str(stopped))
+        _stop(stopped)
     except KeyboardInterrupt:
         console.print(
             Text(f"\nStill running{f' at {url}' if url else ''}."), style="yellow"
         )
         raise SystemExit(130) from None
+    if finished.get("status") == "failed":
+        record_stop("evaluation_failed")
     _print_verdict(finished, url)
     _print_brief(finished)
     _say_where_the_criteria_live(write_eval_config(finished))
@@ -362,6 +404,8 @@ def evaluate_run(
     record_evaluation_outcome(execution_id)
     on_started(started)
     finished = _wait(client, started["id"], started.get("url"), on_status=on_status)
+    if finished.get("status") == "failed":
+        record_stop("evaluation_failed")
     written = write_eval_config(finished)
     if written is not None:
         finished = {**finished, "wrote_eval_config": written.name}
@@ -513,7 +557,8 @@ def saved_login() -> str | None:
         # take the sentence with it.
         raise EvaluationStoppedError(
             f"Could not read the saved login ({type(error).__name__}: {error}). "
-            "Run `crewai login` again, or `crewai eval` will not know who you are."
+            "Run `crewai login` again, or `crewai eval` will not know who you are.",
+            reason="login_unreadable",
         ) from error
 
 
@@ -526,6 +571,7 @@ def _run_and_let_the_app_evaluate() -> str | None:
     flow that took the terminal), and says so itself when nothing was traced.
     """
     if not Path("pyproject.toml").is_file():
+        record_stop("no_project")
         _fail(
             "No crewAI project here (no pyproject.toml). Run `crewai eval` from the project's "
             "directory, or name a run: `crewai eval --run EXECUTION_ID`."
@@ -538,13 +584,16 @@ def _run_and_let_the_app_evaluate() -> str | None:
     if is_dmn_mode_enabled() or not sys.stdin.isatty():
         # `Text`, never markup: the reason may be an OS error's own words, and
         # its `[Errno 13]` would be read as a style tag.
-        console.print(Text(_nothing_traced_unattended() or steps), style="yellow")
+        reason, message = _nothing_traced_unattended() or ("untraced", steps)
+        record_stop(reason)
+        console.print(Text(message), style="yellow")
         raise SystemExit(1)
     if not click.confirm(
         "No traced run is recorded in this project. Turn tracing on and run the crew now? "
         "The run's trace is sent to CrewAI AMP.",
         default=True,  # João, 2026-09-20: y/n with Y as the default — the prompt says what Enter does
     ):
+        record_stop("declined")
         console.print(steps, style="yellow")
         raise SystemExit(0)
 
@@ -569,6 +618,7 @@ def _run_and_let_the_app_evaluate() -> str | None:
     if marker is not None:
         if marker.get("execution_id"):
             return None
+        record_stop("untraced")
         console.print(NOT_TRACED, style="bold red")
         raise SystemExit(1)
 
@@ -582,6 +632,7 @@ def _run_and_let_the_app_evaluate() -> str | None:
     if traced:
         return str(traced)
 
+    record_stop("untraced")
     console.print(NOT_TRACED, style="bold red")
     raise SystemExit(1)
 
@@ -599,7 +650,7 @@ def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
     return when >= began - timedelta(seconds=1)
 
 
-def _nothing_traced_unattended() -> str | None:
+def _nothing_traced_unattended() -> tuple[StopReason, str] | None:
     """Why a run with tracing on left nothing to evaluate, when nobody was there.
 
     An anonymous run asks before its trace leaves the machine, and a process with
@@ -607,7 +658,7 @@ def _nothing_traced_unattended() -> str | None:
     not. Telling that user to turn tracing on sends them round the same loop;
     logging in is what makes an unattended run traced. None when tracing is off
     or there is a login: the ordinary steps are the right ones then. A login
-    that cannot be read says so instead.
+    that cannot be read says so instead, and is counted as that.
     """
     if os.environ.get(TRACING_ENV_VAR, "").strip().lower() not in ("true", "1"):
         return None
@@ -617,8 +668,8 @@ def _nothing_traced_unattended() -> str | None:
     except EvaluationStoppedError as unreadable:
         # A login that exists and cannot be read is the reason, and its
         # sentence says what to do about it.
-        return str(unreadable)
-    return (
+        return unreadable.reason, str(unreadable)
+    return "untraced", (
         "No traced run is recorded in this project. Tracing is on, but a run nobody is "
         "watching is only traced when you are logged in: run `crewai login`, then "
         "`crewai run` and `crewai eval` again."
@@ -657,7 +708,8 @@ def _start_evaluation(
             )
         except httpx.HTTPError as error:
             raise EvaluationStoppedError(
-                f"Could not reach AMP to start the evaluation: {error}"
+                f"Could not reach AMP to start the evaluation: {error}",
+                reason="network_error",
             ) from error
         # The run finished moments ago and its spans are still on their way:
         # waiting is the answer, not a 404 the reader can do nothing with.
@@ -699,10 +751,12 @@ def _accepted(
             payload["url"] = url
             return payload
         raise EvaluationStoppedError(
-            f"AMP answered without an evaluation id ({response.status_code})."
+            f"AMP answered without an evaluation id ({response.status_code}).",
+            reason="invalid_response",
         )
     raise EvaluationStoppedError(
-        _refusal_message(response, subject, about_a_deployment=about_a_deployment)
+        _refusal_message(response, subject, about_a_deployment=about_a_deployment),
+        reason=_refusal_reason(response),
     )
 
 
@@ -764,30 +818,39 @@ def _wait(
             misses += 1
             if misses >= POLL_RETRIES:
                 raise EvaluationStoppedError(
-                    f"Could not reach AMP while waiting ({error}); the evaluation keeps running{where}."
+                    f"Could not reach AMP while waiting ({error}); the evaluation keeps running{where}.",
+                    reason="network_error",
                 ) from error
             time.sleep(POLL_SECONDS)
             continue
         if response.status_code >= 500:
             misses += 1
             if misses >= POLL_RETRIES:
-                raise EvaluationStoppedError(_refusal_message(response, subject))
+                raise EvaluationStoppedError(
+                    _refusal_message(response, subject),
+                    reason=_refusal_reason(response),
+                )
             time.sleep(POLL_SECONDS)
             continue
         if response.status_code != 200:
-            raise EvaluationStoppedError(_refusal_message(response, subject))
+            raise EvaluationStoppedError(
+                _refusal_message(response, subject),
+                reason=_refusal_reason(response),
+            )
         misses = 0
         payload = _payload(response) or {}
         status = payload.get("status")
         if status == "done" and not well_formed(payload):
             raise EvaluationStoppedError(
-                f"AMP answered done without a {answer} (protocol error); follow it{where or ' on AMP'}."
+                f"AMP answered done without a {answer} (protocol error); follow it{where or ' on AMP'}.",
+                reason="invalid_response",
             )
         if status in FINISHED:
             return payload
         if status not in STATUSES:
             raise EvaluationStoppedError(
-                f"AMP answered without a known evaluation status ({status!r}); follow it{where or ' on AMP'}."
+                f"AMP answered without a known evaluation status ({status!r}); follow it{where or ' on AMP'}.",
+                reason="invalid_response",
             )
         if on_status is not None:
             on_status(payload)
@@ -1369,6 +1432,27 @@ def _refusal_message(
 def _refused(response: httpx.Response, subject: str) -> None:
     """The same words, printed, then exit 1."""
     _fail(_refusal_message(response, subject))
+
+
+def _refusal_reason(response: httpx.Response) -> StopReason:
+    """AMP's refusal by status class, for the usage count."""
+    code = response.status_code
+    if code == 401:
+        return "amp_401"
+    if code == 403:
+        return "amp_403"
+    if code == 404:
+        return "amp_404"
+    if 400 <= code < 500:
+        return "amp_4xx"
+    if code >= 500:
+        return "amp_5xx"
+    return "invalid_response"
+
+
+def _stop(stopped: EvaluationStoppedError) -> NoReturn:
+    record_stop(stopped.reason)
+    _fail(str(stopped))
 
 
 def _fail(message: str) -> NoReturn:
