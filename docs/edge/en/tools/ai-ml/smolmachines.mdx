@@ -1,0 +1,50 @@
+---
+title: Smol Machines Sandbox Tools
+description: Run shell commands, Python, and file operations in isolated local or cloud microVMs.
+icon: box
+mode: "wide"
+---
+
+# Smol Machines Sandbox Tools
+
+Give an agent an isolated computer with `SmolExecTool`, `SmolPythonTool`, and `SmolFileTool`. The tools run in local microVMs by default; set `target="cloud"` to use Smol Machines Cloud. All three use the same VM API, so an agent can move between local development and hosted execution.
+
+## Installation
+
+```shell
+uv add "crewai-tools[smol]"
+```
+
+Local execution needs Linux with `/dev/kvm` or an Apple Silicon Mac. Cloud execution needs `SMOL_CLOUD_TOKEN` on the worker.
+
+## Basic use
+
+```python
+from crewai import Agent
+from crewai_tools import SmolExecTool
+
+agent = Agent(
+    role="Developer",
+    goal="Implement and test a feature",
+    backstory="Build and verify changes in an isolated computer.",
+    tools=[SmolExecTool()],
+)
+```
+
+Each tool call creates and deletes a VM by default. Set `persistent=True` to retain state between calls, and close the VM when finished:
+
+```python
+from crewai_tools import SmolExecTool, SmolFileTool
+
+shell = SmolExecTool(target="cloud", persistent=True)
+try:
+    shell.run(command="echo hello > /workspace/message.txt")
+    files = SmolFileTool(target="cloud", machine_id=shell.active_machine_id)
+    print(files.run(action="read", path="/workspace/message.txt"))
+finally:
+    shell.close()
+```
+
+The attached file tool never deletes the VM owned by `shell`. `SmolPythonTool` accepts `code` and optional `argv`, `env`, and `timeout`. The file tool accepts `read` and `write`; use `binary=True` for base64 data.
+
+Guest networking is enabled by default to allow cold image pulls and package installs. Set `network=False` to block it; a blocked Cloud VM needs an image already cached on its chosen node. The local target remains local even when Cloud credentials are present. See the tool package README for additional lifecycle examples.
