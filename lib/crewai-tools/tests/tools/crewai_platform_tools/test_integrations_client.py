@@ -350,10 +350,7 @@ def test_clipper_client_executes_without_deployment_instance_uuid(
 
 @patch.dict(
     "os.environ",
-    {
-        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
-        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "ignored-token",
-    },
+    {"CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id"},
     clear=True,
 )
 @patch(
