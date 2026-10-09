@@ -1155,6 +1155,39 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="DeepInfra">
+    CrewAI talks to DeepInfra through its native OpenAI client, so no LiteLLM install is needed.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    DEEPINFRA_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    DEEPINFRA_BASE_URL=https://api.deepinfra.com/v1/openai
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      DeepInfra features:
+      - Open-weight models (Llama, Qwen, DeepSeek, GLM, Mistral and more) behind one OpenAI-compatible API
+      - Tool calling, streaming and JSON schema structured outputs
+      - Per-token pricing and context length published in the model catalog
+    </Info>
+
+    Model ids are already in `org/model` form, so a full reference carries three segments,
+    for example `deepinfra/meta-llama/Llama-4-Scout-17B-16E-Instruct`. See the
+    [model catalog curated for CrewAI](https://api.deepinfra.com/v1/openai/models?filter=with_meta&sort_by=crewai),
+    which is public and needs no authentication, for current ids, context lengths and pricing.
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses

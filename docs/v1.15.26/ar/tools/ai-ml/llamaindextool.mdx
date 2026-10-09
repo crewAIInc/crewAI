@@ -1,0 +1,147 @@
+---
+title: أداة LlamaIndex
+description: أداة `LlamaIndexTool` هي غلاف لأدوات ومحركات استعلام LlamaIndex.
+icon: address-book
+mode: "wide"
+---
+
+# `LlamaIndexTool`
+
+## الوصف
+
+صُممت `LlamaIndexTool` لتكون غلافاً عاماً حول أدوات ومحركات استعلام LlamaIndex، مما يتيح لك الاستفادة من موارد LlamaIndex من حيث خطوط أنابيب RAG/الوكيلية كأدوات للتوصيل بوكلاء CrewAI. تتيح لك هذه الأداة دمج قدرات معالجة واسترجاع البيانات القوية من LlamaIndex في سير عمل CrewAI بسلاسة.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت LlamaIndex:
+
+```shell
+uv add llama-index
+```
+
+## خطوات البدء
+
+لاستخدام `LlamaIndexTool` بفعالية، اتبع الخطوات التالية:
+
+1. **تثبيت LlamaIndex**: ثبّت حزمة LlamaIndex باستخدام الأمر أعلاه.
+2. **إعداد LlamaIndex**: اتبع [وثائق LlamaIndex](https://docs.llamaindex.ai/) لإعداد خط أنابيب RAG/وكيلي.
+3. **إنشاء أداة أو محرك استعلام**: أنشئ أداة أو محرك استعلام LlamaIndex تريد استخدامه مع CrewAI.
+
+## مثال
+
+توضح الأمثلة التالية كيفية تهيئة الأداة من مكونات LlamaIndex مختلفة:
+
+### من أداة LlamaIndex
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from crewai import Agent
+from llama_index.core.tools import FunctionTool
+
+# Example 1: Initialize from FunctionTool
+def search_data(query: str) -> str:
+    """Search for information in the data."""
+    # Your implementation here
+    return f"Results for: {query}"
+
+# Create a LlamaIndex FunctionTool
+og_tool = FunctionTool.from_defaults(
+    search_data,
+    name="DataSearchTool",
+    description="Search for information in the data"
+)
+
+# Wrap it with LlamaIndexTool
+tool = LlamaIndexTool.from_tool(og_tool)
+
+# Define an agent that uses the tool
+@agent
+def researcher(self) -> Agent:
+    '''
+    This agent uses the LlamaIndexTool to search for information.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        tools=[tool]
+    )
+```
+
+### من أدوات LlamaHub
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from llama_index.tools.wolfram_alpha import WolframAlphaToolSpec
+
+# Initialize from LlamaHub Tools
+wolfram_spec = WolframAlphaToolSpec(app_id="your_app_id")
+wolfram_tools = wolfram_spec.to_tool_list()
+tools = [LlamaIndexTool.from_tool(t) for t in wolfram_tools]
+```
+
+### من محرك استعلام LlamaIndex
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from llama_index.core import VectorStoreIndex
+from llama_index.core.readers import SimpleDirectoryReader
+
+# Load documents
+documents = SimpleDirectoryReader("./data").load_data()
+
+# Create an index
+index = VectorStoreIndex.from_documents(documents)
+
+# Create a query engine
+query_engine = index.as_query_engine()
+
+# Create a LlamaIndexTool from the query engine
+query_tool = LlamaIndexTool.from_query_engine(
+    query_engine,
+    name="Company Data Query Tool",
+    description="Use this tool to lookup information in company documents"
+)
+```
+
+## طرق الفئة
+
+توفر `LlamaIndexTool` طريقتي فئة رئيسيتين لإنشاء المثيلات:
+
+### from_tool
+
+تنشئ `LlamaIndexTool` من أداة LlamaIndex.
+
+```python Code
+@classmethod
+def from_tool(cls, tool: Any, **kwargs: Any) -> "LlamaIndexTool":
+    # Implementation details
+```
+
+### from_query_engine
+
+تنشئ `LlamaIndexTool` من محرك استعلام LlamaIndex.
+
+```python Code
+@classmethod
+def from_query_engine(
+    cls,
+    query_engine: Any,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    return_direct: bool = False,
+    **kwargs: Any,
+) -> "LlamaIndexTool":
+    # Implementation details
+```
+
+## المعاملات
+
+تقبل طريقة `from_query_engine` المعاملات التالية:
+
+- **query_engine**: مطلوب. محرك استعلام LlamaIndex المراد تغليفه.
+- **name**: اختياري. اسم الأداة.
+- **description**: اختياري. وصف الأداة.
+- **return_direct**: اختياري. ما إذا كان يتم إرجاع الاستجابة مباشرة. القيمة الافتراضية `False`.
+
+## الخلاصة
+
+توفر `LlamaIndexTool` طريقة قوية لدمج قدرات LlamaIndex في وكلاء CrewAI. من خلال تغليف أدوات ومحركات استعلام LlamaIndex، تمكّن الوكلاء من الاستفادة من وظائف استرجاع ومعالجة البيانات المتطورة، مما يعزز قدرتهم على التعامل مع مصادر المعلومات المعقدة.
