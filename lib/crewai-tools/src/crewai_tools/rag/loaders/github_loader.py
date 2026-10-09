@@ -103,6 +103,7 @@ class GithubLoader(BaseLoader):
         content = "\n".join(all_content)
         return LoaderResult(
             content=content,
+            source=repo_url,
             metadata={
                 "source": repo_url,
                 "repo": repo_name,
