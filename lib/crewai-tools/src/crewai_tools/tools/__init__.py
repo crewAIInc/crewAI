@@ -88,6 +88,7 @@ from crewai_tools.tools.generate_crewai_automation_tool.generate_crewai_automati
     GenerateCrewaiAutomationTool,
 )
 from crewai_tools.tools.github_search_tool.github_search_tool import GithubSearchTool
+from crewai_tools.tools.hacker_news_tool.hacker_news_tool import HackerNewsTopStoriesTool
 from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
     HyperbrowserLoadTool,
 )
@@ -265,6 +266,7 @@ __all__ = [
     "FirecrawlSearchTool",
     "GenerateCrewaiAutomationTool",
     "GithubSearchTool",
+    "HackerNewsTopStoriesTool",
     "HyperbrowserLoadTool",
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
