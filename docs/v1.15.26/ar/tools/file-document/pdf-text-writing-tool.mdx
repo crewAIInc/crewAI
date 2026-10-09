@@ -1,0 +1,75 @@
+---
+title: أداة كتابة نص PDF
+description: تكتب `PDFTextWritingTool` نصاً في مواضع محددة في ملف PDF، مع دعم الخطوط المخصصة.
+icon: file-pdf
+mode: "wide"
+---
+
+# `PDFTextWritingTool`
+
+## الوصف
+
+كتابة نص في إحداثيات دقيقة على صفحة PDF، مع إمكانية تضمين خط TrueType مخصص اختيارياً.
+
+## المعاملات
+
+### معاملات التشغيل
+
+- `pdf_path` (str, مطلوب): مسار ملف PDF المدخل.
+- `text` (str, مطلوب): النص المراد إضافته.
+- `position` (tuple[int, int], مطلوب): إحداثيات `(x, y)`.
+- `font_size` (int, الافتراضي `12`)
+- `font_color` (str, الافتراضي `"0 0 0 rg"`)
+- `font_name` (str, الافتراضي `"F1"`)
+- `font_file` (str, اختياري): مسار ملف `.ttf`.
+- `page_number` (int, الافتراضي `0`)
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PDFTextWritingTool
+
+tool = PDFTextWritingTool()
+
+agent = Agent(
+    role="PDF Editor",
+    goal="Annotate PDFs",
+    backstory="Documentation specialist",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Write 'CONFIDENTIAL' at (72, 720) on page 1 of ./sample.pdf",
+    expected_output="Confirmation message",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+### الاستخدام المباشر
+
+```python Code
+from crewai_tools import PDFTextWritingTool
+
+PDFTextWritingTool().run(
+  pdf_path="./input.pdf",
+  text="CONFIDENTIAL",
+  position=(72, 720),
+  font_size=18,
+  page_number=0,
+)
+```
+
+## نصائح
+
+- نقطة أصل الإحداثيات هي الزاوية السفلية اليسرى.
+- إذا كنت تستخدم خطاً مخصصاً (`font_file`)، تأكد من أنه ملف `.ttf` صالح.
