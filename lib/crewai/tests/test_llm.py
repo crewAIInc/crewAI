@@ -1029,11 +1029,11 @@ def test_prefixed_models_with_non_native_providers_use_litellm():
     assert llm.model == "groq/llama-3.3-70b"
     assert llm.provider == "groq"
 
-    # Test together/ prefix (not a native provider) → LiteLLM
-    llm2 = LLM(model="together/qwen-2.5-72b", is_litellm=False)
+    # Test sambanova/ prefix (not a native provider) → LiteLLM
+    llm2 = LLM(model="sambanova/Meta-Llama-3.1-70B-Instruct", is_litellm=False)
     assert llm2.is_litellm is True
-    assert llm2.model == "together/qwen-2.5-72b"
-    assert llm2.provider == "together"
+    assert llm2.model == "sambanova/Meta-Llama-3.1-70B-Instruct"
+    assert llm2.provider == "sambanova"
 
 
 @pytest.mark.parametrize(
