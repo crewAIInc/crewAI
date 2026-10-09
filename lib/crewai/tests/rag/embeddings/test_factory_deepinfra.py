@@ -119,7 +119,7 @@ class TestDeepInfraProviderDirect:
         provider = DeepInfraProvider(api_key="test-key")
 
         assert provider.api_key == "test-key"
-        assert provider.model_name == "BAAI/bge-m3"
+        assert provider.model_name == "Qwen/Qwen3-Embedding-8B"
         assert provider.api_base == "https://api.deepinfra.com/v1/openai"
         assert provider.dimensions is None
         assert provider.default_headers is None
@@ -128,14 +128,14 @@ class TestDeepInfraProviderDirect:
         """Test custom configuration values."""
         provider = DeepInfraProvider(
             api_key="test-custom-key",
-            model="Qwen/Qwen3-Embedding-8B",
+            model="Qwen/Qwen3-Embedding-4B",
             api_base="https://proxy.example.com/v1/openai",
             dimensions=4096,
             default_headers={"X-Test": "crewai"},
         )
 
         assert provider.api_key == "test-custom-key"
-        assert provider.model_name == "Qwen/Qwen3-Embedding-8B"
+        assert provider.model_name == "Qwen/Qwen3-Embedding-4B"
         assert provider.api_base == "https://proxy.example.com/v1/openai"
         assert provider.dimensions == 4096
         assert provider.default_headers == {"X-Test": "crewai"}

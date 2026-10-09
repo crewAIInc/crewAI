@@ -43,7 +43,7 @@ class DeepInfraProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         ),
     )
     model_name: str = Field(
-        default="BAAI/bge-m3",
+        default="Qwen/Qwen3-Embedding-8B",
         description="Model name to use for embeddings",
         validation_alias=AliasChoices(
             "model_name",
