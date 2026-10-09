@@ -121,5 +121,15 @@ def test_file_data_and_validation(sdk):
         tool.run(action="read", path="relative/path")
     with pytest.raises(ValueError, match="valid base64"):
         tool.run(action="write", path="/workspace/a", content="!!!", binary=True)
-    assert client.Machine.create.call_count == 4
-    assert machine.delete.call_count == 4
+    assert client.Machine.create.call_count == 3
+    assert machine.delete.call_count == 3
+
+
+def test_invalid_file_payload_never_creates_a_cloud_vm(sdk):
+    client, _ = sdk
+    tool = SmolFileTool(target="cloud")
+    with pytest.raises(ValueError, match="valid base64"):
+        tool.run(action="write", path="/workspace/a", content="not base64!", binary=True)
+    with pytest.raises(UnicodeEncodeError):
+        tool.run(action="write", path="/workspace/a", content="\ud800")
+    client.Machine.create.assert_not_called()

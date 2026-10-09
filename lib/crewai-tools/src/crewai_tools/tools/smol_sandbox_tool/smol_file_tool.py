@@ -44,15 +44,8 @@ class SmolFileTool(SmolBaseTool):
             raise ValueError("read does not accept content")
         if content is not None and action == "write" and not isinstance(content, str):
             raise ValueError("content must be a string")
-        machine, delete = self._acquire_machine()
-        try:
-            if action == "read":
-                data = machine.read_file(path)
-                return (
-                    base64.b64encode(data).decode("ascii") if binary else data.decode()
-                )
-            if content is None:
-                raise ValueError("write requires content")
+        data: bytes | None = None
+        if action == "write" and content is not None:
             if binary:
                 try:
                     data = base64.b64decode(content, validate=True)
@@ -60,6 +53,17 @@ class SmolFileTool(SmolBaseTool):
                     raise ValueError("binary content must be valid base64") from exc
             else:
                 data = content.encode()
+        machine, delete = self._acquire_machine()
+        try:
+            if action == "read":
+                file_data = machine.read_file(path)
+                return (
+                    base64.b64encode(file_data).decode("ascii")
+                    if binary
+                    else file_data.decode()
+                )
+            if data is None:
+                raise ValueError("write requires content")
             machine.write_file(path, data)
             return f"Wrote {len(data)} bytes to {path}"
         finally:
