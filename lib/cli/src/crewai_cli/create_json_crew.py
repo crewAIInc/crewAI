@@ -12,6 +12,7 @@ from typing import Any
 import warnings
 
 import click
+from crewai_core.platform_app_defaults import PLATFORM_APP_DEFAULT_TOOLS
 from crewai_core.platform_apps import (
     PLATFORM_APPLICATION_CATALOG,
     PLATFORM_APP_CATEGORIES,
@@ -543,13 +544,19 @@ def _select_platform_actions(selected_tools: list[str]) -> list[str]:
     ]
 
     for app in platform_apps:
+        app_tools = PLATFORM_APP_TOOLS[app]
+        default_slugs = set(PLATFORM_APP_DEFAULT_TOOLS[app])
         action_indices = pick_many(
             f"{PLATFORM_APP_DISPLAY_NAMES[app]} actions for this agent (space to toggle):",
-            [f"{item.display_name} ({item.slug})" for item in PLATFORM_APP_TOOLS[app]],
+            [f"{item.display_name} ({item.slug})" for item in app_tools],
+            preselected={
+                index
+                for index, item in enumerate(app_tools)
+                if item.slug in default_slugs
+            },
         )
         platform_actions.extend(
-            f"platform:{app}/{PLATFORM_APP_TOOLS[app][index].slug}"
-            for index in action_indices
+            f"platform:{app}/{app_tools[index].slug}" for index in action_indices
         )
 
     return non_platform_tools + platform_actions
@@ -1026,17 +1033,17 @@ def _platform_app_name(app: str) -> str:
 def _prompt_platform_token() -> str:
     """Explain how to prompt for an AMP Enterprise Action Auth Token."""
     click.secho(
-        "  To use CrewAI Platform tools, you need a CrewAI Platform Enterprise Action Auth Token.",
+        "  To use CrewAI Platform tools, you need an Enterprise Action Auth Token.",
         fg="yellow",
     )
     click.secho(
         "  Get your token from CrewAI AMP: https://app.crewai.com "
-        "→ Settings → Account → Integration Token.",
+        "→ Settings → Account → Enterprise Action Auth Token.",
         fg="cyan",
     )
     return str(
         click.prompt(
-            click.style("  CREWAI_PLATFORM_INTEGRATION_TOKEN", fg="cyan"),
+            click.style("  CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", fg="cyan"),
             hide_input=False,
             prompt_suffix=click.style(" > ", fg="bright_white"),
         )
@@ -1080,7 +1087,7 @@ def _report_platform_app_validation(
         status_code = getattr(getattr(error, "response", None), "status_code", None)
         if status_code in {401, 403}:
             click.secho(
-                "  ✘ CrewAI Platform Integration token is invalid or expired",
+                "  ✘ Enterprise Action Auth Token is invalid or expired",
                 fg="red",
             )
             return True
@@ -1134,7 +1141,7 @@ def _validate_platform_apps(
             app_name = _platform_app_name(app)
             click.echo()
             click.secho(
-                "  Checking CrewAI Platform Integration token and "
+                "  Checking Enterprise Action Auth Token and "
                 f"{app_name} integration on AMP...",
                 fg="cyan",
             )
@@ -1153,7 +1160,7 @@ def _show_platform_validation_guidance(
     click.echo()
     if token_invalid:
         click.secho(
-            "  Check your CrewAI Platform Integration token in AMP.",
+            "  Check your Enterprise Action Auth Token in AMP.",
             fg="yellow",
         )
         return
@@ -1163,7 +1170,7 @@ def _show_platform_validation_guidance(
         "  Check the "
         f"{', '.join(failed_app_names)} integration"
         f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
-        "Platform Integration token in AMP.",
+        "Enterprise Action Auth Token in AMP.",
         fg="yellow",
     )
 
@@ -1209,18 +1216,18 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         ) from error
 
     click.secho(
-        "  Checking for CREWAI_PLATFORM_INTEGRATION_TOKEN...",
+        "  Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN...",
         fg="cyan",
     )
-    token = os.environ.get("CREWAI_PLATFORM_INTEGRATION_TOKEN", "")
+    token = os.environ.get("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "")
     credential_location: str | None = None
     if token:
-        credential_location = "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable"
+        credential_location = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable"
 
     while True:
         if not token:
             click.secho(
-                "  No CREWAI_PLATFORM_INTEGRATION_TOKEN found; prompting for one.",
+                "  No CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN found; prompting for one.",
                 fg="yellow",
             )
             token = _prompt_platform_token()
@@ -1228,21 +1235,21 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
                 credential_location = "interactive prompt"
         if not token:
             click.secho(
-                "  A CrewAI Platform Integration token is required to validate "
+                "  An Enterprise Action Auth Token is required to validate "
                 "the selected integrations.",
                 fg="yellow",
             )
             continue
 
         _success(
-            f"Platform Integration token found via {credential_location}", dim=True
+            f"Enterprise Action Auth Token found via {credential_location}", dim=True
         )
-        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
         failed_apps, token_invalid = _validate_platform_apps(
             apps, ApplicationSelector, client_for_selector
         )
         if not failed_apps and not token_invalid:
-            _success("CrewAI Platform integration token set", bold=True)
+            _success("Enterprise Action Auth Token set", bold=True)
             _success(
                 "CrewAI Platform integrations connected: "
                 f"{', '.join(_platform_app_name(app) for app in apps)}"
@@ -1254,7 +1261,7 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
         if replacement_token:
             token = replacement_token
             credential_location = "interactive replacement prompt"
-            os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = token
+            os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
 
 
 # ── Main ────────────────────────────────────────────────────────
@@ -1322,11 +1329,11 @@ def create_json_crew(
     copy_assistant_instructions(folder_path)
 
     if platform_token:
-        os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
         env_vars = load_env_vars(folder_path)
-        env_vars["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = platform_token
+        env_vars["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = platform_token
         write_env_file(folder_path, env_vars)
-        _success("CrewAI Platform integration token saved to .env")
+        _success("Enterprise Action Auth Token saved to .env")
 
     for agent in agents:
         _write_jsonc(

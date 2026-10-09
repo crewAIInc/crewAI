@@ -249,7 +249,7 @@ def session_recorders(monkeypatch) -> dict[str, InMemorySpanExporter]:
     """
     monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
     monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
-    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
     monkeypatch.setattr("crewai.telemetry.tracing.grants.get_auth_token", lambda: None)

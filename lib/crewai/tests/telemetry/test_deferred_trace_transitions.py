@@ -28,7 +28,7 @@ def traces(monkeypatch):
     for name in (
         "OTEL_SDK_DISABLED",
         "CREWAI_USER_PAT",
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
