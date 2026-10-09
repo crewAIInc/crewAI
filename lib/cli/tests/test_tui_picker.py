@@ -50,6 +50,27 @@ def test_draw_multi_renders_only_the_visible_window(monkeypatch) -> None:
     assert "Tool 124" not in rendered
 
 
+def test_search_redraw_shows_only_matching_rows(monkeypatch) -> None:
+    output = StringIO()
+    monkeypatch.setattr(tui_picker.sys, "stdout", output)
+
+    tui_picker._draw_multi(
+        ["Send an email (send-email)", "Create email draft (create_draft)"],
+        cursor=1,
+        selected=set(),
+        row_indices=[1],
+        query="draft",
+        searchable=True,
+        clear=True,
+        previous_line_count=6,
+    )
+
+    rendered = output.getvalue()
+    assert "Create email draft" in rendered
+    assert "Send an email" not in rendered
+    assert rendered.count("\033[2K") >= 6
+
+
 def test_searchable_draw_shows_the_query_and_an_empty_match(monkeypatch) -> None:
     output = StringIO()
     monkeypatch.setattr(tui_picker.sys, "stdout", output)

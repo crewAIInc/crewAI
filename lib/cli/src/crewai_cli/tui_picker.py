@@ -119,7 +119,9 @@ def _draw_multi(
         hint_text += f" · showing {start + 1}-{end} of {len(rows)}"
     hint = f"  {_DIM}{hint_text}{_RESET}"
     if clear:
-        sys.stdout.write(f"\033[{previous_line_count or 1}A")
+        # Erase the previous block first. A shorter search result would
+        # otherwise leave the old rows visible underneath the matches.
+        _clear_lines(previous_line_count or 1)
     extra_lines = 0
     if searchable:
         sys.stdout.write(f"\033[2K  {_DIM}Search:{_RESET} {query}\n")
