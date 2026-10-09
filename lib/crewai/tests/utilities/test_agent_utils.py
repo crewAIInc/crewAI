@@ -1696,6 +1696,82 @@ class TestResolvePlusResponse:
         asyncio.run(main())
 
 
+@pytest.mark.parametrize("entry", ["agent", "plan"])
+@pytest.mark.parametrize("outcome", ["success", "unknown", "retryable", "cache", "limit"])
+def test_native_idempotency_preserves_tool_outcomes(entry, outcome):
+    from crewai.agents.cache.cache_handler import CacheHandler
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.tools.tool_failure import ToolFailure
+
+    clear_before_tool_call_hooks()
+    clear_after_tool_call_hooks()
+    calls = []
+
+    class PaymentTool(BaseTool):
+        name: str = "pay"
+        description: str = "Send a payment"
+
+        def _run(self, amount: int):
+            calls.append(amount)
+            if outcome == "unknown":
+                raise RuntimeError("response lost after sending payment")
+            if outcome == "retryable" and len(calls) == 1:
+                return ToolFailure(message="unavailable before payment", retryable=True)
+            return "payment-sent"
+
+    tool = PaymentTool(max_usage_count=1) if outcome == "limit" else PaymentTool()
+    if outcome == "limit":
+        tool.current_usage_count = 1
+    structured = tool.to_structured_tool()
+    handler = ToolsHandler(cache=CacheHandler() if outcome == "cache" else None)
+    if handler.cache:
+        handler.cache.add("pay", json.dumps({"amount": 10}), "payment-sent")
+    executor = AgentExecutor.model_construct(
+        tools=[structured], original_tools=[tool], tools_handler=handler
+    )
+    executor._available_functions = {"pay": tool.run}
+
+    def execute(call_id):
+        call = {"id": call_id, "function": {"name": "pay", "arguments": '{"amount":10}'}}
+        if entry == "agent":
+            return executor._execute_single_native_tool_call(call)["result"]
+        return execute_single_native_tool_call(
+            call,
+            available_functions={"pay": tool.run},
+            original_tools=[tool],
+            structured_tools=[structured],
+            tools_handler=handler,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=executor,
+        ).result
+
+    first = execute("first")
+    if outcome == "limit":
+        tool.current_usage_count = 0
+    if outcome == "cache":
+        handler.cache = None
+    second = execute("retry")
+    if outcome == "unknown":
+        assert "response lost" in first
+        assert "already in progress" in second
+        assert calls == [10]
+    elif outcome == "limit":
+        assert "limit" in first
+        assert second == "payment-sent"
+        assert calls == [10]
+    elif outcome == "retryable":
+        assert first == "unavailable before payment"
+        assert second == "payment-sent"
+        assert execute("later-retry") == "payment-sent"
+        assert calls == [10, 10]
+    else:
+        assert first == second == "payment-sent"
+        assert calls == ([] if outcome == "cache" else [10])
+
+
 _FORCE_FINAL_ANSWER = I18N_DEFAULT.errors("force_final_answer")
 
 

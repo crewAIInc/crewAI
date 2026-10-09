@@ -1,15 +1,23 @@
-"""Tools handler for managing tool execution and caching."""
+"""Tools handler for managing tool execution, caching, and idempotency."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.tools.cache_tools.cache_tools import CacheTools
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+from crewai.tools.tool_failure import ToolFailure, ToolFailureReason
+from crewai.utilities.idempotency_backend import (
+    IdempotencyBackend,
+    IdempotencyInProgressError,
+    MemoryIdempotencyBackend,
+)
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 class ToolsHandler(BaseModel):
@@ -22,6 +30,103 @@ class ToolsHandler(BaseModel):
 
     cache: CacheHandler | None = Field(default=None)
     last_used_tool: ToolCalling | InstructorToolCalling | None = Field(default=None)
+
+    # ------------------------------------------------------------------
+    # Idempotency — prevents duplicate tool side effects on task retry.
+    # Uses a pluggable backend (default: MemoryIdempotencyBackend).
+    # Inject a persistent backend for cross-process / cross-worker safety.
+    # ------------------------------------------------------------------
+    _idempotency_backend: IdempotencyBackend = PrivateAttr(
+        default_factory=MemoryIdempotencyBackend
+    )
+
+    _idempotency_task_id: str | None = PrivateAttr(default=None)
+
+    def begin_task(self, task_id: str) -> None:
+        """Reuse claims for a task retry without sharing them with other tasks."""
+        self._idempotency_task_id = task_id
+
+    def _get_backend(self) -> IdempotencyBackend:
+        """Return the backend shared by all calls using this handler."""
+        return self._idempotency_backend
+
+    def set_idempotency_backend(self, backend: IdempotencyBackend) -> None:
+        """Replace the idempotency backend (e.g. with a Redis-backed one).
+
+        Call once before any tool execution.
+        """
+        self._idempotency_backend = backend
+
+    def _idempotency_key(self, tool_name: str, arguments: dict[str, object]) -> str:
+        """Build a stable key from sanitised tool name and serialised arguments."""
+        args_json = json.dumps(arguments, sort_keys=True, default=str)
+        args_hash = hashlib.sha256(args_json.encode()).hexdigest()
+        key = f"{sanitize_tool_name(tool_name)}:{args_hash}"
+        return (
+            f"{self._idempotency_task_id}:{key}" if self._idempotency_task_id else key
+        )
+
+    def get_idempotent_result(
+        self, tool_name: str, arguments: dict[str, object]
+    ) -> Any:
+        """Return a previously stored result if this tool call already completed."""
+        key = self._idempotency_key(tool_name, arguments)
+        return self._get_backend().get(key)
+
+    def claim_idempotent_result(
+        self, tool_name: str, arguments: dict[str, object]
+    ) -> Any:
+        """Atomically try to claim the execution slot for this tool call.
+
+        There are three possible outcomes based on the backend's ``claim()``
+        return value:
+
+        * **(claimed, result) == (True, None)** — the caller owns the claim
+          and **must** execute the tool, then call :meth:`set_idempotent_result`
+          to publish the result.  This method returns ``None``.
+        * **(claimed, result) == (False, <value>)** — another caller already
+          completed this key; *result* is the final output.  This method
+          returns the stored result so the caller can skip execution.
+        * **(claimed, result) == (False, None)** — another caller has claimed
+          the key but has not yet published a result (still in progress).
+          This method raises :class:`IdempotencyInProgressError` so another
+          caller cannot repeat a side effect before its outcome is known.
+
+        Returns:
+            The previously stored result if this tool call already completed,
+            or ``None`` if the caller should proceed with execution.
+        """
+        key = self._idempotency_key(tool_name, arguments)
+        claimed, result = self._get_backend().claim(key)
+        if claimed:
+            return None  # caller must execute
+        if result is None:
+            raise IdempotencyInProgressError(
+                f"Tool call {sanitize_tool_name(tool_name)!r} is already in progress; "
+                "its outcome must be confirmed before retrying."
+            )
+        return result
+
+    def set_idempotent_result(
+        self, tool_name: str, arguments: dict[str, object], result: object
+    ) -> None:
+        """Store a tool result so that future retries can reuse it."""
+        key = self._idempotency_key(tool_name, arguments)
+        self._get_backend().set(key, result)
+
+    def release_idempotent_result(
+        self, tool_name: str, arguments: dict[str, object]
+    ) -> None:
+        """Release when execution did not start or the tool explicitly permits retry."""
+        self._get_backend().release(self._idempotency_key(tool_name, arguments))
+
+    def reset_idempotency_store(self) -> None:
+        """Clear the idempotency store.
+
+        Explicitly discard all claims and completed results in this backend.
+        Use begin_task for task isolation without discarding retry state.
+        """
+        self._idempotency_backend.clear()
 
     def on_tool_use(
         self,
@@ -37,6 +142,21 @@ class ToolsHandler(BaseModel):
             should_cache: Whether to cache the tool output.
         """
         self.last_used_tool = calling
+
+        # Store in idempotency store (independent of cache config).
+        # Use the same sanitised name as the read path for consistency.
+        if calling.arguments is not None:
+            arguments: dict[str, object] = (
+                calling.arguments if isinstance(calling.arguments, dict) else {}
+            )
+            if isinstance(output, ToolFailure):
+                if output.retryable or output.reason is ToolFailureReason.USAGE_LIMIT:
+                    self.release_idempotent_result(calling.tool_name, arguments)
+                else:
+                    self.set_idempotent_result(calling.tool_name, arguments, output)
+            else:
+                self.set_idempotent_result(calling.tool_name, arguments, output)
+
         if self.cache and should_cache and calling.tool_name != CacheTools().name:
             input_str = ""
             if calling.arguments:
@@ -46,7 +166,7 @@ class ToolsHandler(BaseModel):
                     input_str = str(calling.arguments)
 
             self.cache.add(
-                tool=calling.tool_name,
+                tool=sanitize_tool_name(calling.tool_name),
                 input=input_str,
                 output=output,
             )
