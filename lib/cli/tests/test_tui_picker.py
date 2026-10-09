@@ -48,3 +48,17 @@ def test_draw_multi_renders_only_the_visible_window(monkeypatch) -> None:
     assert "Tool 65" in rendered
     assert "Tool 0" not in rendered
     assert "Tool 124" not in rendered
+
+
+def test_matching_label_indices_keeps_original_positions() -> None:
+    labels = [
+        "Send an email (send-email)",
+        "Create email draft (create_draft)",
+        "Search emails (search-emails)",
+    ]
+
+    assert tui_picker.matching_label_indices(labels, "") == [0, 1, 2]
+    assert tui_picker.matching_label_indices(labels, "EMAIL") == [0, 1, 2]
+    assert tui_picker.matching_label_indices(labels, "draft") == [1]
+    assert tui_picker.matching_label_indices(labels, "search-emails") == [2]
+    assert tui_picker.matching_label_indices(labels, "missing") == []

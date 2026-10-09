@@ -317,6 +317,18 @@ def _next_selectable_index(
     return cursor
 
 
+def matching_label_indices(labels: list[str], query: str) -> list[int]:
+    """Original indexes whose label contains ``query``, ignoring case.
+
+    An empty query matches every label. The returned indexes stay in label
+    order so a filtered view can keep the selection tied to the full list.
+    """
+    needle = query.casefold()
+    if not needle:
+        return list(range(len(labels)))
+    return [index for index, label in enumerate(labels) if needle in label.casefold()]
+
+
 # ── Public API ──────────────────────────────────────────────────
 
 
