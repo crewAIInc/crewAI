@@ -2,6 +2,7 @@
 
 from typing import Any, cast
 
+from qdrant_client.models import VectorsConfig
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -49,6 +50,7 @@ class QdrantClient(BaseClient):
         default_limit: int = 5,
         default_score_threshold: float = 0.6,
         default_batch_size: int = 100,
+        default_vectors_config: VectorsConfig | None = None,
     ) -> None:
         """Initialize QdrantClient with client and embedding function.
 
@@ -58,19 +60,22 @@ class QdrantClient(BaseClient):
             default_limit: Default number of results to return in searches.
             default_score_threshold: Default minimum score for search results.
             default_batch_size: Default batch size for adding documents.
+            default_vectors_config: Vector configuration for collections created
+                without one. Defaults to 384 dimensions with cosine distance.
         """
         self.client = client
         self.embedding_function = embedding_function
         self.default_limit = default_limit
         self.default_score_threshold = default_score_threshold
         self.default_batch_size = default_batch_size
+        self.default_vectors_config = default_vectors_config
 
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
 
         Keyword Args:
             collection_name: Name of the collection to create. Must be unique.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to default_vectors_config.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -100,7 +105,7 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(kwargs, self.default_vectors_config)
         self.client.create_collection(**params)
 
     async def acreate_collection(
@@ -110,7 +115,7 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to create. Must be unique.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to default_vectors_config.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -140,7 +145,7 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(kwargs, self.default_vectors_config)
         await self.client.create_collection(**params)
 
     def get_or_create_collection(
@@ -150,7 +155,7 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to default_vectors_config.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -182,7 +187,7 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(kwargs, self.default_vectors_config)
         self.client.create_collection(**params)
 
         return self.client.get_collection(collection_name)
@@ -194,7 +199,7 @@ class QdrantClient(BaseClient):
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
-            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            vectors_config: Optional vector configuration. Defaults to default_vectors_config.
             sparse_vectors_config: Optional sparse vector configuration.
             shard_number: Optional number of shards.
             replication_factor: Optional replication factor.
@@ -226,7 +231,7 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
 
-        params = _get_collection_params(kwargs)
+        params = _get_collection_params(kwargs, self.default_vectors_config)
         await self.client.create_collection(**params)
 
         return await self.client.get_collection(collection_name)
