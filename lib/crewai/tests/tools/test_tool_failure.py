@@ -1722,7 +1722,7 @@ class TestPlatformActionTool:
             "error": "Failed to execute action: Slack API error: channel_not_found"
         }
         monkeypatch.setattr(client_mod.requests, "post", Mock(return_value=response))
-        monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
+        monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "t")
 
         result = self._tool()._run(channel="#joao-message")
 
@@ -1739,7 +1739,7 @@ class TestPlatformActionTool:
         response.ok = True
         response.json.return_value = {"ts": "1234.5678"}
         monkeypatch.setattr(client_mod.requests, "post", Mock(return_value=response))
-        monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
+        monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "t")
 
         result = self._tool()._run(channel="#general")
 

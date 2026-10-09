@@ -32,7 +32,7 @@ import pytest
 def tracing_environment(monkeypatch):
     monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
     monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
-    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
     monkeypatch.delenv("CREWAI_EPHEMERAL_TRACE_MAX_SPANS", raising=False)
     monkeypatch.delenv("CREWAI_EPHEMERAL_TRACE_MAX_BYTES", raising=False)
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
