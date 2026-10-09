@@ -1,0 +1,101 @@
+---
+title: Agent Action Capsule (capsule-emit) 통합
+description: 크루 실행에 대한 봉인·서명된 콘텐츠 주소화 증거 레코드 — 도구 호출마다 두 개의 레코드로 이루어진 캡슐 체인, 오프라인 검증 가능.
+icon: file-shield
+mode: "wide"
+---
+
+# Agent Action Capsule 개요
+
+[capsule-emit](https://github.com/action-state-group/capsule-emit)은 크루 실행의 각 도구 호출을 **Agent Action Capsule** 체인으로 기록합니다: 호출 시작 시 *계획* 캡슐이 봉인되고, 종료 시 *확인*(또는 *실패*) 캡슐이 봉인되어 캡슐 id로 계획 캡슐에 연결됩니다. 캡슐은 크루가 실제로 수행한 일에 대한 감사·컴플라이언스 증거이며 — 추적을 보완합니다.
+
+의도적으로 구분된 두 검증 계층:
+
+- **오프라인 검증**은 구조, 콘텐츠 주소화(모든 다이제스트가 레코드 자체 내용에서 재계산됨), 체인 일관성, 그리고 각 레코드의 생산자 서명을 검사합니다 — 서비스도 자격 증명도 필요 없습니다. 서명은 레코드에 명시된 키가 서명했음을 증명할 뿐, 누가 그 키를 보유하는지는 증명하지 않습니다: 서명과 키 ID는 다이제스트 밖에 있으므로, 새 키로 다시 서명한 원장도 검증을 통과합니다.
+- **외부 당사자를 향한 변조 증거**는 기본으로 켜져 있는 체크포인트/증인 스트림에서 나옵니다(아래 표 참조). 증인이 수락한 각 체크포인트는 외부 당사자가 원장을 대조할 수 있는 기준이 되며, 그 효력은 해당 당사자가 증인이 사용자와 독립적이라고 신뢰하는 만큼입니다. 마지막으로 수락된 체크포인트 이후 봉인된 레코드는 아직 사용자 환경 밖에 커밋되지 않았습니다; 900초 이내에 100개 미만의 레코드만 봉인하고 종료하는 실행은 체크포인트를 하나도 게시하지 않습니다. 이전의 봉인별 SCITT 앵커는 레거시 채널이며 기본 비활성화되어 있습니다.
+
+### 기능
+
+- **리스너 하나로 모든 도구 호출 기록**: CrewAI의 표준 `BaseEventListener` 메커니즘으로 `CapsuleEventListener()`를 한 번만 등록 — 도구별 코드 변경 없음.
+- **계획 → 확인 체인**: 도구 호출 시작 시 계획 캡슐이 봉인되고, 종료 시 두 번째 확인 캡슐이 봉인되어 연결됩니다(`prior_capsule_id`); 오류는 연결된 실패 효과 캡슐을 봉인합니다.
+- **다이제스트 전용 프라이버시**: 도구 입출력은 SHA-256 다이제스트로 커밋 — 원본 콘텐츠는 로컬에 유지되며, 증인 스트림은 체크포인트 메타데이터만 전송하고 레코드 내용은 절대 전송하지 않습니다.
+- **오프라인 일관성 검사**: 원장만으로 구조, 콘텐츠 주소화, 체인 링크, 생산자 서명을 재검사합니다.
+- **체크포인트 기반 변조 증거**: 수락된 각 체크포인트가 원장의 루트 해시를 사용자 환경 밖에 커밋합니다; 그 이후 구간은 아직 포함되지 않습니다. `CAPSULE_WITNESS=off`는 모든 외부 전송을 중단합니다; 오프라인 검증은 어느 경우에도 체크포인트를 참조하지 않습니다.
+- **크루 안전 보장**: 리스너는 `is_replaying()`을 준수하고 크루 실행에 예외를 발생시키지 않습니다; 투명성 서비스에 접속할 수 없어도 크루는 중단되지 않습니다.
+
+## 설정 방법
+
+<Steps>
+    <Step title="CrewAI 엑스트라와 함께 capsule-emit 설치">
+      ```shell
+      pip install "capsule-emit[crewai]"
+      ```
+    </Step>
+    <Step title="리스너 등록">
+      ```python
+      from capsule_emit.adapters.crewai_listener import CapsuleEventListener
+
+      # Register once, before kickoff — every tool call in the crew seals a capsule.
+      listener = CapsuleEventListener(operator="acme-crew", developer="platform-team")
+      ```
+    </Step>
+    <Step title="평소처럼 크루 실행">
+      ```python
+      result = crew.kickoff()
+      ```
+      이제 각 도구 호출이 로컬 원장(기본값 `ledger.jsonl`)에 봉인·서명된 레코드를 생성합니다.
+    </Step>
+    <Step title="증거 확인">
+      ```python
+      import json
+      from capsule_emit.signing import verify_store_signed
+
+      rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
+      if not rows:
+          raise SystemExit("empty ledger — nothing to verify")
+      # checks each signature against the key named in the record, not against a key you trust
+      results = verify_store_signed([row.get("capsule", row) for row in rows], require_signature=True)
+      ok = all(r.ok for r in results)
+      print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
+      ```
+    </Step>
+</Steps>
+
+## 실행 가능한 퀵스타트
+
+capsule-emit 저장소에 밀폐형 엔드투엔드 데모가 있습니다(실제 CrewAI 이벤트 버스, 로컬 스텁을 가리키는 레거시 앵커, LLM 키 불필요):
+
+```shell
+git clone --depth 1 --branch v0.8.6 https://github.com/action-state-group/capsule-emit.git
+cd capsule-emit
+pip install "capsule-emit[crewai]"
+python examples/crewai-listener/demo.py
+```
+
+샘플 출력 (capsule-emit 0.8.6, crewai 1.15.22):
+
+```text
+action                             effect     verdict   chained  verify_store_signed()
+---------------------------------------------------------------------------
+crew_kickoff_started/7bf66bc3-11b3 -          executed  -        VALID
+fetch_supplier/70206d21-a261-43c8- planned    executed  -        VALID
+fetch_supplier/fa5be16a-886d-411d- confirmed  executed  yes      VALID
+write_po/376d4199-d967-4472-8960-5 planned    executed  -        VALID
+write_po/af0fe96e-2503-4e10-bf77-4 failed     errored   yes      VALID
+crew_kickoff_completed/7f95d83c-e3 -          executed  -        VALID
+---------------------------------------------------------------------------
+6 capsules, verify: ALL OK
+```
+
+## 기록되는 내용
+
+| 필드 | 내용 |
+|---|---|
+| `action_id` / 도구 이름 | 이 캡슐이 기록하는 도구 호출 또는 크루 라이프사이클 이벤트(kickoff 시작/완료/실패) |
+| 입력/출력 다이제스트 | SHA-256 커밋 — 원본 콘텐츠는 환경 밖으로 나가지 않음 |
+| `effect` | 도구 호출에서 `planned`, `confirmed`, 또는 `failed` (크루 수명주기 레코드에는 없음); 판정은 `executed` 또는 `errored` |
+| `confirms` 체인 | 확인 캡슐이 계획 캡슐을 콘텐츠 주소로 인용 |
+| `signature` / `key_id` | 캡슐 ID에 대한 COSE_Sign1 생산자 서명과 이를 만든 키 — 다이제스트 밖에 있으므로 어떤 키가 서명했는지를 증명할 뿐, 누가 그 키를 보유하는지는 증명하지 않습니다 |
+| 외부 전송 | 기본적으로 레코드 100개마다, 또는 900초가 지난 뒤의 다음 봉인 시점에(백그라운드 타이머 없음) 체크포인트(로그 크기, 루트 해시, 타임스탬프; 레코드 내용은 절대 포함하지 않음)를 프로젝트의 공개 증인 `witness.agentactioncapsule.org`에 게시; `CAPSULE_WITNESS_URL`로 원하는 증인에 보낼 수 있고, `CAPSULE_WITNESS=off`로 비활성화. 레거시 봉인별 앵커는 `CAPSULE_ANCHOR=legacy-on`이 아니면 꺼져 있습니다 |
+
+레코드 형식은 공개 사양(`draft-mih-scitt-agent-action-capsule`, IETF 개인 인터넷 드래프트)이며 Apache-2.0 참조 구현이 있습니다.
