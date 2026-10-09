@@ -323,3 +323,27 @@ class TestAgentCardJsonStructure:
         assert "provider" not in json_data
         assert "documentationUrl" not in json_data
         assert "iconUrl" not in json_data
+
+
+class TestAgentCardCacheIsolation:
+    """The agent-card pickle cache is pinned to its own SimpleMemoryCache.
+
+    Fetching an agent card must not reconfigure the process-wide aiocache
+    ``default`` alias, because the in-memory A2A cancel path relies on that
+    alias staying the same instance across a running poller and a later
+    ``cancel()``. Reconfiguring it would swap the instance and lose the flag.
+    """
+
+    def test_agent_card_module_does_not_reconfigure_default_cache(self) -> None:
+        # The clobbering helper and its unconditional caches.set_config call
+        # were removed; assert they are gone so this cannot regress.
+        from crewai.a2a.utils import agent_card
+
+        assert not hasattr(agent_card, "_ensure_cache_configured")
+
+    def test_default_cache_alias_is_stable_across_get(self) -> None:
+        from aiocache import caches
+
+        first = caches.get("default")
+        second = caches.get("default")
+        assert first is second

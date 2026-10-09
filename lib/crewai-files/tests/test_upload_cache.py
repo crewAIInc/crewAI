@@ -207,3 +207,97 @@ class TestUploadCache:
 
         assert len(gemini_uploads) == 2
         assert len(anthropic_uploads) == 1
+
+
+class TestNoEagerCrewaiImport:
+    """crewai-files must not hard-import crewai at module load.
+
+    parse_cache_url is only needed for the Valkey backend path and must be
+    imported lazily there, so `import crewai_files` works without crewai
+    installed (preserving the crewai[file-processing] -> crewai-files direction).
+    """
+
+    def test_parse_cache_url_not_bound_at_module_level(self) -> None:
+        import crewai_files.cache.upload_cache as mod
+
+        # A module-level `from crewai... import parse_cache_url` would leave the
+        # name bound on the module. Lazy import inside _create_backend does not.
+        assert not hasattr(mod, "parse_cache_url")
+
+    def test_default_memory_backend_needs_no_crewai(self) -> None:
+        from crewai_files.cache.upload_cache import UploadCache
+
+        # Default (in-memory) cache path must not touch the Valkey helper.
+        cache = UploadCache()
+        assert cache is not None
+
+
+class TestExpiredTtlFloor:
+    """A past/sub-second expires_at must map to a real (>=1s) TTL, not 0 —
+    otherwise the Valkey backend treats it as never-expire and the entry
+    persists forever.
+    """
+
+    def test_past_expires_at_yields_positive_ttl(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock
+
+        cache = UploadCache()
+        captured: dict[str, int] = {}
+
+        async def fake_set(key: str, value: object, ttl: int) -> None:
+            captured["ttl"] = ttl
+
+        cache._backend.set = AsyncMock(side_effect=fake_set)  # type: ignore[method-assign]
+
+        file = ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test.png"))
+        past = datetime.now(timezone.utc) - timedelta(seconds=10)
+
+        asyncio.run(
+            cache.aset(
+                file=file,
+                provider="gemini",
+                file_id="file-123",
+                file_uri="files/file-123",
+                expires_at=past,
+            )
+        )
+
+        assert captured["ttl"] >= 1
+
+
+class TestAiocacheBackendClearNamespace:
+    """AiocacheBackend.clear must scope to its namespace, not FLUSHDB the whole
+    shared Redis/Valkey database.
+    """
+
+    def test_clear_passes_namespace(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from crewai_files.cache.upload_cache import AiocacheBackend
+
+        fake_cache = MagicMock()
+        fake_cache.namespace = "crewai_uploads"
+        fake_cache.clear = AsyncMock()
+
+        backend = AiocacheBackend(fake_cache)
+        asyncio.run(backend.clear())
+
+        # Namespace-scoped clear (KEYS ns:* + DELETE), never a bare FLUSHDB.
+        fake_cache.clear.assert_awaited_once_with(namespace="crewai_uploads")
+
+    def test_clear_without_namespace_falls_back(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from crewai_files.cache.upload_cache import AiocacheBackend
+
+        fake_cache = MagicMock()
+        fake_cache.namespace = ""
+        fake_cache.clear = AsyncMock()
+
+        backend = AiocacheBackend(fake_cache)
+        asyncio.run(backend.clear())
+
+        fake_cache.clear.assert_awaited_once_with()
