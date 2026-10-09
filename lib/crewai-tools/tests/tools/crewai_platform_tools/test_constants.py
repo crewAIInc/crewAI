@@ -10,10 +10,10 @@ from crewai_core.platform_apps import (
 
 def test_platform_apps_contains_supported_application_catalog() -> None:
     assert isinstance(PLATFORM_CATALOG["applications"], list)
-    assert len(PLATFORM_APPS) == 125
+    assert len(PLATFORM_APPS) == 129
     assert len(set(PLATFORM_APPS)) == len(PLATFORM_APPS)
     assert PLATFORM_APPS[0] == "airtable"
-    assert PLATFORM_APPS[-1] == "sap_s4hana"
+    assert PLATFORM_APPS[-1] == "pinecone"
     assert set(PLATFORM_APP_DISPLAY_NAMES) == set(PLATFORM_APPS)
     assert set(PLATFORM_APP_TOOL_COUNTS) == set(PLATFORM_APPS)
     assert PLATFORM_APP_DISPLAY_NAMES["github"] == "GitHub"
