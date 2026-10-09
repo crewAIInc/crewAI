@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime
 from copy import deepcopy
-from typing import Any
+from typing import Any, Union, get_args, get_origin
 
 import pytest
 from pydantic import BaseModel
@@ -1132,3 +1132,102 @@ class TestCreateModelFromSchemaRecursive:
         model = create_model_from_schema(deepcopy(MUTUAL_RECURSION_SCHEMA), model_name="A")
         instance = model(val="hello", b={"val": 42})
         assert instance.val == "hello"
+
+
+# id()-keyed cycle cache vs. nullable nested objects in list-form `type`
+# (see issue #7908). The builder registers ``in_progress[id(schema_dict)]``
+# while building, but used to keep no reference to the registered dict, so a
+# temporary member dict freed mid-build could have its address reused by the
+# next allocation -- and a brand-new dict could then hit the stale cache entry
+# and inherit a previous field's model. Each test loops many iterations to
+# defeat allocator luck (the failure is address-reuse dependent).
+
+
+class TestListFormTypeNullableObjectCache:
+    def _nullable_object_filter_schema(self, member_order: list[str]) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": member_order,
+                    "properties": {"field": {"type": "string"}},
+                    "required": ["field"],
+                },
+            },
+            "required": ["filter"],
+        }
+
+    def _assert_nullable(self, annotation: Any) -> None:
+        assert get_origin(annotation) is Union
+        assert type(None) in get_args(annotation)
+
+    def test_member_order_object_first_keeps_null(self) -> None:
+        """`["object", "null"]`: the "object" member's temporary dict used to
+        be freed after its iteration, and the "null" member's temporary was
+        allocated at the same address -- the stale cache hit collapsed the
+        union to the bare nested model, so a required `filter` rejected None."""
+        for _ in range(50):
+            Model = create_model_from_schema(
+                self._nullable_object_filter_schema(["object", "null"])
+            )
+            self._assert_nullable(Model.model_fields["filter"].annotation)
+            assert Model(filter=None).filter is None
+            assert Model(filter={"field": "x"}).filter.field == "x"
+
+    def test_member_order_null_first_keeps_null(self) -> None:
+        for _ in range(50):
+            Model = create_model_from_schema(
+                self._nullable_object_filter_schema(["null", "object"])
+            )
+            self._assert_nullable(Model.model_fields["filter"].annotation)
+            assert Model(filter=None).filter is None
+            assert Model(filter={"field": "x"}).filter.field == "x"
+
+    def test_nullable_object_fields_do_not_share_a_model(self) -> None:
+        """Two nullable-object fields must get distinct nested models; stale
+        cache hits used to leak one field's model into the other field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                name: {
+                    "type": ["object", "null"],
+                    "properties": {"field": {"type": "string"}},
+                    "required": ["field"],
+                }
+                for name in ("a", "b")
+            },
+            "required": ["a", "b"],
+        }
+        for _ in range(50):
+            Model = create_model_from_schema(schema)
+            ann_a = Model.model_fields["a"].annotation
+            ann_b = Model.model_fields["b"].annotation
+            self._assert_nullable(ann_a)
+            self._assert_nullable(ann_b)
+            assert ann_a is not ann_b
+            assert Model(a=None, b=None).a is None
+            assert Model(a=None, b=None).b is None
+
+    def test_allof_with_nullable_object_list_form_type(self) -> None:
+        """`allOf` rebinds the schema dict being built (its old dict is freed),
+        which used to expose the same stale-id hazard for the merged dict."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "allOf": [
+                        {
+                            "type": ["object", "null"],
+                            "properties": {"field": {"type": "string"}},
+                            "required": ["field"],
+                        }
+                    ]
+                },
+            },
+            "required": ["filter"],
+        }
+        for _ in range(50):
+            Model = create_model_from_schema(schema)
+            self._assert_nullable(Model.model_fields["filter"].annotation)
+            assert Model(filter=None).filter is None
+            assert Model(filter={"field": "x"}).filter.field == "x"
