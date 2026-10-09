@@ -1132,3 +1132,93 @@ class TestCreateModelFromSchemaRecursive:
         model = create_model_from_schema(deepcopy(MUTUAL_RECURSION_SCHEMA), model_name="A")
         instance = model(val="hello", b={"val": 42})
         assert instance.val == "hello"
+
+
+class TestNullableFieldConstraints:
+    def test_nullable_string_constraints_applied_and_validated(self) -> None:
+        from pydantic import ValidationError
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "tag": {
+                    "type": ["string", "null"],
+                    "pattern": "^[a-z]+$",
+                    "minLength": 2,
+                    "maxLength": 5,
+                }
+            },
+            "required": ["tag"],
+        }
+        Model = create_model_from_schema(schema)
+
+        # None is allowed
+        assert Model(tag=None).tag is None
+
+        # Valid string is accepted
+        assert Model(tag="valid").tag == "valid"
+
+        # Invalid pattern is rejected
+        with pytest.raises(ValidationError):
+            Model(tag="123")
+
+        # Invalid minLength is rejected
+        with pytest.raises(ValidationError):
+            Model(tag="a")
+
+        # Invalid maxLength is rejected
+        with pytest.raises(ValidationError):
+            Model(tag="toolong")
+
+    def test_nullable_number_constraints_applied_and_validated(self) -> None:
+        from pydantic import ValidationError
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "type": ["integer", "null"],
+                    "minimum": 18,
+                    "maximum": 65,
+                },
+                "score": {
+                    "type": ["number", "null"],
+                    "exclusiveMinimum": 0.0,
+                    "exclusiveMaximum": 10.0,
+                    "multipleOf": 0.5,
+                },
+            },
+            "required": ["age", "score"],
+        }
+        Model = create_model_from_schema(schema)
+
+        # None values are allowed
+        obj = Model(age=None, score=None)
+        assert obj.age is None
+        assert obj.score is None
+
+        # Valid values are accepted
+        obj2 = Model(age=25, score=5.5)
+        assert obj2.age == 25
+        assert obj2.score == 5.5
+
+        # Invalid minimum is rejected
+        with pytest.raises(ValidationError):
+            Model(age=17, score=5.5)
+
+        # Invalid maximum is rejected
+        with pytest.raises(ValidationError):
+            Model(age=70, score=5.5)
+
+        # Invalid exclusiveMinimum is rejected
+        with pytest.raises(ValidationError):
+            Model(age=25, score=0.0)
+
+        # Invalid exclusiveMaximum is rejected
+        with pytest.raises(ValidationError):
+            Model(age=25, score=10.0)
+
+        # Invalid multipleOf is rejected
+        with pytest.raises(ValidationError):
+            Model(age=25, score=5.3)
+
