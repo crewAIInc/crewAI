@@ -209,6 +209,20 @@ _BEDROCK_BASE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 }
 
 
+# Geo prefixes of Bedrock system-defined inference profiles
+# (``aws bedrock list-inference-profiles --type-equals SYSTEM_DEFINED``).
+BEDROCK_GEO_PREFIXES: Final[tuple[str, ...]] = (
+    "us.",
+    "eu.",
+    "apac.",
+    "global.",
+    "jp.",
+    "au.",
+    "in.",
+    "ca.",
+)
+
+
 def _prefixed_context_windows(
     sizes: Mapping[str, int], prefixes: Sequence[str]
 ) -> dict[str, int]:
@@ -221,13 +235,9 @@ def _prefixed_context_windows(
 # Legacy (not EOL) on Bedrock, so keep its provider-specific limit until AWS
 # retires it: https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle-legacy.html
 _BEDROCK_LEGACY_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "anthropic.claude-sonnet-4": 200_000,
-    "us.anthropic.claude-sonnet-4": 200_000,
-    "eu.anthropic.claude-sonnet-4": 200_000,
-    "apac.anthropic.claude-sonnet-4": 200_000,
-    "global.anthropic.claude-sonnet-4": 200_000,
     **_prefixed_context_windows(
         {
+            "anthropic.claude-sonnet-4": 200_000,
             "anthropic.claude-opus-4-1": 200_000,
             "anthropic.claude-opus-4": 200_000,
             "anthropic.claude-haiku-4": 200_000,
@@ -238,7 +248,7 @@ _BEDROCK_LEGACY_CONTEXT_WINDOWS: Final[dict[str, int]] = {
             "anthropic.claude-3-sonnet": 200_000,
             "anthropic.claude-3-haiku": 200_000,
         },
-        ("", "us.", "eu.", "apac.", "global."),
+        ("", *BEDROCK_GEO_PREFIXES),
     ),
 }
 
@@ -296,19 +306,11 @@ LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     **_BEDROCK_BASE_CONTEXT_WINDOWS,
     **_BEDROCK_LEGACY_CONTEXT_WINDOWS,
-    **_prefixed_context_windows(_BEDROCK_BASE_CONTEXT_WINDOWS, ("us.", "eu.", "apac.")),
+    **_prefixed_context_windows(_BEDROCK_BASE_CONTEXT_WINDOWS, BEDROCK_GEO_PREFIXES),
     **_prefixed_context_windows(
         ANTHROPIC_CONTEXT_WINDOWS,
-        (
-            "anthropic.",
-            "us.anthropic.",
-            "eu.anthropic.",
-            "apac.anthropic.",
-            "global.anthropic.",
-        ),
+        ("anthropic.", *(f"{prefix}anthropic." for prefix in BEDROCK_GEO_PREFIXES)),
     ),
-    # Geo inference ID is not produced by the us/eu/apac expansion.
-    "global.moonshotai.kimi-k3": 1_000_000,
 }
 
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {

@@ -101,6 +101,12 @@ def test_affected_model_ids_use_their_specific_context_windows(
             200_000,
         ),
         ("us.anthropic.claude-opus-4-1-20250805-v1:0", BEDROCK_CONTEXT_WINDOWS, 200_000),
+        ("jp.anthropic.claude-sonnet-4-20250514-v1:0", BEDROCK_CONTEXT_WINDOWS, 200_000),
+        ("jp.anthropic.claude-sonnet-4-6", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        ("au.anthropic.claude-opus-4-8", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        ("in.anthropic.claude-sonnet-5", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        ("jp.amazon.nova-2-lite-v1:0", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        ("ca.amazon.nova-lite-v1:0", BEDROCK_CONTEXT_WINDOWS, 300_000),
         (
             "meta.llama4-scout-17b-instruct-v1:0",
             BEDROCK_CONTEXT_WINDOWS,

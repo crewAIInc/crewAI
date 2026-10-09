@@ -2148,26 +2148,29 @@ class BedrockCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+        Claude 3+ and Nova Lite/Pro/Premier/2 Lite on Bedrock support vision,
+        also behind a geo inference profile prefix (``us.``, ``jp.``, ...).
 
         Returns:
             True if the model supports images.
         """
+        from crewai.llms.context_window import BEDROCK_GEO_PREFIXES
+
         model_lower = self.model.lower()
+        if model_lower.startswith(BEDROCK_GEO_PREFIXES):
+            model_lower = model_lower.split(".", 1)[1]
         vision_models = (
             "anthropic.claude-3",
             "anthropic.claude-sonnet-4",
             "anthropic.claude-opus-4",
             "anthropic.claude-haiku-4",
+            "anthropic.claude-sonnet-5",
+            "anthropic.claude-opus-5",
+            "anthropic.claude-fable-5",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
+            "amazon.nova-2-lite",
         )
         return any(model_lower.startswith(m) for m in vision_models)
 
