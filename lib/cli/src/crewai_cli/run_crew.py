@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
@@ -493,6 +493,30 @@ def _run_json_crew_in_project_env(
     return None
 
 
+DeployButtonEvent = Literal[
+    "deploy_login_prompted",
+    "deploy_stopped:login_still_required",
+    "deploy_stopped:login_abandoned",
+    "deploy_stopped:login_failed",
+]
+
+
+def _record_deploy_button(event: DeployButtonEvent) -> None:
+    """Count what the run app's Deploy met before a deployment attempt.
+
+    `cli_usage:deploy` counts the press and `Create Crew Deployment` the
+    attempt; a press that never became an attempt said nothing about why.
+    """
+    try:
+        from crewai_core.telemetry import Telemetry
+
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        telemetry.feature_usage_span(f"cli_usage:{event}")
+    except Exception:  # noqa: S110 - telemetry must never break a command
+        pass
+
+
 def _chain_deploy() -> None:
     from rich.console import Console
 
@@ -516,11 +540,20 @@ def _chain_deploy() -> None:
     except AuthenticationRequiredError:
         from crewai_cli.authentication.main import AuthenticationCommand
 
+        _record_deploy_button("deploy_login_prompted")
         console.print()
-        AuthenticationCommand().login()
+        try:
+            AuthenticationCommand().login()
+        except KeyboardInterrupt:
+            _record_deploy_button("deploy_stopped:login_abandoned")
+            raise
+        except Exception:
+            _record_deploy_button("deploy_stopped:login_failed")
+            raise
         try:
             DeployCommand().create_crew(confirm=True, skip_validate=True, source="tui")
         except AuthenticationRequiredError:
+            _record_deploy_button("deploy_stopped:login_still_required")
             console.print(
                 "\nDeploy failed: authentication is still required.\n",
                 style="bold red",
