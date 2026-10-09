@@ -1023,11 +1023,11 @@ def test_prefixed_models_with_valid_patterns_use_native_sdk():
 
 def test_prefixed_models_with_non_native_providers_use_litellm():
     """Test that models with non-native provider prefixes always use LiteLLM."""
-    # Test groq/ prefix (not a native provider) → LiteLLM
-    llm = LLM(model="groq/llama-3.3-70b", is_litellm=False)
+    # Test cohere/ prefix (not a native provider) → LiteLLM
+    llm = LLM(model="cohere/command-r", is_litellm=False)
     assert llm.is_litellm is True
-    assert llm.model == "groq/llama-3.3-70b"
-    assert llm.provider == "groq"
+    assert llm.model == "cohere/command-r"
+    assert llm.provider == "cohere"
 
     # Test together/ prefix (not a native provider) → LiteLLM
     llm2 = LLM(model="together/qwen-2.5-72b", is_litellm=False)
@@ -1039,7 +1039,6 @@ def test_prefixed_models_with_non_native_providers_use_litellm():
 @pytest.mark.parametrize(
     ("model", "expected_provider"),
     [
-        ("groq/llama-3.3-70b", "groq"),
         ("cohere/command-r", "cohere"),
         ("sambanova/Meta-Llama-3.1-70B-Instruct", "sambanova"),
         ("mistral/mistral-large", "mistral"),
@@ -1188,12 +1187,12 @@ def test_resolve_route_decides_what_new_constructs():
     )
     assert (custom.native_class, custom.custom_openai) == (OpenAICompletion, True)
 
-    litellm_route = LLM._resolve_route("groq/llama-3.1-8b-instant", {})
+    litellm_route = LLM._resolve_route("cohere/command-r", {})
     assert (
         litellm_route.provider,
         litellm_route.model,
         litellm_route.native_class,
-    ) == ("groq", "llama-3.1-8b-instant", None)
+    ) == ("cohere", "command-r", None)
     assert LLM._resolve_route("gpt-4o", {}).native_class is OpenAICompletion
     kwargs = {"provider": "anthropic"}
     assert LLM._resolve_route("some-model", kwargs).native_class is AnthropicCompletion
