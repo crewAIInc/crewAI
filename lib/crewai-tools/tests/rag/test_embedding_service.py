@@ -416,14 +416,14 @@ class TestProviderConfigurations:
             provider="deepinfra",
             model="Qwen/Qwen3-Embedding-4B",
             api_key="test-key",
-            extra_config={"dimensions": 1024},
+            extra_config={"api_base": "https://stage2.api.deepinfra.com/v1/openai"},
         )
 
         call_args = mock_build_embedder.call_args[0][0]
         assert call_args["provider"] == "deepinfra"
         assert call_args["config"]["api_key"] == "test-key"
         assert call_args["config"]["model_name"] == "Qwen/Qwen3-Embedding-4B"
-        assert call_args["config"]["dimensions"] == 1024
+        assert call_args["config"]["api_base"] == "https://stage2.api.deepinfra.com/v1/openai"
 
     @patch("crewai.rag.embeddings.factory.build_embedder")
     def test_create_deepinfra_service(self, mock_build_embedder):
