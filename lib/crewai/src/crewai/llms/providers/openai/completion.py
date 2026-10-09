@@ -689,6 +689,17 @@ class OpenAICompletion(BaseLLM):
             cause = e.__cause__ or e
 
             if self._rejects_reasoning_effort_with_tools(cause):
+                if self._is_responses_only_error(cause):
+                    # No "none" way out (GPT-6 Astra). The 400 itself names
+                    # /v1/responses, so use it even on a custom endpoint.
+                    return self._call_responses(
+                        messages=messages,
+                        tools=tools,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
                 retry_params = self._reasoning_effort_none_params(completion_params)
                 if retry_params is not None:
                     logging.debug(
@@ -833,6 +844,17 @@ class OpenAICompletion(BaseLLM):
             cause = e.__cause__ or e
 
             if self._rejects_reasoning_effort_with_tools(cause):
+                if self._is_responses_only_error(cause):
+                    # No "none" way out (GPT-6 Astra). The 400 itself names
+                    # /v1/responses, so use it even on a custom endpoint.
+                    return await self._acall_responses(
+                        messages=messages,
+                        tools=tools,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
                 retry_params = self._reasoning_effort_none_params(completion_params)
                 if retry_params is not None:
                     return await dispatch(retry_params)
@@ -1860,7 +1882,7 @@ class OpenAICompletion(BaseLLM):
 
     @staticmethod
     def _is_responses_only_error(error: BaseException) -> bool:
-        """Whether a 404 means the model exists but isn't on chat completions.
+        """Whether the model, or its function tools, are only on /v1/responses.
 
         OpenAI distinguishes the two 404s it returns here:
 
@@ -1870,7 +1892,18 @@ class OpenAICompletion(BaseLLM):
 
         Matching the former lets a newly Responses-only model be recovered without
         needing to be listed in this file.
+
+        GPT-6 Astra on Bedrock's OpenAI-compatible endpoints returns the tools +
+        reasoning_effort 400 without GPT-5.6's "or set reasoning_effort to
+        'none'", and rejects "none", so only /v1/responses serves its tools:
+
+            "Function tools with reasoning_effort are not supported for
+            us.openai.gpt-6-astra in /v1/chat/completions. To use function
+            tools, use /v1/responses."
         """
+        if OpenAICompletion._rejects_reasoning_effort_with_tools(error):
+            text = str(error).lower()
+            return "'none'" not in text and "use /v1/responses" in text
         if not isinstance(error, NotFoundError):
             return False
         body = getattr(error, "body", None)
