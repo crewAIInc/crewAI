@@ -1,4 +1,5 @@
 import os
+import shutil
 import stat
 import tempfile
 import unittest
@@ -126,6 +127,126 @@ class TestPickleHandler(unittest.TestCase):
         with patch("os.path.exists", side_effect=remove_sig_after_check):
             with pytest.raises(ValueError, match="signature file"):
                 self.handler.load()
+
+    def test_validate_key_storage_hardens_existing_insecure_directory(self):
+        """A pre-existing 0755 key directory is tightened to 0700, not rejected."""
+        if os.name != "posix":
+            self.skipTest("POSIX-only directory hardening")
+        key_dir = tempfile.mkdtemp(prefix="crewai_key_")
+        key_path = os.path.join(key_dir, "key.bin")
+        os.chmod(key_dir, 0o755)
+        try:
+            self.assertTrue(PickleHandler._validate_key_storage(key_dir, key_path))
+            self.assertEqual(stat.S_IMODE(os.stat(key_dir).st_mode), 0o700)
+        finally:
+            os.chmod(key_dir, 0o700)
+            os.rmdir(key_dir)
+
+    def test_validate_key_storage_still_rejects_unhardenable_directory(self):
+        """If tightening an insecure directory is impossible, validation fails closed."""
+        if os.name != "posix":
+            self.skipTest("POSIX-only directory hardening")
+        key_dir = tempfile.mkdtemp(prefix="crewai_key_")
+        key_path = os.path.join(key_dir, "key.bin")
+        os.chmod(key_dir, 0o755)
+        try:
+            with patch("os.chmod", side_effect=OSError("read-only filesystem")):
+                with self.assertRaises(PermissionError):
+                    PickleHandler._validate_key_storage(key_dir, key_path)
+        finally:
+            os.chmod(key_dir, 0o700)
+            os.rmdir(key_dir)
+
+    def test_key_creation_passes_binary_flag_to_os_open(self):
+        """Key creation must pass O_BINARY to os.open where the platform provides it."""
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch.object(os, "O_BINARY", 0x8000, create=True),
+                patch("os.open", wraps=os.open) as mock_open,
+            ):
+                PickleHandler("binary_flag_check.pkl")
+            seen_flags = [call.args[1] for call in mock_open.call_args_list]
+            self.assertTrue(
+                any(flags & 0x8000 for flags in seen_flags),
+                "os.open must be called with O_BINARY when creating the key file",
+            )
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
+    def test_save_serializes_payload_exactly_once(self):
+        """save() must serialize into a single buffer that the HMAC then covers."""
+        import pickle as pickle_mod
+
+        real_dumps = pickle_mod.dumps
+        calls = []
+
+        def counting_dumps(obj, *args, **kwargs):
+            calls.append(obj)
+            return real_dumps(obj, *args, **kwargs)
+
+        with patch("pickle.dumps", side_effect=counting_dumps):
+            self.handler.save({"key": "value"})
+        self.assertEqual(len(calls), 1)
+
+    def test_save_replaces_symlink_at_destination(self):
+        """A symlink planted at the pickle path is replaced, not followed."""
+        if os.name != "posix":
+            self.skipTest("POSIX-only symlink behavior")
+        os.symlink(os.path.join(os.getcwd(), "dangling_target.pkl"), self.file_path)
+        try:
+            self.handler.save({"key": "value"})
+            self.assertFalse(os.path.islink(self.file_path))
+            self.assertEqual(self.handler.load(), {"key": "value"})
+        finally:
+            if os.path.islink(self.file_path):
+                os.unlink(self.file_path)
+
+    def test_load_refuses_symlinked_pickle_file(self):
+        """A symlink at the pickle path must not be followed on load (O_NOFOLLOW)."""
+        if os.name != "posix":
+            self.skipTest("POSIX-only O_NOFOLLOW behavior")
+        data = {"key": "value"}
+        self.handler.save(data)
+
+        real_pkl = self.file_path + ".real"
+        real_sig = self.file_path + ".sig.real"
+        os.rename(self.file_path, real_pkl)
+        os.rename(self.file_path + ".sig", real_sig)
+        os.symlink(real_pkl, self.file_path)
+        os.symlink(real_sig, self.file_path + ".sig")
+        try:
+            with self.assertRaises(ValueError):
+                self.handler.load()
+        finally:
+            for link in (self.file_path, self.file_path + ".sig"):
+                if os.path.islink(link):
+                    os.unlink(link)
+            for path in (real_pkl, real_sig):
+                if os.path.exists(path):
+                    os.remove(path)
+
+    def test_atomic_write_cleans_up_temp_file_on_failure(self):
+        """A failed payload write must not leave the temp file behind."""
+        dest_dir = os.getcwd()
+        before = set(os.listdir(dest_dir))
+        with patch("os.write", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                PickleHandler._atomic_write(os.path.join(dest_dir, "x.pkl"), b"data")
+        self.assertEqual(before, set(os.listdir(dest_dir)))
+
+    def test_load_refuses_non_regular_file(self):
+        """A FIFO at the pickle path must be rejected instead of read."""
+        if os.name != "posix":
+            self.skipTest("POSIX-only FIFO behavior")
+        fifo_path = self.file_path + ".fifo"
+        os.mkfifo(fifo_path)
+        try:
+            with self.assertRaises(ValueError):
+                PickleHandler._read_regular_file(fifo_path)
+        finally:
+            os.unlink(fifo_path)
 
     def test_validate_key_storage_skips_posix_checks_on_windows(self):
         """On Windows os.getuid() is unavailable; validation must skip POSIX checks."""
