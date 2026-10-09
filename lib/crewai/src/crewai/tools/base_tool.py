@@ -11,6 +11,7 @@ from typing import (
     Generic,
     ParamSpec,
     TypeVar,
+    get_type_hints,
     overload,
 )
 
@@ -91,6 +92,19 @@ def _is_async_callable(func: Callable[..., Any]) -> bool:
 def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:
     """Type narrowing check for awaitable values."""
     return asyncio.iscoroutine(value) or asyncio.isfuture(value)
+
+
+def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
+    """Return a callable's annotations evaluated in its defining module.
+
+    PEP 563 stores them as strings, which pydantic would resolve against this
+    module's globals instead of the caller's; fall back to the raw annotations
+    when they cannot be resolved at runtime, as for TYPE_CHECKING-only names.
+    """
+    try:
+        return get_type_hints(func, include_extras=True)
+    except Exception:
+        return dict(getattr(func, "__annotations__", {}))
 
 
 class EnvVar(BaseModel):
@@ -219,6 +233,7 @@ class BaseTool(BaseModel, ABC):
             return v
 
         run_sig = signature(cls._run)
+        run_hints = _resolve_annotations(cls._run)
         fields: dict[str, Any] = {}
 
         for param_name, param in run_sig.parameters.items():
@@ -227,7 +242,7 @@ class BaseTool(BaseModel, ABC):
             if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                 continue
 
-            annotation = param.annotation if param.annotation != param.empty else Any
+            annotation = run_hints.get(param_name, Any)
 
             if param.default is param.empty:
                 fields[param_name] = (annotation, ...)
@@ -236,15 +251,14 @@ class BaseTool(BaseModel, ABC):
 
         if not fields:
             arun_sig = signature(cls._arun)
+            arun_hints = _resolve_annotations(cls._arun)
             for param_name, param in arun_sig.parameters.items():
                 if param_name in ("self", "return"):
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
 
-                annotation = (
-                    param.annotation if param.annotation != param.empty else Any
-                )
+                annotation = arun_hints.get(param_name, Any)
 
                 if param.default is param.empty:
                     fields[param_name] = (annotation, ...)
@@ -438,15 +452,14 @@ class BaseTool(BaseModel, ABC):
 
         if args_schema is None:
             func_signature = signature(tool.func)
+            func_hints = _resolve_annotations(tool.func)
             fields: dict[str, Any] = {}
             for name, param in func_signature.parameters.items():
                 if name == "self":
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
-                param_annotation = (
-                    param.annotation if param.annotation != param.empty else Any
-                )
+                param_annotation = func_hints.get(name, Any)
                 if param.default is param.empty:
                     fields[name] = (param_annotation, ...)
                 else:
@@ -471,6 +484,7 @@ class BaseTool(BaseModel, ABC):
     def _set_args_schema(self) -> None:
         if self.args_schema is None:
             run_sig = signature(self._run)
+            run_hints = _resolve_annotations(self._run)
             fields: dict[str, Any] = {}
 
             for param_name, param in run_sig.parameters.items():
@@ -479,9 +493,7 @@ class BaseTool(BaseModel, ABC):
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
 
-                annotation = (
-                    param.annotation if param.annotation != param.empty else Any
-                )
+                annotation = run_hints.get(param_name, Any)
 
                 if param.default is param.empty:
                     fields[param_name] = (annotation, ...)
@@ -632,15 +644,14 @@ class Tool(BaseTool, Generic[P, R]):
 
         if args_schema is None:
             func_signature = signature(tool.func)
+            func_hints = _resolve_annotations(tool.func)
             fields: dict[str, Any] = {}
             for name, param in func_signature.parameters.items():
                 if name == "self":
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
-                param_annotation = (
-                    param.annotation if param.annotation != param.empty else Any
-                )
+                param_annotation = func_hints.get(name, Any)
                 if param.default is param.empty:
                     fields[name] = (param_annotation, ...)
                 else:
@@ -737,6 +748,7 @@ def tool(
                 raise ValueError("Function must have type annotations")
 
             func_sig = signature(f)
+            func_hints = _resolve_annotations(f)
             fields: dict[str, Any] = {}
 
             for param_name, param in func_sig.parameters.items():
@@ -745,9 +757,7 @@ def tool(
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
 
-                annotation = (
-                    param.annotation if param.annotation != param.empty else Any
-                )
+                annotation = func_hints.get(param_name, Any)
 
                 if param.default is param.empty:
                     fields[param_name] = (annotation, ...)
