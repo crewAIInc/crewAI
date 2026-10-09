@@ -845,9 +845,15 @@ mode: "wide"
   </Accordion>
 
   <Accordion title="Fireworks AI">
+    يتصل CrewAI بـ Fireworks AI عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
     عيّن متغيرات البيئة التالية في ملف `.env`:
     ```toml Code
+    # Required
     FIREWORKS_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    FIREWORKS_BASE_URL=https://api.fireworks.ai/inference/v1
     ```
 
     مثال الاستخدام في مشروع CrewAI:
@@ -856,11 +862,6 @@ mode: "wide"
         model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
         temperature=0.7
     )
-    ```
-
-    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
-    ```bash
-    uv add 'crewai[litellm]'
     ```
   </Accordion>
 

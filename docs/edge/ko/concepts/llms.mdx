@@ -588,9 +588,15 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
   </Accordion>
 
   <Accordion title="Fireworks AI">
+    CrewAI는 네이티브 OpenAI 클라이언트로 Fireworks AI에 연결하므로 LiteLLM 설치가 필요하지 않습니다.
+
     `.env` 파일에 다음 환경 변수를 설정하십시오:
     ```toml Code
+    # Required
     FIREWORKS_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    FIREWORKS_BASE_URL=https://api.fireworks.ai/inference/v1
     ```
 
     CrewAI 프로젝트에서의 예시 사용법:
@@ -599,11 +605,6 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
         temperature=0.7
     )
-    ```
-
-    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
-    ```bash
-    uv add 'crewai[litellm]'
     ```
   </Accordion>
 
