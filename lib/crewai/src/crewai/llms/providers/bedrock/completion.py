@@ -1196,7 +1196,11 @@ class BedrockCompletion(BaseLLM):
             response_id=response_id,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            messages,
+            full_response,
+            from_agent,
+        )
 
     async def _ensure_async_client(self) -> Any:
         """Ensure async client is initialized and return it."""
@@ -1452,7 +1456,11 @@ class BedrockCompletion(BaseLLM):
                 response_id=response_id,
             )
 
-            return text_content
+            return self._invoke_after_llm_call_hooks(
+                messages,
+                text_content,
+                from_agent,
+            )
 
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
