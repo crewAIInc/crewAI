@@ -216,12 +216,14 @@ def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
     
-    # Manually truncate at stop words
+    # Manually truncate at the earliest stop word in the text.
+    # Use min() to find the stop word that appears first in the response,
+    # not the first stop word in the list.
     if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
+        stop_positions = {sw: content.index(sw) for sw in self.stop if sw in content}
+        if stop_positions:
+            earliest = min(stop_positions, key=stop_positions.get)
+            content = content[:stop_positions[earliest]]
     
     return content
 
