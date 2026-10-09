@@ -12,6 +12,7 @@ from typing import Any
 import warnings
 
 import click
+from crewai_core.platform_app_defaults import PLATFORM_APP_DEFAULT_TOOLS
 from crewai_core.platform_apps import (
     PLATFORM_APPLICATION_CATALOG,
     PLATFORM_APP_CATEGORIES,
@@ -543,13 +544,19 @@ def _select_platform_actions(selected_tools: list[str]) -> list[str]:
     ]
 
     for app in platform_apps:
+        app_tools = PLATFORM_APP_TOOLS[app]
+        default_slugs = set(PLATFORM_APP_DEFAULT_TOOLS[app])
         action_indices = pick_many(
             f"{PLATFORM_APP_DISPLAY_NAMES[app]} actions for this agent (space to toggle):",
-            [f"{item.display_name} ({item.slug})" for item in PLATFORM_APP_TOOLS[app]],
+            [f"{item.display_name} ({item.slug})" for item in app_tools],
+            preselected={
+                index
+                for index, item in enumerate(app_tools)
+                if item.slug in default_slugs
+            },
         )
         platform_actions.extend(
-            f"platform:{app}/{PLATFORM_APP_TOOLS[app][index].slug}"
-            for index in action_indices
+            f"platform:{app}/{app_tools[index].slug}" for index in action_indices
         )
 
     return non_platform_tools + platform_actions

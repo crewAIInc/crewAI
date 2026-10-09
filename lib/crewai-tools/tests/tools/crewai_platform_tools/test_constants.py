@@ -1,8 +1,10 @@
+from crewai_core.platform_app_defaults import PLATFORM_APP_DEFAULT_TOOLS
 from crewai_core.platform_apps import (
     PLATFORM_CATALOG,
     PLATFORM_APP_CATEGORIES,
     PLATFORM_APP_DISPLAY_NAMES,
     PLATFORM_APP_TOOL_COUNTS,
+    PLATFORM_APP_TOOLS,
     PLATFORM_APPLICATION_CATALOG,
     PLATFORM_APPS,
 )
@@ -24,6 +26,15 @@ def test_platform_apps_contains_supported_application_catalog() -> None:
     assert next(
         application for application in PLATFORM_APPLICATION_CATALOG if application.slug == "github"
     ).display_name == "GitHub"
+
+
+def test_platform_app_default_tools_match_the_catalog() -> None:
+    assert len(PLATFORM_APP_DEFAULT_TOOLS) == len(PLATFORM_APPS)
+    assert set(PLATFORM_APP_DEFAULT_TOOLS) == set(PLATFORM_APPS)
+    for app, defaults in PLATFORM_APP_DEFAULT_TOOLS.items():
+        slugs = {tool.slug for tool in PLATFORM_APP_TOOLS[app]}
+        assert len(defaults) == 3
+        assert set(defaults) <= slugs
 
 
 def test_platform_app_categories_cover_the_catalog_once() -> None:
