@@ -23,6 +23,7 @@ from crewai_cli.cli import (
     train,
     version,
 )
+from crewai_cli.task_outputs import load_task_outputs
 
 
 @pytest.fixture
@@ -180,6 +181,7 @@ def test_replay_help_hides_legacy_flag_aliases(runner):
 
     assert result.exit_code == 0
     assert "--task-id" in result.output
+    assert "--list" in result.output
     assert "--task_id" not in result.output
 
 
@@ -232,6 +234,107 @@ def test_replay_without_task_id(replay_task_command, runner):
     assert result.exit_code == 0, result.output
     replay_task_command.assert_called_once_with(None, trained_agents_file=None)
     assert "Replaying the crew from task None" in result.output
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["--list"], ["--list", "-t", "task_123"], ["--list", "--task_id", "task_123"]],
+)
+@mock.patch("crewai_cli.cli.get_or_create_project_id")
+@mock.patch("crewai_cli.cli.replay_task_command")
+@mock.patch("crewai_cli.task_outputs.load_task_outputs")
+def test_replay_list_tasks(
+    mock_load: mock.MagicMock,
+    replay_task_command: mock.MagicMock,
+    get_or_create_project_id: mock.MagicMock,
+    runner: CliRunner,
+    args: list[str],
+) -> None:
+    mock_load.return_value = [
+        {"task_id": "task_123", "expected_output": "Research findings"},
+        {"task_id": "task_456", "expected_output": "A final report"},
+    ]
+
+    result = runner.invoke(replay, args)
+
+    assert result.exit_code == 0, result.output
+    assert result.output == (
+        "Task 1: task_123\n"
+        "Expected output: Research findings\n"
+        "------\n"
+        "Task 2: task_456\n"
+        "Expected output: A final report\n"
+        "------\n"
+    )
+    mock_load.assert_called_once_with(raise_on_error=True)
+    replay_task_command.assert_not_called()
+    get_or_create_project_id.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.replay_task_command")
+@mock.patch("crewai_cli.task_outputs.load_task_outputs", return_value=[])
+def test_replay_list_no_tasks(
+    mock_load: mock.MagicMock,
+    replay_task_command: mock.MagicMock,
+    runner: CliRunner,
+) -> None:
+    result = runner.invoke(replay, ["--list"])
+
+    assert result.exit_code == 0, result.output
+    assert "No task outputs found" in result.output
+    mock_load.assert_called_once_with(raise_on_error=True)
+    replay_task_command.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.replay_task_command")
+@mock.patch(
+    "crewai_cli.task_outputs.load_task_outputs", side_effect=OSError("cannot read")
+)
+def test_replay_list_read_error(
+    mock_load: mock.MagicMock,
+    replay_task_command: mock.MagicMock,
+    runner: CliRunner,
+) -> None:
+    result = runner.invoke(replay, ["--list"])
+
+    assert result.exit_code == 1, result.output
+    assert "An error occurred while listing replay tasks: cannot read" in result.stderr
+    mock_load.assert_called_once_with(raise_on_error=True)
+    replay_task_command.assert_not_called()
+
+
+@pytest.mark.parametrize("contents", [b"not a sqlite database", b""])
+@mock.patch("crewai_cli.cli.replay_task_command")
+def test_replay_list_database_error(
+    replay_task_command: mock.MagicMock,
+    runner: CliRunner,
+    tmp_path: Path,
+    contents: bytes,
+) -> None:
+    db_path = tmp_path / "latest_kickoff_task_outputs.db"
+    db_path.write_bytes(contents)
+    with mock.patch(
+        "crewai_cli.task_outputs._db_storage_path", return_value=str(tmp_path)
+    ):
+        result = runner.invoke(replay, ["--list"])
+
+    assert result.exit_code == 1, result.output
+    assert "An error occurred while listing replay tasks" in result.stderr
+    assert "No task outputs found" not in result.output
+    replay_task_command.assert_not_called()
+    assert load_task_outputs(str(db_path)) == []
+
+
+@mock.patch("crewai_cli.cli.replay_task_command")
+def test_replay_trained_agents_file(
+    replay_task_command: mock.MagicMock, runner: CliRunner
+) -> None:
+    result = runner.invoke(replay, ["-t", "task_123", "-f", "trained.pkl"])
+
+    assert result.exit_code == 0, result.output
+    replay_task_command.assert_called_once_with(
+        "task_123", trained_agents_file="trained.pkl"
+    )
 
 
 @mock.patch("crewai_cli.cli.run_crew")
@@ -471,6 +574,7 @@ def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
 
 def test_add_crew_to_flow_not_in_root(runner):
     with mock.patch("pathlib.Path.exists", autospec=True) as mock_exists:
+
         def exists_side_effect(self):
             if self.name == "pyproject.toml":
                 return False
