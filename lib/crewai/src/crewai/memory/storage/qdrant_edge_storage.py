@@ -78,6 +78,65 @@ def _build_scope_ancestors(scope: str) -> list[str]:
     return ancestors
 
 
+def _windows_process_is_alive(pid: int) -> bool:
+    """Liveness check through the Win32 process handle.
+
+    ``os.kill`` cannot be used as a probe on Windows: with signal 0 it reaches
+    ``TerminateProcess`` when the pid is live, and raises a generic ``OSError``
+    when it is dead.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    process_query_limited_information = 0x1000
+    still_active = 259
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.GetExitCodeProcess.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+    if not handle:
+        last_error = ctypes.get_last_error()  # type: ignore[attr-defined]
+        # ERROR_INVALID_PARAMETER is how OpenProcess reports a missing PID.
+        # Access denied (or other ambiguous failures) means the process may
+        # still exist, so keep the shard rather than reclaiming live data.
+        return bool(last_error != 87)
+    try:
+        exit_code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            return True
+        return exit_code.value == still_active
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def _process_is_alive(pid: int) -> bool:
+    """Return whether *pid* still identifies a running process.
+
+    ``os.kill(pid, 0)`` is a POSIX-only liveness probe. On Windows the same call
+    is not a null signal: a dead pid raises a generic ``OSError`` (which used to
+    escape this cleanup and crash ``__init__``) and a live pid would be killed
+    outright. Use the process handle there instead.
+    """
+    if os.name == "nt":
+        return _windows_process_is_alive(pid)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 class QdrantEdgeStorage:
     """Qdrant Edge storage backend with write-local/sync-central pattern.
 
@@ -818,14 +877,10 @@ class QdrantEdgeStorage:
                 continue
             if pid == os.getpid():
                 continue
-            try:
-                os.kill(pid, 0)
-                continue
-            except ProcessLookupError:
-                _logger.debug("Worker %d is dead, shard is orphaned", pid)
-            except PermissionError:
+            if _process_is_alive(pid):
                 continue
 
+            _logger.debug("Worker %d is dead, shard is orphaned", pid)
             _logger.info("Cleaning up orphaned shard for dead worker %d", pid)
             try:
                 orphan = EdgeShard.load(str(entry))
