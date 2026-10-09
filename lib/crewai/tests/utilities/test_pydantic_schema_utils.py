@@ -11,12 +11,9 @@ Covers:
 
 from __future__ import annotations
 
-import datetime
 from copy import deepcopy
+import datetime
 from typing import Any
-
-import pytest
-from pydantic import BaseModel
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -29,6 +26,8 @@ from crewai.utilities.pydantic_schema_utils import (
     strip_null_from_types,
     strip_unsupported_formats,
 )
+from pydantic import BaseModel
+import pytest
 
 
 class TestSimpleTypes:
@@ -419,6 +418,172 @@ class TestUnionTypes:
         assert Model(value=42).value == 42
         assert Model(value=None).value is None
 
+    def test_type_array_nullable_string_pattern_enforced(self) -> None:
+        """A list-form nullable string field still carries its string
+        constraints. `{"type": ["string", "null"], "pattern": ...}` used to
+        produce `Optional[str]` with no pattern, because constraint application
+        was gated on `isinstance(type_, type)` and a Union fails that check --
+        so a value violating the pattern was accepted and passed straight
+        through to the (MCP) tool.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": ["string", "null"],
+                    "pattern": "^[a-z]+$",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        assert Model(code=None).code is None
+        with pytest.raises(Exception):
+            Model(code="123")
+
+    def test_type_array_nullable_string_length_bounds_enforced(self) -> None:
+        """A list-form nullable string field enforces `minLength`/`maxLength`."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": ["string", "null"],
+                    "minLength": 2,
+                    "maxLength": 4,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        assert Model(code=None).code is None
+        with pytest.raises(Exception):
+            Model(code="a")  # too short
+        with pytest.raises(Exception):
+            Model(code="abcde")  # too long
+
+    def test_type_array_nullable_integer_bounds_enforced(self) -> None:
+        """A list-form nullable integer field keeps its numeric constraints.
+        `{"type": ["integer", "null"], "minimum": 0}` used to drop `minimum`,
+        so a negative number was accepted despite the schema forbidding it.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "type": ["integer", "null"],
+                    "minimum": 0,
+                    "maximum": 150,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(age=5).age == 5
+        assert Model(age=None).age is None
+        with pytest.raises(Exception):
+            Model(age=-1)  # below minimum
+        with pytest.raises(Exception):
+            Model(age=200)  # above maximum
+
+    def test_type_array_nullable_number_multiple_of_enforced(self) -> None:
+        """A list-form nullable number field enforces `minimum`/`multipleOf`."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": ["number", "null"],
+                    "minimum": 0,
+                    "multipleOf": 0.5,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(amount=2.5).amount == 2.5
+        assert Model(amount=None).amount is None
+        with pytest.raises(Exception):
+            Model(amount=0.25)  # not a multiple of 0.5
+
+    def test_type_array_nullable_string_does_not_apply_numeric_constraints(self) -> None:
+        """Cross-kind hygiene: a string field must not receive numeric bounds.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": ["string", "null"],
+                    "minimum": 0,
+                    "maximum": 5,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        # Long string is fine: numeric bounds never attach to a string member.
+        assert Model(code="a much longer string").code == "a much longer string"
+        assert Model(code=None).code is None
+
+    def test_type_array_mixed_string_number_constraints_scoped_per_member(self) -> None:
+        """A mixed union `["string","number","null"]` carrying BOTH a string
+        constraint (`pattern`) and a numeric constraint (`minimum`). Constraints
+        must attach per-member: `pattern` only to the string member, `minimum`
+        only to the number member. Attaching them at the field level raised a
+        raw `TypeError` (e.g. `ge` applied to a string value) instead of a clean
+        validation error, even for otherwise-valid values."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "v": {
+                    "type": ["string", "number", "null"],
+                    "pattern": "^[a-z]+$",
+                    "minimum": 0,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        # valid members
+        assert Model(v="abc").v == "abc"
+        assert Model(v=5.5).v == 5.5
+        assert Model(v=None).v is None
+        # invalid string (non-numeric, fails pattern) -> clean ValidationError
+        with pytest.raises(Exception):
+            Model(v="!!!")
+        # invalid number (below minimum) -> clean ValidationError
+        with pytest.raises(Exception):
+            Model(v=-3)
+
+    def test_type_array_date_format_with_pattern_does_not_raise(self) -> None:
+        """`{"type": ["string","null"], "format": "date", "pattern": ...}`:
+        the string member is narrowed to `datetime.date`. A lexical `pattern`
+        cannot be safely applied to a converted date object (it raised a raw
+        `TypeError`). Compatible semantics: the pattern is simply not applied to
+        the date member (the pre-fix behavior), and no raw TypeError escapes."""
+        import datetime as _dt
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "d": {
+                    "type": ["string", "null"],
+                    "format": "date",
+                    "pattern": r"^\d{4}-",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(d="2026-01-01").d == _dt.date(2026, 1, 1)
+        assert Model(d=None).d is None
+
+    def test_non_nullable_string_pattern_control(self) -> None:
+        """Non-nullable control: a required plain string field still enforces
+        its pattern both ways."""
+        schema = {
+            "type": "object",
+            "properties": {"code": {"type": "string", "pattern": "^[a-z]+$"}},
+            "required": ["code"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        with pytest.raises(Exception):
+            Model(code="123")
+
 
 class TestAllOfMerging:
     def test_allof_merges_properties(self) -> None:
@@ -461,6 +626,165 @@ class TestAllOfMerging:
         Model = create_model_from_schema(schema)
         obj = Model(item={"id": 1})
         assert obj.item.id == 1
+
+    def test_single_allof_integer_sibling_numeric_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner type is `integer` keeps its
+        sibling numeric constraints.
+
+        `{"allOf":[{"type":"integer"}],"minimum":5}` resolves to a plain `int`,
+        but the property has no local `type` key, so the earlier
+        `declared_types`-only check saw an empty type set and dropped
+        `minimum`/`maximum` -- a value below the bound was accepted and forwarded
+        to the tool. The resolved annotation now drives constraint application.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "age": {"allOf": [{"type": "integer"}], "minimum": 5, "maximum": 50},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(age=10).age == 10
+        with pytest.raises(Exception):
+            Model(age=1)  # below minimum
+        with pytest.raises(Exception):
+            Model(age=100)  # above maximum
+
+    def test_single_allof_string_sibling_string_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner type is `string` keeps its sibling
+        `pattern`/`minLength` constraints (the draft-07 way to add constraints
+        beside a composed string)."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "allOf": [{"type": "string"}],
+                    "pattern": "^[a-z]+$",
+                    "minLength": 2,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        with pytest.raises(Exception):
+            Model(code="1")  # fails pattern and minLength
+
+    def test_single_allof_ref_sibling_numeric_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner member is a `$ref` to an integer
+        keeps its sibling `minimum` (the usual draft-07 shape for constraining a
+        referenced type)."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "n": {"allOf": [{"$ref": "#/$defs/Count"}], "minimum": 5},
+            },
+            "$defs": {"Count": {"type": "integer"}},
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(n=10).n == 10
+        with pytest.raises(Exception):
+            Model(n=1)
+
+    def test_single_allof_string_does_not_apply_numeric_constraints(self) -> None:
+        """Cross-kind hygiene: an allOf string field must not receive sibling
+        numeric bounds."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {"allOf": [{"type": "string"}], "minimum": 0, "maximum": 5},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        # Long string is fine: numeric bounds never attach to a string member.
+        assert Model(code="a much longer string").code == "a much longer string"
+
+    def test_single_allof_string_with_format_does_not_raise(self) -> None:
+        """`{"allOf":[{"type":"string"}],"format":"date"}`: the resolved string
+        member is narrowed to `datetime.date`; a lexical string constraint must
+        not be applied to the converted date (it used to raise a raw TypeError).
+        """
+        import datetime as _dt
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "d": {
+                    "allOf": [{"type": "string"}],
+                    "format": "date",
+                    "pattern": r"^\d{4}-",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(d="2026-01-01").d == _dt.date(2026, 1, 1)
+
+    def test_single_allof_nullable_string_sibling_string_constraints_enforced(self) -> None:
+        """A single-element allOf whose inner member is a nullable list-form
+        string, e.g. `{"allOf":[{"type":["string","null"]}],"pattern":...}`,
+        resolves to `Optional[str]`. With no local `type` key the resolved
+        annotation is a Union, so the earlier concrete-type fallback saw nothing
+        and dropped `pattern`/`minLength`. The fallback now inspects the
+        non-None union members and mounts the string constraints per-member.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "allOf": [{"type": ["string", "null"]}],
+                    "pattern": "^[a-z]+$",
+                    "minLength": 2,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(code="abc").code == "abc"
+        assert Model(code=None).code is None
+        with pytest.raises(Exception):
+            Model(code="123")  # fails pattern and minLength
+
+    def test_single_allof_nullable_integer_sibling_numeric_constraints_enforced(self) -> None:
+        """The numeric mirror of the nullable allOf string case:
+        `{"allOf":[{"type":["integer","null"]}],"minimum":0,"maximum":100}`
+        resolves to `Optional[int]`; `minimum`/`maximum` must attach to the
+        `int` member while `null` stays accepted.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "allOf": [{"type": ["integer", "null"]}],
+                    "minimum": 0,
+                    "maximum": 100,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(age=50).age == 50
+        assert Model(age=None).age is None
+        with pytest.raises(Exception):
+            Model(age=-5)  # below minimum
+
+    def test_single_allof_nullable_string_format_does_not_apply_lexical_constraint(self) -> None:
+        """`{"allOf":[{"type":["string","null"]}],"format":"date","pattern":...}`:
+        the string member is narrowed to `datetime.date`, so the union-member
+        fallback must not match it as `str` and attach a lexical `pattern`. No
+        raw TypeError may escape.
+        """
+        import datetime as _dt
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "d": {
+                    "allOf": [{"type": ["string", "null"]}],
+                    "format": "date",
+                    "pattern": r"^\d{4}-",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(d="2026-01-01").d == _dt.date(2026, 1, 1)
+        assert Model(d=None).d is None
 
 
 # $ref resolution
@@ -1051,7 +1375,9 @@ class TestResolveRefsRecursive:
 
 class TestSanitizeStrictSchemas:
     def test_openai_strict_preserves_property_named_title(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_openai_strict,
+        )
 
         schema = {
             "type": "object",
@@ -1069,7 +1395,9 @@ class TestSanitizeStrictSchemas:
         assert "title" not in san["properties"]["title"]
 
     def test_openai_strict_preserves_nested_property_named_title(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_openai_strict,
+        )
 
         schema = {
             "type": "object",
@@ -1093,7 +1421,9 @@ class TestSanitizeStrictSchemas:
         assert "title" not in payload["properties"]["title"]
 
     def test_anthropic_strict_preserves_recursive_type(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_anthropic_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_anthropic_strict,
+        )
 
         san = sanitize_tool_params_for_anthropic_strict(deepcopy(RECURSIVE_NODE_SCHEMA))
         items = san["properties"]["children"]["items"]
@@ -1101,7 +1431,9 @@ class TestSanitizeStrictSchemas:
         assert items.get("type") == "object"
 
     def test_openai_strict_preserves_recursive_type(self) -> None:
-        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+        from crewai.utilities.pydantic_schema_utils import (
+            sanitize_tool_params_for_openai_strict,
+        )
 
         san = sanitize_tool_params_for_openai_strict(deepcopy(RECURSIVE_NODE_SCHEMA))
         items = san["properties"]["children"]["items"]
