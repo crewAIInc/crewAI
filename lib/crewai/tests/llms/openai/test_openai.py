@@ -2389,3 +2389,67 @@ def test_openai_no_detail_fields_omitted():
     assert usage["completion_tokens"] == 30
     assert "cached_prompt_tokens" not in usage
     assert "reasoning_tokens" not in usage
+
+
+# ---------------------------------------------------------------------------
+# Responses params: system and tool messages with multimodal parts content
+# ---------------------------------------------------------------------------
+
+
+def _responses_llm():
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    return OpenAICompletion(model="gpt-4o", api_key="testing")
+
+
+def test_responses_system_message_with_parts_collapses_to_instructions():
+    """A system message whose content is a parts list must put its text into
+    `instructions`, not the list repr."""
+    llm = _responses_llm()
+    params = llm._prepare_responses_params(
+        messages=[
+            {"role": "system", "content": [{"type": "text", "text": "be terse and polite"}]},
+            {"role": "user", "content": "hi"},
+        ],
+    )
+    assert params["instructions"] == "be terse and polite"
+
+
+def test_responses_second_system_message_with_parts_joins_with_newlines():
+    """A system message following another one must append its collapsed text
+    after the \\n\\n separator, not the f-stringified list repr."""
+    llm = _responses_llm()
+    params = llm._prepare_responses_params(
+        messages=[
+            {"role": "system", "content": "A"},
+            {"role": "system", "content": [{"type": "text", "text": "be terse and polite"}]},
+            {"role": "user", "content": "hi"},
+        ],
+    )
+    assert params["instructions"] == "A\n\nbe terse and polite"
+
+
+def test_responses_tool_message_with_parts_collapses_to_output():
+    """A tool message whose content is a parts list must put the collapsed
+    text into `function_call_output.output`, not the list repr."""
+    llm = _responses_llm()
+    items = llm._to_responses_input(
+        {"role": "tool", "tool_call_id": "call_1", "content": [{"type": "text", "text": "result payload"}]}
+    )
+    outputs = [item for item in items if item.get("type") == "function_call_output"]
+    assert outputs[0]["output"] == "result payload"
+
+
+def test_responses_string_system_and_tool_content_unchanged():
+    """Plain string system and tool content keep their existing behaviour."""
+    llm = _responses_llm()
+    params = llm._prepare_responses_params(
+        messages=[
+            {"role": "system", "content": "be terse"},
+            {"role": "user", "content": "hi"},
+        ],
+    )
+    assert params["instructions"] == "be terse"
+    items = llm._to_responses_input({"role": "tool", "tool_call_id": "call_1", "content": "string result"})
+    outputs = [item for item in items if item.get("type") == "function_call_output"]
+    assert outputs[0]["output"] == "string result"

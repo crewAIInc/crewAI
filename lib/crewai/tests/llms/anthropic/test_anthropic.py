@@ -2025,3 +2025,50 @@ def test_max_iterations_request_ends_on_a_user_turn(history_tail):
     sent = mock_client.messages.create.call_args.kwargs["messages"]
     assert sent[-1] == {"role": "user", "content": I18N_DEFAULT.errors("force_final_answer")}
     assert result.output == "42"
+
+
+# ---------------------------------------------------------------------------
+# Formatter: system messages with multimodal parts content
+# ---------------------------------------------------------------------------
+
+
+def test_anthropic_lone_system_message_with_parts_collapses_to_text():
+    """A lone system message whose content is a parts list must put its text
+    into the system string, not the list repr (the API rejects a list)."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(api_key="testing")
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": "be terse and polite"}]},
+        {"role": "user", "content": "hi"},
+    ]
+    _, system_message = llm._format_messages_for_anthropic(messages)
+    assert system_message == "be terse and polite"
+
+
+def test_anthropic_second_system_message_with_parts_joins_with_newlines():
+    """A system message following another one must append its collapsed text
+    after the \\n\\n separator, not the f-stringified list repr."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(api_key="testing")
+    messages = [
+        {"role": "system", "content": "A"},
+        {"role": "system", "content": [{"type": "text", "text": "be terse and polite"}]},
+        {"role": "user", "content": "hi"},
+    ]
+    _, system_message = llm._format_messages_for_anthropic(messages)
+    assert system_message == "A\n\nbe terse and polite"
+
+
+def test_anthropic_string_system_content_unchanged():
+    """Plain string system content keeps its existing behaviour."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(api_key="testing")
+    messages = [
+        {"role": "system", "content": "be terse"},
+        {"role": "user", "content": "hi"},
+    ]
+    _, system_message = llm._format_messages_for_anthropic(messages)
+    assert system_message == "be terse"
