@@ -79,7 +79,7 @@ class EmbeddingService:
             if provider == "openrouter":
                 model = "openai/text-embedding-3-small"
             elif provider == "deepinfra":
-                model = "BAAI/bge-m3"
+                model = "Qwen/Qwen3-Embedding-8B"
             else:
                 model = "text-embedding-3-small"
 
@@ -425,7 +425,7 @@ class EmbeddingService:
     @classmethod
     def create_deepinfra_service(
         cls,
-        model: str = "BAAI/bge-m3",
+        model: str = "Qwen/Qwen3-Embedding-8B",
         api_key: str | None = None,
         **kwargs: Any,
     ) -> EmbeddingService:

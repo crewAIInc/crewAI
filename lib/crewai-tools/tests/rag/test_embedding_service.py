@@ -465,8 +465,8 @@ class TestProviderConfigurations:
         service = EmbeddingService(provider="deepinfra", api_key="test-key")
 
         assert service.config.provider == "deepinfra"
-        assert service.config.model == "BAAI/bge-m3"
+        assert service.config.model == "Qwen/Qwen3-Embedding-8B"
         mock_build_embedder.assert_called_once()
         call_args = mock_build_embedder.call_args[0][0]
         assert call_args["provider"] == "deepinfra"
-        assert call_args["config"]["model_name"] == "BAAI/bge-m3"
+        assert call_args["config"]["model_name"] == "Qwen/Qwen3-Embedding-8B"
