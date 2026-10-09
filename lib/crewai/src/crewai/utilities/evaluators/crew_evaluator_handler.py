@@ -212,7 +212,7 @@ class CrewEvaluator:
         current_task = None
         current_task_index = -1
         for task_index, task in enumerate(self.crew.tasks):
-            if task.description == task_output.description:
+            if task.output is task_output:
                 current_task = task
                 current_task_index = task_index
                 break

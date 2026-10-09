@@ -231,7 +231,7 @@ class TestCrewEvaluatorSkippedConditionalTasks:
             ]
         )
 
-    def _run_crew_test(self, task1_raw_outputs):
+    def _run_crew_test(self, task1_raw_outputs, duplicate_descriptions=False):
         """Run a 3-task crew (middle one conditional) through Crew.test.
 
         Returns the evaluator instance created by ``Crew.test``. Only the
@@ -239,7 +239,7 @@ class TestCrewEvaluatorSkippedConditionalTasks:
         LLM call are mocked; the rest is the real ``Crew.test``/``kickoff``
         path, including the conditional-skip logic and the task callbacks.
         """
-        quality_by_task = {"Task 1": 9.0, "Task 2": 7.0, "Task 3": 8.0}
+        quality_by_output = {"Output 1": 9.0, "Output 2": 7.0, "Output 3": 8.0}
         evaluator_instances = []
 
         class RecordingEvaluator(CrewEvaluator):
@@ -253,7 +253,7 @@ class TestCrewEvaluatorSkippedConditionalTasks:
                 result = mock.Mock()
                 result.execute_sync.return_value.pydantic = (
                     TaskEvaluationPydanticOutput(
-                        quality=quality_by_task[task_to_evaluate.description]
+                        quality=quality_by_output[task_to_evaluate.expected_output]
                     )
                 )
                 return result
@@ -266,7 +266,11 @@ class TestCrewEvaluatorSkippedConditionalTasks:
             agent=agent,
             condition=lambda output: output.raw != "skip",
         )
-        task3 = Task(description="Task 3", expected_output="Output 3", agent=agent)
+        task3 = Task(
+            description="Task 2" if duplicate_descriptions else "Task 3",
+            expected_output="Output 3",
+            agent=agent,
+        )
         crew = Crew(agents=[agent], tasks=[task1, task2, task3])
 
         raw_outputs = iter(task1_raw_outputs)
@@ -339,3 +343,17 @@ class TestCrewEvaluatorSkippedConditionalTasks:
                 mock.call().add_row("Execution Time (s)", "0", "0", "0", ""),
             ]
         )
+
+    @pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$"])
+    @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Console")
+    @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Table")
+    def test_crew_test_with_skipped_task_and_duplicate_descriptions(
+        self, table, console
+    ):
+        """A later task with the same description keeps its own score."""
+        evaluator = self._run_crew_test(["skip", "go"], duplicate_descriptions=True)
+
+        assert dict(evaluator.tasks_scores) == {
+            1: [9.0, None, 8.0],
+            2: [9.0, 7.0, 8.0],
+        }
