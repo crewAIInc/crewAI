@@ -166,9 +166,13 @@ def commit_job_update(state: JobState[Any], update: JobUpdate) -> bool:
         candidate.model_dump_json()
     except (ValidationError, ValueError, TypeError):
         return False
-    # Preserve record identity for existing consumers, after all validation.
-    for name in type(job).model_fields:
-        setattr(job, name, getattr(candidate, name))
+    # The complete candidate is already validated. Install its fields together so
+    # assignment validators cannot observe partially committed cross-field state.
+    # Keep the original record (and its private attributes) for existing consumers.
+    job.__dict__.update(
+        {name: getattr(candidate, name) for name in type(job).model_fields}
+    )
+    job.__pydantic_fields_set__.update(changes)
     state.job_sequence += 1
     return True
 
