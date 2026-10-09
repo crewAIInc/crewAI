@@ -792,3 +792,54 @@ class TestAuthoredDescriptionPreserved:
             assert "Tool Name: get_temperature" in rendered
             assert "Tool Arguments:" in rendered
             assert f"Tool Description: {self.AUTHORED}" in rendered
+
+
+def test_validate_kwargs_omits_unset_optional_fields():
+    # See https://github.com/crewAIInc/crewAI/issues/7891: arguments the caller
+    # never provided must be omitted, not serialized as null (strict servers
+    # reject the null), while explicitly passed values keep working.
+
+    class GreetArgs(BaseModel):
+        name: str
+        nickname: str | None = None
+
+    class GreetTool(BaseTool):
+        name: str = "greet"
+        description: str = "Greet someone."
+        args_schema: type[BaseModel] = GreetArgs
+
+        def _run(self, name: str, nickname: str | None = None) -> str:
+            return f"{name}:{nickname}"
+
+    tool = GreetTool()
+    assert tool._validate_kwargs({"name": "Ada"}) == {"name": "Ada"}
+    assert tool._validate_kwargs({"name": "Ada", "nickname": "Addie"}) == {
+        "name": "Ada",
+        "nickname": "Addie",
+    }
+    assert tool._validate_kwargs({"name": "Ada", "nickname": None}) == {
+        "name": "Ada",
+        "nickname": None,
+    }
+
+
+def test_validate_kwargs_preserves_non_none_schema_defaults():
+    # An explicit schema may declare a real default (e.g. `count: int = 1`)
+    # that the implementation requires positionally. Omitting it must still
+    # deliver the default, even though other unset fields are dropped.
+
+    class CountArgs(BaseModel):
+        name: str
+        count: int = 1
+
+    class CountTool(BaseTool):
+        name: str = "count"
+        description: str = "Count things."
+        args_schema: type[BaseModel] = CountArgs
+
+        def _run(self, name: str, count: int) -> str:
+            return f"{name}:{count}"
+
+    tool = CountTool()
+    assert tool._validate_kwargs({"name": "Ada"}) == {"name": "Ada", "count": 1}
+    assert tool.run(name="Ada") == "Ada:1"
