@@ -1032,12 +1032,15 @@ def eval_models(models_text: str, deployment_id: str | None = None) -> None:
         _open(url)
 
     console.print("Waiting for the comparison…", style="dim")
-    shown: list[str] = []
+    # Every line once: setups run in parallel, so consecutive polls alternate
+    # between them ("judging the final output", "0 of 3 setups done", again),
+    # and a line said before carries nothing new.
+    shown: set[str] = set()
 
     def show_progress(payload: dict[str, Any]) -> None:
         line = _progress_line(payload)
-        if line and (not shown or shown[-1] != line):
-            shown.append(line)
+        if line and line not in shown:
+            shown.add(line)
             _note(line)
 
     try:
@@ -1125,13 +1128,15 @@ def _print_comparison(finished: dict[str, Any], url: str | None) -> None:
     rows: list[dict[str, Any]] = comparison["models"]
 
     grades = {area: [_grade_of(row, area) for row in rows] for area in GRADE_COLUMNS}
-    costs = [_number(row.get("cost_usd")) for row in rows]
-    seconds = [_number(row.get("seconds")) for row in rows]
+    # Per run, as the brief and the report say it; the totals over every run of
+    # a setup only from a service that sends no per-run figure.
+    costs, cost_header = _per_run(rows, "cost_per_run", "cost_usd", "cost")
+    seconds, time_header = _per_run(rows, "seconds_per_run", "seconds", "time")
     best = {area: _best(values, max) for area, values in grades.items()}
     cheapest, fastest = _best(costs, min), _best(seconds, min)
 
     table = Table(show_edge=False, pad_edge=False)
-    for header in ("model", *GRADE_COLUMNS, "cost", "time"):
+    for header in ("model", *GRADE_COLUMNS, cost_header, time_header):
         table.add_column(header, justify="left" if header == "model" else "right")
     for n, row in enumerate(rows):
         label = Text(str(row.get("label") or row.get("key") or "?"))
@@ -1152,6 +1157,14 @@ def _print_comparison(finished: dict[str, Any], url: str | None) -> None:
         )
         table.add_row(*cells)
     console.print(table)
+    # A dash is a model the service could not price, or a setup with no time
+    # recorded — said once, so a `/ run` column with a gap is not a mystery.
+    if any(cost is None for cost in costs):
+        console.print(Text("— in cost: no price is known for that model", style="dim"))
+    if any(took is None for took in seconds):
+        console.print(
+            Text("— in time: no time was recorded for that setup", style="dim")
+        )
 
     suggestions = _top_suggestions(comparison.get("suggestions"))
     if suggestions:
@@ -1173,6 +1186,26 @@ def _print_comparison(finished: dict[str, Any], url: str | None) -> None:
             console.print(Text(f"   change: {item['change'].strip()}"))
     if url:
         console.print(Text(f"Full report: {url}"))
+
+
+def _per_run(
+    rows: list[dict[str, Any]], per_run: str, total: str, noun: str
+) -> tuple[list[float | None], str]:
+    """One column's values and header: the per-run figure when every row that
+    has a value has one (`noun / run`), else every row's total (`noun`) — never
+    a column that mixes the two. A row with neither (a model the service could
+    not price) does not decide the unit: one unpriced model would otherwise turn
+    the whole column back into totals, which the brief beside it does not use.
+    Its dash is explained under the table."""
+    totals = [_number(row.get(total)) for row in rows]
+    runs = [_number(row.get(per_run)) for row in rows]
+    if any(value is not None for value in runs) and all(
+        run is not None
+        for run, whole in zip(runs, totals, strict=True)
+        if whole is not None
+    ):
+        return runs, f"{noun} / run"
+    return totals, noun
 
 
 def _grade_of(row: dict[str, Any], area: str) -> int | None:
