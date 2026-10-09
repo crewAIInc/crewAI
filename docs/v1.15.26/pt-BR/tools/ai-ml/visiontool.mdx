@@ -1,0 +1,62 @@
+---
+title: Vision Tool
+description: O `VisionTool` foi projetado para extrair texto de imagens.
+icon: eye
+mode: "wide"
+---
+
+# `VisionTool`
+
+## Descrição
+
+Esta ferramenta é utilizada para extrair texto de imagens. Quando passada para o agente, ela extrai o texto da imagem e depois o utiliza para gerar uma resposta, relatório ou qualquer outra saída.
+A URL ou o CAMINHO da imagem deve ser passado para o Agente.
+
+Você também pode fazer uma `query` personalizada sobre a imagem e escolher um `complexity_level` que seleciona automaticamente o modelo mais adequado para a solicitação:
+
+| Nível de complexidade | Modelo         |
+| :--------------- | :------------ |
+| `easy`           | `gpt-5.6-luna`  |
+| `medium` (padrão) | `gpt-5.6-terra` |
+| `hard`           | `gpt-5.6-sol`   |
+
+Quando um `llm` ou `model` explícito é fornecido à ferramenta, ele tem precedência sobre a seleção de modelo baseada na complexidade.
+
+## Instalação
+
+Instale o pacote crewai_tools
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Uso
+
+Para usar o VisionTool, a chave da API da OpenAI deve ser definida na variável de ambiente `OPENAI_API_KEY`.
+
+```python Code
+from crewai_tools import VisionTool
+
+vision_tool = VisionTool()
+
+@agent
+def researcher(self) -> Agent:
+    '''
+    This agent uses the VisionTool to extract text from images.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[vision_tool]
+    )
+```
+
+## Argumentos
+
+O VisionTool aceita os seguintes argumentos:
+
+| Argumento           | Tipo     | Descrição                                                                        |
+| :------------------ | :------- | :------------------------------------------------------------------------------- |
+| **image_path_url**  | `string` | **Obrigatório**. O caminho para o arquivo de imagem (ou URL) do qual o texto será extraído. |
+| **query**           | `string` | **Opcional**. A pergunta ou instrução a ser feita ao modelo sobre a imagem. O padrão é `"What's in this image?"`. |
+| **complexity_level** | `string` | **Opcional**. A complexidade da solicitação, que seleciona o modelo: `easy`, `medium` ou `hard`. O padrão é `medium`. |
