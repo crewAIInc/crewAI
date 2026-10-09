@@ -172,7 +172,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 # These security fixes are newer than the global supply-chain cutoff.
-exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z" }
+exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", oauthlib = "2026-09-29T00:00:00Z" }
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
