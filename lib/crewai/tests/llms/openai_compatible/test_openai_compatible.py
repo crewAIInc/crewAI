@@ -377,6 +377,22 @@ class TestLLMIntegration:
             LLM(model=model, provider="deepinfra")
 
     @pytest.mark.parametrize(
+        "model",
+        [
+            "deepinfra/DeepSeek-V4-Flash-0731",
+            "deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731/",
+            "deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731/extra",
+        ],
+    )
+    def test_llm_rejects_malformed_deepinfra_prefixed_model(self, model):
+        """A malformed deepinfra/... id raises the org/model error, never reaching LiteLLM."""
+        with patch.dict(os.environ, {"DEEPINFRA_API_KEY": "test-key"}), pytest.raises(
+            ValueError, match="org/model"
+        ) as exc_info:
+            LLM(model=model)
+        assert model in str(exc_info.value)
+
+    @pytest.mark.parametrize(
         ("model", "expected"),
         [
             ("deepseek-ai/DeepSeek-V4-Flash-0731", True),

@@ -466,7 +466,8 @@ class LLM(BaseLLM):
         a ``<prefix>/<model>`` string goes native when the prefix is a native
         provider and the model is one it knows (or, for ``openai/``, when a
         custom endpoint is configured); a bare model name infers its provider.
-        ``native_class`` is ``None`` when the call falls back to LiteLLM.
+        ``native_class`` is ``None`` when the call falls back to LiteLLM; a
+        DeepInfra id that is not ``org/model`` raises instead of falling through.
         ``kwargs`` is read, never mutated.
         """
         custom_openai = bool(kwargs.get("custom_openai", False))
@@ -489,17 +490,16 @@ class LLM(BaseLLM):
             provider = explicit_provider
             use_native = True
             model_string = model
-            if provider == "deepinfra" and not cls._matches_provider_pattern(
-                model, provider
-            ):
-                raise ValueError(
-                    "DeepInfra model ids are org/model, for example "
-                    f"'deepseek-ai/DeepSeek-V4-Flash-0731'; got '{model}'"
-                )
+            if provider == "deepinfra":
+                cls._require_deepinfra_model(model)
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 
             canonical_provider = PROVIDER_ALIASES.get(prefix.lower())
+            if canonical_provider == "deepinfra":
+                # Raise here rather than fall through to LiteLLM, where the same
+                # malformed id fails later and differently per environment.
+                cls._require_deepinfra_model(model_part, prefix=f"{prefix}/")
 
             valid_native_model = bool(
                 canonical_provider
@@ -528,6 +528,20 @@ class LLM(BaseLLM):
         if provider not in SUPPORTED_NATIVE_PROVIDERS:
             native_class = None
         return _Route(provider, model_string, native_class, custom_openai_route)
+
+    @classmethod
+    def _require_deepinfra_model(cls, model: str, prefix: str = "") -> None:
+        """Raise unless ``model`` is the ``org/model`` form DeepInfra serves.
+
+        ``prefix`` is the ``deepinfra/`` the caller wrote before ``model``, if
+        any, so the example and the echoed value match what they passed.
+        """
+        if cls._matches_provider_pattern(model, "deepinfra"):
+            return
+        raise ValueError(
+            "DeepInfra model ids are org/model, for example "
+            f"'{prefix}deepseek-ai/DeepSeek-V4-Flash-0731'; got '{prefix}{model}'"
+        )
 
     @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
