@@ -377,6 +377,7 @@ def pick_many(
     separator_indices: set[int] | None = None,
     preselected: set[int] | None = None,
     initial_cursor: int | None = None,
+    searchable: bool = False,
 ) -> list[int]: ...
 
 
@@ -389,6 +390,7 @@ def pick_many(
     separator_indices: set[int] | None = None,
     preselected: set[int] | None = None,
     initial_cursor: int | None = None,
+    searchable: bool = False,
 ) -> tuple[list[int], int | None]: ...
 
 
@@ -400,13 +402,18 @@ def pick_many(
     separator_indices: set[int] | None = None,
     preselected: set[int] | None = None,
     initial_cursor: int | None = None,
+    searchable: bool = False,
 ) -> list[int] | tuple[list[int], int | None]:
     """Arrow-key multi-select with checkboxes.
+
+    ``searchable`` marks a list the user can filter by typing. The filter
+    itself is applied by the picker loop; this flag only turns that on.
 
     Returns:
         Sorted list of selected indices, or ``(indices, action_index)`` when
         ``action_indices`` is provided.
     """
+    del searchable
     if title:
         click.echo()
         click.secho(f"  {title}", fg="cyan")

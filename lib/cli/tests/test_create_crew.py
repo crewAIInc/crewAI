@@ -486,6 +486,19 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     assert "More tools" not in labels
 
 
+def test_platform_action_picker_is_searchable(monkeypatch):
+    picker_calls: list[dict[str, object]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append(kwargs)
+        return []
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    assert json_crew._select_platform_actions(["platform:github"]) == []
+    assert picker_calls[0]["searchable"] is True
+
+
 def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
 
