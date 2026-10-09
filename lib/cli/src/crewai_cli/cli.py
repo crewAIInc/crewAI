@@ -408,7 +408,7 @@ def replay(
         try:
             from crewai_cli.task_outputs import load_task_outputs
 
-            tasks = load_task_outputs()
+            tasks = load_task_outputs(raise_on_error=True)
             if not tasks:
                 click.echo(
                     "No task outputs found. Only crew kickoff task outputs are logged."
@@ -420,7 +420,9 @@ def replay(
                 click.echo(f"Expected output: {task['expected_output']}")
                 click.echo("------")
         except Exception as e:
-            click.echo(f"An error occurred while listing replay tasks: {e}", err=True)
+            raise click.ClickException(
+                f"An error occurred while listing replay tasks: {e}"
+            ) from e
         return
 
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.

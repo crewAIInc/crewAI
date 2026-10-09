@@ -23,6 +23,7 @@ from crewai_cli.cli import (
     train,
     version,
 )
+from crewai_cli.task_outputs import load_task_outputs
 
 
 @pytest.fixture
@@ -265,7 +266,7 @@ def test_replay_list_tasks(
         "Expected output: A final report\n"
         "------\n"
     )
-    mock_load.assert_called_once_with()
+    mock_load.assert_called_once_with(raise_on_error=True)
     replay_task_command.assert_not_called()
     get_or_create_project_id.assert_not_called()
 
@@ -281,7 +282,7 @@ def test_replay_list_no_tasks(
 
     assert result.exit_code == 0, result.output
     assert "No task outputs found" in result.output
-    mock_load.assert_called_once_with()
+    mock_load.assert_called_once_with(raise_on_error=True)
     replay_task_command.assert_not_called()
 
 
@@ -296,10 +297,32 @@ def test_replay_list_read_error(
 ) -> None:
     result = runner.invoke(replay, ["--list"])
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
     assert "An error occurred while listing replay tasks: cannot read" in result.stderr
-    mock_load.assert_called_once_with()
+    mock_load.assert_called_once_with(raise_on_error=True)
     replay_task_command.assert_not_called()
+
+
+@pytest.mark.parametrize("contents", [b"not a sqlite database", b""])
+@mock.patch("crewai_cli.cli.replay_task_command")
+def test_replay_list_database_error(
+    replay_task_command: mock.MagicMock,
+    runner: CliRunner,
+    tmp_path: Path,
+    contents: bytes,
+) -> None:
+    db_path = tmp_path / "latest_kickoff_task_outputs.db"
+    db_path.write_bytes(contents)
+    with mock.patch(
+        "crewai_cli.task_outputs._db_storage_path", return_value=str(tmp_path)
+    ):
+        result = runner.invoke(replay, ["--list"])
+
+    assert result.exit_code == 1, result.output
+    assert "An error occurred while listing replay tasks" in result.stderr
+    assert "No task outputs found" not in result.output
+    replay_task_command.assert_not_called()
+    assert load_task_outputs(str(db_path)) == []
 
 
 @mock.patch("crewai_cli.cli.replay_task_command")
