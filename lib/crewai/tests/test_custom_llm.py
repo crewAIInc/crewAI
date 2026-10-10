@@ -348,3 +348,52 @@ def test_timeout_handling_llm():
     with pytest.raises(TimeoutError, match="LLM request failed after 2 attempts"):
         llm.call("Test message")
     assert len(llm.calls) == 2  # Initial call + failed retry attempt
+
+
+class ManualStopWordsLLM(BaseLLM):
+    """Custom LLM that truncates stop words itself.
+
+    Mirrors the "Stop Words Support" example in
+    ``docs/edge/en/learn/custom-llm.mdx`` for LLMs without native stop words.
+    """
+
+    def __init__(self, response: str, stop: List[str], model="test-model"):
+        super().__init__(model=model, stop=stop)
+        self.response = response
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ):
+        return self._apply_stop_words(self.response)
+
+    def supports_stop_words(self) -> bool:
+        """Return False to tell CrewAI stop words are handled manually."""
+        return False
+
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+        raise NotImplementedError
+
+
+@pytest.mark.parametrize("stop", [["LATE", "EARLY"], ["EARLY", "LATE"]])
+def test_manual_stop_words_truncate_at_earliest_match(stop):
+    """Truncation happens at the earliest match, whatever the stop order is."""
+    llm = ManualStopWordsLLM(response="hello EARLY middle LATE tail", stop=stop)
+
+    # Truncated content is stripped, so the space before "EARLY" is dropped
+    assert llm.call("Test message") == "hello"
+
+
+def test_manual_stop_words_leave_response_unchanged_without_match():
+    """A response with no stop word in it is returned as is."""
+    llm = ManualStopWordsLLM(
+        response="hello EARLY middle LATE tail", stop=["NEVER", "ABSENT"]
+    )
+
+    assert llm.call("Test message") == "hello EARLY middle LATE tail"
