@@ -7,8 +7,10 @@ import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
+import importlib.util
 import inspect
 import json
+import os
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
@@ -60,6 +62,41 @@ _ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
         "crewai.tools.tool_usage",
     }
 )
+
+
+def _is_allowlisted_tool_module(module_name: str) -> bool:
+    """Check whether a repository tool record's module may be imported.
+
+    Repository records store the tool class's defining module as produced by
+    ``extract_tools_metadata``. For crewai-tools that is the tool's own
+    submodule (e.g. ``"crewai_tools.tools.csv_search_tool.csv_search_tool"``),
+    never the bare ``"crewai_tools"`` package. Accept only submodules that
+    resolve inside the installed ``crewai_tools`` package directory, so the
+    check remains a pinned-package membership test rather than a loose prefix
+    match that would bless any dotted name starting with the package name.
+    """
+    if module_name in _ALLOWED_TOOL_MODULES:
+        return True
+    if module_name != "crewai_tools" and not module_name.startswith("crewai_tools."):
+        return False
+    try:
+        spec = importlib.util.find_spec(module_name)
+        package_spec = importlib.util.find_spec("crewai_tools")
+    except Exception:  # noqa: BLE001 - fail closed: any resolution failure rejects the module
+        # find_spec imports the parent package, which can raise beyond
+        # ImportError on a broken install; an allowlist must fail closed to
+        # "not allowlisted" rather than crash the agent load.
+        return False
+    if spec is None or package_spec is None or not spec.origin:
+        return False
+    search_locations = package_spec.submodule_search_locations
+    if not search_locations:
+        return False
+    real_origin = os.path.realpath(spec.origin)
+    return any(
+        real_origin.startswith(os.path.realpath(location) + os.sep)
+        for location in search_locations
+    )
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -1331,7 +1368,7 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        if tool["module"] not in _ALLOWED_TOOL_MODULES:
+                        if not _is_allowlisted_tool_module(tool["module"]):
                             raise AgentRepositoryError(
                                 f"Tool module {tool['module']!r} is not in the allowlist. "
                                 f"Allowed modules: {', '.join(sorted(_ALLOWED_TOOL_MODULES))}"

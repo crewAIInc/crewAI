@@ -1,4 +1,7 @@
+import hashlib
+import hmac
 import os
+import pickle
 import shutil
 import stat
 import tempfile
@@ -52,12 +55,40 @@ class TestPickleHandler(unittest.TestCase):
         loaded_data = self.handler.load()
         assert loaded_data == data
 
-    def test_save_creates_signature_file(self):
+    def test_save_writes_single_self_contained_record(self):
+        """save() must store payload+signature in one atomic record, no .sig sidecar."""
         data = {"key": "value"}
         self.handler.save(data)
+
         sig_path = self.file_path + ".sig"
-        assert os.path.exists(sig_path)
-        assert os.path.getsize(sig_path) == 32  # SHA-256 digest size
+        assert not os.path.exists(sig_path)
+
+        with open(self.file_path, "rb") as f:
+            record = f.read()
+        sig_len = int.from_bytes(record[:4], "big")
+        assert sig_len == 32  # SHA-256 digest size
+        assert (
+            record[4 : 4 + 32]
+            == hmac.new(self.handler._key, pickle.dumps(data), hashlib.sha256).digest()
+        )
+        assert self.handler.load() == data
+
+    def test_load_reads_legacy_payload_and_sig_pair(self):
+        """Files written by older versions (payload + .sig sidecar) stay readable."""
+        import hmac as hmac_mod
+        import hashlib as hashlib_mod
+        import pickle as pickle_mod
+
+        payload = pickle_mod.dumps({"legacy": True})
+        signature = hmac_mod.new(
+            self.handler._key, payload, hashlib_mod.sha256
+        ).digest()
+        with open(self.file_path, "wb") as f:
+            f.write(payload)
+        with open(self.file_path + ".sig", "wb") as f:
+            f.write(signature)
+
+        assert self.handler.load() == {"legacy": True}
 
     def test_load_empty_file(self):
         loaded_data = self.handler.load()
@@ -76,8 +107,26 @@ class TestPickleHandler(unittest.TestCase):
         data = {"key": "value"}
         self.handler.save(data)
 
-        with open(self.file_path, "wb") as f:
-            f.write(b"tampered pickle data")
+        with open(self.file_path, "r+b") as f:
+            record = bytearray(f.read())
+            # Flip a byte inside the payload region of the single record.
+            record[40] ^= 0xFF
+            f.seek(0)
+            f.write(record)
+
+        with pytest.raises(ValueError, match="signature mismatch"):
+            self.handler.load()
+
+    def test_load_tampered_signature_prefix_raises_error(self):
+        """A forged length prefix still fails HMAC verification."""
+        self.handler.save({"key": "value"})
+
+        with open(self.file_path, "r+b") as f:
+            record = bytearray(f.read())
+            record[0:4] = b"\x00\x00\x00\x20"
+            record[4] ^= 0xFF
+            f.seek(0)
+            f.write(record)
 
         with pytest.raises(ValueError, match="signature mismatch"):
             self.handler.load()
@@ -102,18 +151,28 @@ class TestPickleHandler(unittest.TestCase):
         loaded2 = self.handler.load()
         assert loaded2 == data2
 
-    def test_initialize_file_creates_valid_signature(self):
+    def test_initialize_file_creates_valid_record(self):
         self.handler.initialize_file()
         sig_path = self.file_path + ".sig"
-        assert os.path.exists(sig_path)
+        assert not os.path.exists(sig_path)
 
         loaded_data = self.handler.load()
         assert loaded_data == {}
 
-    def test_load_rejects_disappearing_signature(self):
-        """If the signature file is removed after the existence check, load should raise ValueError."""
-        data = {"key": "value"}
-        self.handler.save(data)
+    def test_load_rejects_disappearing_legacy_signature(self):
+        """If the legacy .sig file is removed after the existence check, load raises."""
+        import hmac as hmac_mod
+        import hashlib as hashlib_mod
+        import pickle as pickle_mod
+
+        payload = pickle_mod.dumps({"key": "value"})
+        signature = hmac_mod.new(
+            self.handler._key, payload, hashlib_mod.sha256
+        ).digest()
+        with open(self.file_path, "wb") as f:
+            f.write(payload)
+        with open(self.file_path + ".sig", "wb") as f:
+            f.write(signature)
 
         original_exists = os.path.exists
         sig_path = self.file_path + ".sig"
@@ -157,21 +216,69 @@ class TestPickleHandler(unittest.TestCase):
             os.chmod(key_dir, 0o700)
             os.rmdir(key_dir)
 
-    def test_key_creation_passes_binary_flag_to_os_open(self):
-        """Key creation must pass O_BINARY to os.open where the platform provides it."""
+    def test_key_creation_publishes_via_temp_file_and_link(self):
+        """Key creation must stage the key in a temp file and publish with os.link,
+        so a concurrent reader never observes a partially written key."""
+        import tempfile as tempfile_mod
+
         fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
         try:
+            staged = []
+            real_mkstemp = tempfile_mod.mkstemp
+
+            def recording_mkstemp(*args, **kwargs):
+                result = real_mkstemp(*args, **kwargs)
+                staged.append(result[1])
+                return result
+
             with (
                 patch("os.path.expanduser", return_value=fresh_home),
-                patch.object(os, "O_BINARY", 0x8000, create=True),
-                patch("os.open", wraps=os.open) as mock_open,
+                patch("os.link", wraps=os.link) as mock_link,
+                patch("tempfile.mkstemp", side_effect=recording_mkstemp),
             ):
-                PickleHandler("binary_flag_check.pkl")
-            seen_flags = [call.args[1] for call in mock_open.call_args_list]
+                PickleHandler("link_publish_check.pkl")
+            self.assertEqual(len(staged), 1)
             self.assertTrue(
-                any(flags & 0x8000 for flags in seen_flags),
-                "os.open must be called with O_BINARY when creating the key file",
+                staged[0].startswith(os.path.join(fresh_home, ".crewai") + os.sep),
+                "temp key file must live in the key directory",
             )
+            mock_link.assert_called_once_with(
+                staged[0], os.path.join(fresh_home, ".crewai", ".hmac_key")
+            )
+            # The staged key must be complete (32 bytes, 0600) before publish.
+            key_path = os.path.join(fresh_home, ".crewai", ".hmac_key")
+            self.assertEqual(os.path.getsize(key_path), 32)
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(os.stat(key_path).st_mode), 0o600)
+            # No temp files may be left behind after publication.
+            leftovers = [
+                name
+                for name in os.listdir(os.path.join(fresh_home, ".crewai"))
+                if name.startswith(".hmac_key_tmp_")
+            ]
+            self.assertEqual(leftovers, [])
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
+    def test_key_creation_lost_link_race_loads_installed_key(self):
+        """If another process publishes first (os.link raises FileExistsError),
+        the installed complete key must be loaded, not the in-memory copy."""
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            key_dir = os.path.join(fresh_home, ".crewai")
+            os.makedirs(key_dir, mode=0o700)
+            installed_key = os.urandom(32)
+            key_path = os.path.join(key_dir, ".hmac_key")
+            with open(key_path, "wb") as f:
+                f.write(installed_key)
+            os.chmod(key_path, 0o600)
+
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch("os.link", side_effect=FileExistsError),
+            ):
+                handler = PickleHandler("link_race_check.pkl")
+            self.assertEqual(handler._key, installed_key)
         finally:
             shutil.rmtree(fresh_home, ignore_errors=True)
 
@@ -211,21 +318,16 @@ class TestPickleHandler(unittest.TestCase):
         self.handler.save(data)
 
         real_pkl = self.file_path + ".real"
-        real_sig = self.file_path + ".sig.real"
         os.rename(self.file_path, real_pkl)
-        os.rename(self.file_path + ".sig", real_sig)
         os.symlink(real_pkl, self.file_path)
-        os.symlink(real_sig, self.file_path + ".sig")
         try:
             with self.assertRaises(ValueError):
                 self.handler.load()
         finally:
-            for link in (self.file_path, self.file_path + ".sig"):
-                if os.path.islink(link):
-                    os.unlink(link)
-            for path in (real_pkl, real_sig):
-                if os.path.exists(path):
-                    os.remove(path)
+            if os.path.islink(self.file_path):
+                os.unlink(self.file_path)
+            if os.path.exists(real_pkl):
+                os.remove(real_pkl)
 
     def test_atomic_write_cleans_up_temp_file_on_failure(self):
         """A failed payload write must not leave the temp file behind."""

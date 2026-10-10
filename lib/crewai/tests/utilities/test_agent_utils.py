@@ -1802,6 +1802,102 @@ class TestHandleMaxIterationsExceeded:
 class TestModuleAllowlist:
     """Tests for the tool module allowlist in load_agent_from_repository."""
 
+    def test_is_allowlisted_tool_module_exact_members(self):
+        """Exact allowlist members pass; anything else falls through to the package check."""
+        from crewai.utilities.agent_utils import _is_allowlisted_tool_module
+
+        assert _is_allowlisted_tool_module("crewai.tools") is True
+        assert _is_allowlisted_tool_module("crewai_tools") is True
+        assert _is_allowlisted_tool_module("crewai.tools.base_tool") is True
+        assert _is_allowlisted_tool_module("os") is False
+        assert _is_allowlisted_tool_module("subprocess") is False
+        # A loose prefix match must not bless lookalike top-level names.
+        assert _is_allowlisted_tool_module("crewai_tools_evil") is False
+
+    def test_crewai_tools_submodule_inside_package_is_allowed(self):
+        """A repository record's defining module (e.g. csv_search_tool's own
+        submodule) resolves inside the installed crewai_tools package."""
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from crewai.utilities import agent_utils
+
+        def fake_find_spec(name):
+            if name == "crewai_tools":
+                return SimpleNamespace(submodule_search_locations=["/site/crewai_tools"])
+            if name == "crewai_tools.tools.csv_search_tool.csv_search_tool":
+                return SimpleNamespace(
+                    origin="/site/crewai_tools/tools/csv_search_tool/csv_search_tool.py"
+                )
+            raise AssertionError(f"unexpected find_spec({name})")
+
+        with patch.object(
+            agent_utils.importlib.util, "find_spec", side_effect=fake_find_spec
+        ):
+            assert (
+                agent_utils._is_allowlisted_tool_module(
+                    "crewai_tools.tools.csv_search_tool.csv_search_tool"
+                )
+                is True
+            )
+
+    def test_crewai_tools_submodule_outside_package_is_rejected(self):
+        """A dotted name under crewai_tools.* that resolves outside the installed
+        package directory is still rejected."""
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from crewai.utilities import agent_utils
+
+        def fake_find_spec(name):
+            if name == "crewai_tools":
+                return SimpleNamespace(submodule_search_locations=["/site/crewai_tools"])
+            return SimpleNamespace(origin="/tmp/attacker/x.py")
+
+        with patch.object(
+            agent_utils.importlib.util, "find_spec", side_effect=fake_find_spec
+        ):
+            assert (
+                agent_utils._is_allowlisted_tool_module("crewai_tools.tools.evil")
+                is False
+            )
+
+    def test_crewai_tools_submodule_unresolvable_is_rejected(self):
+        """A submodule find_spec cannot resolve is rejected."""
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from crewai.utilities import agent_utils
+
+        def fake_find_spec(name):
+            if name == "crewai_tools":
+                return SimpleNamespace(submodule_search_locations=["/site/crewai_tools"])
+            return None
+
+        with patch.object(
+            agent_utils.importlib.util, "find_spec", side_effect=fake_find_spec
+        ):
+            assert (
+                agent_utils._is_allowlisted_tool_module("crewai_tools.tools.missing")
+                is False
+            )
+
+    def test_crewai_tools_package_missing_is_rejected(self):
+        """Without an installed crewai_tools package, submodules are rejected."""
+        from unittest.mock import patch
+
+        from crewai.utilities import agent_utils
+
+        with patch.object(
+            agent_utils.importlib.util, "find_spec", return_value=None
+        ):
+            assert (
+                agent_utils._is_allowlisted_tool_module(
+                    "crewai_tools.tools.csv_search_tool.csv_search_tool"
+                )
+                is False
+            )
+
     def test_blocked_module_raises_repository_error(self):
         """Loading an agent whose tool references a non-allowlisted module should raise AgentRepositoryError."""
         from unittest.mock import MagicMock, patch
