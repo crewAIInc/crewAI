@@ -167,6 +167,20 @@ def _serialize_executor_ref(value: Any) -> dict[str, Any] | None:
     return result
 
 
+def _validate_guardrail_llm_ref(value: Any) -> BaseLLM | None:
+    if value is None:
+        return None
+    if not isinstance(value, (BaseLLM, str, dict)):
+        raise ValueError("guardrail_llm must be an LLM instance, model name, or config")
+
+    from crewai.utilities.llm_utils import create_llm
+
+    llm = create_llm(_validate_llm_ref(value))
+    if not isinstance(llm, BaseLLM):
+        raise ValueError("guardrail_llm must resolve to a BaseLLM instance")
+    return llm
+
+
 def _serialize_llm_ref(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
@@ -316,6 +330,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         BeforeValidator(_validate_llm_ref),
         PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(default=None, description="Language model that will run the agent.")
+    guardrail_llm: Annotated[
+        BaseLLM | None,
+        BeforeValidator(_validate_guardrail_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(
+        default=None,
+        description="Language model for string guardrails. Defaults to the agent's LLM.",
+    )
     crew: Annotated[
         Crew | str | None,
         BeforeValidator(_validate_crew_ref),
@@ -712,6 +734,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "tools_handler",
             "cache_handler",
             "llm",
+            "guardrail_llm",
             "knowledge_sources",
             "knowledge_storage",
             "knowledge",
@@ -757,6 +780,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         return type(self)(
             **copied_data,
             llm=existing_llm,
+            guardrail_llm=shallow_copy(self.guardrail_llm),
             tools=self.tools,
             knowledge_sources=existing_knowledge_sources,
             knowledge=copied_knowledge,

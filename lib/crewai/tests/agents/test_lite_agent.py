@@ -527,6 +527,39 @@ def test_agent_output_when_guardrail_returns_base_model():
     assert result.pydantic == Player(name="Lionel Messi", country="Argentina")
 
 
+@pytest.mark.parametrize("agent_class", [Agent, LiteAgent])
+@pytest.mark.parametrize("separate_judge", [False, True])
+def test_standalone_string_guardrail_uses_configured_judge(agent_class, separate_judge):
+    from crewai.tasks.llm_guardrail import LLMGuardrailResult
+
+    subject = LLM(model="gpt-4o-mini", api_key="unit-test-key")
+    judge = LLM(model="gpt-4o-mini", api_key="unit-test-key")
+    agent = agent_class(
+        role="Writer",
+        goal="Write a short answer",
+        backstory="A concise writer",
+        llm=subject,
+        guardrail="The answer is concise",
+        guardrail_llm=judge if separate_judge else None,
+    )
+
+    def respond(*args, **kwargs):
+        if kwargs.get("response_model") is not None:
+            return LLMGuardrailResult(valid=True)
+        return "Final Answer: A short answer"
+
+    with (
+        patch.object(subject, "call", side_effect=respond) as subject_calls,
+        patch.object(judge, "call", side_effect=respond) as judge_calls,
+    ):
+        result = agent.kickoff("Write an answer")
+
+    assert result.raw == "A short answer"
+    assert agent.llm is subject
+    assert judge_calls.call_count == (1 if separate_judge else 0)
+    assert subject_calls.call_count == (1 if separate_judge else 2)
+
+
 def test_lite_agent_with_custom_llm_and_guardrails():
     """Test that CustomLLM (inheriting from BaseLLM) works with guardrails."""
 

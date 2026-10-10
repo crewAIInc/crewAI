@@ -21,6 +21,7 @@ import uuid
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
     PrivateAttr,
     ValidationError,
@@ -39,7 +40,11 @@ if TYPE_CHECKING:
 
 from crewai_core.printer import PRINTER
 
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import (
+    BaseAgent,
+    _serialize_llm_ref,
+    _validate_guardrail_llm_ref,
+)
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.parser import (
@@ -273,6 +278,14 @@ class LiteAgent(FlowTrackable, BaseModel):
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
+    guardrail_llm: Annotated[
+        BaseLLM | None,
+        BeforeValidator(_validate_guardrail_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(
+        default=None,
+        description="Language model for string guardrails. Defaults to this agent's LLM.",
+    )
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
@@ -389,13 +402,14 @@ class LiteAgent(FlowTrackable, BaseModel):
         elif isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
-            if not isinstance(self.llm, BaseLLM):
+            llm = self.guardrail_llm if self.guardrail_llm is not None else self.llm
+            if not isinstance(llm, BaseLLM):
                 raise TypeError(
-                    f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}"
+                    f"Guardrail requires LLM instance of type BaseLLM, got {type(llm).__name__}"
                 )
             self._guardrail = cast(
                 GuardrailCallable,
-                cast(object, LLMGuardrail(description=self.guardrail, llm=self.llm)),
+                cast(object, LLMGuardrail(description=self.guardrail, llm=llm)),
             )
 
         return self

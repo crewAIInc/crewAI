@@ -2105,9 +2105,12 @@ class Agent(BaseAgent):
         if isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
+            llm = self.guardrail_llm
+            if llm is None:
+                llm = cast(BaseLLM, self.llm)
             guardrail_callable = cast(
                 GuardrailCallable,
-                LLMGuardrail(description=self.guardrail, llm=cast(BaseLLM, self.llm)),
+                LLMGuardrail(description=self.guardrail, llm=llm),
             )
         elif callable(self.guardrail):
             guardrail_callable = self.guardrail
