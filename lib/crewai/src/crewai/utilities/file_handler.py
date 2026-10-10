@@ -157,8 +157,9 @@ class PickleHandler:
         The key is stored in ``~/.crewai/.hmac_key`` with mode 0600 to keep it
         separate from the working directory where pickle files reside. The
         directory and key file are validated for ownership and restrictive
-        permissions before use. Key creation uses an exclusive-create flag so
-        concurrent processes cannot overwrite each other's key.
+        permissions before use. Key creation stages the key in a temp file
+        and publishes it with a no-clobber hard link, so a concurrent process
+        never observes a partially written key.
 
         Returns:
             The 32-byte HMAC key.
@@ -201,38 +202,46 @@ class PickleHandler:
 
         key = secrets.token_bytes(32)
 
-        # Atomic no-clobber creation: O_CREAT|O_EXCL prevents two processes
-        # from writing different keys simultaneously. If another process won,
-        # load its key instead of using our in-memory copy.
+        # Write-then-publish: stage the key in a temp file inside key_dir
+        # (0600 from mkstemp), fsync it, then publish with os.link(), which
+        # refuses to overwrite an existing file. A concurrent process can
+        # therefore never observe a partially written key: the path either
+        # does not exist yet or already holds the complete 32 bytes. On a
+        # lost race, load the installed key instead of our in-memory copy.
         #
-        # O_BINARY keeps the Windows CRT from translating 0x0A bytes to CRLF
-        # on write, which would corrupt the fixed 32-byte key length on read.
-        # It does not exist on POSIX; the getattr guard yields 0 there.
-        open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_BINARY", 0)
+        # os.write() operates on the fd directly, so no CRT newline
+        # translation can corrupt the fixed 32-byte length on any platform.
+        fd, tmp_key = tempfile.mkstemp(dir=key_dir, prefix=".hmac_key_tmp_")
         try:
-            fd = os.open(key_path, open_flags, 0o600)
-        except FileExistsError:
-            # Another process created the key between our check and create.
-            # Validate and load the installed key.
-            if self._validate_key_storage(key_dir, key_path):
-                with open(key_path, "rb") as f:
-                    installed = f.read()
-                if len(installed) == 32:
-                    return installed
-                raise ValueError(
-                    f"HMAC key file {key_path} was created concurrently but has "
-                    "invalid length. Remove the file to regenerate."
-                ) from None
-            raise
-
-        try:
-            # Write all bytes, handling short writes from the OS.
-            offset = 0
-            while offset < len(key):
-                offset += os.write(fd, key[offset:])
-            os.fsync(fd)
+            try:
+                # Write all bytes, handling short writes from the OS.
+                offset = 0
+                while offset < len(key):
+                    offset += os.write(fd, key[offset:])
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            try:
+                os.link(tmp_key, key_path)
+            except FileExistsError:
+                # Another process published its key first. Validate and load
+                # the installed key, which is guaranteed complete.
+                if self._validate_key_storage(key_dir, key_path):
+                    with open(key_path, "rb") as f:
+                        installed = f.read()
+                    if len(installed) == 32:
+                        return installed
+                    raise ValueError(
+                        f"HMAC key file {key_path} has invalid length "
+                        f"({len(installed)} bytes, expected 32). Remove the file "
+                        "to regenerate, or restore from a valid backup."
+                    ) from None
+                raise
         finally:
-            os.close(fd)
+            try:
+                os.unlink(tmp_key)
+            except OSError:
+                pass
 
         return key
 
@@ -324,13 +333,21 @@ class PickleHandler:
         """Initialize the file with an empty dictionary and overwrite any existing data."""
         self.save({})
 
+    # On-disk record layout for save()/load(): a 4-byte big-endian signature
+    # length, the HMAC-SHA256 signature, then the pickle payload, all written
+    # in one atomic _atomic_write. A single atomic write means a crash can
+    # never leave a new payload paired with an old signature.
+    _RECORD_SIG_LEN = 32
+
     def save(self, data: Any) -> None:
         """Save the data to the specified file using pickle with HMAC signature.
 
         The payload is serialized exactly once into a buffer; the signature
-        covers those same bytes. Both files are written atomically (temp file
-        in the destination directory + fsync + rename) so a concurrent reader
-        never observes a torn write and a symlink planted at the destination
+        covers those same bytes. Payload and signature are stored in one
+        self-contained record written atomically (temp file in the
+        destination directory + fsync + rename), so a concurrent reader never
+        observes a torn write, a crash between two writes cannot orphan a
+        payload from its signature, and a symlink planted at the destination
         is replaced rather than followed.
 
         Args:
@@ -338,9 +355,15 @@ class PickleHandler:
         """
         payload = pickle.dumps(data)
         signature = hmac.new(self._key, payload, hashlib.sha256).digest()
+        record = len(signature).to_bytes(4, "big") + signature + payload
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            self._atomic_write(self.file_path, payload)
-            self._atomic_write(self._sig_path, signature)
+            self._atomic_write(self.file_path, record)
+            # Drop any legacy sidecar signature: the record is now
+            # self-contained, and a stale .sig must not shadow it.
+            try:
+                os.unlink(self._sig_path)
+            except OSError:
+                pass
 
     @staticmethod
     def _atomic_write(path: str, data: bytes) -> None:
@@ -404,21 +427,45 @@ class PickleHandler:
     def load(self) -> Any:
         """Load the data from the specified file with HMAC integrity verification.
 
-        The signature file must exist and match the pickle file's contents.
-        Files without a signature are rejected to prevent loading untrusted data.
+        Reads the single self-contained record written by save(); files in
+        the legacy layout (payload plus a separate ``.sig`` sidecar, written
+        by older versions) remain readable for migration. Files without a
+        verifiable signature are rejected to prevent loading untrusted data.
 
         Returns:
             The data loaded from the file.
 
         Raises:
-            ValueError: If the signature file is missing or verification fails.
+            ValueError: If no verifiable signature exists or verification fails.
         """
         if not os.path.exists(self.file_path):
             return {}
 
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            payload = self._read_regular_file(self.file_path)
+            record = self._read_regular_file(self.file_path)
 
+            # Single-record format: 4-byte big-endian signature length, then
+            # the signature, then the pickle payload. A real pickle payload
+            # never begins with b"\x00\x00\x00\x20" (no pickle opcode is
+            # 0x00), so the length prefix cannot collide with a legacy
+            # payload file; a forged prefix still fails HMAC verification.
+            if len(record) >= 4 + PickleHandler._RECORD_SIG_LEN:
+                sig_len = int.from_bytes(record[:4], "big")
+                if sig_len == PickleHandler._RECORD_SIG_LEN:
+                    stored_sig = record[4 : 4 + PickleHandler._RECORD_SIG_LEN]
+                    payload = record[4 + PickleHandler._RECORD_SIG_LEN :]
+                    expected_sig = hmac.new(
+                        self._key, payload, hashlib.sha256
+                    ).digest()
+                    if not hmac.compare_digest(stored_sig, expected_sig):
+                        raise ValueError(
+                            f"Integrity check failed for {self.file_path}: "
+                            "signature mismatch - file may have been tampered with"
+                        )
+                    return pickle.loads(payload)  # noqa: S301
+
+            # Legacy layout: payload file plus a separate .sig sidecar.
+            payload = record
             if not os.path.exists(self._sig_path):
                 raise ValueError(
                     f"Integrity check failed for {self.file_path}: "
@@ -440,6 +487,5 @@ class PickleHandler:
                     f"Integrity check failed for {self.file_path}: "
                     "signature mismatch - file may have been tampered with"
                 )
-
 
             return pickle.loads(payload)  # noqa: S301
