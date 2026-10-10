@@ -5,10 +5,11 @@ import threading
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
-
+from crewai import Agent, Crew, Process, Task
+from crewai.llms.base_llm import BaseLLM
 from crewai_tools import SmolExecTool, SmolFileTool, SmolPythonTool
 from crewai_tools.tools.smol_sandbox_tool.smol_base_tool import SmolBaseTool
+import pytest
 
 
 @pytest.fixture
@@ -53,7 +54,9 @@ def test_local_shell_exec_does_not_select_cloud_from_environment(sdk, monkeypatc
     machine.delete.assert_called_once_with()
 
 
-def test_persistent_shell_and_attached_files_share_vm_without_double_delete(sdk, tmp_path):
+def test_persistent_shell_and_attached_files_share_vm_without_double_delete(
+    sdk, tmp_path
+):
     client, machine = sdk
     offline_image = tmp_path / "rootfs"
     offline_image.mkdir()
@@ -342,7 +345,10 @@ def test_python_argv_is_passed_without_shell_interpolation(sdk):
     result = tool.run(code="import sys; print(sys.argv[1])", argv=["; echo unsafe"])
     assert result["stdout"] == "hello\n"
     assert machine.exec.call_args.args[0] == [
-        "python", "-c", "import sys; print(sys.argv[1])", "; echo unsafe"
+        "python",
+        "-c",
+        "import sys; print(sys.argv[1])",
+        "; echo unsafe",
     ]
     machine.delete.assert_called_once_with()
 
@@ -352,9 +358,9 @@ def test_file_data_and_validation(sdk):
     tool = SmolFileTool()
     assert tool.run(action="read", path="/workspace/a") == "hello\n"
     assert tool.run(action="read", path="/workspace/a", binary=True) == "aGVsbG8K"
-    assert tool.run(action="write", path="/workspace/a", content="AAE=", binary=True) == (
-        "Wrote 2 bytes to /workspace/a"
-    )
+    assert tool.run(
+        action="write", path="/workspace/a", content="AAE=", binary=True
+    ) == ("Wrote 2 bytes to /workspace/a")
     machine.write_file.assert_called_with("/workspace/a", b"\x00\x01")
     with pytest.raises(ValueError, match="absolute"):
         tool.run(action="read", path="relative/path")
@@ -377,7 +383,9 @@ def test_invalid_file_payload_never_creates_a_cloud_vm(sdk):
     client, _ = sdk
     tool = SmolFileTool(target="cloud")
     with pytest.raises(ValueError, match="valid base64"):
-        tool.run(action="write", path="/workspace/a", content="not base64!", binary=True)
+        tool.run(
+            action="write", path="/workspace/a", content="not base64!", binary=True
+        )
     with pytest.raises(UnicodeEncodeError):
         tool.run(action="write", path="/workspace/a", content="\ud800")
     client.Machine.create.assert_not_called()
@@ -404,3 +412,63 @@ def test_missing_local_offline_image_rejected_before_provisioning(sdk):
             command="echo should-not-run"
         )
     client.Machine.create.assert_not_called()
+
+
+def test_crew_agent_uses_smol_tool_and_receives_vm_output(sdk):
+    _, machine = sdk
+    machine.exec.return_value.stdout = "CREWAI_SMOL_AGENT_OK"
+
+    class ScriptedLLM(BaseLLM):
+        def __init__(self):
+            super().__init__(model="scripted-local")
+            object.__setattr__(self, "calls", 0)
+            object.__setattr__(self, "observed", False)
+
+        def call(self, messages, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return (
+                    "Thought: I need the isolated shell.\n"
+                    "Action: Smol Machines Sandbox Exec\n"
+                    'Action Input: {"command": "printf CREWAI_SMOL_AGENT_OK"}'
+                )
+            self.observed = "Observation:" in str(
+                messages
+            ) and "CREWAI_SMOL_AGENT_OK" in str(messages)
+            return "Thought: I received the VM output.\nFinal Answer: Done"
+
+        def supports_function_calling(self):
+            return False
+
+        def supports_stop_words(self):
+            return False
+
+        def get_context_window_size(self):
+            return 8192
+
+    llm = ScriptedLLM()
+    tool = SmolExecTool()
+    agent = Agent(
+        role="Developer",
+        goal="Get a verification code",
+        backstory="Uses an isolated VM",
+        tools=[tool],
+        llm=llm,
+        max_iter=3,
+    )
+    task = Task(
+        description="Use the sandbox tool to get a verification code",
+        expected_output="The code",
+        agent=agent,
+    )
+    try:
+        Crew(agents=[agent], tasks=[task], process=Process.sequential).kickoff()
+        assert llm.calls == 2 and llm.observed
+        assert machine.exec.call_args.args[0] == [
+            "sh",
+            "-lc",
+            "printf CREWAI_SMOL_AGENT_OK",
+        ]
+        machine.delete.assert_called_once_with()
+    finally:
+        tool.close()
