@@ -43,9 +43,14 @@ async def test_async_handlers_run_on_the_host_event_loop(
 async def test_shutdown_leaves_the_host_event_loop_running(
     wasm_bus: CrewAIEventsBus,
 ) -> None:
+    @wasm_bus.on(_PingEvent)
+    def on_ping(source: object, event: _PingEvent) -> None:
+        pass
+
     wasm_bus.emit(object(), _PingEvent())
 
     wasm_bus.shutdown(wait=False)
 
     assert asyncio.get_running_loop().is_running()
     assert not asyncio.get_running_loop().is_closed()
+    assert not wasm_bus._sync_handlers

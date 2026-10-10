@@ -144,3 +144,23 @@ def test_sync_requests_without_jspi_explain_the_requirement(
     with httpx.Client(transport=FetchTransport()) as client:
         with pytest.raises(RuntimeError, match="JSPI"):
             client.get("https://api.example.com/")
+
+
+@pytest.mark.asyncio
+async def test_body_failures_raise_read_error(fake_js: SimpleNamespace) -> None:
+    async def fail() -> SimpleNamespace:
+        raise _JsException("TypeError: network error")
+
+    async with httpx.AsyncClient(transport=FetchAsyncTransport()) as client:
+        async with client.stream("GET", "https://api.example.com/sse") as response:
+            fake_js.reader.read = fail
+            with pytest.raises(httpx.ReadError, match="network error"):
+                await response.aread()
+
+
+def test_sync_requests_send_streamed_bodies(fake_js: SimpleNamespace) -> None:
+    with httpx.Client(transport=FetchTransport()) as client:
+        client.post("https://api.example.com/", content=iter([b"a", b"b"]))
+
+    ((_, init),) = fake_js.requests
+    assert init["body"] == b"ab"

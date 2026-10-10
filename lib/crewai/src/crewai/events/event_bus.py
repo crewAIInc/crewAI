@@ -917,10 +917,14 @@ class CrewAIEventsBus:
                 return
             loop = getattr(self, "_loop", None)
 
-        if loop is None or loop.is_closed() or self._loop_thread is None:
+        if loop is None or loop.is_closed():
             return
 
-        if wait:
+        if self._loop_thread is None:
+            # The loop belongs to the host runtime (e.g. Pyodide): leave it
+            # running, but still release the executor and handlers below.
+            pass
+        elif wait:
 
             async def _wait_for_all_tasks() -> None:
                 tasks = {
@@ -945,9 +949,10 @@ class CrewAIEventsBus:
 
             loop.call_soon_threadsafe(_cancel_tasks)
 
-        loop.call_soon_threadsafe(loop.stop)
-        self._loop_thread.join()
-        loop.close()
+        if self._loop_thread is not None:
+            loop.call_soon_threadsafe(loop.stop)
+            self._loop_thread.join()
+            loop.close()
         self._sync_executor.shutdown(wait=wait)
 
         with self._rwlock.w_locked():

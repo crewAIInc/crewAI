@@ -68,9 +68,12 @@ def _without_entropy(module_name: str) -> Iterator[None]:
     stay visible to :func:`audit_entropy`.
     """
     real_uuid4, real_urandom = uuid.uuid4, os.urandom
+    # Names bound with ``from os import urandom`` keep these stand-ins after
+    # the import, so they must hand out real entropy from then on.
+    active = True
 
     def from_module() -> bool:
-        return sys._getframe(2).f_globals.get("__name__") == module_name
+        return active and sys._getframe(2).f_globals.get("__name__") == module_name
 
     def uuid4() -> uuid.UUID:
         return _deterministic_uuid4() if from_module() else real_uuid4()
@@ -82,6 +85,7 @@ def _without_entropy(module_name: str) -> Iterator[None]:
     try:
         yield
     finally:
+        active = False
         uuid.uuid4, os.urandom = real_uuid4, real_urandom
 
 

@@ -31,10 +31,16 @@ class _FetchByteStream(httpx.AsyncByteStream):
         self._reader = body.getReader() if body is not None else None
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
+        from pyodide.ffi import JsException  # type: ignore[import-not-found]
+
         if self._reader is None:
             return
         while True:
-            chunk = await self._reader.read()
+            try:
+                chunk = await self._reader.read()
+            except JsException as e:
+                # The connection dropped mid-body; let httpx and SDKs retry.
+                raise httpx.ReadError(str(e)) from e
             if chunk.done:
                 return
             yield chunk.value.to_bytes()
@@ -56,7 +62,7 @@ class FetchAsyncTransport(httpx.AsyncBaseTransport):
         pass
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        from pyodide.ffi import JsException, to_js  # type: ignore[import-not-found]
+        from pyodide.ffi import JsException, to_js
 
         js: Any = importlib.import_module("js")  # Pyodide's bridge to JavaScript
 
@@ -107,6 +113,9 @@ class FetchTransport(httpx.BaseTransport):
             from crewai_pyodide import JSPI_REQUIRED_MESSAGE
 
             raise RuntimeError(JSPI_REQUIRED_MESSAGE)
+
+        # Read a streamed sync body here: the async transport can only await it.
+        request.read()
 
         async def send() -> httpx.Response:
             response = await self._async.handle_async_request(request)

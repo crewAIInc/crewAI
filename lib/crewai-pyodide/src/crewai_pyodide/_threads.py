@@ -8,9 +8,11 @@ without parallelism.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 import concurrent.futures
 import concurrent.futures.thread
+import sys
 import threading
 from typing import Any, TypeVar
 
@@ -42,8 +44,31 @@ class InlineExecutor(concurrent.futures.Executor):
 
 
 def _start_inline(self: threading.Thread) -> None:
-    """``Thread.start`` replacement: run the target to completion now."""
-    self.run()
+    """``Thread.start`` replacement: run the target to completion now.
+
+    As in a real thread, an exception from the target goes to
+    ``threading.excepthook`` instead of propagating to the caller.
+    """
+    try:
+        self.run()
+    except SystemExit:
+        pass
+    except BaseException:
+        threading.excepthook(threading.ExceptHookArgs((*sys.exc_info(), self)))
+
+
+def _start_timer(self: threading.Timer) -> None:
+    """``Timer.start`` replacement: schedule the call on the event loop.
+
+    Running a timer inline would block the caller for its whole interval.
+    """
+
+    def fire() -> None:
+        if not self.finished.is_set():
+            self.function(*self.args, **self.kwargs)
+        self.finished.set()
+
+    asyncio.get_event_loop().call_later(self.interval, fire)
 
 
 def _join_inline(self: threading.Thread, timeout: float | None = None) -> None:
@@ -56,3 +81,4 @@ def install_inline_threads() -> None:
     concurrent.futures.thread.ThreadPoolExecutor = InlineExecutor  # type: ignore[misc,assignment]
     threading.Thread.start = _start_inline  # type: ignore[method-assign]
     threading.Thread.join = _join_inline  # type: ignore[method-assign]
+    threading.Timer.start = _start_timer  # type: ignore[method-assign,assignment]
