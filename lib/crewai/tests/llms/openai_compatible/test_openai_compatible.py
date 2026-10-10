@@ -319,6 +319,7 @@ class TestLLMIntegration:
     def test_llm_creates_openai_compatible_for_together(self):
         """Test LLM factory creates OpenAICompatibleCompletion for Together AI."""
         with patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"}):
+            os.environ.pop("TOGETHER_BASE_URL", None)
             llm = LLM(model="together/meta-llama/Llama-3-8b")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "together"
