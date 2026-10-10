@@ -87,13 +87,13 @@ from crewai.tools.tool_failure import (
     reportable_failure,
 )
 from crewai.utilities.agent_utils import (
-    ToolInvocation,
+    Invocation,
     _llm_stop_words_applied,
-    adrive_tool_call,
+    adrive_call,
     aget_llm_response,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
-    drive_tool_call,
+    drive_call,
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
@@ -109,6 +109,7 @@ from crewai.utilities.agent_utils import (
     is_inside_event_loop,
     is_native_tool_calling_unsupported_error,
     is_tool_call_list,
+    native_async_tool_fn,
     parse_tool_call_args,
     process_llm_response,
     setup_native_tools,
@@ -315,6 +316,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         "call_llm_native_tools": "_acall_llm_native_tools",
         "call_llm_and_parse": "_acall_llm_and_parse",
         "execute_native_tool": "_aexecute_native_tool",
+        "execute_todo_sequential": "_aexecute_todo_sequential",
     }
 
     def _async_step_override(
@@ -1193,6 +1195,18 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     def execute_todo_sequential(
         self,
     ) -> Literal["step_executed", "todo_injected"]:
+        """Execute a single todo (see :meth:`_execute_todo_sequential_steps`)."""
+        return drive_call(self._execute_todo_sequential_steps())
+
+    async def _aexecute_todo_sequential(
+        self,
+    ) -> Literal["step_executed", "todo_injected"]:
+        """Async twin of :meth:`execute_todo_sequential`."""
+        return await adrive_call(self._execute_todo_sequential_steps())
+
+    def _execute_todo_sequential_steps(
+        self,
+    ) -> Generator[Invocation, Any, Literal["step_executed", "todo_injected"]]:
         """Execute a single todo using StepExecutor (Plan-and-Execute mode)
         or fall back to the old ReAct injection (legacy mode).
 
@@ -1219,11 +1233,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             step_executor = self._ensure_step_executor()
             context = self._build_context_for_todo(current)
-            result = step_executor.execute(
-                current,
-                context,
-                max_step_iterations=self._get_max_step_iterations(),
-                step_timeout=self._get_step_timeout(),
+            result = yield (
+                step_executor.execute,
+                step_executor.aexecute,
+                {
+                    "todo": current,
+                    "context": context,
+                    "max_step_iterations": self._get_max_step_iterations(),
+                    "step_timeout": self._get_step_timeout(),
+                },
             )
 
             # Do NOT mark completed here — observation logic decides
@@ -1328,13 +1346,21 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         async def _run_step(todo: TodoItem) -> tuple[TodoItem, object]:
             step_executor = self._ensure_step_executor()
             context = self._build_context_for_todo(todo)
-            result = await asyncio.to_thread(
-                step_executor.execute,
-                todo,
-                context,
-                self._get_max_step_iterations(),
-                self._get_step_timeout(),
-            )
+            if self._native_async:
+                result = await step_executor.aexecute(
+                    todo,
+                    context,
+                    self._get_max_step_iterations(),
+                    self._get_step_timeout(),
+                )
+            else:
+                result = await asyncio.to_thread(
+                    step_executor.execute,
+                    todo,
+                    context,
+                    self._get_max_step_iterations(),
+                    self._get_step_timeout(),
+                )
             return todo, result
 
         gathered = await asyncio.gather(
@@ -2083,15 +2109,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
     def _execute_single_native_tool_call(self, tool_call: Any) -> dict[str, Any]:
         """Execute a single native tool call and return metadata/result."""
-        return drive_tool_call(self._native_tool_call_steps(tool_call))
+        return drive_call(self._native_tool_call_steps(tool_call))
 
     async def _aexecute_single_native_tool_call(self, tool_call: Any) -> dict[str, Any]:
         """Async twin of :meth:`_execute_single_native_tool_call`."""
-        return await adrive_tool_call(self._native_tool_call_steps(tool_call))
+        return await adrive_call(self._native_tool_call_steps(tool_call))
 
     def _native_tool_call_steps(
         self, tool_call: Any
-    ) -> Generator[ToolInvocation, Any, dict[str, Any]]:
+    ) -> Generator[Invocation, Any, dict[str, Any]]:
         """Lifecycle of one native tool call; yields where the tool is invoked."""
         info = extract_tool_call_info(tool_call)
         if not info:
@@ -2214,7 +2240,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
-                    raw_result = yield (original_tool, tool_func, args_dict)
+                    raw_result = yield (
+                        tool_func,
+                        native_async_tool_fn(original_tool),
+                        args_dict,
+                    )
                     raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)

@@ -12,7 +12,7 @@ this class single-purpose and fast.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from datetime import datetime
 import json
 import time
@@ -31,15 +31,19 @@ from crewai.events.types.tool_usage_events import (
 from crewai.hooks.dispatch import HookAborted
 from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.utilities.agent_utils import (
+    Invocation,
+    adrive_call,
     build_text_tool_calling_fallback_message,
     build_tool_calls_assistant_message,
     check_native_tool_support,
+    drive_call,
     enforce_rpm_limit,
-    execute_single_native_tool_call,
     extract_task_section,
     format_message_for_llm,
     is_native_tool_calling_unsupported_error,
     is_tool_call_list,
+    native_async_llm_fn,
+    native_tool_call_steps,
     process_llm_response,
     render_text_description_and_args,
     setup_native_tools,
@@ -132,6 +136,30 @@ class StepExecutor:
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
     ) -> StepResult:
+        """Execute a single todo item (see :meth:`_execute_steps`)."""
+        return drive_call(
+            self._execute_steps(todo, context, max_step_iterations, step_timeout)
+        )
+
+    async def aexecute(
+        self,
+        todo: TodoItem,
+        context: StepExecutionContext,
+        max_step_iterations: int = 15,
+        step_timeout: int | None = None,
+    ) -> StepResult:
+        """Async twin of :meth:`execute`: LLM calls and async tools are awaited."""
+        return await adrive_call(
+            self._execute_steps(todo, context, max_step_iterations, step_timeout)
+        )
+
+    def _execute_steps(
+        self,
+        todo: TodoItem,
+        context: StepExecutionContext,
+        max_step_iterations: int = 15,
+        step_timeout: int | None = None,
+    ) -> Generator[Invocation, Any, StepResult]:
         """Execute a single todo item using a multi-turn action loop.
 
         Enforces the RPM limit, builds a fresh message list, then iterates
@@ -156,7 +184,7 @@ class StepExecutor:
             messages = self._build_isolated_messages(todo, context)
 
             if self._use_native_tools:
-                result_text = self._execute_native(
+                result_text = yield from self._execute_native(
                     messages,
                     todo,
                     tool_calls_made,
@@ -165,7 +193,7 @@ class StepExecutor:
                     start_time=start_time,
                 )
             else:
-                result_text = self._execute_text_parsed(
+                result_text = yield from self._execute_text_parsed(
                     messages,
                     todo,
                     tool_calls_made,
@@ -209,7 +237,7 @@ class StepExecutor:
                             role="user",
                         )
                     )
-                    result_text = self._execute_text_parsed(
+                    result_text = yield from self._execute_text_parsed(
                         messages,
                         todo,
                         tool_calls_made,
@@ -334,7 +362,7 @@ class StepExecutor:
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
         start_time: float | None = None,
-    ) -> str:
+    ) -> Generator[Invocation, Any, str]:
         """Execute step using text-parsed tool calling with a multi-turn loop.
 
         Iterates LLM call → tool execution → observation until the LLM
@@ -350,11 +378,15 @@ class StepExecutor:
                 elapsed = time.monotonic() - start_time
                 if elapsed >= step_timeout:
                     return last_tool_result or f"Step timed out after {elapsed:.0f}s"
-            answer = self.llm.call(
-                messages,
-                callbacks=self.callbacks,
-                from_task=self.task,
-                from_agent=self.agent,
+            answer = yield (
+                self.llm.call,
+                native_async_llm_fn(self.llm),
+                {
+                    "messages": messages,
+                    "callbacks": self.callbacks,
+                    "from_task": self.task,
+                    "from_agent": self.agent,
+                },
             )
 
             if not answer:
@@ -373,7 +405,9 @@ class StepExecutor:
 
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
-                tool_result = self._execute_text_tool_with_events(formatted, todo)
+                tool_result = yield from self._execute_text_tool_with_events(
+                    formatted, todo
+                )
                 last_tool_result = tool_result
                 messages.append({"role": "assistant", "content": answer_str})
                 messages.append(self._build_observation_message(tool_result))
@@ -385,7 +419,7 @@ class StepExecutor:
 
     def _execute_text_tool_with_events(
         self, formatted: AgentAction, todo: TodoItem
-    ) -> str:
+    ) -> Generator[Invocation, Any, str]:
         """Execute text-parsed tool calls with tool usage events."""
         args_dict = self._parse_tool_args(formatted.tool_input)
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -414,17 +448,21 @@ class StepExecutor:
                     "agent_fingerprint": str(self.agent.security_config.fingerprint)
                 }
 
-            tool_result = execute_tool_and_check_finality(
-                agent_action=formatted,
-                fingerprint_context=fingerprint_context,
-                tools=self.tools,
-                agent_key=self.agent.key if self.agent else None,
-                agent_role=self.agent.role if self.agent else None,
-                tools_handler=self.tools_handler,
-                task=self.task,
-                agent=self.agent,
-                function_calling_llm=self.function_calling_llm,
-                crew=self.crew,
+            tool_result = yield (
+                execute_tool_and_check_finality,
+                None,
+                {
+                    "agent_action": formatted,
+                    "fingerprint_context": fingerprint_context,
+                    "tools": self.tools,
+                    "agent_key": self.agent.key if self.agent else None,
+                    "agent_role": self.agent.role if self.agent else None,
+                    "tools_handler": self.tools_handler,
+                    "task": self.task,
+                    "agent": self.agent,
+                    "function_calling_llm": self.function_calling_llm,
+                    "crew": self.crew,
+                },
             )
         except Exception as e:
             crewai_event_bus.emit(
@@ -550,7 +588,7 @@ class StepExecutor:
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
         start_time: float | None = None,
-    ) -> str:
+    ) -> Generator[Invocation, Any, str]:
         """Execute step using native function calling with a multi-turn loop.
 
         Iterates LLM call → tool execution → appended results until the LLM
@@ -569,12 +607,16 @@ class StepExecutor:
                         if accumulated_results
                         else f"Step timed out after {elapsed:.0f}s"
                     )
-            answer = self.llm.call(
-                messages,
-                tools=self._openai_tools,
-                callbacks=self.callbacks,
-                from_task=self.task,
-                from_agent=self.agent,
+            answer = yield (
+                self.llm.call,
+                native_async_llm_fn(self.llm),
+                {
+                    "messages": messages,
+                    "tools": self._openai_tools,
+                    "callbacks": self.callbacks,
+                    "from_task": self.task,
+                    "from_agent": self.agent,
+                },
             )
 
             if not answer:
@@ -586,7 +628,7 @@ class StepExecutor:
                 return answer.model_dump_json()
 
             if isinstance(answer, list) and answer and is_tool_call_list(answer):
-                result = self._execute_native_tool_calls(
+                result = yield from self._execute_native_tool_calls(
                     answer, messages, todo, tool_calls_made
                 )
                 accumulated_results.append(result)
@@ -607,7 +649,7 @@ class StepExecutor:
         messages: list[LLMMessage],
         todo: TodoItem,
         tool_calls_made: list[str],
-    ) -> str:
+    ) -> Generator[Invocation, Any, str]:
         """Execute a batch of native tool calls and return their results.
 
         Returns the result of the first tool marked result_as_answer if any,
@@ -619,7 +661,7 @@ class StepExecutor:
 
         tool_results: list[str] = []
         for tool_call in tool_calls:
-            call_result = execute_single_native_tool_call(
+            call_result = yield from native_tool_call_steps(
                 tool_call,
                 available_functions=self._available_functions,
                 original_tools=self.original_tools,

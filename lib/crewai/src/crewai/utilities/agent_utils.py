@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Generator, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Generator, Iterator, Sequence
 import concurrent.futures
 import contextlib
 import contextvars
@@ -1639,18 +1639,26 @@ def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     return str(runtime_formatter(raw_result))
 
 
-ToolInvocation = tuple[Any, Callable[..., Any], dict[str, Any]]
-"""A request yielded by a tool-call generator: ``(original_tool, func, kwargs)``."""
+Invocation = tuple[
+    Callable[..., Any], Callable[..., Awaitable[Any]] | None, dict[str, Any]
+]
+"""A blocking call yielded by a step generator: ``(func, async_func, kwargs)``.
+
+Step generators (tool calls, plan steps) yield one of these wherever they
+would block. :func:`drive_call` runs ``func`` inline; :func:`adrive_call`
+awaits ``async_func`` when there is one and otherwise runs ``func`` in a worker
+thread, so one implementation serves both the sync and the async path.
+"""
 
 _T = TypeVar("_T")
 
 
-def drive_tool_call(steps: Generator[ToolInvocation, Any, _T]) -> _T:
-    """Run a tool-call generator, invoking each yielded tool synchronously."""
+def drive_call(steps: Generator[Invocation, Any, _T]) -> _T:
+    """Run a step generator synchronously."""
     try:
         request = next(steps)
         while True:
-            _, func, kwargs = request
+            func, _, kwargs = request
             try:
                 result = func(**kwargs)
             except Exception as e:
@@ -1661,33 +1669,20 @@ def drive_tool_call(steps: Generator[ToolInvocation, Any, _T]) -> _T:
         return stop.value
 
 
-def tool_has_native_async(tool: Any) -> bool:
-    """Whether awaiting ``tool.arun`` runs the tool natively on the event loop."""
-    from crewai.tools.base_tool import BaseTool, Tool
-
-    if isinstance(tool, Tool):
-        return inspect.iscoroutinefunction(tool.func)
-    return isinstance(tool, BaseTool) and type(tool)._arun is not BaseTool._arun
-
-
-async def ainvoke_tool(
-    tool: Any, func: Callable[..., Any], kwargs: dict[str, Any]
-) -> Any:
-    """Await an async tool directly; run a sync tool off the event loop."""
-    if tool_has_native_async(tool):
-        return await tool.arun(**kwargs)
-    ctx = contextvars.copy_context()
-    return await asyncio.to_thread(ctx.run, functools.partial(func, **kwargs))
-
-
-async def adrive_tool_call(steps: Generator[ToolInvocation, Any, _T]) -> _T:
-    """Async counterpart of :func:`drive_tool_call`."""
+async def adrive_call(steps: Generator[Invocation, Any, _T]) -> _T:
+    """Run a step generator on the event loop (see :data:`Invocation`)."""
     try:
         request = next(steps)
         while True:
-            tool, func, kwargs = request
+            func, afunc, kwargs = request
             try:
-                result = await ainvoke_tool(tool, func, kwargs)
+                if afunc is not None:
+                    result = await afunc(**kwargs)
+                else:
+                    ctx = contextvars.copy_context()
+                    result = await asyncio.to_thread(
+                        ctx.run, functools.partial(func, **kwargs)
+                    )
             except Exception as e:
                 request = steps.throw(e)
             else:
@@ -1696,7 +1691,44 @@ async def adrive_tool_call(steps: Generator[ToolInvocation, Any, _T]) -> _T:
         return stop.value
 
 
+def native_async_tool_fn(tool: Any) -> Callable[..., Awaitable[Any]] | None:
+    """``tool.arun`` when awaiting it runs the tool natively on the loop."""
+    from crewai.tools.base_tool import BaseTool, Tool
+
+    if isinstance(tool, Tool):
+        return tool.arun if inspect.iscoroutinefunction(tool.func) else None
+    if isinstance(tool, BaseTool) and type(tool)._arun is not BaseTool._arun:
+        return tool.arun
+    return None
+
+
+def native_async_llm_fn(llm: Any) -> Callable[..., Awaitable[Any]] | None:
+    """``llm.acall`` when the LLM implements it (``BaseLLM.acall`` raises)."""
+    from crewai.llms.base_llm import BaseLLM
+
+    if isinstance(llm, BaseLLM) and type(llm).acall is not BaseLLM.acall:
+        return llm.acall
+    return None
+
+
 def execute_single_native_tool_call(
+    tool_call: Any, **kwargs: Any
+) -> NativeToolCallResult:
+    """Execute a single native tool call with full lifecycle management.
+
+    See :func:`native_tool_call_steps` for the arguments.
+    """
+    return drive_call(native_tool_call_steps(tool_call, **kwargs))
+
+
+async def aexecute_single_native_tool_call(
+    tool_call: Any, **kwargs: Any
+) -> NativeToolCallResult:
+    """Async twin of :func:`execute_single_native_tool_call`."""
+    return await adrive_call(native_tool_call_steps(tool_call, **kwargs))
+
+
+def native_tool_call_steps(
     tool_call: Any,
     *,
     available_functions: dict[str, Callable[..., Any]],
@@ -1711,7 +1743,7 @@ def execute_single_native_tool_call(
     verbose: bool = False,
     plan_step_number: int | None = None,
     plan_step_description: str | None = None,
-) -> NativeToolCallResult:
+) -> Generator[Invocation, Any, NativeToolCallResult]:
     """Execute a single native tool call with full lifecycle management.
 
     Handles: arg parsing, tool lookup, max-usage check, cache read/write,
@@ -1845,7 +1877,11 @@ def execute_single_native_tool_call(
         if func_name in available_functions and output_tool is not None:
             try:
                 tool_func = available_functions[func_name]
-                raw_result = tool_func(**args_dict)
+                raw_result = yield (
+                    tool_func,
+                    native_async_tool_fn(original_tool),
+                    args_dict,
+                )
                 raw_tool_result = raw_result
 
                 if tools_handler and tools_handler.cache:
