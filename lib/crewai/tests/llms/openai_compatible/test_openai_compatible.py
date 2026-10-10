@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_groq_config(self):
+        """Test Groq provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["groq"]
+        assert config.base_url == "https://api.groq.com/openai/v1"
+        assert config.api_key_env == "GROQ_API_KEY"
+        assert config.base_url_env == "GROQ_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -339,6 +347,49 @@ class TestLLMIntegration:
             # prefix is itself two segments and must reach the API intact.
             assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
             assert llm.base_url == "https://api.deepinfra.com/v1/openai"
+
+    def test_llm_creates_openai_compatible_for_groq(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Groq."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            os.environ.pop("GROQ_BASE_URL", None)
+            llm = LLM(model="groq/llama-3.3-70b-versatile")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
+            assert llm.model == "llama-3.3-70b-versatile"
+            assert llm.base_url == "https://api.groq.com/openai/v1"
+
+    def test_llm_explicit_groq_provider_with_overrides(self):
+        """Explicit provider + api_key/base_url take precedence over env."""
+        with patch.dict(
+            os.environ,
+            {
+                "GROQ_API_KEY": "env-key",
+                "GROQ_BASE_URL": "https://env.example.com/v1",
+            },
+        ):
+            llm = LLM(
+                model="llama3",
+                provider="groq",
+                api_key="explicit-key",
+                base_url="https://explicit.example.com/v1",
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
+            assert llm.api_key == "explicit-key"
+            assert llm.base_url == "https://explicit.example.com/v1"
+
+    def test_llm_groq_uses_env_when_no_overrides(self):
+        """GROQ_API_KEY and GROQ_BASE_URL apply without explicit args."""
+        with patch.dict(
+            os.environ,
+            {
+                "GROQ_API_KEY": "env-key",
+                "GROQ_BASE_URL": "https://env.example.com/v1",
+            },
+        ):
+            llm = LLM(model="groq/llama-3.3-70b-versatile")
+            assert llm.api_key == "env-key"
+            assert llm.base_url == "https://env.example.com/v1"
 
     def test_deepinfra_base_url_env_override(self):
         """DEEPINFRA_BASE_URL redirects DeepInfra to a proxy or private endpoint."""
