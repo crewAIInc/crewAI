@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Generator, Iterator, Sequence
 import concurrent.futures
 import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
+import functools
 import inspect
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast
 
 from crewai_core.printer import PRINTER, ColoredText, Printer
 from crewai_core.settings import Settings
@@ -1636,6 +1637,63 @@ def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
         return str(raw_result)
 
     return str(runtime_formatter(raw_result))
+
+
+ToolInvocation = tuple[Any, Callable[..., Any], dict[str, Any]]
+"""A request yielded by a tool-call generator: ``(original_tool, func, kwargs)``."""
+
+_T = TypeVar("_T")
+
+
+def drive_tool_call(steps: Generator[ToolInvocation, Any, _T]) -> _T:
+    """Run a tool-call generator, invoking each yielded tool synchronously."""
+    try:
+        request = next(steps)
+        while True:
+            _, func, kwargs = request
+            try:
+                result = func(**kwargs)
+            except Exception as e:
+                request = steps.throw(e)
+            else:
+                request = steps.send(result)
+    except StopIteration as stop:
+        return stop.value
+
+
+def tool_has_native_async(tool: Any) -> bool:
+    """Whether awaiting ``tool.arun`` runs the tool natively on the event loop."""
+    from crewai.tools.base_tool import BaseTool, Tool
+
+    if isinstance(tool, Tool):
+        return inspect.iscoroutinefunction(tool.func)
+    return isinstance(tool, BaseTool) and type(tool)._arun is not BaseTool._arun
+
+
+async def ainvoke_tool(
+    tool: Any, func: Callable[..., Any], kwargs: dict[str, Any]
+) -> Any:
+    """Await an async tool directly; run a sync tool off the event loop."""
+    if tool_has_native_async(tool):
+        return await tool.arun(**kwargs)
+    ctx = contextvars.copy_context()
+    return await asyncio.to_thread(ctx.run, functools.partial(func, **kwargs))
+
+
+async def adrive_tool_call(steps: Generator[ToolInvocation, Any, _T]) -> _T:
+    """Async counterpart of :func:`drive_tool_call`."""
+    try:
+        request = next(steps)
+        while True:
+            tool, func, kwargs = request
+            try:
+                result = await ainvoke_tool(tool, func, kwargs)
+            except Exception as e:
+                request = steps.throw(e)
+            else:
+                request = steps.send(result)
+    except StopIteration as stop:
+        return stop.value
 
 
 def execute_single_native_tool_call(

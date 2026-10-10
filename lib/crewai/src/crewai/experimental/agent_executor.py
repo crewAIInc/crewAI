@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
 from datetime import datetime
+import functools
 import inspect
 import json
 import threading
@@ -73,6 +74,7 @@ from crewai.hooks.types import (
     BeforeLLMCallHookCallable,
     BeforeLLMCallHookType,
 )
+from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_failure import (
@@ -85,9 +87,13 @@ from crewai.tools.tool_failure import (
     reportable_failure,
 )
 from crewai.utilities.agent_utils import (
+    ToolInvocation,
     _llm_stop_words_applied,
+    adrive_tool_call,
+    aget_llm_response,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
+    drive_tool_call,
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
@@ -227,6 +233,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _finalize_called: bool = PrivateAttr(default=False)
     _is_executing: bool = PrivateAttr(default=False)
     _has_been_invoked: bool = PrivateAttr(default=False)
+    _native_async: bool = PrivateAttr(default=False)
     _instance_id: str = PrivateAttr(default_factory=lambda: str(uuid4())[:8])
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
@@ -289,6 +296,48 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     role="user",
                 )
             )
+
+    # Pure routing/bookkeeping steps: no I/O, no LLM calls, no user callbacks.
+    # On the native async path they run inline instead of in a worker thread.
+    _INLINE_STEPS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "check_todos_available",
+            "initialize_reasoning",
+            "continue_iteration",
+            "check_max_iterations",
+            "route_by_answer_type",
+            "check_native_todo_completion",
+            "check_todo_completion",
+            "increment_and_continue",
+        }
+    )
+    _ASYNC_STEPS: ClassVar[dict[str, str]] = {
+        "call_llm_native_tools": "_acall_llm_native_tools",
+        "call_llm_and_parse": "_acall_llm_and_parse",
+        "execute_native_tool": "_aexecute_native_tool",
+    }
+
+    def _async_step_override(
+        self, method_name: FlowMethodName
+    ) -> Callable[..., Coroutine[Any, Any, Any]] | None:
+        if not self._native_async:
+            return None
+        if (async_name := self._ASYNC_STEPS.get(method_name)) is not None:
+            return cast(
+                Callable[..., Coroutine[Any, Any, Any]], getattr(self, async_name)
+            )
+        inline = method_name in self._INLINE_STEPS or (
+            method_name == "generate_plan"
+            and not getattr(self.agent, "planning_enabled", False)
+        )
+        if not inline:
+            return None
+        method = getattr(self, method_name)
+
+        async def _run_inline(*args: Any, **kwargs: Any) -> Any:
+            return method(*args, **kwargs)
+
+        return _run_inline
 
     def _is_tool_call_list(self, response: list[Any]) -> bool:
         """Check if a response is a list of tool calls."""
@@ -1462,23 +1511,40 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         try:
             enforce_rpm_limit(self.request_within_rpm_limit)
+            answer = get_llm_response(**self._react_llm_request())
+            return self._parse_react_llm_answer(answer)
+        except Exception as e:
+            return self._route_react_llm_error(e)
 
-            effective_response_model = (
-                None if self.original_tools else self.response_model
-            )
+    async def _acall_llm_and_parse(
+        self,
+    ) -> Literal["parsed", "parser_error", "context_error"]:
+        """Async twin of :meth:`call_llm_and_parse` awaiting ``LLM.acall``."""
+        if self.state.is_finished:
+            return "parsed"
 
-            answer = get_llm_response(
-                llm=self.llm,
-                messages=list(self.state.messages),
-                callbacks=self.callbacks,
-                printer=PRINTER,
-                from_task=self.task,
-                from_agent=self.agent,
-                response_model=effective_response_model,
-                executor_context=self,
-                verbose=self.agent.verbose,
-            )
+        try:
+            enforce_rpm_limit(self.request_within_rpm_limit)
+            answer = await self._aget_llm_response(**self._react_llm_request())
+            return self._parse_react_llm_answer(answer)
+        except Exception as e:
+            return self._route_react_llm_error(e)
 
+    def _react_llm_request(self) -> dict[str, Any]:
+        return {
+            "llm": self.llm,
+            "messages": list(self.state.messages),
+            "callbacks": self.callbacks,
+            "printer": PRINTER,
+            "from_task": self.task,
+            "from_agent": self.agent,
+            "response_model": None if self.original_tools else self.response_model,
+            "executor_context": self,
+            "verbose": self.agent.verbose,
+        }
+
+    def _parse_react_llm_answer(self, answer: Any) -> Literal["parsed", "parser_error"]:
+        try:
             # If response is structured output (BaseModel), store it directly
             if isinstance(answer, BaseModel):
                 self.state.current_answer = AgentFinish(
@@ -1515,14 +1581,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             )
             return "parser_error"
 
-        except Exception as e:
-            if is_context_length_exceeded(e):
-                self._last_context_error = e
-                return "context_error"
-            if e.__class__.__module__.startswith("litellm"):
-                raise e
-            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
-            raise
+    def _route_react_llm_error(self, e: Exception) -> Literal["context_error"]:
+        if is_context_length_exceeded(e):
+            self._last_context_error = e
+            return "context_error"
+        if e.__class__.__module__.startswith("litellm"):
+            raise e
+        handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
+        raise e
 
     @router("continue_reasoning_native")
     def call_llm_native_tools(
@@ -1553,74 +1619,112 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             # 1. Return a final answer (string) if it has enough info
             # 2. Return tool calls (possibly same ones, or different ones)
             self.state.pending_tool_calls.clear()
-
             enforce_rpm_limit(self.request_within_rpm_limit)
+            answer = get_llm_response(**self._native_llm_request())
+            return self._route_native_llm_answer(answer)
+        except Exception as e:
+            return self._route_native_llm_error(e)
 
-            # Call LLM with native tools
-            answer = get_llm_response(
-                llm=self.llm,
-                messages=list(self.state.messages),
-                callbacks=self.callbacks,
-                printer=PRINTER,
-                tools=self._openai_tools,
-                available_functions=None,
-                from_task=self.task,
-                from_agent=self.agent,
-                response_model=None,
-                executor_context=self,
-                verbose=self.agent.verbose,
+    async def _acall_llm_native_tools(
+        self,
+    ) -> Literal[
+        "native_tool_calls",
+        "native_finished",
+        "context_error",
+        "todo_satisfied",
+        "continue_reasoning",
+    ]:
+        """Async twin of :meth:`call_llm_native_tools` awaiting ``LLM.acall``."""
+        if self.state.is_finished:
+            return "native_finished"
+
+        try:
+            self.state.pending_tool_calls.clear()
+            enforce_rpm_limit(self.request_within_rpm_limit)
+            answer = await self._aget_llm_response(**self._native_llm_request())
+            return self._route_native_llm_answer(answer)
+        except Exception as e:
+            return self._route_native_llm_error(e)
+
+    def _native_llm_request(self) -> dict[str, Any]:
+        return {
+            "llm": self.llm,
+            "messages": list(self.state.messages),
+            "callbacks": self.callbacks,
+            "printer": PRINTER,
+            "tools": self._openai_tools,
+            "available_functions": None,
+            "from_task": self.task,
+            "from_agent": self.agent,
+            "response_model": None,
+            "executor_context": self,
+            "verbose": self.agent.verbose,
+        }
+
+    async def _aget_llm_response(self, **request: Any) -> Any:
+        """Await ``LLM.acall``; fall back to a worker thread for sync-only LLMs."""
+        if type(self.llm).acall is BaseLLM.acall:
+            ctx = contextvars.copy_context()
+            return await asyncio.to_thread(
+                ctx.run, functools.partial(get_llm_response, **request)
             )
+        return await aget_llm_response(**request)
 
-            # Check if the response is a list of tool calls
-            if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
-                # Store tool calls for sequential processing
-                self.state.pending_tool_calls = list(answer)
-                return "native_tool_calls"
+    def _route_native_llm_answer(
+        self, answer: Any
+    ) -> Literal["native_tool_calls", "native_finished", "todo_satisfied"]:
+        # Check if the response is a list of tool calls
+        if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
+            # Store tool calls for sequential processing
+            self.state.pending_tool_calls = list(answer)
+            return "native_tool_calls"
 
-            if isinstance(answer, BaseModel):
-                self.state.current_answer = AgentFinish(
-                    thought="",
-                    output=answer,
-                    text=answer.model_dump_json(),
-                )
-                self._invoke_step_callback(self.state.current_answer)
-                self._append_message_to_state(answer.model_dump_json())
-                return self._route_finish_with_todos("native_finished")
-
-            # Text response - this is the final answer
-            if isinstance(answer, str):
-                self.state.current_answer = AgentFinish(
-                    thought="",
-                    output=answer,
-                    text=answer,
-                )
-                self._invoke_step_callback(self.state.current_answer)
-                self._append_message_to_state(answer)
-
-                return self._route_finish_with_todos("native_finished")
-
-            # Unexpected response type, treat as final answer
+        if isinstance(answer, BaseModel):
             self.state.current_answer = AgentFinish(
                 thought="",
-                output=str(answer),
-                text=str(answer),
+                output=answer,
+                text=answer.model_dump_json(),
             )
             self._invoke_step_callback(self.state.current_answer)
-            self._append_message_to_state(str(answer))
+            self._append_message_to_state(answer.model_dump_json())
+            return self._route_finish_with_todos("native_finished")
+
+        # Text response - this is the final answer
+        if isinstance(answer, str):
+            self.state.current_answer = AgentFinish(
+                thought="",
+                output=answer,
+                text=answer,
+            )
+            self._invoke_step_callback(self.state.current_answer)
+            self._append_message_to_state(answer)
 
             return self._route_finish_with_todos("native_finished")
 
-        except Exception as e:
-            if is_native_tool_calling_unsupported_error(e):
-                self._downgrade_to_text_tool_calling()
-                return "continue_reasoning"
-            if is_context_length_exceeded(e):
-                self._last_context_error = e
-                return "context_error"
-            if e.__class__.__module__.startswith("litellm"):
-                raise e
-            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
-            raise
+        # Unexpected response type, treat as final answer
+        self.state.current_answer = AgentFinish(
+            thought="",
+            output=str(answer),
+            text=str(answer),
+        )
+        self._invoke_step_callback(self.state.current_answer)
+        self._append_message_to_state(str(answer))
+
+        return self._route_finish_with_todos("native_finished")
+
+    def _route_native_llm_error(
+        self, e: Exception
+    ) -> Literal["context_error", "continue_reasoning"]:
+        if is_native_tool_calling_unsupported_error(e):
+            self._downgrade_to_text_tool_calling()
+            return "continue_reasoning"
+        if is_context_length_exceeded(e):
+            self._last_context_error = e
+            return "context_error"
+        if e.__class__.__module__.startswith("litellm"):
+            raise e
+        handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
+        raise e
 
     def _route_finish_with_todos(
         self, default_route: _RouteT
@@ -1744,8 +1848,101 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "native_tool_completed" normally, or "tool_result_is_final" if
             a tool with result_as_answer=True was executed.
         """
-        if not self.state.pending_tool_calls:
+        batch = self._begin_native_tool_batch()
+        if batch is None:
             return "native_tool_completed"
+        runnable_tool_calls, should_parallelize = batch
+
+        if should_parallelize:
+            max_workers = min(8, len(runnable_tool_calls))
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                future_to_idx = {
+                    pool.submit(
+                        contextvars.copy_context().run,
+                        self._execute_single_native_tool_call,
+                        tool_call,
+                    ): idx
+                    for idx, tool_call in enumerate(runnable_tool_calls)
+                }
+                ordered_results: list[dict[str, Any] | None] = [None] * len(
+                    runnable_tool_calls
+                )
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    try:
+                        ordered_results[idx] = future.result()
+                    except ToolExecutionFailedError:
+                        # A deliberate stop: folding it into a tool result would
+                        # let the remaining parallel calls carry on. Cancel the
+                        # siblings that have not started so they never run.
+                        # Ones already in flight cannot be interrupted -- Python
+                        # threads are not cancellable -- so a concurrent tool may
+                        # still complete before the abort surfaces.
+                        pool.shutdown(wait=False, cancel_futures=True)
+                        raise
+                    except Exception as e:
+                        ordered_results[idx] = self._native_tool_error_result(
+                            runnable_tool_calls[idx], e
+                        )
+            return self._apply_native_tool_results(
+                [result for result in ordered_results if result is not None]
+            )
+
+        # Execute sequentially so result_as_answer tools can short-circuit
+        # immediately without running remaining calls.
+        for tool_call in runnable_tool_calls:
+            execution_result = self._execute_single_native_tool_call(tool_call)
+            if self._apply_native_tool_results([execution_result]) == (
+                "tool_result_is_final"
+            ):
+                return "tool_result_is_final"
+        return "native_tool_completed"
+
+    async def _aexecute_native_tool(
+        self,
+    ) -> Literal["native_tool_completed", "tool_result_is_final"]:
+        """Async twin of :meth:`execute_native_tool`.
+
+        Async tools are awaited on the loop and gathered when parallel; sync
+        tools still run in worker threads via ``asyncio.to_thread``.
+        """
+        batch = self._begin_native_tool_batch()
+        if batch is None:
+            return "native_tool_completed"
+        runnable_tool_calls, should_parallelize = batch
+
+        if should_parallelize:
+
+            async def _run(tool_call: Any) -> dict[str, Any]:
+                try:
+                    return await self._aexecute_single_native_tool_call(tool_call)
+                except ToolExecutionFailedError:
+                    raise
+                except Exception as e:
+                    return self._native_tool_error_result(tool_call, e)
+
+            tasks = [asyncio.ensure_future(_run(tc)) for tc in runnable_tool_calls]
+            try:
+                results = await asyncio.gather(*tasks)
+            except BaseException:
+                # Unlike threads, in-flight async siblings can be cancelled.
+                for task in tasks:
+                    task.cancel()
+                raise
+            return self._apply_native_tool_results(list(results))
+
+        for tool_call in runnable_tool_calls:
+            execution_result = await self._aexecute_single_native_tool_call(tool_call)
+            if self._apply_native_tool_results([execution_result]) == (
+                "tool_result_is_final"
+            ):
+                return "tool_result_is_final"
+        return "native_tool_completed"
+
+    def _begin_native_tool_batch(self) -> tuple[list[Any], bool] | None:
+        """Record the assistant tool-call message and pick runnable calls."""
+        if not self.state.pending_tool_calls:
+            return None
 
         pending_tool_calls = list(self.state.pending_tool_calls)
         self.state.pending_tool_calls.clear()
@@ -1786,97 +1983,25 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             for tool_call in pending_tool_calls
             if extract_tool_call_info(tool_call) is not None
         ]
-        should_parallelize = self._should_parallelize_native_tool_calls(
+        return runnable_tool_calls, self._should_parallelize_native_tool_calls(
             runnable_tool_calls
         )
 
-        execution_results: list[dict[str, Any]] = []
-        if should_parallelize:
-            max_workers = min(8, len(runnable_tool_calls))
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                future_to_idx = {
-                    pool.submit(
-                        contextvars.copy_context().run,
-                        self._execute_single_native_tool_call,
-                        tool_call,
-                    ): idx
-                    for idx, tool_call in enumerate(runnable_tool_calls)
-                }
-                ordered_results: list[dict[str, Any] | None] = [None] * len(
-                    runnable_tool_calls
-                )
-                for future in as_completed(future_to_idx):
-                    idx = future_to_idx[future]
-                    try:
-                        ordered_results[idx] = future.result()
-                    except ToolExecutionFailedError:
-                        # A deliberate stop: folding it into a tool result would
-                        # let the remaining parallel calls carry on. Cancel the
-                        # siblings that have not started so they never run.
-                        # Ones already in flight cannot be interrupted -- Python
-                        # threads are not cancellable -- so a concurrent tool may
-                        # still complete before the abort surfaces.
-                        pool.shutdown(wait=False, cancel_futures=True)
-                        raise
-                    except Exception as e:
-                        tool_call = runnable_tool_calls[idx]
-                        info = extract_tool_call_info(tool_call)
-                        call_id = info[0] if info else "unknown"
-                        func_name = info[1] if info else "unknown"
-                        ordered_results[idx] = {
-                            "call_id": call_id,
-                            "func_name": func_name,
-                            "result": f"Error executing tool: {e}",
-                            "from_cache": False,
-                            "original_tool": None,
-                        }
-                execution_results = [
-                    result for result in ordered_results if result is not None
-                ]
-        else:
-            # Execute sequentially so result_as_answer tools can short-circuit
-            # immediately without running remaining calls.
-            for tool_call in runnable_tool_calls:
-                execution_result = self._execute_single_native_tool_call(tool_call)
-                call_id = cast(str, execution_result["call_id"])
-                func_name = cast(str, execution_result["func_name"])
-                result = cast(str, execution_result["result"])
-                from_cache = cast(bool, execution_result["from_cache"])
-                original_tool = execution_result["original_tool"]
+    @staticmethod
+    def _native_tool_error_result(tool_call: Any, e: Exception) -> dict[str, Any]:
+        info = extract_tool_call_info(tool_call)
+        return {
+            "call_id": info[0] if info else "unknown",
+            "func_name": info[1] if info else "unknown",
+            "result": f"Error executing tool: {e}",
+            "from_cache": False,
+            "original_tool": None,
+        }
 
-                tool_message: LLMMessage = {
-                    "role": "tool",
-                    "tool_call_id": call_id,
-                    "name": func_name,
-                    "content": result,
-                }
-                self.state.messages.append(tool_message)
-
-                # Log the tool execution
-                if self.agent and self.agent.verbose:
-                    cache_info = " (from cache)" if from_cache else ""
-                    PRINTER.print(
-                        content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-                        color="green",
-                    )
-
-                if (
-                    original_tool
-                    and hasattr(original_tool, "result_as_answer")
-                    and original_tool.result_as_answer
-                    # A failed tool must not become the final answer.
-                    and execution_result.get("tool_failure") is None
-                ):
-                    self.state.current_answer = AgentFinish(
-                        thought="Tool result is the final answer",
-                        output=result,
-                        text=result,
-                    )
-                    self.state.is_finished = True
-                    return "tool_result_is_final"
-
-            return "native_tool_completed"
-
+    def _apply_native_tool_results(
+        self, execution_results: list[dict[str, Any]]
+    ) -> Literal["native_tool_completed", "tool_result_is_final"]:
+        """Append tool results to the conversation; detect result_as_answer."""
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
@@ -1884,7 +2009,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             from_cache = cast(bool, execution_result["from_cache"])
             original_tool = execution_result["original_tool"]
 
-            tool_message = {
+            tool_message: LLMMessage = {
                 "role": "tool",
                 "tool_call_id": call_id,
                 "name": func_name,
@@ -1953,6 +2078,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
     def _execute_single_native_tool_call(self, tool_call: Any) -> dict[str, Any]:
         """Execute a single native tool call and return metadata/result."""
+        return drive_tool_call(self._native_tool_call_steps(tool_call))
+
+    async def _aexecute_single_native_tool_call(self, tool_call: Any) -> dict[str, Any]:
+        """Async twin of :meth:`_execute_single_native_tool_call`."""
+        return await adrive_tool_call(self._native_tool_call_steps(tool_call))
+
+    def _native_tool_call_steps(
+        self, tool_call: Any
+    ) -> Generator[ToolInvocation, Any, dict[str, Any]]:
+        """Lifecycle of one native tool call; yields where the tool is invoked."""
         info = extract_tool_call_info(tool_call)
         if not info:
             call_id = (
@@ -2074,7 +2209,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
-                    raw_result = tool_func(**args_dict)
+                    raw_result = yield (original_tool, tool_func, args_dict)
                     raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)
@@ -2976,6 +3111,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.execution_log = []
 
             self._kickoff_input = inputs.get("input", "")
+            self._native_async = True
 
             if self.llm is None or self.prompt is None:
                 raise RuntimeError(
@@ -3022,6 +3158,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
+            self._native_async = False
             self._is_executing = False
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:

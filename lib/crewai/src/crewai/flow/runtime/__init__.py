@@ -9,7 +9,7 @@ Structure (see ``flow_definition``) and executed here.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
@@ -2956,6 +2956,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             try:
                 if asyncio.iscoroutinefunction(method):
                     result = await method(*args, **kwargs)
+                elif (step := self._async_step_override(method_name)) is not None:
+                    result = await step(*args, **kwargs)
                 else:
                     # Run sync methods in thread pool for isolation
                     # This allows Agent.kickoff() to work synchronously inside Flow methods
@@ -3007,7 +3009,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             self._completed_methods.add(method_name)
 
-            await asyncio.to_thread(self._persist_method_completion, method_name)
+            if self._method_persistence_enabled(method_name):
+                await asyncio.to_thread(self._persist_method_completion, method_name)
 
             finished_event_id: str | None = None
             if not self.suppress_flow_events:
@@ -3064,6 +3067,26 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
             raise e
+
+    def _async_step_override(
+        self, method_name: FlowMethodName
+    ) -> Callable[..., Coroutine[Any, Any, Any]] | None:
+        """Return a coroutine function to run instead of a sync method.
+
+        By default sync methods run in a worker thread. Subclasses that know a
+        step is cheap, or have a native async implementation of it, return an
+        async callable here so the step runs on the event loop instead.
+        """
+        return None
+
+    def _method_persistence_enabled(self, method_name: FlowMethodName) -> bool:
+        method_definition = self._definition.methods[str(method_name)]
+        persist_definition = (
+            method_definition.persist
+            if method_definition.persist is not None
+            else self._definition.persist
+        )
+        return persist_definition is not None and bool(persist_definition.enabled)
 
     def _persist_method_completion(self, method_name: FlowMethodName) -> None:
         method_definition = self._definition.methods[str(method_name)]
