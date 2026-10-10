@@ -134,13 +134,22 @@ class SmolBaseTool(BaseTool):
         except Exception:
             logger.warning("Could not delete Smol Machines VM", exc_info=True)
 
+    @staticmethod
+    def _delete_owned_machine(machine: Any) -> None:
+        try:
+            machine.delete()
+        except Exception as exc:
+            # A Cloud VM may expire before cleanup; there is nothing left to retry.
+            if getattr(exc, "code", None) != "NOT_FOUND":
+                raise
+
     def _release_machine(
         self, machine: Any, delete: bool, *, suppress_errors: bool
     ) -> None:
         if not delete:
             return
         try:
-            machine.delete()
+            self._delete_owned_machine(machine)
         except Exception:
             with self._lock:
                 self._pending_cleanup.append(machine)
@@ -173,7 +182,7 @@ class SmolBaseTool(BaseTool):
         first_error: Exception | None = None
         for machine in to_delete:
             try:
-                machine.delete()
+                self._delete_owned_machine(machine)
             except Exception as exc:  # noqa: PERF203 - VM deletion dwarfs loop overhead
                 failed.append(machine)
                 if first_error is None:

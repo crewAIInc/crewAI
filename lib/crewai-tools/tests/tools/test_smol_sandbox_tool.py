@@ -103,6 +103,24 @@ def test_cleanup_failure_preserves_the_command_error(sdk, caplog):
     tool.close()
 
 
+@pytest.mark.parametrize("persistent", [False, True])
+def test_expired_owned_machine_needs_no_delete_retry(sdk, persistent):
+    _, machine = sdk
+
+    class AlreadyGone(Exception):
+        code = "NOT_FOUND"
+
+    tool = SmolExecTool(target="cloud", persistent=persistent)
+    if not persistent:
+        machine.delete.side_effect = AlreadyGone("expired")
+    assert tool.run(command="echo hello")["exit_code"] == 0
+    if persistent:
+        machine.delete.side_effect = AlreadyGone("expired")
+    tool.close()
+    tool.close()
+    machine.delete.assert_called_once_with()
+
+
 def test_failed_ephemeral_delete_can_be_retried(sdk):
     _, machine = sdk
     machine.delete.side_effect = RuntimeError("delete failed")
