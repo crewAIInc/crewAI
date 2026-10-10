@@ -72,6 +72,10 @@ class TestTextFileLoader:
         with pytest.raises(FileNotFoundError):
             TextFileLoader().load(SourceContent("/nonexistent/path.txt"))
 
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="chmod(0o000) only sets a read-only bit on Windows; the file stays readable",
+    )
     def test_permission_denied(self):
         path = write_temp_file("Some content")
         os.chmod(path, 0o000)
