@@ -514,9 +514,7 @@ class CrewAIEventsBus:
                     future = self._sync_executor.submit(
                         ctx.run, self._call_handlers, source, event, level_sync, state
                     )
-                    await asyncio.get_running_loop().run_in_executor(
-                        None, future.result
-                    )
+                    await asyncio.wrap_future(future)
 
             if level_async:
                 await self._acall_handlers(source, event, level_async, state)
@@ -766,6 +764,37 @@ class CrewAIEventsBus:
                 f"[CrewAIEventsBus] Handler exception during flush: {error}"
             )
 
+        return len(not_done) == 0
+
+    async def aflush(self, timeout: float | None = 30.0) -> bool:
+        """Await all pending event handlers without blocking the event loop.
+
+        Async counterpart of :meth:`flush` for callers running on an event
+        loop (e.g. ``Crew.akickoff``).
+
+        Args:
+            timeout: Maximum time in seconds to wait. None waits indefinitely.
+
+        Returns:
+            True if all handlers completed, False if timeout occurred.
+        """
+        if not self._has_pending_events:
+            return True
+
+        with self._futures_lock:
+            futures_to_wait = list(self._pending_futures)
+
+        if not futures_to_wait:
+            return True
+
+        done, not_done = await asyncio.wait(
+            [asyncio.wrap_future(f) for f in futures_to_wait], timeout=timeout
+        )
+        for future in done:
+            if not future.cancelled() and future.exception() is not None:
+                self._console.print(
+                    f"[CrewAIEventsBus] Handler exception during flush: {future.exception()}"
+                )
         return len(not_done) == 0
 
     async def aemit(self, source: Any, event: BaseEvent) -> None:

@@ -1436,7 +1436,7 @@ class Crew(FlowTrackable, BaseModel):
                 await self._aprocess_async_tasks(pending_tasks, was_replayed)
             )
 
-        return self._create_crew_output(task_outputs)
+        return await self._acreate_crew_output(task_outputs)
 
     async def _ahandle_conditional_task(
         self,
@@ -1947,6 +1947,26 @@ class Crew(FlowTrackable, BaseModel):
                 drain()
 
     def _create_crew_output(self, task_outputs: list[TaskOutput]) -> CrewOutput:
+        crew_output, final_task_output = self._build_crew_output(task_outputs)
+        # Ensure background memory saves finish (and emit their
+        # completed/failed events) before the kickoff-completed event below
+        # triggers listener teardown/finalization.
+        self._drain_memory_writes()
+        crewai_event_bus.flush()
+        self._emit_kickoff_completed(final_task_output)
+        return crew_output
+
+    async def _acreate_crew_output(self, task_outputs: list[TaskOutput]) -> CrewOutput:
+        """Async counterpart of ``_create_crew_output`` that never blocks the loop."""
+        crew_output, final_task_output = self._build_crew_output(task_outputs)
+        await asyncio.to_thread(self._drain_memory_writes)
+        await crewai_event_bus.aflush()
+        self._emit_kickoff_completed(final_task_output)
+        return crew_output
+
+    def _build_crew_output(
+        self, task_outputs: list[TaskOutput]
+    ) -> tuple[CrewOutput, TaskOutput]:
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
 
@@ -1986,11 +2006,9 @@ class Crew(FlowTrackable, BaseModel):
         if isinstance(crew_output, CrewOutput):
             final_task_output.raw = crew_output.raw
 
-        # Ensure background memory saves finish (and emit their
-        # completed/failed events) before the kickoff-completed event below
-        # triggers listener teardown/finalization.
-        self._drain_memory_writes()
-        crewai_event_bus.flush()
+        return crew_output, final_task_output
+
+    def _emit_kickoff_completed(self, final_task_output: TaskOutput) -> None:
         crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
@@ -2003,8 +2021,6 @@ class Crew(FlowTrackable, BaseModel):
 
         # Finalization is handled by trace listener (always initialized)
         # The batch manager checks contextvar to determine if tracing is enabled
-
-        return crew_output
 
     def _dispatch_execution_end_failure(self, error: BaseException) -> None:
         """Dispatch EXECUTION_END with status="failed" for a kickoff that raised.
