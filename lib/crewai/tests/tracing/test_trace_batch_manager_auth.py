@@ -35,6 +35,15 @@ def test_plus_api_falls_back_to_anonymous_client_without_token():
     assert plus_api.api_key is None
 
 
+def test_plus_api_falls_back_to_anonymous_client_on_unreadable_token():
+    with patch(
+        "crewai_core.auth.token.TokenManager", side_effect=RuntimeError("bad key")
+    ):
+        plus_api = TraceBatchManager().plus_api
+
+    assert plus_api.api_key is None
+
+
 def test_importing_crewai_does_not_create_secret_key(tmp_path):
     code = (
         "from unittest.mock import patch\n"
@@ -43,7 +52,12 @@ def test_importing_crewai_does_not_create_secret_key(tmp_path):
         "    import crewai.events.event_listener\n"
         "assert not m.called\n"
     )
-    env = {**os.environ, "HOME": str(tmp_path), "XDG_DATA_HOME": str(tmp_path / "data")}
+    env = {
+        **os.environ,
+        "HOME": str(tmp_path),
+        "XDG_DATA_HOME": str(tmp_path / "data"),
+        "LOCALAPPDATA": str(tmp_path / "localappdata"),
+    }
     result = subprocess.run(
         [sys.executable, "-c", code], env=env, capture_output=True, text=True
     )

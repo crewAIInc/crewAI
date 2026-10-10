@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from functools import cached_property
 from logging import getLogger
 from threading import Condition, Lock
 import time
@@ -80,30 +81,25 @@ class TraceBatchManager:
         self.trace_url: str | None = None
         self.ephemeral_trace_url: str | None = None
         self._telemetry: Telemetry = Telemetry()
-        self._plus_api: PlusAPI | None = None
-        self._plus_api_lock = Lock()
         self.ephemeral_trace_url = None
 
-    @property
+    @cached_property
     def plus_api(self) -> PlusAPI:
         """Return the PlusAPI client, resolving the auth token on first use.
 
         Resolving the token reads (and may create) the encrypted credentials
         file, so it is deferred until tracing actually talks to the backend
-        rather than happening when crewai is imported.
+        rather than happening when crewai is imported. Any failure to read the
+        saved token falls back to an anonymous client so tracing never breaks
+        execution.
         """
-        if self._plus_api is None:
-            with self._plus_api_lock:
-                if self._plus_api is None:
-                    try:
-                        self._plus_api = PlusAPI(api_key=get_auth_token())
-                    except AuthError:
-                        self._plus_api = PlusAPI()
-        return self._plus_api
-
-    @plus_api.setter
-    def plus_api(self, value: PlusAPI) -> None:
-        self._plus_api = value
+        try:
+            return PlusAPI(api_key=get_auth_token())
+        except AuthError:
+            return PlusAPI()
+        except Exception as e:
+            logger.debug(f"Could not read saved auth token for tracing: {e}")
+            return PlusAPI()
 
     def initialize_batch(
         self,
@@ -155,7 +151,7 @@ class TraceBatchManager:
         if not skip_context_check and not is_tracing_enabled_in_context():
             return None
 
-        if not self.plus_api or not self.current_batch:
+        if not self.current_batch:
             return None
 
         try:
@@ -303,7 +299,7 @@ class TraceBatchManager:
 
     def _send_events_to_backend(self) -> int:
         """Send buffered events to backend with graceful failure handling"""
-        if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
+        if not self.trace_batch_id or not self.event_buffer:
             return 500
         try:
             batch_metadata: TraceBatchMetadata = {
@@ -409,7 +405,7 @@ class TraceBatchManager:
         with self._finalize_lock:
             batch_id = self.trace_batch_id
             is_ephemeral = self.is_current_batch_ephemeral
-            if self._batch_finalized or not self.plus_api or not batch_id:
+            if self._batch_finalized or not batch_id:
                 return True
 
             try:
