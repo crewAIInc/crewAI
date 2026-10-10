@@ -1345,3 +1345,62 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+def _tool_round_then_client_error():
+    from botocore.exceptions import ClientError
+
+    tool_use_response = {
+        'output': {
+            'message': {
+                'role': 'assistant',
+                'content': [
+                    {'toolUse': {'toolUseId': 'tool-1', 'name': 'echo', 'input': {}}}
+                ],
+            }
+        },
+        'usage': {'inputTokens': 1, 'outputTokens': 1, 'totalTokens': 2},
+    }
+    error = ClientError(
+        {'Error': {'Code': 'ValidationException', 'Message': 'bad request'}},
+        'converse',
+    )
+    return [tool_use_response, error]
+
+
+def test_bedrock_converse_error_after_tool_round_is_wrapped_per_round():
+    """An error in the follow-up Converse call is re-wrapped by the outer round."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    messages = [{'role': 'user', 'content': [{'text': 'Hi'}]}]
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.side_effect = _tool_round_then_client_error()
+        with pytest.raises(RuntimeError) as exc_info:
+            llm._handle_converse(messages, {}, {'echo': lambda: 'ok'})
+
+    assert str(exc_info.value) == (
+        "Unexpected error in Bedrock converse call: "
+        "Request validation failed: bad request"
+    )
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert mock_converse.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_bedrock_async_converse_error_after_tool_round_is_wrapped_per_round():
+    """Async twin: the follow-up round's error is re-wrapped by the outer round."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    messages = [{'role': 'user', 'content': [{'text': 'Hi'}]}]
+    async_client = MagicMock()
+    async_client.converse = AsyncMock(side_effect=_tool_round_then_client_error())
+
+    with patch.object(llm, '_ensure_async_client', return_value=async_client):
+        with pytest.raises(RuntimeError) as exc_info:
+            await llm._ahandle_converse(messages, {}, {'echo': lambda: 'ok'})
+
+    assert str(exc_info.value) == (
+        "Unexpected error in Bedrock converse call: "
+        "Request validation failed: bad request"
+    )
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert async_client.converse.await_count == 2
