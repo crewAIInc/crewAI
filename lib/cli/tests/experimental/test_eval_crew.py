@@ -107,6 +107,7 @@ def install(monkeypatch, amp: FakeAMP, configured_amp: str = "https://amp.test")
 
 
 def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(project, monkeypatch, capsys):
+    """Evaluate the recorded run, open its report and print the returned verdict."""
     directory, opened = project
     record_last_run(directory)
     amp = install(monkeypatch, FakeAMP(statuses=[httpx.Response(200, json={"id": "ev-1", "status": "running"}), done()]))
@@ -121,11 +122,26 @@ def test_the_last_run_is_evaluated_the_url_opened_and_the_verdict_printed(projec
     assert "Goal gate: PASSED" in out and "goal 5/5" in out and "cost not measured" in out
 
 
+def test_eval_can_print_the_report_without_opening_a_browser(project, monkeypatch, capsys):
+    """Keep the report URL and verdict available when browser opening is disabled."""
+    directory, opened = project
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew(open_browser=False)
+
+    assert opened == []
+    assert amp.calls == [("create", EXECUTION_ID), ("get", "ev-1")]
+    out = capsys.readouterr().out
+    assert URL in out and "Goal gate: PASSED" in out
+
+
 def test_the_verdict_prints_whatever_areas_the_evaluation_graded(project, monkeypatch, capsys):
     # The areas are the evaluator's to name. A client printing its own list
     # would drop the ones it had not heard of and invent "not measured" for
     # ones that no longer exist — which is what happens the moment the
     # evaluation's vocabulary moves ahead of an installed CLI.
+    """Render the evaluator-provided areas without inventing fixed categories."""
     directory, _ = project
     record_last_run(directory)
     graded = done(grades={"goal": 5, "tasks": 3, "agents": 4, "tools": None})
@@ -1086,14 +1102,24 @@ def test_a_run_that_leaves_no_trace_behind_is_explained(project, monkeypatch, ca
 
 
 def test_the_cli_command_maps_to_the_implementation(monkeypatch):
+    """Forward the selected run and browser preference from CLI options."""
     calls = []
     monkeypatch.setattr("crewai_cli.cli.eval_crew", lambda **kwargs: calls.append(kwargs))
     runner = CliRunner()
 
     assert runner.invoke(eval_command, []).exit_code == 0
     assert runner.invoke(eval_command, ["--run", EXECUTION_ID]).exit_code == 0
-    assert calls == [{"run_id": None}, {"run_id": EXECUTION_ID}]
-    assert "Evaluate the last traced run" in runner.invoke(eval_command, ["--help"]).output
+    assert runner.invoke(eval_command, ["--no-open"]).exit_code == 0
+    assert runner.invoke(eval_command, ["--run", EXECUTION_ID, "--no-open"]).exit_code == 0
+    assert calls == [
+        {"run_id": None, "open_browser": True},
+        {"run_id": EXECUTION_ID, "open_browser": True},
+        {"run_id": None, "open_browser": False},
+        {"run_id": EXECUTION_ID, "open_browser": False},
+    ]
+    help_text = runner.invoke(eval_command, ["--help"]).output
+    assert "Evaluate the last traced run" in help_text
+    assert "--no-open" in help_text
 
 
 def test_only_a_missing_login_reads_as_anonymous(monkeypatch, capsys):
@@ -1288,13 +1314,16 @@ class FakeModelsAMP(FakeAMP):
 
 @pytest.fixture
 def deployed(project, monkeypatch):
+    """Set up a project whose deployment can be found by its project ID."""
     directory, opened = project
     (directory / "pyproject.toml").write_text('[tool.crewai]\nproject_id = "proj-1"\n')
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: "proj-1")
     return directory, opened
 
 
-def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, monkeypatch, capsys):
+@pytest.mark.parametrize("open_browser", [True, False])
+def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, monkeypatch, capsys, open_browser):
+    """Preserve comparison results and progress with either browser preference."""
     directory, opened = deployed
     (directory / "eval.jsonc").write_text('{"dataset": []}')
     running = httpx.Response(200, json={"id": "ev-9", "status": "running", "progress": {
@@ -1303,7 +1332,7 @@ def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, m
         "event": "judging", "payload": {"subject": "agent 'Poem composer'", "index": 1, "total": 3}}})
     amp = install(monkeypatch, FakeModelsAMP(statuses=[running, running, judging, compared()]))
 
-    eval_module.eval_models(MODELS)
+    eval_module.eval_models(MODELS, open_browser=open_browser)
 
     out = capsys.readouterr().out
     assert amp.api_key == "login-token"
@@ -1311,7 +1340,8 @@ def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, m
         "models": ["openai/gpt-4o-mini", "openrouter/meta-llama/llama-4-maverick"],
         "project_id": "proj-1", "eval_config": '{"dataset": []}', "deployment_id": None,
     }
-    assert opened == [URL] and URL in out
+    assert opened == ([URL] if open_browser else [])
+    assert URL in out
     # Progress: said once per change, never once per poll.
     assert out.count("running · model 2 of 3 · mini") == 1
     assert "judging agent 'Poem composer' · model 2 of 3" in out
@@ -1601,6 +1631,7 @@ def test_the_last_event_stands_in_for_progress():
 
 
 def test_the_cli_maps_models_and_deployment_to_the_comparison(monkeypatch):
+    """Forward model, deployment and browser options while rejecting mixed modes."""
     calls = []
     monkeypatch.setattr("crewai_cli.cli.eval_models", lambda *args, **kwargs: calls.append((args, kwargs)))
     monkeypatch.setattr("crewai_cli.cli.eval_crew", lambda **kwargs: calls.append(("run", kwargs)))
@@ -1608,13 +1639,18 @@ def test_the_cli_maps_models_and_deployment_to_the_comparison(monkeypatch):
 
     assert runner.invoke(eval_command, ["--models", MODELS]).exit_code == 0
     assert runner.invoke(eval_command, ["--models", "openai/gpt-4o", "--deployment", DEPLOYMENT]).exit_code == 0
-    assert calls == [((MODELS,), {"deployment_id": None}), (("openai/gpt-4o",), {"deployment_id": DEPLOYMENT})]
+    assert runner.invoke(eval_command, ["--models", MODELS, "--no-open"]).exit_code == 0
+    assert calls == [
+        ((MODELS,), {"deployment_id": None, "open_browser": True}),
+        (("openai/gpt-4o",), {"deployment_id": DEPLOYMENT, "open_browser": True}),
+        ((MODELS,), {"deployment_id": None, "open_browser": False}),
+    ]
 
     both = runner.invoke(eval_command, ["--models", MODELS, "--run", EXECUTION_ID])
     alone = runner.invoke(eval_command, ["--deployment", DEPLOYMENT])
     assert both.exit_code == 2 and "Give one of them" in both.output
     assert alone.exit_code == 2 and "add --models LIST" in alone.output
-    assert len(calls) == 2
+    assert len(calls) == 3
     assert "--models" in runner.invoke(eval_command, ["--help"]).output
 
 
