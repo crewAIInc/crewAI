@@ -13,7 +13,7 @@ Its remote MCP server is `https://api.datacircle.dev/mcp` (Streamable HTTP). Con
 
 | Tool | Description | Costs |
 | --- | --- | --- |
-| `get_linkedin_profile` | Fetch one person's LinkedIn profile by its URL: name, headline, location, current company and title, positions, education, skills | $1.25 per 1,000 through Up2Data (a profile it can't find is free), $3.70 per 1,000 through HarvestAPI |
+| `get_linkedin_profile` | Fetch one person's LinkedIn profile by its URL: name, headline, location, current company and title, positions, education, skills | $2.375 per 1,000 through Up2Data (a profile it can't find is free), $3.70 per 1,000 through HarvestAPI |
 | `get_balance` | Read the account's balance in USD | free |
 | `list_files` | List the data files the account can download, and whether each is unlocked | free |
 | `get_download_link` | Get a download link for one file from `list_files`, by its id | free |
@@ -32,7 +32,7 @@ pip install crewai
 
 ## Authentication
 
-Sign up at [datacircle.dev](https://datacircle.dev) with your work email: a $5 credit, that's 4,000 LinkedIn profiles at $1.25 per 1,000. Your API key is on your dashboard once you're in.
+Sign up at [datacircle.dev](https://datacircle.dev) with your work email: a $5 credit, that's 2,105 LinkedIn profiles at $2.375 per 1,000. Your API key is on your dashboard once you're in.
 
 ```shell
 export DATACIRCLE_API_KEY="your-api-key"
@@ -92,7 +92,7 @@ The tool filter keeps `add_funds` away from an unattended crew. Drop it to give 
 | `url` | Yes | `string` | The LinkedIn profile URL, e.g. `https://www.linkedin.com/in/satyanadella` |
 | `provider` | No | `string` | `"up2data"` (the default) or `"harvestapi"` |
 
-Up2Data takes $1 a day per account (800 profiles), with a shared daily limit for all customers, then answers 429 until 00:00 UTC; HarvestAPI has no daily limit. A call your balance can't cover answers 402. Add funds, from $5, on your dashboard.
+Up2Data takes $1 a day per account (421 profiles), with a shared daily limit for all customers, then answers 429 until 00:00 UTC; HarvestAPI has no daily limit. A call your balance can't cover answers 402. Add funds, from $5, on your dashboard.
 
 A failed call comes back as the tool's error (`isError: true`), with the API's error JSON as its text.
 
