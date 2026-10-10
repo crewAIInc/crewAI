@@ -355,8 +355,9 @@ def _offline_guide_blocks() -> tuple[str, str]:
     """The example code and expected output from the custom LLM guide's offline section."""
     guide = Path(__file__).parents[3] / "docs/edge/en/learn/custom-llm.mdx"
     section = guide.read_text().split("## Try It Offline First", 1)[1].split("\n## ", 1)[0]
-    code = section.split("```python\n", 1)[1].split("```", 1)[0]
-    output = section.split("```text\n", 1)[1].split("```", 1)[0]
+    # Closing fences start a line, so a backtick run inside the code can't end a block.
+    code = section.split("```python\n", 1)[1].split("\n```", 1)[0]
+    output = section.split("```text\n", 1)[1].split("\n```", 1)[0] + "\n"
     return code, output
 
 
