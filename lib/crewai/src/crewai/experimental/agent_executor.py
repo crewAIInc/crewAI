@@ -1581,7 +1581,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             )
             return "parser_error"
 
-    def _route_react_llm_error(self, e: Exception) -> Literal["context_error"]:
+    def _route_react_llm_error(
+        self, e: Exception
+    ) -> Literal["parser_error", "context_error"]:
+        if isinstance(e, OutputParserError):
+            self._last_parser_error = e
+            return "parser_error"
         if is_context_length_exceeded(e):
             self._last_context_error = e
             return "context_error"
