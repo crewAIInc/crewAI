@@ -103,13 +103,16 @@ class _DeterministicLoader(importlib.abc.Loader):
 
 
 class _DeterministicFinder(importlib.abc.MetaPathFinder):
+    def __init__(self, skip: frozenset[str]) -> None:
+        self._skip = skip
+
     def find_spec(
         self,
         fullname: str,
         path: Sequence[str] | None,
         target: ModuleType | None = None,
     ) -> importlib.machinery.ModuleSpec | None:
-        if fullname not in _DETERMINISTIC_MODULES:
+        if fullname not in _DETERMINISTIC_MODULES or fullname in self._skip:
             return None
         for finder in sys.meta_path:
             if finder is self or not hasattr(finder, "find_spec"):
@@ -122,9 +125,22 @@ class _DeterministicFinder(importlib.abc.MetaPathFinder):
         return None
 
 
+def _host_patched_modules() -> frozenset[str]:
+    """Modules whose import the host already makes snapshot-safe.
+
+    workerd (with its Python SDK) allows the entropy some packages read at
+    import, and raises if an allowance goes unused, so those are left to it.
+    """
+    try:
+        from _cloudflare import import_patch_manager  # type: ignore[import-not-found]
+    except ImportError:
+        return frozenset()
+    return frozenset(import_patch_manager.patches)
+
+
 def install_deterministic_imports() -> None:
     """Import the modules above without reading randomness."""
-    sys.meta_path.insert(0, _DeterministicFinder())
+    sys.meta_path.insert(0, _DeterministicFinder(_host_patched_modules()))
 
 
 def reseed() -> None:

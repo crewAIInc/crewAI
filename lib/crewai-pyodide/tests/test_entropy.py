@@ -102,3 +102,36 @@ def test_audit_records_callers_and_restores_functions() -> None:
     assert len(calls) == 3  # uuid4 reads os.urandom itself
     assert all(":" in c for c in calls)
     assert os.urandom is real_urandom
+
+
+def test_modules_the_host_already_patches_are_left_to_it(
+    tmp_path, monkeypatch
+) -> None:
+    """workerd's SDK allows these modules' entropy itself and raises if an
+    allowance goes unused, so they must import untouched."""
+    import types
+
+    pkg = tmp_path / "hosted_pkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "signing.py").write_text("import os\nSECRET = os.urandom(32)\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.setattr(
+        _entropy, "_DETERMINISTIC_MODULES", {"hosted_pkg.signing": (None, None)}
+    )
+    cloudflare = types.ModuleType("_cloudflare")
+    manager = types.ModuleType("_cloudflare.import_patch_manager")
+    manager.patches = {"hosted_pkg.signing": object()}
+    cloudflare.import_patch_manager = manager
+    monkeypatch.setitem(sys.modules, "_cloudflare", cloudflare)
+    monkeypatch.setitem(sys.modules, "_cloudflare.import_patch_manager", manager)
+    meta_path = list(sys.meta_path)
+    _entropy.install_deterministic_imports()
+    try:
+        signing = importlib.import_module("hosted_pkg.signing")
+    finally:
+        sys.meta_path[:] = meta_path
+        for name in [m for m in sys.modules if m.split(".")[0] == "hosted_pkg"]:
+            del sys.modules[name]
+
+    assert signing.SECRET != bytes(32)
