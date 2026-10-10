@@ -125,7 +125,7 @@ instant_expert = MCPServerHTTP(
 )
 ```
 
-`sign_in()` opens your browser to sign in and approve the connection. Access tokens expire after a short time and FastMCP keeps them in memory, so each run signs in again. Placing orders from an agent also needs paid sending turned on for that connection and a saved card. See the [Instant Expert MCP docs](https://instant.expert/docs/mcp).
+`sign_in()` opens your browser to sign in and approve the connection, once per run. CrewAI sends that header unchanged for the whole run, and access tokens expire after a short time, so let the run finish, approval included, before the token expires. If tool calls start failing with HTTP 401, sign in again and start a new run. Orders placed before then stay placed, so check `list_requests` before sending again. Placing orders from an agent also needs paid sending turned on for that connection and a saved card. See the [Instant Expert MCP docs](https://instant.expert/docs/mcp).
 
 ## Notes
 

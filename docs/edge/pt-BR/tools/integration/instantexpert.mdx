@@ -125,7 +125,7 @@ instant_expert = MCPServerHTTP(
 )
 ```
 
-`sign_in()` abre o navegador para você entrar e aprovar a conexão. Os tokens de acesso expiram depois de pouco tempo e o FastMCP os guarda só na memória, então cada execução faz o login de novo. Para que um agente efetive pedidos, a conexão também precisa ter o envio pago ativado e um cartão salvo. Veja a [documentação MCP do Instant Expert](https://instant.expert/docs/mcp).
+`sign_in()` abre o navegador uma vez por execução para você entrar e aprovar a conexão. A CrewAI envia esse cabeçalho sem mudanças durante toda a execução, e os tokens de acesso expiram depois de pouco tempo, então deixe a execução terminar, aprovação incluída, antes que o token expire. Se as chamadas de ferramenta começarem a falhar com HTTP 401, entre de novo e comece uma nova execução. Os pedidos feitos antes disso continuam valendo, então confira `list_requests` antes de enviar de novo. Para que um agente efetive pedidos, a conexão também precisa ter o envio pago ativado e um cartão salvo. Veja a [documentação MCP do Instant Expert](https://instant.expert/docs/mcp).
 
 ## Observações
 
