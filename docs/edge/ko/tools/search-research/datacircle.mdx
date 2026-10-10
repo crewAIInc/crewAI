@@ -13,7 +13,7 @@ mode: "wide"
 
 | 도구 | 설명 | 비용 |
 | --- | --- | --- |
-| `get_linkedin_profile` | URL로 한 사람의 LinkedIn 프로필을 가져옵니다: 이름, 헤드라인, 위치, 현재 회사와 직함, 경력, 학력, 기술 | Up2Data를 통해 1,000건당 $1.25 (찾지 못한 프로필은 무료), HarvestAPI를 통해 1,000건당 $3.70 |
+| `get_linkedin_profile` | URL로 한 사람의 LinkedIn 프로필을 가져옵니다: 이름, 헤드라인, 위치, 현재 회사와 직함, 경력, 학력, 기술 | Up2Data를 통해 1,000건당 $2.375 (찾지 못한 프로필은 무료), HarvestAPI를 통해 1,000건당 $3.70 |
 | `get_balance` | 계정 잔액을 USD로 읽습니다 | 무료 |
 | `list_files` | 계정이 다운로드할 수 있는 데이터 파일과 각 파일의 잠금 해제 여부를 나열합니다 | 무료 |
 | `get_download_link` | `list_files`의 파일 하나에 대한 다운로드 링크를 id로 가져옵니다 | 무료 |
@@ -32,7 +32,7 @@ pip install crewai
 
 ## 인증
 
-업무용 이메일로 [datacircle.dev](https://datacircle.dev)에 가입하세요: $5 크레딧, 즉 1,000건당 $1.25로 LinkedIn 프로필 4,000건입니다. 로그인하면 대시보드에서 API 키를 확인할 수 있습니다.
+업무용 이메일로 [datacircle.dev](https://datacircle.dev)에 가입하세요: $5 크레딧, 즉 1,000건당 $2.375로 LinkedIn 프로필 2,105건입니다. 로그인하면 대시보드에서 API 키를 확인할 수 있습니다.
 
 ```shell
 export DATACIRCLE_API_KEY="your-api-key"
@@ -92,7 +92,7 @@ print(crew.kickoff())
 | `url` | 예 | `string` | LinkedIn 프로필 URL, 예: `https://www.linkedin.com/in/satyanadella` |
 | `provider` | 아니요 | `string` | `"up2data"` (기본값) 또는 `"harvestapi"` |
 
-Up2Data는 계정당 하루 $1 (프로필 800건)까지 받으며, 모든 고객이 공유하는 일일 한도가 있고, 그 이후에는 00:00 UTC까지 429로 응답합니다. HarvestAPI는 일일 한도가 없습니다. 잔액으로 충당할 수 없는 호출은 402로 응답합니다. 대시보드에서 $5부터 자금을 추가하세요.
+Up2Data는 계정당 하루 $1 (프로필 421건)까지 받으며, 모든 고객이 공유하는 일일 한도가 있고, 그 이후에는 00:00 UTC까지 429로 응답합니다. HarvestAPI는 일일 한도가 없습니다. 잔액으로 충당할 수 없는 호출은 402로 응답합니다. 대시보드에서 $5부터 자금을 추가하세요.
 
 실패한 호출은 도구 오류 (`isError: true`)로 반환되며, API의 오류 JSON이 텍스트로 담깁니다.
 
