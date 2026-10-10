@@ -6,6 +6,7 @@ import pytest
 from crewai.agent.core import Agent
 from crewai.mcp.config import MCPServerHTTP
 from crewai.mcp.tool_resolver import MCPToolResolver
+from crewai.llms.providers.utils.common import safe_tool_conversion
 
 
 @pytest.fixture
@@ -97,3 +98,44 @@ class TestResolveNativeRuntimeError:
 
         with pytest.raises(ConnectionError, match="Failed to get native MCP tools"):
             resolver._resolve_native(http_config)
+
+class TestResolveNativeToolNames:
+    @staticmethod
+    def _resolve_tool_names(mock_client_class, resolver, url):
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(
+            return_value=[{"name": "add", "description": "Add numbers"}]
+        )
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        tools, _ = resolver._resolve_native(MCPServerHTTP(url=url))
+        return [tool.name for tool in tools]
+
+    @pytest.mark.parametrize(
+        "provider", ["OpenAI", "Anthropic", "Gemini", "Bedrock", "Azure"]
+    )
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_ip_addressed_server_tool_name_passes_provider_validation(
+        self, mock_client_class, resolver, provider
+    ):
+        names = self._resolve_tool_names(
+            mock_client_class, resolver, "http://127.0.0.1:8800/mcp"
+        )
+
+        name, _, _ = safe_tool_conversion(
+            {"name": names[0], "description": "Add numbers"}, provider
+        )
+        assert name == "mcp_127_0_0_1_8800_mcp_add"
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_hostname_server_tool_name_is_unchanged(
+        self, mock_client_class, resolver
+    ):
+        names = self._resolve_tool_names(
+            mock_client_class, resolver, "http://localhost:8800/mcp"
+        )
+
+        assert names == ["localhost:8800_mcp_add"]

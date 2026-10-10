@@ -529,7 +529,11 @@ class MCPToolResolver:
         parsed = urlparse(server_url)
         domain = parsed.netloc.replace(".", "_")
         path = parsed.path.replace("/", "_").strip("_")
-        return f"{domain}_{path}" if path else domain
+        name = f"{domain}_{path}" if path else domain
+        # Provider function names must start with a letter; IP hosts don't.
+        if name and not name[0].isalpha():
+            name = f"mcp_{name}"
+        return name
 
     def _get_mcp_tool_schemas(
         self, server_params: dict[str, Any]
