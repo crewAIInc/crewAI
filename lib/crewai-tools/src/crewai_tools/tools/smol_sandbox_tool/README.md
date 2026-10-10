@@ -33,7 +33,7 @@ finally:
     shell.close()
 ```
 
-`target="local"` is the default, even if a Cloud token is present. Guest egress is enabled by default for workloads that need network access; set `network=False` to block it. Local and Cloud VMs can start from registry images with guest networking disabled because image retrieval happens outside the guest. To avoid pulling a registry image, pass a local rootfs directory or a `docker save` archive (`image="./image.tar"`) to a local VM. For restricted egress, configure the VM directly with the Smol SDK and attach to it by ID.
+`target="local"` is the default, even if a Cloud token is present. Guest egress is enabled by default for workloads that need network access; set `network=False` to block it. Cached registry images can still boot without guest egress. For a cold local image pull with guest egress disabled, SmolVM 1.23.0 or newer fetches the image on the host; on older versions, enable guest networking or supply a local rootfs directory or `docker save` archive (`image="./image.tar"`). For restricted egress, configure the VM directly with the Smol SDK and attach to it by ID.
 
 By default, each call creates and deletes a VM. With `persistent=True`, calls on one tool share a VM until `close()` or process exit. To use multiple tools with one VM, create it through the first persistent tool and pass `active_machine_id` to another tool as `machine_id` with the same target:
 

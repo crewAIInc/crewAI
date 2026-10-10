@@ -47,6 +47,6 @@ finally:
 
 The attached file tool never deletes the VM owned by `shell`. `SmolPythonTool` accepts `code` and optional `argv`, `env`, and `timeout`. The file tool accepts `read` and `write`; use `binary=True` for base64 data.
 
-Guest networking is enabled by default for workloads that need network access, including package installs. Set `network=False` to block guest egress. Local and Cloud VMs can still start from registry images because the image is retrieved outside the guest. The local target remains local even when Cloud credentials are present. See the tool package README for additional lifecycle examples.
+Guest networking is enabled by default for workloads that need network access, including package installs. Set `network=False` to block guest egress. Cached registry images can still boot without guest egress; SmolVM 1.23.0 or newer also fetches cold registry images on the host for local VMs. The local target remains local even when Cloud credentials are present. See the tool package README for additional lifecycle examples.
 
-To avoid pulling a registry image on a local VM, supply a local rootfs directory or a `docker save` archive through `image`.
+On older local SmolVM versions, enable guest networking for cold registry pulls, or supply a local rootfs directory or a `docker save` archive through `image`.

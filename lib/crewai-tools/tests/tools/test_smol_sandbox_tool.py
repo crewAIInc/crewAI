@@ -365,7 +365,7 @@ def test_invalid_file_payload_never_creates_a_cloud_vm(sdk):
     client.Machine.create.assert_not_called()
 
 
-def test_network_disabled_local_registry_image_uses_host_pull(sdk):
+def test_network_disabled_local_registry_image_is_passed_to_sdk(sdk):
     client, _ = sdk
     assert SmolExecTool(network=False).run(command="echo allowed")["exit_code"] == 0
     config = client.Machine.create.call_args.args[0]
