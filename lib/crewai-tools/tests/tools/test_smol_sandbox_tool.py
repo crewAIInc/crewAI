@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import threading
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -62,7 +63,7 @@ def test_persistent_shell_and_attached_files_share_vm_without_double_delete(sdk,
         shell.run(command="echo second")
         assert client.Machine.create.call_count == 1
         assert client.Machine.create.call_args.args[0].resources.network is False
-        assert client.Machine.create.call_args.args[0].persistent is True
+        assert client.Machine.create.call_args.args[0].persistent is False
         assert shell.active_machine_id == "mach-123"
         files = SmolFileTool(machine_id=shell.active_machine_id)
         assert files.run(action="write", path="/workspace/a", content="hi") == (
@@ -199,6 +200,49 @@ def test_close_unregisters_exit_cleanup_after_successful_retry(sdk, monkeypatch)
     assert unregistered == registered
 
 
+def test_overlapping_close_keeps_exit_cleanup_until_deletion_finishes(sdk, monkeypatch):
+    _, machine = sdk
+    registered = []
+    unregistered = []
+    monkeypatch.setattr(atexit, "register", registered.append)
+    monkeypatch.setattr(atexit, "unregister", unregistered.append)
+    tool = SmolExecTool(persistent=True)
+    tool.run(command="echo hello")
+    entered = threading.Event()
+    release = threading.Event()
+
+    def slow_delete():
+        entered.set()
+        if not release.wait(5):
+            raise TimeoutError("delete was never released")
+
+    machine.delete.side_effect = slow_delete
+    close_errors = []
+
+    def close_old():
+        try:
+            tool.close()
+        except Exception as exc:
+            close_errors.append(exc)
+
+    closing = threading.Thread(target=close_old)
+    closing.start()
+    try:
+        assert entered.wait(2)
+        tool.close()
+        assert not unregistered
+    finally:
+        release.set()
+        closing.join(timeout=5)
+    assert not closing.is_alive()
+    assert not close_errors
+    machine.delete.assert_called_once_with()
+    # The first close is now responsible for a completed deletion; callers may
+    # invoke close again to unregister the exit hook.
+    tool.close()
+    assert unregistered == registered
+
+
 def test_cloud_attachment_starts_stopped_vm_and_preserves_ownership(sdk):
     client, machine = sdk
     machine.state.return_value = "stopped"
@@ -210,6 +254,68 @@ def test_cloud_attachment_starts_stopped_vm_and_preserves_ownership(sdk):
     machine.wait_until_ready.assert_called_once_with()
     client.Machine.create.assert_not_called()
     machine.delete.assert_not_called()
+
+
+def test_cloud_key_stays_masked_in_serialized_tool(sdk):
+    tool = SmolExecTool(target="cloud", api_key="never-log-this-token")
+    assert "never-log-this-token" not in tool.model_dump_json()
+    assert "never-log-this-token" not in str(tool.model_dump(mode="json"))
+    assert tool.run(command="echo hello")["exit_code"] == 0
+    client, _ = sdk
+    assert client.Machine.create.call_args.args[1].api_key == "never-log-this-token"
+
+
+def test_close_does_not_hold_lock_during_slow_delete(sdk):
+    client, machine = sdk
+    tool = SmolExecTool(persistent=True)
+    tool.run(command="echo first")
+    entered_delete = threading.Event()
+    release_delete = threading.Event()
+    run_done = threading.Event()
+    errors = []
+    replacement = MagicMock()
+    replacement.id = "replacement"
+    replacement.exec.return_value = machine.exec.return_value
+    client.Machine.create.return_value = replacement
+
+    def slow_delete():
+        entered_delete.set()
+        if not release_delete.wait(5):
+            raise TimeoutError("delete was never released")
+
+    def run_again():
+        try:
+            tool.run(command="echo second")
+        except Exception as exc:
+            errors.append(exc)
+        finally:
+            run_done.set()
+
+    machine.delete.side_effect = slow_delete
+
+    def close_old():
+        try:
+            tool.close()
+        except Exception as exc:
+            errors.append(exc)
+
+    closing = threading.Thread(target=close_old)
+    runner = threading.Thread(target=run_again)
+    closing.start()
+    try:
+        assert entered_delete.wait(2)
+        runner.start()
+        assert run_done.wait(2), "run blocked on another VM's delete"
+    finally:
+        release_delete.set()
+        closing.join(timeout=5)
+        if runner.ident is not None:
+            runner.join(timeout=5)
+    assert not closing.is_alive() and not runner.is_alive()
+    assert not errors
+    assert tool.active_machine_id == "replacement"
+    tool.close()
+    replacement.delete.assert_called_once_with()
 
 
 def test_python_argv_is_passed_without_shell_interpolation(sdk):
@@ -238,6 +344,15 @@ def test_file_data_and_validation(sdk):
         tool.run(action="write", path="/workspace/a", content="!!!", binary=True)
     assert client.Machine.create.call_count == 3
     assert machine.delete.call_count == 3
+
+
+def test_binary_file_read_returns_guidance_in_text_mode(sdk):
+    _, machine = sdk
+    machine.read_file.return_value = b"\xff\xfe"
+    tool = SmolFileTool()
+    assert "binary=True" in tool.run(action="read", path="/workspace/binary")
+    assert tool.run(action="read", path="/workspace/binary", binary=True) == "//4="
+    assert machine.delete.call_count == 2
 
 
 def test_invalid_file_payload_never_creates_a_cloud_vm(sdk):

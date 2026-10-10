@@ -9,7 +9,7 @@ import threading
 from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import ConfigDict, Field, PrivateAttr
+from pydantic import ConfigDict, Field, PrivateAttr, SecretStr
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class SmolBaseTool(BaseTool):
         default=True,
         description="Allow guest egress (also needed for cold image pulls on cloud).",
     )
-    api_key: str | None = Field(default=None, repr=False)
+    api_key: SecretStr | None = Field(default=None, repr=False)
     base_url: str | None = None
     persistent: bool = False
     machine_id: str | None = None
@@ -49,6 +49,7 @@ class SmolBaseTool(BaseTool):
 
     _machine: Any = PrivateAttr(default=None)
     _pending_cleanup: list[Any] = PrivateAttr(default_factory=list)
+    _deleting_count: int = PrivateAttr(default=0)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _cleanup_registered: bool = PrivateAttr(default=False)
 
@@ -65,7 +66,9 @@ class SmolBaseTool(BaseTool):
 
     def _connection(self, sdk: Any) -> Any:
         return sdk.ConnectOptions(
-            target=self.target, api_key=self.api_key, base_url=self.base_url
+            target=self.target,
+            api_key=self.api_key.get_secret_value() if self.api_key else None,
+            base_url=self.base_url,
         )
 
     def _create_machine(self, sdk: Any) -> Any:
@@ -92,7 +95,9 @@ class SmolBaseTool(BaseTool):
             sdk.MachineConfig(
                 image=self.image,
                 resources=sdk.ResourceSpec(network=self.network),
-                persistent=self.persistent,
+                # Tool reuse is in-process; SDK persistence would retain local
+                # disk state if this process exits before close() can delete it.
+                persistent=False,
             ),
             self._connection(sdk),
         )
@@ -169,19 +174,31 @@ class SmolBaseTool(BaseTool):
                 self._machine = None
             to_delete = self._pending_cleanup
             self._pending_cleanup = []
-            first_error: Exception | None = None
-            for machine in to_delete:
-                try:
-                    machine.delete()
-                except Exception as exc:  # noqa: PERF203 - VM deletion dwarfs loop overhead
-                    self._pending_cleanup.append(machine)
-                    if first_error is None:
-                        first_error = exc
-            if first_error is not None:
-                raise first_error
-            if unregister and self._cleanup_registered:
+            self._deleting_count += len(to_delete)
+        failed: list[Any] = []
+        first_error: Exception | None = None
+        for machine in to_delete:
+            try:
+                machine.delete()
+            except Exception as exc:  # noqa: PERF203 - VM deletion dwarfs loop overhead
+                failed.append(machine)
+                if first_error is None:
+                    first_error = exc
+        with self._lock:
+            self._pending_cleanup.extend(failed)
+            self._deleting_count -= len(to_delete)
+            # A concurrent run or close may overlap a slow delete.
+            if (
+                unregister
+                and self._machine is None
+                and not self._pending_cleanup
+                and self._deleting_count == 0
+                and self._cleanup_registered
+            ):
                 atexit.unregister(self._cleanup_on_exit)
                 self._cleanup_registered = False
+        if first_error is not None:
+            raise first_error
 
     @property
     def active_machine_id(self) -> str | None:

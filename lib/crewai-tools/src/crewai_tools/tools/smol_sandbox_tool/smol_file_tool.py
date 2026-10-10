@@ -56,11 +56,12 @@ class SmolFileTool(SmolBaseTool):
         with self._machine_session() as machine:
             if action == "read":
                 file_data = machine.read_file(path)
-                return (
-                    base64.b64encode(file_data).decode("ascii")
-                    if binary
-                    else file_data.decode()
-                )
+                if binary:
+                    return base64.b64encode(file_data).decode("ascii")
+                try:
+                    return file_data.decode("utf-8")
+                except UnicodeDecodeError:
+                    return "File is not valid UTF-8; read it with binary=True for base64 content."
             if data is None:
                 raise ValueError("write requires content")
             machine.write_file(path, data)
