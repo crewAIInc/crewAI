@@ -60,6 +60,21 @@ def _make_non_dict_tool_use_stream() -> list[dict]:
     ]
 
 
+class _AsyncStream:
+    def __init__(self, events):
+        self._events = events
+
+    def __aiter__(self):
+        self._it = iter(self._events)
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self._it)
+        except StopIteration:
+            raise StopAsyncIteration
+
+
 def _build_completion() -> BedrockCompletion:
     """Build a BedrockCompletion with mocked AWS credentials/session."""
     with patch.dict(
@@ -106,20 +121,6 @@ def test_streaming_tool_call_preserves_arguments():
 async def test_async_streaming_tool_call_preserves_arguments():
     """Async streaming: function_args must carry the streamed tool input."""
     llm = _build_completion()
-
-    class _AsyncStream:
-        def __init__(self, events):
-            self._events = events
-
-        def __aiter__(self):
-            self._it = iter(self._events)
-            return self
-
-        async def __anext__(self):
-            try:
-                return next(self._it)
-            except StopIteration:
-                raise StopAsyncIteration
 
     async def _converse_stream(**kwargs):
         return {"stream": _AsyncStream(_make_tool_use_stream())}
@@ -180,3 +181,51 @@ def test_streaming_non_dict_tool_input_coerced_to_empty_dict():
         )
 
     assert captured["args"] == {}
+
+
+EXPECTED_TOOL_USE = [
+    {"toolUseId": "tool-1", "name": "get_weather", "input": {"city": "Paris"}}
+]
+
+
+def test_streaming_tool_call_is_returned_without_available_functions():
+    """Sync streaming: without available_functions the caller runs the tool.
+
+    The agent executor calls the LLM with ``available_functions=None`` and
+    executes the returned tool calls itself, as the non-streaming path
+    supports. Dropping the call instead returns the empty-content fallback.
+    """
+    llm = _build_completion()
+    mock_client = MagicMock()
+    mock_client.converse_stream.return_value = {"stream": _make_tool_use_stream()}
+
+    with patch.object(llm, "_get_sync_client", return_value=mock_client):
+        result = llm._handle_streaming_converse(
+            messages=[{"role": "user", "content": "weather in Paris?"}],
+            body={},
+        )
+
+    assert result == EXPECTED_TOOL_USE
+
+
+@pytest.mark.asyncio
+async def test_async_streaming_tool_call_is_returned_without_available_functions():
+    """Async streaming: without available_functions the tool call is returned."""
+    llm = _build_completion()
+
+    async def _converse_stream(**kwargs):
+        return {"stream": _AsyncStream(_make_tool_use_stream())}
+
+    mock_async_client = MagicMock()
+    mock_async_client.converse_stream = _converse_stream
+
+    async def _ensure(*args, **kwargs):
+        return mock_async_client
+
+    with patch.object(llm, "_ensure_async_client", side_effect=_ensure):
+        result = await llm._ahandle_streaming_converse(
+            messages=[{"role": "user", "content": "weather in Paris?"}],
+            body={},
+        )
+
+    assert result == EXPECTED_TOOL_USE
