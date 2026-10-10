@@ -14,6 +14,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 import contextvars
 import logging
+import sys
 import threading
 from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypeVar
 
@@ -181,13 +182,19 @@ class CrewAIEventsBus:
                 thread_name_prefix="CrewAISyncHandler",
             )
 
-            self._loop = asyncio.new_event_loop()
-            self._loop_thread = threading.Thread(
-                target=self._run_loop,
-                name="CrewAIEventsLoop",
-                daemon=True,
-            )
-            self._loop_thread.start()
+            if sys.platform == "emscripten":
+                # WebAssembly runtimes (e.g. Pyodide) cannot start threads, but
+                # always have a running host event loop to schedule onto.
+                self._loop = asyncio.get_event_loop()
+                self._loop_thread = None
+            else:
+                self._loop = asyncio.new_event_loop()
+                self._loop_thread = threading.Thread(
+                    target=self._run_loop,
+                    name="CrewAIEventsLoop",
+                    daemon=True,
+                )
+                self._loop_thread.start()
             self._executor_initialized = True
 
     def _track_future(self, future: Future[Any]) -> Future[Any]:
@@ -910,7 +917,7 @@ class CrewAIEventsBus:
                 return
             loop = getattr(self, "_loop", None)
 
-        if loop is None or loop.is_closed():
+        if loop is None or loop.is_closed() or self._loop_thread is None:
             return
 
         if wait:

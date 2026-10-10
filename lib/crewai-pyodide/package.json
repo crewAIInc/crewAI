@@ -1,0 +1,13 @@
+{
+  "name": "crewai-pyodide",
+  "private": true,
+  "type": "module",
+  "description": "JavaScript loader and smoke test for running CrewAI on Pyodide.",
+  "scripts": {
+    "build": "uv run python build.py",
+    "test:smoke": "node --experimental-wasm-jspi tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "pyodide": "0.29.3"
+  }
+}

@@ -142,7 +142,9 @@ def _patched_make_vcr_request(
     The original implementation fails on binary request bodies (like file uploads)
     because it assumes all content can be decoded as UTF-8.
     """
-    raw_body = real_request_body if real_request_body is not None else httpx_request.read()
+    raw_body = (
+        real_request_body if real_request_body is not None else httpx_request.read()
+    )
     body: Any = raw_body
     if isinstance(raw_body, bytes):
         try:
@@ -413,7 +415,14 @@ def vcr_cassette_dir(request: Any) -> str:
     for parent in test_file.parents:
         if (
             parent.name
-            in ("crewai", "crewai-tools", "crewai-files", "cli", "crewai-core")
+            in (
+                "crewai",
+                "crewai-tools",
+                "crewai-files",
+                "cli",
+                "crewai-core",
+                "crewai-pyodide",
+            )
             and parent.parent.name == "lib"
         ):
             package_root = parent

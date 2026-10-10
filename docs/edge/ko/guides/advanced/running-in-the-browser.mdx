@@ -1,0 +1,71 @@
+---
+title: 브라우저에서 실행하기
+description: WebAssembly로 컴파일된 CPython인 Pyodide에서 브라우저 또는 Node.js로 CrewAI crew와 flow를 실행합니다.
+icon: globe
+mode: "wide"
+---
+
+## 개요
+
+CrewAI는 WebAssembly로 컴파일된 CPython 인터프리터인 [Pyodide](https://pyodide.org)에서 완전히 클라이언트 측으로 실행할 수 있습니다. `crewai-pyodide` 패키지(CrewAI 저장소의 `lib/crewai-pyodide`)는 CrewAI를 Pyodide에 설치하고 런타임을 조정합니다. HTTP 요청은 JavaScript `fetch` API를 통해 전송되고, 스레드 풀은 작업을 인라인으로 실행하며, WebAssembly 빌드가 없는 네이티브 의존성은 건너뜁니다.
+
+<Warning>
+웹 페이지에서 사용하는 API 키는 페이지를 열 수 있는 누구에게나 노출됩니다. 로컬 도구, 데모 또는 사용자가 직접 입력하는 키에만 사용하세요. 그 외에는 키를 보관하는 프록시를 통해 LLM 요청을 보내세요.
+</Warning>
+
+## 요구 사항
+
+- WebAssembly JavaScript Promise Integration(JSPI)을 지원하는 런타임: Chrome 또는 Edge 137+, 또는 `--experimental-wasm-jspi` 플래그를 사용한 Node.js
+- Pyodide 0.29 (Python 3.13)
+- OpenAI API처럼 교차 출처 요청(CORS)을 허용하는 LLM 엔드포인트
+
+## 예제 빌드 및 실행
+
+CrewAI 저장소를 체크아웃한 위치에서:
+
+```bash
+uv run python lib/crewai-pyodide/build.py
+python -m http.server -d lib/crewai-pyodide/dist
+```
+
+`http://localhost:8000`을 열고 OpenAI 호환 엔드포인트와 API 키를 입력한 뒤, 페이지에서 두 개의 에이전트로 구성된 crew를 실행하세요.
+
+## 직접 만든 페이지에서 사용하기
+
+페이지와 함께 `dist/crewai-pyodide.mjs`와 `dist/wheels/`를 제공한 다음:
+
+```js
+import { loadCrewAI } from "./crewai-pyodide.mjs";
+
+const pyodide = await loadCrewAI({ wheelBaseURL: "./wheels/" });
+pyodide.globals.set("api_key", apiKey);
+
+const answer = await pyodide.runPythonAsync(`
+import crewai_pyodide
+from crewai import LLM, Agent, Crew, Task
+
+llm = LLM(model="gpt-4o-mini", api_key=api_key)
+agent = Agent(role="Writer", goal="Write haiku", backstory="A poet", llm=llm)
+task = Task(description="A haiku about WebAssembly", expected_output="A haiku", agent=agent)
+
+result = await crewai_pyodide.run(Crew(agents=[agent], tasks=[task]).akickoff())
+result.raw
+`);
+```
+
+<Note>
+항상 비동기 진입점(`crew.akickoff()`, `flow.kickoff_async()`, `llm.acall()`)을 사용하고 `crewai_pyodide.run()`으로 감싸세요. Pyodide의 이벤트 루프는 항상 실행 중이므로 동기 방식의 `kickoff()`는 시작되지 않습니다.
+</Note>
+
+## 지원되는 기능
+
+- Agents, Tasks, Crews 및 Flows
+- 네이티브 OpenAI 프로바이더와 `base_url`을 통한 OpenAI 호환 엔드포인트(스트리밍 및 네이티브 도구 호출 포함)
+- 네이티브 코드가 필요 없는 사용자 정의 도구. `requests`는 동작하지만 `urllib.request`는 동작하지 않습니다
+
+## 제한 사항
+
+- Memory, Knowledge, RAG는 사용할 수 없습니다. 기본 저장소(LanceDB, ChromaDB)에 WebAssembly 빌드가 없기 때문입니다. Flows는 자동 메모리 없이 실행됩니다.
+- stdio 기반 MCP 서버, 서브프로세스 기반 코드 실행, 대부분의 `crewai-tools` 패키지는 동작하지 않습니다.
+- 비동기 task와 도구 호출은 병렬이 아니라 한 번에 하나씩 실행됩니다.
+- 텔레메트리, 트레이싱, 업데이트 확인은 비활성화됩니다.

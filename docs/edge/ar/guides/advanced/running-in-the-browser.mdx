@@ -1,0 +1,71 @@
+---
+title: التشغيل في المتصفح
+description: شغّل crews و flows الخاصة بـ CrewAI في المتصفح أو في Node.js باستخدام Pyodide، وهو CPython مُترجَم إلى WebAssembly.
+icon: globe
+mode: "wide"
+---
+
+## نظرة عامة
+
+يمكن تشغيل CrewAI بالكامل على جهة العميل باستخدام [Pyodide](https://pyodide.org)، وهو مفسّر CPython مُترجَم إلى WebAssembly. تقوم حزمة `crewai-pyodide` (في `lib/crewai-pyodide` ضمن مستودع CrewAI) بتثبيت CrewAI داخل Pyodide وتكييف بيئة التشغيل: تمر طلبات HTTP عبر واجهة `fetch` في JavaScript، وتنفّذ مجمّعات الخيوط عملها مباشرة دون خيوط، ويتم تخطي التبعيات الأصلية التي لا تتوفر لها نسخة WebAssembly.
+
+<Warning>
+مفاتيح API المستخدمة في صفحة ويب مرئية لأي شخص يمكنه فتحها. استخدم ذلك للأدوات المحلية أو العروض التوضيحية أو المفاتيح التي يُدخلها المستخدمون بأنفسهم؛ وإلا فأرسل طلبات LLM عبر وكيل (proxy) يحتفظ بالمفتاح.
+</Warning>
+
+## المتطلبات
+
+- بيئة تشغيل تدعم WebAssembly JavaScript Promise Integration (JSPI): متصفح Chrome أو Edge الإصدار 137 أو أحدث، أو Node.js مع `--experimental-wasm-jspi`
+- Pyodide 0.29 (Python 3.13)
+- نقطة نهاية LLM تسمح بالطلبات عبر المصادر (CORS)، مثل OpenAI API
+
+## بناء المثال وتشغيله
+
+من نسخة محلية من مستودع CrewAI:
+
+```bash
+uv run python lib/crewai-pyodide/build.py
+python -m http.server -d lib/crewai-pyodide/dist
+```
+
+افتح `http://localhost:8000`، وأدخل نقطة نهاية متوافقة مع OpenAI ومفتاح API، ثم شغّل crew مكوّنًا من وكيلين في الصفحة.
+
+## الاستخدام في صفحتك الخاصة
+
+قدّم الملف `dist/crewai-pyodide.mjs` والمجلد `dist/wheels/` مع صفحتك، ثم:
+
+```js
+import { loadCrewAI } from "./crewai-pyodide.mjs";
+
+const pyodide = await loadCrewAI({ wheelBaseURL: "./wheels/" });
+pyodide.globals.set("api_key", apiKey);
+
+const answer = await pyodide.runPythonAsync(`
+import crewai_pyodide
+from crewai import LLM, Agent, Crew, Task
+
+llm = LLM(model="gpt-4o-mini", api_key=api_key)
+agent = Agent(role="Writer", goal="Write haiku", backstory="A poet", llm=llm)
+task = Task(description="A haiku about WebAssembly", expected_output="A haiku", agent=agent)
+
+result = await crewai_pyodide.run(Crew(agents=[agent], tasks=[task]).akickoff())
+result.raw
+`);
+```
+
+<Note>
+استخدم دائمًا نقاط الدخول غير المتزامنة (`crew.akickoff()`، `flow.kickoff_async()`، `llm.acall()`) وغلّفها بـ `crewai_pyodide.run()`. حلقة الأحداث في Pyodide تعمل دائمًا، لذا يرفض `kickoff()` المتزامن البدء.
+</Note>
+
+## ما الذي يعمل
+
+- Agents و Tasks و Crews و Flows
+- مزوّد OpenAI الأصلي ونقاط النهاية المتوافقة مع OpenAI عبر `base_url`، بما في ذلك البث (streaming) واستدعاء الأدوات الأصلي
+- الأدوات المخصصة التي لا تحتاج إلى كود أصلي؛ تعمل `requests` ولا تعمل `urllib.request`
+
+## القيود
+
+- Memory و Knowledge و RAG غير متاحة: لا تتوفر نسخة WebAssembly لوحدات التخزين الافتراضية الخاصة بها (LanceDB و ChromaDB). تعمل Flows دون الذاكرة التلقائية.
+- لا تعمل خوادم MCP عبر stdio، ولا تنفيذ الكود في عمليات فرعية، ولا معظم حزم `crewai-tools`.
+- تُنفَّذ Tasks غير المتزامنة واستدعاءات الأدوات واحدة تلو الأخرى بدلًا من التوازي.
+- يتم تعطيل القياس عن بُعد (telemetry) والتتبع (tracing) والتحقق من التحديثات.

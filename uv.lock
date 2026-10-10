@@ -33,6 +33,7 @@ members = [
     "crewai-core",
     "crewai-devtools",
     "crewai-files",
+    "crewai-pyodide",
     "crewai-tools",
 ]
 overrides = [
@@ -1716,6 +1717,10 @@ requires-dist = [
     { name = "python-magic", specifier = ">=0.4.27" },
     { name = "tinytag", specifier = "~=2.2.1" },
 ]
+
+[[package]]
+name = "crewai-pyodide"
+source = { editable = "lib/crewai-pyodide" }
 
 [[package]]
 name = "crewai-tools"

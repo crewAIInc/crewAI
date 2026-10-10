@@ -2391,3 +2391,22 @@ def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
         assert finished.wait(timeout=5)
 
     assert order.index("save-done") < order.index("flow-finished")
+
+
+def test_flow_runs_without_memory_when_storage_backend_is_unavailable(monkeypatch):
+    """A missing default storage backend (e.g. lancedb under WebAssembly)
+    disables the flow's auto-created memory instead of failing the flow."""
+    import sys
+
+    # None in sys.modules makes the import raise ImportError.
+    monkeypatch.setitem(sys.modules, "crewai.memory.storage.lancedb_storage", None)
+
+    class NoMemoryFlow(Flow):
+        @start()
+        def begin(self):
+            return "done"
+
+    flow = NoMemoryFlow()
+
+    assert flow.memory is None
+    assert flow.kickoff() == "done"

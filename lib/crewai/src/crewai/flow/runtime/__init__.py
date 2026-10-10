@@ -891,7 +891,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             from crewai.memory.utils import sanitize_scope_name
 
             flow_name = sanitize_scope_name(self._definition.name)
-            self.memory = Memory(root_scope=f"/flow/{flow_name}")
+            try:
+                self.memory = Memory(root_scope=f"/flow/{flow_name}")
+            except ImportError as e:
+                # The default storage backend is not installable everywhere
+                # (e.g. lancedb has no WebAssembly build); run without memory.
+                logger.debug("Flow memory disabled: %s", e)
 
         self._methods.update(methods)
 

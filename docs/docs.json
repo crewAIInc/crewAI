@@ -156,7 +156,8 @@
                         "icon": "gear",
                         "pages": [
                           "edge/en/guides/advanced/customizing-prompts",
-                          "edge/en/guides/advanced/fingerprinting"
+                          "edge/en/guides/advanced/fingerprinting",
+                          "edge/en/guides/advanced/running-in-the-browser"
                         ]
                       },
                       {
@@ -17478,7 +17479,8 @@
                         "icon": "gear",
                         "pages": [
                           "edge/pt-BR/guides/advanced/customizing-prompts",
-                          "edge/pt-BR/guides/advanced/fingerprinting"
+                          "edge/pt-BR/guides/advanced/fingerprinting",
+                          "edge/pt-BR/guides/advanced/running-in-the-browser"
                         ]
                       },
                       {
@@ -33478,7 +33480,8 @@
                         "icon": "gear",
                         "pages": [
                           "edge/ko/guides/advanced/customizing-prompts",
-                          "edge/ko/guides/advanced/fingerprinting"
+                          "edge/ko/guides/advanced/fingerprinting",
+                          "edge/ko/guides/advanced/running-in-the-browser"
                         ]
                       },
                       {
@@ -50018,7 +50021,8 @@
                         "icon": "gear",
                         "pages": [
                           "edge/ar/guides/advanced/customizing-prompts",
-                          "edge/ar/guides/advanced/fingerprinting"
+                          "edge/ar/guides/advanced/fingerprinting",
+                          "edge/ar/guides/advanced/running-in-the-browser"
                         ]
                       },
                       {

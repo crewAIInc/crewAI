@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CrewAI in the Browser</title>
+    <style>
+      :root {
+        --bg: #fafaf9;
+        --fg: #1c1917;
+        --muted: #78716c;
+        --border: #e7e5e4;
+        --panel: #ffffff;
+        --accent: #eb6658;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0c0a09;
+          --fg: #f5f5f4;
+          --muted: #a8a29e;
+          --border: #292524;
+          --panel: #1c1917;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.5 system-ui, sans-serif;
+      }
+      main { max-width: 760px; margin: 0 auto; padding: 32px 16px; }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      p.lede { color: var(--muted); margin: 0 0 24px; }
+      form {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+      label.wide { grid-column: 1 / -1; }
+      input, button {
+        font: inherit;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--fg);
+      }
+      button {
+        grid-column: 1 / -1;
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.6; cursor: progress; }
+      #status { color: var(--muted); margin: 16px 0 8px; font-size: 13px; }
+      pre {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        overflow-x: auto;
+        font-size: 12px;
+        min-height: 120px;
+        white-space: pre-wrap;
+      }
+      #result { font-size: 14px; }
+      @media (max-width: 560px) { form { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>CrewAI in the Browser</h1>
+      <p class="lede">
+        A crew running on Pyodide (CPython compiled to WebAssembly). Your API key stays in this
+        tab and is sent only to the LLM endpoint below.
+      </p>
+      <form id="form">
+        <label>Model <input name="model" value="gpt-4o-mini" required /></label>
+        <label>API key <input name="apiKey" type="password" autocomplete="off" required /></label>
+        <label class="wide">Base URL <input name="baseUrl" value="https://api.openai.com/v1" required /></label>
+        <label class="wide">Topic <input name="topic" value="WebAssembly" required /></label>
+        <button id="run" disabled>Loading Pyodide…</button>
+      </form>
+      <div id="status"></div>
+      <pre id="result"></pre>
+      <pre id="log"></pre>
+    </main>
+    <script type="module">
+      import { loadCrewAI } from "./crewai-pyodide.mjs";
+
+      const form = document.getElementById("form");
+      const button = document.getElementById("run");
+      const status = document.getElementById("status");
+      const result = document.getElementById("result");
+      const log = document.getElementById("log");
+
+      const CREW = `
+import crewai_pyodide
+from crewai import LLM, Agent, Crew, Task
+
+llm = LLM(model=model, base_url=base_url, api_key=api_key)
+researcher = Agent(
+    role="Researcher",
+    goal=f"Find the three most interesting facts about {topic}",
+    backstory="You dig up surprising, accurate facts.",
+    llm=llm,
+)
+writer = Agent(
+    role="Writer",
+    goal="Turn research into a short, lively paragraph",
+    backstory="You write clear, engaging prose.",
+    llm=llm,
+)
+research = Task(
+    description=f"List three interesting facts about {topic}.",
+    expected_output="Three bullet points.",
+    agent=researcher,
+)
+write = Task(
+    description="Write one paragraph built on the research.",
+    expected_output="A single paragraph.",
+    agent=writer,
+)
+crew = Crew(agents=[researcher, writer], tasks=[research, write], verbose=True)
+(await crewai_pyodide.run(crew.akickoff())).raw
+`;
+
+      let pyodide;
+      try {
+        status.textContent = "Loading Pyodide and installing CrewAI…";
+        pyodide = await loadCrewAI({ wheelBaseURL: "./wheels/" });
+        const write = (text) => { log.textContent += text + "\n"; };
+        pyodide.setStdout({ batched: write });
+        pyodide.setStderr({ batched: write });
+        status.textContent = "Ready.";
+        button.textContent = "Run crew";
+        button.disabled = false;
+      } catch (error) {
+        status.textContent = `Failed to load: ${error.message}`;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+        button.disabled = true;
+        result.textContent = "";
+        log.textContent = "";
+        status.textContent = "Running…";
+        pyodide.globals.set("model", data.get("model"));
+        pyodide.globals.set("api_key", data.get("apiKey"));
+        pyodide.globals.set("base_url", data.get("baseUrl"));
+        pyodide.globals.set("topic", data.get("topic"));
+        try {
+          result.textContent = await pyodide.runPythonAsync(CREW);
+          status.textContent = "Done.";
+        } catch (error) {
+          status.textContent = "Failed; see the log below.";
+          log.textContent += error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
