@@ -366,7 +366,13 @@ def handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            return convert_with_instructions(
+                result=result,
+                model=model,
+                is_json_output=is_json_output,
+                agent=agent,
+                converter_cls=converter_cls,
+            )
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
@@ -519,7 +525,13 @@ async def async_handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            return await async_convert_with_instructions(
+                result=result,
+                model=model,
+                is_json_output=is_json_output,
+                agent=agent,
+                converter_cls=converter_cls,
+            )
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(

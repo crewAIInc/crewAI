@@ -1404,12 +1404,18 @@ class Agent(BaseAgent):
         )
         return []
 
-    @staticmethod
     def get_output_converter(
-        llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
+        self, llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
     ) -> Converter:
-        """Create a Converter instance for transforming LLM output to a structured model."""
-        return Converter(llm=llm, text=text, model=model, instructions=instructions)
+        """Create a Converter instance for transforming LLM output to a structured model.
+
+        The agent reference is forwarded to the converter so instruction-based
+        retry converters created via ``convert_with_instructions`` keep using
+        this agent's LLM for fallback conversions.
+        """
+        return Converter(
+            llm=llm, text=text, model=model, instructions=instructions, agent=self
+        )
 
     def _training_handler(self, task_prompt: str) -> str:
         """Handle training data for the agent task prompt to improve output on Training."""
