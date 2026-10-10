@@ -2,7 +2,7 @@
 
 This module provides a thin subclass of OpenAICompletion that supports
 various OpenAI-compatible APIs like OpenRouter, DeepSeek, Ollama, vLLM,
-Cerebras, and Dashscope (Alibaba/Qwen).
+Cerebras, Groq, and Dashscope (Alibaba/Qwen).
 
 Usage:
     llm = LLM(model="deepseek/deepseek-chat")  # Uses DeepSeek API
@@ -84,6 +84,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="CEREBRAS_BASE_URL",
         api_key_required=True,
     ),
+    "groq": ProviderConfig(
+        base_url="https://api.groq.com/openai/v1",
+        api_key_env="GROQ_API_KEY",
+        base_url_env="GROQ_BASE_URL",
+        api_key_required=True,
+    ),
     "dashscope": ProviderConfig(
         base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
         api_key_env="DASHSCOPE_API_KEY",
@@ -147,8 +153,16 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - ollama_chat: Alias for ollama
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
+        - groq: Groq (https://groq.com)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+
+    Compatibility is per-provider and is not full OpenAI parity: a provider may
+    reject OpenAI request fields it does not implement. Groq, for instance,
+    documents ``logprobs``, ``top_logprobs`` and ``logit_bias`` as unsupported,
+    so sending them fails the request; leave them unset. Basic Chat Completions
+    (messages, temperature, max_tokens, tools, streaming) is what this class
+    configures for every provider.
 
     Example:
         # Using provider prefix
