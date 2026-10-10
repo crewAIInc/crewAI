@@ -121,22 +121,24 @@ class SmolBaseTool(BaseTool):
         try:
             self.close()
         except Exception:
-            logger.warning(
-                "Could not delete persistent Smol Machines VM", exc_info=True
-            )
+            logger.warning("Could not delete Smol Machines VM", exc_info=True)
 
-    @staticmethod
-    def _release_machine(machine: Any, delete: bool) -> None:
+    def _release_machine(self, machine: Any, delete: bool) -> None:
         if not delete:
             return
         original_error = sys.exc_info()[1]
         try:
             machine.delete()
         except Exception:
+            with self._lock:
+                self._pending_cleanup.append(machine)
+                if not self._cleanup_registered:
+                    atexit.register(self._cleanup_on_exit)
+                    self._cleanup_registered = True
             if original_error is None:
                 raise
             logger.warning(
-                "Could not delete Smol Machines VM %s after tool failure",
+                "Could not delete Smol Machines VM %s after tool failure; close() will retry",
                 getattr(machine, "id", "unknown"),
                 exc_info=True,
             )

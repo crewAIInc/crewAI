@@ -91,18 +91,35 @@ def test_cleanup_failure_preserves_the_command_error(sdk, caplog):
     _, machine = sdk
     machine.exec.side_effect = RuntimeError("command failed")
     machine.delete.side_effect = RuntimeError("delete failed")
+    tool = SmolExecTool()
     with pytest.raises(RuntimeError, match="command failed"):
-        SmolExecTool().run(command="false")
+        tool.run(command="false")
     machine.delete.assert_called_once_with()
     assert "mach-123" in caplog.text
     assert "delete failed" in caplog.text
+    machine.delete.side_effect = None
+    tool.close()
+
+
+def test_failed_ephemeral_delete_can_be_retried(sdk):
+    _, machine = sdk
+    machine.delete.side_effect = RuntimeError("delete failed")
+    tool = SmolExecTool()
+    with pytest.raises(RuntimeError, match="delete failed"):
+        tool.run(command="echo hello")
+    machine.delete.side_effect = None
+    tool.close()
+    assert machine.delete.call_count == 2
 
 
 def test_cleanup_failure_after_success_is_reported(sdk):
     _, machine = sdk
     machine.delete.side_effect = RuntimeError("delete failed")
+    tool = SmolExecTool()
     with pytest.raises(RuntimeError, match="delete failed"):
-        SmolExecTool().run(command="echo hello")
+        tool.run(command="echo hello")
+    machine.delete.side_effect = None
+    tool.close()
 
 
 def test_failed_persistent_close_does_not_reuse_vm_and_can_retry(sdk):
