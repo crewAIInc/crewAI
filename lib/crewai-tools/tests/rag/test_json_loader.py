@@ -16,9 +16,11 @@ class TestJSONLoader:
             json.dump(data, f)
             return f.name
 
-    def _create_temp_raw_file(self, content: str) -> str:
+    def _create_temp_raw_file(self, content: str, encoding: str = "utf-8") -> str:
         """Helper to write raw content to a temporary file and return its path."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", encoding=encoding, delete=False
+        ) as f:
             f.write(content)
             return f.name
 
@@ -36,6 +38,15 @@ class TestJSONLoader:
             assert all(k in result.content for k in ["name", "John", "age", "30"])
             assert result.metadata == {"format": "json", "type": "dict", "size": 3}
             assert result.source == path
+        finally:
+            os.unlink(path)
+
+    def test_load_json_with_utf8_bom(self):
+        path = self._create_temp_raw_file('{"message": "hello"}', "utf-8-sig")
+        try:
+            result = self._load_from_path(path)
+            assert result.content == 'message: "hello"'
+            assert result.metadata == {"format": "json", "type": "dict", "size": 1}
         finally:
             os.unlink(path)
 
