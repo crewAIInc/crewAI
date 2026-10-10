@@ -130,6 +130,62 @@ class TestAgentExecutor:
     class StructuredResult(BaseModel):
         value: str
 
+    def test_mark_todo_complete_collapses_multimodal_tool_content(self):
+        """Tool evidence stores text parts instead of a Python list repr."""
+        agent = SimpleNamespace(planning_config=None, verbose=False)
+        executor = _build_executor(agent=agent)
+        todo = TodoItem(
+            step_number=1,
+            description="Inspect the receipt",
+            status="running",
+        )
+        executor.state.todos = TodoList(items=[todo])
+        executor.state.current_answer = AgentAction(
+            thought="Use the receipt tool",
+            tool="inspect_receipt",
+            tool_input="{}",
+            text="Action: inspect_receipt",
+        )
+        executor.state.messages = [
+            {
+                "role": "tool",
+                "content": [
+                    {"type": "text", "text": "Refund is allowed."},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "https://example.com/receipt.png"},
+                    },
+                ],
+            },
+        ]
+
+        executor.mark_todo_complete()
+
+        assert executor.state.todos.items[0].result == "Refund is allowed."
+
+    def test_should_replan_ignores_multimodal_metadata(self):
+        """An image URL containing 'replan' is not an agent instruction."""
+        agent = SimpleNamespace(planning_config=None, verbose=False)
+        executor = _build_executor(agent=agent)
+        executor.state.messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "https://example.com/replan-diagram.png",
+                        },
+                    },
+                ],
+            },
+        ]
+
+        should_replan, reason = executor._should_replan()
+
+        assert should_replan is False
+        assert reason == ""
+
     def test_setup_messages_calls_human_input_provider_hooks(self):
         """Message setup should preserve the HumanInputProvider hook contract."""
         executor = _build_executor(
