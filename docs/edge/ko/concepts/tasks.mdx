@@ -405,6 +405,8 @@ blog_task = Task(
 
 문자열 가드레일은 기본적으로 에이전트와 동일한 LLM 인스턴스를 사용합니다. 다른 검증 모델을 사용하려면 Agent에 `guardrail_llm`을 설정하고, Agent의 설정을 재정의하려면 Task에 설정하세요. LLM 인스턴스, 모델 이름 또는 모델 구성 딕셔너리를 전달할 수 있습니다. 함수 기반 가드레일의 동작은 변경되지 않습니다.
 
+태스크를 다른 에이전트로 실행하면 문자열 가드레일은 실행 중인 에이전트의 설정을 사용합니다. Task에 설정한 `guardrail_llm`이 여전히 우선합니다.
+
 ```python Code
 from crewai import LLM, Task
 

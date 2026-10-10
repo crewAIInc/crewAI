@@ -363,6 +363,8 @@ blog_task = Task(
 
 By default, string guardrails use the agent’s own LLM instance. Set `guardrail_llm` on the Agent to choose another judge, or on the Task to override the Agent’s choice. You can pass an LLM instance, model name, or model configuration dictionary. Callable guardrails keep their own behavior.
 
+When a task executes with a replacement agent, its string guardrails use that executing agent’s configuration. A Task-level `guardrail_llm` still takes precedence.
+
 ```python Code
 from crewai import LLM, Task
 

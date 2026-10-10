@@ -413,6 +413,8 @@ blog_task = Task(
 
 Por padrão, guardrails de texto usam a mesma instância de LLM do agente. Defina `guardrail_llm` no Agent para escolher outro avaliador, ou na Task para substituir a escolha do Agent. Você pode passar uma instância de LLM, um nome de modelo ou um dicionário de configuração. Guardrails definidos como funções mantêm seu comportamento.
 
+Quando uma tarefa é executada por um agente substituto, os guardrails de texto usam a configuração desse agente. O `guardrail_llm` definido na Task continua tendo prioridade.
+
 ```python Code
 from crewai import LLM, Task
 

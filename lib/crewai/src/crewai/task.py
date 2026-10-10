@@ -312,6 +312,7 @@ class Task(BaseModel):
         description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
     )
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
+    _guardrail_agent: BaseAgent | None = PrivateAttr(default=None)
     _guardrails: list[GuardrailCallable] = PrivateAttr(
         default_factory=list,
     )
@@ -403,6 +404,9 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def ensure_guardrail_is_callable(self) -> Task:
+        return self._initialize_guardrail()
+
+    def _initialize_guardrail(self) -> Task:
         if callable(self.guardrail):
             self._guardrail = self.guardrail
         elif isinstance(self.guardrail, str):
@@ -420,6 +424,9 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def ensure_guardrails_is_list_of_callables(self) -> Task:
+        return self._initialize_guardrails()
+
+    def _initialize_guardrails(self) -> Task:
         guardrails = []
         if self.guardrails is not None:
             if isinstance(self.guardrails, (list, tuple)):
@@ -472,6 +479,7 @@ class Task(BaseModel):
             self.guardrail = None
             self._guardrail = None
 
+        self._guardrail_agent = self.agent
         return self
 
     def _get_guardrail_llm(self) -> BaseLLM:
@@ -486,6 +494,14 @@ class Task(BaseModel):
         if not isinstance(llm, BaseLLM):
             raise ValueError("Agent must have a BaseLLM instance to use LLMGuardrail")
         return llm
+
+    def _set_execution_agent(self, agent: BaseAgent) -> None:
+        self.agent = agent
+        if agent is self._guardrail_agent:
+            return
+
+        self._initialize_guardrail()
+        self._initialize_guardrails()
 
     @field_validator("id", mode="before")
     @classmethod
@@ -675,12 +691,12 @@ class Task(BaseModel):
         self._store_input_files()
         try:
             agent = agent or self.agent
-            self.agent = agent
             if not agent:
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
 
+            self._set_execution_agent(agent)
             self.prompt_context = context
             tools = tools or self.tools or []
 
@@ -834,12 +850,12 @@ class Task(BaseModel):
         self._store_input_files()
         try:
             agent = agent or self.agent
-            self.agent = agent
             if not agent:
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
 
+            self._set_execution_agent(agent)
             self.prompt_context = context
             tools = tools or self.tools or []
 

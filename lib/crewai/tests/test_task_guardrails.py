@@ -1,4 +1,5 @@
-from unittest.mock import Mock, patch
+import asyncio
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -49,7 +50,11 @@ def test_task_without_guardrail():
 
 @pytest.mark.parametrize("guardrail_field", ["guardrail", "guardrails", "list"])
 @pytest.mark.parametrize("judge_config", ["task", "agent", "default"])
-def test_string_guardrail_uses_configured_judge(guardrail_field, judge_config):
+@pytest.mark.parametrize("replacement", ["none", "argument", "assignment"])
+@pytest.mark.parametrize("execution", ["sync", "thread", "async"])
+def test_string_guardrail_uses_configured_judge(
+    guardrail_field, judge_config, replacement, execution
+):
     from crewai.lite_agent_output import LiteAgentOutput
     from crewai.tasks.llm_guardrail import LLMGuardrailResult
 
@@ -69,10 +74,20 @@ def test_string_guardrail_uses_configured_judge(guardrail_field, judge_config):
         if guardrail_field == "list"
         else {guardrail_field: guardrail}
     )
+    replace_agent = replacement != "none"
+    assigned_agent = agent
+    if replace_agent:
+        assigned_agent = Agent(
+            role="Original writer",
+            goal=agent.goal,
+            backstory=agent.backstory,
+            llm=subject,
+            guardrail_llm=LLM(model="gpt-4o-mini", api_key="unit-test-key"),
+        )
     task = Task(
         description="Write an answer",
         expected_output="A short answer",
-        agent=agent,
+        agent=assigned_agent,
         guardrail_llm=task_judge if judge_config == "task" else None,
         **kwargs,
     )
@@ -90,15 +105,43 @@ def test_string_guardrail_uses_configured_judge(guardrail_field, judge_config):
             pydantic=LLMGuardrailResult(valid=True),
         )
 
+    def execute(executing_agent):
+        if replacement == "assignment":
+            task.agent = executing_agent
+            executing_agent = None
+        if execution == "async":
+            return asyncio.run(task.aexecute_sync(agent=executing_agent))
+        if execution == "thread":
+            return task.execute_async(agent=executing_agent).result(timeout=5)
+        return task.execute_sync(agent=executing_agent)
+
     with (
         patch.object(Agent, "execute_task", return_value="A short answer"),
+        patch.object(
+            Agent, "aexecute_task", new_callable=AsyncMock, return_value="A short answer"
+        ),
         patch.object(Agent, "kickoff", autospec=True, side_effect=validate),
     ):
-        result = task.execute_sync()
+        result = execute(agent)
+        if replace_agent:
+            execute(assigned_agent)
+            result = execute(agent)
 
     assert result.raw == "A short answer"
-    assert len(judging_clients) == 1
-    assert judging_clients[0] is expected_judge
+    assert task.agent is agent
+    expected_clients = [expected_judge]
+    if replace_agent:
+        expected_clients.extend(
+            [
+                task_judge if judge_config == "task" else assigned_agent.guardrail_llm,
+                expected_judge,
+            ]
+        )
+    assert len(judging_clients) == len(expected_clients)
+    assert all(
+        actual is expected
+        for actual, expected in zip(judging_clients, expected_clients)
+    )
     assert agent.llm is subject
 
 
