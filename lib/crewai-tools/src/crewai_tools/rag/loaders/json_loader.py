@@ -25,7 +25,7 @@ class JSONLoader(BaseLoader):
 
     @staticmethod
     def _load_from_file(path: str) -> str:
-        with open(path, encoding="utf-8") as file:
+        with open(path, encoding="utf-8-sig") as file:
             return file.read()
 
     def _parse_json(self, content: str, source_ref: str) -> LoaderResult:
