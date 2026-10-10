@@ -51,9 +51,10 @@ class Converter(OutputConverter):
     def _coerce_response_to_pydantic(self, response: Any) -> BaseModel:
         """Validate an LLM response into the configured Pydantic model.
 
-        Pure post-processing — performs no I/O. Shared by ``to_pydantic`` and
-        ``ato_pydantic`` so the validation/partial-JSON fallback logic stays in
-        a single place.
+        Pure post-processing — performs no I/O. Used by ``to_pydantic`` (the
+        sync path); ``ato_pydantic`` uses the async variant
+        ``_acoerce_response_to_pydantic`` so the partial-JSON fallback stays
+        asynchronous.
         """
         if isinstance(response, BaseModel):
             return response
@@ -79,6 +80,40 @@ class Converter(OutputConverter):
                     ) from parse_err
             raise ConverterError(
                 "handle_partial_json returned an unexpected type."
+            ) from None
+
+    async def _acoerce_response_to_pydantic(self, response: Any) -> BaseModel:
+        """Async equivalent of ``_coerce_response_to_pydantic``.
+
+        Used by ``ato_pydantic`` so instruction-based fallback retries await
+        ``async_handle_partial_json`` (and therefore ``converter.ato_pydantic()``)
+        instead of running the synchronous ``handle_partial_json`` on the
+        event-loop thread.
+        """
+        if isinstance(response, BaseModel):
+            return response
+        try:
+            return self.model.model_validate_json(response)
+        except ValidationError:
+            partial = await async_handle_partial_json(
+                result=response,
+                model=self.model,
+                is_json_output=False,
+                agent=self.agent,
+            )
+            if isinstance(partial, BaseModel):
+                return partial
+            if isinstance(partial, dict):
+                return self.model.model_validate(partial)
+            if isinstance(partial, str):
+                try:
+                    return self.model.model_validate_json(partial)
+                except Exception as parse_err:
+                    raise ConverterError(
+                        f"Failed to convert partial JSON result into Pydantic: {parse_err}"
+                    ) from parse_err
+            raise ConverterError(
+                "async_handle_partial_json returned an unexpected type."
             ) from None
 
     def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
@@ -131,7 +166,7 @@ class Converter(OutputConverter):
                 )
             else:
                 response = await self.llm.acall(self._build_messages())
-            return self._coerce_response_to_pydantic(response)
+            return await self._acoerce_response_to_pydantic(response)
         except ValidationError as e:
             if current_attempt < self.max_attempts:
                 return await self.ato_pydantic(current_attempt + 1)
