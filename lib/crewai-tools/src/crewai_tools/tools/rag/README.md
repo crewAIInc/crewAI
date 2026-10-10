@@ -38,7 +38,7 @@ RagTool can be instantiated with data from different sources, including:
 #### **Creating an Instance**
 
 ```python
-from crewai_tools.tools.rag_tool import RagTool
+from crewai_tools import RagTool
 
 # Example: Loading from a file
 rag_tool = RagTool().from_file('path/to/your/file.txt')
