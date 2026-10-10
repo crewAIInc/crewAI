@@ -9,6 +9,7 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
+from crewai.llms._finish_reason_utils import warn_if_truncated
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -1056,6 +1057,8 @@ class AnthropicCompletion(BaseLLM):
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
+        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
@@ -1292,6 +1295,8 @@ class AnthropicCompletion(BaseLLM):
             final_message
         )
 
+        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1514,6 +1519,8 @@ class AnthropicCompletion(BaseLLM):
                 final_response
             )
 
+            warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+
             self._emit_call_completed_event(
                 response=final_content,
                 call_type=LLMCallType.LLM_CALL,
@@ -1603,6 +1610,8 @@ class AnthropicCompletion(BaseLLM):
         self._track_token_usage_internal(usage)
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
+
+        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1816,6 +1825,8 @@ class AnthropicCompletion(BaseLLM):
             final_message
         )
 
+        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1929,6 +1940,8 @@ class AnthropicCompletion(BaseLLM):
             finish_reason, final_response_id = self._extract_finish_reason_and_id(
                 final_response
             )
+
+            warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
 
             self._emit_call_completed_event(
                 response=final_content,

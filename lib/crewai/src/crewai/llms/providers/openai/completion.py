@@ -47,7 +47,10 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
+from crewai.llms._finish_reason_utils import (
+    extract_choices_finish_reason_and_id,
+    warn_if_truncated,
+)
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -1156,6 +1159,8 @@ class OpenAICompletion(BaseLLM):
                 response
             )
 
+            warn_if_truncated(finish_reason, "openai", log=logging.getLogger())
+
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1302,6 +1307,8 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_responses_finish_reason_and_id(
                 response
             )
+
+            warn_if_truncated(finish_reason, "openai", log=logging.getLogger())
 
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
@@ -1480,6 +1487,8 @@ class OpenAICompletion(BaseLLM):
             else (None, response_id_stream)
         )
 
+        warn_if_truncated(finish_reason, "openai", log=logging.getLogger())
+
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1616,6 +1625,8 @@ class OpenAICompletion(BaseLLM):
             if final_response is not None
             else (None, response_id_stream)
         )
+
+        warn_if_truncated(finish_reason, "openai", log=logging.getLogger())
 
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
@@ -2201,6 +2212,10 @@ class OpenAICompletion(BaseLLM):
                 parsed_finish_reason, parsed_response_id = (
                     self._extract_chat_finish_reason_and_id(parsed_response)
                 )
+
+                warn_if_truncated(
+                    parsed_finish_reason, "openai", log=logging.getLogger()
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -2236,6 +2251,8 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
             )
+
+            warn_if_truncated(finish_reason, "openai", log=logging.getLogger())
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
@@ -2380,6 +2397,7 @@ class OpenAICompletion(BaseLLM):
             tool execution result when available_functions is provided,
             or the text response string.
         """
+        warn_if_truncated(finish_reason, "openai", log=logging.getLogger())
         if usage_data:
             self._track_token_usage_internal(usage_data)
 
@@ -2496,6 +2514,10 @@ class OpenAICompletion(BaseLLM):
                     self._track_token_usage_internal(usage)
                     parsed_finish_reason, parsed_response_id = (
                         self._extract_chat_finish_reason_and_id(final_completion)
+                    )
+
+                    warn_if_truncated(
+                        parsed_finish_reason, "openai", log=logging.getLogger()
                     )
                     if final_completion.choices:
                         parsed_result = final_completion.choices[0].message.parsed
@@ -2643,6 +2665,10 @@ class OpenAICompletion(BaseLLM):
                 parsed_finish_reason, parsed_response_id = (
                     self._extract_chat_finish_reason_and_id(parsed_response)
                 )
+
+                warn_if_truncated(
+                    parsed_finish_reason, "openai", log=logging.getLogger()
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -2676,6 +2702,8 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
             )
+
+            warn_if_truncated(finish_reason, "openai", log=logging.getLogger())
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
