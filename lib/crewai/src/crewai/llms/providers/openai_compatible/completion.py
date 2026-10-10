@@ -2,12 +2,14 @@
 
 This module provides a thin subclass of OpenAICompletion that supports
 various OpenAI-compatible APIs like OpenRouter, DeepSeek, Ollama, vLLM,
-Cerebras, and Dashscope (Alibaba/Qwen).
+Cerebras, Dashscope (Alibaba/Qwen) and Fireworks AI.
 
 Usage:
     llm = LLM(model="deepseek/deepseek-chat")  # Uses DeepSeek API
     llm = LLM(model="openrouter/anthropic/claude-3-opus")  # Uses OpenRouter
     llm = LLM(model="ollama/llama3")  # Uses local Ollama
+    # Uses Fireworks AI; everything after the prefix is the model id
+    llm = LLM(model="fireworks_ai/accounts/fireworks/models/llama-v3p1-70b-instruct")
 """
 
 from __future__ import annotations
@@ -96,6 +98,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "fireworks_ai": ProviderConfig(
+        base_url="https://api.fireworks.ai/inference/v1",
+        api_key_env="FIREWORKS_API_KEY",
+        base_url_env="FIREWORKS_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -149,6 +157,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - fireworks_ai: Fireworks AI (https://fireworks.ai)
 
     Example:
         # Using provider prefix
