@@ -457,7 +457,7 @@ def convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-    if attempt >= getattr(converter, "max_attempts", 3):
+    if attempt > getattr(converter, "max_attempts", 3):
         return result
     exported_result = (
         converter.to_pydantic(attempt)
@@ -630,7 +630,7 @@ async def async_convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-    if attempt >= getattr(converter, "max_attempts", 3):
+    if attempt > getattr(converter, "max_attempts", 3):
         return result
     exported_result = (
         await converter.ato_pydantic(attempt)
