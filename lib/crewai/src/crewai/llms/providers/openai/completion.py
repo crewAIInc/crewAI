@@ -57,7 +57,10 @@ from crewai.llms.base_llm import (
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
-from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.agent_utils import (
+    is_context_length_exceeded,
+    message_content_text,
+)
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -988,8 +991,7 @@ class OpenAICompletion(BaseLLM):
 
         for message in messages:
             if message.get("role") == "system":
-                content = message.get("content", "")
-                content_str = content if isinstance(content, str) else str(content)
+                content_str = message_content_text(message)
                 if instructions:
                     instructions = f"{instructions}\n\n{content_str}"
                 else:
