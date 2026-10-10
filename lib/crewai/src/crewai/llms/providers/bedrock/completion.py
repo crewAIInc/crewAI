@@ -6,7 +6,7 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -50,6 +50,14 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+
+class _ConverseAgain:
+    """Sentinel returned by _process_converse_response when a tool result was
+    appended to the message history and another Converse call is required."""
+
+
+_CONVERSE_RECURSE: Final = _ConverseAgain()
 
 
 def _preprocess_structured_data(
@@ -604,6 +612,280 @@ class BedrockCompletion(BaseLLM):
                 )
                 raise
 
+    def _apply_structured_output_tool(
+        self,
+        body: BedrockConverseRequestBody,
+        response_model: type[BaseModel] | None,
+    ) -> None:
+        """Inject the structured_output tool into the request body when needed."""
+        if not response_model:
+            return
+
+        # Check if structured_output tool already exists (from a previous recursive call)
+        existing_tool_config = body.get("toolConfig")
+        existing_tools: list[Any] = []
+        structured_output_already_exists = False
+
+        if existing_tool_config:
+            existing_tools = list(existing_tool_config.get("tools", []))
+            for tool in existing_tools:
+                tool_spec = tool.get("toolSpec", {})
+                if tool_spec.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
+                    structured_output_already_exists = True
+                    break
+
+        if structured_output_already_exists:
+            return
+
+        structured_tool: ConverseToolTypeDef = {
+            "toolSpec": {
+                "name": STRUCTURED_OUTPUT_TOOL_NAME,
+                "description": (
+                    "Use this tool to provide your final structured response. "
+                    "Call this tool when you have gathered all necessary information "
+                    "and are ready to provide the final answer in the required format."
+                ),
+                "inputSchema": {
+                    "json": generate_model_description(response_model)
+                    .get("json_schema", {})
+                    .get("schema", {})
+                },
+            }
+        }
+
+        if existing_tools:
+            # Append structured_output to existing tools, don't force toolChoice
+            existing_tools.append(structured_tool)
+            body["toolConfig"] = cast(
+                "ToolConfigurationTypeDef",
+                cast(object, {"tools": existing_tools}),
+            )
+        else:
+            # No existing tools, use only structured_output with forced toolChoice
+            body["toolConfig"] = cast(
+                "ToolConfigurationTypeDef",
+                cast(
+                    object,
+                    {
+                        "tools": [structured_tool],
+                        "toolChoice": {"tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}},
+                    },
+                ),
+            )
+
+    @staticmethod
+    def _validate_converse_messages(messages: list[LLMMessage]) -> None:
+        """Ensure the message list is well formed before calling Converse."""
+        if not messages:
+            raise ValueError("Messages cannot be empty")
+
+        for i, msg in enumerate(messages):
+            if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
+                raise ValueError(f"Invalid message format at index {i}")
+
+    def _process_converse_response(
+        self,
+        messages: list[LLMMessage],
+        response: Any,
+        available_functions: Mapping[str, Any] | None,
+        from_task: Any | None,
+        from_agent: Any | None,
+        response_model: type[BaseModel] | None,
+        invoke_after_hooks: bool,
+    ) -> str | Any:
+        """Process a non-streaming Converse response.
+
+        Shared by the sync and async handlers, which differ only in how the
+        Converse call itself is made. Returns the final result, or
+        _CONVERSE_RECURSE when a tool result was appended to ``messages`` and
+        another Converse call is required.
+        """
+        # Track token usage according to AWS response format
+        usage = response.get("usage")
+        if usage:
+            self._track_token_usage_internal(usage)
+
+        stop_reason, response_id = self._extract_finish_reason_and_id(response)
+        if stop_reason:
+            logging.debug(f"Response stop reason: {stop_reason}")
+            if stop_reason == "max_tokens":
+                logging.warning("Response truncated due to max_tokens limit")
+            elif stop_reason == "content_filtered":
+                logging.warning("Response was filtered due to content policy")
+
+        # Extract content following AWS response structure
+        output = response.get("output", {})
+        message = output.get("message", {})
+        content = message.get("content", [])
+
+        if not content:
+            logging.warning("No content in Bedrock response")
+            return "I apologize, but I received an empty response. Please try again."
+
+        # If there are tool uses but no available_functions, return them for the executor to handle
+        tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+
+        # Check for structured_output tool call first
+        if response_model and tool_uses:
+            for tool_use in tool_uses:
+                if tool_use.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
+                    structured_data = tool_use.get("input", {})
+                    structured_data = _preprocess_structured_data(
+                        structured_data, response_model
+                    )
+                    try:
+                        result = response_model.model_validate(structured_data)
+                        self._emit_call_completed_event(
+                            response=result.model_dump_json(),
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=messages,
+                            usage=usage,
+                            finish_reason=stop_reason,
+                            response_id=response_id,
+                        )
+                        return result
+                    except Exception as e:
+                        error_msg = (
+                            f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
+                            f"with model {response_model.__name__}: {e}"
+                        )
+                        logging.error(error_msg)
+                        raise ValueError(error_msg) from e
+
+        non_structured_output_tool_uses = [
+            tu for tu in tool_uses if tu.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
+        ]
+
+        if non_structured_output_tool_uses and not available_functions:
+            self._emit_call_completed_event(
+                response=non_structured_output_tool_uses,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=messages,
+                usage=usage,
+                finish_reason=stop_reason,
+                response_id=response_id,
+            )
+            return non_structured_output_tool_uses
+
+        text_content = ""
+
+        for content_block in content:
+            if "text" in content_block:
+                text_content += content_block["text"]
+
+            elif "toolUse" in content_block and available_functions:
+                tool_use_block = content_block["toolUse"]
+                tool_use_id = tool_use_block.get("toolUseId")
+                function_name = tool_use_block["name"]
+                function_args = tool_use_block.get("input", {})
+
+                # Skip structured_output - it's handled above
+                if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
+                    continue
+
+                logging.debug(
+                    f"Tool use requested: {function_name} with ID {tool_use_id}"
+                )
+
+                tool_result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=dict(available_functions),
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if tool_result is not None:
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": [{"toolUse": tool_use_block}],
+                        }
+                    )
+
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "toolResult": {
+                                        "toolUseId": tool_use_id,
+                                        "content": [{"text": str(tool_result)}],
+                                    }
+                                }
+                            ],
+                        }
+                    )
+
+                    return _CONVERSE_RECURSE
+
+        text_content = self._apply_stop_words(text_content)
+
+        if not text_content or text_content.strip() == "":
+            logging.warning("Extracted empty text content from Bedrock response")
+            text_content = "I apologize, but I couldn't generate a proper response. Please try again."
+
+        self._emit_call_completed_event(
+            response=text_content,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=messages,
+            usage=usage,
+            finish_reason=stop_reason,
+            response_id=response_id,
+        )
+
+        if invoke_after_hooks:
+            return self._invoke_after_llm_call_hooks(
+                messages,
+                text_content,
+                from_agent,
+            )
+
+        return text_content
+
+    def _raise_for_client_error(self, e: ClientError) -> NoReturn:
+        """Translate a Bedrock ClientError into a Python exception."""
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = e.response.get("Error", {}).get("Message", str(e))
+
+        logging.error(f"AWS Bedrock ClientError ({error_code}): {error_msg}")
+
+        if error_code == "ValidationException":
+            # Cohere returns this when conversation alternation is broken
+            if "last turn" in error_msg and "user message" in error_msg:
+                raise ValueError(
+                    f"Conversation format error: {error_msg}. Check message alternation."
+                ) from e
+            raise ValueError(f"Request validation failed: {error_msg}") from e
+        if error_code == "AccessDeniedException":
+            raise PermissionError(
+                f"Access denied to model {self.model_id}: {error_msg}"
+            ) from e
+        if error_code == "ResourceNotFoundException":
+            raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
+        if error_code == "ThrottlingException":
+            raise RuntimeError(f"API throttled, please retry later: {error_msg}") from e
+        if error_code == "ModelTimeoutException":
+            raise TimeoutError(f"Model request timed out: {error_msg}") from e
+        if error_code == "ServiceQuotaExceededException":
+            raise RuntimeError(f"Service quota exceeded: {error_msg}") from e
+        if error_code == "ModelNotReadyException":
+            raise RuntimeError(f"Model {self.model_id} not ready: {error_msg}") from e
+        if error_code == "ModelErrorException":
+            raise RuntimeError(f"Model error: {error_msg}") from e
+        if error_code == "InternalServerException":
+            raise RuntimeError(f"Internal server error: {error_msg}") from e
+        if error_code == "ServiceUnavailableException":
+            raise RuntimeError(f"Service unavailable: {error_msg}") from e
+
+        raise RuntimeError(f"Bedrock API error ({error_code}): {error_msg}") from e
+
     def _handle_converse(
         self,
         messages: list[LLMMessage],
@@ -614,70 +896,10 @@ class BedrockCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming converse API call following AWS best practices."""
-        if response_model:
-            # Check if structured_output tool already exists (from a previous recursive call)
-            existing_tool_config = body.get("toolConfig")
-            existing_tools: list[Any] = []
-            structured_output_already_exists = False
-
-            if existing_tool_config:
-                existing_tools = list(existing_tool_config.get("tools", []))
-                for tool in existing_tools:
-                    tool_spec = tool.get("toolSpec", {})
-                    if tool_spec.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
-                        structured_output_already_exists = True
-                        break
-
-            if not structured_output_already_exists:
-                structured_tool: ConverseToolTypeDef = {
-                    "toolSpec": {
-                        "name": STRUCTURED_OUTPUT_TOOL_NAME,
-                        "description": (
-                            "Use this tool to provide your final structured response. "
-                            "Call this tool when you have gathered all necessary information "
-                            "and are ready to provide the final answer in the required format."
-                        ),
-                        "inputSchema": {
-                            "json": generate_model_description(response_model)
-                            .get("json_schema", {})
-                            .get("schema", {})
-                        },
-                    }
-                }
-
-                if existing_tools:
-                    existing_tools.append(structured_tool)
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(object, {"tools": existing_tools}),
-                    )
-                else:
-                    # No existing tools, use only structured_output with forced toolChoice
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(
-                            object,
-                            {
-                                "tools": [structured_tool],
-                                "toolChoice": {
-                                    "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
-                                },
-                            },
-                        ),
-                    )
+        self._apply_structured_output_tool(body, response_model)
 
         try:
-            if not messages:
-                raise ValueError("Messages cannot be empty")
-
-            # Ensure we have valid message structure
-            for i, msg in enumerate(messages):
-                if (
-                    not isinstance(msg, dict)
-                    or "role" not in msg
-                    or "content" not in msg
-                ):
-                    raise ValueError(f"Invalid message format at index {i}")
+            self._validate_converse_messages(messages)
 
             # Call Bedrock Converse API with proper error handling
             response = self._get_sync_client().converse(
@@ -689,200 +911,27 @@ class BedrockCompletion(BaseLLM):
                 **body,
             )
 
-            # Track token usage according to AWS response format
-            usage = response.get("usage")
-            if usage:
-                self._track_token_usage_internal(usage)
-
-            stop_reason, response_id = self._extract_finish_reason_and_id(response)
-            if stop_reason:
-                logging.debug(f"Response stop reason: {stop_reason}")
-                if stop_reason == "max_tokens":
-                    logging.warning("Response truncated due to max_tokens limit")
-                elif stop_reason == "content_filtered":
-                    logging.warning("Response was filtered due to content policy")
-
-            # Extract content following AWS response structure
-            output = response.get("output", {})
-            message = output.get("message", {})
-            content = message.get("content", [])
-
-            if not content:
-                logging.warning("No content in Bedrock response")
-                return (
-                    "I apologize, but I received an empty response. Please try again."
-                )
-
-            # If there are tool uses but no available_functions, return them for the executor to handle
-            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
-
-            # Check for structured_output tool call first
-            if response_model and tool_uses:
-                for tool_use in tool_uses:
-                    if tool_use.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
-                        structured_data = tool_use.get("input", {})
-                        structured_data = _preprocess_structured_data(
-                            structured_data, response_model
-                        )
-                        try:
-                            result = response_model.model_validate(structured_data)
-                            self._emit_call_completed_event(
-                                response=result.model_dump_json(),
-                                call_type=LLMCallType.LLM_CALL,
-                                from_task=from_task,
-                                from_agent=from_agent,
-                                messages=messages,
-                                usage=usage,
-                                finish_reason=stop_reason,
-                                response_id=response_id,
-                            )
-                            return result
-                        except Exception as e:
-                            error_msg = (
-                                f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
-                                f"with model {response_model.__name__}: {e}"
-                            )
-                            logging.error(error_msg)
-                            raise ValueError(error_msg) from e
-
-            non_structured_output_tool_uses = [
-                tu for tu in tool_uses if tu.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
-            ]
-
-            if non_structured_output_tool_uses and not available_functions:
-                self._emit_call_completed_event(
-                    response=non_structured_output_tool_uses,
-                    call_type=LLMCallType.TOOL_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=messages,
-                    usage=usage,
-                    finish_reason=stop_reason,
-                    response_id=response_id,
-                )
-                return non_structured_output_tool_uses
-
-            text_content = ""
-
-            for content_block in content:
-                if "text" in content_block:
-                    text_content += content_block["text"]
-
-                elif "toolUse" in content_block and available_functions:
-                    tool_use_block = content_block["toolUse"]
-                    tool_use_id = tool_use_block.get("toolUseId")
-                    function_name = tool_use_block["name"]
-                    function_args = tool_use_block.get("input", {})
-
-                    if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
-                        continue
-
-                    logging.debug(
-                        f"Tool use requested: {function_name} with ID {tool_use_id}"
-                    )
-
-                    tool_result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,
-                        available_functions=dict(available_functions),
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if tool_result is not None:
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": [{"toolUse": tool_use_block}],
-                            }
-                        )
-
-                        messages.append(
-                            {
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "toolResult": {
-                                            "toolUseId": tool_use_id,
-                                            "content": [{"text": str(tool_result)}],
-                                        }
-                                    }
-                                ],
-                            }
-                        )
-
-                        return self._handle_converse(
-                            messages,
-                            body,
-                            available_functions,
-                            from_task,
-                            from_agent,
-                            response_model,
-                        )
-
-            text_content = self._apply_stop_words(text_content)
-
-            if not text_content or text_content.strip() == "":
-                logging.warning("Extracted empty text content from Bedrock response")
-                text_content = "I apologize, but I couldn't generate a proper response. Please try again."
-
-            self._emit_call_completed_event(
-                response=text_content,
-                call_type=LLMCallType.LLM_CALL,
-                from_task=from_task,
-                from_agent=from_agent,
-                messages=messages,
-                usage=usage,
-                finish_reason=stop_reason,
-                response_id=response_id,
-            )
-
-            return self._invoke_after_llm_call_hooks(
+            outcome = self._process_converse_response(
                 messages,
-                text_content,
+                response,
+                available_functions,
+                from_task,
                 from_agent,
+                response_model,
+                invoke_after_hooks=True,
             )
-
+            if outcome is _CONVERSE_RECURSE:
+                return self._handle_converse(
+                    messages,
+                    body,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    response_model,
+                )
+            return outcome
         except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            error_msg = e.response.get("Error", {}).get("Message", str(e))
-
-            logging.error(f"AWS Bedrock ClientError ({error_code}): {error_msg}")
-
-            if error_code == "ValidationException":
-                # Cohere returns this when conversation alternation is broken
-                if "last turn" in error_msg and "user message" in error_msg:
-                    raise ValueError(
-                        f"Conversation format error: {error_msg}. Check message alternation."
-                    ) from e
-                raise ValueError(f"Request validation failed: {error_msg}") from e
-            if error_code == "AccessDeniedException":
-                raise PermissionError(
-                    f"Access denied to model {self.model_id}: {error_msg}"
-                ) from e
-            if error_code == "ResourceNotFoundException":
-                raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
-            if error_code == "ThrottlingException":
-                raise RuntimeError(
-                    f"API throttled, please retry later: {error_msg}"
-                ) from e
-            if error_code == "ModelTimeoutException":
-                raise TimeoutError(f"Model request timed out: {error_msg}") from e
-            if error_code == "ServiceQuotaExceededException":
-                raise RuntimeError(f"Service quota exceeded: {error_msg}") from e
-            if error_code == "ModelNotReadyException":
-                raise RuntimeError(
-                    f"Model {self.model_id} not ready: {error_msg}"
-                ) from e
-            if error_code == "ModelErrorException":
-                raise RuntimeError(f"Model error: {error_msg}") from e
-            if error_code == "InternalServerException":
-                raise RuntimeError(f"Internal server error: {error_msg}") from e
-            if error_code == "ServiceUnavailableException":
-                raise RuntimeError(f"Service unavailable: {error_msg}") from e
-
-            raise RuntimeError(f"Bedrock API error ({error_code}): {error_msg}") from e
-
+            self._raise_for_client_error(e)
         except BotoCoreError as e:
             error_msg = f"Bedrock connection error: {e}"
             logging.error(error_msg)
@@ -902,59 +951,7 @@ class BedrockCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming converse API call with comprehensive event handling."""
-        if response_model:
-            # Check if structured_output tool already exists (from a previous recursive call)
-            existing_tool_config = body.get("toolConfig")
-            existing_tools: list[Any] = []
-            structured_output_already_exists = False
-
-            if existing_tool_config:
-                existing_tools = list(existing_tool_config.get("tools", []))
-                # Check if structured_output tool is already in the tools list
-                for tool in existing_tools:
-                    tool_spec = tool.get("toolSpec", {})
-                    if tool_spec.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
-                        structured_output_already_exists = True
-                        break
-
-            if not structured_output_already_exists:
-                structured_tool: ConverseToolTypeDef = {
-                    "toolSpec": {
-                        "name": STRUCTURED_OUTPUT_TOOL_NAME,
-                        "description": (
-                            "Use this tool to provide your final structured response. "
-                            "Call this tool when you have gathered all necessary information "
-                            "and are ready to provide the final answer in the required format."
-                        ),
-                        "inputSchema": {
-                            "json": generate_model_description(response_model)
-                            .get("json_schema", {})
-                            .get("schema", {})
-                        },
-                    }
-                }
-
-                if existing_tools:
-                    # Append structured_output to existing tools, don't force toolChoice
-                    existing_tools.append(structured_tool)
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(object, {"tools": existing_tools}),
-                    )
-                else:
-                    # No existing tools, use only structured_output with forced toolChoice
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(
-                            object,
-                            {
-                                "tools": [structured_tool],
-                                "toolChoice": {
-                                    "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
-                                },
-                            },
-                        ),
-                    )
+        self._apply_structured_output_tool(body, response_model)
 
         full_response = ""
         current_tool_use: dict[str, Any] | None = None
@@ -1229,71 +1226,10 @@ class BedrockCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle async non-streaming converse API call."""
-        if response_model:
-            # Check if structured_output tool already exists (from a previous recursive call)
-            existing_tool_config = body.get("toolConfig")
-            existing_tools: list[Any] = []
-            structured_output_already_exists = False
-
-            if existing_tool_config:
-                existing_tools = list(existing_tool_config.get("tools", []))
-                # Check if structured_output tool is already in the tools list
-                for tool in existing_tools:
-                    tool_spec = tool.get("toolSpec", {})
-                    if tool_spec.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
-                        structured_output_already_exists = True
-                        break
-
-            if not structured_output_already_exists:
-                structured_tool: ConverseToolTypeDef = {
-                    "toolSpec": {
-                        "name": STRUCTURED_OUTPUT_TOOL_NAME,
-                        "description": (
-                            "Use this tool to provide your final structured response. "
-                            "Call this tool when you have gathered all necessary information "
-                            "and are ready to provide the final answer in the required format."
-                        ),
-                        "inputSchema": {
-                            "json": generate_model_description(response_model)
-                            .get("json_schema", {})
-                            .get("schema", {})
-                        },
-                    }
-                }
-
-                if existing_tools:
-                    # Append structured_output to existing tools, don't force toolChoice
-                    existing_tools.append(structured_tool)
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(object, {"tools": existing_tools}),
-                    )
-                else:
-                    # No existing tools, use only structured_output with forced toolChoice
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(
-                            object,
-                            {
-                                "tools": [structured_tool],
-                                "toolChoice": {
-                                    "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
-                                },
-                            },
-                        ),
-                    )
+        self._apply_structured_output_tool(body, response_model)
 
         try:
-            if not messages:
-                raise ValueError("Messages cannot be empty")
-
-            for i, msg in enumerate(messages):
-                if (
-                    not isinstance(msg, dict)
-                    or "role" not in msg
-                    or "content" not in msg
-                ):
-                    raise ValueError(f"Invalid message format at index {i}")
+            self._validate_converse_messages(messages)
 
             async_client = await self._ensure_async_client()
             response = await async_client.converse(
@@ -1305,193 +1241,27 @@ class BedrockCompletion(BaseLLM):
                 **body,
             )
 
-            usage = response.get("usage")
-            if usage:
-                self._track_token_usage_internal(usage)
-
-            stop_reason, response_id = self._extract_finish_reason_and_id(response)
-            if stop_reason:
-                logging.debug(f"Response stop reason: {stop_reason}")
-                if stop_reason == "max_tokens":
-                    logging.warning("Response truncated due to max_tokens limit")
-                elif stop_reason == "content_filtered":
-                    logging.warning("Response was filtered due to content policy")
-
-            output = response.get("output", {})
-            message = output.get("message", {})
-            content = message.get("content", [])
-
-            if not content:
-                logging.warning("No content in Bedrock response")
-                return (
-                    "I apologize, but I received an empty response. Please try again."
-                )
-
-            # If there are tool uses but no available_functions, return them for the executor to handle
-            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
-
-            # Check for structured_output tool call first
-            if response_model and tool_uses:
-                for tool_use in tool_uses:
-                    if tool_use.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
-                        structured_data = tool_use.get("input", {})
-                        structured_data = _preprocess_structured_data(
-                            structured_data, response_model
-                        )
-                        try:
-                            result = response_model.model_validate(structured_data)
-                            self._emit_call_completed_event(
-                                response=result.model_dump_json(),
-                                call_type=LLMCallType.LLM_CALL,
-                                from_task=from_task,
-                                from_agent=from_agent,
-                                messages=messages,
-                                usage=usage,
-                                finish_reason=stop_reason,
-                                response_id=response_id,
-                            )
-                            return result
-                        except Exception as e:
-                            error_msg = (
-                                f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
-                                f"with model {response_model.__name__}: {e}"
-                            )
-                            logging.error(error_msg)
-                            raise ValueError(error_msg) from e
-
-            non_structured_output_tool_uses = [
-                tu for tu in tool_uses if tu.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
-            ]
-
-            if non_structured_output_tool_uses and not available_functions:
-                self._emit_call_completed_event(
-                    response=non_structured_output_tool_uses,
-                    call_type=LLMCallType.TOOL_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=messages,
-                    usage=usage,
-                    finish_reason=stop_reason,
-                    response_id=response_id,
-                )
-                return non_structured_output_tool_uses
-
-            text_content = ""
-
-            for content_block in content:
-                if "text" in content_block:
-                    text_content += content_block["text"]
-
-                elif "toolUse" in content_block and available_functions:
-                    tool_use_block = content_block["toolUse"]
-                    tool_use_id = tool_use_block.get("toolUseId")
-                    function_name = tool_use_block["name"]
-                    function_args = tool_use_block.get("input", {})
-
-                    # Skip structured_output - it's handled above
-                    if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
-                        continue
-
-                    logging.debug(
-                        f"Tool use requested: {function_name} with ID {tool_use_id}"
-                    )
-
-                    tool_result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,
-                        available_functions=dict(available_functions),
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if tool_result is not None:
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": [{"toolUse": tool_use_block}],
-                            }
-                        )
-
-                        messages.append(
-                            {
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "toolResult": {
-                                            "toolUseId": tool_use_id,
-                                            "content": [{"text": str(tool_result)}],
-                                        }
-                                    }
-                                ],
-                            }
-                        )
-
-                        return await self._ahandle_converse(
-                            messages,
-                            body,
-                            available_functions,
-                            from_task,
-                            from_agent,
-                            response_model,
-                        )
-
-            text_content = self._apply_stop_words(text_content)
-
-            if not text_content or text_content.strip() == "":
-                logging.warning("Extracted empty text content from Bedrock response")
-                text_content = "I apologize, but I couldn't generate a proper response. Please try again."
-
-            self._emit_call_completed_event(
-                response=text_content,
-                call_type=LLMCallType.LLM_CALL,
-                from_task=from_task,
-                from_agent=from_agent,
-                messages=messages,
-                usage=usage,
-                finish_reason=stop_reason,
-                response_id=response_id,
+            outcome = self._process_converse_response(
+                messages,
+                response,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model,
+                invoke_after_hooks=False,
             )
-
-            return text_content
-
+            if outcome is _CONVERSE_RECURSE:
+                return await self._ahandle_converse(
+                    messages,
+                    body,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    response_model,
+                )
+            return outcome
         except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            error_msg = e.response.get("Error", {}).get("Message", str(e))
-            logging.error(f"AWS Bedrock ClientError ({error_code}): {error_msg}")
-
-            if error_code == "ValidationException":
-                if "last turn" in error_msg and "user message" in error_msg:
-                    raise ValueError(
-                        f"Conversation format error: {error_msg}. Check message alternation."
-                    ) from e
-                raise ValueError(f"Request validation failed: {error_msg}") from e
-            if error_code == "AccessDeniedException":
-                raise PermissionError(
-                    f"Access denied to model {self.model_id}: {error_msg}"
-                ) from e
-            if error_code == "ResourceNotFoundException":
-                raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
-            if error_code == "ThrottlingException":
-                raise RuntimeError(
-                    f"API throttled, please retry later: {error_msg}"
-                ) from e
-            if error_code == "ModelTimeoutException":
-                raise TimeoutError(f"Model request timed out: {error_msg}") from e
-            if error_code == "ServiceQuotaExceededException":
-                raise RuntimeError(f"Service quota exceeded: {error_msg}") from e
-            if error_code == "ModelNotReadyException":
-                raise RuntimeError(
-                    f"Model {self.model_id} not ready: {error_msg}"
-                ) from e
-            if error_code == "ModelErrorException":
-                raise RuntimeError(f"Model error: {error_msg}") from e
-            if error_code == "InternalServerException":
-                raise RuntimeError(f"Internal server error: {error_msg}") from e
-            if error_code == "ServiceUnavailableException":
-                raise RuntimeError(f"Service unavailable: {error_msg}") from e
-
-            raise RuntimeError(f"Bedrock API error ({error_code}): {error_msg}") from e
-
+            self._raise_for_client_error(e)
         except BotoCoreError as e:
             error_msg = f"Bedrock connection error: {e}"
             logging.error(error_msg)
@@ -1511,59 +1281,7 @@ class BedrockCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle async streaming converse API call."""
-        if response_model:
-            # Check if structured_output tool already exists (from a previous recursive call)
-            existing_tool_config = body.get("toolConfig")
-            existing_tools: list[Any] = []
-            structured_output_already_exists = False
-
-            if existing_tool_config:
-                existing_tools = list(existing_tool_config.get("tools", []))
-                # Check if structured_output tool is already in the tools list
-                for tool in existing_tools:
-                    tool_spec = tool.get("toolSpec", {})
-                    if tool_spec.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
-                        structured_output_already_exists = True
-                        break
-
-            if not structured_output_already_exists:
-                structured_tool: ConverseToolTypeDef = {
-                    "toolSpec": {
-                        "name": STRUCTURED_OUTPUT_TOOL_NAME,
-                        "description": (
-                            "Use this tool to provide your final structured response. "
-                            "Call this tool when you have gathered all necessary information "
-                            "and are ready to provide the final answer in the required format."
-                        ),
-                        "inputSchema": {
-                            "json": generate_model_description(response_model)
-                            .get("json_schema", {})
-                            .get("schema", {})
-                        },
-                    }
-                }
-
-                if existing_tools:
-                    # Append structured_output to existing tools, don't force toolChoice
-                    existing_tools.append(structured_tool)
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(object, {"tools": existing_tools}),
-                    )
-                else:
-                    # No existing tools, use only structured_output with forced toolChoice
-                    body["toolConfig"] = cast(
-                        "ToolConfigurationTypeDef",
-                        cast(
-                            object,
-                            {
-                                "tools": [structured_tool],
-                                "toolChoice": {
-                                    "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
-                                },
-                            },
-                        ),
-                    )
+        self._apply_structured_output_tool(body, response_model)
 
         full_response = ""
         current_tool_use: dict[str, Any] | None = None
