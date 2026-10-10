@@ -5,7 +5,7 @@ icon: linkedin
 mode: "wide"
 ---
 
-[Datacircle](https://datacircle.dev) is a data co-op. Query your favorite B2B data APIs through us. Same request, same price, no markup. Right now we have 2 live LinkedIn profile APIs that we trust: Up2Data and HarvestAPI.
+[Datacircle](https://datacircle.dev) is a data co-op. Query your favorite B2B data APIs through us. Same request, same price, no markup. Right now we have 3 live LinkedIn profile APIs that we trust: Up2Data, HarvestAPI and Fetchin.
 
 Its remote MCP server is `https://api.datacircle.dev/mcp` (Streamable HTTP). Connect it with crewAI's built-in `MCPServerHTTP`: no extra package, and paid calls are taken from your Datacircle balance.
 
@@ -13,7 +13,7 @@ Its remote MCP server is `https://api.datacircle.dev/mcp` (Streamable HTTP). Con
 
 | Tool | Description | Costs |
 | --- | --- | --- |
-| `get_linkedin_profile` | Fetch one person's LinkedIn profile by its URL: name, headline, location, current company and title, positions, education, skills | $2.375 per 1,000 through Up2Data (a profile it can't find is free), $3.70 per 1,000 through HarvestAPI |
+| `get_linkedin_profile` | Fetch one person's LinkedIn profile by its URL: name, headline, location, current company and title, positions, education, skills | $2.375 per 1,000 through Up2Data (a profile it can't find is free), $3.70 per 1,000 through HarvestAPI. $1.485 per 1,000 through Fetchin, a profile it can't find billed the same. |
 | `get_balance` | Read the account's balance in USD | free |
 | `list_files` | List the data files the account can download, and whether each is unlocked | free |
 | `get_download_link` | Get a download link for one file from `list_files`, by its id | free |
@@ -90,9 +90,9 @@ The tool filter keeps `add_funds` away from an unattended crew. Drop it to give 
 | Parameter | Required | Type | Description |
 | --- | --- | --- | --- |
 | `url` | Yes | `string` | The LinkedIn profile URL, e.g. `https://www.linkedin.com/in/satyanadella` |
-| `provider` | No | `string` | `"up2data"` (the default) or `"harvestapi"` |
+| `provider` | No | `string` | `"up2data"` (the default), `"harvestapi"` or `"fetchin"` |
 
-Up2Data takes $1 a day per account (421 profiles), with a shared daily limit for all customers, then answers 429 until 00:00 UTC; HarvestAPI has no daily limit. A call your balance can't cover answers 402. Add funds, from $5, on your dashboard.
+Up2Data takes $1 a day per account (421 profiles), with a shared daily limit for all customers, then answers 429 until 00:00 UTC. HarvestAPI has no daily limit. Fetchin has no daily limit either. At Up2Data's limit, the server tells your agent to call again through Fetchin or HarvestAPI. A call your balance can't cover answers 402. Add funds, from $5, on your dashboard.
 
 A failed call comes back as the tool's error (`isError: true`), with the API's error JSON as its text.
 
