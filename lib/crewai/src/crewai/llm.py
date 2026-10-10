@@ -190,6 +190,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "bedrock",
     "aws",
     "openrouter",
+    "trustedrouter",
     "deepseek",
     "ollama",
     "ollama_chat",
@@ -215,6 +216,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "bedrock": "bedrock",
     "aws": "bedrock",
     "openrouter": "openrouter",
+    "trustedrouter": "trustedrouter",
     "deepseek": "deepseek",
     "ollama": "ollama",
     "ollama_chat": "ollama_chat",
@@ -452,6 +454,10 @@ class LLM(BaseLLM):
             parts = model_lower.split("/")
             return len(parts) == 2 and all(parts)
 
+        if provider == "trustedrouter":
+            # TrustedRouter routes provider-prefixed ids and router aliases
+            return True
+
         if provider == "snowflake":
             return True
 
@@ -514,7 +520,14 @@ class LLM(BaseLLM):
             if canonical_provider and (valid_native_model or custom_openai_route):
                 provider = canonical_provider
                 use_native = True
-                model_string = model_part
+                # Every TrustedRouter model id is namespaced. "trustedrouter/auto"
+                # names a router alias whose id keeps the prefix, while
+                # "trustedrouter/moonshotai/kimi-k3" prefixes an upstream id that
+                # must be stripped. A bare remainder means the former.
+                if canonical_provider == "trustedrouter" and "/" not in model_part:
+                    model_string = model
+                else:
+                    model_string = model_part
             else:
                 provider = prefix
                 use_native = False
@@ -673,6 +686,7 @@ class LLM(BaseLLM):
 
         openai_compatible_providers = {
             "openrouter",
+            "trustedrouter",
             "deepseek",
             "ollama",
             "ollama_chat",
