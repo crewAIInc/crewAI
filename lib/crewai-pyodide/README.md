@@ -97,6 +97,27 @@ await crewai_pyodide.install(
 - Parallel execution: async tasks and tool calls run one at a time
 - Telemetry and tracing
 
+## Snapshots
+
+Importing crewai takes several seconds. Isolate hosts avoid paying that on
+every start by snapshotting the interpreter after its imports and restoring it
+in each new isolate. Such hosts forbid reading randomness during the imports,
+since it would be shared by every restored isolate, so `bootstrap()` makes the
+import entropy-free:
+
+- `opentelemetry.context` gets counter-based UUIDs for its context keys, which
+  only need to be unique within the process.
+- `openai.lib.bedrock` gets a placeholder HMAC key while it is imported.
+
+In each restored isolate, call `crewai_pyodide.reseed()` before doing work to
+reseed `random` and replace the placeholder; `crewai_pyodide.run()` does this on
+first use. `crewai_pyodide.audit_entropy()` records any Python-level entropy
+read inside a block, and the smoke test uses it to keep `import crewai` clean.
+
+Pyodide's own `makeMemorySnapshot()` cannot restore native extension modules
+(pydantic_core, numpy, cryptography), so it does not work for crewai yet.
+workerd's snapshots do.
+
 ## Browser security
 
 API keys used in a page are visible to anyone who can open it. Use this for

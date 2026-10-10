@@ -22,6 +22,8 @@ import os
 import sys
 from typing import TypeVar
 
+from crewai_pyodide._entropy import audit_entropy, reseed
+
 
 __version__ = "1.15.27"
 
@@ -121,6 +123,7 @@ async def install(
 
 
 _bootstrapped = False
+_reseeded = False
 
 
 def bootstrap() -> None:
@@ -134,6 +137,7 @@ def bootstrap() -> None:
     if _bootstrapped or not is_pyodide():
         return
 
+    from crewai_pyodide._entropy import install_deterministic_imports
     from crewai_pyodide._threads import install_inline_threads
     from crewai_pyodide._unavailable import install_placeholders
     from crewai_pyodide.http import install_fetch_transports
@@ -145,6 +149,7 @@ def bootstrap() -> None:
     install_inline_threads()
     install_fetch_transports()
     install_placeholders(UNAVAILABLE_PACKAGES)
+    install_deterministic_imports()
     _bootstrapped = True
 
 
@@ -160,11 +165,15 @@ async def run(awaitable: Awaitable[T]) -> T:
         RuntimeError: If the runtime cannot block on async work, which crewai
             needs for the synchronous helpers its async path still calls.
     """
+    global _reseeded
     if is_pyodide():
         from pyodide.ffi import can_run_sync  # type: ignore[import-not-found]
 
         if not can_run_sync():
             raise RuntimeError(JSPI_REQUIRED_MESSAGE)
+        if not _reseeded:
+            reseed()
+            _reseeded = True
 
     async def _await() -> T:
         return await awaitable
@@ -177,8 +186,10 @@ __all__ = [
     "NO_DEPS_REQUIREMENTS",
     "REQUIREMENTS",
     "UNAVAILABLE_PACKAGES",
+    "audit_entropy",
     "bootstrap",
     "install",
     "is_pyodide",
+    "reseed",
     "run",
 ]
