@@ -2025,7 +2025,7 @@ class Crew(FlowTrackable, BaseModel):
             CrewKickoffCompletedEvent(
                 crew_name=self.name,
                 output=final_task_output,
-                total_tokens=self.token_usage.total_tokens,
+                total_tokens=self.token_usage.total_tokens if self.token_usage else 0,
                 started_event_id=self._kickoff_event_id,
             ),
         )

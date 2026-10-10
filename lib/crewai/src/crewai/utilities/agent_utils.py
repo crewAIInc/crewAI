@@ -1666,7 +1666,7 @@ def drive_call(steps: Generator[Invocation, Any, _T]) -> _T:
             else:
                 request = steps.send(result)
     except StopIteration as stop:
-        return stop.value
+        return cast(_T, stop.value)
 
 
 async def adrive_call(steps: Generator[Invocation, Any, _T]) -> _T:
@@ -1688,7 +1688,7 @@ async def adrive_call(steps: Generator[Invocation, Any, _T]) -> _T:
             else:
                 request = steps.send(result)
     except StopIteration as stop:
-        return stop.value
+        return cast(_T, stop.value)
 
 
 def native_async_tool_fn(tool: Any) -> Callable[..., Awaitable[Any]] | None:
