@@ -1429,7 +1429,14 @@ class Crew(FlowTrackable, BaseModel):
                 )
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
-                self._store_execution_log(task, task_output, task_index, was_replayed)
+                # SQLite write behind a file lock: keep it off the event loop.
+                await asyncio.to_thread(
+                    self._store_execution_log,
+                    task,
+                    task_output,
+                    task_index,
+                    was_replayed,
+                )
 
         if pending_tasks:
             task_outputs.extend(
@@ -1468,8 +1475,12 @@ class Crew(FlowTrackable, BaseModel):
             task_output = await async_task
             task_outputs.append(task_output)
             self._process_task_result(future_task, task_output)
-            self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
+            await asyncio.to_thread(
+                self._store_execution_log,
+                future_task,
+                task_output,
+                task_index,
+                was_replayed,
             )
         return task_outputs
 
