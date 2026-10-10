@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.15.23",
+    "crewai==1.15.27",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4>=4.13.4,<5",
     "python-docx~=1.2.0",
@@ -76,7 +76,10 @@ hyperbrowser = [
 ]
 snowflake = [
     "cryptography>=43.0.3",
-    "snowflake-connector-python>=3.12.4",
+    # <4.7.3 has GHSA-qqj6-54q6-cxv6 (auth tokens, query keys, and presigned
+    # URLs written to diagnostic logs). Declared here, not only as a uv
+    # override, so consumers installing crewai-tools[snowflake] get this floor.
+    "snowflake-connector-python>=4.7.3,<5",
     # <1.11.0 has GHSA-8g6f-qw9x-4q6q (SQL injection, local file disclosure).
     # Declared here, not only as a uv override, so consumers installing
     # crewai-tools[snowflake] get this floor.
@@ -146,7 +149,14 @@ oxylabs = [
     "oxylabs>=2.0.0,<4",
 ]
 mongodb = [
-    "pymongo>=4.13"
+    # <4.18.1 has GHSA-8fvv-fgr5-f8ch (GridFS delete treats a mapping id as a
+    # query). <4.18.2 has GHSA-qx36-8mw2-4r3x, GHSA-v4x9-3549-crwv, and
+    # GHSA-vp6j-j7w5-5xjj. Declared here, not only as a uv override, so
+    # consumers installing crewai-tools[mongodb] get this floor.
+    "pymongo>=4.18.2"
+]
+oracledb = [
+    "oracledb>=2.2.0"
 ]
 mysql = [
     "pymysql>=1.1.1"

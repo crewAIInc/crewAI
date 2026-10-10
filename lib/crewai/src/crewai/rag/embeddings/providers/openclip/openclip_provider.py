@@ -33,6 +33,6 @@ class OpenCLIPProvider(BaseEmbeddingsProvider[OpenCLIPEmbeddingFunction]):
     )
     device: str | None = Field(
         default="cpu",
-        description="Device to run model on",
+        description="Device to run model on (e.g., cpu, cuda, mps, xpu)",
         validation_alias=AliasChoices("EMBEDDINGS_OPENCLIP_DEVICE", "OPENCLIP_DEVICE"),
     )

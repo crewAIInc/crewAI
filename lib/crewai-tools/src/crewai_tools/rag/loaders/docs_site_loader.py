@@ -108,6 +108,7 @@ class DocsSiteLoader(BaseLoader):
 
         return LoaderResult(
             content=content,
+            source=docs_url,
             metadata={
                 "source": docs_url,
                 "title": title_text,

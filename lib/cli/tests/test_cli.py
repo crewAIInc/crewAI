@@ -11,8 +11,10 @@ from crewai_cli.cli import (
     deploy_push,
     deploy_remove,
     deply_status,
+    evaluate_crew,
     flow_add_crew,
     flow_run,
+    log_tasks_outputs,
     login,
     replay,
     reset_memories,
@@ -482,3 +484,42 @@ def test_add_crew_to_flow_not_in_root(runner):
         assert "This command must be run from the root of a flow project." in str(
             result.output
         )
+
+
+@mock.patch("crewai_cli.task_outputs.load_task_outputs")
+def test_log_tasks_outputs_shows_result_not_blob(mock_load, runner):
+    mock_load.return_value = [
+        {
+            "task_id": "abc",
+            "expected_output": "EXP",
+            "output": {"raw": "REAL", "messages": [{"role": "user"}]},
+            "task_index": 0,
+            "inputs": None,
+            "was_replayed": 0,
+            "timestamp": "t",
+        }
+    ]
+    result = runner.invoke(log_tasks_outputs)
+
+    assert result.exit_code == 0
+    assert "Output: REAL" in result.output
+    assert "messages" not in result.output
+
+
+@mock.patch("crewai_cli.task_outputs.load_task_outputs")
+def test_log_tasks_outputs_plain_output(mock_load, runner):
+    mock_load.return_value = [
+        {
+            "task_id": "abc",
+            "expected_output": "EXP",
+            "output": "REAL",
+            "task_index": 0,
+            "inputs": None,
+            "was_replayed": 0,
+            "timestamp": "t",
+        }
+    ]
+    result = runner.invoke(log_tasks_outputs)
+
+    assert result.exit_code == 0
+    assert "Output: REAL" in result.output
