@@ -31,7 +31,7 @@ class SmolBaseTool(BaseTool):
     image: str = "python:3.12-alpine"
     network: bool = Field(
         default=True,
-        description="Allow guest egress (also needed for cold image pulls on cloud).",
+        description="Allow guest egress for network requests and package installs.",
     )
     api_key: SecretStr | None = Field(default=None, repr=False)
     base_url: str | None = None
@@ -83,13 +83,7 @@ class SmolBaseTool(BaseTool):
                 and image[1] == ":"
                 and image[2] in ("/", "\\")
             )
-            if not local_path and not windows_path:
-                raise ValueError(
-                    "Local VMs with network=False need a local image archive or "
-                    "rootfs directory; registry images require network access. "
-                    "Set image='./image.tar' or network=True."
-                )
-            if not Path(image).exists():
+            if (local_path or windows_path) and not Path(image).exists():
                 raise ValueError(f"Local offline image source does not exist: {image}")
         return sdk.Machine.create(
             sdk.MachineConfig(

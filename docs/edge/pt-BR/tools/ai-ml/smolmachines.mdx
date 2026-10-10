@@ -47,6 +47,6 @@ finally:
 
 A ferramenta de arquivos anexada não exclui a VM pertencente a `shell`. `SmolPythonTool` aceita `code` e, opcionalmente, `argv`, `env` e `timeout`. A ferramenta de arquivos aceita `read` e `write`; use `binary=True` para dados em base64.
 
-A rede da VM fica habilitada por padrão para permitir baixar imagens não armazenadas em cache e instalar pacotes. Use `network=False` para bloqueá-la; uma VM Cloud bloqueada precisa de uma imagem já armazenada em cache no nó escolhido. O destino local permanece local mesmo quando há credenciais Cloud. Consulte o README do pacote de ferramentas para mais exemplos de ciclo de vida.
+A rede da VM fica habilitada por padrão para tarefas que precisam de acesso à rede, como instalar pacotes. Use `network=False` para bloquear a saída de rede da VM. VMs locais e Cloud ainda podem iniciar a partir de imagens de registro, pois a imagem é obtida fora da VM. O destino local permanece local mesmo quando há credenciais Cloud. Consulte o README do pacote de ferramentas para mais exemplos de ciclo de vida.
 
-Para uma VM local sem rede, forneça um diretório rootfs local ou um arquivo `docker save` em `image`, pois imagens de registro exigem rede na VM.
+Para evitar baixar uma imagem de registro em uma VM local, forneça um diretório rootfs local ou um arquivo `docker save` em `image`.

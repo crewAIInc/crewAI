@@ -365,11 +365,12 @@ def test_invalid_file_payload_never_creates_a_cloud_vm(sdk):
     client.Machine.create.assert_not_called()
 
 
-def test_offline_local_registry_image_rejected_before_provisioning(sdk):
+def test_network_disabled_local_registry_image_uses_host_pull(sdk):
     client, _ = sdk
-    with pytest.raises(ValueError, match="local image archive"):
-        SmolExecTool(network=False).run(command="echo should-not-run")
-    client.Machine.create.assert_not_called()
+    assert SmolExecTool(network=False).run(command="echo allowed")["exit_code"] == 0
+    config = client.Machine.create.call_args.args[0]
+    assert config.image == "python:3.12-alpine"
+    assert config.resources.network is False
 
 
 def test_offline_cloud_image_is_left_to_cloud_scheduler(sdk):
