@@ -527,11 +527,12 @@ class MCPToolResolver:
     def _extract_server_name(server_url: str) -> str:
         """Extract clean server name from URL for tool prefixing."""
         parsed = urlparse(server_url)
-        domain = parsed.netloc.replace(".", "_")
+        # Drop any "user:pass@" so credentials never end up in tool names.
+        domain = parsed.netloc.rpartition("@")[2].replace(".", "_")
         path = parsed.path.replace("/", "_").strip("_")
         name = f"{domain}_{path}" if path else domain
-        # Provider function names must start with a letter; IP hosts don't.
-        if name and not name[0].isalpha():
+        # Provider function names must start with an ASCII letter; IP hosts don't.
+        if name and not (name[0].isascii() and name[0].isalpha()):
             name = f"mcp_{name}"
         return name
 

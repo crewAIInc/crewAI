@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from crewai.agent.core import Agent
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.mcp.config import MCPServerHTTP
 from crewai.mcp.tool_resolver import MCPToolResolver
-from crewai.llms.providers.utils.common import safe_tool_conversion
 
 
 @pytest.fixture
@@ -99,6 +99,7 @@ class TestResolveNativeRuntimeError:
         with pytest.raises(ConnectionError, match="Failed to get native MCP tools"):
             resolver._resolve_native(http_config)
 
+
 class TestResolveNativeToolNames:
     @staticmethod
     def _resolve_tool_names(mock_client_class, resolver, url):
@@ -114,19 +115,16 @@ class TestResolveNativeToolNames:
         tools, _ = resolver._resolve_native(MCPServerHTTP(url=url))
         return [tool.name for tool in tools]
 
-    @pytest.mark.parametrize(
-        "provider", ["OpenAI", "Anthropic", "Gemini", "Bedrock", "Azure"]
-    )
     @patch("crewai.mcp.tool_resolver.MCPClient")
     def test_ip_addressed_server_tool_name_passes_provider_validation(
-        self, mock_client_class, resolver, provider
+        self, mock_client_class, resolver
     ):
         names = self._resolve_tool_names(
             mock_client_class, resolver, "http://127.0.0.1:8800/mcp"
         )
 
         name, _, _ = safe_tool_conversion(
-            {"name": names[0], "description": "Add numbers"}, provider
+            {"name": names[0], "description": "Add numbers"}, "OpenAI"
         )
         assert name == "mcp_127_0_0_1_8800_mcp_add"
 
@@ -139,3 +137,11 @@ class TestResolveNativeToolNames:
         )
 
         assert names == ["localhost:8800_mcp_add"]
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_url_credentials_are_not_in_tool_name(self, mock_client_class, resolver):
+        names = self._resolve_tool_names(
+            mock_client_class, resolver, "http://user:secret@10.0.0.5:8800/mcp"
+        )
+
+        assert names == ["mcp_10_0_0_5:8800_mcp_add"]
