@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import atexit
+from collections.abc import Iterator
+from contextlib import contextmanager
 import logging
 from pathlib import Path
-import sys
 import threading
 from typing import Any, Literal
 
@@ -117,16 +118,28 @@ class SmolBaseTool(BaseTool):
 
         return self._create_machine(sdk), True
 
+    @contextmanager
+    def _machine_session(self) -> Iterator[Any]:
+        machine, delete = self._acquire_machine()
+        try:
+            yield machine
+        except BaseException:
+            self._release_machine(machine, delete, suppress_errors=True)
+            raise
+        else:
+            self._release_machine(machine, delete, suppress_errors=False)
+
     def _cleanup_on_exit(self) -> None:
         try:
-            self.close()
+            self._close_owned(unregister=False)
         except Exception:
             logger.warning("Could not delete Smol Machines VM", exc_info=True)
 
-    def _release_machine(self, machine: Any, delete: bool) -> None:
+    def _release_machine(
+        self, machine: Any, delete: bool, *, suppress_errors: bool
+    ) -> None:
         if not delete:
             return
-        original_error = sys.exc_info()[1]
         try:
             machine.delete()
         except Exception:
@@ -135,7 +148,7 @@ class SmolBaseTool(BaseTool):
                 if not self._cleanup_registered:
                     atexit.register(self._cleanup_on_exit)
                     self._cleanup_registered = True
-            if original_error is None:
+            if not suppress_errors:
                 raise
             logger.warning(
                 "Could not delete Smol Machines VM %s after tool failure; close() will retry",
@@ -145,9 +158,11 @@ class SmolBaseTool(BaseTool):
 
     def close(self) -> None:
         """Delete owned VMs, retrying failed deletions on the next close."""
+        self._close_owned(unregister=True)
+
+    def _close_owned(self, *, unregister: bool) -> None:
         if self.machine_id:
             return
-        original_error = sys.exc_info()[1]
         with self._lock:
             if self._machine is not None:
                 self._pending_cleanup.append(self._machine)
@@ -163,16 +178,10 @@ class SmolBaseTool(BaseTool):
                     if first_error is None:
                         first_error = exc
             if first_error is not None:
-                if original_error is None:
-                    raise first_error
-                logger.warning(
-                    "Could not delete persistent Smol Machines VM; close() will retry",
-                    exc_info=(
-                        type(first_error),
-                        first_error,
-                        first_error.__traceback__,
-                    ),
-                )
+                raise first_error
+            if unregister and self._cleanup_registered:
+                atexit.unregister(self._cleanup_on_exit)
+                self._cleanup_registered = False
 
     @property
     def active_machine_id(self) -> str | None:

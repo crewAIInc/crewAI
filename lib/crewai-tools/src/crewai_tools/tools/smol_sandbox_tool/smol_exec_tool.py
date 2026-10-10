@@ -32,13 +32,10 @@ class SmolExecTool(SmolBaseTool):
         timeout: int | None = None,
     ) -> dict[str, object]:
         sdk = self._sdk()
-        machine, delete = self._acquire_machine()
-        try:
+        with self._machine_session() as machine:
             return execution_result(
                 machine.exec(
                     ["sh", "-lc", command],
                     sdk.ExecOptions(env=env, workdir=cwd, timeout=timeout),
                 )
             )
-        finally:
-            self._release_machine(machine, delete)

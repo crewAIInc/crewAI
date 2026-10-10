@@ -32,13 +32,10 @@ class SmolPythonTool(SmolBaseTool):
         timeout: int | None = None,
     ) -> dict[str, object]:
         sdk = self._sdk()
-        machine, delete = self._acquire_machine()
-        try:
+        with self._machine_session() as machine:
             return execution_result(
                 machine.exec(
                     ["python", "-c", code, *(argv or [])],
                     sdk.ExecOptions(env=env, timeout=timeout),
                 )
             )
-        finally:
-            self._release_machine(machine, delete)

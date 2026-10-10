@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import atexit
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -145,22 +146,57 @@ def test_failed_persistent_close_does_not_reuse_vm_and_can_retry(sdk):
     replacement.delete.assert_called_once_with()
 
 
-def test_close_does_not_mask_an_active_error_and_retries_cleanup(sdk, caplog):
+def test_close_reports_delete_failure_even_inside_unrelated_except(sdk):
     _, machine = sdk
     tool = SmolExecTool(persistent=True)
     tool.run(command="echo hello")
     machine.delete.side_effect = RuntimeError("delete failed")
-    with pytest.raises(ValueError, match="original failure"):
-        try:
-            raise ValueError("original failure")
-        finally:
+    try:
+        raise ValueError("unrelated exception")
+    except ValueError:
+        with pytest.raises(RuntimeError, match="delete failed"):
             tool.close()
     assert tool.active_machine_id is None
-    assert "close() will retry" in caplog.text
 
     machine.delete.side_effect = None
     tool.close()
     assert machine.delete.call_count == 2
+
+
+def test_successful_run_reports_delete_failure_inside_unrelated_except(sdk):
+    _, machine = sdk
+    machine.delete.side_effect = RuntimeError("delete failed")
+    tool = SmolExecTool()
+    try:
+        raise ValueError("unrelated exception")
+    except ValueError:
+        with pytest.raises(RuntimeError, match="delete failed"):
+            tool.run(command="echo hello")
+
+    machine.delete.side_effect = None
+    tool.close()
+
+
+def test_close_unregisters_exit_cleanup_after_successful_retry(sdk, monkeypatch):
+    _, machine = sdk
+    registered = []
+    unregistered = []
+    monkeypatch.setattr(atexit, "register", registered.append)
+    monkeypatch.setattr(atexit, "unregister", unregistered.append)
+    machine.delete.side_effect = RuntimeError("delete failed")
+    tool = SmolExecTool()
+    with pytest.raises(RuntimeError, match="delete failed"):
+        tool.run(command="echo hello")
+    assert len(registered) == 1
+    with pytest.raises(RuntimeError, match="delete failed"):
+        tool.close()
+    assert not unregistered
+
+    machine.delete.side_effect = None
+    tool.close()
+    assert unregistered == registered
+    tool.close()
+    assert unregistered == registered
 
 
 def test_cloud_attachment_starts_stopped_vm_and_preserves_ownership(sdk):

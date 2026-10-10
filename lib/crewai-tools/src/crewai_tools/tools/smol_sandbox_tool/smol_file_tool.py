@@ -53,8 +53,7 @@ class SmolFileTool(SmolBaseTool):
                     raise ValueError("binary content must be valid base64") from exc
             else:
                 data = content.encode()
-        machine, delete = self._acquire_machine()
-        try:
+        with self._machine_session() as machine:
             if action == "read":
                 file_data = machine.read_file(path)
                 return (
@@ -66,5 +65,3 @@ class SmolFileTool(SmolBaseTool):
                 raise ValueError("write requires content")
             machine.write_file(path, data)
             return f"Wrote {len(data)} bytes to {path}"
-        finally:
-            self._release_machine(machine, delete)
