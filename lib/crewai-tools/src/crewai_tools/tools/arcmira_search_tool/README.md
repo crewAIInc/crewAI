@@ -1,6 +1,6 @@
 # Arcmira: YouTube Transcript Search
 
-[API documentation](https://arcmira.com/docs) · [Search reference](https://arcmira.com/docs/search-for-coding-agents) · [OpenAPI](https://api.arcmira.com/v1/openapi.json)
+[Arcmira](https://arcmira.com) · [API documentation](https://arcmira.com/docs) · [Search reference](https://arcmira.com/docs/search-for-coding-agents) · [OpenAPI](https://api.arcmira.com/v1/openapi.json)
 
 `ArcmiraSearchTool` finds passages in indexed YouTube transcripts. It returns the API response with transcript text, timestamps, source links, partial-result flags and access information so an agent can cite the evidence and describe its limits.
 
@@ -16,7 +16,7 @@ uv add crewai-tools
 
 Create an Arcmira API key using the [API quickstart](https://arcmira.com/docs), then set `ARCMIRA_API_KEY` in your environment. Keep credentials outside prompts and source control. You can also pass `api_key` when constructing the tool; it is excluded from serialized tool configuration and model inputs.
 
-Search calls use credits from your plan, then any top-up credits, then your on-demand budget. Check [usage and billing](https://arcmira.com/docs/usage-and-billing) before running the example.
+Search calls use credits from your plan, then your on-demand budget. Check [usage and billing](https://arcmira.com/docs/usage-and-billing) before running the example.
 
 ```python
 from crewai_tools import ArcmiraSearchTool
