@@ -31,6 +31,13 @@ class CSVLoader(BaseLoader):
 
     def _parse_csv(self, content: str, source_ref: str) -> LoaderResult:
         try:
+            # Strip a leading UTF-8 BOM (\ufeff) if present.  Files saved by
+            # Excel/Office or other Windows editors often carry a BOM; if left
+            # in place it becomes part of the first column name in
+            # csv.DictReader, making that column unreachable by its expected
+            # key and shifting row values onto the wrong headers.
+            content = content.lstrip("\ufeff")
+
             csv_reader = csv.DictReader(StringIO(content))
 
             text_parts = []
