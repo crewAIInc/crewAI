@@ -1,0 +1,52 @@
+---
+title: أدوات بيئة Smol Machines المعزولة
+description: شغّل أوامر الصدفة وPython وعمليات الملفات داخل أجهزة microVM محلية أو سحابية معزولة.
+icon: box
+mode: "wide"
+---
+
+# أدوات بيئة Smol Machines المعزولة
+
+امنح Agent حاسوبًا معزولًا باستخدام `SmolExecTool` و`SmolPythonTool` و`SmolFileTool`. تعمل الأدوات افتراضيًا داخل أجهزة microVM محلية؛ حدّد `target="cloud"` لاستخدام Smol Machines Cloud. تستخدم الأدوات الثلاث API الجهاز نفسه، مما يتيح الانتقال بين التطوير المحلي والتنفيذ المستضاف.
+
+## التثبيت
+
+```shell
+uv add "crewai-tools[smol]"
+```
+
+يتطلب التنفيذ المحلي Linux مع `/dev/kvm` أو جهاز Mac بمعالج Apple Silicon. ويتطلب التنفيذ السحابي وجود `SMOL_CLOUD_TOKEN` لدى worker.
+
+## الاستخدام الأساسي
+
+```python
+from crewai import Agent
+from crewai_tools import SmolExecTool
+
+agent = Agent(
+    role="Developer",
+    goal="Implement and test a feature",
+    backstory="Build and verify changes in an isolated computer.",
+    tools=[SmolExecTool()],
+)
+```
+
+تنشئ كل استدعاءة جهاز VM وتحذفه افتراضيًا. استخدم `persistent=True` للاحتفاظ بالحالة بين الاستدعاءات، وأغلق الجهاز بعد الانتهاء:
+
+```python
+from crewai_tools import SmolExecTool, SmolFileTool
+
+shell = SmolExecTool(target="cloud", persistent=True)
+try:
+    shell.run(command="echo hello > /workspace/message.txt")
+    files = SmolFileTool(target="cloud", machine_id=shell.active_machine_id)
+    print(files.run(action="read", path="/workspace/message.txt"))
+finally:
+    shell.close()
+```
+
+لا تحذف أداة الملفات المتصلة الجهاز الذي تملكه `shell`. تقبل `SmolPythonTool` المعامل `code` ومعه اختياريًا `argv` و`env` و`timeout`. تدعم أداة الملفات `read` و`write`؛ استخدم `binary=True` لبيانات base64.
+
+تكون شبكة الجهاز مفعّلة افتراضيًا لأحمال العمل التي تحتاج إلى الاتصال بالشبكة، مثل تثبيت الحزم. استخدم `network=False` لمنع اتصالات الجهاز الصادرة. يمكن تشغيل صور السجل المخزّنة مؤقتًا دون شبكة داخل الجهاز؛ وفي الأجهزة المحلية، يجلب SmolVM الإصدار 1.23.0 أو أحدث الصور غير المخزّنة عبر المضيف أيضًا. يبقى الهدف محليًا حتى عند وجود بيانات اعتماد Cloud. راجع README الخاص بحزمة الأدوات لأمثلة إضافية على دورة الحياة.
+
+مع إصدارات SmolVM المحلية الأقدم، فعّل شبكة الجهاز لجلب صور السجل غير المخزّنة، أو قدّم دليل نظام ملفات جذري محلي أو أرشيف `docker save` عبر `image`.

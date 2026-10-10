@@ -183,6 +183,10 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 
+smol = [
+    "smolmachines>=1.22.2,<2",
+]
+
 
 [tool.uv]
 exclude-newer = "3 days"
