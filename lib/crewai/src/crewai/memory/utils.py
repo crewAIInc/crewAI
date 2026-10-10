@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 
 def sanitize_scope_name(name: str) -> str:
     """Sanitize a name for use in hierarchical scope paths.
 
-    Converts to lowercase, replaces non-alphanumeric chars (except underscore
-    and hyphen) with hyphens, collapses multiple hyphens, strips leading/trailing
-    hyphens.
+    Converts to lowercase, replaces every character that is not a Unicode
+    letter, number, combining mark, underscore or hyphen with a hyphen,
+    collapses multiple hyphens, strips leading/trailing hyphens. Non-ASCII
+    letters (e.g. CJK, Hangul, accented Latin) and the combining marks of
+    scripts such as Devanagari and Thai are kept so distinct names stay distinct.
 
     Args:
         name: The raw name to sanitize (e.g. crew name, agent role, flow class name).
@@ -25,12 +28,19 @@ def sanitize_scope_name(name: str) -> str:
         >>> sanitize_scope_name("Agent #1 (Main)")
         'agent-1-main'
         >>> sanitize_scope_name("café_worker")
-        'caf-_worker'
+        'café_worker'
+        >>> sanitize_scope_name("東京支社")
+        '東京支社'
     """
     if not name:
         return "unknown"
-    name = name.lower().strip()
-    name = re.sub(r"[^a-z0-9_-]", "-", name)
+    # NFC so visually identical names (e.g. macOS NFD file names) map to one scope.
+    name = unicodedata.normalize("NFC", name.lower().strip())
+    # Keep letters (L), numbers (N) and combining marks (M). Marks matter:
+    # Python's \w drops them, which would merge e.g. "काली" and "किली".
+    name = "".join(
+        c if c in "_-" or unicodedata.category(c)[0] in "LNM" else "-" for c in name
+    )
     name = re.sub(r"-+", "-", name)
     name = name.strip("-")
     return name or "unknown"
