@@ -48,12 +48,18 @@ class Converter(OutputConverter):
             {"role": "user", "content": self.text},
         ]
 
-    def _coerce_response_to_pydantic(self, response: Any) -> BaseModel:
+    def _coerce_response_to_pydantic(self, response: Any, attempt: int = 1) -> BaseModel:
         """Validate an LLM response into the configured Pydantic model.
 
-        Pure post-processing — performs no I/O. Shared by ``to_pydantic`` and
-        ``ato_pydantic`` so the validation/partial-JSON fallback logic stays in
-        a single place.
+        Pure post-processing — performs no I/O. Used by ``to_pydantic`` (the
+        sync path); ``ato_pydantic`` uses the async variant
+        ``_acoerce_response_to_pydantic`` so the partial-JSON fallback stays
+        asynchronous.
+
+        Args:
+            response: The raw LLM response to coerce.
+            attempt: Current conversion attempt, threaded through instruction
+                fallbacks so nested converters share the same retry budget.
         """
         if isinstance(response, BaseModel):
             return response
@@ -64,7 +70,8 @@ class Converter(OutputConverter):
                 result=response,
                 model=self.model,
                 is_json_output=False,
-                agent=None,
+                agent=self.agent,
+                attempt=attempt,
             )
             if isinstance(partial, BaseModel):
                 return partial
@@ -79,6 +86,47 @@ class Converter(OutputConverter):
                     ) from parse_err
             raise ConverterError(
                 "handle_partial_json returned an unexpected type."
+            ) from None
+
+    async def _acoerce_response_to_pydantic(self, response: Any, attempt: int = 1) -> BaseModel:
+        """Async equivalent of ``_coerce_response_to_pydantic``.
+
+        Used by ``ato_pydantic`` so instruction-based fallback retries await
+        ``async_handle_partial_json`` (and therefore ``converter.ato_pydantic()``)
+        instead of running the synchronous ``handle_partial_json`` on the
+        event-loop thread.
+
+        Args:
+            response: The raw LLM response to coerce.
+            attempt: Current conversion attempt, threaded through async
+                instruction fallbacks so nested converters share the same
+                retry budget.
+        """
+        if isinstance(response, BaseModel):
+            return response
+        try:
+            return self.model.model_validate_json(response)
+        except ValidationError:
+            partial = await async_handle_partial_json(
+                result=response,
+                model=self.model,
+                is_json_output=False,
+                agent=self.agent,
+                attempt=attempt,
+            )
+            if isinstance(partial, BaseModel):
+                return partial
+            if isinstance(partial, dict):
+                return self.model.model_validate(partial)
+            if isinstance(partial, str):
+                try:
+                    return self.model.model_validate_json(partial)
+                except Exception as parse_err:
+                    raise ConverterError(
+                        f"Failed to convert partial JSON result into Pydantic: {parse_err}"
+                    ) from parse_err
+            raise ConverterError(
+                "async_handle_partial_json returned an unexpected type."
             ) from None
 
     def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
@@ -103,7 +151,7 @@ class Converter(OutputConverter):
                 )
             else:
                 response = self.llm.call(self._build_messages())
-            return self._coerce_response_to_pydantic(response)
+            return self._coerce_response_to_pydantic(response, current_attempt)
         except ValidationError as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
@@ -131,7 +179,7 @@ class Converter(OutputConverter):
                 )
             else:
                 response = await self.llm.acall(self._build_messages())
-            return self._coerce_response_to_pydantic(response)
+            return await self._acoerce_response_to_pydantic(response, current_attempt)
         except ValidationError as e:
             if current_attempt < self.max_attempts:
                 return await self.ato_pydantic(current_attempt + 1)
@@ -299,6 +347,7 @@ def handle_partial_json(
     is_json_output: bool,
     agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
+    attempt: int = 1,
 ) -> dict[str, Any] | BaseModel | str:
     """Handle partial JSON in a result string and convert to Pydantic model or dict.
 
@@ -308,6 +357,10 @@ def handle_partial_json(
         is_json_output: Whether to return a dict (True) or Pydantic model (False).
         agent: The agent instance.
         converter_cls: The converter class to use.
+        attempt: Current conversion attempt. Instruction fallbacks receive
+            ``attempt + 1`` so nested converters created by
+            ``convert_with_instructions`` share the same retry budget instead
+            of restarting at attempt 1.
 
     Returns:
         The converted result as a dict, BaseModel, or original string.
@@ -323,6 +376,7 @@ def handle_partial_json(
                 is_json_output=is_json_output,
                 agent=agent,
                 converter_cls=converter_cls,
+                attempt=attempt + 1,
             )
 
         try:
@@ -331,7 +385,14 @@ def handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            return convert_with_instructions(
+                result=result,
+                model=model,
+                is_json_output=is_json_output,
+                agent=agent,
+                converter_cls=converter_cls,
+                attempt=attempt + 1,
+            )
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
@@ -345,6 +406,7 @@ def handle_partial_json(
         is_json_output=is_json_output,
         agent=agent,
         converter_cls=converter_cls,
+        attempt=attempt + 1,
     )
 
 
@@ -354,6 +416,7 @@ def convert_with_instructions(
     is_json_output: bool,
     agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
+    attempt: int = 1,
 ) -> dict[str, Any] | BaseModel | str:
     """Convert a result string to a Pydantic model or JSON using instructions.
 
@@ -363,6 +426,10 @@ def convert_with_instructions(
         is_json_output: Whether to return a dict (True) or Pydantic model (False).
         agent: The agent instance.
         converter_cls: The converter class to use.
+        attempt: Shared retry budget. Once ``attempt`` reaches the converter's
+            ``max_attempts``, no further nested conversion is started and the
+            original result is returned, so persistent schema-invalid output
+            cannot exhaust the call stack via nested converters.
 
     Returns:
         The converted result as a dict, BaseModel, or original string.
@@ -390,8 +457,12 @@ def convert_with_instructions(
         model=model,
         instructions=instructions,
     )
+    if attempt > getattr(converter, "max_attempts", 3):
+        return result
     exported_result = (
-        converter.to_pydantic() if not is_json_output else converter.to_json()
+        converter.to_pydantic(attempt)
+        if not is_json_output
+        else converter.to_json(attempt)
     )
 
     if isinstance(exported_result, ConverterError):
@@ -463,8 +534,20 @@ async def async_handle_partial_json(
     is_json_output: bool,
     agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
+    attempt: int = 1,
 ) -> dict[str, Any] | BaseModel | str:
-    """Async equivalent of ``handle_partial_json`` — defers LLM fallback to ``acall``."""
+    """Async equivalent of ``handle_partial_json`` — defers LLM fallback to ``acall``.
+
+    Args:
+        result: The result string to process.
+        model: The Pydantic model class to convert to.
+        is_json_output: Whether to return a dict (True) or Pydantic model (False).
+        agent: The agent instance.
+        converter_cls: The converter class to use.
+        attempt: Current conversion attempt. Instruction fallbacks receive
+            ``attempt + 1`` so nested async converters share the same retry
+            budget instead of restarting at attempt 1.
+    """
     match = _JSON_PATTERN.search(result)
     if match:
         try:
@@ -476,6 +559,7 @@ async def async_handle_partial_json(
                 is_json_output=is_json_output,
                 agent=agent,
                 converter_cls=converter_cls,
+                attempt=attempt + 1,
             )
 
         try:
@@ -484,7 +568,14 @@ async def async_handle_partial_json(
                 return exported_result.model_dump()
             return exported_result
         except ValidationError:
-            raise
+            return await async_convert_with_instructions(
+                result=result,
+                model=model,
+                is_json_output=is_json_output,
+                agent=agent,
+                converter_cls=converter_cls,
+                attempt=attempt + 1,
+            )
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
@@ -498,6 +589,7 @@ async def async_handle_partial_json(
         is_json_output=is_json_output,
         agent=agent,
         converter_cls=converter_cls,
+        attempt=attempt + 1,
     )
 
 
@@ -507,8 +599,20 @@ async def async_convert_with_instructions(
     is_json_output: bool,
     agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
+    attempt: int = 1,
 ) -> dict[str, Any] | BaseModel | str:
-    """Async equivalent of ``convert_with_instructions`` — calls ``ato_pydantic``/``ato_json``."""
+    """Async equivalent of ``convert_with_instructions`` — calls ``ato_pydantic``/``ato_json``.
+
+    Args:
+        result: The result string to convert.
+        model: The Pydantic model class to convert to.
+        is_json_output: Whether to return a dict (True) or Pydantic model (False).
+        agent: The agent instance.
+        converter_cls: The converter class to use.
+        attempt: Shared retry budget. Once ``attempt`` reaches the converter's
+            ``max_attempts``, no further nested async conversion is started and
+            the original result is returned.
+    """
     if agent is None:
         raise TypeError("Agent must be provided if converter_cls is not specified.")
 
@@ -526,10 +630,12 @@ async def async_convert_with_instructions(
         model=model,
         instructions=instructions,
     )
+    if attempt > getattr(converter, "max_attempts", 3):
+        return result
     exported_result = (
-        await converter.ato_pydantic()
+        await converter.ato_pydantic(attempt)
         if not is_json_output
-        else await converter.ato_json()
+        else await converter.ato_json(attempt)
     )
 
     if isinstance(exported_result, ConverterError):
