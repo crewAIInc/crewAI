@@ -99,16 +99,33 @@ print(Crew(agents=[coordinator], tasks=[outreach]).kickoff().raw)
 
 ## 실제 계정으로 전환
 
-같은 `MCPServerHTTP`를 `https://instant.expert/mcp`로 지정하고, 샌드박스 토큰 대신 실제 계정의 OAuth 액세스 토큰을 보냅니다:
+실제 계정은 `https://instant.expert/mcp`를 사용하며, 샌드박스 토큰 대신 OAuth 액세스 토큰을 보냅니다. API 키는 없습니다. 서버는 OAuth 2.1(PKCE와 동적 클라이언트 등록)로 클라이언트를 로그인시킵니다. `MCPServerHTTP`는 전달한 헤더만 보내므로, 로그인을 수행하는 MCP 클라이언트(예: FastMCP)로 토큰을 받으세요. pip가 CrewAI의 `mcp` 라이브러리 버전과 호환되는 FastMCP 릴리스를 고르도록, CrewAI와 같은 명령으로 설치하세요: `pip install crewai fastmcp`.
 
 ```python
+import asyncio
+
+from crewai.mcp import MCPServerHTTP
+from fastmcp import Client
+from fastmcp.client.auth import OAuth
+
+LIVE_URL = "https://instant.expert/mcp"
+
+
+async def sign_in() -> str:
+    """Sign in to Instant Expert in the browser and return an access token."""
+    oauth = OAuth(mcp_url=LIVE_URL)
+    async with Client(LIVE_URL, auth=oauth):
+        tokens = await oauth.token_storage_adapter.get_tokens()
+    return tokens.access_token
+
+
 instant_expert = MCPServerHTTP(
-    url="https://instant.expert/mcp",
-    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_TOKEN']}"},
+    url=LIVE_URL,
+    headers={"Authorization": f"Bearer {asyncio.run(sign_in())}"},
 )
 ```
 
-API 키는 없습니다. 서버는 OAuth 2.1(PKCE와 동적 클라이언트 등록)로 클라이언트를 로그인시키며, 액세스 토큰은 짧은 시간 뒤에 만료되므로 실행하기 전에 새 토큰을 받으세요. 에이전트가 주문을 실행하려면 해당 연결에서 유료 발송을 켜고 카드를 저장해 두어야 합니다. 자세한 내용은 [Instant Expert MCP 문서](https://instant.expert/docs/mcp)를 참고하세요.
+`sign_in()`은 브라우저를 열어 로그인하고 연결을 승인하게 합니다. 액세스 토큰은 짧은 시간 뒤에 만료되고 FastMCP는 토큰을 메모리에만 보관하므로, 실행할 때마다 다시 로그인합니다. 에이전트가 주문을 실행하려면 해당 연결에서 유료 발송을 켜고 카드를 저장해 두어야 합니다. 자세한 내용은 [Instant Expert MCP 문서](https://instant.expert/docs/mcp)를 참고하세요.
 
 ## 참고
 

@@ -99,16 +99,33 @@ No modo de teste, cada pessoa fictícia responde por conta própria depois da en
 
 ## Usar uma conta real
 
-Aponte o mesmo `MCPServerHTTP` para `https://instant.expert/mcp` e envie um token de acesso OAuth de uma conta real em vez do token de sandbox:
+Uma conta real usa `https://instant.expert/mcp` e um token de acesso OAuth no lugar do token de sandbox. Não há chaves de API: o servidor autentica clientes com OAuth 2.1 (PKCE e registro dinâmico de clientes). O `MCPServerHTTP` só envia os cabeçalhos que você passa, então obtenha o token com um cliente MCP que faça o login, como o FastMCP. Instale-o no mesmo comando que a CrewAI, `pip install crewai fastmcp`, para que o pip escolha uma versão do FastMCP compatível com a versão da biblioteca `mcp` usada pela CrewAI.
 
 ```python
+import asyncio
+
+from crewai.mcp import MCPServerHTTP
+from fastmcp import Client
+from fastmcp.client.auth import OAuth
+
+LIVE_URL = "https://instant.expert/mcp"
+
+
+async def sign_in() -> str:
+    """Sign in to Instant Expert in the browser and return an access token."""
+    oauth = OAuth(mcp_url=LIVE_URL)
+    async with Client(LIVE_URL, auth=oauth):
+        tokens = await oauth.token_storage_adapter.get_tokens()
+    return tokens.access_token
+
+
 instant_expert = MCPServerHTTP(
-    url="https://instant.expert/mcp",
-    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_TOKEN']}"},
+    url=LIVE_URL,
+    headers={"Authorization": f"Bearer {asyncio.run(sign_in())}"},
 )
 ```
 
-Não há chaves de API. O servidor autentica clientes com OAuth 2.1 (PKCE e registro dinâmico de clientes), e os tokens de acesso expiram depois de pouco tempo, então obtenha um novo antes de cada execução. Para que um agente efetive pedidos, a conexão também precisa ter o envio pago ativado e um cartão salvo. Veja a [documentação MCP do Instant Expert](https://instant.expert/docs/mcp).
+`sign_in()` abre o navegador para você entrar e aprovar a conexão. Os tokens de acesso expiram depois de pouco tempo e o FastMCP os guarda só na memória, então cada execução faz o login de novo. Para que um agente efetive pedidos, a conexão também precisa ter o envio pago ativado e um cartão salvo. Veja a [documentação MCP do Instant Expert](https://instant.expert/docs/mcp).
 
 ## Observações
 

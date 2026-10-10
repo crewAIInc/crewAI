@@ -99,16 +99,33 @@ In test mode, each fictional person responds on their own after delivery: some b
 
 ## Going live
 
-Point the same `MCPServerHTTP` at `https://instant.expert/mcp` and send an OAuth access token for a real account instead of the sandbox token:
+A real account uses `https://instant.expert/mcp` and an OAuth access token in place of the sandbox token. There are no API keys: the server signs clients in with OAuth 2.1 (PKCE and dynamic client registration). `MCPServerHTTP` only sends the headers you give it, so get the token from an MCP client that runs the sign-in, such as FastMCP. Install it in the same command as CrewAI, `pip install crewai fastmcp`, so pip picks a FastMCP release that works with CrewAI's version of the `mcp` library.
 
 ```python
+import asyncio
+
+from crewai.mcp import MCPServerHTTP
+from fastmcp import Client
+from fastmcp.client.auth import OAuth
+
+LIVE_URL = "https://instant.expert/mcp"
+
+
+async def sign_in() -> str:
+    """Sign in to Instant Expert in the browser and return an access token."""
+    oauth = OAuth(mcp_url=LIVE_URL)
+    async with Client(LIVE_URL, auth=oauth):
+        tokens = await oauth.token_storage_adapter.get_tokens()
+    return tokens.access_token
+
+
 instant_expert = MCPServerHTTP(
-    url="https://instant.expert/mcp",
-    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_TOKEN']}"},
+    url=LIVE_URL,
+    headers={"Authorization": f"Bearer {asyncio.run(sign_in())}"},
 )
 ```
 
-There are no API keys. The server signs clients in with OAuth 2.1 (PKCE and dynamic client registration), and access tokens expire after a short time, so get a fresh one before a run. Placing orders from an agent also needs paid sending turned on for that connection and a saved card. See the [Instant Expert MCP docs](https://instant.expert/docs/mcp).
+`sign_in()` opens your browser to sign in and approve the connection. Access tokens expire after a short time and FastMCP keeps them in memory, so each run signs in again. Placing orders from an agent also needs paid sending turned on for that connection and a saved card. See the [Instant Expert MCP docs](https://instant.expert/docs/mcp).
 
 ## Notes
 
