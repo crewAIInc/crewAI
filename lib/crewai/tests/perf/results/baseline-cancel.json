@@ -1,0 +1,22 @@
+{
+  "cancel/during-llm/llm=200ms,tool=300ms": {
+    "cancel_outcome": "CancelledError",
+    "await_returned_after_ms": 2.8,
+    "llm_started_after_cancel": 0,
+    "llm_finished_after_cancel": 1,
+    "tool_started_after_cancel": 0,
+    "tool_finished_after_cancel": 0,
+    "llm_started_total": 1,
+    "tool_started_total": 0
+  },
+  "cancel/during-tools/llm=200ms,tool=300ms": {
+    "cancel_outcome": "CancelledError",
+    "await_returned_after_ms": 1.9,
+    "llm_started_after_cancel": 0,
+    "llm_finished_after_cancel": 0,
+    "tool_started_after_cancel": 0,
+    "tool_finished_after_cancel": 4,
+    "llm_started_total": 1,
+    "tool_started_total": 4
+  }
+}

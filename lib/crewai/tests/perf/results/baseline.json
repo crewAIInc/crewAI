@@ -1,0 +1,170 @@
+{
+  "scaling/plain/lat=200ms/N=1": {
+    "wall_s": 0.45,
+    "throughput_kickoffs_per_s": 2.22,
+    "peak_threads": 6,
+    "thread_starts": 8,
+    "peak_rss_mb": 177.3,
+    "rss_growth_mb": 0.3,
+    "sync_llm_calls": 2,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 6.6,
+    "loop_lag_p99_ms": 4.2,
+    "loop_lag_mean_ms": 0.47
+  },
+  "scaling/plain/lat=200ms/N=10": {
+    "wall_s": 0.991,
+    "throughput_kickoffs_per_s": 10.09,
+    "peak_threads": 15,
+    "thread_starts": 79,
+    "peak_rss_mb": 181.7,
+    "rss_growth_mb": 3.5,
+    "sync_llm_calls": 20,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 166.4,
+    "loop_lag_p99_ms": 14.7,
+    "loop_lag_mean_ms": 3.4
+  },
+  "scaling/plain/lat=200ms/N=50": {
+    "wall_s": 4.226,
+    "throughput_kickoffs_per_s": 11.83,
+    "peak_threads": 21,
+    "thread_starts": 365,
+    "peak_rss_mb": 194.0,
+    "rss_growth_mb": 12.2,
+    "sync_llm_calls": 100,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 770.7,
+    "loop_lag_p99_ms": 88.7,
+    "loop_lag_mean_ms": 5.72
+  },
+  "scaling/plain/lat=200ms/N=200": {
+    "wall_s": 18.483,
+    "throughput_kickoffs_per_s": 10.82,
+    "peak_threads": 21,
+    "thread_starts": 1415,
+    "peak_rss_mb": 241.2,
+    "rss_growth_mb": 43.1,
+    "sync_llm_calls": 400,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 3510.1,
+    "loop_lag_p99_ms": 72.3,
+    "loop_lag_mean_ms": 8.66
+  },
+  "scaling/tools/lat=200ms/N=1": {
+    "wall_s": 0.766,
+    "throughput_kickoffs_per_s": 1.31,
+    "peak_threads": 10,
+    "thread_starts": 11,
+    "peak_rss_mb": 178.1,
+    "rss_growth_mb": 0.6,
+    "sync_llm_calls": 3,
+    "async_llm_calls": 0,
+    "tool_calls": 4,
+    "loop_lag_max_ms": 16.9,
+    "loop_lag_p99_ms": 4.1,
+    "loop_lag_mean_ms": 0.53
+  },
+  "scaling/tools/lat=200ms/N=10": {
+    "wall_s": 1.254,
+    "throughput_kickoffs_per_s": 7.97,
+    "peak_threads": 37,
+    "thread_starts": 119,
+    "peak_rss_mb": 184.8,
+    "rss_growth_mb": 3.7,
+    "sync_llm_calls": 30,
+    "async_llm_calls": 0,
+    "tool_calls": 40,
+    "loop_lag_max_ms": 178.8,
+    "loop_lag_p99_ms": 21.8,
+    "loop_lag_mean_ms": 3.15
+  },
+  "scaling/tools/lat=200ms/N=50": {
+    "wall_s": 6.221,
+    "throughput_kickoffs_per_s": 8.04,
+    "peak_threads": 47,
+    "thread_starts": 565,
+    "peak_rss_mb": 211.9,
+    "rss_growth_mb": 14.2,
+    "sync_llm_calls": 150,
+    "async_llm_calls": 0,
+    "tool_calls": 200,
+    "loop_lag_max_ms": 1014.9,
+    "loop_lag_p99_ms": 40.4,
+    "loop_lag_mean_ms": 4.18
+  },
+  "scaling/tools/lat=200ms/N=200": {
+    "wall_s": 27.889,
+    "throughput_kickoffs_per_s": 7.17,
+    "peak_threads": 49,
+    "thread_starts": 2215,
+    "peak_rss_mb": 310.4,
+    "rss_growth_mb": 53.0,
+    "sync_llm_calls": 600,
+    "async_llm_calls": 0,
+    "tool_calls": 800,
+    "loop_lag_max_ms": 3829.4,
+    "loop_lag_p99_ms": 39.0,
+    "loop_lag_mean_ms": 5.93
+  },
+  "scaling/plain/lat=500ms/N=200": {
+    "wall_s": 35.096,
+    "throughput_kickoffs_per_s": 5.7,
+    "peak_threads": 21,
+    "thread_starts": 1415,
+    "peak_rss_mb": 241.0,
+    "rss_growth_mb": 43.0,
+    "sync_llm_calls": 400,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 5138.9,
+    "loop_lag_p99_ms": 26.6,
+    "loop_lag_mean_ms": 4.17
+  },
+  "overhead/plain/lat=0": {
+    "per_kickoff_ms_median": 26.07,
+    "per_kickoff_ms_mean": 27.3,
+    "thread_starts_per_kickoff": 7.1
+  },
+  "overhead/tools/lat=0": {
+    "per_kickoff_ms_median": 36.62,
+    "per_kickoff_ms_mean": 36.67,
+    "thread_starts_per_kickoff": 11.1
+  },
+  "small_executor(4)/plain/lat=200ms/N=20": {
+    "wall_s": 2.685,
+    "throughput_kickoffs_per_s": 7.45,
+    "peak_threads": 15,
+    "thread_starts": 149,
+    "peak_rss_mb": 184.1,
+    "rss_growth_mb": 4.9,
+    "sync_llm_calls": 40,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 282.9,
+    "loop_lag_p99_ms": 31.7,
+    "loop_lag_mean_ms": 2.44
+  },
+  "cancel/tools/lat=200ms": {
+    "cancel_outcome": "CancelledError",
+    "await_returned_after_ms": 2.2,
+    "llm_calls_after_cancel": 0,
+    "tool_calls_after_cancel": 0,
+    "llm_calls_total": 1
+  },
+  "context/tools": {
+    "tool": [
+      "set-before-akickoff"
+    ],
+    "handler": [
+      "set-before-akickoff"
+    ],
+    "llm": [
+      "set-before-akickoff"
+    ]
+  }
+}

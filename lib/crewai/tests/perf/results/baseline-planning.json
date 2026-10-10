@@ -1,0 +1,30 @@
+{
+  "scaling/planning/lat=200ms/N=1": {
+    "wall_s": 1.269,
+    "throughput_kickoffs_per_s": 0.79,
+    "peak_threads": 10,
+    "thread_starts": 7,
+    "peak_rss_mb": 179.4,
+    "rss_growth_mb": 0.7,
+    "sync_llm_calls": 9,
+    "async_llm_calls": 0,
+    "tool_calls": 6,
+    "loop_lag_max_ms": 8.7,
+    "loop_lag_p99_ms": 1.0,
+    "loop_lag_mean_ms": 0.29
+  },
+  "scaling/planning/lat=200ms/N=50": {
+    "wall_s": 16.524,
+    "throughput_kickoffs_per_s": 3.03,
+    "peak_threads": 21,
+    "thread_starts": 362,
+    "peak_rss_mb": 207.5,
+    "rss_growth_mb": 16.1,
+    "sync_llm_calls": 450,
+    "async_llm_calls": 0,
+    "tool_calls": 300,
+    "loop_lag_max_ms": 839.6,
+    "loop_lag_p99_ms": 9.9,
+    "loop_lag_mean_ms": 1.3
+  }
+}

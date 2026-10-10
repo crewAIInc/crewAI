@@ -1,0 +1,183 @@
+{
+  "scaling/plain/lat=200ms/N=1": {
+    "wall_s": 0.442,
+    "throughput_kickoffs_per_s": 2.26,
+    "peak_threads": 6,
+    "thread_starts": 4,
+    "peak_rss_mb": 177.6,
+    "rss_growth_mb": 0.3,
+    "sync_llm_calls": 2,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 4.8,
+    "loop_lag_p99_ms": 2.2,
+    "loop_lag_mean_ms": 0.33
+  },
+  "scaling/plain/lat=200ms/N=10": {
+    "wall_s": 0.965,
+    "throughput_kickoffs_per_s": 10.36,
+    "peak_threads": 14,
+    "thread_starts": 48,
+    "peak_rss_mb": 181.5,
+    "rss_growth_mb": 3.1,
+    "sync_llm_calls": 20,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 143.4,
+    "loop_lag_p99_ms": 13.6,
+    "loop_lag_mean_ms": 2.62
+  },
+  "scaling/plain/lat=200ms/N=50": {
+    "wall_s": 4.078,
+    "throughput_kickoffs_per_s": 12.26,
+    "peak_threads": 21,
+    "thread_starts": 215,
+    "peak_rss_mb": 194.3,
+    "rss_growth_mb": 12.2,
+    "sync_llm_calls": 100,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 750.8,
+    "loop_lag_p99_ms": 43.4,
+    "loop_lag_mean_ms": 5.25
+  },
+  "scaling/plain/lat=200ms/N=200": {
+    "wall_s": 17.276,
+    "throughput_kickoffs_per_s": 11.58,
+    "peak_threads": 21,
+    "thread_starts": 815,
+    "peak_rss_mb": 240.4,
+    "rss_growth_mb": 42.5,
+    "sync_llm_calls": 400,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 2937.5,
+    "loop_lag_p99_ms": 41.3,
+    "loop_lag_mean_ms": 6.93
+  },
+  "scaling/tools/lat=200ms/N=1": {
+    "wall_s": 0.764,
+    "throughput_kickoffs_per_s": 1.31,
+    "peak_threads": 10,
+    "thread_starts": 9,
+    "peak_rss_mb": 178.3,
+    "rss_growth_mb": 0.7,
+    "sync_llm_calls": 3,
+    "async_llm_calls": 0,
+    "tool_calls": 4,
+    "loop_lag_max_ms": 8.2,
+    "loop_lag_p99_ms": 1.5,
+    "loop_lag_mean_ms": 0.33
+  },
+  "scaling/tools/lat=200ms/N=10": {
+    "wall_s": 1.249,
+    "throughput_kickoffs_per_s": 8.01,
+    "peak_threads": 37,
+    "thread_starts": 88,
+    "peak_rss_mb": 185.1,
+    "rss_growth_mb": 3.6,
+    "sync_llm_calls": 30,
+    "async_llm_calls": 0,
+    "tool_calls": 40,
+    "loop_lag_max_ms": 174.7,
+    "loop_lag_p99_ms": 6.7,
+    "loop_lag_mean_ms": 2.48
+  },
+  "scaling/tools/lat=200ms/N=50": {
+    "wall_s": 6.328,
+    "throughput_kickoffs_per_s": 7.9,
+    "peak_threads": 47,
+    "thread_starts": 414,
+    "peak_rss_mb": 212.2,
+    "rss_growth_mb": 14.9,
+    "sync_llm_calls": 150,
+    "async_llm_calls": 0,
+    "tool_calls": 200,
+    "loop_lag_max_ms": 1019.6,
+    "loop_lag_p99_ms": 63.6,
+    "loop_lag_mean_ms": 4.48
+  },
+  "scaling/tools/lat=200ms/N=200": {
+    "wall_s": 27.07,
+    "throughput_kickoffs_per_s": 7.39,
+    "peak_threads": 48,
+    "thread_starts": 1614,
+    "peak_rss_mb": 310.5,
+    "rss_growth_mb": 53.2,
+    "sync_llm_calls": 600,
+    "async_llm_calls": 0,
+    "tool_calls": 800,
+    "loop_lag_max_ms": 3733.0,
+    "loop_lag_p99_ms": 37.8,
+    "loop_lag_mean_ms": 5.8
+  },
+  "scaling/plain/lat=500ms/N=200": {
+    "wall_s": 32.614,
+    "throughput_kickoffs_per_s": 6.13,
+    "peak_threads": 21,
+    "thread_starts": 815,
+    "peak_rss_mb": 240.5,
+    "rss_growth_mb": 42.4,
+    "sync_llm_calls": 400,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 3120.4,
+    "loop_lag_p99_ms": 28.2,
+    "loop_lag_mean_ms": 3.1
+  },
+  "overhead/plain/lat=0": {
+    "per_kickoff_ms_median": 26.16,
+    "per_kickoff_ms_mean": 27.46,
+    "thread_starts_per_kickoff": 4.0
+  },
+  "overhead/tools/lat=0": {
+    "per_kickoff_ms_median": 36.14,
+    "per_kickoff_ms_mean": 36.74,
+    "thread_starts_per_kickoff": 8.1
+  },
+  "small_executor(4)/plain/lat=200ms/N=20": {
+    "wall_s": 2.694,
+    "throughput_kickoffs_per_s": 7.43,
+    "peak_threads": 14,
+    "thread_starts": 88,
+    "peak_rss_mb": 184.3,
+    "rss_growth_mb": 5.2,
+    "sync_llm_calls": 40,
+    "async_llm_calls": 0,
+    "tool_calls": 0,
+    "loop_lag_max_ms": 269.9,
+    "loop_lag_p99_ms": 28.0,
+    "loop_lag_mean_ms": 2.31
+  },
+  "cancel/during-llm/llm=200ms,tool=300ms": {
+    "cancel_outcome": "CancelledError",
+    "await_returned_after_ms": 2.3,
+    "llm_started_after_cancel": 0,
+    "llm_finished_after_cancel": 1,
+    "tool_started_after_cancel": 0,
+    "tool_finished_after_cancel": 0,
+    "llm_started_total": 1,
+    "tool_started_total": 0
+  },
+  "cancel/during-tools/llm=200ms,tool=300ms": {
+    "cancel_outcome": "CancelledError",
+    "await_returned_after_ms": 1.8,
+    "llm_started_after_cancel": 0,
+    "llm_finished_after_cancel": 0,
+    "tool_started_after_cancel": 0,
+    "tool_finished_after_cancel": 4,
+    "llm_started_total": 1,
+    "tool_started_total": 4
+  },
+  "context/tools": {
+    "tool": [
+      "set-before-akickoff"
+    ],
+    "handler": [
+      "set-before-akickoff"
+    ],
+    "llm": [
+      "set-before-akickoff"
+    ]
+  }
+}

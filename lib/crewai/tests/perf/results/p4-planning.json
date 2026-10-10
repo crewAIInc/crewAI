@@ -1,0 +1,30 @@
+{
+  "scaling/planning/lat=200ms/N=1": {
+    "wall_s": 1.247,
+    "throughput_kickoffs_per_s": 0.8,
+    "peak_threads": 8,
+    "thread_starts": 0,
+    "peak_rss_mb": 181.5,
+    "rss_growth_mb": 0.3,
+    "sync_llm_calls": 8,
+    "async_llm_calls": 1,
+    "tool_calls": 6,
+    "loop_lag_max_ms": 4.5,
+    "loop_lag_p99_ms": 1.5,
+    "loop_lag_mean_ms": 0.26
+  },
+  "scaling/planning/lat=200ms/N=50": {
+    "wall_s": 15.233,
+    "throughput_kickoffs_per_s": 3.28,
+    "peak_threads": 20,
+    "thread_starts": 12,
+    "peak_rss_mb": 207.4,
+    "rss_growth_mb": 16.0,
+    "sync_llm_calls": 400,
+    "async_llm_calls": 50,
+    "tool_calls": 300,
+    "loop_lag_max_ms": 757.0,
+    "loop_lag_p99_ms": 9.6,
+    "loop_lag_mean_ms": 1.22
+  }
+}
