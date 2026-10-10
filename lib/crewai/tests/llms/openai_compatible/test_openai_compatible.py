@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_together_config(self):
+        """Test Together AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["together"]
+        assert config.base_url == "https://api.together.ai/v1"
+        assert config.api_key_env == "TOGETHER_API_KEY"
+        assert config.base_url_env == "TOGETHER_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -307,6 +315,48 @@ class TestLLMIntegration:
             llm = LLM(model="cerebras/llama3-8b")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "cerebras"
+
+    def test_llm_creates_openai_compatible_for_together(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Together AI."""
+        with patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"}):
+            llm = LLM(model="together/meta-llama/Llama-3-8b")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "together"
+            assert llm.model == "meta-llama/Llama-3-8b"
+            assert llm.base_url == "https://api.together.ai/v1"
+
+    def test_llm_explicit_together_provider_with_overrides(self):
+        """Explicit provider + api_key/base_url take precedence over env."""
+        with patch.dict(
+            os.environ,
+            {
+                "TOGETHER_API_KEY": "env-key",
+                "TOGETHER_BASE_URL": "https://env.example.com/v1",
+            },
+        ):
+            llm = LLM(
+                model="llama3",
+                provider="together",
+                api_key="explicit-key",
+                base_url="https://explicit.example.com/v1",
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "together"
+            assert llm.api_key == "explicit-key"
+            assert llm.base_url == "https://explicit.example.com/v1"
+
+    def test_llm_together_uses_env_when_no_overrides(self):
+        """TOGETHER_API_KEY and TOGETHER_BASE_URL apply without explicit args."""
+        with patch.dict(
+            os.environ,
+            {
+                "TOGETHER_API_KEY": "env-key",
+                "TOGETHER_BASE_URL": "https://env.example.com/v1",
+            },
+        ):
+            llm = LLM(model="together/meta-llama/Llama-3-8b")
+            assert llm.api_key == "env-key"
+            assert llm.base_url == "https://env.example.com/v1"
 
     def test_llm_creates_openai_compatible_for_dashscope(self):
         """Test LLM factory creates OpenAICompatibleCompletion for Dashscope."""
