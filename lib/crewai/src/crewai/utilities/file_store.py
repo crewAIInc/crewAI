@@ -57,6 +57,16 @@ def _run_sync(coro: Coroutine[None, None, T]) -> T:
 
 DEFAULT_TTL = 3600
 
+# Ids that have had files stored in this process. Lookups and clears for any
+# other id short-circuit, so runs that never use files never pay for the
+# sync-over-async hop in ``_run_sync`` (a new thread + event loop per call).
+# Entries may outlive a TTL expiry; that only costs a real lookup.
+_stored_ids: set[UUID] = set()
+
+
+def _may_have_files(*ids: UUID | None) -> bool:
+    return any(i is not None and i in _stored_ids for i in ids)
+
 _CREW_PREFIX = "crew:"
 _TASK_PREFIX = "task:"
 
@@ -75,6 +85,7 @@ async def astore_files(
     """
     if _file_store is None:
         return
+    _stored_ids.add(execution_id)
     await _file_store.set(f"{_CREW_PREFIX}{execution_id}", files, ttl=ttl)
 
 
@@ -101,9 +112,10 @@ async def aclear_files(execution_id: UUID) -> None:
     Args:
         execution_id: Unique identifier for the crew execution.
     """
-    if _file_store is None:
+    if _file_store is None or not _may_have_files(execution_id):
         return
     await _file_store.delete(f"{_CREW_PREFIX}{execution_id}")
+    _stored_ids.discard(execution_id)
 
 
 async def astore_task_files(
@@ -120,6 +132,7 @@ async def astore_task_files(
     """
     if _file_store is None:
         return
+    _stored_ids.add(task_id)
     await _file_store.set(f"{_TASK_PREFIX}{task_id}", files, ttl=ttl)
 
 
@@ -146,9 +159,10 @@ async def aclear_task_files(task_id: UUID) -> None:
     Args:
         task_id: Unique identifier for the task.
     """
-    if _file_store is None:
+    if _file_store is None or not _may_have_files(task_id):
         return
     await _file_store.delete(f"{_TASK_PREFIX}{task_id}")
+    _stored_ids.discard(task_id)
 
 
 async def aget_all_files(
@@ -166,6 +180,8 @@ async def aget_all_files(
     Returns:
         Merged dictionary of files or None if none found.
     """
+    if not _may_have_files(crew_id, task_id):
+        return None
     crew_files = await aget_files(crew_id) or {}
     task_files = await aget_task_files(task_id) if task_id else {}
 
@@ -208,7 +224,8 @@ def clear_files(execution_id: UUID) -> None:
     Args:
         execution_id: Unique identifier for the crew execution.
     """
-    _run_sync(aclear_files(execution_id))
+    if _may_have_files(execution_id):
+        _run_sync(aclear_files(execution_id))
 
 
 def store_task_files(
@@ -244,7 +261,8 @@ def clear_task_files(task_id: UUID) -> None:
     Args:
         task_id: Unique identifier for the task.
     """
-    _run_sync(aclear_task_files(task_id))
+    if _may_have_files(task_id):
+        _run_sync(aclear_task_files(task_id))
 
 
 def get_all_files(
@@ -262,4 +280,6 @@ def get_all_files(
     Returns:
         Merged dictionary of files or None if none found.
     """
+    if not _may_have_files(crew_id, task_id):
+        return None
     return _run_sync(aget_all_files(crew_id, task_id))
