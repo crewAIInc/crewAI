@@ -21,7 +21,7 @@ class TextFileLoader(BaseLoader):
                     f"The following file does not exist: {source_content.source}"
                 )
 
-            with open(source_content.source, encoding="utf-8") as file:
+            with open(source_content.source, encoding="utf-8-sig") as file:
                 content = file.read()
 
         return LoaderResult(

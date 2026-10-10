@@ -126,6 +126,22 @@ class TestJSONLoader:
         finally:
             os.unlink(path)
 
+    def test_load_utf8_bom_file(self):
+        """JSONLoader must parse files that start with a UTF-8 BOM (\\ufeff)."""
+        bom = b"\xef\xbb\xbf"
+        json_bytes = json.dumps({"greeting": "hello", "count": 3}).encode("utf-8")
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            f.write(bom + json_bytes)
+            path = f.name
+        try:
+            result = self._load_from_path(path)
+            assert "parse_error" not in result.metadata
+            assert result.metadata["type"] == "dict"
+            assert "greeting" in result.content
+            assert "hello" in result.content
+        finally:
+            os.unlink(path)
+
 
     @patch("crewai_tools.security.safe_requests._raw_get")
     def test_url_response_valid_json(self, mock_get):
