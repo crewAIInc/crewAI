@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
+from types import EllipsisType
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import baggage
@@ -122,6 +123,7 @@ def prepare_task_execution(
     start_index: int | None,
     task_outputs: list[Any],
     last_sync_output: Any | None,
+    files: dict[str, Any] | None | EllipsisType = ...,
 ) -> tuple[TaskExecutionData, list[Any], Any | None]:
     """Prepare a task for execution, handling replay skip logic and agent/tool setup.
 
@@ -132,6 +134,8 @@ def prepare_task_execution(
         start_index: Index to start execution from (for replay).
         task_outputs: Current list of task outputs.
         last_sync_output: Last synchronous task output.
+        files: Files already fetched from the file store by an async caller,
+            or ``...`` to fetch them synchronously.
 
     Returns:
         A tuple of (TaskExecutionData or None if skipped, updated task_outputs, updated last_sync_output).
@@ -164,6 +168,7 @@ def prepare_task_execution(
         agent_to_use,
         task,
         tools_for_task,
+        files,
     )
 
     executor = agent_to_use.agent_executor

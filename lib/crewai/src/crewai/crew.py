@@ -8,6 +8,7 @@ from hashlib import md5
 import json
 from pathlib import Path
 import re
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -130,7 +131,12 @@ from crewai.utilities.env import get_env_context
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import FileHandler
-from crewai.utilities.file_store import clear_files, get_all_files
+from crewai.utilities.file_store import (
+    aclear_files,
+    aget_all_files,
+    clear_files,
+    get_all_files,
+)
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -1310,7 +1316,7 @@ class Crew(FlowTrackable, BaseModel):
             # Safety net for the exception path; the success path already
             # drained in _create_crew_output before emitting completion.
             self._drain_memory_writes()
-            clear_files(self.id)
+            await aclear_files(self.id)
             detach(token)
             end_execution(execution_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
@@ -1377,7 +1383,13 @@ class Crew(FlowTrackable, BaseModel):
 
         for task_index, task in enumerate(tasks):
             exec_data, task_outputs, last_sync_output = prepare_task_execution(
-                self, task, task_index, start_index, task_outputs, last_sync_output
+                self,
+                task,
+                task_index,
+                start_index,
+                task_outputs,
+                last_sync_output,
+                files=await aget_all_files(self.id, task.id),
             )
             if exec_data.should_skip:
                 continue
@@ -1656,7 +1668,11 @@ class Crew(FlowTrackable, BaseModel):
         )
 
     def _prepare_tools(
-        self, agent: BaseAgent, task: Task, tools: list[BaseTool]
+        self,
+        agent: BaseAgent,
+        task: Task,
+        tools: list[BaseTool],
+        files: dict[str, FileInput] | None | EllipsisType = ...,
     ) -> list[BaseTool]:
         if hasattr(agent, "allow_delegation") and getattr(
             agent, "allow_delegation", False
@@ -1695,7 +1711,8 @@ class Crew(FlowTrackable, BaseModel):
         if resolved_memory is not None:
             tools = self._add_memory_tools(tools, resolved_memory)
 
-        files = get_all_files(self.id, task.id)
+        if isinstance(files, EllipsisType):
+            files = get_all_files(self.id, task.id)
         if files:
             supported_types: list[str] = []
             if (
