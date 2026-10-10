@@ -13,7 +13,7 @@ Seu servidor MCP remoto é `https://api.datacircle.dev/mcp` (Streamable HTTP). C
 
 | Ferramenta | Descrição | Custo |
 | --- | --- | --- |
-| `get_linkedin_profile` | Busca o perfil do LinkedIn de uma pessoa pela URL: nome, headline, localização, empresa e cargo atuais, experiências, formação, habilidades | US$ 1,25 por 1.000 pela Up2Data (um perfil que ela não encontra é gratuito), US$ 3,70 por 1.000 pela HarvestAPI |
+| `get_linkedin_profile` | Busca o perfil do LinkedIn de uma pessoa pela URL: nome, headline, localização, empresa e cargo atuais, experiências, formação, habilidades | US$ 2,375 por 1.000 pela Up2Data (um perfil que ela não encontra é gratuito), US$ 3,70 por 1.000 pela HarvestAPI |
 | `get_balance` | Lê o saldo da conta em USD | gratuito |
 | `list_files` | Lista os arquivos de dados que a conta pode baixar e se cada um está desbloqueado | gratuito |
 | `get_download_link` | Obtém um link de download para um arquivo de `list_files`, pelo seu id | gratuito |
@@ -32,7 +32,7 @@ O `MCPServerHTTP` vem com o crewAI; não há mais nada a instalar.
 
 ## Autenticação
 
-Cadastre-se em [datacircle.dev](https://datacircle.dev) com seu e-mail de trabalho: um crédito de US$ 5, ou seja, 4.000 perfis do LinkedIn a US$ 1,25 por 1.000. Sua chave de API fica no seu painel assim que você entra.
+Cadastre-se em [datacircle.dev](https://datacircle.dev) com seu e-mail de trabalho: um crédito de US$ 5, ou seja, 2.105 perfis do LinkedIn a US$ 2,375 por 1.000. Sua chave de API fica no seu painel assim que você entra.
 
 ```shell
 export DATACIRCLE_API_KEY="your-api-key"
@@ -92,7 +92,7 @@ O filtro de ferramentas mantém o `add_funds` longe de uma crew sem supervisão.
 | `url` | Sim | `string` | A URL do perfil do LinkedIn, por exemplo `https://www.linkedin.com/in/satyanadella` |
 | `provider` | Não | `string` | `"up2data"` (o padrão) ou `"harvestapi"` |
 
-A Up2Data aceita US$ 1 por dia por conta (800 perfis), com um limite diário compartilhado entre todos os clientes, e depois responde 429 até 00:00 UTC; a HarvestAPI não tem limite diário. Uma chamada que o seu saldo não cobre responde 402. Adicione fundos, a partir de US$ 5, no seu painel.
+A Up2Data aceita US$ 1 por dia por conta (421 perfis), com um limite diário compartilhado entre todos os clientes, e depois responde 429 até 00:00 UTC; a HarvestAPI não tem limite diário. Uma chamada que o seu saldo não cobre responde 402. Adicione fundos, a partir de US$ 5, no seu painel.
 
 Uma chamada que falha volta como erro da ferramenta (`isError: true`), com o JSON de erro da API como texto.
 
