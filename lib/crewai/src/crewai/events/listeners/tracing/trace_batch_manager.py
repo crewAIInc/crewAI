@@ -80,13 +80,30 @@ class TraceBatchManager:
         self.trace_url: str | None = None
         self.ephemeral_trace_url: str | None = None
         self._telemetry: Telemetry = Telemetry()
-        try:
-            self.plus_api = PlusAPI(
-                api_key=get_auth_token(),
-            )
-        except AuthError:
-            self.plus_api = PlusAPI()
+        self._plus_api: PlusAPI | None = None
+        self._plus_api_lock = Lock()
         self.ephemeral_trace_url = None
+
+    @property
+    def plus_api(self) -> PlusAPI:
+        """Return the PlusAPI client, resolving the auth token on first use.
+
+        Resolving the token reads (and may create) the encrypted credentials
+        file, so it is deferred until tracing actually talks to the backend
+        rather than happening when crewai is imported.
+        """
+        if self._plus_api is None:
+            with self._plus_api_lock:
+                if self._plus_api is None:
+                    try:
+                        self._plus_api = PlusAPI(api_key=get_auth_token())
+                    except AuthError:
+                        self._plus_api = PlusAPI()
+        return self._plus_api
+
+    @plus_api.setter
+    def plus_api(self, value: PlusAPI) -> None:
+        self._plus_api = value
 
     def initialize_batch(
         self,
