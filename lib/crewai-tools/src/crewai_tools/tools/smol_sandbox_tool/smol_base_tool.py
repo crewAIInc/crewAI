@@ -3,6 +3,7 @@ from __future__ import annotations
 import atexit
 import logging
 from pathlib import Path
+import sys
 import threading
 from typing import Any, Literal
 
@@ -46,6 +47,7 @@ class SmolBaseTool(BaseTool):
     )
 
     _machine: Any = PrivateAttr(default=None)
+    _pending_cleanup: list[Any] = PrivateAttr(default_factory=list)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _cleanup_registered: bool = PrivateAttr(default=False)
 
@@ -87,7 +89,9 @@ class SmolBaseTool(BaseTool):
                 raise ValueError(f"Local offline image source does not exist: {image}")
         return sdk.Machine.create(
             sdk.MachineConfig(
-                image=self.image, network=self.network, persistent=self.persistent
+                image=self.image,
+                resources=sdk.ResourceSpec(network=self.network),
+                persistent=self.persistent,
             ),
             self._connection(sdk),
         )
@@ -123,17 +127,50 @@ class SmolBaseTool(BaseTool):
 
     @staticmethod
     def _release_machine(machine: Any, delete: bool) -> None:
-        if delete:
+        if not delete:
+            return
+        original_error = sys.exc_info()[1]
+        try:
             machine.delete()
+        except Exception:
+            if original_error is None:
+                raise
+            logger.warning(
+                "Could not delete Smol Machines VM %s after tool failure",
+                getattr(machine, "id", "unknown"),
+                exc_info=True,
+            )
 
     def close(self) -> None:
-        """Delete the VM created by persistent mode; attached VMs remain owned by their caller."""
+        """Delete owned VMs, retrying failed deletions on the next close."""
         if self.machine_id:
             return
+        original_error = sys.exc_info()[1]
         with self._lock:
             if self._machine is not None:
-                self._machine.delete()
+                self._pending_cleanup.append(self._machine)
                 self._machine = None
+            to_delete = self._pending_cleanup
+            self._pending_cleanup = []
+            first_error: Exception | None = None
+            for machine in to_delete:
+                try:
+                    machine.delete()
+                except Exception as exc:  # noqa: PERF203 - VM deletion dwarfs loop overhead
+                    self._pending_cleanup.append(machine)
+                    if first_error is None:
+                        first_error = exc
+            if first_error is not None:
+                if original_error is None:
+                    raise first_error
+                logger.warning(
+                    "Could not delete persistent Smol Machines VM; close() will retry",
+                    exc_info=(
+                        type(first_error),
+                        first_error,
+                        first_error.__traceback__,
+                    ),
+                )
 
     @property
     def active_machine_id(self) -> str | None:

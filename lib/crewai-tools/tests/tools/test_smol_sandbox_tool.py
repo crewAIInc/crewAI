@@ -28,6 +28,7 @@ def sdk(monkeypatch):
             connect=MagicMock(return_value=machine),
         ),
         MachineConfig=lambda **kw: SimpleNamespace(**kw),
+        ResourceSpec=lambda **kw: SimpleNamespace(**kw),
         ConnectOptions=lambda **kw: SimpleNamespace(**kw),
         ExecOptions=lambda **kw: SimpleNamespace(**kw),
     )
@@ -44,7 +45,7 @@ def test_local_shell_exec_does_not_select_cloud_from_environment(sdk, monkeypatc
     assert result["stdout"] == "hello\n"
     assert result["exit_code"] == 0
     assert client.Machine.create.call_args.args[1].target == "local"
-    assert client.Machine.create.call_args.args[0].network is True
+    assert client.Machine.create.call_args.args[0].resources.network is True
     assert machine.exec.call_args.args[0] == ["sh", "-lc", "echo hello"]
     assert machine.exec.call_args.args[1].workdir == "/workspace"
     machine.delete.assert_called_once_with()
@@ -59,7 +60,7 @@ def test_persistent_shell_and_attached_files_share_vm_without_double_delete(sdk,
         shell.run(command="echo first")
         shell.run(command="echo second")
         assert client.Machine.create.call_count == 1
-        assert client.Machine.create.call_args.args[0].network is False
+        assert client.Machine.create.call_args.args[0].resources.network is False
         assert client.Machine.create.call_args.args[0].persistent is True
         assert shell.active_machine_id == "mach-123"
         files = SmolFileTool(machine_id=shell.active_machine_id)
@@ -84,6 +85,65 @@ def test_ephemeral_machine_deleted_when_command_fails(sdk):
     with pytest.raises(RuntimeError, match="command failed"):
         SmolExecTool().run(command="false")
     machine.delete.assert_called_once_with()
+
+
+def test_cleanup_failure_preserves_the_command_error(sdk, caplog):
+    _, machine = sdk
+    machine.exec.side_effect = RuntimeError("command failed")
+    machine.delete.side_effect = RuntimeError("delete failed")
+    with pytest.raises(RuntimeError, match="command failed"):
+        SmolExecTool().run(command="false")
+    machine.delete.assert_called_once_with()
+    assert "mach-123" in caplog.text
+    assert "delete failed" in caplog.text
+
+
+def test_cleanup_failure_after_success_is_reported(sdk):
+    _, machine = sdk
+    machine.delete.side_effect = RuntimeError("delete failed")
+    with pytest.raises(RuntimeError, match="delete failed"):
+        SmolExecTool().run(command="echo hello")
+
+
+def test_failed_persistent_close_does_not_reuse_vm_and_can_retry(sdk):
+    client, machine = sdk
+    tool = SmolExecTool(persistent=True)
+    tool.run(command="echo hello")
+    machine.delete.side_effect = RuntimeError("delete failed")
+    with pytest.raises(RuntimeError, match="delete failed"):
+        tool.close()
+    assert tool.active_machine_id is None
+
+    replacement = MagicMock()
+    replacement.id = "replacement"
+    replacement.exec.return_value = machine.exec.return_value
+    client.Machine.create.return_value = replacement
+    tool.run(command="echo again")
+    assert tool.active_machine_id == "replacement"
+    assert client.Machine.create.call_count == 2
+
+    machine.delete.side_effect = None
+    tool.close()
+    assert machine.delete.call_count == 2
+    replacement.delete.assert_called_once_with()
+
+
+def test_close_does_not_mask_an_active_error_and_retries_cleanup(sdk, caplog):
+    _, machine = sdk
+    tool = SmolExecTool(persistent=True)
+    tool.run(command="echo hello")
+    machine.delete.side_effect = RuntimeError("delete failed")
+    with pytest.raises(ValueError, match="original failure"):
+        try:
+            raise ValueError("original failure")
+        finally:
+            tool.close()
+    assert tool.active_machine_id is None
+    assert "close() will retry" in caplog.text
+
+    machine.delete.side_effect = None
+    tool.close()
+    assert machine.delete.call_count == 2
 
 
 def test_cloud_attachment_starts_stopped_vm_and_preserves_ownership(sdk):
@@ -147,7 +207,7 @@ def test_offline_local_registry_image_rejected_before_provisioning(sdk):
 def test_offline_cloud_image_is_left_to_cloud_scheduler(sdk):
     client, _ = sdk
     SmolExecTool(target="cloud", network=False).run(command="echo allowed")
-    assert client.Machine.create.call_args.args[0].network is False
+    assert client.Machine.create.call_args.args[0].resources.network is False
 
 
 def test_missing_local_offline_image_rejected_before_provisioning(sdk):
