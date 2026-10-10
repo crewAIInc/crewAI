@@ -7,10 +7,16 @@ mode: "wide"
 
 # Instant Expert
 
-[Instant Expert](https://instant.expert) lets an agent get answers from specific people worth paying: executives, operators and domain experts. It finds people who match a description (or takes the ones you name), sends each a paid invitation for a short call or a written answer, and charges only if they book or answer. It's a remote MCP server, so CrewAI connects to it with `MCPServerHTTP` and needs no extra package.
+[Instant Expert](https://instant.expert) lets an agent get answers from specific people worth paying: executives, operators and domain experts. It finds people who match a description (or takes the ones you name), sends each a paid invitation for a short call or a written answer, and charges only if they book or answer. It's a remote MCP server, so CrewAI connects to it with its built-in MCP support, `MCPServerHTTP` in an agent's `mcps`, and there's no extra package to install.
+
+| Endpoint                          | What it reaches                                                 | Authorization                         |
+| --------------------------------- | --------------------------------------------------------------- | ------------------------------------- |
+| `https://instant.expert/mcp/test` | Test mode: fictional people, no email sent, a Stripe test card  | A free sandbox token, no account      |
+| `https://instant.expert/mcp`      | A real account: real people and real charges                    | An OAuth access token for the account |
 
 ## Requirements
 
+- CrewAI, which includes the `mcp` library that `MCPServerHTTP` uses
 - An LLM API key, for example `OPENAI_API_KEY`
 - No Instant Expert account for test mode
 
@@ -22,6 +28,8 @@ Test mode uses fictional people, records each email instead of sending it, and c
 curl -X POST https://instant.expert/api/sandbox
 export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
 ```
+
+Each network can create five tokens an hour, so reuse one token across runs.
 
 ## Usage
 
@@ -91,9 +99,19 @@ In test mode, each fictional person responds on their own after delivery: some b
 
 ## Going live
 
-Connect to `https://instant.expert/mcp` with an OAuth access token for a real account; there are no API keys. Placing orders from an agent also needs paid sending turned on for that connection and a saved card. See the [Instant Expert MCP docs](https://instant.expert/docs/mcp).
+Point the same `MCPServerHTTP` at `https://instant.expert/mcp` and send an OAuth access token for a real account instead of the sandbox token:
+
+```python
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_TOKEN']}"},
+)
+```
+
+There are no API keys. The server signs clients in with OAuth 2.1 (PKCE and dynamic client registration), and access tokens expire after a short time, so get a fresh one before a run. Placing orders from an agent also needs paid sending turned on for that connection and a saved card. See the [Instant Expert MCP docs](https://instant.expert/docs/mcp).
 
 ## Notes
 
+- CrewAI prefixes MCP tool names with the server: `instant_expert_mcp_test_send_requests` in test mode and `instant_expert_mcp_send_requests` on a real account. The hook matches the end of the name, so it works on both.
+- CrewAI doesn't pass the server's own instructions to the model, so the task above spells out the steps they describe: search, wait for the job, read the people, draft, preview, then send.
 - CrewAI retries a tool call that runs longer than 30 seconds. That's safe here: tools that start a job or place an order take an idempotency key, and a retry with the same arguments returns the original job or order.
-- [`crewai-instant-expert`](https://github.com/Instant-Expert/integrations/tree/main/python/crewai-instant-expert) adds the server's workflow instructions for the agent's backstory and a tool that waits for jobs without spending agent iterations.

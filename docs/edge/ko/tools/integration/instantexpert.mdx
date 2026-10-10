@@ -7,10 +7,16 @@ mode: "wide"
 
 # Instant Expert
 
-[Instant Expert](https://instant.expert)를 사용하면 에이전트가 비용을 지불할 가치가 있는 특정 인물, 즉 임원, 실무 책임자, 도메인 전문가에게서 답을 얻을 수 있습니다. 설명에 맞는 사람을 찾거나 지정한 사람을 그대로 사용하고, 각 사람에게 짧은 통화나 서면 답변을 요청하는 유료 초대를 보내며, 상대가 예약하거나 답변한 경우에만 요금이 청구됩니다. 원격 MCP 서버이므로 CrewAI는 `MCPServerHTTP`로 연결하며 별도의 패키지가 필요하지 않습니다.
+[Instant Expert](https://instant.expert)를 사용하면 에이전트가 비용을 지불할 가치가 있는 특정 인물, 즉 임원, 실무 책임자, 도메인 전문가에게서 답을 얻을 수 있습니다. 설명에 맞는 사람을 찾거나 지정한 사람을 그대로 사용하고, 각 사람에게 짧은 통화나 서면 답변을 요청하는 유료 초대를 보내며, 상대가 예약하거나 답변한 경우에만 요금이 청구됩니다. 원격 MCP 서버이므로 CrewAI는 내장 MCP 지원, 즉 에이전트의 `mcps`에 넣는 `MCPServerHTTP`로 연결하며 별도의 패키지를 설치할 필요가 없습니다.
+
+| 엔드포인트                        | 연결 대상                                                      | 인증                          |
+| --------------------------------- | -------------------------------------------------------------- | ----------------------------- |
+| `https://instant.expert/mcp/test` | 테스트 모드: 가상의 인물, 이메일 발송 없음, Stripe 테스트 카드 | 무료 샌드박스 토큰, 계정 불필요 |
+| `https://instant.expert/mcp`      | 실제 계정: 실제 인물과 실제 결제                               | 해당 계정의 OAuth 액세스 토큰 |
 
 ## 요구 사항
 
+- CrewAI (`MCPServerHTTP`가 사용하는 `mcp` 라이브러리가 포함되어 있습니다)
 - LLM API 키 (예: `OPENAI_API_KEY`)
 - 테스트 모드에는 Instant Expert 계정이 필요하지 않습니다
 
@@ -22,6 +28,8 @@ mode: "wide"
 curl -X POST https://instant.expert/api/sandbox
 export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
 ```
+
+네트워크마다 한 시간에 토큰을 5개까지 만들 수 있으므로, 여러 번 실행할 때는 토큰 하나를 재사용하세요.
 
 ## 사용법
 
@@ -91,9 +99,19 @@ print(Crew(agents=[coordinator], tasks=[outreach]).kickoff().raw)
 
 ## 실제 계정으로 전환
 
-실제 계정에서는 OAuth 액세스 토큰으로 `https://instant.expert/mcp`에 연결합니다. API 키는 없습니다. 에이전트가 주문을 실행하려면 해당 연결에서 유료 발송을 켜고 카드를 저장해 두어야 합니다. 자세한 내용은 [Instant Expert MCP 문서](https://instant.expert/docs/mcp)를 참고하세요.
+같은 `MCPServerHTTP`를 `https://instant.expert/mcp`로 지정하고, 샌드박스 토큰 대신 실제 계정의 OAuth 액세스 토큰을 보냅니다:
+
+```python
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_TOKEN']}"},
+)
+```
+
+API 키는 없습니다. 서버는 OAuth 2.1(PKCE와 동적 클라이언트 등록)로 클라이언트를 로그인시키며, 액세스 토큰은 짧은 시간 뒤에 만료되므로 실행하기 전에 새 토큰을 받으세요. 에이전트가 주문을 실행하려면 해당 연결에서 유료 발송을 켜고 카드를 저장해 두어야 합니다. 자세한 내용은 [Instant Expert MCP 문서](https://instant.expert/docs/mcp)를 참고하세요.
 
 ## 참고
 
+- CrewAI는 MCP 도구 이름 앞에 서버 이름을 붙입니다. 테스트 모드에서는 `instant_expert_mcp_test_send_requests`, 실제 계정에서는 `instant_expert_mcp_send_requests`가 됩니다. 훅은 이름의 끝부분을 비교하므로 두 경우 모두 동작합니다.
+- CrewAI는 서버 자체의 지침을 모델에 전달하지 않으므로, 위 작업 설명에 그 지침이 안내하는 단계(검색, 작업 대기, 인물 확인, 초안 작성, 미리 보기, 발송)를 직접 적어 두었습니다.
 - CrewAI는 30초 넘게 실행되는 도구 호출을 재시도합니다. 작업을 시작하거나 주문을 실행하는 도구는 멱등성 키를 받으며, 같은 인수로 재시도하면 원래의 작업이나 주문이 반환되므로 안전합니다.
-- [`crewai-instant-expert`](https://github.com/Instant-Expert/integrations/tree/main/python/crewai-instant-expert)는 에이전트 backstory에 넣을 서버의 워크플로 지침과, 에이전트 반복 횟수를 쓰지 않고 작업 완료를 기다리는 도구를 제공합니다.

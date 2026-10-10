@@ -7,10 +7,16 @@ mode: "wide"
 
 # Instant Expert
 
-O [Instant Expert](https://instant.expert) permite que um agente obtenha respostas de pessoas específicas que valem o investimento: executivos, líderes de operações e especialistas. Ele encontra pessoas que correspondem a uma descrição (ou usa as que você indicar), envia a cada uma um convite pago para uma chamada curta ou uma resposta por escrito e cobra apenas se a pessoa agendar ou responder. É um servidor MCP remoto, então a CrewAI se conecta a ele com `MCPServerHTTP`, sem nenhum pacote extra.
+O [Instant Expert](https://instant.expert) permite que um agente obtenha respostas de pessoas específicas que valem o investimento: executivos, líderes de operações e especialistas. Ele encontra pessoas que correspondem a uma descrição (ou usa as que você indicar), envia a cada uma um convite pago para uma chamada curta ou uma resposta por escrito e cobra apenas se a pessoa agendar ou responder. É um servidor MCP remoto, então a CrewAI se conecta a ele com o suporte a MCP já embutido, `MCPServerHTTP` no `mcps` de um agente, sem nenhum pacote extra para instalar.
+
+| Endpoint                          | O que alcança                                                      | Autorização                         |
+| --------------------------------- | ------------------------------------------------------------------ | ----------------------------------- |
+| `https://instant.expert/mcp/test` | Modo de teste: pessoas fictícias, nenhum e-mail enviado, cartão de teste do Stripe | Um token de sandbox gratuito, sem conta |
+| `https://instant.expert/mcp`      | Uma conta real: pessoas reais e cobranças reais                    | Um token de acesso OAuth da conta   |
 
 ## Requisitos
 
+- A CrewAI, que inclui a biblioteca `mcp` usada pelo `MCPServerHTTP`
 - Uma chave de API de LLM, por exemplo `OPENAI_API_KEY`
 - Nenhuma conta do Instant Expert para o modo de teste
 
@@ -22,6 +28,8 @@ O modo de teste usa pessoas fictícias, registra cada e-mail em vez de enviá-lo
 curl -X POST https://instant.expert/api/sandbox
 export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
 ```
+
+Cada rede pode criar cinco tokens por hora, então reutilize um token entre execuções.
 
 ## Uso
 
@@ -91,9 +99,19 @@ No modo de teste, cada pessoa fictícia responde por conta própria depois da en
 
 ## Usar uma conta real
 
-Conecte-se a `https://instant.expert/mcp` com um token de acesso OAuth de uma conta real; não há chaves de API. Para que um agente efetive pedidos, a conexão também precisa ter o envio pago ativado e um cartão salvo. Veja a [documentação MCP do Instant Expert](https://instant.expert/docs/mcp).
+Aponte o mesmo `MCPServerHTTP` para `https://instant.expert/mcp` e envie um token de acesso OAuth de uma conta real em vez do token de sandbox:
+
+```python
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_TOKEN']}"},
+)
+```
+
+Não há chaves de API. O servidor autentica clientes com OAuth 2.1 (PKCE e registro dinâmico de clientes), e os tokens de acesso expiram depois de pouco tempo, então obtenha um novo antes de cada execução. Para que um agente efetive pedidos, a conexão também precisa ter o envio pago ativado e um cartão salvo. Veja a [documentação MCP do Instant Expert](https://instant.expert/docs/mcp).
 
 ## Observações
 
+- A CrewAI adiciona o nome do servidor como prefixo aos nomes das ferramentas MCP: `instant_expert_mcp_test_send_requests` no modo de teste e `instant_expert_mcp_send_requests` em uma conta real. O hook compara o fim do nome, então funciona nos dois casos.
+- A CrewAI não repassa as instruções do próprio servidor ao modelo, por isso a tarefa acima descreve os passos que elas indicam: buscar, esperar a tarefa, ler as pessoas, criar o rascunho, ver a prévia e enviar.
 - A CrewAI tenta novamente uma chamada de ferramenta que leva mais de 30 segundos. Isso é seguro aqui: as ferramentas que iniciam uma tarefa ou efetivam um pedido recebem uma chave de idempotência, e uma nova tentativa com os mesmos argumentos retorna a tarefa ou o pedido original.
-- O [`crewai-instant-expert`](https://github.com/Instant-Expert/integrations/tree/main/python/crewai-instant-expert) adiciona as instruções de fluxo de trabalho do servidor para o backstory do agente e uma ferramenta que espera as tarefas terminarem sem gastar iterações do agente.
