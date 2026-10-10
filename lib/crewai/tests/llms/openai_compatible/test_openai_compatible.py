@@ -103,6 +103,14 @@ class TestProviderRegistry:
         assert config.base_url_env == "DEEPINFRA_BASE_URL"
         assert config.api_key_required is True
 
+    def test_fireworks_ai_config(self):
+        """Test Fireworks AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["fireworks_ai"]
+        assert config.base_url == "https://api.fireworks.ai/inference/v1"
+        assert config.api_key_env == "FIREWORKS_API_KEY"
+        assert config.base_url_env == "FIREWORKS_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -339,6 +347,49 @@ class TestLLMIntegration:
             # prefix is itself two segments and must reach the API intact.
             assert llm.model == "deepseek-ai/DeepSeek-V4-Flash-0731"
             assert llm.base_url == "https://api.deepinfra.com/v1/openai"
+
+    def test_llm_creates_openai_compatible_for_fireworks_ai(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Fireworks AI."""
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "test-key"}):
+            os.environ.pop("FIREWORKS_BASE_URL", None)
+            llm = LLM(model="fireworks_ai/accounts/fireworks/models/llama-v3-8b")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "fireworks_ai"
+            assert llm.model == "accounts/fireworks/models/llama-v3-8b"
+            assert llm.base_url == "https://api.fireworks.ai/inference/v1"
+
+    def test_llm_explicit_fireworks_ai_provider_with_overrides(self):
+        """Explicit provider + api_key/base_url take precedence over env."""
+        with patch.dict(
+            os.environ,
+            {
+                "FIREWORKS_API_KEY": "env-key",
+                "FIREWORKS_BASE_URL": "https://env.example.com/v1",
+            },
+        ):
+            llm = LLM(
+                model="llama3",
+                provider="fireworks_ai",
+                api_key="explicit-key",
+                base_url="https://explicit.example.com/v1",
+            )
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "fireworks_ai"
+            assert llm.api_key == "explicit-key"
+            assert llm.base_url == "https://explicit.example.com/v1"
+
+    def test_llm_fireworks_ai_uses_env_when_no_overrides(self):
+        """FIREWORKS_API_KEY and FIREWORKS_BASE_URL apply without explicit args."""
+        with patch.dict(
+            os.environ,
+            {
+                "FIREWORKS_API_KEY": "env-key",
+                "FIREWORKS_BASE_URL": "https://env.example.com/v1",
+            },
+        ):
+            llm = LLM(model="fireworks_ai/accounts/fireworks/models/llama-v3-8b")
+            assert llm.api_key == "env-key"
+            assert llm.base_url == "https://env.example.com/v1"
 
     def test_deepinfra_base_url_env_override(self):
         """DEEPINFRA_BASE_URL redirects DeepInfra to a proxy or private endpoint."""
