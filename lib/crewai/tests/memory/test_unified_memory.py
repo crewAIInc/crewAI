@@ -1212,3 +1212,340 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+# ---------------------------------------------------------------------------
+# recall_many tests (#7530)
+# ---------------------------------------------------------------------------
+
+
+def test_memory_recall_many_single_call_batch_embedding(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """recall_many must embed all queries in a single embedder API call."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember(
+        "Python is a dynamic programming language.",
+        scope="/tech",
+        categories=["lang"],
+        importance=0.8,
+    )
+    mem.remember(
+        "Rust emphasizes safety and speed.",
+        scope="/tech",
+        categories=["lang"],
+        importance=0.8,
+    )
+
+    mock_embedder.reset_mock()
+    matches = mem.recall_many(
+        ["Python language", "Rust safety"],
+        scope="/tech",
+        depth="shallow",
+        limit=5,
+    )
+    # The embedder should be invoked exactly once with both queries
+    assert mock_embedder.call_count == 1
+    called_queries = mock_embedder.call_args[0][0]
+    assert called_queries == ["Python language", "Rust safety"]
+    assert len(matches) >= 2
+
+
+def test_memory_recall_many_cross_query_deduplication_max_score(tmp_path: Path) -> None:
+    """recall_many deduplicates records by ID and retains the highest semantic score."""
+    from crewai.memory.unified_memory import Memory
+
+    record_a = MemoryRecord(id="rec-1", content="Memory A", scope="/s", importance=0.5)
+    record_b = MemoryRecord(id="rec-2", content="Memory B", scope="/s", importance=0.5)
+
+    mock_storage = MagicMock()
+    # Query 1 returns rec-1 with score 0.6 and rec-2 with score 0.4
+    # Query 2 returns rec-1 with score 0.9 and rec-2 with score 0.3
+    mock_storage.search.side_effect = [
+        [(record_a, 0.6), (record_b, 0.4)],
+        [(record_a, 0.9), (record_b, 0.3)],
+    ]
+
+    mock_embedder = MagicMock()
+    mock_embedder.return_value = [[0.1] * 10, [0.2] * 10]
+
+    mem = Memory(storage=mock_storage, llm=MagicMock(), embedder=mock_embedder)
+    matches = mem.recall_many(["query 1", "query 2"], depth="shallow", limit=10)
+
+    # Exactly 2 unique records
+    assert len(matches) == 2
+    matched_ids = [m.record.id for m in matches]
+    assert matched_ids == ["rec-1", "rec-2"]
+
+    # rec-1 should have been scored using semantic_score=0.9 (higher of 0.6 and 0.9)
+    composite_a, _ = compute_composite_score(record_a, 0.9, mem._config)
+    assert abs(matches[0].score - composite_a) < 1e-5
+
+
+def test_memory_recall_many_empty_and_whitespace_queries(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Empty list or whitespace-only queries return [] without calling embedder."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mock_embedder.reset_mock()
+
+    assert mem.recall_many([]) == []
+    assert mem.recall_many(["", "   ", "\t\n"]) == []
+    mock_embedder.assert_not_called()
+
+
+def test_memory_recall_many_with_scope_and_categories(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """recall_many respects scope prefixes and category filters."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember(
+        "Frontend react components",
+        scope="/frontend",
+        categories=["ui"],
+        importance=0.8,
+    )
+    mem.remember(
+        "Backend database queries",
+        scope="/backend",
+        categories=["db"],
+        importance=0.8,
+    )
+
+    # Search only frontend scope
+    matches_fe = mem.recall_many(
+        ["react", "components"], scope="/frontend", depth="shallow"
+    )
+    assert len(matches_fe) >= 1
+    assert all(m.record.scope.startswith("/frontend") for m in matches_fe)
+
+    # Search only ui category
+    matches_cat = mem.recall_many(
+        ["database", "react"], categories=["ui"], depth="shallow"
+    )
+    assert len(matches_cat) >= 1
+    assert all("ui" in m.record.categories for m in matches_cat)
+
+
+def test_memory_recall_many_read_only_and_touch(tmp_path: Path) -> None:
+    """recall_many touches records only when memory is not read-only."""
+    from crewai.memory.unified_memory import Memory
+
+    record = MemoryRecord(
+        id="rec-touch", content="Touch test", scope="/s", importance=0.5
+    )
+    mock_storage = MagicMock()
+    mock_storage.search.return_value = [(record, 0.8)]
+    mock_storage.touch_records = MagicMock()
+
+    mock_embedder = MagicMock()
+    mock_embedder.return_value = [[0.1] * 10]
+
+    # Writable memory -> should touch records
+    mem_rw = Memory(
+        storage=mock_storage, llm=MagicMock(), embedder=mock_embedder, read_only=False
+    )
+    mem_rw.recall_many(["test query"], depth="shallow")
+    mock_storage.touch_records.assert_called_once_with(["rec-touch"])
+
+    # Read-only memory -> should not touch records
+    mock_storage.touch_records.reset_mock()
+    mem_ro = Memory(
+        storage=mock_storage, llm=MagicMock(), embedder=mock_embedder, read_only=True
+    )
+    mem_ro.recall_many(["test query"], depth="shallow")
+    mock_storage.touch_records.assert_not_called()
+
+
+def test_memory_scope_and_slice_recall_many(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """MemoryScope.recall_many and MemorySlice.recall_many delegate properly."""
+    from crewai.memory.memory_scope import MemoryScope, MemorySlice
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember(
+        "Scoped project fact",
+        scope="/projects/alpha",
+        categories=["p"],
+        importance=0.8,
+    )
+    mem.remember(
+        "Another project fact",
+        scope="/projects/beta",
+        categories=["p"],
+        importance=0.8,
+    )
+
+    scope = MemoryScope(memory=mem, root_path="/projects/alpha")
+    scope_matches = scope.recall_many(["project", "fact"], depth="shallow")
+    assert len(scope_matches) >= 1
+    assert all(m.record.scope.startswith("/projects/alpha") for m in scope_matches)
+
+    slice_view = MemorySlice(
+        memory=mem, scopes=["/projects/alpha", "/projects/beta"], read_only=True
+    )
+    slice_matches = slice_view.recall_many(["project", "fact"], depth="shallow")
+    assert len(slice_matches) >= 2
+
+
+def test_recall_memory_tool_batch_execution(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """RecallMemoryTool calls memory.recall_many in a single call."""
+    from crewai.memory.unified_memory import Memory
+    from crewai.tools.memory_tools import RecallMemoryTool
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember("First memory note", scope="/test", categories=["c"], importance=0.8)
+    mem.remember("Second memory note", scope="/test", categories=["c"], importance=0.8)
+
+    mock_embedder.reset_mock()
+    tool = RecallMemoryTool(memory=mem)
+    result = tool._run(queries=["First note", "Second note"])
+
+    # Embedder called once via recall_many
+    assert mock_embedder.call_count == 1
+    assert "Found memories:" in result
+    assert "First memory note" in result or "Second memory note" in result
+
+
+def test_flow_recall_many_delegation() -> None:
+    """Flow.recall delegates lists to recall_many and strings to recall."""
+    from crewai.flow.flow import Flow
+
+    mock_mem = MagicMock()
+    f = Flow()
+    f.memory = mock_mem
+
+    # String query -> recall
+    f.recall("single query", limit=5)
+    mock_mem.recall.assert_called_once_with("single query", limit=5)
+
+    # List query -> recall_many
+    f.recall(["q1", "q2"], limit=10)
+    mock_mem.recall_many.assert_called_once_with(["q1", "q2"], limit=10)
+
+
+def test_memory_recall_many_deep_mode(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """recall_many with depth='deep' runs concurrent RecallFlow and aggregates results."""
+    from unittest.mock import patch
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    rec1 = MemoryRecord(id="deep-1", content="Deep 1", scope="/s", importance=0.5)
+    rec2 = MemoryRecord(id="deep-2", content="Deep 2", scope="/s", importance=0.5)
+
+    match1 = MemoryMatch(record=rec1, score=0.85, match_reasons=["semantic"])
+    match2 = MemoryMatch(record=rec2, score=0.92, match_reasons=["semantic"])
+
+    with patch("crewai.memory.recall_flow.RecallFlow") as mock_flow_cls:
+        flow_inst_1 = MagicMock()
+        flow_inst_1.state.final_results = [match1]
+        flow_inst_2 = MagicMock()
+        flow_inst_2.state.final_results = [match2]
+        mock_flow_cls.side_effect = [flow_inst_1, flow_inst_2]
+
+        matches = mem.recall_many(["query one", "query two"], depth="deep", limit=5)
+        assert len(matches) == 2
+        # Ordered by score descending
+        assert matches[0].record.id == "deep-2"
+        assert matches[1].record.id == "deep-1"
+
+
+@pytest.mark.asyncio
+async def test_memory_arecall_many(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """arecall_many asynchronously delegates to recall_many."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember("Async note", scope="/test", categories=["c"], importance=0.8)
+
+    matches = await mem.arecall_many(["Async note"], depth="shallow")
+    assert len(matches) >= 1
+    assert "Async note" in matches[0].record.content
+
+
+def test_flow_recall_fallback_deduplication_and_limit() -> None:
+    """Flow.recall fallback for legacy memory backends deduplicates, retains max score, sorts, and limits."""
+    from crewai.flow.flow import Flow
+
+    rec_a = MemoryRecord(id="rec-a", content="A", scope="/s")
+    rec_b = MemoryRecord(id="rec-b", content="B", scope="/s")
+    rec_c = MemoryRecord(id="rec-c", content="C", scope="/s")
+
+    # Legacy memory mock without recall_many
+    class LegacyMemory:
+        def recall(self, query: str, **kwargs: Any) -> list[MemoryMatch]:
+            if query == "q1":
+                return [
+                    MemoryMatch(record=rec_a, score=0.6, match_reasons=["semantic"]),
+                    MemoryMatch(record=rec_b, score=0.9, match_reasons=["semantic"]),
+                ]
+            else:
+                return [
+                    MemoryMatch(record=rec_a, score=0.8, match_reasons=["semantic"]),
+                    MemoryMatch(record=rec_c, score=0.7, match_reasons=["semantic"]),
+                ]
+
+    f = Flow()
+    f.memory = LegacyMemory()
+
+    results = f.recall(["q1", "q2"], limit=2)
+    # Total unique records: rec-b (0.9), rec-a (0.8), rec-c (0.7).
+    # With limit=2, should return rec-b and rec-a in descending order
+    assert len(results) == 2
+    assert results[0].record.id == "rec-b"
+    assert results[0].score == 0.9
+    assert results[1].record.id == "rec-a"
+    assert results[1].score == 0.8
+
+
+def test_memory_slice_recall_and_recall_many_with_subscope(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """MemorySlice applies the provided scope parameter to each slice root."""
+    from crewai.memory.memory_scope import MemorySlice
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=MagicMock(), embedder=mock_embedder)
+    mem.remember(
+        "Alpha child fact",
+        scope="/projects/alpha/child",
+        categories=["p"],
+        importance=0.8,
+    )
+    mem.remember(
+        "Alpha root fact", scope="/projects/alpha", categories=["p"], importance=0.8
+    )
+    mem.remember(
+        "Beta child fact",
+        scope="/projects/beta/child",
+        categories=["p"],
+        importance=0.8,
+    )
+
+    slice_view = MemorySlice(
+        memory=mem, scopes=["/projects/alpha", "/projects/beta"], read_only=True
+    )
+
+    # Scoped recall with scope="/child" should only match /child subscopes
+    matches = slice_view.recall("fact", scope="/child", depth="shallow")
+    assert len(matches) >= 2
+    assert all(m.record.scope.endswith("/child") for m in matches)
+
+    # Scoped recall_many with scope="/child"
+    matches_many = slice_view.recall_many(
+        ["child", "fact"], scope="/child", depth="shallow"
+    )
+    assert len(matches_many) >= 2
+    assert all(m.record.scope.endswith("/child") for m in matches_many)
+
+
