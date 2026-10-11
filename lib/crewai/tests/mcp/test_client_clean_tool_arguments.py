@@ -8,9 +8,14 @@ def _client() -> MCPClient:
 
 def test_explicit_empty_containers_reach_the_server():
     cleaned = _client()._clean_tool_arguments(
-        {"query": "cats", "tags": [], "filters": {}}
+        {"query": "cats", "tags": [], "filters": {}, "sources": []}
     )
-    assert cleaned == {"query": "cats", "tags": [], "filters": {}}
+    assert cleaned == {
+        "query": "cats",
+        "tags": [],
+        "filters": {},
+        "sources": [],
+    }
 
 
 def test_list_items_that_clean_to_empty_keep_their_position():

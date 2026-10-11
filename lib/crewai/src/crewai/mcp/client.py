@@ -564,9 +564,12 @@ class MCPClient:
     def _clean_tool_arguments(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Clean tool arguments by removing None values and fixing formats.
 
-        Only ``None`` values are removed. Explicit empty containers (``[]``,
-        ``{}``) and list items are kept as sent, because the model chose them
-        and a server may require the field or rely on list positions.
+        Only ``None`` values are removed, including ``None`` items inside
+        lists. Explicit empty containers (``[]``, ``{}``) are kept as sent,
+        because the model chose them and a server may require the field or
+        rely on list positions. The ``sources`` list is still normalized
+        from strings to ``{"type": ...}`` dicts, but an empty ``sources``
+        list is preserved like any other empty list.
 
         Args:
             arguments: Raw tool arguments.
@@ -590,8 +593,7 @@ class MCPClient:
                         fixed_sources.append(item)
                     else:
                         fixed_sources.append(item)
-                if fixed_sources:
-                    cleaned[key] = fixed_sources
+                cleaned[key] = fixed_sources
                 continue
 
             if isinstance(value, dict):
