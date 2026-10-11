@@ -109,6 +109,24 @@ def test_serper_tool_news_search(mock_post):
 
 
 @patch("requests.post")
+def test_save_file_keeps_non_ascii_readable(mock_post, tmp_path, monkeypatch):
+    """Saved search results keep non-ASCII characters readable, not escaped to \\uXXXX."""
+    mock_post.return_value.json.return_value = {
+        "searchParameters": {"q": "tokyo", "type": "search"},
+        "organic": [{"title": "東京タワー ☕", "link": "http://example.com"}],
+    }
+    mock_post.return_value.status_code = 200
+    monkeypatch.chdir(tmp_path)
+
+    tool = SerperDevTool(n_results=1, save_file=True)
+    tool.run(search_query="tokyo")
+
+    saved = next(tmp_path.glob("search_results_*.txt")).read_text(encoding="utf-8")
+    assert "東京タワー" in saved
+    assert "\\u6771" not in saved
+
+
+@patch("requests.post")
 def test_serper_tool_with_location_params(mock_post):
     tool = SerperDevTool(n_results=2, country="US", location="New York", locale="en")
 

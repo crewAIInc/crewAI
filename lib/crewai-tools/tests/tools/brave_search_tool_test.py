@@ -468,6 +468,20 @@ def test_save_file_called_when_enabled(mock_save, mock_get):
     mock_save.assert_called_once()
 
 
+@patch("crewai_tools.tools.brave_search_tool.base.requests.get")
+def test_save_file_keeps_non_ascii_readable(mock_get, tmp_path, monkeypatch):
+    """Saved results keep non-ASCII characters readable, not escaped to \\uXXXX."""
+    mock_get.return_value = _mock_response(json_data={"title": "東京タワー ☕"})
+    monkeypatch.chdir(tmp_path)
+
+    tool = BraveWebSearchTool(save_file=True, raw=True)
+    tool._run(query="tokyo")
+
+    saved = next(tmp_path.glob("search_results_*.txt")).read_text(encoding="utf-8")
+    assert "東京タワー" in saved
+    assert "\\u6771" not in saved
+
+
 # Error Handling
 
 
