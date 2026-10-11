@@ -17,6 +17,7 @@ import asyncio
 from collections.abc import Coroutine, Generator
 from contextlib import contextmanager
 import socket
+import sys
 import threading
 from typing import TypeVar
 
@@ -96,7 +97,26 @@ def run_in_new_loop(coro: Coroutine[None, None, T]) -> T:
                 loop.run_until_complete(
                     asyncio.gather(*pending, return_exceptions=True)
                 )
+                for task in pending:
+                    if task.cancelled():
+                        continue
+                    exc = task.exception()
+                    if exc is not None:
+                        loop.call_exception_handler(
+                            {
+                                "message": (
+                                    "unhandled exception during event loop shutdown"
+                                ),
+                                "exception": exc,
+                                "task": task,
+                            }
+                        )
             loop.run_until_complete(loop.shutdown_asyncgens())
-            loop.run_until_complete(loop.shutdown_default_executor())
+            if sys.version_info >= (3, 12):
+                # asyncio.run bounds the default-executor wait on these
+                # versions; keep the same guarantee here.
+                loop.run_until_complete(loop.shutdown_default_executor(timeout=5 * 60))
+            else:
+                loop.run_until_complete(loop.shutdown_default_executor())
         finally:
             loop.close()

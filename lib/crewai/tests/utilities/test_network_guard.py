@@ -123,3 +123,31 @@ def test_run_in_new_loop_finalizes_async_generators(network_guard, monkeypatch):
     run_in_new_loop(coro())
     assert finalized == [True]
     monkeypatch.undo()
+
+
+def test_run_in_new_loop_reports_exceptions_from_cancelled_tasks(network_guard, monkeypatch):
+    # A pending task that raises (not CancelledError) while handling its
+    # cancellation must be reported to the loop's exception handler, mirroring
+    # asyncio.run's shutdown behavior.
+    reported = []
+
+    async def stubborn():
+        try:
+            await asyncio.sleep(30)
+        finally:
+            raise ValueError("cleanup boom")
+
+    async def coro():
+        loop = asyncio.get_running_loop()
+        loop.set_exception_handler(lambda loop, ctx: reported.append(ctx))
+        asyncio.create_task(stubborn())
+        await asyncio.sleep(0.01)
+        return "done"
+
+    assert run_in_new_loop(coro()) == "done"
+    assert any(
+        isinstance(ctx.get("exception"), ValueError)
+        and "cleanup boom" in str(ctx["exception"])
+        for ctx in reported
+    )
+    monkeypatch.undo()
