@@ -1,5 +1,6 @@
 """Qdrant client implementation."""
 
+import logging
 from typing import Any, cast
 
 from qdrant_client.models import VectorParams
@@ -31,7 +32,13 @@ from crewai.rag.qdrant.utils import (
 from crewai.rag.types import SearchResult
 
 
+_logger = logging.getLogger(__name__)
+
 _DIMENSION_PROBE_TEXT = "dimension probe"
+_PROBE_FAILED_MESSAGE = (
+    "Could not infer the Qdrant vector size from the embedding function; "
+    "creating the collection with the default vector params"
+)
 
 
 def _with_vectors_config(
@@ -85,15 +92,20 @@ class QdrantClient(BaseClient):
         """Size a new collection to the embedding function's output dimension.
 
         An explicit ``vectors_config`` is kept. An async embedding function cannot
-        be awaited here, so the default vector params apply in that case.
+        be awaited here, and a failing probe is logged; the default vector params
+        apply in both cases.
         """
         if "vectors_config" in kwargs or _is_async_embedding_function(
             self.embedding_function
         ):
             return kwargs
         sync_fn = cast(EmbeddingFunction, self.embedding_function)
-        params = _infer_vector_params(sync_fn(_DIMENSION_PROBE_TEXT))
-        return _with_vectors_config(kwargs, params)
+        try:
+            embedding = sync_fn(_DIMENSION_PROBE_TEXT)
+        except Exception:
+            _logger.warning(_PROBE_FAILED_MESSAGE, exc_info=True)
+            return kwargs
+        return _with_vectors_config(kwargs, _infer_vector_params(embedding))
 
     async def _ainfer_vectors_config(
         self, kwargs: QdrantCollectionCreateParams
@@ -101,11 +113,15 @@ class QdrantClient(BaseClient):
         """Async variant of ``_infer_vectors_config``."""
         if "vectors_config" in kwargs:
             return kwargs
-        if _is_async_embedding_function(self.embedding_function):
-            embedding = await self.embedding_function(_DIMENSION_PROBE_TEXT)
-        else:
-            sync_fn = cast(EmbeddingFunction, self.embedding_function)
-            embedding = sync_fn(_DIMENSION_PROBE_TEXT)
+        try:
+            if _is_async_embedding_function(self.embedding_function):
+                embedding = await self.embedding_function(_DIMENSION_PROBE_TEXT)
+            else:
+                sync_fn = cast(EmbeddingFunction, self.embedding_function)
+                embedding = sync_fn(_DIMENSION_PROBE_TEXT)
+        except Exception:
+            _logger.warning(_PROBE_FAILED_MESSAGE, exc_info=True)
+            return kwargs
         return _with_vectors_config(kwargs, _infer_vector_params(embedding))
 
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:

@@ -1,9 +1,11 @@
 """Utility functions for Qdrant operations."""
 
 import asyncio
+from numbers import Real
 from typing import TypeGuard
 from uuid import uuid4
 
+import numpy as np
 from qdrant_client import (
     AsyncQdrantClient,
     QdrantClient as SyncQdrantClient,
@@ -94,15 +96,17 @@ def _infer_vector_params(embedding: QueryEmbedding) -> VectorParams | None:
 
     Returns:
         VectorParams matching the embedding dimension, or None if the sample
-        is not a non-empty vector.
+        is not a non-empty one-dimensional vector of numbers.
     """
+    if isinstance(embedding, np.ndarray) and embedding.ndim != 1:
+        return None
     try:
-        size = len(_ensure_list_embedding(embedding))
+        vector = _ensure_list_embedding(embedding)
     except (AttributeError, TypeError):
         return None
-    if size == 0:
+    if not vector or not all(isinstance(value, Real) for value in vector):
         return None
-    return VectorParams(size=size, distance=Distance.COSINE)
+    return VectorParams(size=len(vector), distance=Distance.COSINE)
 
 
 def _get_collection_params(
