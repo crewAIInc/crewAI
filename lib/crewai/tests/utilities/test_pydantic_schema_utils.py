@@ -740,7 +740,7 @@ class TestAllOfMerging:
         assert Model(code="abc").code == "abc"
         assert Model(code=None).code is None
         with pytest.raises(Exception):
-            Model(code="123")  # fails pattern and minLength
+            Model(code="a")  # matches pattern but fails minLength
 
     def test_single_allof_nullable_integer_sibling_numeric_constraints_enforced(self) -> None:
         """The numeric mirror of the nullable allOf string case:
@@ -1444,6 +1444,7 @@ class TestSanitizeStrictSchemas:
 class TestCreateModelFromSchemaRecursive:
     def test_model_creation_succeeds(self) -> None:
         model = create_model_from_schema(deepcopy(RECURSIVE_NODE_SCHEMA), model_name="Node")
+        assert model is not None
         assert model is not None
         assert model.__name__ == "Node"
 
