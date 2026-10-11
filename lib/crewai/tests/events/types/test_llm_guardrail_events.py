@@ -19,19 +19,23 @@ class CallableGuardrail:
 
 
 @pytest.mark.parametrize(
-    "guardrail",
+    ("guardrail", "expected_guardrail"),
     [
-        FunctionType(
-            validate_output.__code__.replace(co_filename="<dynamic-guardrail>"),
-            globals(),
+        (
+            FunctionType(
+                validate_output.__code__.replace(co_filename="<dynamic-guardrail>"),
+                globals(),
+            ),
+            "validate_output",
         ),
-        partial(validate_output),
-        CallableGuardrail(),
+        (partial(validate_output), "partial"),
+        (CallableGuardrail(), "CallableGuardrail"),
     ],
     ids=["dynamic-function", "partial", "callable-instance"],
 )
 def test_guardrail_runs_without_inspectable_source(
     guardrail: Callable[[TaskOutput], tuple[bool, TaskOutput]],
+    expected_guardrail: str,
 ) -> None:
     output = TaskOutput(description="Validate output", raw="done", agent="test")
 
@@ -41,8 +45,7 @@ def test_guardrail_runs_without_inspectable_source(
     assert result.result is output
     event = LLMGuardrailStartedEvent(guardrail=guardrail, retry_count=0)
     assert event.guardrail_type == "function"
-    assert isinstance(event.guardrail, str)
-    assert event.guardrail
+    assert event.guardrail == expected_guardrail
     assert json.loads(event.model_dump_json())["guardrail"] == event.guardrail
 
 
