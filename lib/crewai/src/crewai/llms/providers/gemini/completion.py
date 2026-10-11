@@ -887,7 +887,12 @@ class GeminiCompletion(BaseLLM):
         """
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
-        warn_if_truncated(finish_reason, "gemini", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "gemini",
+            log=logging.getLogger(),
+            token_limit=self.max_output_tokens,
+        )
 
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
@@ -1109,7 +1114,12 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Final response content after processing
         """
-        warn_if_truncated(finish_reason, "gemini", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "gemini",
+            log=logging.getLogger(),
+            token_limit=self.max_output_tokens,
+        )
         if usage_data:
             self._track_token_usage_internal(usage_data)
 

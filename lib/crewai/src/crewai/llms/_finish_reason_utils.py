@@ -13,7 +13,7 @@ Two concerns live here:
    (``status``) — keep their own helpers.
 2. ``warn_if_truncated`` — interpretation. Providers report token-cap
    truncation with provider-specific values (``"length"``, ``"max_tokens"``,
-   ``"MAX_TOKENS"``, Responses ``"incomplete"``); this maps each to one
+   ``"MAX_TOKENS"``, Responses ``max_output_tokens``); this maps each to one
    normalized warning so no provider silently accepts a truncated response
    as complete (#7013).
 """
@@ -26,11 +26,13 @@ from typing import Any
 
 
 #: Raw provider values that mean "generation stopped because the token cap
-#: was hit", keyed by provider. OpenAI's ``"incomplete"`` covers the
-#: Responses API, where ``status`` (not a finish reason) is forwarded;
-#: most ``incomplete`` responses are cut off by ``max_output_tokens``.
+#: was hit", keyed by provider. For the OpenAI Responses API the provider's
+#: extractor resolves ``status="incomplete"`` through
+#: ``incomplete_details.reason`` before it reaches this mapping — ``incomplete``
+#: alone also covers non-token stops (e.g. ``content_filter``) and must not
+#: warn — so only the resolved ``max_output_tokens`` lands here.
 _TRUNCATION_FINISH_REASONS: dict[str, frozenset[str]] = {
-    "openai": frozenset({"length", "incomplete"}),
+    "openai": frozenset({"length", "max_output_tokens"}),
     "azure": frozenset({"length"}),
     "anthropic": frozenset({"max_tokens"}),
     "bedrock": frozenset({"max_tokens"}),
@@ -38,7 +40,13 @@ _TRUNCATION_FINISH_REASONS: dict[str, frozenset[str]] = {
 }
 
 
-def warn_if_truncated(finish_reason: str | None, provider: str, *, log: Logger) -> bool:
+def warn_if_truncated(
+    finish_reason: str | None,
+    provider: str,
+    *,
+    log: Logger,
+    token_limit: int | None = None,
+) -> bool:
     """Emit one normalized warning when a provider reports a token-cap truncation.
 
     This is warning-only by design (matching the long-standing Bedrock
@@ -56,6 +64,10 @@ def warn_if_truncated(finish_reason: str | None, provider: str, *, log: Logger) 
         log: Logger to emit the warning through. Callers pass the root
             logger (``logging.getLogger()``), matching how the providers
             log today.
+        token_limit: The token cap actually sent with the request, when the
+            provider sent one. Included in the warning (#7013 asks for the
+            effective limit, not the configured field). Omitted when no
+            limit was sent.
 
     Returns:
         True if a truncation warning was emitted, False otherwise.
@@ -70,12 +82,21 @@ def warn_if_truncated(finish_reason: str | None, provider: str, *, log: Logger) 
     )
     if reason not in _TRUNCATION_FINISH_REASONS.get(provider, frozenset()):
         return False
-    log.warning(
-        "Response truncated by token cap (provider=%s, finish_reason=%s); "
-        "output may be incomplete",
-        provider,
-        reason,
-    )
+    if token_limit is not None:
+        log.warning(
+            "Response truncated by token cap (provider=%s, finish_reason=%s, "
+            "token_limit=%s); output may be incomplete",
+            provider,
+            reason,
+            token_limit,
+        )
+    else:
+        log.warning(
+            "Response truncated by token cap (provider=%s, finish_reason=%s); "
+            "output may be incomplete",
+            provider,
+            reason,
+        )
     return True
 
 

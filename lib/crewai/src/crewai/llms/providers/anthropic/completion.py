@@ -1057,7 +1057,12 @@ class AnthropicCompletion(BaseLLM):
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
-        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "anthropic",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1295,7 +1300,12 @@ class AnthropicCompletion(BaseLLM):
             final_message
         )
 
-        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "anthropic",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
 
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
@@ -1519,7 +1529,12 @@ class AnthropicCompletion(BaseLLM):
                 final_response
             )
 
-            warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+            warn_if_truncated(
+                finish_reason,
+                "anthropic",
+                log=logging.getLogger(),
+                token_limit=params.get("max_tokens"),
+            )
 
             self._emit_call_completed_event(
                 response=final_content,
@@ -1611,7 +1626,12 @@ class AnthropicCompletion(BaseLLM):
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
-        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "anthropic",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1825,7 +1845,12 @@ class AnthropicCompletion(BaseLLM):
             final_message
         )
 
-        warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "anthropic",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
 
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
@@ -1941,7 +1966,12 @@ class AnthropicCompletion(BaseLLM):
                 final_response
             )
 
-            warn_if_truncated(finish_reason, "anthropic", log=logging.getLogger())
+            warn_if_truncated(
+                finish_reason,
+                "anthropic",
+                log=logging.getLogger(),
+                token_limit=params.get("max_tokens"),
+            )
 
             self._emit_call_completed_event(
                 response=final_content,

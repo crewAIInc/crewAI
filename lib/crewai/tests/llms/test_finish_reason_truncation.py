@@ -18,7 +18,7 @@ TRUNCATED_RE = re.compile(r"truncated by token cap", re.IGNORECASE)
     ("provider", "finish_reason"),
     [
         ("openai", "length"),
-        ("openai", "incomplete"),
+        ("openai", "max_output_tokens"),
         ("azure", "length"),
         ("anthropic", "max_tokens"),
         ("bedrock", "max_tokens"),
@@ -49,6 +49,10 @@ def test_warns_on_truncation_finish_reasons(
         ("openai", "stop"),
         ("openai", "tool_calls"),
         ("openai", "completed"),
+        # The Responses API reports ``status="incomplete"`` also for
+        # non-token stops (e.g. ``content_filter``); only the resolved
+        # ``incomplete_details.reason == "max_output_tokens"`` may warn.
+        ("openai", "incomplete"),
         ("azure", "stop"),
         ("anthropic", "end_turn"),
         ("anthropic", "tool_use"),
@@ -78,6 +82,33 @@ def test_silent_on_missing_finish_reason(caplog: pytest.LogCaptureFixture) -> No
 
     assert warned is False
     assert caplog.records == []
+
+
+def test_warning_includes_the_effective_token_limit(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """#7013 asks for the limit in effect on the request, not just the reason."""
+    with caplog.at_level(logging.WARNING):
+        warned = warn_if_truncated(
+            "length", "openai", log=logging.getLogger(), token_limit=4096
+        )
+
+    assert warned is True
+    message = caplog.records[-1].getMessage()
+    assert "token_limit=4096" in message
+
+
+def test_warning_omits_the_limit_when_none_was_sent(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Providers without an explicit cap must not fabricate ``token_limit=None``."""
+    with caplog.at_level(logging.WARNING):
+        warned = warn_if_truncated(
+            "length", "openai", log=logging.getLogger(), token_limit=None
+        )
+
+    assert warned is True
+    assert "token_limit=" not in caplog.records[-1].getMessage()
 
 
 def test_logs_through_the_injected_logger(caplog: pytest.LogCaptureFixture) -> None:

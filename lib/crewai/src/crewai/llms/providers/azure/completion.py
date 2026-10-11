@@ -877,7 +877,12 @@ class AzureCompletion(BaseLLM):
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
-        warn_if_truncated(finish_reason, "azure", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "azure",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
 
         # Without available_functions, return tool_calls so the caller (executor) handles execution
         if message.tool_calls and not available_functions:
@@ -1072,7 +1077,12 @@ class AzureCompletion(BaseLLM):
         Returns:
             Final response content after processing, or structured output
         """
-        warn_if_truncated(finish_reason, "azure", log=logging.getLogger())
+        warn_if_truncated(
+            finish_reason,
+            "azure",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
         if usage_data:
             self._track_token_usage_internal(usage_data)
 

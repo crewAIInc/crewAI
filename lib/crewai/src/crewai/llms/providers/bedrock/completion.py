@@ -698,7 +698,12 @@ class BedrockCompletion(BaseLLM):
             stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
-                warn_if_truncated(stop_reason, "bedrock", log=logging.getLogger())
+                warn_if_truncated(
+                    stop_reason,
+                    "bedrock",
+                    log=logging.getLogger(),
+                    token_limit=self.max_tokens,
+                )
                 if stop_reason == "content_filtered":
                     logging.warning("Response was filtered due to content policy")
 
@@ -1149,7 +1154,10 @@ class BedrockCompletion(BaseLLM):
                         stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         warn_if_truncated(
-                            stop_reason, "bedrock", log=logging.getLogger()
+                            stop_reason,
+                            "bedrock",
+                            log=logging.getLogger(),
+                            token_limit=self.max_tokens,
                         )
                         if stop_reason == "content_filtered":
                             logging.warning(
@@ -1311,7 +1319,12 @@ class BedrockCompletion(BaseLLM):
             stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
-                warn_if_truncated(stop_reason, "bedrock", log=logging.getLogger())
+                warn_if_truncated(
+                    stop_reason,
+                    "bedrock",
+                    log=logging.getLogger(),
+                    token_limit=self.max_tokens,
+                )
                 if stop_reason == "content_filtered":
                     logging.warning("Response was filtered due to content policy")
 
@@ -1762,7 +1775,10 @@ class BedrockCompletion(BaseLLM):
                         stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         warn_if_truncated(
-                            stop_reason, "bedrock", log=logging.getLogger()
+                            stop_reason,
+                            "bedrock",
+                            log=logging.getLogger(),
+                            token_limit=self.max_tokens,
                         )
                         if stop_reason == "content_filtered":
                             logging.warning(
