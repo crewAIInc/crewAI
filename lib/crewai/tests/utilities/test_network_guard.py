@@ -1,3 +1,4 @@
+import asyncio
 import socket
 import threading
 
@@ -58,3 +59,67 @@ def test_concurrent_contexts_reinstate_guard(network_guard):
     assert errors == []
     with pytest.raises(RuntimeError, match="Network is disabled"):
         socket.socket().connect(("127.0.0.1", 1))
+
+
+def test_guard_stays_active_for_other_threads_during_construction(network_guard, monkeypatch):
+    # While one thread builds a loop under the exemption, another thread's
+    # real connect() attempts must still hit the guard.
+    results = {}
+
+    def other_thread():
+        try:
+            socket.socket().connect(("127.0.0.1", 1))
+            results["allowed"] = True
+        except RuntimeError as exc:
+            results["guarded"] = str(exc)
+        except OSError as exc:
+            results["pristine"] = str(exc)
+
+    with unpatched_socket_connect():
+        loop = asyncio.new_event_loop()
+        try:
+            t = threading.Thread(target=other_thread)
+            t.start()
+            t.join(timeout=10)
+        finally:
+            loop.close()
+
+    assert results.get("guarded") == "Network is disabled"
+    monkeypatch.undo()
+
+
+def test_run_in_new_loop_cancels_pending_tasks(network_guard, monkeypatch):
+    finalizer_ran = []
+
+    async def leaving_resource():
+        try:
+            await asyncio.sleep(30)
+        finally:
+            finalizer_ran.append(True)
+
+    async def coro():
+        task = asyncio.create_task(leaving_resource())
+        await asyncio.sleep(0.01)
+        return "done"
+
+    assert run_in_new_loop(coro()) == "done"
+    assert finalizer_ran == [True]
+    monkeypatch.undo()
+
+
+def test_run_in_new_loop_finalizes_async_generators(network_guard, monkeypatch):
+    finalized = []
+
+    async def agen():
+        try:
+            yield 1
+        finally:
+            finalized.append(True)
+
+    async def coro():
+        gen = agen()
+        await gen.__anext__()  # left suspended; asyncio.run would finalize it
+
+    run_in_new_loop(coro())
+    assert finalized == [True]
+    monkeypatch.undo()
