@@ -281,11 +281,14 @@ class TestVettoSandboxTools(unittest.TestCase):
         tool = VettoBaseTool(working_dir=str(self.workspace), allow_fallback=True)
         malicious_env = {
             "LD_PRELOAD": "/lib/evil.so",
+            "LD_LIBRARY_PATH": "/lib/evil_path",
             "DYLD_INSERT_LIBRARIES": "/lib/evil.dylib",
             "DYLD_FALLBACK_INSERT_LIBRARIES": "/lib/evil2.dylib",
+            "DYLD_LIBRARY_PATH": "/lib/evil_dyld",
+            "PYTHONPATH": "/malicious/python/path",
             "SAFE_VAR": "clean_value",
         }
-        with patch.dict(os.environ, {"LD_PRELOAD": "/lib/host_evil.so"}):
+        with patch.dict(os.environ, {"LD_PRELOAD": "/lib/host_evil.so", "LD_LIBRARY_PATH": "/lib/host_path"}):
             with patch("subprocess.Popen") as mock_popen:
                 mock_proc = MagicMock()
                 mock_proc.communicate.return_value = (b"", b"")
@@ -295,8 +298,11 @@ class TestVettoSandboxTools(unittest.TestCase):
                 tool._execute_subprocess(["echo", "hi"], env=malicious_env)
                 called_env = mock_popen.call_args[1]["env"]
                 self.assertNotIn("LD_PRELOAD", called_env)
+                self.assertNotIn("LD_LIBRARY_PATH", called_env)
                 self.assertNotIn("DYLD_INSERT_LIBRARIES", called_env)
                 self.assertNotIn("DYLD_FALLBACK_INSERT_LIBRARIES", called_env)
+                self.assertNotIn("DYLD_LIBRARY_PATH", called_env)
+                self.assertNotIn("PYTHONPATH", called_env)
                 self.assertEqual(called_env.get("SAFE_VAR"), "clean_value")
 
     def test_file_tool_search_on_single_file(self):

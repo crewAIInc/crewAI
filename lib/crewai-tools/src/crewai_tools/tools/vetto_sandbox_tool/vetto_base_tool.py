@@ -190,8 +190,24 @@ class VettoBaseTool(BaseTool):
         if env:
             exec_env.update(env)
 
-        # Sanitize dynamic loader injection variables to prevent unauthorized code injection
-        for loader_var in ("LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "DYLD_FALLBACK_INSERT_LIBRARIES"):
+        # Sanitize dynamic loader, search paths, and runtime injection variables
+        # from the host supervisor environment to prevent sandbox escape before isolation initializes
+        banned_loader_vars = (
+            "LD_PRELOAD",
+            "LD_LIBRARY_PATH",
+            "LD_AUDIT",
+            "LD_ORIGIN_PATH",
+            "DYLD_INSERT_LIBRARIES",
+            "DYLD_FALLBACK_INSERT_LIBRARIES",
+            "DYLD_LIBRARY_PATH",
+            "DYLD_FRAMEWORK_PATH",
+            "PYTHONPATH",
+            "PYTHONHOME",
+            "NODE_OPTIONS",
+            "RUBYOPT",
+            "PERL5OPT",
+        )
+        for loader_var in banned_loader_vars:
             exec_env.pop(loader_var, None)
 
         effective_timeout = timeout if timeout is not None else self.timeout
