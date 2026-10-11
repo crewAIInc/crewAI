@@ -9,7 +9,7 @@ from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ImportString
 
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
@@ -1515,3 +1515,170 @@ class TestModuleAllowlist:
 
             result = load_agent_from_repository("test-agent")
             assert result.get("name") == "test-agent"
+
+
+class TestRepositoryToolParamValidation:
+    """Tests for init_params validation in load_agent_from_repository.
+
+    The module allowlist gates *which* tool classes may load; init_params
+    validation gates *what* a remote record may pass to their constructors.
+    """
+
+    @staticmethod
+    def _repository_response(tools):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"name": "test-agent", "tools": tools}
+        return mock_response
+
+    @staticmethod
+    def _load_with_tool(mock_response, tool_class):
+        with (
+            patch(
+                "crewai.utilities.agent_utils.resolve_plus_response",
+                return_value=mock_response,
+            ),
+            patch("crewai.utilities.agent_utils.resolve_plus_client"),
+            patch("crewai.tools.tool", tool_class),
+        ):
+            from crewai.utilities.agent_utils import load_agent_from_repository
+
+            return load_agent_from_repository("test-agent")
+
+    def test_import_string_param_rejected(self):
+        """A string init_param for an ImportString field must be rejected:
+        pydantic would import the dotted path as a live callable on this host
+        (e.g. 'os.system'), which the tool may then invoke."""
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class ImportStringTool(BaseTool):
+            name: str = "import_string_tool"
+            description: str = "Tool with an import-resolving init param."
+            custom_embedding_fn: ImportString
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        response = self._repository_response(
+            [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": {"custom_embedding_fn": "os.system"},
+                }
+            ]
+        )
+        with pytest.raises(AgentRepositoryError, match="import-resolving"):
+            self._load_with_tool(response, ImportStringTool)
+
+    def test_optional_import_string_param_rejected(self):
+        """Optional[ImportString] (and other wrappers) must be caught too."""
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class OptionalImportStringTool(BaseTool):
+            name: str = "optional_import_string_tool"
+            description: str = "Tool with an optional import-resolving param."
+            custom_embedding_fn: ImportString | None = None
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        response = self._repository_response(
+            [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": {"custom_embedding_fn": "builtins.eval"},
+                }
+            ]
+        )
+        with pytest.raises(AgentRepositoryError, match="import-resolving"):
+            self._load_with_tool(response, OptionalImportStringTool)
+
+    def test_undeclared_param_rejected(self):
+        """Records may not smuggle unexpected keyword arguments into the tool
+        constructor."""
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class ScalarTool(BaseTool):
+            name: str = "scalar_tool"
+            description: str = "Tool with a plain scalar param."
+            top_k: int = 5
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        response = self._repository_response(
+            [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": {"top_k": 3, "no_such_field": 1},
+                }
+            ]
+        )
+        with pytest.raises(AgentRepositoryError, match="does not declare"):
+            self._load_with_tool(response, ScalarTool)
+
+    def test_non_dict_init_params_rejected(self):
+        """init_params must be a JSON object."""
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class ScalarTool(BaseTool):
+            name: str = "scalar_tool"
+            description: str = "Tool with a plain scalar param."
+            top_k: int = 5
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        response = self._repository_response(
+            [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": ["top_k"],
+                }
+            ]
+        )
+        with pytest.raises(AgentRepositoryError, match="expected a JSON object"):
+            self._load_with_tool(response, ScalarTool)
+
+    def test_non_json_value_rejected(self):
+        """Non-serializable values (notably callables) must never reach the
+        tool constructor."""
+        from crewai.utilities.agent_utils import _validate_repository_tool_params
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class ScalarTool(BaseTool):
+            name: str = "scalar_tool"
+            description: str = "Tool with a plain scalar param."
+            top_k: int = 5
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        with pytest.raises(AgentRepositoryError, match="must be JSON-typed"):
+            _validate_repository_tool_params(ScalarTool, {"top_k": object()})
+
+    def test_scalar_params_still_instantiate(self):
+        """Legitimate JSON scalar params for declared fields keep working."""
+        class ScalarTool(BaseTool):
+            name: str = "scalar_tool"
+            description: str = "Tool with a plain scalar param."
+            top_k: int = 5
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        response = self._repository_response(
+            [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": {"top_k": 3},
+                }
+            ]
+        )
+        result = self._load_with_tool(response, ScalarTool)
+        assert result["tools"][0].top_k == 3
