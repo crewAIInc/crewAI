@@ -10,6 +10,8 @@ import logging
 from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
 
+from crewai.utilities.network_guard import unpatched_socket_connect
+
 
 if TYPE_CHECKING:
     from aiocache import Cache  # type: ignore[import-untyped]
@@ -52,7 +54,8 @@ def _run_sync(coro: Coroutine[None, None, T]) -> T:
             future = executor.submit(ctx.run, asyncio.run, coro)
             return future.result()
     except RuntimeError:
-        return asyncio.run(coro)
+        with unpatched_socket_connect():
+            return asyncio.run(coro)
 
 
 DEFAULT_TTL = 3600
