@@ -458,6 +458,16 @@ def convert_with_instructions(
         instructions=instructions,
     )
     if attempt > getattr(converter, "max_attempts", 3):
+        # Fail closed on the output_json path: returning the raw result string
+        # here would let Task._unpack_model_output json.loads a dict that never
+        # passed the declared model, bypassing the output_json schema gate. The
+        # pydantic path is unchanged: any returned string is re-validated by
+        # _coerce_response_to_pydantic before it is accepted.
+        if is_json_output:
+            return ConverterError(
+                "Failed to convert result to JSON: shared instruction-retry "
+                "budget exhausted without producing schema-valid output."
+            )
         return result
     exported_result = (
         converter.to_pydantic(attempt)
@@ -471,8 +481,11 @@ def convert_with_instructions(
                 content=f"Failed to convert result to model: {exported_result}",
                 color="red",
             )
+        # Fail closed on the output_json path: propagate the ConverterError
+        # instead of falling back to the raw, schema-unvalidated result string.
+        if is_json_output:
+            return exported_result
         return result
-
     return exported_result
 
 
@@ -631,6 +644,13 @@ async def async_convert_with_instructions(
         instructions=instructions,
     )
     if attempt > getattr(converter, "max_attempts", 3):
+        # Fail closed on the output_json path: mirror the sync guard so an
+        # unvalidated result string is never returned as a successful JSON dict.
+        if is_json_output:
+            return ConverterError(
+                "Failed to convert result to JSON: shared instruction-retry "
+                "budget exhausted without producing schema-valid output."
+            )
         return result
     exported_result = (
         await converter.ato_pydantic(attempt)
@@ -644,8 +664,11 @@ async def async_convert_with_instructions(
                 content=f"Failed to convert result to model: {exported_result}",
                 color="red",
             )
+        # Fail closed on the output_json path: propagate the ConverterError
+        # instead of falling back to the raw, schema-unvalidated result string.
+        if is_json_output:
+            return exported_result
         return result
-
     return exported_result
 
 
