@@ -13,15 +13,24 @@ this.
 from __future__ import annotations
 
 import _socket
-from collections.abc import Generator
+import asyncio
+from collections.abc import Coroutine, Generator
 from contextlib import contextmanager
 import socket
+import threading
+from typing import TypeVar
 
 
 # The pristine C-level connect, kept out of reach of guards that replace the
 # class attribute on socket.socket.
 _PRISTINE_CONNECT = _socket.socket.connect
 _PRISTINE_CONNECT_EX = _socket.socket.connect_ex
+
+# Serializes context entry/exit so overlapping uses cannot permanently replace
+# a guard with the pristine connect.
+_GUARD_SWAP_LOCK = threading.RLock()
+
+T = TypeVar("T")
 
 
 @contextmanager
@@ -33,12 +42,28 @@ def unpatched_socket_connect() -> Generator[None, None, None]:
     stay blocked. On POSIX this is a no-op in practice: the loop self-pipe is
     created with ``os.socketpair()`` and never calls ``connect()``.
     """
-    previous_connect = socket.socket.connect
-    previous_connect_ex = socket.socket.connect_ex
-    socket.socket.connect = _PRISTINE_CONNECT
-    socket.socket.connect_ex = _PRISTINE_CONNECT_EX
+    with _GUARD_SWAP_LOCK:
+        previous_connect = socket.socket.connect
+        previous_connect_ex = socket.socket.connect_ex
+        socket.socket.connect = _PRISTINE_CONNECT
+        socket.socket.connect_ex = _PRISTINE_CONNECT_EX
+        try:
+            yield
+        finally:
+            socket.socket.connect = previous_connect
+            socket.socket.connect_ex = previous_connect_ex
+
+
+def run_in_new_loop(coro: Coroutine[None, None, T]) -> T:
+    """Run *coro* in a fresh event loop, exempting only its construction.
+
+    Equivalent to ``asyncio.run(coro)`` except that the socket guard is
+    lifted while the loop object (and its Windows self-pipe) is built, and
+    reinstated before the coroutine runs.
+    """
+    with unpatched_socket_connect():
+        loop = asyncio.new_event_loop()
     try:
-        yield
+        return loop.run_until_complete(coro)
     finally:
-        socket.socket.connect = previous_connect
-        socket.socket.connect_ex = previous_connect_ex
+        loop.close()
