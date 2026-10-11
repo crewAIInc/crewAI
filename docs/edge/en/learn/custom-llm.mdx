@@ -216,12 +216,15 @@ def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
     
-    # Manually truncate at stop words
+    # Manually truncate at the earliest stop word occurrence
     if self.stop:
+        earliest_position = len(content)
         for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
+            position = content.find(stop_word)
+            if position != -1 and position < earliest_position:
+                earliest_position = position
+        if earliest_position < len(content):
+            content = content[:earliest_position].strip()
     
     return content
 
