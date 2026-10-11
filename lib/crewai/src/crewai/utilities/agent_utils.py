@@ -13,7 +13,7 @@ import json
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, get_args
 import warnings
 
 from crewai_core.printer import ColoredText, Printer
@@ -72,6 +72,12 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
 
+try:
+    from pydantic import ImportString as _ImportString
+except ImportError:  # pragma: no cover - crewai requires pydantic v2
+    _ImportString = None  # type: ignore[assignment]
+
+
 _ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
     {
         "crewai.tools",
@@ -116,6 +122,99 @@ def _is_allowlisted_tool_module(module_name: str) -> bool:
         real_origin.startswith(os.path.realpath(location) + os.sep)
         for location in search_locations
     )
+
+
+def _annotation_resolves_import(annotation: Any) -> bool:
+    """Detect annotations that turn a string into an imported Python object.
+
+    ``pydantic.ImportString`` (including inside ``Optional``/``Union`` or
+    containers such as ``list[ImportString]``) resolves a dotted-path string
+    to the referenced object at validation time. A repository record is remote
+    JSON, so a string init_param for such a field becomes an arbitrary
+    callable (e.g. ``"os.system"``) on the loader's host.
+    """
+    seen: set[int] = set()
+
+    def _walk(tp: Any) -> bool:
+        if tp is None or id(tp) in seen:
+            return False
+        seen.add(id(tp))
+        if tp is _ImportString or getattr(tp, "__name__", "") == "ImportString":
+            return True
+        if tp == "ImportString":  # unresolved forward reference, fail closed
+            return True
+        # Unwrap Annotated / Optional / Union / generic containers.
+        return any(_walk(arg) for arg in get_args(tp))
+
+    return _walk(annotation)
+
+
+def _is_json_value(value: Any) -> bool:
+    """True for values that can round-trip through JSON (defense in depth).
+
+    Repository records arrive as JSON, so legitimate init_params are
+    JSON-typed by construction; rejecting anything else keeps callables and
+    other non-serializable objects out of the tool constructor even if a
+    record ever reaches this path from a non-JSON source.
+    """
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return True
+    if isinstance(value, (list, tuple)):
+        return all(_is_json_value(item) for item in value)
+    if isinstance(value, dict):
+        return all(
+            isinstance(key, str) and _is_json_value(item)
+            for key, item in value.items()
+        )
+    return False
+
+
+def _validate_repository_tool_params(
+    tool_class: type[BaseTool], init_params: Any
+) -> None:
+    """Fail closed on repository tool init_params that could become code.
+
+    The module allowlist gates *which* tool classes may load; this gates *what*
+    a remote record may pass to their constructors:
+
+    - ``init_params`` must be a JSON object;
+    - every key must be a declared pydantic field of the tool class, so a
+      record cannot smuggle unexpected keyword arguments into ``__init__``;
+    - no field may use an import-resolving annotation (``ImportString``,
+      including inside ``Optional``/containers): such a field turns a remote
+      string like ``"os.system"`` into a live callable, which the tool may
+      then invoke — arbitrary code execution on the loader's host;
+    - every value must be JSON-typed.
+
+    Raises:
+        AgentRepositoryError: If any parameter fails validation.
+    """
+    tool_name = getattr(tool_class, "__name__", repr(tool_class))
+    if not isinstance(init_params, dict):
+        raise AgentRepositoryError(
+            f"Tool {tool_name!r} has invalid init_params: expected a JSON "
+            f"object, got {type(init_params).__name__}."
+        )
+    fields = getattr(tool_class, "model_fields", None) or {}
+    for key, value in init_params.items():
+        field = fields.get(key)
+        if field is None:
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} does not declare init parameter {key!r}; "
+                "repository records may only set declared tool fields."
+            )
+        if _annotation_resolves_import(field.annotation):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} uses an "
+                "import-resolving annotation: a repository string value would "
+                "be imported as a Python object on this host. Refusing to "
+                "instantiate."
+            )
+        if not _is_json_value(value):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} must be JSON-typed "
+                f"(got {type(value).__name__}); refusing to instantiate."
+            )
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -1255,6 +1354,12 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                                 f"Tool {tool['name']!r} resolved from module {tool['module']!r} "
                                 f"is not a BaseTool subclass."
                             )
+
+                        # The record is remote JSON: validate what it may pass
+                        # to the constructor before splatting it in.
+                        _validate_repository_tool_params(
+                            tool_class, tool["init_params"]
+                        )
 
                         tool_value = tool_class(**tool["init_params"])
 
