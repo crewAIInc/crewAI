@@ -1445,7 +1445,6 @@ class TestCreateModelFromSchemaRecursive:
     def test_model_creation_succeeds(self) -> None:
         model = create_model_from_schema(deepcopy(RECURSIVE_NODE_SCHEMA), model_name="Node")
         assert model is not None
-        assert model is not None
         assert model.__name__ == "Node"
 
     def test_model_accepts_valid_recursive_data(self) -> None:
