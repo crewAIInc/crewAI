@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, Mock
 
+import numpy as np
 import pytest
 from crewai.rag.core.exceptions import ClientMethodMismatchError
 from crewai.rag.qdrant.client import QdrantClient
@@ -858,7 +859,9 @@ class TestQdrantVectorSizeInference:
         assert self._vector_params(info).size == 4
         embedding.assert_not_called()
 
-    @pytest.mark.parametrize("unusable", [[], None])
+    @pytest.mark.parametrize(
+        "unusable", [[], None, np.array(1.0), np.zeros((2, 3)), [[0.1, 0.2]], ["a"]]
+    )
     def test_unusable_embedding_falls_back_to_default(self, unusable):
         raw = SyncQdrantClient(location=":memory:")
         client = QdrantClient(client=raw, embedding_function=lambda text: unusable)
@@ -916,3 +919,41 @@ class TestQdrantVectorSizeInference:
         info = await raw.get_collection("explicit")
         assert self._vector_params(info).size == 8
         embedding.assert_not_called()
+
+    def test_numpy_embedding_infers_dimension(self):
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(
+            client=raw,
+            embedding_function=lambda text: np.zeros(1536, dtype=np.float32),
+        )
+
+        client.create_collection(collection_name="numpy")
+
+        assert self._vector_params(raw.get_collection("numpy")).size == 1536
+
+    def test_failing_probe_logs_and_falls_back_to_default(self, caplog):
+        def embed(text: str) -> list[float]:
+            raise RuntimeError("embedder offline")
+
+        raw = SyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=embed)
+
+        with caplog.at_level("WARNING"):
+            client.create_collection(collection_name="fallback")
+
+        assert self._vector_params(raw.get_collection("fallback")).size == 384
+        assert "Could not infer the Qdrant vector size" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_afailing_probe_logs_and_falls_back_to_default(self, caplog):
+        async def embed(text: str) -> list[float]:
+            raise RuntimeError("embedder offline")
+
+        raw = AsyncQdrantClient(location=":memory:")
+        client = QdrantClient(client=raw, embedding_function=embed)
+
+        with caplog.at_level("WARNING"):
+            info = await client.aget_or_create_collection(collection_name="fallback")
+
+        assert self._vector_params(info).size == 384
+        assert "Could not infer the Qdrant vector size" in caplog.text
