@@ -9,11 +9,13 @@ from qdrant_client import (
     QdrantClient as SyncQdrantClient,
 )
 from qdrant_client.models import (
+    Distance,
     FieldCondition,
     Filter,
     MatchValue,
     PointStruct,
     QueryResponse,
+    VectorParams,
 )
 
 from crewai.rag.qdrant.constants import DEFAULT_VECTOR_PARAMS
@@ -82,6 +84,25 @@ def _is_async_embedding_function(
         True if the function is async, False otherwise.
     """
     return asyncio.iscoroutinefunction(func)
+
+
+def _infer_vector_params(embedding: QueryEmbedding) -> VectorParams | None:
+    """Build cosine vector params sized to a sample embedding.
+
+    Args:
+        embedding: Sample embedding produced by the client's embedding function.
+
+    Returns:
+        VectorParams matching the embedding dimension, or None if the sample
+        is not a non-empty vector.
+    """
+    try:
+        size = len(_ensure_list_embedding(embedding))
+    except (AttributeError, TypeError):
+        return None
+    if size == 0:
+        return None
+    return VectorParams(size=size, distance=Distance.COSINE)
 
 
 def _get_collection_params(
