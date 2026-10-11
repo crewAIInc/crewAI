@@ -1,10 +1,12 @@
 import hashlib
 import hmac
+import errno
 import os
 import pickle
 import shutil
 import stat
 import tempfile
+import time
 import unittest
 import uuid
 from unittest.mock import patch
@@ -390,3 +392,128 @@ class TestPickleHandler(unittest.TestCase):
         ):
             with self.assertRaisesRegex(PermissionError, "key file must not be a symlink"):
                 PickleHandler._validate_key_storage(key_dir, key_path)
+
+
+class TestKeyCreationWithoutHardlinkSupport(unittest.TestCase):
+    """Fallback publish path for filesystems where os.link() is unavailable."""
+
+    def _unsupported_link(self, *args, **kwargs):
+        raise OSError(errno.EPERM, "Operation not permitted")
+
+    def test_key_creation_falls_back_when_hardlinks_unsupported(self):
+        """With os.link raising EPERM, key creation must still succeed and the
+        resulting key must be loadable by a later handler."""
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch("os.link", side_effect=self._unsupported_link),
+            ):
+                handler = PickleHandler("nolink_check.pkl")
+            key_path = os.path.join(fresh_home, ".crewai", ".hmac_key")
+            self.assertEqual(os.path.getsize(key_path), 32)
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(os.stat(key_path).st_mode), 0o600)
+            # No temp files or lock files may be left behind.
+            leftovers = [
+                name
+                for name in os.listdir(os.path.join(fresh_home, ".crewai"))
+                if name.startswith(".hmac_key_tmp_") or name == ".hmac_key.lock"
+            ]
+            self.assertEqual(leftovers, [])
+            # A later handler must load the same key, not generate a new one.
+            with patch("os.path.expanduser", return_value=fresh_home):
+                handler2 = PickleHandler("nolink_check2.pkl")
+            self.assertEqual(handler2._key, handler._key)
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
+    def test_key_creation_fallback_lost_race_loads_installed_key(self):
+        """If another process publishes first while the fallback waits on the
+        lock, the installed complete key must be loaded, not the in-memory
+        copy. The race is simulated by having os.link both fail with EPERM
+        and publish a winner's key, so the fallback's in-lock re-check fires."""
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            key_dir = os.path.join(fresh_home, ".crewai")
+            os.makedirs(key_dir, mode=0o700)
+            installed_key = os.urandom(32)
+
+            def _link_fails_after_winner_publishes(src, dst):
+                with open(dst, "wb") as f:
+                    f.write(installed_key)
+                os.chmod(dst, 0o600)
+                raise OSError(errno.EPERM, "Operation not permitted")
+
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch("os.link", side_effect=_link_fails_after_winner_publishes),
+            ):
+                handler = PickleHandler("nolink_race_check.pkl")
+            self.assertEqual(handler._key, installed_key)
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
+    def test_key_creation_link_eacces_propagates(self):
+        """Unrelated os.link failures (e.g. EACCES) must propagate, not trigger
+        the hard-link fallback."""
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch(
+                    "os.link",
+                    side_effect=OSError(errno.EACCES, "Permission denied"),
+                ),
+                self.assertRaises(OSError),
+            ):
+                PickleHandler("nolink_eacces_check.pkl")
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
+    def test_key_creation_lock_recovers_from_stale_lockfile(self):
+        """A lockfile orphaned by a crashed holder must not wedge key creation."""
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            key_dir = os.path.join(fresh_home, ".crewai")
+            os.makedirs(key_dir, mode=0o700)
+            lock_path = os.path.join(key_dir, ".hmac_key.lock")
+            with open(lock_path, "w") as f:
+                f.write("dead")
+            old = time.time() - 61.0
+            os.utime(lock_path, (old, old))
+
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch("os.link", side_effect=self._unsupported_link),
+            ):
+                handler = PickleHandler("nolink_stale_lock_check.pkl")
+            self.assertEqual(len(handler._key), 32)
+            self.assertFalse(os.path.exists(lock_path))
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
+    def test_key_creation_lock_timeout_fails_closed(self):
+        """If the fallback lock cannot be acquired, creation must fail loudly
+        rather than publish without serialization."""
+        from crewai.utilities import file_handler as file_handler_mod
+
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            key_dir = os.path.join(fresh_home, ".crewai")
+            os.makedirs(key_dir, mode=0o700)
+            lock_path = os.path.join(key_dir, ".hmac_key.lock")
+            with open(lock_path, "w") as f:
+                f.write("live holder")
+
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch("os.link", side_effect=self._unsupported_link),
+                patch.object(
+                    file_handler_mod, "_LOCK_ACQUIRE_TIMEOUT_SECONDS", 0
+                ),
+                self.assertRaises(TimeoutError),
+            ):
+                PickleHandler("nolink_lock_timeout_check.pkl")
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)

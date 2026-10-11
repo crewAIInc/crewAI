@@ -1,4 +1,7 @@
+from collections.abc import Iterator
+import contextlib
 from datetime import datetime
+import errno
 import hashlib
 import hmac
 import json
@@ -7,10 +10,70 @@ import pickle
 import secrets
 import stat
 import tempfile
+import time
 from typing import Any, TypedDict
 
 from crewai_core.lock_store import lock as store_lock
 from typing_extensions import Unpack
+
+
+# errno values raised by os.link() on filesystems without hard-link support
+# (FAT/exFAT, some network mounts, restricted containers). Other OSError
+# errnos (notably EACCES) are deliberately excluded: those indicate genuine
+# permission or I/O problems and must propagate rather than trigger the
+# fallback publish path.
+_LINK_UNSUPPORTED_ERRNOS = frozenset({errno.EPERM, errno.EOPNOTSUPP, errno.ENOSYS})
+
+# Bounds for the lockfile-serialized key-creation fallback below. Key creation
+# takes milliseconds; a lock older than _LOCK_STALE_AFTER_SECONDS can only
+# belong to a crashed holder.
+_LOCK_STALE_AFTER_SECONDS = 60.0
+_LOCK_ACQUIRE_TIMEOUT_SECONDS = 30.0
+
+
+@contextlib.contextmanager
+def _key_creation_lock(lock_path: str) -> Iterator[None]:
+    """Best-effort inter-process mutex for first-time HMAC key creation.
+
+    Only used on filesystems where the atomic ``os.link`` publish is
+    unavailable. Acquisition is atomic via ``O_CREAT | O_EXCL``; a lockfile
+    older than ``_LOCK_STALE_AFTER_SECONDS`` is treated as orphaned by a
+    crashed holder and removed (removal races are benign because ``O_EXCL``
+    serializes the next acquisition). Fails closed with ``TimeoutError`` if
+    the lock cannot be acquired in time.
+    """
+    deadline = time.monotonic() + _LOCK_ACQUIRE_TIMEOUT_SECONDS
+    while True:
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            try:
+                age = time.time() - os.stat(lock_path).st_mtime
+            except OSError:
+                age = 0.0
+            if age > _LOCK_STALE_AFTER_SECONDS:
+                try:
+                    os.unlink(lock_path)
+                except OSError:
+                    pass
+                continue
+            if time.monotonic() > deadline:
+                raise TimeoutError(
+                    f"Timed out waiting for HMAC key creation lock {lock_path}"
+                ) from None
+            time.sleep(0.05)
+            continue
+        break
+    try:
+        yield
+    finally:
+        try:
+            os.close(fd)
+        finally:
+            try:
+                os.unlink(lock_path)
+            except OSError:
+                pass
 
 
 class LogEntry(TypedDict, total=False):
@@ -159,7 +222,10 @@ class PickleHandler:
         directory and key file are validated for ownership and restrictive
         permissions before use. Key creation stages the key in a temp file
         and publishes it with a no-clobber hard link, so a concurrent process
-        never observes a partially written key.
+        never observes a partially written key. Where the filesystem does not
+        support hard links, creation falls back to a lockfile-serialized
+        publish with the same no-clobber guarantee for concurrent writers and
+        atomic visibility for concurrent readers.
 
         Returns:
             The 32-byte HMAC key.
@@ -237,6 +303,17 @@ class PickleHandler:
                         "to regenerate, or restore from a valid backup."
                     ) from None
                 raise
+            except OSError as e:
+                if e.errno not in _LINK_UNSUPPORTED_ERRNOS:
+                    raise
+                # Hard links are unsupported on this filesystem (EPERM /
+                # EOPNOTSUPP / ENOSYS from os.link). Fall back to a
+                # lockfile-serialized publish; tmp_key is already fully
+                # written and fsynced, so the fallback only changes how it
+                # is published, not what is published.
+                return self._publish_key_without_hardlinks(
+                    key_dir, key_path, key, tmp_key
+                )
         finally:
             try:
                 os.unlink(tmp_key)
@@ -244,6 +321,37 @@ class PickleHandler:
                 pass
 
         return key
+
+    def _publish_key_without_hardlinks(
+        self, key_dir: str, key_path: str, key: bytes, tmp_key: str
+    ) -> bytes:
+        """Publish a staged key on filesystems without hard-link support.
+
+        Serializes first-time creation across processes with a lockfile, then
+        publishes the fully written temp file with ``os.replace``, which is
+        atomic for concurrent readers. The existence re-check inside the lock
+        closes the race: at most one process publishes, and a process that
+        loses the race loads the installed key instead of its in-memory copy.
+        """
+        with _key_creation_lock(os.path.join(key_dir, ".hmac_key.lock")):
+            if os.path.exists(key_path):
+                # Another process published while we waited for the lock.
+                # _validate_key_storage raises on any problem.
+                self._validate_key_storage(key_dir, key_path)
+                with open(key_path, "rb") as f:
+                    installed = f.read()
+                if len(installed) == 32:
+                    return installed
+                raise ValueError(
+                    f"HMAC key file {key_path} has invalid length "
+                    f"({len(installed)} bytes, expected 32). Remove the file "
+                    "to regenerate, or restore from a valid backup."
+                )
+            # No concurrent writer can exist inside the lock, so os.replace
+            # cannot clobber another process's key. tmp_key carries mode 0600
+            # from mkstemp, which the rename preserves.
+            os.replace(tmp_key, key_path)
+            return key
 
     @staticmethod
     def _validate_key_storage(key_dir: str, key_path: str) -> bool:
