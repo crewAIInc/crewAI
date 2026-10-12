@@ -45,7 +45,8 @@ uv add crewai-anakin
 - `AnakinBrowserTaskTool`: AI 에이전트가 실제 브라우저를 조작해 여러 단계의 작업을 수행합니다.
 
 `get_anakin_tools()`는 하나의 공유 클라이언트로 22개 도구를 모두 반환합니다. 웹사이트나 Anakin
-계정에서 무언가를 변경하는 7개 도구를 제외하려면 `read_only=True`를 전달하세요.
+계정에서 무언가를 변경하거나 오래 걸리는 유료 작업을 시작하는 7개 도구(예: `AnakinBrowserTaskTool`)를
+제외하려면 `read_only=True`를 전달하세요.
 
 ## 예시
 
