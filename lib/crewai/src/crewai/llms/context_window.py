@@ -1,324 +1,92 @@
-"""Shared context-window definitions and lookup for CrewAI LLMs."""
+"""Shared context-window lookup for CrewAI LLMs.
+
+Limits come from a checked-in snapshot of LiteLLM's model catalog:
+https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json
+
+``resolve_context_window_size`` applies the usable context ratio, so every
+call site shares one matching rule.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Final
+from importlib.resources import files
+import json
+from typing import Any, Final
 
 
-MIN_CONTEXT: Final[int] = 1024
-MAX_CONTEXT: Final[int] = 10_000_000
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 
-# Raw provider limits. ``resolve_context_window_size`` applies the usable
-# context ratio uniformly, so all call sites share one matching rule.
-# Keep active IDs and context windows in sync with OpenAI's model catalog;
-# remove or replace entries when the vendor marks them retired:
-# https://developers.openai.com/api/docs/models
-OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "gpt-4.1-mini-2025-04-14": 1_047_576,
-    "gpt-4.1-nano-2025-04-14": 1_047_576,
-    "gpt-6": 1_050_000,
-    "gpt-5.5": 1_050_000,
-    "gpt-5.4": 1_050_000,
-    "gpt-5.4-mini": 400_000,
-    "gpt-5.4-nano": 400_000,
-    "gpt-5.3-codex": 400_000,
-    "gpt-4-turbo": 128_000,
-    "gpt-4o-mini": 128_000,
-    "gpt-5-mini": 400_000,
-    "gpt-5-nano": 400_000,
-    "gpt-5.6": 1_050_000,
-    "gpt-5.6-cyber": 400_000,
-    "gpt-3.5-turbo": 16_385,
-    "gpt-oss-120b": 131_072,
-    "gpt-oss-20b": 131_072,
-    "chat-latest": 400_000,
-    "gpt-daybreak-blue-latest": 1_050_000,
-    "gpt-daybreak-red-latest": 400_000,
-    "o1-preview": 128_000,
-    "o1-mini": 128_000,
-    "o1-pro": 200_000,
-    "o1": 200_000,
-    "o3": 200_000,
-    "o3-mini": 200_000,
-    "o4-mini": 200_000,
-    "gpt-4.1": 1_047_576,
-    "gpt-4o": 128_000,
-    "gpt-5": 400_000,
-    "gpt-4": 8192,
-}
+_CATALOG_FILENAME: Final[str] = "model_prices_and_context_window.json"
+_OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
+_AZURE_PROVIDERS: Final[frozenset[str]] = frozenset({"azure", "azure_ai"})
+_ANTHROPIC_PROVIDERS: Final[frozenset[str]] = frozenset({"anthropic"})
+_GEMINI_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {"gemini", "vertex_ai-language-models"}
+)
+_BEDROCK_PROVIDERS: Final[frozenset[str]] = frozenset({"bedrock", "bedrock_converse"})
 
-# Check Azure deployment IDs and context windows here; availability varies by
-# account and region. Remove or replace vendor-retired entries:
-# https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure
-AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "gpt-6-astra": 1_050_000,
-    "gpt-5.6-sol": 1_050_000,
-    "gpt-5.6-terra": 1_050_000,
-    "gpt-5.6-luna": 1_050_000,
-    "gpt-chat-latest": 400_000,
-    "gpt-5.4-pro": 1_050_000,
-    "gpt-5.2-codex": 400_000,
-    "gpt-5.2": 400_000,
-    "gpt-5.1-codex-mini": 400_000,
-    "gpt-5.1-codex-max": 400_000,
-    "gpt-5.1-codex": 400_000,
-    "gpt-5.1": 400_000,
-    "gpt-5-codex": 400_000,
-    "gpt-5-pro": 400_000,
-    "gpt-oss-120b": 131_072,
-    "gpt-oss-20b": 131_072,
-    "codex-mini": 200_000,
-    "o3-pro": 200_000,
-    "computer-use-preview": 8192,
-    "gpt-4": 128_000,
-    "text-embedding-3-large": 8192,
-    "text-embedding-3-small": 8192,
-    "text-embedding-ada-002": 8192,
-    "text-embedding": 8191,
-}
 
+def context_windows_from_catalog(
+    catalog: Mapping[str, Any],
+    *,
+    providers: frozenset[str] | None = None,
+) -> dict[str, int]:
+    """Build model-id context windows from a LiteLLM catalog payload.
+
+    Catalog keys are kept as published. When a key is ``provider/model`` and
+    that provider matches ``litellm_provider``, the bare model id is also
+    indexed so native providers can look up the id they send to the API.
+    Exact catalog keys override those bare aliases.
+    """
+    aliases: dict[str, int] = {}
+    exact: dict[str, int] = {}
+    for name, props in catalog.items():
+        if name == "sample_spec" or not isinstance(props, dict):
+            continue
+        provider = props.get("litellm_provider")
+        if providers is not None and provider not in providers:
+            continue
+        limit = props.get("max_input_tokens")
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            continue
+        exact[name] = limit
+        provider_name, separator, remainder = name.partition("/")
+        if separator and remainder and provider_name == provider:
+            aliases.setdefault(remainder, limit)
+    return {**aliases, **exact}
+
+
+def _load_catalog() -> dict[str, Any]:
+    resource = files("crewai.llms").joinpath("data", _CATALOG_FILENAME)
+    catalog = json.loads(resource.read_text(encoding="utf-8"))
+    if not isinstance(catalog, dict):
+        raise ValueError("LiteLLM context catalog must be a JSON object")
+    return catalog
+
+
+_CATALOG = _load_catalog()
+LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(_CATALOG)
+OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
+    _CATALOG, providers=_OPENAI_PROVIDERS
+)
+AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
+    _CATALOG, providers=_AZURE_PROVIDERS
+)
 AZURE_OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     **OPENAI_CONTEXT_WINDOWS,
     **AZURE_CONTEXT_WINDOWS,
 }
-
-# Check active Claude IDs and context windows here; review retirements before
-# removing legacy prefixes: https://docs.anthropic.com/en/docs/about-claude/models
-# https://docs.anthropic.com/en/docs/about-claude/model-deprecations
-ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "claude-fable-5-1": 1_000_000,
-    "claude-fable-5": 1_000_000,
-    "claude-mythos-5-1": 1_000_000,
-    "claude-mythos-5": 1_000_000,
-    "claude-opus-5-5": 1_000_000,
-    "claude-opus-5": 1_000_000,
-    "claude-sonnet-5": 1_000_000,
-    "claude-opus-4-8": 1_000_000,
-    "claude-opus-4-7": 1_000_000,
-    "claude-sonnet-4-6": 1_000_000,
-    "claude-opus-4-6": 1_000_000,
-    "claude-opus-4-5": 200_000,
-    "claude-sonnet-4-5": 200_000,
-    "claude-haiku-4-5": 200_000,
-}
-
-# Check Gemini model IDs and context windows here; remove or replace retired
-# entries listed in the catalog:
-# https://ai.google.dev/gemini-api/docs/models
-GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "gemini-3.8-flash": 1_048_576,
-    "gemini-3.7-flash": 1_048_576,
-    "gemini-3.6-flash": 1_048_576,
-    "gemini-3.5-flash": 1_048_576,
-    "gemini-3.5-flash-lite": 1_048_576,
-    "gemini-2.5-flash": 1_048_576,
-    "gemini-2.5-flash-lite": 1_048_576,
-    "gemini-2.5-pro": 1_048_576,
-    "gemini-3.1-flash-lite": 1_048_576,
-    "gemini-3.1-pro-preview": 1_048_576,
-    "gemini-3-flash-preview": 1_048_576,
-    "gemma-3-27b": 128_000,
-    "gemma-3-12b": 128_000,
-    "gemma-3-4b": 128_000,
-    "gemma-3-1b": 32_000,
-}
-
-# Check Bedrock model IDs and each model's context window in Models at a glance.
-# Availability varies by account and region; remove or replace retired entries:
-# https://docs.aws.amazon.com/bedrock/latest/userguide/models.html
-_BEDROCK_BASE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "amazon.nova-2-lite-v1:0": 1_000_000,
-    "amazon.nova-pro-v1:0": 300_000,
-    "amazon.nova-micro-v1:0": 128_000,
-    "amazon.nova-lite-v1:0": 300_000,
-    "ai21.jamba-1-5-large-v1:0": 256_000,
-    "ai21.jamba-1-5-mini-v1:0": 256_000,
-    "deepseek.r1-v1:0": 128_000,
-    "deepseek.v3-v1:0": 128_000,
-    "deepseek.v3.2": 164_000,
-    "google.gemma-3-12b-it": 128_000,
-    "google.gemma-3-27b-it": 128_000,
-    "google.gemma-3-4b-it": 128_000,
-    "google.gemma-4-26b-a4b": 256_000,
-    "google.gemma-4-31b": 256_000,
-    "google.gemma-4-e2b": 128_000,
-    "meta.llama3-1-405b-instruct-v1:0": 128_000,
-    "meta.llama3-3-70b-instruct-v1:0": 128_000,
-    "meta.llama3-1-70b-instruct-v1:0": 128_000,
-    "meta.llama3-1-8b-instruct-v1:0": 128_000,
-    "meta.llama3-70b-instruct-v1:0": 8000,
-    "meta.llama3-8b-instruct-v1:0": 8000,
-    "meta.llama3-2-11b-instruct-v1:0": 128_000,
-    "meta.llama3-2-3b-instruct-v1:0": 128_000,
-    "meta.llama3-2-90b-instruct-v1:0": 128_000,
-    "meta.llama3-2-1b-instruct-v1:0": 128_000,
-    "meta.llama4-maverick-17b-instruct-v1:0": 1_000_000,
-    "meta.llama4-scout-17b-instruct-v1:0": 10_000_000,
-    "minimax.minimax-m2": 1_000_000,
-    "minimax.minimax-m2.1": 196_000,
-    "minimax.minimax-m2.5": 196_000,
-    "mistral.devstral-2-123b": 256_000,
-    "mistral.magistral-small-2509": 128_000,
-    "mistral.ministral-3-14b-instruct": 128_000,
-    "mistral.ministral-3-8b-instruct": 128_000,
-    "mistral.ministral-3-3b-instruct": 128_000,
-    "mistral.mistral-7b-instruct-v0:2": 32_000,
-    "mistral.mistral-large-3-675b-instruct": 256_000,
-    "mistral.mistral-large-2402-v1:0": 32_000,
-    "mistral.mistral-small-2402-v1:0": 32_000,
-    "mistral.mixtral-8x7b-instruct-v0:1": 32_000,
-    "mistral.pixtral-large-2502-v1:0": 128_000,
-    "moonshot.kimi-k2-thinking": 256_000,
-    "moonshotai.kimi-k2.5": 256_000,
-    "moonshotai.kimi-k3": 1_000_000,
-    "nvidia.nemotron-nano-12b-v2": 128_000,
-    "nvidia.nemotron-nano-9b-v2": 128_000,
-    "nvidia.nemotron-nano-3-30b": 256_000,
-    "nvidia.nemotron-super-3-120b": 256_000,
-    "openai.gpt-5.4": 1_000_000,
-    "openai.gpt-5.5": 1_000_000,
-    "openai.gpt-5.6-cyber": 272_000,
-    "openai.gpt-5.6-luna": 1_000_000,
-    "openai.gpt-5.6-sol": 1_000_000,
-    "openai.gpt-5.6-terra": 1_000_000,
-    "openai.gpt-6-astra": 1_050_000,
-    "openai.gpt-6-luna": 1_050_000,
-    "openai.gpt-6-sol": 1_050_000,
-    "openai.gpt-daybreak-blue-5.6-sol": 1_000_000,
-    "openai.gpt-oss-20b-1:0": 128_000,
-    "openai.gpt-oss-120b-1:0": 128_000,
-    "openai.gpt-oss-safeguard-20b": 128_000,
-    "openai.gpt-oss-safeguard-120b": 128_000,
-    "qwen.qwen3-235b-a22b-2507-v1:0": 256_000,
-    "qwen.qwen3-32b-v1:0": 32_000,
-    "qwen.qwen3-coder-30b-a3b-v1:0": 256_000,
-    "qwen.qwen3-coder-480b-a35b-v1:0": 128_000,
-    "qwen.qwen3-coder-next": 256_000,
-    "qwen.qwen3-next-80b-a3b": 256_000,
-    "qwen.qwen3-vl-235b-a22b": 256_000,
-    "writer.palmyra-x4-v1:0": 128_000,
-    "writer.palmyra-x5-v1:0": 128_000,
-    "xai.grok-4.3": 1_000_000,
-    "xai.grok-4.6": 500_000,
-    "zai.glm-4.7": 203_000,
-    "zai.glm-4.7-flash": 203_000,
-    "zai.glm-5": 200_000,
-}
-
-
-def _prefixed_context_windows(
-    sizes: Mapping[str, int], prefixes: Sequence[str]
-) -> dict[str, int]:
-    return {
-        f"{prefix}{model}": size for prefix in prefixes for model, size in sizes.items()
-    }
-
-
-# Bedrock's lifecycle is independent from Anthropic's direct API. Sonnet 4 is
-# Legacy (not EOL) on Bedrock, so keep its provider-specific limit until AWS
-# retires it: https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle-legacy.html
-_BEDROCK_LEGACY_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "anthropic.claude-sonnet-4": 200_000,
-    "us.anthropic.claude-sonnet-4": 200_000,
-    "eu.anthropic.claude-sonnet-4": 200_000,
-    "apac.anthropic.claude-sonnet-4": 200_000,
-    "global.anthropic.claude-sonnet-4": 200_000,
-    **_prefixed_context_windows(
-        {
-            "anthropic.claude-opus-4-1": 200_000,
-            "anthropic.claude-opus-4": 200_000,
-            "anthropic.claude-haiku-4": 200_000,
-            "anthropic.claude-3-7-sonnet": 200_000,
-            "anthropic.claude-3-5-sonnet": 200_000,
-            "anthropic.claude-3-5-haiku": 200_000,
-            "anthropic.claude-3-opus": 200_000,
-            "anthropic.claude-3-sonnet": 200_000,
-            "anthropic.claude-3-haiku": 200_000,
-        },
-        ("", "us.", "eu.", "apac.", "global."),
-    ),
-}
-
-# LiteLLM maintains its provider-only model IDs and context windows here. Prefer
-# the vendor catalogs above when both sources define the same model:
-# https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json
-LITELLM_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    "deepseek-chat": 128_000,
-    "claude-3-5-sonnet": 200_000,
-    "gemma2-9b-it": 8192,
-    "gemma-7b-it": 8192,
-    "llama3-groq-70b-8192-tool-use-preview": 8192,
-    "llama3-groq-8b-8192-tool-use-preview": 8192,
-    "llama-3.1-70b-versatile": 131_072,
-    "llama-3.1-8b-instant": 131_072,
-    "llama-3.2-1b-preview": 8192,
-    "llama-3.2-3b-preview": 8192,
-    "llama-3.2-11b-text-preview": 8192,
-    "llama-3.2-90b-text-preview": 8192,
-    "llama3-70b-8192": 8192,
-    "llama3-8b-8192": 8192,
-    "mixtral-8x7b-32768": 32_768,
-    "llama-3.3-70b-versatile": 128_000,
-    "llama-3.3-70b-instruct": 128_000,
-    "Meta-Llama-3.3-70B-Instruct": 131_072,
-    "QwQ-32B-Preview": 8192,
-    "Qwen2.5-72B-Instruct": 8192,
-    "Qwen2.5-Coder-32B-Instruct": 8192,
-    "Meta-Llama-3.1-405B-Instruct": 8192,
-    "Meta-Llama-3.1-70B-Instruct": 131_072,
-    "Meta-Llama-3.1-8B-Instruct": 131_072,
-    "Llama-3.2-90B-Vision-Instruct": 16_384,
-    "Llama-3.2-11B-Vision-Instruct": 16_384,
-    "Meta-Llama-3.2-3B-Instruct": 4096,
-    "Meta-Llama-3.2-1B-Instruct": 16_384,
-    "gemini/gemma-3-1b-it": 32_000,
-    "gemini/gemma-3-4b-it": 128_000,
-    "gemini/gemma-3-12b-it": 128_000,
-    "gemini/gemma-3-27b-it": 128_000,
-    "mistral-tiny": 32_768,
-    "mistral-small-latest": 32_768,
-    "mistral-medium-latest": 32_768,
-    "mistral-large-latest": 32_768,
-    "mistral-large-2407": 32_768,
-    "mistral-large-2402": 32_768,
-    "mistral/mistral-tiny": 32_768,
-    "mistral/mistral-small-latest": 32_768,
-    "mistral/mistral-medium-latest": 32_768,
-    "mistral/mistral-large-latest": 32_768,
-    "mistral/mistral-large-2407": 32_768,
-    "mistral/mistral-large-2402": 32_768,
-}
-
-
-BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = {
-    **_BEDROCK_BASE_CONTEXT_WINDOWS,
-    **_BEDROCK_LEGACY_CONTEXT_WINDOWS,
-    **_prefixed_context_windows(_BEDROCK_BASE_CONTEXT_WINDOWS, ("us.", "eu.", "apac.")),
-    **_prefixed_context_windows(
-        ANTHROPIC_CONTEXT_WINDOWS,
-        (
-            "anthropic.",
-            "us.anthropic.",
-            "eu.anthropic.",
-            "apac.anthropic.",
-            "global.anthropic.",
-        ),
-    ),
-    # Geo inference ID is not produced by the us/eu/apac expansion.
-    "global.moonshotai.kimi-k3": 1_000_000,
-}
-
-LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
-    **LITELLM_CONTEXT_WINDOWS,
-    **OPENAI_CONTEXT_WINDOWS,
-    **AZURE_CONTEXT_WINDOWS,
-    **ANTHROPIC_CONTEXT_WINDOWS,
-    **GEMINI_CONTEXT_WINDOWS,
-    **BEDROCK_CONTEXT_WINDOWS,
-}
+ANTHROPIC_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
+    _CATALOG, providers=_ANTHROPIC_PROVIDERS
+)
+GEMINI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
+    _CATALOG, providers=_GEMINI_PROVIDERS
+)
+BEDROCK_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
+    _CATALOG, providers=_BEDROCK_PROVIDERS
+)
 
 
 def resolve_context_window_size(
@@ -328,21 +96,9 @@ def resolve_context_window_size(
     default: int,
     extra_names: Sequence[str] = (),
 ) -> int:
-    """Return the usable context window for a model using its longest prefix."""
-    for name, size in sizes.items():
-        if size < MIN_CONTEXT or size > MAX_CONTEXT:
-            raise ValueError(
-                f"Context window for {name} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
-            )
-
-    candidates = (model, *extra_names)
-    _, size = max(
-        (
-            (prefix, size)
-            for prefix, size in sizes.items()
-            if any(name.startswith(prefix) for name in candidates)
-        ),
-        key=lambda match: len(match[0]),
-        default=("", default),
-    )
-    return int(size * CONTEXT_WINDOW_USAGE_RATIO)
+    """Return the usable context window for an exact catalog model id."""
+    for name in (model, *extra_names):
+        size = sizes.get(name)
+        if size is not None:
+            return int(size * CONTEXT_WINDOW_USAGE_RATIO)
+    return int(default * CONTEXT_WINDOW_USAGE_RATIO)
