@@ -33,6 +33,16 @@ def test_bare_lookup_uses_the_full_catalog_when_the_provider_map_misses() -> Non
     assert result == int(200_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+def test_unrecognized_provider_prefix_does_not_inherit_the_bare_window() -> None:
+    result = resolve_context_window_size(
+        "acme/gpt-5.6-luna",
+        LLM_CONTEXT_WINDOW_SIZES,
+        default=DEFAULT_CONTEXT_WINDOW_SIZE,
+    )
+
+    assert result == int(DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_resolver_does_not_match_a_different_model_family() -> None:
     sizes = {"gpt-5.4-mini": 200_000}
 

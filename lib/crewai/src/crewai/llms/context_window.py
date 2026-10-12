@@ -108,7 +108,23 @@ def _load_catalog() -> dict[str, Any]:
     return catalog
 
 
+def _catalog_provider_prefixes(catalog: Mapping[str, Any]) -> frozenset[str]:
+    """Return provider prefixes that catalog keys actually use."""
+    prefixes: set[str] = set()
+    for name, props in catalog.items():
+        if not isinstance(props, dict):
+            continue
+        provider = props.get("litellm_provider")
+        if not isinstance(provider, str):
+            continue
+        prefix, separator, remainder = name.partition("/")
+        if separator and remainder and prefix == provider:
+            prefixes.add(prefix.lower())
+    return frozenset(prefixes)
+
+
 _CATALOG = _load_catalog()
+_CATALOG_PROVIDER_PREFIXES: Final[frozenset[str]] = _catalog_provider_prefixes(_CATALOG)
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = context_windows_from_catalog(_CATALOG)
 OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = context_windows_from_catalog(
     _CATALOG, providers=_OPENAI_PROVIDERS
@@ -161,6 +177,18 @@ def bare_model_name(name: str) -> str:
     return name
 
 
+def _bare_lookup_name(name: str) -> str:
+    """Return the bare-index key for a model id.
+
+    A slash prefix is removed only when that prefix is a catalog provider.
+    ``acme/gpt-5.6-luna`` stays intact so it does not inherit ``gpt-5.6-luna``.
+    """
+    prefix, separator, remainder = name.partition("/")
+    if separator and remainder and prefix.lower() not in _CATALOG_PROVIDER_PREFIXES:
+        return name
+    return bare_model_name(name)
+
+
 def bare_context_windows(sizes: Mapping[str, int]) -> dict[str, int]:
     """Index context limits by bare model name.
 
@@ -197,7 +225,8 @@ def resolve_context_window_size(
 
     Exact IDs are resolved in ``sizes``. A miss falls back to
     ``BARE_CONTEXT_WINDOWS``, which is built from the full catalog rather than
-    the provider map.
+    the provider map. An unknown ``provider/model`` prefix is not reduced to
+    the bare model.
     """
     for name in (model, *extra_names):
         size = sizes.get(name)
@@ -205,7 +234,7 @@ def resolve_context_window_size(
             return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
     for name in (model, *extra_names):
-        size = BARE_CONTEXT_WINDOWS.get(bare_model_name(name))
+        size = BARE_CONTEXT_WINDOWS.get(_bare_lookup_name(name))
         if size is not None:
             return int(size * CONTEXT_WINDOW_USAGE_RATIO)
     return int(default * CONTEXT_WINDOW_USAGE_RATIO)
