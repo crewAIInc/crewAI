@@ -115,7 +115,7 @@ def test_run_reports_sdk_failure(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_missing_dependency_error_is_actionable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delitem(sys.modules, "typesafe_sdk", raising=False)
+    monkeypatch.setitem(sys.modules, "typesafe_sdk", None)
     tool = JevDecisionTool()
 
     result = tool._run(

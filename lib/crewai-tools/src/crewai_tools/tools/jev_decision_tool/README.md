@@ -26,6 +26,9 @@ result = tool.run(
     },
 )
 
-print(result["choice"])
-print(result["confidence"])
+if result["success"]:
+    print(result["choice"])
+    print(result["confidence"])
+else:
+    print(result["error"])
 ```
