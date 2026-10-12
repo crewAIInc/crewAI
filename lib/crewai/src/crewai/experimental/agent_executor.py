@@ -1298,7 +1298,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # todo ↔ result (or exception) mapping.
         step_results: list[tuple[TodoItem, StepResult]] = []
         for todo, item in zip(ready, gathered, strict=True):
-            if isinstance(item, HookAborted):
+            if isinstance(item, (HookAborted, ToolExecutionFailedError)):
                 raise item
             if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"

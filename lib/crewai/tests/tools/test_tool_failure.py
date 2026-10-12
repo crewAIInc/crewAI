@@ -722,6 +722,63 @@ class TestRaisePolicySurvivesEveryWrapper:
         with pytest.raises(ToolExecutionFailedError):
             crew.kickoff()
 
+    @pytest.mark.parametrize("parallel", [False, True], ids=["sequential", "parallel"])
+    @pytest.mark.parametrize("policy", list(ToolFailurePolicy))
+    def test_planned_tool_failure_policy_reaches_crew_caller(
+        self, parallel: bool, policy: ToolFailurePolicy
+    ) -> None:
+        """Parallel planning must preserve deliberate tool aborts like sequential planning."""
+        from unittest.mock import patch
+
+        from crewai import PlanningConfig
+        from crewai.utilities.planning_types import PlanStep
+        from crewai.utilities.reasoning_handler import AgentReasoningOutput, ReasoningPlan
+
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post messages",
+            backstory="b",
+            llm=StatelessToolLLM("slackbot_send_message", {"channel": "#test"}),
+            tools=[SlackTool()],
+            planning_config=PlanningConfig(reasoning_effort="low", max_replans=0),
+            tool_failure_policy=policy,
+        )
+        reviewer = Agent(
+            role="Reviewer",
+            goal="review delivery",
+            backstory="b",
+            llm=ScriptedLLM(["Thought: reviewed\nFinal Answer: reviewed"]),
+        )
+        task = Task(description="post messages", expected_output="posted", agent=agent)
+        next_task = Task(description="review delivery", expected_output="reviewed", agent=reviewer)
+        crew = Crew(agents=[agent, reviewer], tasks=[task, next_task])
+        steps = [PlanStep(step_number=1, description="Post the first message")]
+        if parallel:
+            steps.append(PlanStep(step_number=2, description="Post the second message"))
+        plan = AgentReasoningOutput(
+            plan=ReasoningPlan(plan="Post messages", ready=True, steps=steps)
+        )
+
+        # Only the model-generated plan is fixed; real StepExecutor, tools,
+        # policy handling, Task lifecycle, and the second Agent execute.
+        with patch(
+            "crewai.utilities.reasoning_handler.AgentReasoning.handle_agent_reasoning",
+            return_value=plan,
+        ):
+            if policy == ToolFailurePolicy.RAISE:
+                with pytest.raises(ToolExecutionFailedError) as exc_info:
+                    crew.kickoff()
+                assert exc_info.value.record.failure.code == "channel_not_found"
+                assert task.output is None
+                assert next_task.output is None
+                assert reviewer.llm._index == 0
+            else:
+                result = crew.kickoff()
+                assert result.raw == "reviewed"
+                assert task.output is not None
+                assert next_task.output is not None
+                assert task.output.has_tool_failures == (policy == ToolFailurePolicy.WARN)
+
     def test_crew_ignore_suppresses_recording_end_to_end(self) -> None:
         agent = Agent(
             role="Slack Messenger",
