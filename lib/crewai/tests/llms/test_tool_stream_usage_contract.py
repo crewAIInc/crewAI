@@ -1043,19 +1043,24 @@ def test_completed_event_reports_the_tokens_of_its_call(
 # --- Failures -----------------------------------------------------------------
 
 
-def _assert_one_failure(llm: BaseLLM, events: _Events) -> None:
+def _assert_failed(llm: BaseLLM, events: _Events) -> None:
     assert len(events.started) == 1
-    assert len(events.failed) == 1
+    assert events.failed
     assert "provider exploded" in events.failed[0].error
     assert events.completed == []
     assert llm.get_token_usage_summary().successful_requests == 0
 
 
-@pytest.mark.parametrize("provider", _providers(openai=_OPENAI_FAILS_TWICE))
-def test_failed_call_raises_and_emits_one_failed_event(
+def _assert_one_failure(llm: BaseLLM, events: _Events) -> None:
+    _assert_failed(llm, events)
+    assert len(events.failed) == 1
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+def test_failed_call_raises_without_completing(
     provider: _ProviderContract, monkeypatch: pytest.MonkeyPatch, events: _Events
 ) -> None:
-    """One failed logical call is one failure event, however deep it was raised."""
+    """A failed call raises, reports the error and records no completion or usage."""
     llm = provider.build()
     provider.stub(llm, monkeypatch, RuntimeError("provider exploded"))
 
@@ -1063,12 +1068,12 @@ def test_failed_call_raises_and_emits_one_failed_event(
         llm.call(PROMPT)
     _flush()
 
-    _assert_one_failure(llm, events)
+    _assert_failed(llm, events)
 
 
-@pytest.mark.parametrize("provider", _providers(openai=_OPENAI_FAILS_TWICE))
+@pytest.mark.parametrize("provider", PROVIDERS)
 @pytest.mark.asyncio
-async def test_failed_acall_raises_and_emits_one_failed_event(
+async def test_failed_acall_raises_without_completing(
     provider: _ProviderContract, monkeypatch: pytest.MonkeyPatch, events: _Events
 ) -> None:
     """The async path reports a failure the same way."""
@@ -1079,7 +1084,38 @@ async def test_failed_acall_raises_and_emits_one_failed_event(
         await llm.acall(PROMPT)
     _flush()
 
-    _assert_one_failure(llm, events)
+    _assert_failed(llm, events)
+
+
+@pytest.mark.parametrize("provider", _providers(openai=_OPENAI_FAILS_TWICE))
+def test_failed_call_emits_one_failed_event(
+    provider: _ProviderContract, monkeypatch: pytest.MonkeyPatch, events: _Events
+) -> None:
+    """One failed logical call is one failure event, however deep it was raised."""
+    llm = provider.build()
+    provider.stub(llm, monkeypatch, RuntimeError("provider exploded"))
+
+    with pytest.raises(RuntimeError, match="provider exploded"):
+        llm.call(PROMPT)
+    _flush()
+
+    assert len(events.failed) == 1
+
+
+@pytest.mark.parametrize("provider", _providers(openai=_OPENAI_FAILS_TWICE))
+@pytest.mark.asyncio
+async def test_failed_acall_emits_one_failed_event(
+    provider: _ProviderContract, monkeypatch: pytest.MonkeyPatch, events: _Events
+) -> None:
+    """The async path emits one failure event too."""
+    llm = provider.build()
+    provider.stub_async(llm, monkeypatch, RuntimeError("provider exploded"))
+
+    with pytest.raises(RuntimeError, match="provider exploded"):
+        await llm.acall(PROMPT)
+    _flush()
+
+    assert len(events.failed) == 1
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
