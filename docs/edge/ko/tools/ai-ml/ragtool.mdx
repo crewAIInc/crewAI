@@ -530,7 +530,7 @@ rag_tool = RagTool(config=config, summarize=True)
     **구성 옵션:**
     - `model_name` (str): OpenCLIP 모델 아키텍처. 기본값: `ViT-B-32`. 옵션: `ViT-B-32`, `ViT-B-16`, `ViT-L-14`
     - `checkpoint` (str): 사전 학습된 체크포인트 이름. 기본값: `laion2b_s34b_b79k`. 옵션: `laion2b_s34b_b79k`, `laion400m_e32`, `openai`
-    - `device` (str): 실행할 장치. 기본값: `cpu`. 옵션: `cpu`, `cuda`
+    - `device` (str): 실행할 장치. 기본값: `cpu`. 옵션: `cpu`, `cuda`, `mps`, `xpu`
 
     **환경 변수:**
     - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`
