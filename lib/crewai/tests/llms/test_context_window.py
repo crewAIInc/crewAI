@@ -7,6 +7,7 @@ from crewai.llms.context_window import (
     CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
+    bare_context_windows,
     context_windows_from_catalog,
     resolve_context_window_size,
 )
@@ -22,11 +23,21 @@ def test_resolver_uses_the_exact_model_id() -> None:
     assert result == int(200_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
-def test_resolver_does_not_inherit_a_shorter_model_id() -> None:
-    sizes = {"gpt-5": 1_047_576, "gpt-5.4-mini": 200_000}
+def test_bare_lookup_uses_the_full_catalog_when_the_provider_map_misses() -> None:
+    result = resolve_context_window_size(
+        "us.anthropic.claude-sonnet-4-5-v1:0",
+        {},
+        default=DEFAULT_CONTEXT_WINDOW_SIZE,
+    )
+
+    assert result == int(200_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_resolver_does_not_match_a_different_model_family() -> None:
+    sizes = {"gpt-5.4-mini": 200_000}
 
     result = resolve_context_window_size(
-        "gpt-5.4-mini-2026-01-01", sizes, default=DEFAULT_CONTEXT_WINDOW_SIZE
+        "gpt-5.4-nano", sizes, default=DEFAULT_CONTEXT_WINDOW_SIZE
     )
 
     assert result == int(DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO)
@@ -162,3 +173,34 @@ def test_catalog_parser_keeps_published_integer_limits() -> None:
     assert windows["huge"] == 20_000_000
     assert windows["openai/gpt-example"] == 16_000
     assert windows["gpt-example"] == 16_000
+
+
+@pytest.mark.parametrize(
+    ("model", "raw_context_window"),
+    [
+        ("us.anthropic.claude-sonnet-4-5-v1:0", 200_000),
+        ("eu.anthropic.claude-sonnet-4-5-v1:0", 200_000),
+        ("us.anthropic.claude-opus-4-6-v1:0", 1_000_000),
+        ("us.anthropic.claude-opus-4-5-v1:0", 200_000),
+        ("us.anthropic.claude-haiku-4-5-v1:0", 200_000),
+        ("amazon.nova-lite-v1:0:24k", 300_000),
+        ("anthropic.claude-v2:1:200k", 100_000),
+    ],
+)
+def test_bare_model_name_matches_catalog_variants(
+    model: str, raw_context_window: int
+) -> None:
+    assert resolve_context_window_size(
+        model, BEDROCK_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+    ) == int(raw_context_window * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_bare_context_windows_skips_a_name_with_disagreeing_limits() -> None:
+    windows = bare_context_windows(
+        {
+            "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200_000,
+            "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 1_000_000,
+        }
+    )
+
+    assert "claude-sonnet-4-5" not in windows
