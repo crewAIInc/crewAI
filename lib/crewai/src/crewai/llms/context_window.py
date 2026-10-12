@@ -72,9 +72,11 @@ def context_windows_from_catalog(
     Catalog keys are kept as published. When a key is ``provider/model`` and
     that provider matches ``litellm_provider``, the bare model id is also
     indexed so native providers can look up the id they send to the API.
-    Exact catalog keys override those bare aliases.
+    That alias is omitted when those entries disagree on the limit, so lookup
+    can fall through to the conflict-aware bare-name index. Exact catalog keys
+    override aliases that do agree.
     """
-    aliases: dict[str, int] = {}
+    alias_limits: dict[str, set[int]] = {}
     exact: dict[str, int] = {}
     for name, props in catalog.items():
         if name == "sample_spec" or not isinstance(props, dict):
@@ -88,7 +90,12 @@ def context_windows_from_catalog(
         exact[name] = limit
         provider_name, separator, remainder = name.partition("/")
         if separator and remainder and provider_name == provider:
-            aliases.setdefault(remainder, limit)
+            alias_limits.setdefault(remainder, set()).add(limit)
+    aliases = {
+        name: next(iter(limits))
+        for name, limits in alias_limits.items()
+        if len(limits) == 1
+    }
     return {**aliases, **exact}
 
 

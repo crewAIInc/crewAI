@@ -175,6 +175,28 @@ def test_catalog_parser_keeps_published_integer_limits() -> None:
     assert windows["gpt-example"] == 16_000
 
 
+def test_contested_provider_aliases_are_left_to_the_bare_index() -> None:
+    windows = context_windows_from_catalog(
+        {
+            "azure/contested-model": {
+                "litellm_provider": "azure",
+                "max_input_tokens": 32_000,
+            },
+            "azure_ai/contested-model": {
+                "litellm_provider": "azure_ai",
+                "max_input_tokens": 128_000,
+            },
+        }
+    )
+
+    assert windows["azure/contested-model"] == 32_000
+    assert windows["azure_ai/contested-model"] == 128_000
+    assert "contested-model" not in windows
+    assert resolve_context_window_size(
+        "contested-model", windows, default=DEFAULT_CONTEXT_WINDOW_SIZE
+    ) == int(DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 @pytest.mark.parametrize(
     ("model", "raw_context_window"),
     [
