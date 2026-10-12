@@ -10,7 +10,6 @@ import pytest
 
 from crewai import Agent
 from crewai.agents.cache.cache_handler import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events import crewai_event_bus
 from crewai.experimental.agent_executor import AgentExecutor
@@ -125,28 +124,15 @@ def native_call(backend, tool, cache, args):
             event_source=tool,
         )
         return result.result, result.from_cache
-    if backend == "agent":
-        executor = AgentExecutor(
-            tools=structured, original_tools=[tool], tools_handler=handler
-        )
-        executor._setup_native_tools()
-        result = executor._execute_single_native_tool_call(call)
-    else:
-        executor = CrewAgentExecutor(
-            tools=structured, original_tools=[tool], tools_handler=handler
-        )
-        result = executor._execute_single_native_tool_call(
-            call_id="call_1",
-            func_name="lookup",
-            func_args=args,
-            available_functions=functions,
-            original_tool=tool,
-        )
+    executor = AgentExecutor(
+        tools=structured, original_tools=[tool], tools_handler=handler
+    )
+    executor._setup_native_tools()
+    result = executor._execute_single_native_tool_call(call)
     return result["result"], result["from_cache"]
 
 
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-@pytest.mark.parametrize("backend", ["agent", "shared", "crew"])
+@pytest.mark.parametrize("backend", ["agent", "shared"])
 @pytest.mark.parametrize(
     "input_args", [{"term": "original"}, {}], ids=["original", "empty"]
 )
@@ -176,8 +162,7 @@ def test_cache_identity_uses_arguments_after_hooks(backend, input_args, seed):
     )
 
 
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-@pytest.mark.parametrize("backend", ["agent", "shared", "crew"])
+@pytest.mark.parametrize("backend", ["agent", "shared"])
 def test_blocked_hook_does_not_return_a_cached_result(backend):
     @on(InterceptionPoint.PRE_TOOL_CALL)
     def block(_context):
