@@ -561,16 +561,17 @@ class MCPClient:
             raise
 
     def _clean_tool_arguments(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Clean tool arguments by removing None values and fixing formats.
+        """Clean MCP arguments recursively without discarding explicit empties.
 
-        Explicit empty containers are preserved because MCP input schemas
-        distinguish an empty value from an omitted argument.
+        Removes only ``None`` values, normalizes ``sources`` string items, and
+        retains empty dictionaries/lists because schemas distinguish an empty
+        value from an omitted argument.
 
         Args:
             arguments: Raw tool arguments.
 
         Returns:
-            Cleaned arguments ready for MCP server.
+            Cleaned arguments ready for the MCP server.
         """
         cleaned: dict[str, Any] = {}
 
