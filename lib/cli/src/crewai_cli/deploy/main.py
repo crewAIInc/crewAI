@@ -811,6 +811,14 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         console.print(f"Name:\t {status_data['name']}")
         console.print(f"Status:\t {status_data['status']}")
+        # AMP sets these only while the deployment is failed. They carry raw git
+        # and build output, so print them without Rich markup.
+        error_message = status_data.get("error_message")
+        if error_message:
+            console.print(f"Error:\t {error_message}", style="red", markup=False)
+        suggested_fix = status_data.get("error_suggested_fix")
+        if suggested_fix:
+            console.print(f"Fix:\t {suggested_fix}", markup=False)
 
     def get_crew_logs(self, uuid: str | None, log_type: str = "deployment") -> None:
         """
@@ -852,11 +860,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             self._standard_no_param_error_message()
             return
 
+        crew = uuid or self.project_name
         if response.status_code == 204:
-            console.print(
-                f"Crew '{self.project_name}' removed successfully.", style="green"
-            )
+            console.print(f"Crew '{crew}' removed successfully.", style="green")
         else:
-            console.print(
-                f"Failed to remove crew '{self.project_name}'", style="bold red"
-            )
+            console.print(f"Failed to remove crew '{crew}'", style="bold red")
+            self._validate_response(response)
