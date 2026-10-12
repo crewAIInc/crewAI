@@ -23,9 +23,10 @@ The contract asserted here:
 5. Failures. A failed logical call raises, emits exactly one
    ``LLMCallFailedEvent`` and no ``LLMCallCompletedEvent``, and counts no usage.
 
-Three cases fail on current ``main`` and are marked as strict known failures
-against the issue that reports each defect (#7783, #8060), so they turn into
-errors as soon as the defect is fixed and the mark is left behind.
+Two cases fail on current ``main`` and are marked as strict known failures
+against the issue that reports the defect (#7783), so they turn into errors as
+soon as it is fixed and the mark is left behind. A third defect these tests
+exposed, #8060, is already fixed and its case now passes.
 
 Legitimate differences are recorded on the provider adapters rather than hidden
 behind a shared assertion: the shape of a returned tool call (``tool_calls``),
@@ -689,14 +690,10 @@ def _providers(**known_failures: str) -> list[Any]:
 
 PROVIDERS = _providers()
 
-# Defects these tests exposed, each reported as its own issue.
+# A defect these tests exposed that is still open.
 _OPENAI_FAILS_TWICE = (
     "#7783: the non-streaming OpenAI handlers emit LLMCallFailedEvent and "
     "call()/acall() emit it again"
-)
-_ANTHROPIC_STREAM_TOOL_CALL_NEVER_COMPLETES = (
-    "#8060: the Anthropic streaming handlers return tool calls without "
-    "emitting LLMCallCompletedEvent"
 )
 
 
@@ -948,9 +945,7 @@ def test_streamed_tool_call_chunks_share_one_id_and_accumulate_arguments(
     assert events.text_chunks == []
 
 
-@pytest.mark.parametrize(
-    "provider", _providers(anthropic=_ANTHROPIC_STREAM_TOOL_CALL_NEVER_COMPLETES)
-)
+@pytest.mark.parametrize("provider", PROVIDERS)
 def test_streamed_tool_call_is_reported_as_one_tool_call_event(
     provider: _ProviderContract, monkeypatch: pytest.MonkeyPatch, events: _Events
 ) -> None:
