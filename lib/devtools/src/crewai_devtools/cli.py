@@ -29,6 +29,7 @@ from crewai_devtools.docs_versioning import (
     MissingEdgeSourcesError,
     freeze as freeze_docs,
 )
+from crewai_devtools.litellm_catalog_update import CATALOG_RELATIVE, update_catalog
 from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
 
 
@@ -1096,16 +1097,18 @@ def _update_docs_and_create_pr(
 ) -> str | None:
     """Update Edge changelogs, freeze a snapshot, and open the docs PR.
 
-    For a stable release this freezes ``docs/edge/`` into ``docs/v<version>/``
-    (after the Edge changelogs have been updated so the snapshot contains the
-    new entry), updates ``docs/docs.json`` to register the new version and
-    canonical-URL redirects, and opens a ``[docs-freeze]`` PR. The
-    ``docs-snapshots`` CI guard recognises that title prefix and allows the
-    snapshot directory to land.
+    Runs after the version-bump PR has merged. Refreshes the checked-in
+    LiteLLM catalog, then for a stable release freezes ``docs/edge/`` into
+    ``docs/v<version>/`` (after the Edge changelogs have been updated so the
+    snapshot contains the new entry), updates ``docs/docs.json`` to register
+    the new version and canonical-URL redirects, and opens a ``[docs-freeze]``
+    PR. The ``docs-snapshots`` CI guard recognises that title prefix and
+    allows the snapshot directory to land. The catalog file is included in
+    that same PR.
 
-    For a pre-release, only the Edge changelogs are touched (pre-releases don't
-    get a frozen snapshot — they ride Edge), and the PR title omits the
-    ``[docs-freeze]`` prefix.
+    For a pre-release, the catalog is still refreshed and the Edge changelogs
+    are updated. Pre-releases don't get a frozen snapshot — they ride Edge —
+    and the PR title omits the ``[docs-freeze]`` prefix.
 
     Returns:
         The docs branch name if a PR was created, None otherwise.
@@ -1116,6 +1119,9 @@ def _update_docs_and_create_pr(
     changelog_langs: list[ChangelogLang] = ["en", "pt-BR", "ko", "ar"]
 
     if dry_run:
+        console.print(
+            f"[dim][DRY RUN][/dim] Would download the LiteLLM catalog into {CATALOG_RELATIVE}"
+        )
         for lang in changelog_langs:
             cl_path = edge_root / lang / "changelog.mdx"
             translated = " (translated)" if lang != "en" else ""
@@ -1141,6 +1147,14 @@ def _update_docs_and_create_pr(
         return None
 
     docs_paths_staged: list[str] = []
+
+    # The bump PR has already merged. Refresh the catalog before the docs
+    # snapshot so this PR carries the model data that ships with the release.
+    catalog_path = update_catalog(cwd)
+    console.print(
+        f"[green]✓[/green] Updated LiteLLM catalog {catalog_path.relative_to(cwd)}"
+    )
+    docs_paths_staged.append(str(catalog_path))
 
     # Step 1: update Edge changelogs first so the snapshot we freeze afterwards
     # contains the new release's entry.
