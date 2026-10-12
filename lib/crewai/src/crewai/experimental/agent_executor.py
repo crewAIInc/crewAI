@@ -1809,7 +1809,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     idx = future_to_idx[future]
                     try:
                         ordered_results[idx] = future.result()
-                    except ToolExecutionFailedError:
+                    except (HookAborted, ToolExecutionFailedError):
                         # A deliberate stop: folding it into a tool result would
                         # let the remaining parallel calls carry on. Cancel the
                         # siblings that have not started so they never run.
@@ -2027,17 +2027,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         result = "Tool not found"
         raw_tool_result: Any = result
         tool_failure: ToolFailure | None = None
-        input_str = json.dumps(args_dict) if args_dict else ""
-        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
-            cached_result = self.tools_handler.cache.read(
-                tool=func_name, input=input_str
-            )
-            if cached_result is not None:
-                raw_tool_result = cached_result
-                result = format_native_tool_output_for_agent(output_tool, cached_result)
-                tool_failure = detect_tool_failure(cached_result)
-                from_cache = True
-
         # Emit tool usage started event
         started_at = datetime.now()
         crewai_event_bus.emit(
@@ -2064,11 +2053,25 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         )
         hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if (
+            not hook_blocked
+            and self.tools_handler
+            and self.tools_handler.cache
+            and output_tool is not None
+        ):
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
+            if cached_result is not None:
+                raw_tool_result = cached_result
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
+                tool_failure = detect_tool_failure(cached_result)
+                from_cache = True
+
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
             raw_tool_result = result
-            # The blocked message replaces any cached result, so a cached
-            # failure must not be attributed to this call.
             tool_failure = None
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
