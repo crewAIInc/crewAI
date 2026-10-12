@@ -1644,6 +1644,54 @@ async def test_anthropic_async_streaming_returns_dict_tool_use_blocks_as_tool_ca
     )
 
 
+def _assert_tool_call_completed_once(llm, mock_response):
+    from crewai.events.types.llm_events import LLMCallType
+
+    llm._emit_call_completed_event.assert_called_once()
+    kwargs = llm._emit_call_completed_event.call_args.kwargs
+    assert kwargs["call_type"] == LLMCallType.TOOL_CALL
+    assert kwargs["response"] == mock_response.content
+    assert kwargs["finish_reason"] == "tool_use"
+    assert kwargs["response_id"] == "msg_123"
+    assert kwargs["usage"]["output_tokens"] == 2
+
+
+def test_anthropic_streaming_tool_calls_emit_call_completed_event():
+    """Returned tool calls complete the call when streaming, as they do without it."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5", stream=True)
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _SyncAnthropicStream(
+        _dict_tool_use_stream_events(), mock_response
+    )
+    llm._client = mock_client
+    llm._emit_call_completed_event = MagicMock()
+
+    llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    _assert_tool_call_completed_once(llm, mock_response)
+
+
+@pytest.mark.asyncio
+async def test_anthropic_async_streaming_tool_calls_emit_call_completed_event():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5", stream=True)
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _AsyncAnthropicStream(
+        _dict_tool_use_stream_events(), mock_response
+    )
+    llm._async_client = mock_client
+    llm._emit_call_completed_event = MagicMock()
+
+    await llm.acall("Search for CrewAI", tools=_MANY_TOOLS)
+
+    _assert_tool_call_completed_once(llm, mock_response)
+
+
 def test_anthropic_dict_tool_use_blocks_execute_available_function():
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 
