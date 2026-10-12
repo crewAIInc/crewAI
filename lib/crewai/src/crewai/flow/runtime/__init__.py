@@ -18,6 +18,7 @@ import enum
 import inspect
 import logging
 from pathlib import Path
+import sys
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -894,8 +895,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             try:
                 self.memory = Memory(root_scope=f"/flow/{flow_name}")
             except ImportError as e:
-                # The default storage backend is not installable everywhere
-                # (e.g. lancedb has no WebAssembly build); run without memory.
+                # lancedb, the default storage backend, has no WebAssembly
+                # build; run without memory there and fail loudly elsewhere.
+                if sys.platform != "emscripten":
+                    raise
                 logger.debug("Flow memory disabled: %s", e)
 
         self._methods.update(methods)

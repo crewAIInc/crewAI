@@ -99,6 +99,11 @@ class _DeterministicLoader(importlib.abc.Loader):
     def create_module(self, spec: importlib.machinery.ModuleSpec) -> ModuleType | None:
         return self._loader.create_module(spec)
 
+    def __getattr__(self, name: str) -> Any:
+        # Becomes the module's __loader__, so tools that read source or package
+        # resources through it need the wrapped loader's other methods.
+        return getattr(self._loader, name)
+
     def exec_module(self, module: ModuleType) -> None:
         with _without_entropy(module.__name__):
             self._loader.exec_module(module)

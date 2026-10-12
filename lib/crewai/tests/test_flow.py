@@ -2394,10 +2394,11 @@ def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
 
 
 def test_flow_runs_without_memory_when_storage_backend_is_unavailable(monkeypatch):
-    """A missing default storage backend (e.g. lancedb under WebAssembly)
-    disables the flow's auto-created memory instead of failing the flow."""
+    """Under WebAssembly, where lancedb has no build, a missing default storage
+    backend disables the flow's auto-created memory instead of failing the flow."""
     import sys
 
+    monkeypatch.setattr(sys, "platform", "emscripten")
     # None in sys.modules makes the import raise ImportError.
     monkeypatch.setitem(sys.modules, "crewai.memory.storage.lancedb_storage", None)
 
@@ -2410,3 +2411,17 @@ def test_flow_runs_without_memory_when_storage_backend_is_unavailable(monkeypatc
 
     assert flow.memory is None
     assert flow.kickoff() == "done"
+
+
+def test_flow_reports_a_missing_storage_backend_outside_webassembly(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "crewai.memory.storage.lancedb_storage", None)
+
+    class BrokenMemoryFlow(Flow):
+        @start()
+        def begin(self):
+            return "done"
+
+    with pytest.raises(ImportError):
+        BrokenMemoryFlow()

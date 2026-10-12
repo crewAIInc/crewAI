@@ -83,6 +83,12 @@ def test_real_functions_are_restored_after_import(fake_packages) -> None:
     assert uuid.uuid4() != uuid.uuid4()
 
 
+def test_wrapped_modules_keep_their_loaders_other_methods(fake_packages) -> None:
+    keys = importlib.import_module("entropy_pkg.keys")
+
+    assert "uuid4" in keys.__loader__.get_source("entropy_pkg.keys")
+
+
 def test_reseed_replaces_placeholder_values(fake_packages) -> None:
     signing = importlib.import_module("entropy_pkg.signing")
     assert signing.SECRET == bytes(32)

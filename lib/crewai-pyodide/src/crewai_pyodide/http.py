@@ -8,7 +8,7 @@ server-sent events from LLM providers arrive incrementally.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable
 import importlib
 from typing import Any
 
@@ -23,21 +23,73 @@ _FORBIDDEN_REQUEST_HEADERS = frozenset(
 _STALE_RESPONSE_HEADERS = frozenset({"content-encoding", "content-length"})
 
 
-class _FetchByteStream(httpx.AsyncByteStream):
-    """Response body read chunk by chunk from a ``ReadableStream``."""
+class _FetchTimeoutError(Exception):
+    pass
 
-    def __init__(self, js_response: Any) -> None:
+
+async def _abort_after(
+    awaitable: Awaitable[Any], timeout: float | None, abort_controller: Any
+) -> Any:
+    """Await ``awaitable``, aborting the fetch if ``timeout`` seconds pass first.
+
+    Raises _FetchTimeoutError on expiry. The timer is a JavaScript one that is
+    cleared on every exit: Pyodide's event loop never clears the ``setTimeout``
+    behind a cancelled asyncio timer, so ``asyncio.wait_for`` would leave one
+    pending per call and keep Node.js alive until it fires.
+    """
+    if timeout is None:
+        return await awaitable
+
+    from pyodide.ffi import JsException, create_proxy  # type: ignore[import-not-found]
+
+    js: Any = importlib.import_module("js")
+    expired = False
+
+    def expire() -> None:
+        nonlocal expired
+        expired = True
+        abort_controller.abort()
+
+    callback = create_proxy(expire)
+    timer = js.setTimeout(callback, timeout * 1000)
+    try:
+        return await awaitable
+    except JsException as e:
+        if expired:
+            raise _FetchTimeoutError from e
+        raise
+    finally:
+        js.clearTimeout(timer)
+        callback.destroy()
+
+
+class _FetchByteStream(httpx.AsyncByteStream):
+    """Response body read chunk by chunk from a ``ReadableStream``.
+
+    ``read_timeout`` bounds the wait for each chunk, as httpx's read timeout
+    does; on expiry ``abort_controller`` cancels the underlying fetch.
+    """
+
+    def __init__(
+        self, js_response: Any, abort_controller: Any, read_timeout: float | None
+    ) -> None:
         body = js_response.body
         self._reader = body.getReader() if body is not None else None
+        self._abort_controller = abort_controller
+        self._read_timeout = read_timeout
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
-        from pyodide.ffi import JsException  # type: ignore[import-not-found]
+        from pyodide.ffi import JsException
 
         if self._reader is None:
             return
         while True:
             try:
-                chunk = await self._reader.read()
+                chunk = await _abort_after(
+                    self._reader.read(), self._read_timeout, self._abort_controller
+                )
+            except _FetchTimeoutError as e:
+                raise httpx.ReadTimeout("Timed out reading the response body") from e
             except JsException as e:
                 # The connection dropped mid-body; let httpx and SDKs retry.
                 raise httpx.ReadError(str(e)) from e
@@ -72,13 +124,30 @@ class FetchAsyncTransport(httpx.AsyncBaseTransport):
             for k, v in request.headers.multi_items()
             if k.lower() not in _FORBIDDEN_REQUEST_HEADERS
         ]
-        init: dict[str, Any] = {"method": request.method, "headers": headers}
+        # fetch has no separate connect phase, so httpx's read timeout bounds
+        # both the wait for response headers and each body chunk.
+        read_timeout = request.extensions.get("timeout", {}).get("read")
+        abort_controller = js.AbortController.new()
+        init: dict[str, Any] = {
+            "method": request.method,
+            "headers": headers,
+            "signal": abort_controller.signal,
+        }
         if body:
             init["body"] = to_js(body)
         try:
-            js_response = await js.fetch(
-                str(request.url), to_js(init, dict_converter=js.Object.fromEntries)
+            js_response = await _abort_after(
+                js.fetch(
+                    str(request.url),
+                    to_js(init, dict_converter=js.Object.fromEntries),
+                ),
+                read_timeout,
+                abort_controller,
             )
+        except _FetchTimeoutError as e:
+            raise httpx.ReadTimeout(
+                "Timed out waiting for the response", request=request
+            ) from e
         except JsException as e:
             # Network failures and CORS rejections both surface as a TypeError.
             raise httpx.ConnectError(str(e), request=request) from e
@@ -91,7 +160,7 @@ class FetchAsyncTransport(httpx.AsyncBaseTransport):
         return httpx.Response(
             status_code=js_response.status,
             headers=response_headers,
-            stream=_FetchByteStream(js_response),
+            stream=_FetchByteStream(js_response, abort_controller, read_timeout),
             request=request,
         )
 

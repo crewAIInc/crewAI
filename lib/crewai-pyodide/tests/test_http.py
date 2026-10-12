@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import sys
 from types import ModuleType, SimpleNamespace
@@ -44,14 +45,43 @@ class _JsException(Exception):
     pass
 
 
+class _Proxy:
+    def __init__(self, fn: Any) -> None:
+        self._fn = fn
+        self.destroyed = False
+
+    def __call__(self) -> None:
+        self._fn()
+
+    def destroy(self) -> None:
+        self.destroyed = True
+
+
 @pytest.fixture
 def fake_js(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """Install fake ``js`` and ``pyodide.ffi`` modules; returns call records."""
-    state = SimpleNamespace(requests=[], chunks=[b'{"ok": ', b"true}"], error=None)
+    state = SimpleNamespace(
+        requests=[],
+        chunks=[b'{"ok": ', b"true}"],
+        error=None,
+        hang=False,
+        aborted=0,
+        abort_event=asyncio.Event(),
+        timers=set(),
+    )
+
+    async def wait_for_abort() -> None:
+        # A real fetch rejects its pending promises once its signal aborts.
+        await state.abort_event.wait()
+        raise _JsException("AbortError")
+
+    state.wait_for_abort = wait_for_abort
 
     async def fetch(url: str, init: dict[str, Any]) -> SimpleNamespace:
         if state.error:
             raise state.error
+        if state.hang:
+            await wait_for_abort()
         state.requests.append((url, init))
         state.reader = _Reader(list(state.chunks))
         return SimpleNamespace(
@@ -69,9 +99,34 @@ def fake_js(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     js = ModuleType("js")
     js.fetch = fetch  # type: ignore[attr-defined]
     js.Object = SimpleNamespace(fromEntries=dict)  # type: ignore[attr-defined]
+
+    def abort_controller() -> SimpleNamespace:
+        def abort() -> None:
+            state.aborted += 1
+            state.abort_event.set()
+
+        return SimpleNamespace(signal=object(), abort=abort)
+
+    def set_timeout(callback: _Proxy, ms: float) -> asyncio.TimerHandle:
+        def fire() -> None:
+            state.timers.discard(handle)
+            callback()
+
+        handle = asyncio.get_running_loop().call_later(ms / 1000, fire)
+        state.timers.add(handle)
+        return handle
+
+    def clear_timeout(handle: asyncio.TimerHandle) -> None:
+        handle.cancel()
+        state.timers.discard(handle)
+
+    js.AbortController = SimpleNamespace(new=abort_controller)  # type: ignore[attr-defined]
+    js.setTimeout = set_timeout  # type: ignore[attr-defined]
+    js.clearTimeout = clear_timeout  # type: ignore[attr-defined]
     ffi = ModuleType("pyodide.ffi")
     ffi.JsException = _JsException  # type: ignore[attr-defined]
     ffi.to_js = lambda value, dict_converter=None: value  # type: ignore[attr-defined]
+    ffi.create_proxy = _Proxy  # type: ignore[attr-defined]
     ffi.can_run_sync = lambda: state.can_run_sync  # type: ignore[attr-defined]
     state.can_run_sync = True
 
@@ -164,3 +219,43 @@ def test_sync_requests_send_streamed_bodies(fake_js: SimpleNamespace) -> None:
 
     ((_, init),) = fake_js.requests
     assert init["body"] == b"ab"
+
+
+@pytest.mark.asyncio
+async def test_unanswered_requests_time_out_and_abort_the_fetch(
+    fake_js: SimpleNamespace,
+) -> None:
+    fake_js.hang = True
+
+    async with httpx.AsyncClient(transport=FetchAsyncTransport(), timeout=0.05) as client:
+        with pytest.raises(httpx.ReadTimeout):
+            await client.get("https://api.example.com/")
+
+    assert fake_js.aborted == 1
+
+
+@pytest.mark.asyncio
+async def test_stalled_bodies_time_out_and_abort_the_fetch(
+    fake_js: SimpleNamespace,
+) -> None:
+    async def stall() -> SimpleNamespace:
+        await fake_js.wait_for_abort()
+        raise AssertionError
+
+    async with httpx.AsyncClient(transport=FetchAsyncTransport(), timeout=0.05) as client:
+        async with client.stream("GET", "https://api.example.com/sse") as response:
+            fake_js.reader.read = stall
+            with pytest.raises(httpx.ReadTimeout):
+                await response.aread()
+
+    assert fake_js.aborted == 1
+
+
+@pytest.mark.asyncio
+async def test_completed_requests_clear_their_timers(fake_js: SimpleNamespace) -> None:
+    async with httpx.AsyncClient(transport=FetchAsyncTransport(), timeout=30) as client:
+        response = await client.get("https://api.example.com/")
+
+    assert response.json() == {"ok": True}
+    assert fake_js.timers == set()
+    assert fake_js.aborted == 0

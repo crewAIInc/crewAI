@@ -763,6 +763,11 @@ class CrewAIEventsBus:
 
         from concurrent.futures import wait as wait_futures
 
+        if getattr(self, "_loop_thread", None) is None:
+            # Async handlers run on the host loop, which only advances once
+            # this thread yields, so blocking here would stall until timeout.
+            timeout = 0
+
         done, not_done = wait_futures(futures_to_wait, timeout=timeout)
 
         errors = [
@@ -923,7 +928,11 @@ class CrewAIEventsBus:
         if self._loop_thread is None:
             # The loop belongs to the host runtime (e.g. Pyodide): leave it
             # running, but still release the executor and handlers below.
-            pass
+            if not wait:
+                with self._futures_lock:
+                    pending = list(self._pending_futures)
+                for future in pending:
+                    future.cancel()
         elif wait:
 
             async def _wait_for_all_tasks() -> None:
