@@ -547,6 +547,7 @@ def test_anthropic_model_detection():
         ("claude/v1", True),
         ("anthropic--claude-sonnet-custom", True),
         ("anthropic:claude-sonnet-custom", True),
+        ("anthropic.claude-sonnet-v1:0", True),
         ("claude--custom", True),
         ("gpt-4", False),
         ("anthropomorphic", False),

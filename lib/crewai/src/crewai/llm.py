@@ -181,6 +181,7 @@ ANTHROPIC_PREFIXES: Final[tuple[str, ...]] = (
     "anthropic/",
     "anthropic--",
     "anthropic:",
+    "anthropic.",
     "claude-",
     "claude/",
     "claude--",
@@ -410,7 +411,7 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return model_lower.startswith((*ANTHROPIC_PREFIXES, "anthropic."))
+            return model_lower.startswith(ANTHROPIC_PREFIXES)
 
         if provider == "gemini" or provider == "google":
             return any(
