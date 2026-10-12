@@ -16,6 +16,7 @@ suitable for use with LLMs and tool definitions.
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import nullcontext
 from copy import deepcopy
 import datetime
 import logging
@@ -34,6 +35,7 @@ from typing import (
     get_origin,
 )
 import uuid
+import warnings
 
 import jsonref  # type: ignore[import-untyped]
 from pydantic import (
@@ -950,15 +952,26 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
 
     effective_config = __config__ or ConfigDict(extra="forbid")
 
-    model = create_model_base(
-        effective_name,
-        __config__=effective_config,
-        __base__=__base__,
-        __module__=__module__,
-        __validators__=__validators__,
-        __cls_kwargs__=__cls_kwargs__,
-        **field_definitions,
-    )
+    shadowed = [name for name in field_definitions if hasattr(BaseModel, name)]
+    with warnings.catch_warnings() if shadowed else nullcontext():
+        if shadowed:
+            # Properties like `schema` or `json` shadow BaseModel attributes but still validate
+            # and dump under their own names. catch_warnings swaps process-global filters (not
+            # thread-safe before 3.14), so it is entered only when a name collides.
+            warnings.filterwarnings(
+                "ignore",
+                message=f'Field name "({"|".join(shadowed)})" in ".+" shadows an attribute',
+                category=UserWarning,
+            )
+        model = create_model_base(
+            effective_name,
+            __config__=effective_config,
+            __base__=__base__,
+            __module__=__module__,
+            __validators__=__validators__,
+            __cls_kwargs__=__cls_kwargs__,
+            **field_definitions,
+        )
     in_progress[original_id] = model
     if schema_id != original_id:
         in_progress[schema_id] = model

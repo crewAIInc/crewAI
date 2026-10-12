@@ -522,6 +522,99 @@ class TestModelName:
         assert Model.__name__ == "DynamicModel"
 
 
+# Property names that collide with BaseModel attributes
+
+
+def _shadow_warnings(recwarn: pytest.WarningsRecorder) -> list[str]:
+    return [str(w.message) for w in recwarn if "shadows an attribute" in str(w.message)]
+
+
+class TestBaseModelAttributeNames:
+    @pytest.mark.parametrize("name", ["schema", "json", "copy"])
+    def test_property_does_not_warn_and_keeps_its_name(
+        self, name: str, recwarn: pytest.WarningsRecorder
+    ) -> None:
+        schema = {
+            "type": "object",
+            "title": "ActionRequest",
+            "properties": {name: {"type": "string"}},
+            "required": [name],
+        }
+        Model = create_model_from_schema(schema)
+
+        assert _shadow_warnings(recwarn) == []
+        assert Model(**{name: "value"}).model_dump() == {name: "value"}
+
+    def test_nested_object_property_does_not_warn(
+        self, recwarn: pytest.WarningsRecorder
+    ) -> None:
+        schema = {
+            "type": "object",
+            "title": "CreateList",
+            "properties": {
+                "list": {
+                    "type": "object",
+                    "properties": {"schema": {"type": "string"}},
+                    "required": ["schema"],
+                }
+            },
+            "required": ["list"],
+        }
+        Model = create_model_from_schema(schema)
+
+        assert _shadow_warnings(recwarn) == []
+        dumped = Model(list={"schema": "columns"}).model_dump()
+        assert dumped == {"list": {"schema": "columns"}}
+
+    def test_shadowing_property_is_still_validated(self) -> None:
+        schema = {
+            "type": "object",
+            "title": "ActionRequest",
+            "properties": {"schema": {"type": "integer"}},
+            "required": ["schema"],
+        }
+        Model = create_model_from_schema(schema)
+
+        with pytest.raises(ValueError, match="schema\n  Field required"):
+            Model()
+        with pytest.raises(ValueError, match="schema\n  Input should be a valid integer"):
+            Model(schema="not a number")
+
+    def test_unrelated_warning_during_build_still_surfaces(self) -> None:
+        schema = {
+            "type": "object",
+            "title": "ActionRequest",
+            "properties": {
+                "schema": {"type": "string"},
+                "model_dump_extra": {"type": "string"},
+            },
+        }
+        with pytest.warns(
+            UserWarning,
+            match="Field 'model_dump_extra' in 'ActionRequest' conflicts with protected namespace",
+        ) as record:
+            create_model_from_schema(schema)
+
+        assert [str(w.message) for w in record if "shadows" in str(w.message)] == []
+
+    def test_user_models_still_warn_after_a_schema_build(self) -> None:
+        create_model_from_schema(
+            {
+                "type": "object",
+                "title": "ActionRequest",
+                "properties": {"json": {"type": "string"}},
+            }
+        )
+
+        with pytest.warns(
+            UserWarning,
+            match='Field name "schema" in ".*UserModel" shadows an attribute in parent "BaseModel"',
+        ):
+
+            class UserModel(BaseModel):
+                schema: str
+
+
 # enrich_descriptions
 
 

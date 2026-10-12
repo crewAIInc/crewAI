@@ -165,3 +165,40 @@ class TestCrewAIPlatformActionToolVerify:
         mock_post.assert_called_once()
         call_args = mock_post.call_args
         assert call_args.kwargs["verify"] is False
+
+
+class TestCrewAIPlatformActionToolBaseModelAttributeNames:
+    tool_info = ToolInfo(
+        app="slack",
+        action="create_list",
+        connection_id=None,
+        description="Create a Slack list",
+        parameters={
+            "properties": {
+                "name": {"type": "string"},
+                "schema": {"type": "object", "description": "Column definitions"},
+            },
+            "required": ["name", "schema"],
+        },
+    )
+
+    def test_building_the_tool_does_not_warn(self, recwarn):
+        CrewAIPlatformActionTool(self.tool_info, client=Mock(spec=IntegrationsClient))
+
+        assert [
+            str(w.message) for w in recwarn if "shadows an attribute" in str(w.message)
+        ] == []
+
+    def test_run_sends_the_argument_under_its_original_name(self):
+        client = Mock(spec=IntegrationsClient)
+        client.execute_action.return_value = ToolExecutionSuccess(output={"ok": True})
+        tool = CrewAIPlatformActionTool(
+            self.tool_info, client=cast(IntegrationsClient, client)
+        )
+
+        tool.run(name="Launch plan", schema={"columns": ["owner", "due"]})
+
+        assert client.execute_action.call_args.args[1] == {
+            "name": "Launch plan",
+            "schema": {"columns": ["owner", "due"]},
+        }
