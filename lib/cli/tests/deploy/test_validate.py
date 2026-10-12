@@ -22,6 +22,7 @@ from crewai_cli.deploy.validate import (
     ValidationResult,
     _JSONProjectEnvironmentError,
     normalize_package_name,
+    render_report,
 )
 
 
@@ -327,6 +328,7 @@ def _scaffold_locked_crew(root: Path) -> Path:
         cwd=root,
         capture_output=True,
         check=True,
+        timeout=60,
         env={**os.environ, "UV_OFFLINE": "1"},
     )
     return root / "pyproject.toml"
@@ -743,3 +745,23 @@ def test_is_json_crew_false_without_pyproject(tmp_path):
     (tmp_path / "crew.jsonc").write_text("{}")
 
     assert DeployValidator(project_root=tmp_path)._is_json_crew is False
+
+
+@pytest.mark.parametrize("severity", [Severity.ERROR, Severity.WARNING])
+def test_render_report_prints_bracketed_text_verbatim(severity, capsys):
+    render_report(
+        [
+            ValidationResult(
+                severity=severity,
+                code="stale_lockfile",
+                title="uv.lock is out of date with pyproject.toml",
+                detail="error: crewai[tools]==1.0 not found; stray [/red] tag",
+                hint="Add [tool.hatch.build.targets.wheel] under [project].",
+            )
+        ]
+    )
+
+    out = capsys.readouterr().out
+    assert "[stale_lockfile] uv.lock is out of date with pyproject.toml" in out
+    assert "error: crewai[tools]==1.0 not found; stray [/red] tag" in out
+    assert "hint: Add [tool.hatch.build.targets.wheel] under [project]." in out

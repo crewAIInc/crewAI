@@ -46,6 +46,7 @@ from crewai_core.project import (
     read_toml,
 )
 from rich.console import Console
+from rich.markup import escape
 
 from crewai_cli.utils import normalize_package_name
 
@@ -1156,21 +1157,27 @@ def render_report(results: list[ValidationResult]) -> None:
     errors = [r for r in results if r.severity is Severity.ERROR]
     warnings = [r for r in results if r.severity is Severity.WARNING]
 
+    # Codes, TOML table names like `[project]`, extras like `crewai[tools]`, and raw
+    # subprocess output all contain brackets that Rich would read as markup.
     for result in errors:
-        console.print(f"[bold red]ERROR[/bold red] [{result.code}] {result.title}")
+        console.print(
+            f"[bold red]ERROR[/bold red] {escape(f'[{result.code}]')} "
+            f"{escape(result.title)}"
+        )
         if result.detail:
-            console.print(f"  {result.detail}")
+            console.print(f"  {escape(result.detail)}")
         if result.hint:
-            console.print(f"  [dim]hint:[/dim] {result.hint}")
+            console.print(f"  [dim]hint:[/dim] {escape(result.hint)}")
 
     for result in warnings:
         console.print(
-            f"[bold yellow]WARNING[/bold yellow] [{result.code}] {result.title}"
+            f"[bold yellow]WARNING[/bold yellow] {escape(f'[{result.code}]')} "
+            f"{escape(result.title)}"
         )
         if result.detail:
-            console.print(f"  {result.detail}")
+            console.print(f"  {escape(result.detail)}")
         if result.hint:
-            console.print(f"  [dim]hint:[/dim] {result.hint}")
+            console.print(f"  [dim]hint:[/dim] {escape(result.hint)}")
 
     summary_parts: list[str] = []
     if errors:
