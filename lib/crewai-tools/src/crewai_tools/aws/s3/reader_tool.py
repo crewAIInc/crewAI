@@ -1,3 +1,4 @@
+from contextlib import suppress
 import os
 
 from crewai.tools import BaseTool
@@ -38,8 +39,13 @@ class S3ReaderTool(BaseTool):
             )
 
             response = s3.get_object(Bucket=bucket_name, Key=object_key)
-            result: str = response["Body"].read().decode("utf-8")
-            return result
+            body = response["Body"]
+            try:
+                result: str = body.read().decode("utf-8")
+                return result
+            finally:
+                with suppress(Exception):
+                    body.close()
 
         except ClientError as e:
             return f"Error reading file from S3: {e!s}"

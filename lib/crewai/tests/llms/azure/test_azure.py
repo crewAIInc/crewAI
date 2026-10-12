@@ -5,7 +5,8 @@ from unittest.mock import patch, MagicMock, Mock
 from urllib.parse import urlparse
 import pytest
 
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm import LLM
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -644,13 +645,33 @@ def test_azure_context_window_size():
     """
     Test that Azure models return correct context window sizes
     """
+    usable = int(128_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
     llm_gpt4 = LLM(model="azure/gpt-4")
-    context_size_gpt4 = llm_gpt4.get_context_window_size()
-    assert context_size_gpt4 > 0
+    assert llm_gpt4.get_context_window_size() == usable
 
     llm_gpt4o = LLM(model="azure/gpt-4o")
-    context_size_gpt4o = llm_gpt4o.get_context_window_size()
-    assert context_size_gpt4o > context_size_gpt4  # GPT-4o has larger context
+    assert llm_gpt4o.get_context_window_size() == usable
+
+
+@pytest.mark.parametrize(
+    ("model", "context_window"),
+    [
+        ("azure/gpt-6-astra", 1_050_000),
+        ("azure/gpt-chat-latest", 400_000),
+        ("azure/gpt-oss-120b", 131_072),
+        ("azure/codex-mini", 200_000),
+        ("azure/computer-use-preview", 8192),
+        ("azure/gpt-4", 128_000),
+    ],
+)
+def test_azure_specific_models_use_official_context_windows(
+    model: str, context_window: int
+) -> None:
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(
+        context_window * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 @pytest.mark.parametrize(
@@ -670,7 +691,7 @@ def test_azure_gpt56_family_uses_official_context_window(model: str) -> None:
 
 def test_azure_gpt54_mini_keeps_its_window() -> None:
     llm = LLM(model="azure/gpt-5.4-mini")
-    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_azure_message_formatting():

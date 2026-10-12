@@ -7,7 +7,8 @@ from unittest.mock import patch, MagicMock
 import openai
 import pytest
 
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm import LLM
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
 from crewai.crew import Crew
 from crewai.agent import Agent
@@ -213,6 +214,15 @@ def test_openai_completion_module_is_imported(monkeypatch):
     """
     module_name = "crewai.llms.providers.openai.completion"
 
+    # Re-importing binds the fresh module on its package too, and monkeypatch
+    # only restores sys.modules: without also restoring the attribute, every
+    # later test in this worker sees two module objects for one name, and a
+    # `patch("crewai.llms.providers.openai.completion.X")` patches the one that
+    # `from ... import X` does not read.
+    import crewai.llms.providers.openai as openai_package
+
+    if hasattr(openai_package, "completion"):
+        monkeypatch.setattr(openai_package, "completion", openai_package.completion)
     monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="gpt-4o")
@@ -1877,8 +1887,8 @@ def test_openai_prefixed_gpt56_luna_uses_official_context_window() -> None:
 def test_openai_gpt5_and_gpt54_mini_keep_their_windows() -> None:
     gpt5 = OpenAICompletion(model="gpt-5")
     gpt54_mini = OpenAICompletion(model="gpt-5.4-mini")
-    assert gpt5.get_context_window_size() == int(1_047_576 * CONTEXT_WINDOW_USAGE_RATIO)
-    assert gpt54_mini.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt5.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt54_mini.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_openai_stop_words_still_applied_to_regular_responses():
