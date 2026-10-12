@@ -93,7 +93,7 @@ def context_windows_from_catalog(
 
 
 def _load_catalog() -> dict[str, Any]:
-    resource = files("crewai.llms").joinpath("data", _CATALOG_FILENAME)
+    resource = files("crewai.llms").joinpath("litellm_catalog", _CATALOG_FILENAME)
     catalog = json.loads(resource.read_text(encoding="utf-8"))
     if not isinstance(catalog, dict):
         raise ValueError("LiteLLM context catalog must be a JSON object")
