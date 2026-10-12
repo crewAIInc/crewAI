@@ -292,3 +292,26 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             Whether the model supports function calling.
         """
         return super().supports_function_calling()
+
+    def get_context_window_size(self) -> int:
+        """Get the context window size for the model.
+
+        These providers mostly host non-OpenAI models, which are catalogued
+        under LiteLLM's ids, so both catalogs are consulted. OpenAI's entries
+        take precedence when a model id appears in both.
+
+        Returns:
+            The usable context window size in tokens.
+        """
+        from crewai.llms.context_window import (
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            LITELLM_CONTEXT_WINDOWS,
+            OPENAI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
+
+        return resolve_context_window_size(
+            self.model,
+            {**LITELLM_CONTEXT_WINDOWS, **OPENAI_CONTEXT_WINDOWS},
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+        )
