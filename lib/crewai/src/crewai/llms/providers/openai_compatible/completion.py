@@ -298,7 +298,9 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
         These providers mostly host non-OpenAI models, which are catalogued
         under LiteLLM's ids, so both catalogs are consulted. OpenAI's entries
-        take precedence when a model id appears in both.
+        take precedence when a model id appears in both. Ids that carry a
+        vendor prefix, such as ``openai/gpt-oss-120b``, are also looked up
+        without it.
 
         Returns:
             The usable context window size in tokens.
@@ -314,4 +316,5 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             self.model,
             {**LITELLM_CONTEXT_WINDOWS, **OPENAI_CONTEXT_WINDOWS},
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            extra_names=(self.model.rpartition("/")[2],),
         )

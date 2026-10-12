@@ -281,6 +281,8 @@ class TestOpenAICompatibleCompletion:
             ("llama-3.3-70b-versatile", 128_000),
             ("llama-3.1-8b-instant", 131_072),
             ("gpt-4o", 128_000),
+            ("openai/gpt-oss-120b", 131_072),
+            ("meta-llama/an-uncatalogued-model", DEFAULT_CONTEXT_WINDOW_SIZE),
             ("an-uncatalogued-model", DEFAULT_CONTEXT_WINDOW_SIZE),
         ],
     )
