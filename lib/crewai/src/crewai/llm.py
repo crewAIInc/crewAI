@@ -2480,13 +2480,7 @@ class LLM(BaseLLM):
         return LLM_CONTEXT_WINDOW_SIZES
 
     def get_context_window_size(self) -> int:
-        """
-        Returns the context window size, using 75% of the maximum to avoid
-        cutting off messages mid-thread.
-
-        Raises:
-            ValueError: If a model's context window size is outside valid bounds (1024-2097152)
-        """
+        """Return the context window size, using 85% of the catalog limit."""
         if self.context_window_size != 0:
             return self.context_window_size
 

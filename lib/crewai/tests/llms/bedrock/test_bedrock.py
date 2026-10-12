@@ -554,7 +554,7 @@ def test_bedrock_context_window_size():
 
 
 def test_bedrock_claude_sonnet_46_uses_its_specific_context_window():
-    llm = LLM(model="bedrock/anthropic.claude-sonnet-4-6-v1:0")
+    llm = LLM(model="bedrock/anthropic.claude-sonnet-4-6")
 
     assert llm.get_context_window_size() == int(
         1_000_000 * CONTEXT_WINDOW_USAGE_RATIO
