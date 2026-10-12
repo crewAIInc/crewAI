@@ -19,6 +19,7 @@ from typing import (
     NoReturn,
     cast,
 )
+from uuid import uuid4
 import warnings
 
 from pydantic import (
@@ -114,6 +115,7 @@ from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.idempotency_backend import MemoryIdempotencyBackend
 from crewai.utilities.llm_utils import create_llm, overlay_llm_for
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -696,6 +698,7 @@ class Agent(BaseAgent):
         self.reset_tool_failures()
 
         if self.tools_handler:
+            self.tools_handler.begin_task(str(task.id))
             self.tools_handler.last_used_tool = None
 
         task_prompt = task.prompt()
@@ -1591,9 +1594,6 @@ class Agent(BaseAgent):
         """
         self.reset_tool_failures()
 
-        if self.tools_handler:
-            self.tools_handler.last_used_tool = None
-
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools:
@@ -1648,7 +1648,7 @@ class Agent(BaseAgent):
             executor.prompt = prompt
             executor.response_model = response_format
             executor.stop_words = stop_words
-            executor.tools_handler = self.tools_handler
+            executor.tools_handler = executor.tools_handler or self.tools_handler
             executor.step_callback = self.step_callback
             executor.function_calling_llm = cast(
                 BaseLLM | None, self.function_calling_llm
@@ -1657,6 +1657,19 @@ class Agent(BaseAgent):
             executor.request_within_rpm_limit = rpm_limit_fn
             executor.callbacks = [TokenCalcHandler(self._token_process)]
         else:
+            kickoff_tools_handler = (
+                self.tools_handler.model_copy() if self.tools_handler else None
+            )
+            if kickoff_tools_handler:
+                if (
+                    type(kickoff_tools_handler._get_backend())
+                    is MemoryIdempotencyBackend
+                ):
+                    kickoff_tools_handler.set_idempotency_backend(
+                        MemoryIdempotencyBackend()
+                    )
+                kickoff_tools_handler.begin_task(str(uuid4()))
+                kickoff_tools_handler.last_used_tool = None
             executor = AgentExecutor(
                 llm=cast(BaseLLM, self.llm),
                 agent=self,
@@ -1666,7 +1679,7 @@ class Agent(BaseAgent):
                 tools_names=get_tool_names(parsed_tools),
                 stop_words=stop_words,
                 tools_description=render_text_description_and_args(parsed_tools),
-                tools_handler=self.tools_handler,
+                tools_handler=kickoff_tools_handler,
                 original_tools=raw_tools,
                 step_callback=self.step_callback,
                 function_calling_llm=self.function_calling_llm,

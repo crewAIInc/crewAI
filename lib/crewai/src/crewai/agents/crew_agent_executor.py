@@ -49,6 +49,7 @@ from crewai.hooks.tool_hooks import (
     run_after_tool_call_hooks,
     run_before_tool_call_hooks,
 )
+from crewai.tools.tool_calling import ToolCalling
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
@@ -954,6 +955,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 raw_tool_result = cached_result
                 result = format_native_tool_output_for_agent(output_tool, cached_result)
                 from_cache = True
+                self.tools_handler.on_tool_use(
+                    ToolCalling(tool_name=func_name, arguments=args_dict or {}),
+                    cached_result,
+                    should_cache=False,
+                )
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
         started_at = datetime.now()
@@ -993,8 +999,24 @@ class CrewAgentExecutor(BaseAgentExecutor):
             and output_tool is not None
         ):
             try:
-                raw_result = available_functions[func_name](**(args_dict or {}))
+                raw_result = (
+                    self.tools_handler.claim_idempotent_result(
+                        func_name, args_dict or {}
+                    )
+                    if self.tools_handler
+                    else None
+                )
+                if raw_result is None:
+                    raw_result = available_functions[func_name](**(args_dict or {}))
+                else:
+                    from_cache = True
                 raw_tool_result = raw_result
+                if self.tools_handler:
+                    self.tools_handler.on_tool_use(
+                        ToolCalling(tool_name=func_name, arguments=args_dict or {}),
+                        raw_result,
+                        should_cache=False,
+                    )
 
                 if self.tools_handler and self.tools_handler.cache:
                     should_cache = True

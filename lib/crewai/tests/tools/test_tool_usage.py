@@ -174,6 +174,7 @@ def test_tool_usage_cache_callback_receives_raw_typed_output():
         cache_function: Callable = cache_result
 
     tools_handler = MagicMock()
+    tools_handler.claim_idempotent_result.return_value = None
     tools_handler.cache = None
     tools_handler.last_used_tool = None
     tool = CacheAwareTypedSearchTool().to_structured_tool()
@@ -863,7 +864,7 @@ def test_tool_error_does_not_emit_finished_event():
     mock_action.tool_input = "{}"
 
     tool_usage = ToolUsage(
-        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        tools_handler=ToolsHandler(),
         tools=[failing_tool],
         task=mock_task,
         function_calling_llm=None,

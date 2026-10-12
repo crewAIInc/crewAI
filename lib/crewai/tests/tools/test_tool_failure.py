@@ -1650,9 +1650,15 @@ class TestKickoffResetsTheAccessor:
 
         agent.kickoff("post once")
         assert len(agent.last_tool_failures) == 1
+        backend = agent.tools_handler._get_backend()
+        retained_entries = len(backend._store)
 
         agent.kickoff("post again")
         assert len(agent.last_tool_failures) == 1, "records must not accumulate"
+        assert len(backend._store) <= retained_entries, (
+            "completed independent kickoffs must not retain new idempotency keys "
+            "on the long-lived agent"
+        )
 
 
 class TestMCPIsErrorPlumbing:

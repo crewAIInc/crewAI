@@ -182,6 +182,10 @@ def format_description_for_llm(
     )
 
 
+class ToolArgumentsValidationError(ValueError):
+    """Arguments were rejected before the tool function started."""
+
+
 class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
@@ -366,7 +370,9 @@ class CrewStructuredTool(BaseModel):
             try:
                 raw_args = json.loads(raw_args)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
+                raise ToolArgumentsValidationError(
+                    f"Failed to parse arguments as JSON: {e}"
+                ) from e
 
         if not self.args_schema:
             return raw_args if isinstance(raw_args, dict) else {}
@@ -375,7 +381,9 @@ class CrewStructuredTool(BaseModel):
             return dict(validated_args.model_dump())
         except Exception as e:
             hint = build_schema_hint(self.args_schema)
-            raise ValueError(f"Arguments validation failed: {e}{hint}") from e
+            raise ToolArgumentsValidationError(
+                f"Arguments validation failed: {e}{hint}"
+            ) from e
 
     async def ainvoke(
         self,

@@ -1282,6 +1282,7 @@ class TestNativeToolExecution:
 
         tools_handler = Mock(spec=_ToolsHandler)
         tools_handler.cache = None
+        tools_handler.claim_idempotent_result.return_value = None
 
         return {
             "llm": llm,
