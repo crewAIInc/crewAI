@@ -1331,6 +1331,16 @@ class AnthropicCompletion(BaseLLM):
 
             if tool_uses:
                 if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                        usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
+                    )
                     return list(tool_uses)
 
                 result = self._execute_first_tool(
@@ -1855,6 +1865,16 @@ class AnthropicCompletion(BaseLLM):
 
             if tool_uses:
                 if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                        usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
+                    )
                     return list(tool_uses)
 
                 result = self._execute_first_tool(
