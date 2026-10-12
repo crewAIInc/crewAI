@@ -1262,6 +1262,93 @@ class TestDeployCommand(unittest.TestCase):
                 "Crew 'test_project' removed successfully", fake_out.getvalue()
             )
 
+    def test_remove_by_uuid_names_the_removed_deployment_not_the_local_project(self):
+        self.mock_client.delete_crew_by_uuid.return_value = httpx.Response(204)
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.remove_crew("other-uuid")
+
+        output = fake_out.getvalue()
+        self.assertIn("Crew 'other-uuid' removed successfully", output)
+        self.assertNotIn("test_project", output)
+
+    def test_failed_remove_by_uuid_shows_the_api_error(self):
+        self.mock_client.delete_crew_by_uuid.return_value = httpx.Response(
+            403, json={"error": "You do not have permission to delete this crew"}
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with self.assertRaises(SystemExit):
+                self.deploy_command.remove_crew("other-uuid")
+
+        output = fake_out.getvalue()
+        self.assertIn("Failed to remove crew 'other-uuid'", output)
+        self.assertIn("You do not have permission to delete this crew", output)
+        self.assertNotIn("test_project", output)
+
+    def test_failed_remove_by_name_shows_the_api_error(self):
+        self.mock_client.delete_crew_by_name.return_value = httpx.Response(
+            404, json={"error": "Crew not found"}
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with self.assertRaises(SystemExit):
+                self.deploy_command.remove_crew(None)
+
+        output = fake_out.getvalue()
+        self.assertIn("Failed to remove crew 'test_project'", output)
+        self.assertIn("Crew not found", output)
+
+    def test_status_of_a_failed_deployment_shows_amp_error_and_fix(self):
+        # The shape AMP's status endpoint returns for a failed git clone.
+        self.mock_client.crew_status_by_uuid.return_value = httpx.Response(
+            200,
+            json={
+                "name": "lead_qualifier",
+                "status": "Provisioning Failed, try again.",
+                "state": "Failed",
+                "error_message": (
+                    "Host key verification failed. [git@github.com:org/repo.git]"
+                ),
+                "error_category": "git_clone_failure",
+                "error_suggested_fix": "Use an HTTPS [origin] URL.",
+            },
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.get_crew_status("test-uuid")
+
+        output = fake_out.getvalue()
+        self.assertIn("Provisioning Failed, try again.", output)
+        # Printed verbatim: square brackets are not swallowed as Rich markup.
+        self.assertRegex(
+            output,
+            r"Error:\s+Host key verification failed\. \[git@github\.com:org/repo\.git\]",
+        )
+        self.assertRegex(output, r"Fix:\s+Use an HTTPS \[origin\] URL\.")
+
+    def test_status_of_a_healthy_deployment_prints_no_error_lines(self):
+        # AMP sends the error fields as null outside a failure.
+        self.mock_client.crew_status_by_uuid.return_value = httpx.Response(
+            200,
+            json={
+                "name": "lead_qualifier",
+                "status": "Online",
+                "state": "Successful",
+                "error_message": None,
+                "error_category": None,
+                "error_suggested_fix": None,
+            },
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.get_crew_status("test-uuid")
+
+        output = fake_out.getvalue()
+        self.assertRegex(output, r"Status:\s+Online")
+        self.assertNotIn("Error:", output)
+        self.assertNotIn("Fix:", output)
+
     @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
     def test_parse_toml_python_311_plus(self):
         toml_content = """
