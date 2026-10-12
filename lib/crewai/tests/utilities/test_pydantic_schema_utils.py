@@ -615,6 +615,39 @@ class TestBaseModelAttributeNames:
         ):
             create_model("UserModel", schema=(str, ...))
 
+    def test_recursive_defs_completed_by_rebuild_do_not_warn(
+        self, recwarn: pytest.WarningsRecorder
+    ) -> None:
+        # B refers back to A, so it is built incomplete and finished by model_rebuild
+        # after the suppressed build; pydantic does not re-emit the warning there.
+        schema = {
+            "type": "object",
+            "title": "Root",
+            "properties": {"a": {"$ref": "#/$defs/A"}},
+            "$defs": {
+                "A": {
+                    "type": "object",
+                    "properties": {
+                        "schema": {"type": "string"},
+                        "b": {"$ref": "#/$defs/B"},
+                    },
+                },
+                "B": {
+                    "type": "object",
+                    "properties": {
+                        "json": {"type": "string"},
+                        "a": {"$ref": "#/$defs/A"},
+                    },
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+
+        assert _shadow_warnings(recwarn) == []
+        dumped = Model(a={"schema": "s", "b": {"json": "j"}}).model_dump()
+        assert dumped["a"]["schema"] == "s"
+        assert dumped["a"]["b"]["json"] == "j"
+
     def test_overlapping_builds_leave_warning_filters_as_they_were(self) -> None:
         # Without serialization, a build that enters while another is inside restores
         # the first build's ignore filter on exit, leaking it for every later model.
