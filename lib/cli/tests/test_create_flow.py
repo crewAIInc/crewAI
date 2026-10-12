@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+import runpy
 
 from click.testing import CliRunner
+from crewai.flow.visualization import build_flow_structure
 from pytest import MonkeyPatch
 import tomli
 
@@ -83,3 +85,23 @@ def test_scaffolded_flow_agents_md_tells_assistants_to_evaluate_with_crewai_eval
         assert 'crewai eval --models "provider/model,…"' in agents_md
         assert "{{name}}" not in agents_md
         assert "crewai-eval:" not in agents_md
+
+
+def test_scaffolded_agents_md_routing_example_lets_plots_see_its_branches(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+
+    agents_md = (tmp_path / "research_flow" / "AGENTS.md").read_text(encoding="utf-8")
+    section = agents_md.split("### Conditional Routing", 1)[1]
+    example = tmp_path / "routing_example.py"
+    example.write_text(section.split("```python\n", 1)[1].split("```", 1)[0])
+
+    quality_flow = runpy.run_path(str(example), run_name="routing_example")["QualityFlow"]
+    structure = build_flow_structure(quality_flow())
+
+    assert structure["nodes"]["check_quality"]["router_events"] == [
+        "high_quality",
+        "needs_revision",
+    ]
