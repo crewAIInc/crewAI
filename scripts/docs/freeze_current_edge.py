@@ -13,6 +13,9 @@ Usage::
 
 Idempotent: re-running with the same version is a no-op (existing snapshot
 directory and existing docs.json entry are both detected).
+
+A successful freeze also refreshes the checked-in LiteLLM catalog by calling
+``update_litellm_catalog.update_catalog``.
 """
 
 from __future__ import annotations
@@ -22,11 +25,17 @@ from pathlib import Path
 import subprocess
 import sys
 
-from crewai_devtools.docs_versioning import (
+
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+from crewai_devtools.docs_versioning import (  # type: ignore[import-untyped]  # noqa: E402
     InvalidVersionError,
     MissingEdgeSourcesError,
     freeze,
 )
+from update_litellm_catalog import update_catalog  # noqa: E402
 
 
 def _repo_root() -> Path:
@@ -47,7 +56,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    docs_root = _repo_root() / "docs"
+    repo_root = _repo_root()
+    docs_root = repo_root / "docs"
     try:
         result = freeze(args.version, docs_root)
     except InvalidVersionError as e:
@@ -74,6 +84,13 @@ def main() -> int:
         f"skipped {result.docsjson_entries_skipped}, "
         f"upserted {result.redirects_upserted} canonical-URL redirects."
     )
+    print()
+    try:
+        update_catalog(repo_root)
+    except (OSError, RuntimeError, ValueError) as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
+
     print()
     print("Commit message suggestion:")
     print(f"  [docs-freeze] snapshot docs for {result.version_slug}")
