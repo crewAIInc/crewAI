@@ -91,15 +91,20 @@ def _resolve_tool_func(path: str) -> Callable[..., Any]:
 
     ``@tool`` rebinds the decorated function's name to the ``Tool`` it builds,
     so the path may resolve to that tool; its ``func`` is returned instead.
-    Like other checkpointed callables, resolving requires
-    ``CREWAI_DESERIALIZE_CALLBACKS``.
+    The tool is looked up on its module, or on its class when ``@tool`` was
+    used in a class body (``module.Class.name``). Like other checkpointed
+    callables, resolving requires ``CREWAI_DESERIALIZE_CALLBACKS``.
     """
-    module_path, _, name = path.rpartition(".")
-    if module_path and _trusted_deserialize():
+    owner_path, _, name = path.rpartition(".")
+    if owner_path and _trusted_deserialize():
         try:
-            target = getattr(importlib.import_module(module_path), name, None)
+            owner: object = importlib.import_module(owner_path)
         except (ImportError, TypeError, ValueError):
-            target = None
+            try:
+                owner = _resolve_dotted_path(owner_path)
+            except ValueError:
+                owner = None
+        target = getattr(owner, name, None)
         if isinstance(target, Tool):
             return target.func
     return string_to_callable(path)
