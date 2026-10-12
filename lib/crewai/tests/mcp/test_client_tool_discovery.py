@@ -15,6 +15,7 @@ import pytest
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> MCPClient:
+    """Create a connected client with an isolated schema cache and SDK mock."""
     monkeypatch.setattr("crewai.mcp.client._mcp_schema_cache", {})
     transport = MagicMock(spec=BaseTransport)
     transport.connected = True
@@ -26,6 +27,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> MCPClient:
 
 
 def tool(name: str) -> Tool:
+    """Build an advertised tool with metadata to verify across discovery pages."""
     return Tool(
         name=name,
         description=f"Description of {name}",
@@ -39,6 +41,7 @@ def tool(name: str) -> Tool:
 
 @pytest.mark.asyncio
 async def test_single_page_preserves_tool_metadata(client: MCPClient) -> None:
+    """Keep tool metadata and name normalization unchanged for a single page."""
     advertised = tool("search-tickets")
     client.session.list_tools.return_value = ListToolsResult(tools=[advertised])
 
@@ -58,6 +61,7 @@ async def test_single_page_preserves_tool_metadata(client: MCPClient) -> None:
 async def test_discovers_all_pages_and_preserves_opaque_cursor(
     client: MCPClient, cursor: str
 ) -> None:
+    """Pass cursor strings back unchanged, including an empty-string cursor."""
     client.session.list_tools.side_effect = [
         ListToolsResult(tools=[tool("search-tickets")], nextCursor=cursor),
         ListToolsResult(tools=[tool("read-ticket")]),
@@ -78,6 +82,7 @@ async def test_discovers_all_pages_and_preserves_opaque_cursor(
 
 @pytest.mark.asyncio
 async def test_empty_page_with_cursor_does_not_end_discovery(client: MCPClient) -> None:
+    """Continue after an empty page when the server advertises another cursor."""
     client.session.list_tools.side_effect = [
         ListToolsResult(tools=[], nextCursor="page-2"),
         ListToolsResult(tools=[tool("read-ticket")], nextCursor="page-3"),
@@ -90,6 +95,7 @@ async def test_empty_page_with_cursor_does_not_end_discovery(client: MCPClient) 
 
 @pytest.mark.asyncio
 async def test_empty_unpaginated_catalog_returns_empty_list(client: MCPClient) -> None:
+    """Return an empty catalog when the first response has no continuation."""
     client.session.list_tools.return_value = ListToolsResult(tools=[])
 
     assert await client.list_tools() == []
@@ -97,9 +103,68 @@ async def test_empty_unpaginated_catalog_returns_empty_list(client: MCPClient) -
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "cursors",
+    [
+        ["page-2", "page-2"],
+        ["", ""],
+        ["page-2", "page-3", "page-2"],
+    ],
+    ids=["repeated", "empty", "cycle"],
+)
+async def test_repeated_cursor_fails_without_caching_partial_catalog(
+    client: MCPClient, cursors: list[str]
+) -> None:
+    """Stop a cursor cycle before requesting it again or caching partial tools."""
+    client.session.list_tools.side_effect = [
+        *[
+            ListToolsResult(tools=[tool(f"page-{index}")], nextCursor=cursor)
+            for index, cursor in enumerate(cursors)
+        ],
+        ListToolsResult(tools=[tool("unexpected-extra-page")]),
+    ]
+
+    with pytest.raises(ConnectionError, match="repeated tools/list pagination cursor"):
+        await client.list_tools()
+
+    assert client.session.list_tools.await_count == len(cursors)
+    client.session.list_tools.side_effect = None
+    client.session.list_tools.return_value = ListToolsResult(tools=[tool("fresh")])
+    assert [item["name"] for item in await client.list_tools()] == ["fresh"]
+
+
+@pytest.mark.asyncio
+async def test_retry_after_repeated_cursor_starts_with_fresh_state(
+    client: MCPClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Allow a retry to reuse a cursor without retaining failed-attempt tools."""
+    client.max_retries = 2
+    monkeypatch.setattr("crewai.mcp.client.asyncio.sleep", AsyncMock())
+    client.session.list_tools.side_effect = [
+        ListToolsResult(tools=[tool("old-first")], nextCursor="page-2"),
+        ListToolsResult(tools=[tool("old-second")], nextCursor="page-2"),
+        ListToolsResult(tools=[tool("new-first")], nextCursor="page-2"),
+        ListToolsResult(tools=[tool("new-second")]),
+    ]
+
+    discovered = await client.list_tools()
+
+    assert [item["name"] for item in discovered] == ["new_first", "new_second"]
+    assert client.session.list_tools.await_args_list == [
+        call(params=None),
+        call(params=PaginatedRequestParams(cursor="page-2")),
+        call(params=None),
+        call(params=PaginatedRequestParams(cursor="page-2")),
+    ]
+    assert await client.list_tools() == discovered
+    assert client.session.list_tools.await_count == 4
+
+
+@pytest.mark.asyncio
 async def test_cache_contains_complete_catalog_and_can_be_bypassed(
     client: MCPClient,
 ) -> None:
+    """Reuse complete cached catalogs and fetch every page on explicit bypass."""
     client.session.list_tools.side_effect = [
         ListToolsResult(tools=[tool("search")], nextCursor="page-2"),
         ListToolsResult(tools=[tool("read")]),
@@ -122,6 +187,7 @@ async def test_cache_contains_complete_catalog_and_can_be_bypassed(
 async def test_later_page_failure_does_not_return_or_cache_partial_catalog(
     client: MCPClient,
 ) -> None:
+    """Discard partial tools after failure so the next call discovers afresh."""
     client.session.list_tools.side_effect = [
         ListToolsResult(tools=[tool("old-first")], nextCursor="page-2"),
         MCPConnectionError("server disconnected"),
@@ -143,6 +209,7 @@ async def test_later_page_failure_does_not_return_or_cache_partial_catalog(
 async def test_retry_restarts_discovery_without_duplicating_first_page(
     client: MCPClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Restart at the first page without retaining tools from a failed attempt."""
     client.max_retries = 2
     monkeypatch.setattr("crewai.mcp.client.asyncio.sleep", AsyncMock())
     client.session.list_tools.side_effect = [
@@ -164,6 +231,7 @@ async def test_retry_restarts_discovery_without_duplicating_first_page(
 async def test_cancellation_during_later_page_propagates_without_caching(
     client: MCPClient,
 ) -> None:
+    """Propagate cancellation into the pending page and discard partial tools."""
     reached_second_page = asyncio.Event()
     page_cancelled = asyncio.Event()
     requests = 0
@@ -171,6 +239,7 @@ async def test_cancellation_during_later_page_propagates_without_caching(
     async def list_page(
         *, params: PaginatedRequestParams | None = None
     ) -> ListToolsResult:
+        """Signal when the second page is awaiting cancellation from the caller."""
         nonlocal requests
         requests += 1
         if requests == 1:
@@ -199,6 +268,7 @@ async def test_cancellation_during_later_page_propagates_without_caching(
 
 @pytest.mark.asyncio
 async def test_stalled_later_page_obeys_discovery_timeout(client: MCPClient) -> None:
+    """Cancel a stalled later page within the existing discovery timeout."""
     client.discovery_timeout = 1
     cancelled = asyncio.Event()
     requests = 0
@@ -206,6 +276,7 @@ async def test_stalled_later_page_obeys_discovery_timeout(client: MCPClient) -> 
     async def list_page(
         *, params: PaginatedRequestParams | None = None
     ) -> ListToolsResult:
+        """Stall after the first page and record cancellation by the timeout."""
         nonlocal requests
         requests += 1
         if requests == 1:
@@ -228,11 +299,13 @@ async def test_stalled_later_page_obeys_discovery_timeout(client: MCPClient) -> 
 
 @pytest.mark.asyncio
 async def test_pagination_through_real_mcp_client_and_server(client: MCPClient) -> None:
+    """Verify cursor exchange and complete discovery through real SDK sessions."""
     server = Server("paginated-tools")
     requested_cursors: list[str | None] = []
 
     @server.list_tools()
     async def list_page(request: ListToolsRequest) -> ListToolsResult:
+        """Advertise two pages and record the cursors received over the protocol."""
         cursor = request.params.cursor if request.params else None
         requested_cursors.append(cursor)
         if cursor is None:
