@@ -32,6 +32,28 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 
+def _record_after_hook_result(
+    agent: Agent | BaseAgent | LiteAgent | None,
+    tool_name: str,
+    result: str,
+) -> None:
+    """Keep the agent's recorded tool result in step with a hook replacement.
+
+    ToolUsage appends its own copy of the result to ``agent.tools_results``,
+    which ``process_tool_results`` reads back to honour ``result_as_answer``.
+    The ToolResult returned from here already carries the replacement, so
+    without this the replacement is applied to the answer and then overwritten
+    by the original copy.
+    """
+    recorded = getattr(agent, "tools_results", None)
+    if not recorded:
+        return
+    for entry in reversed(recorded):
+        if entry.get("tool_name") == tool_name:
+            entry["result"] = result
+            return
+
+
 async def aexecute_tool_and_check_finality(
     agent_action: AgentAction,
     tools: list[CrewStructuredTool],
@@ -157,6 +179,8 @@ async def aexecute_tool_and_check_finality(
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            _record_after_hook_result(agent, sanitized_tool_name, modified_result)
 
         # After the hooks, so post_tool_call can still inspect or rewrite the
         # result before the policy aborts.
@@ -320,6 +344,8 @@ def execute_tool_and_check_finality(
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            _record_after_hook_result(agent, sanitized_tool_name, modified_result)
 
         # After the hooks, so post_tool_call can still inspect or rewrite the
         # result before the policy aborts.

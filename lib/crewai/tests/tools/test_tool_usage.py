@@ -26,7 +26,11 @@ from crewai.hooks.tool_hooks import (
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.utilities.tool_utils import execute_tool_and_check_finality
+from crewai.agent.utils import process_tool_results
+from crewai.utilities.tool_utils import (
+    aexecute_tool_and_check_finality,
+    execute_tool_and_check_finality,
+)
 from pydantic import BaseModel, Field
 import pytest
 
@@ -903,3 +907,126 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+class AmountTool(BaseTool):
+    name: str = "amount_tool"
+    description: str = "Reports an amount."
+    result_as_answer: bool = True
+
+    def _run(self) -> str:
+        return "amount: 100"
+
+
+def _amount_action() -> AgentAction:
+    return AgentAction(
+        thought="",
+        tool="amount_tool",
+        tool_input="{}",
+        text="Action: amount_tool\nAction Input: {}",
+    )
+
+
+def _amount_agent() -> Agent:
+    agent = Agent(
+        role="Teller",
+        goal="Report amounts",
+        backstory="You report amounts.",
+        tools=[AmountTool()],
+    )
+    agent.tools_results = []
+    return agent
+
+
+def test_react_result_as_answer_keeps_the_after_hook_replacement():
+    """result_as_answer must answer with the hook's value, not the raw result.
+
+    ToolUsage records the pre-hook result on the agent, and
+    process_tool_results() reads that record back to honour result_as_answer.
+    The executor's own answer already carries the replacement, so the two have
+    to agree -- otherwise the replacement is applied and then overwritten.
+    """
+    agent = _amount_agent()
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return "Amount: 100 USD"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        tool_result = execute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert tool_result.result == "Amount: 100 USD"
+    assert tool_result.result_as_answer is True
+    assert process_tool_results(agent, tool_result.result) == "Amount: 100 USD"
+
+
+@pytest.mark.asyncio
+async def test_async_react_result_as_answer_keeps_the_after_hook_replacement():
+    """The async ReAct path mirrors the sync one."""
+    agent = _amount_agent()
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return "Amount: 100 USD"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        tool_result = await aexecute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert tool_result.result == "Amount: 100 USD"
+    assert process_tool_results(agent, tool_result.result) == "Amount: 100 USD"
+
+
+def test_react_result_as_answer_unchanged_without_an_after_hook():
+    """Control: with no hook registered the raw tool result is still the answer."""
+    agent = _amount_agent()
+    clear_after_tool_call_hooks()
+    tool_result = execute_tool_and_check_finality(
+        agent_action=_amount_action(),
+        tools=[AmountTool().to_structured_tool()],
+        tools_handler=ToolsHandler(cache=CacheHandler()),
+        agent=agent,
+    )
+
+    assert tool_result.result == "amount: 100"
+    assert process_tool_results(agent, tool_result.result) == "amount: 100"
+
+
+def test_react_after_hook_that_returns_none_leaves_the_result_alone():
+    """Control: a monitoring hook that returns None must not blank the answer."""
+    agent = _amount_agent()
+    seen: list[str | None] = []
+
+    def after_hook(context: ToolCallHookContext) -> None:
+        seen.append(context.tool_result)
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        tool_result = execute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert seen == ["amount: 100"]
+    assert tool_result.result == "amount: 100"
+    assert process_tool_results(agent, tool_result.result) == "amount: 100"
