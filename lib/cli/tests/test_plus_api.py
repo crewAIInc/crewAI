@@ -533,15 +533,15 @@ def _requests_sent_by(call: Callable[[PlusAPI], object]) -> list[httpx.Request]:
     ],
     ids=["get_triggers", "get_trigger_payload"],
 )
-def test_trigger_requests_wait_60_seconds_for_a_response(call, path):
+def test_trigger_requests_wait_60_seconds_only_for_the_response(call, path):
     (request,) = _requests_sent_by(call)
 
     assert request.url.path == path
     assert request.extensions["timeout"] == {
-        "connect": 60,
-        "read": 60,
-        "write": 60,
-        "pool": 60,
+        "connect": 5.0,
+        "read": 60.0,
+        "write": 5.0,
+        "pool": 5.0,
     }
 
 

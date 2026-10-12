@@ -134,11 +134,16 @@ Headers = TypedDict(
 )
 
 
+# The integrations apps listing takes ~11s on a real organization. Only the read
+# waits longer, so an unreachable or saturated service still fails at httpx's 5s.
+_TRIGGER_TIMEOUT = httpx.Timeout(5.0, read=60.0)
+
+
 class RequestKwargs(TypedDict):
     headers: dict[str, str]
     json: NotRequired[Any]
     params: NotRequired[dict[str, str]]
-    timeout: NotRequired[float]
+    timeout: NotRequired[float | httpx.Timeout]
 
 
 class PlusAPI:
@@ -188,7 +193,7 @@ class PlusAPI:
         *,
         json: Any = None,
         params: dict[str, str] | None = None,
-        timeout: float | None = None,
+        timeout: float | httpx.Timeout | None = None,
         verify: bool = True,
     ) -> httpx.Response:
         url = urljoin(self.base_url, endpoint)
@@ -533,9 +538,8 @@ class PlusAPI:
 
     def get_triggers(self) -> httpx.Response:
         """Get all available triggers from integrations."""
-        # The apps listing takes ~11s on a real organization, past httpx's 5s default.
         return self._make_request(
-            "GET", f"{self.INTEGRATIONS_RESOURCE}/apps", timeout=60
+            "GET", f"{self.INTEGRATIONS_RESOURCE}/apps", timeout=_TRIGGER_TIMEOUT
         )
 
     def get_trigger_payload(self, app_slug: str, trigger_slug: str) -> httpx.Response:
@@ -543,5 +547,5 @@ class PlusAPI:
         return self._make_request(
             "GET",
             f"{self.INTEGRATIONS_RESOURCE}/{app_slug}/{trigger_slug}/payload",
-            timeout=60,
+            timeout=_TRIGGER_TIMEOUT,
         )
