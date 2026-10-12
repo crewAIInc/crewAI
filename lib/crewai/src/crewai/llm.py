@@ -177,7 +177,14 @@ def _ensure_litellm() -> bool:
     return LITELLM_AVAILABLE
 
 
-ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
+ANTHROPIC_PREFIXES: Final[tuple[str, ...]] = (
+    "anthropic/",
+    "anthropic--",
+    "anthropic:",
+    "claude-",
+    "claude/",
+    "claude--",
+)
 
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "openai",
@@ -403,9 +410,7 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
-            )
+            return model_lower.startswith((*ANTHROPIC_PREFIXES, "anthropic."))
 
         if provider == "gemini" or provider == "google":
             return any(
@@ -718,8 +723,7 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
+        return model.lower().startswith(ANTHROPIC_PREFIXES)
 
     def _prepare_completion_params(
         self,
