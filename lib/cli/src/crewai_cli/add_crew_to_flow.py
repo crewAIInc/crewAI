@@ -30,28 +30,28 @@ def _find_crews_folder(flow_folder: Path) -> Path:
     """Locate the flow package's crews folder from ``[project].name``.
 
     The package directory follows ``[project].name``, not the folder the project
-    was cloned into. A single ``src/*/crews`` covers packages whose directory was
-    named differently.
+    was cloned into. Only a project without a name falls back to a single
+    ``src/*/crews``, so a crew is never written into a package the name contradicts.
     """
     project = read_toml(flow_folder / "pyproject.toml").get("project", {})
     package_name = normalize_package_name(project.get("name", ""))
-    expected = Path("src") / (package_name or "<package>") / "crews"
-    if package_name and (flow_folder / expected).is_dir():
-        return flow_folder / expected
-
-    found = sorted(path for path in flow_folder.glob("src/*/crews") if path.is_dir())
-    if len(found) == 1:
-        return found[0]
-
-    if found:
-        names = ", ".join(str(path.relative_to(flow_folder)) for path in found)
-        message = (
-            f"Found more than one crews folder ({names}) and none matches "
-            f"[project].name in pyproject.toml (expected {expected})."
-        )
-    else:
+    if package_name:
+        expected = Path("src") / package_name / "crews"
+        if (flow_folder / expected).is_dir():
+            return flow_folder / expected
         message = (
             f"Crews folder does not exist in the current flow (expected {expected})."
+        )
+    else:
+        found = sorted(
+            path for path in flow_folder.glob("src/*/crews") if path.is_dir()
+        )
+        if len(found) == 1:
+            return found[0]
+        names = ", ".join(str(path.relative_to(flow_folder)) for path in found)
+        message = (
+            f"pyproject.toml has no [project].name and found {len(found)} crews "
+            f"folders under src/ ({names or 'none'}); expected exactly one."
         )
     PRINTER.print(message, color="red")
     raise click.ClickException(message)

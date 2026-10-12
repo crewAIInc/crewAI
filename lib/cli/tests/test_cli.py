@@ -503,11 +503,10 @@ def test_flow_add_crew_prefers_project_name_over_other_crews_folders(
     assert not (root / "src" / "beta" / "crews" / "new_crew").exists()
 
 
-@pytest.mark.parametrize("project_name", ["lead-qualifier", None])
-def test_flow_add_crew_falls_back_to_single_crews_folder(
-    tmp_path, monkeypatch, runner, project_name
+def test_flow_add_crew_without_project_name_uses_single_crews_folder(
+    tmp_path, monkeypatch, runner
 ):
-    root = _flow_project(tmp_path / "proj", project_name, ["qualifier"])
+    root = _flow_project(tmp_path / "proj", None, ["qualifier"])
     monkeypatch.chdir(root)
 
     result = runner.invoke(flow_add_crew, ["new_crew"])
@@ -516,8 +515,28 @@ def test_flow_add_crew_falls_back_to_single_crews_folder(
     assert (root / "src" / "qualifier" / "crews" / "new_crew" / "new_crew.py").is_file()
 
 
-def test_flow_add_crew_rejects_ambiguous_crews_folders(tmp_path, monkeypatch, runner):
-    root = _flow_project(tmp_path / "proj", "gamma", ["beta", "alpha"])
+def test_flow_add_crew_rejects_crews_folder_that_contradicts_project_name(
+    tmp_path, monkeypatch, runner
+):
+    root = _flow_project(tmp_path / "proj", "lead-qualifier", ["other_pkg"])
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(flow_add_crew, ["new_crew"])
+
+    assert result.exit_code != 0
+    expected = Path("src", "lead_qualifier", "crews")
+    assert (
+        f"Crews folder does not exist in the current flow (expected {expected})."
+        in result.output
+    )
+    assert list((root / "src" / "other_pkg" / "crews").iterdir()) == []
+    assert not (root / "src" / "lead_qualifier").exists()
+
+
+def test_flow_add_crew_without_project_name_rejects_several_crews_folders(
+    tmp_path, monkeypatch, runner
+):
+    root = _flow_project(tmp_path / "proj", None, ["beta", "alpha"])
     monkeypatch.chdir(root)
 
     result = runner.invoke(flow_add_crew, ["new_crew"])
@@ -525,24 +544,31 @@ def test_flow_add_crew_rejects_ambiguous_crews_folders(tmp_path, monkeypatch, ru
     assert result.exit_code != 0
     alpha = Path("src", "alpha", "crews")
     beta = Path("src", "beta", "crews")
-    expected = Path("src", "gamma", "crews")
     assert (
-        f"Found more than one crews folder ({alpha}, {beta}) and none matches "
-        f"[project].name in pyproject.toml (expected {expected})."
+        f"pyproject.toml has no [project].name and found 2 crews folders under "
+        f"src/ ({alpha}, {beta}); expected exactly one."
     ) in result.output
-    assert not (root / "src" / "alpha" / "crews" / "new_crew").exists()
-    assert not (root / "src" / "beta" / "crews" / "new_crew").exists()
+    assert list((root / "src" / "alpha" / "crews").iterdir()) == []
+    assert list((root / "src" / "beta" / "crews").iterdir()) == []
 
 
 @pytest.mark.parametrize(
-    ("project_name", "expected"),
+    ("project_name", "expected_message"),
     [
-        ("alpha", Path("src", "alpha", "crews")),
-        (None, Path("src", "<package>", "crews")),
+        (
+            "alpha",
+            "Crews folder does not exist in the current flow "
+            f"(expected {Path('src', 'alpha', 'crews')}).",
+        ),
+        (
+            None,
+            "pyproject.toml has no [project].name and found 0 crews folders "
+            "under src/ (none); expected exactly one.",
+        ),
     ],
 )
 def test_flow_add_crew_without_crews_folder_errors(
-    tmp_path, monkeypatch, runner, project_name, expected
+    tmp_path, monkeypatch, runner, project_name, expected_message
 ):
     root = _flow_project(tmp_path / "proj", project_name, [])
     (root / "src" / "alpha").mkdir(parents=True)
@@ -551,10 +577,8 @@ def test_flow_add_crew_without_crews_folder_errors(
     result = runner.invoke(flow_add_crew, ["new_crew"])
 
     assert result.exit_code != 0
-    assert (
-        f"Crews folder does not exist in the current flow (expected {expected})."
-        in result.output
-    )
+    assert expected_message in result.output
+    assert list((root / "src" / "alpha").iterdir()) == []
 
 
 def test_add_crew_to_flow_not_in_root(tmp_path, monkeypatch, runner):
