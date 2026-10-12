@@ -1,9 +1,10 @@
 """Import-time placeholders for native packages missing under WebAssembly.
 
-crewai imports ``chromadb`` types at module level for its knowledge and RAG
-integrations. chromadb is compiled code with no Pyodide build, so this finder
-serves placeholder modules in its place: imports succeed, and any attempt to
-actually construct one of its objects raises an error naming the package.
+crewai imports some packages at module level that cannot run under Pyodide:
+``chromadb`` (compiled code with no Pyodide build) for knowledge and RAG, and
+``portalocker`` (which needs ``fcntl``) for file locks. This finder serves
+placeholder modules in their place: imports succeed, and any attempt to
+actually construct one of their objects raises an error naming the package.
 """
 
 from __future__ import annotations

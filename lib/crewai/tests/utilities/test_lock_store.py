@@ -111,37 +111,3 @@ def test_clearing_backend_restores_default():
             pass
 
     mock_lock.assert_called_once()
-
-
-# no portalocker (e.g. Pyodide, which has no fcntl)
-
-
-def test_uses_in_process_lock_without_portalocker(monkeypatch):
-    monkeypatch.setattr(lock_store, "portalocker", None)
-
-    with lock("no_portalocker"):
-        with lock("no_portalocker"):  # reentrant within one thread
-            pass
-
-
-def test_in_process_lock_times_out_when_held_elsewhere(monkeypatch):
-    import threading
-
-    monkeypatch.setattr(lock_store, "portalocker", None)
-    held, release = threading.Event(), threading.Event()
-
-    def hold() -> None:
-        with lock("contended"):
-            held.set()
-            release.wait()
-
-    holder = threading.Thread(target=hold)
-    holder.start()
-    held.wait()
-    try:
-        with pytest.raises(TimeoutError):
-            with lock("contended", timeout=0.05):
-                pass
-    finally:
-        release.set()
-        holder.join()

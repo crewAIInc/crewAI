@@ -38,3 +38,31 @@ async def test_install_rejects_unknown_extras(monkeypatch: pytest.MonkeyPatch) -
 
     with pytest.raises(ValueError, match="nope"):
         await crewai_pyodide.install(extras=["nope"])
+
+
+def test_pinned_requirements_match_crewai() -> None:
+    import importlib.metadata
+
+    from packaging.requirements import Requirement
+    from packaging.utils import canonicalize_name
+
+    upstream: dict[str, set[str]] = {}
+    for dist in ("crewai", "crewai-core"):
+        for req in map(Requirement, importlib.metadata.requires(dist) or []):
+            upstream.setdefault(canonicalize_name(req.name), set()).add(
+                str(req.specifier)
+            )
+
+    ours = [
+        *crewai_pyodide.REQUIREMENTS,
+        *crewai_pyodide.NO_DEPS_REQUIREMENTS,
+        *(req for reqs in crewai_pyodide.EXTRAS.values() for req in reqs),
+    ]
+    mismatched = {
+        str(req): upstream.get(canonicalize_name(req.name))
+        for req in map(Requirement, ours)
+        if req.specifier
+        and str(req.specifier) not in upstream.get(canonicalize_name(req.name), set())
+    }
+
+    assert mismatched == {}

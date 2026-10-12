@@ -76,7 +76,7 @@ EXTRAS: dict[str, tuple[str, ...]] = {
 }
 
 # Native packages crewai imports at module level that have no Pyodide build.
-UNAVAILABLE_PACKAGES: tuple[str, ...] = ("chromadb",)
+UNAVAILABLE_PACKAGES: tuple[str, ...] = ("chromadb", "portalocker")
 
 JSPI_REQUIRED_MESSAGE = (
     "crewai needs WebAssembly JavaScript Promise Integration (JSPI) to run "
@@ -138,6 +138,7 @@ def bootstrap() -> None:
         return
 
     from crewai_pyodide._entropy import install_deterministic_imports
+    from crewai_pyodide._locks import install_in_process_locks
     from crewai_pyodide._threads import install_inline_threads
     from crewai_pyodide._unavailable import install_placeholders
     from crewai_pyodide.http import install_fetch_transports
@@ -150,6 +151,8 @@ def bootstrap() -> None:
     install_fetch_transports()
     install_placeholders(UNAVAILABLE_PACKAGES)
     install_deterministic_imports()
+    # Imports crewai_core.lock_store, so the placeholders must be in place.
+    install_in_process_locks()
     _bootstrapped = True
 
 

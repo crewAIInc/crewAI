@@ -2,9 +2,7 @@
 
 By default, if ``REDIS_URL`` is set and the ``redis`` package is installed,
 locks are distributed via ``portalocker.RedisLock``. Otherwise, falls back to
-the standard file-based ``portalocker.Lock`` in the system temp dir. Where
-file locking is unavailable (e.g. Pyodide/WebAssembly, which has no ``fcntl``
-and only ever runs a single process), an in-process lock is used instead.
+the standard file-based ``portalocker.Lock`` in the system temp dir.
 
 The backend can be replaced via :func:`set_lock_backend` to plug in a custom
 locking strategy (e.g. a different distributed lock service, or an in-process
@@ -13,7 +11,6 @@ lock for tests).
 
 from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from functools import lru_cache
@@ -21,15 +18,10 @@ from hashlib import md5
 import logging
 import os
 import tempfile
-import threading
 from typing import TYPE_CHECKING, Final
 
-
-try:
-    import portalocker
-    import portalocker.exceptions
-except ImportError:  # no fcntl, e.g. Pyodide/WebAssembly
-    portalocker = None  # type: ignore[assignment]
+import portalocker
+import portalocker.exceptions
 
 
 if TYPE_CHECKING:
@@ -48,10 +40,6 @@ LockBackend = Callable[..., AbstractContextManager[None]]
 
 # ``None`` means use the built-in Redis/file selection.
 _backend: LockBackend | None = None
-
-# Fallback used when portalocker is unavailable; one process, so in-process
-# locks give the same guarantees as file locks.
-_local_locks: defaultdict[str, threading.RLock] = defaultdict(threading.RLock)
 
 
 def set_lock_backend(backend: LockBackend | None) -> None:
@@ -108,15 +96,7 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
 
     channel = f"crewai:{md5(name.encode(), usedforsecurity=False).hexdigest()}"
 
-    if portalocker is None:
-        local_lock = _local_locks[channel]
-        if not local_lock.acquire(timeout=timeout):
-            raise TimeoutError(f"Failed to acquire lock '{name}' (timeout={timeout}s)")
-        try:
-            yield
-        finally:
-            local_lock.release()
-    elif _redis_available():
+    if _redis_available():
         with portalocker.RedisLock(
             channel=channel,
             connection=_redis_connection(),

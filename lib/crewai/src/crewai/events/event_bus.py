@@ -743,7 +743,8 @@ class CrewAIEventsBus:
 
         This method waits for all futures from previously emitted events to
         finish executing. Useful at the end of operations (like kickoff) to
-        ensure all event handlers have completed before returning.
+        ensure all event handlers have completed before returning. On a host
+        event loop (Pyodide), it returns at once without waiting.
 
         Args:
             timeout: Maximum time in seconds to wait for handlers to complete.
@@ -763,7 +764,7 @@ class CrewAIEventsBus:
 
         from concurrent.futures import wait as wait_futures
 
-        if getattr(self, "_loop_thread", None) is None:
+        if self._loop_thread is None:
             # Async handlers run on the host loop, which only advances once
             # this thread yields, so blocking here would stall until timeout.
             timeout = 0

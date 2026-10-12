@@ -142,9 +142,7 @@ def _patched_make_vcr_request(
     The original implementation fails on binary request bodies (like file uploads)
     because it assumes all content can be decoded as UTF-8.
     """
-    raw_body = (
-        real_request_body if real_request_body is not None else httpx_request.read()
-    )
+    raw_body = real_request_body if real_request_body is not None else httpx_request.read()
     body: Any = raw_body
     if isinstance(raw_body, bytes):
         try:
