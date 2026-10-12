@@ -265,11 +265,23 @@ def strip_unsupported_formats(d: Any, _seen: set[int] | None = None) -> Any:
     return d
 
 
+_ANY_VALUE_TYPES: Final[tuple[str, ...]] = (
+    "string",
+    "number",
+    "boolean",
+    "object",
+    "null",
+)
+
+
 def ensure_type_in_schemas(d: Any, _seen: set[int] | None = None) -> Any:
     """Ensure all schema objects in anyOf/oneOf have a 'type' key.
 
-    OpenAI strict mode requires every schema to have a 'type' key.
-    Empty schemas {} in anyOf/oneOf are converted to {"type": "object"}.
+    OpenAI strict mode requires every schema to have a 'type' key. An empty
+    schema {} (any value, e.g. from ``Any``) in anyOf/oneOf is replaced by one
+    branch per type in ``_ANY_VALUE_TYPES``, spliced into the parent list and
+    skipping types already present. Arrays are left out because strict mode
+    requires ``items``, and "integer" is covered by "number".
 
     Args:
         d: The dictionary/list to modify.
@@ -287,11 +299,18 @@ def ensure_type_in_schemas(d: Any, _seen: set[int] | None = None) -> Any:
         for key in ("anyOf", "oneOf"):
             if key in d:
                 schema_list = d[key]
-                for i, schema in enumerate(schema_list):
+                expanded: list[Any] = []
+                for schema in schema_list:
                     if isinstance(schema, dict) and schema == {}:
-                        schema_list[i] = {"type": "object"}
+                        expanded.extend(
+                            {"type": t}
+                            for t in _ANY_VALUE_TYPES
+                            if {"type": t} not in schema_list
+                        )
                     else:
                         ensure_type_in_schemas(schema, _seen)
+                        expanded.append(schema)
+                schema_list[:] = expanded
         for v in d.values():
             ensure_type_in_schemas(v, _seen)
     elif isinstance(d, list):
