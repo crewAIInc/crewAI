@@ -453,37 +453,121 @@ def test_deploy_remove_no_uuid(command, runner):
     mock_deploy.remove_crew.assert_called_once_with(uuid=None)
 
 
-@mock.patch("crewai_cli.add_crew_to_flow.create_embedded_crew")
-@mock.patch("pathlib.Path.exists", return_value=True)
-def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
-    crew_name = "new_crew"
-    result = runner.invoke(flow_add_crew, [crew_name])
-
-    assert result.exit_code == 0, f"Command failed with output: {result.output}"
-    assert f"Adding crew {crew_name} to the flow" in result.output
-
-    mock_create_embedded_crew.assert_called_once()
-    call_args, call_kwargs = mock_create_embedded_crew.call_args
-    assert call_args[0] == crew_name
-    assert "parent_folder" in call_kwargs
-    assert isinstance(call_kwargs["parent_folder"], Path)
+def _flow_project(
+    root: Path, project_name: str | None, package_dirs: list[str]
+) -> Path:
+    """Lay out a flow project at ``root`` with ``src/<dir>/crews`` per package dir."""
+    root.mkdir(parents=True)
+    name_line = f'name = "{project_name}"\n' if project_name else ""
+    (root / "pyproject.toml").write_text(f'[project]\n{name_line}version = "0.1.0"\n')
+    for package_dir in package_dirs:
+        (root / "src" / package_dir / "crews").mkdir(parents=True)
+    return root
 
 
-def test_add_crew_to_flow_not_in_root(runner):
-    with mock.patch("pathlib.Path.exists", autospec=True) as mock_exists:
-        def exists_side_effect(self):
-            if self.name == "pyproject.toml":
-                return False
-            return True
+@pytest.mark.parametrize(
+    ("folder", "project_name", "package_dir"),
+    [
+        ("lead_qualifier", "lead_qualifier", "lead_qualifier"),
+        ("use-case-lead-qualifier", "lead_qualifier", "lead_qualifier"),
+        ("use-case-lead-qualifier", "lead-qualifier", "lead_qualifier"),
+        ("checkout", "Lead Qualifier", "lead_qualifier"),
+    ],
+)
+def test_flow_add_crew_finds_package_from_project_name(
+    tmp_path, monkeypatch, runner, folder, project_name, package_dir
+):
+    root = _flow_project(tmp_path / folder, project_name, [package_dir])
+    monkeypatch.chdir(root)
 
-        mock_exists.side_effect = exists_side_effect
+    result = runner.invoke(flow_add_crew, ["new_crew"])
 
-        result = runner.invoke(flow_add_crew, ["new_crew"])
+    assert result.exit_code == 0, result.output
+    assert "Adding crew new_crew to the flow" in result.output
+    crew_dir = root / "src" / package_dir / "crews" / "new_crew"
+    assert (crew_dir / "new_crew.py").is_file()
+    assert (crew_dir / "config" / "agents.yaml").is_file()
+    assert (crew_dir / "config" / "tasks.yaml").is_file()
 
-        assert result.exit_code != 0
-        assert "This command must be run from the root of a flow project." in str(
-            result.output
-        )
+
+def test_flow_add_crew_prefers_project_name_over_other_crews_folders(
+    tmp_path, monkeypatch, runner
+):
+    root = _flow_project(tmp_path / "proj", "alpha", ["alpha", "beta"])
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(flow_add_crew, ["new_crew"])
+
+    assert result.exit_code == 0, result.output
+    assert (root / "src" / "alpha" / "crews" / "new_crew" / "new_crew.py").is_file()
+    assert not (root / "src" / "beta" / "crews" / "new_crew").exists()
+
+
+@pytest.mark.parametrize("project_name", ["lead-qualifier", None])
+def test_flow_add_crew_falls_back_to_single_crews_folder(
+    tmp_path, monkeypatch, runner, project_name
+):
+    root = _flow_project(tmp_path / "proj", project_name, ["qualifier"])
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(flow_add_crew, ["new_crew"])
+
+    assert result.exit_code == 0, result.output
+    assert (root / "src" / "qualifier" / "crews" / "new_crew" / "new_crew.py").is_file()
+
+
+def test_flow_add_crew_rejects_ambiguous_crews_folders(tmp_path, monkeypatch, runner):
+    root = _flow_project(tmp_path / "proj", "gamma", ["beta", "alpha"])
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(flow_add_crew, ["new_crew"])
+
+    assert result.exit_code != 0
+    alpha = Path("src", "alpha", "crews")
+    beta = Path("src", "beta", "crews")
+    expected = Path("src", "gamma", "crews")
+    assert (
+        f"Found more than one crews folder ({alpha}, {beta}) and none matches "
+        f"[project].name in pyproject.toml (expected {expected})."
+    ) in result.output
+    assert not (root / "src" / "alpha" / "crews" / "new_crew").exists()
+    assert not (root / "src" / "beta" / "crews" / "new_crew").exists()
+
+
+@pytest.mark.parametrize(
+    ("project_name", "expected"),
+    [
+        ("alpha", Path("src", "alpha", "crews")),
+        (None, Path("src", "<package>", "crews")),
+    ],
+)
+def test_flow_add_crew_without_crews_folder_errors(
+    tmp_path, monkeypatch, runner, project_name, expected
+):
+    root = _flow_project(tmp_path / "proj", project_name, [])
+    (root / "src" / "alpha").mkdir(parents=True)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(flow_add_crew, ["new_crew"])
+
+    assert result.exit_code != 0
+    assert (
+        f"Crews folder does not exist in the current flow (expected {expected})."
+        in result.output
+    )
+
+
+def test_add_crew_to_flow_not_in_root(tmp_path, monkeypatch, runner):
+    (tmp_path / "src" / "proj" / "crews").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(flow_add_crew, ["new_crew"])
+
+    assert result.exit_code != 0
+    assert "This command must be run from the root of a flow project." in str(
+        result.output
+    )
+    assert not (tmp_path / "src" / "proj" / "crews" / "new_crew").exists()
 
 
 @mock.patch("crewai_cli.task_outputs.load_task_outputs")
