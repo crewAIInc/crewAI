@@ -816,6 +816,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
     _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
     _instance_persistence: bool = PrivateAttr(default=False)
+    # Live adapters restore before admission; kickoff must not replace their state.
+    _skip_persistence_restore: bool = PrivateAttr(default=False)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -2347,6 +2349,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     "id" in inputs
                     and self.persistence is not None
                     and not fork_succeeded
+                    and not self._skip_persistence_restore
                 ):
                     restore_uuid = inputs["id"]
                     stored_state = self.persistence.load_state(restore_uuid)

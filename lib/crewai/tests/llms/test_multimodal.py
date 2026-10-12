@@ -296,6 +296,30 @@ class TestBedrockMultimodal:
     @pytest.mark.parametrize(
         "model",
         [
+            "bedrock/openai.gpt-6-sol",
+            "bedrock/openai.gpt-6-luna",
+            "bedrock/openai.gpt-6-astra",
+            "bedrock/us.openai.gpt-6-sol",
+            "bedrock/us.openai.gpt-6-luna",
+            "bedrock/us.openai.gpt-6-astra",
+            "bedrock/global.openai.gpt-6-sol",
+            "bedrock/global.openai.gpt-6-luna",
+            "bedrock/global.openai.gpt-6-astra",
+        ],
+    )
+    def test_supports_multimodal_openai_gpt_6(self, model: str) -> None:
+        """Test Bedrock OpenAI GPT-6 Sol/Luna/Astra support multimodal."""
+        llm = LLM(model=model)
+        assert llm.supports_multimodal() is True
+
+    def test_does_not_support_gpt_oss(self) -> None:
+        """Test Bedrock gpt-oss (no image input) does not support multimodal."""
+        llm = LLM(model="bedrock/openai.gpt-oss-120b-1:0")
+        assert llm.supports_multimodal() is False
+
+    @pytest.mark.parametrize(
+        "model",
+        [
             "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
             "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
             "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0",

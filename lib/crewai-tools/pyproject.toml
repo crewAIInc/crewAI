@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.15.23",
+    "crewai==1.15.27",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4>=4.13.4,<5",
     "python-docx~=1.2.0",
@@ -154,6 +154,9 @@ mongodb = [
     # GHSA-vp6j-j7w5-5xjj. Declared here, not only as a uv override, so
     # consumers installing crewai-tools[mongodb] get this floor.
     "pymongo>=4.18.2"
+]
+oracledb = [
+    "oracledb>=2.2.0"
 ]
 mysql = [
     "pymysql>=1.1.1"

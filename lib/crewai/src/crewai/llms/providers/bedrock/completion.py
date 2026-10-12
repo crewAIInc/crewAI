@@ -2056,7 +2056,7 @@ class BedrockCompletion(BaseLLM):
             config["temperature"] = float(self.temperature)
         if self.top_p is not None:
             config["topP"] = float(self.top_p)
-        if self.stop_sequences:
+        if self.stop_sequences and self.supports_stop_words():
             config["stopSequences"] = self.stop_sequences
 
         if self.is_claude_model and self.top_k is not None:
@@ -2130,8 +2130,13 @@ class BedrockCompletion(BaseLLM):
         return self.supports_tools
 
     def supports_stop_words(self) -> bool:
-        """Check if the model supports stop words."""
-        return True
+        """Check if the model supports stop words.
+
+        OpenAI models on Bedrock (gpt-oss, GPT-5.x, GPT-6) reject
+        ``stopSequences``. Stop words are still applied to their output
+        client-side by ``_apply_stop_words``.
+        """
+        return "openai." not in self.model.lower()
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
@@ -2148,8 +2153,9 @@ class BedrockCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+ and Nova Lite/Pro/Premier/2 Lite on Bedrock support vision,
-        also behind a geo inference profile prefix (``us.``, ``jp.``, ...).
+        Claude 3+, Nova Lite/Pro/Premier/2 Lite and OpenAI GPT-6 (Sol, Luna,
+        Astra) on Bedrock support vision, also behind a geo inference profile
+        prefix (``us.``, ``jp.``, ...).
 
         Returns:
             True if the model supports images.
@@ -2167,6 +2173,7 @@ class BedrockCompletion(BaseLLM):
             "anthropic.claude-sonnet-5",
             "anthropic.claude-opus-5",
             "anthropic.claude-fable-5",
+            "openai.gpt-6",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
