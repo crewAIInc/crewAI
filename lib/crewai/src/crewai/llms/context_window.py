@@ -9,6 +9,7 @@ call site shares one matching rule.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from importlib.resources import files
 import json
@@ -73,8 +74,8 @@ def context_windows_from_catalog(
     that provider matches ``litellm_provider``, the bare model id is also
     indexed so native providers can look up the id they send to the API.
     That alias is omitted when those entries disagree on the limit, so lookup
-    can fall through to the conflict-aware bare-name index. Exact catalog keys
-    override aliases that do agree.
+    can fall through to the bare-name index, which keeps the most common limit.
+    Exact catalog keys override aliases that do agree.
     """
     alias_limits: dict[str, set[int]] = {}
     exact: dict[str, int] = {}
@@ -163,17 +164,21 @@ def bare_model_name(name: str) -> str:
 def bare_context_windows(sizes: Mapping[str, int]) -> dict[str, int]:
     """Index context limits by bare model name.
 
-    A bare name is kept only when every catalog entry that produces it agrees
-    on the limit. Disagreeing providers stay on the exact-id lookup.
+    Each catalog entry casts a vote for its limit. The bare name keeps the
+    limit with the most votes. A tie keeps the smaller limit.
     """
-    limits_by_name: dict[str, set[int]] = {}
+    votes_by_name: dict[str, Counter[int]] = {}
     for name, limit in sizes.items():
-        limits_by_name.setdefault(bare_model_name(name), set()).add(limit)
-    return {
-        name: next(iter(limits))
-        for name, limits in limits_by_name.items()
-        if name and len(limits) == 1
-    }
+        bare_name = bare_model_name(name)
+        if not bare_name:
+            continue
+        votes_by_name.setdefault(bare_name, Counter()).update((limit,))
+    windows: dict[str, int] = {}
+    for name, votes in votes_by_name.items():
+        ranking = votes.most_common()
+        top_votes = ranking[0][1]
+        windows[name] = min(limit for limit, count in ranking if count == top_votes)
+    return windows
 
 
 BARE_CONTEXT_WINDOWS: Final[dict[str, int]] = bare_context_windows(

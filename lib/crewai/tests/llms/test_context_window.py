@@ -40,7 +40,7 @@ def test_resolver_does_not_match_a_different_model_family() -> None:
         "gpt-5.4-nano", sizes, default=DEFAULT_CONTEXT_WINDOW_SIZE
     )
 
-    assert result == int(DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO)
+    assert result == int(272_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_resolver_uses_default_for_an_unknown_model() -> None:
@@ -217,7 +217,19 @@ def test_bare_model_name_matches_catalog_variants(
     ) == int(raw_context_window * CONTEXT_WINDOW_USAGE_RATIO)
 
 
-def test_bare_context_windows_skips_a_name_with_disagreeing_limits() -> None:
+def test_bare_context_windows_uses_the_majority_limit() -> None:
+    windows = bare_context_windows(
+        {
+            "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200_000,
+            "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 200_000,
+            "apac.anthropic.claude-sonnet-4-5-20250929-v1:0": 1_000_000,
+        }
+    )
+
+    assert windows["claude-sonnet-4-5"] == 200_000
+
+
+def test_bare_context_windows_uses_the_smaller_limit_when_votes_tie() -> None:
     windows = bare_context_windows(
         {
             "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200_000,
@@ -225,4 +237,4 @@ def test_bare_context_windows_skips_a_name_with_disagreeing_limits() -> None:
         }
     )
 
-    assert "claude-sonnet-4-5" not in windows
+    assert windows["claude-sonnet-4-5"] == 200_000
