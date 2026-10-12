@@ -70,14 +70,14 @@ O CrewAI adiciona automaticamente `"\nObservation:"` como stop word para control
 # (não traduzir blocos de código)
 ```
 
-Se o seu LLM não suporta stop words nativamente, trunque a resposta com `BaseLLM._apply_stop_words`. O corte é a ocorrência mais antiga de qualquer stop word no texto gerado. Tanto `stop=["LATE", "EARLY"]` quanto `stop=["EARLY", "LATE"]` transformam `"hello EARLY middle LATE tail"` em `"hello"`, porque `EARLY` aparece primeiro e `str.strip()` remove o espaço no corte. Um texto que não contém nenhuma stop word é devolvido sem alteração.
+Se o seu LLM não suporta stop words nativamente, trunque a resposta com `BaseLLM._apply_stop_words`. O corte é a ocorrência mais antiga de qualquer stop word no texto gerado. Tanto `stop=["LATE", "EARLY"]` quanto `stop=["EARLY", "LATE"]` transformam `"hello EARLY middle LATE tail"` em `"hello"`, porque `EARLY` aparece primeiro e o trecho mantido passa por `str.strip()`. Um texto que não contém nenhuma stop word é devolvido sem alteração.
 
 ```python
 def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
 
-    # Earliest stop word in the text wins; whitespace at the cut is stripped.
+    # Earliest stop word in the text wins; the kept prefix is stripped.
     content = self._apply_stop_words(content)
 
     return content

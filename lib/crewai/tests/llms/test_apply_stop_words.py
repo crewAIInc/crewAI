@@ -18,7 +18,7 @@ def test_apply_stop_words_truncates_at_the_earliest_text_match() -> None:
 
     assert late_then_early._apply_stop_words(content) == "hello"
     assert early_then_late._apply_stop_words(content) == "hello"
-    assert late_then_early._apply_stop_words("hello \nEARLY tail") == "hello"
+    assert late_then_early._apply_stop_words("  hello \nEARLY tail") == "hello"
 
 
 def test_apply_stop_words_leaves_text_unchanged_when_nothing_matches() -> None:
