@@ -533,10 +533,15 @@ class PlusAPI:
 
     def get_triggers(self) -> httpx.Response:
         """Get all available triggers from integrations."""
-        return self._make_request("GET", f"{self.INTEGRATIONS_RESOURCE}/apps")
+        # The apps listing takes ~11s on a real organization, past httpx's 5s default.
+        return self._make_request(
+            "GET", f"{self.INTEGRATIONS_RESOURCE}/apps", timeout=60
+        )
 
     def get_trigger_payload(self, app_slug: str, trigger_slug: str) -> httpx.Response:
         """Get sample payload for a specific trigger."""
         return self._make_request(
-            "GET", f"{self.INTEGRATIONS_RESOURCE}/{app_slug}/{trigger_slug}/payload"
+            "GET",
+            f"{self.INTEGRATIONS_RESOURCE}/{app_slug}/{trigger_slug}/payload",
+            timeout=60,
         )
