@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import datetime
 from copy import deepcopy
+import threading
 from typing import Any
+from unittest.mock import patch
+import warnings
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, create_model
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -610,9 +613,47 @@ class TestBaseModelAttributeNames:
             UserWarning,
             match='Field name "schema" in ".*UserModel" shadows an attribute in parent "BaseModel"',
         ):
+            create_model("UserModel", schema=(str, ...))
 
-            class UserModel(BaseModel):
-                schema: str
+    def test_overlapping_builds_leave_warning_filters_as_they_were(self) -> None:
+        # Without serialization, a build that enters while another is inside restores
+        # the first build's ignore filter on exit, leaking it for every later model.
+        from crewai.utilities import pydantic_schema_utils as psu
+
+        first_inside = threading.Event()
+        second_inside = threading.Event()
+        first_done = threading.Event()
+        real_create_model = psu.create_model_base
+
+        def create_model_base(name: str, **kwargs: Any) -> type[BaseModel]:
+            if name == "First":
+                first_inside.set()
+                second_inside.wait(timeout=0.5)
+            else:
+                second_inside.set()
+                first_done.wait(timeout=0.5)
+            return real_create_model(name, **kwargs)
+
+        def build(title: str) -> None:
+            create_model_from_schema(
+                {"type": "object", "title": title, "properties": {"schema": {"type": "string"}}}
+            )
+            if title == "First":
+                first_done.set()
+
+        filters_before = list(warnings.filters)
+        with patch.object(psu, "create_model_base", create_model_base):
+            first = threading.Thread(target=build, args=("First",))
+            first.start()
+            first_inside.wait(timeout=1)
+            second = threading.Thread(target=build, args=("Second",))
+            second.start()
+            first.join(timeout=5)
+            second.join(timeout=5)
+
+        assert warnings.filters == filters_before
+        with pytest.warns(UserWarning, match='Field name "schema" in ".*UserModel"'):
+            create_model("UserModel", schema=(str, ...))
 
 
 # enrich_descriptions
