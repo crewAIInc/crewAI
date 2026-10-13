@@ -334,19 +334,17 @@ def test_o3_mini_reasoning_effort_medium():
 
 
 def test_context_window_validation():
-    """Test that context window validation works correctly."""
+    """A published catalog limit is used as given."""
     llm = LLM(model="o3-mini")
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    with pytest.raises(ValueError) as excinfo:
-        with patch.dict(
-            "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
-            {"test-model": 500},
-            clear=True,
-        ):
-            llm = LLM(model="test-model", is_litellm=True)
-            llm.get_context_window_size()
-    assert "must be between 1024 and 10000000" in str(excinfo.value)
+    with patch.dict(
+        "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
+        {"test-model": 500},
+        clear=True,
+    ):
+        llm = LLM(model="test-model", is_litellm=True)
+        assert llm.get_context_window_size() == int(500 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 @pytest.mark.parametrize(
@@ -354,33 +352,31 @@ def test_context_window_validation():
     ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
 )
 def test_gpt56_family_uses_official_context_window(model: str) -> None:
-    """GPT-5.6 Sol, Terra, Luna, and the alias share a 1.05M window."""
+    """GPT-5.6 Sol, Terra, Luna, and the alias share the catalog window."""
     llm = LLM(model=model, is_litellm=True)
-    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(922_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_gpt56_does_not_override_gpt54_mini_window() -> None:
-    """A more specific older prefix must keep its own window."""
+    """A more specific model id must keep its own catalog window."""
     llm = LLM(model="gpt-5.4-mini", is_litellm=True)
-    assert llm.get_context_window_size() == int(400000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(272_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
-def test_qualified_litellm_gpt4_keeps_the_provider_context_window() -> None:
-    openai_llm = LLM(model="openai/gpt-4", is_litellm=True)
-    azure_llm = LLM(model="azure/gpt-4", is_litellm=True)
+def test_qualified_litellm_gpt35_keeps_the_provider_context_window() -> None:
+    openai_llm = LLM(model="openai/gpt-3.5-turbo", is_litellm=True)
+    azure_llm = LLM(model="azure/gpt-3.5-turbo", is_litellm=True)
 
-    assert openai_llm.get_context_window_size() == int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
-    assert azure_llm.get_context_window_size() == int(
-        128_000 * CONTEXT_WINDOW_USAGE_RATIO
+    assert openai_llm.get_context_window_size() == int(
+        16_385 * CONTEXT_WINDOW_USAGE_RATIO
     )
+    assert azure_llm.get_context_window_size() == int(4097 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_litellm_gpt5_uses_the_shared_openai_context_window() -> None:
     llm = LLM(model="gpt-5", is_litellm=True)
 
-    assert llm.get_context_window_size() == int(
-        400_000 * CONTEXT_WINDOW_USAGE_RATIO
-    )
+    assert llm.get_context_window_size() == int(272_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 @pytest.mark.parametrize(
@@ -415,7 +411,7 @@ def test_gpt56_family_context_window_with_provider_prefix(model: str) -> None:
     llm = LLM(model=model, is_litellm=True)
     assert llm.model == model
     assert llm._context_window_model_name() == model.partition("/")[2]
-    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(922_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_unrecognized_provider_prefix_is_not_stripped() -> None:
