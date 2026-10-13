@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from crewai.agent.core import Agent
 from crewai.llms.providers.utils.common import safe_tool_conversion
-from crewai.mcp.config import MCPServerHTTP
+from crewai.mcp.config import MCPServerHTTP, MCPServerStdio
 from crewai.mcp.tool_resolver import MCPToolResolver
 
 
@@ -102,7 +102,7 @@ class TestResolveNativeRuntimeError:
 
 class TestResolveNativeToolNames:
     @staticmethod
-    def _resolve_tool_names(mock_client_class, resolver, url):
+    def _resolve_tool_names(mock_client_class, resolver, config):
         mock_client = AsyncMock()
         mock_client.list_tools = AsyncMock(
             return_value=[{"name": "add", "description": "Add numbers"}]
@@ -112,7 +112,9 @@ class TestResolveNativeToolNames:
         mock_client.disconnect = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        tools, _ = resolver._resolve_native(MCPServerHTTP(url=url))
+        if isinstance(config, str):
+            config = MCPServerHTTP(url=config)
+        tools, _ = resolver._resolve_native(config)
         return [tool.name for tool in tools]
 
     @patch("crewai.mcp.tool_resolver.MCPClient")
@@ -145,3 +147,26 @@ class TestResolveNativeToolNames:
         )
 
         assert names == ["mcp_10_0_0_5:8800_mcp_add"]
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_digit_leading_stdio_server_tool_name_passes_provider_validation(
+        self, mock_client_class, resolver
+    ):
+        names = self._resolve_tool_names(
+            mock_client_class, resolver, MCPServerStdio(command="3d-server")
+        )
+
+        name, _, _ = safe_tool_conversion(
+            {"name": names[0], "description": "Add numbers"}, "OpenAI"
+        )
+        assert name == "mcp_3d_server_add"
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_non_ascii_host_that_sanitizes_to_a_letter_is_not_prefixed(
+        self, mock_client_class, resolver
+    ):
+        names = self._resolve_tool_names(
+            mock_client_class, resolver, "http://\u00f1andu.example/mcp"
+        )
+
+        assert names == ["\u00f1andu_example_mcp_add"]
