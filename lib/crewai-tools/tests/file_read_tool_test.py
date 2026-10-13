@@ -408,6 +408,21 @@ def test_allow_file_permits_only_the_exact_deferred_file(tmp_path, monkeypatch):
     assert "secret" not in result
 
 
+def test_disallow_file_revokes_an_explicitly_allowed_file(tmp_path, monkeypatch):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    artifact = tmp_path / "result.md"
+    artifact.write_text("deferred content")
+    tool = FileReadTool()
+    alias = "tool-result-opaque/result.md"
+    tool.allow_file(str(artifact), alias)
+
+    tool.disallow_file(alias)
+
+    assert "Invalid file path" in tool._run(file_path=alias)
+
+
 def test_line_window_stops_reading_early():
     """A small window must not scan the rest of the file."""
     handle = CountingFile([f"Line {i}\n" for i in range(1, 1001)])

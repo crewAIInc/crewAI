@@ -105,6 +105,7 @@ class FileReadTool(BaseTool):
     _declared_label: str | None = PrivateAttr(default=None)
     # Execution-scoped aliases added by CrewAI for exact deferred-result files.
     _allowed_file_paths: dict[str, str] = PrivateAttr(default_factory=dict)
+    _disallowed_file_aliases: set[str] = PrivateAttr(default_factory=set)
 
     def __init__(
         self,
@@ -155,6 +156,16 @@ class FileReadTool(BaseTool):
         if not alias:
             raise ValueError("Allowed file aliases must not be empty.")
         self._allowed_file_paths[alias] = os.path.realpath(file_path)
+        self._disallowed_file_aliases.discard(alias)
+
+    def disallow_file(self, alias: str) -> None:
+        """Remove a framework-managed runtime file alias.
+
+        Missing aliases are ignored so execution cleanup remains safe when it
+        runs more than once.
+        """
+        self._allowed_file_paths.pop(alias, None)
+        self._disallowed_file_aliases.add(alias)
 
     def _resolve_path(self, file_path: str) -> str:
         """Resolve *file_path* and confirm the tool is allowed to read it.
@@ -179,6 +190,8 @@ class FileReadTool(BaseTool):
         allowed = self._allowed_file_paths.get(file_path)
         if allowed is not None:
             return allowed
+        if file_path in self._disallowed_file_aliases:
+            raise ValueError("This temporary file alias is no longer available.")
         if declared is not None and (
             file_path == self._declared_label
             or _resolve_against_base(file_path, self.base_dir) == declared

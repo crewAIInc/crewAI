@@ -2542,6 +2542,83 @@ class TestDeferredNativeToolResults:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
 
+    def test_cleanup_removes_artifact_and_revokes_existing_reader_alias(self, tmp_path):
+        from crewai_tools import FileReadTool
+
+        local_files = tmp_path / "local-files"
+        local_files.mkdir()
+        (local_files / "notes.md").write_text("local content")
+        reader = FileReadTool(base_dir=str(local_files))
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = True
+        executor = _build_executor(llm=llm, original_tools=[reader])
+
+        executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "deferred content",
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+        artifact_store = executor._tool_result_artifact_store
+        assert artifact_store is not None
+        artifact_directory = artifact_store.directory
+        alias = next(artifact_directory.glob("*/result.md")).relative_to(
+            artifact_directory
+        ).as_posix()
+
+        executor._cleanup_deferred_tool_results()
+
+        assert not artifact_directory.exists()
+        assert reader.run(file_path="notes.md") == "local content"
+        assert "Invalid file path" in reader.run(file_path=alias)
+
+    def test_invoke_cleans_deferred_artifacts_after_completion(self):
+        from crewai_tools import FileReadTool
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = True
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False),
+            crew=None,
+            llm=llm,
+            prompt=Mock(),
+            original_tools=[],
+        )
+        executor._setup_messages = Mock()
+        executor._inject_files_from_inputs = Mock()
+        executor._save_to_memory = Mock()
+        artifact_directory = None
+
+        def complete_with_deferred_result() -> None:
+            nonlocal artifact_directory
+            executor._prepare_tool_result_for_context(
+                {
+                    "func_name": "search_docs",
+                    "result": "deferred content",
+                    "tool_args": {"query": "CrewAI"},
+                    "original_tool": None,
+                    "tool_failure": None,
+                }
+            )
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            artifact_directory = artifact_store.directory
+            executor.state.current_answer = AgentFinish(
+                thought="", output="done", text="done"
+            )
+
+        executor.kickoff = complete_with_deferred_result
+
+        assert executor.invoke({"input": "Find CrewAI docs"}) == {"output": "done"}
+        assert artifact_directory is not None
+        assert not artifact_directory.exists()
+        assert not any(
+            isinstance(tool, FileReadTool) for tool in executor.original_tools
+        )
+
 
 # Executor State Reset on Re-invoke
 

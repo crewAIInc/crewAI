@@ -239,6 +239,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _tool_result_artifact_store: ToolResultArtifactStore | None = PrivateAttr(
         default=None
     )
+    _deferred_file_reader: Any = PrivateAttr(default=None)
+    _deferred_file_reader_added_by_executor: bool = PrivateAttr(default=False)
+    _deferred_file_aliases: list[str] = PrivateAttr(default_factory=list)
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -314,7 +317,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             reader = FileReadTool()
             self.original_tools.append(reader)
             self._setup_native_tools()
+            self._deferred_file_reader_added_by_executor = True
+        self._deferred_file_reader = reader
         reader.allow_file(str(artifact.file_path), artifact.relative_path.as_posix())
+        self._deferred_file_aliases.append(artifact.relative_path.as_posix())
         self.state.use_file_system_tool = True
 
         tool_args = json.dumps(
@@ -334,6 +340,34 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             f"{preview_suffix}\n---\n\nUse FileReadTool to read it in bounded sections, for "
             "example with `start_line=1` and `line_count=50`."
         )
+
+    def _cleanup_deferred_tool_results(self) -> None:
+        """Remove temporary tool-result files and their reader aliases."""
+        reader = self._deferred_file_reader
+        for alias in self._deferred_file_aliases:
+            if reader is not None:
+                reader.disallow_file(alias)
+
+        if (
+            self._deferred_file_reader_added_by_executor
+            and reader in self.original_tools
+        ):
+            self.original_tools.remove(reader)
+            if self.original_tools:
+                self._setup_native_tools()
+            else:
+                self._openai_tools = []
+                self._available_functions = {}
+                self._tool_name_mapping = {}
+
+        if self._tool_result_artifact_store is not None:
+            self._tool_result_artifact_store.cleanup()
+
+        self._tool_result_artifact_store = None
+        self._deferred_file_reader = None
+        self._deferred_file_reader_added_by_executor = False
+        self._deferred_file_aliases.clear()
+        self.state.use_file_system_tool = False
 
     def _downgrade_to_text_tool_calling(self) -> None:
         """Switch a running execution from native tools to text tool calls."""
@@ -2940,15 +2974,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         try:
             # Reset state for fresh execution
+            self._cleanup_deferred_tool_results()
             self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
-            self.state.use_file_system_tool = False
             self.state.pending_tool_calls = []
-            self._tool_result_artifact_store = None
             self.state.plan = None
             self.state.plan_ready = False
             self.state.todos = TodoList()
@@ -3002,6 +3035,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
+            self._cleanup_deferred_tool_results()
             self._is_executing = False
 
     async def invoke_async(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -3028,12 +3062,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         try:
             # Reset state for fresh execution
+            self._cleanup_deferred_tool_results()
             self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
+            self.state.use_file_system_tool = False
             self.state.pending_tool_calls = []
             self.state.plan = None
             self.state.plan_ready = False
@@ -3090,6 +3126,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
+            self._cleanup_deferred_tool_results()
             self._is_executing = False
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -3374,9 +3411,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.state.is_finished = False
         self.state.iterations = 0
         self.state.use_native_tools = False
-        self.state.use_file_system_tool = False
         self.state.pending_tool_calls = []
-        self._tool_result_artifact_store = None
         self.state.plan = None
         self.state.plan_ready = False
         self.state.todos = TodoList()
