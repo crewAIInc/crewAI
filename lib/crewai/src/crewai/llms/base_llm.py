@@ -368,7 +368,6 @@ class BaseLLM(BaseModel, ABC):
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
         response_model: type[BaseModel] | None = None,
-        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Get the input-token count a request will consume.
 
@@ -381,8 +380,6 @@ class BaseLLM(BaseModel, ABC):
             tools: Optional tool schemas included in the request.
             response_model: Optional structured-output model included in the
                 request.
-            available_functions: Functions available for tool calls. Providers
-                may use this to select a tool choice that affects the request.
 
         Returns:
             The provider's estimated input-token count.

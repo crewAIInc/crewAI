@@ -339,7 +339,6 @@ class AnthropicCompletion(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
-        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Get request input tokens with Anthropic's Messages API.
 
@@ -351,7 +350,7 @@ class AnthropicCompletion(BaseLLM):
             messages
         )
         completion_params = self._prepare_completion_params(
-            formatted_messages, system_message, tools, available_functions
+            formatted_messages, system_message, tools
         )
         count_params = {
             key: completion_params[key]

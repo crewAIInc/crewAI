@@ -252,16 +252,13 @@ class AzureCompletion(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
-        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Get input tokens when supported by the configured Azure API."""
         if self.api == "responses":
             raise NotImplementedError(
                 "Token estimation is not supported for the Azure OpenAI Responses API."
             )
-        return super().get_input_tokens_count(
-            messages, tools, response_model, available_functions
-        )
+        return super().get_input_tokens_count(messages, tools, response_model)
 
     def _get_responses_base_url(self) -> str:
         """Construct the base URL for the Azure OpenAI Responses API.

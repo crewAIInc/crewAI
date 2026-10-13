@@ -148,7 +148,6 @@ class GeminiCompletion(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
-        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Get request input tokens with Gemini's Count Tokens API."""
         formatted_content, system_instruction = self._format_messages_for_gemini(

@@ -753,43 +753,6 @@ def test_anthropic_input_token_count_uses_files_beta_for_structured_output_fallb
     )
 
 
-def test_anthropic_input_token_count_forwards_forced_tool_choice():
-    """A callable single tool is forced for counting as it is for completion."""
-    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
-    client = MagicMock()
-    client.messages.count_tokens.return_value = MagicMock(input_tokens=42)
-    tools = [
-        {
-            "name": "get_weather",
-            "description": "Get weather for a location.",
-            "parameters": {"type": "object", "properties": {}},
-        }
-    ]
-
-    with patch.object(llm, "_get_sync_client", return_value=client):
-        assert (
-            llm.get_input_tokens_count(
-                "What is the weather?",
-                tools=tools,
-                available_functions={"get_weather": lambda: None},
-            )
-            == 42
-        )
-
-    client.messages.count_tokens.assert_called_once_with(
-        model="claude-3-5-sonnet-20241022",
-        messages=[{"role": "user", "content": "What is the weather?"}],
-        tools=[
-            {
-                "name": "get_weather",
-                "description": "Get weather for a location.",
-                "input_schema": {"type": "object", "properties": {}},
-            }
-        ],
-        tool_choice={"type": "tool", "name": "get_weather"},
-    )
-
-
 @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
 def test_anthropic_input_token_count_live():
     """Anthropic returns a positive input-token count for a real request."""

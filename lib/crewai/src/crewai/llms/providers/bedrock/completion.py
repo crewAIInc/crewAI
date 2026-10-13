@@ -341,7 +341,6 @@ class BedrockCompletion(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[Any, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
-        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Get request input tokens with Bedrock's CountTokens API.
 

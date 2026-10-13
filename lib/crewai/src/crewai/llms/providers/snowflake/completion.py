@@ -136,7 +136,6 @@ class SnowflakeCompletion(OpenAICompletion):
         messages: str | list[LLMMessage],
         tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
-        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Raise until Snowflake Cortex token estimation is implemented.
 
