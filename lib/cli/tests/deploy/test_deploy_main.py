@@ -229,6 +229,7 @@ class TestDeployCommand(unittest.TestCase):
         *,
         uuid: str = "test-uuid",
         zip_deployment: bool | None = None,
+        source_type: str | None = None,
         is_success: bool = True,
     ) -> MagicMock:
         response = MagicMock()
@@ -236,6 +237,8 @@ class TestDeployCommand(unittest.TestCase):
         payload: dict = {"uuid": uuid}
         if zip_deployment is not None:
             payload["zip_deployment"] = zip_deployment
+        if source_type is not None:
+            payload["source_type"] = source_type
         response.json.return_value = payload
         return response
 
@@ -626,6 +629,78 @@ class TestDeployCommand(unittest.TestCase):
         )
         self.mock_client.deploy_by_uuid.assert_not_called()
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_a_zip_source_type_uploads_the_code_even_when_origin_exists(
+        self, mock_display, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        # What AMP's status actually sends: `source_type`, no `zip_deployment`.
+        # A redeploy by uuid here rebuilds the ZIP AMP already holds, not the code.
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+        for source_type in ("zip", "studio"):
+            with self.subTest(source_type=source_type):
+                self.mock_client.reset_mock()
+                self.mock_client.crew_status_by_uuid.return_value = (
+                    self._status_response(source_type=source_type)
+                )
+                mock_response = MagicMock()
+                mock_response.status_code = 200
+                mock_response.json.return_value = {"uuid": "test-uuid"}
+                self.mock_client.update_crew_from_zip.return_value = mock_response
+
+                self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+                self.mock_client.update_crew_from_zip.assert_called_once_with(
+                    "test-uuid",
+                    Path("/tmp/test_project.zip"),
+                    env={"ENV_VAR": "value"},
+                )
+                self.mock_client.deploy_by_uuid.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_a_git_source_type_redeploys_from_git_even_without_origin(
+        self, mock_display, mock_repository, mock_create_project_zip
+    ):
+        mock_repository.return_value.origin_url.return_value = None
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        for source_type in ("github", "any_git"):
+            with self.subTest(source_type=source_type):
+                self.mock_client.reset_mock()
+                self.mock_client.crew_status_by_uuid.return_value = (
+                    self._status_response(source_type=source_type)
+                )
+                mock_response = MagicMock()
+                mock_response.status_code = 200
+                mock_response.json.return_value = {"uuid": "test-uuid"}
+                self.mock_client.deploy_by_uuid.return_value = mock_response
+
+                self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+                self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
+                self.mock_client.update_crew_from_zip.assert_not_called()
+        mock_create_project_zip.assert_not_called()
+
+    def test_zip_deployment_is_read_before_source_type(self):
+        from crewai_cli.deploy.main import _zip_deployment_flag
+
+        self.assertFalse(_zip_deployment_flag({"zip_deployment": False, "source_type": "zip"}))
+        self.assertTrue(_zip_deployment_flag({"source_type": "zip"}))
+        self.assertIsNone(_zip_deployment_flag({"source_type": "something-new"}))
+        self.assertIsNone(_zip_deployment_flag({"uuid": "x"}))
 
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
@@ -1261,6 +1336,93 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn(
                 "Crew 'test_project' removed successfully", fake_out.getvalue()
             )
+
+    def test_remove_by_uuid_names_the_removed_deployment_not_the_local_project(self):
+        self.mock_client.delete_crew_by_uuid.return_value = httpx.Response(204)
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.remove_crew("other-uuid")
+
+        output = fake_out.getvalue()
+        self.assertIn("Crew 'other-uuid' removed successfully", output)
+        self.assertNotIn("test_project", output)
+
+    def test_failed_remove_by_uuid_shows_the_api_error(self):
+        self.mock_client.delete_crew_by_uuid.return_value = httpx.Response(
+            403, json={"error": "You do not have permission to delete this crew"}
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with self.assertRaises(SystemExit):
+                self.deploy_command.remove_crew("other-uuid")
+
+        output = fake_out.getvalue()
+        self.assertIn("Failed to remove crew 'other-uuid'", output)
+        self.assertIn("You do not have permission to delete this crew", output)
+        self.assertNotIn("test_project", output)
+
+    def test_failed_remove_by_name_shows_the_api_error(self):
+        self.mock_client.delete_crew_by_name.return_value = httpx.Response(
+            404, json={"error": "Crew not found"}
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with self.assertRaises(SystemExit):
+                self.deploy_command.remove_crew(None)
+
+        output = fake_out.getvalue()
+        self.assertIn("Failed to remove crew 'test_project'", output)
+        self.assertIn("Crew not found", output)
+
+    def test_status_of_a_failed_deployment_shows_amp_error_and_fix(self):
+        # The shape AMP's status endpoint returns for a failed git clone.
+        self.mock_client.crew_status_by_uuid.return_value = httpx.Response(
+            200,
+            json={
+                "name": "lead_qualifier",
+                "status": "Provisioning Failed, try again.",
+                "state": "Failed",
+                "error_message": (
+                    "Host key verification failed. [git@github.com:org/repo.git]"
+                ),
+                "error_category": "git_clone_failure",
+                "error_suggested_fix": "Use an HTTPS [origin] URL.",
+            },
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.get_crew_status("test-uuid")
+
+        output = fake_out.getvalue()
+        self.assertIn("Provisioning Failed, try again.", output)
+        # Printed verbatim: square brackets are not swallowed as Rich markup.
+        self.assertRegex(
+            output,
+            r"Error:\s+Host key verification failed\. \[git@github\.com:org/repo\.git\]",
+        )
+        self.assertRegex(output, r"Fix:\s+Use an HTTPS \[origin\] URL\.")
+
+    def test_status_of_a_healthy_deployment_prints_no_error_lines(self):
+        # AMP sends the error fields as null outside a failure.
+        self.mock_client.crew_status_by_uuid.return_value = httpx.Response(
+            200,
+            json={
+                "name": "lead_qualifier",
+                "status": "Online",
+                "state": "Successful",
+                "error_message": None,
+                "error_category": None,
+                "error_suggested_fix": None,
+            },
+        )
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.get_crew_status("test-uuid")
+
+        output = fake_out.getvalue()
+        self.assertRegex(output, r"Status:\s+Online")
+        self.assertNotIn("Error:", output)
+        self.assertNotIn("Fix:", output)
 
     @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
     def test_parse_toml_python_311_plus(self):
