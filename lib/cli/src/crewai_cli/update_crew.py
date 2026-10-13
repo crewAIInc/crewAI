@@ -2,6 +2,7 @@ import os
 import shutil
 from typing import Any
 
+from packaging.version import InvalidVersion, Version
 import tomli_w
 
 from crewai_cli.utils import read_toml
@@ -116,6 +117,10 @@ def _poetry_author_to_pep621(author: str) -> dict[str, str]:
 def parse_version(version: str) -> str:
     """Translate a poetry version constraint into a PEP 508 specifier."""
     version = version.strip()
+    if not version:
+        raise ValueError(
+            "Poetry version constraint must not be empty; use '*' for any version"
+        )
     if version == "*":
         return ""
     if version.startswith("^"):
@@ -128,19 +133,19 @@ def parse_version(version: str) -> str:
             f",{addtional_lib_version}" if addtional_lib_version else ""
         )
     if version.startswith("~") and not version.startswith("~="):
-        # Poetry tilde: the second-to-last specified component may grow
-        # (~1.2.3 → >=1.2.3,<1.3; ~1.2 → >=1.2,<2).
-        parts = version[1:].split(".")
+        # Poetry tilde keeps the minor line when a minor is specified.
         try:
-            if len(parts) == 1:
-                upper = [str(int(parts[0]) + 1)]
-            else:
-                bumped = list(parts)
-                bumped[-2] = str(int(bumped[-2]) + 1)
-                upper = bumped[:-1]
-        except ValueError:
+            parsed = Version(version[1:])
+            release = parsed.release
+        except InvalidVersion:
             return version
-        return f">={version[1:]},<{'.'.join(upper)}"
+        upper = (
+            f"{release[0]}.{release[1] + 1}"
+            if len(release) > 1
+            else str(release[0] + 1)
+        )
+        epoch = f"{parsed.epoch}!" if parsed.epoch else ""
+        return f">={version[1:]},<{epoch}{upper}"
     if version[0].isdigit():
         return f"=={version}"
     return version
