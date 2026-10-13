@@ -120,7 +120,10 @@ from crewai.utilities.planning_types import (
 from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
-from crewai.utilities.tool_result_artifacts import ToolResultArtifactStore
+from crewai.utilities.tool_result_artifacts import (
+    TOOL_RESULT_PREVIEW_LINE_COUNT,
+    ToolResultArtifactStore,
+)
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.types import LLMMessage
@@ -317,12 +320,18 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         tool_args = json.dumps(
             execution_result.get("tool_args", {}), default=str, sort_keys=True
         )
+        preview_suffix = (
+            "\n[Preview truncated; read the artifact for more.]"
+            if artifact.preview_truncated
+            else ""
+        )
         return (
             f"The result of `{execution_result['func_name']}` with arguments "
             f"`{tool_args}` was stored as temporary artifact "
             f"`{artifact.artifact_id}` at relative file path "
-            f"`{artifact.relative_path.as_posix()}`. Use FileReadTool to read it "
-            "in bounded sections, for "
+            f"`{artifact.relative_path.as_posix()}`.\n\nPreview of the first "
+            f"{TOOL_RESULT_PREVIEW_LINE_COUNT} lines:\n---\n{artifact.preview}"
+            f"{preview_suffix}\n---\n\nUse FileReadTool to read it in bounded sections, for "
             "example with `start_line=1` and `line_count=50`."
         )
 

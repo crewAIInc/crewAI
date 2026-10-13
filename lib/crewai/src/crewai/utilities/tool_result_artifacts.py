@@ -8,6 +8,10 @@ from secrets import token_urlsafe
 from tempfile import TemporaryDirectory
 
 
+TOOL_RESULT_PREVIEW_LINE_COUNT = 10
+TOOL_RESULT_PREVIEW_MAX_CHARS = 2_000
+
+
 @dataclass(frozen=True)
 class ToolResultArtifact:
     """An internally-addressable deferred tool result."""
@@ -15,6 +19,8 @@ class ToolResultArtifact:
     artifact_id: str
     relative_path: Path
     file_path: Path
+    preview: str
+    preview_truncated: bool
 
 
 class ToolResultArtifactStore:
@@ -49,10 +55,18 @@ class ToolResultArtifactStore:
         path = artifact_directory / "result.md"
         path.write_text(content, encoding="utf-8")
         self._artifact_ids.add(artifact_id)
+        preview_lines = content.splitlines(keepends=True)
+        preview = "".join(preview_lines[:TOOL_RESULT_PREVIEW_LINE_COUNT])
+        preview_truncated = len(preview_lines) > TOOL_RESULT_PREVIEW_LINE_COUNT
+        if len(preview) > TOOL_RESULT_PREVIEW_MAX_CHARS:
+            preview = preview[:TOOL_RESULT_PREVIEW_MAX_CHARS]
+            preview_truncated = True
         return ToolResultArtifact(
             artifact_id=artifact_id,
             relative_path=path.relative_to(self._directory),
             file_path=path,
+            preview=preview,
+            preview_truncated=preview_truncated,
         )
 
     @property

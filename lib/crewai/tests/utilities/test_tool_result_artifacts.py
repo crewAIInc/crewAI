@@ -29,6 +29,29 @@ def test_each_result_has_a_separate_private_file(tmp_path: Path) -> None:
     store.cleanup()
 
 
+def test_store_keeps_a_bounded_preview_of_the_first_ten_lines(tmp_path: Path) -> None:
+    store = ToolResultArtifactStore(base_dir=tmp_path)
+    content = "".join(f"line {index}\n" for index in range(12))
+
+    artifact = store.store(content)
+
+    assert artifact.preview == "".join(f"line {index}\n" for index in range(10))
+    assert artifact.preview_truncated is True
+
+    store.cleanup()
+
+
+def test_store_caps_a_single_long_preview_line(tmp_path: Path) -> None:
+    store = ToolResultArtifactStore(base_dir=tmp_path)
+
+    artifact = store.store("x" * 2_001)
+
+    assert len(artifact.preview) == 2_000
+    assert artifact.preview_truncated is True
+
+    store.cleanup()
+
+
 def test_cleanup_removes_execution_directory_and_is_idempotent(tmp_path: Path) -> None:
     store = ToolResultArtifactStore(base_dir=tmp_path)
     store.store("content")
