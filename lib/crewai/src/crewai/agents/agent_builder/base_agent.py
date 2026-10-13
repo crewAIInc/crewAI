@@ -50,6 +50,7 @@ from crewai.tools.tool_failure import (
     ToolFailureRecord,
     collect_tool_failures,
 )
+from crewai.tools.tool_results import active_tool_results
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -664,6 +665,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     def reset_tool_failures(self) -> None:
         """Clear recorded tool failures before a new execution begins."""
         self._tool_failures = []
+
+    def reset_tools_results(self) -> None:
+        """Clear recorded tool results before a new task execution begins."""
+        active = active_tool_results()
+        if active is not None:
+            active.clear()
+        else:
+            self.tools_results = []
+
 
     @abstractmethod
     def execute_task(

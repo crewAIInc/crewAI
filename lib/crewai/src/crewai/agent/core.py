@@ -94,6 +94,7 @@ from crewai.tools.tool_failure import (
     merge_tool_failures,
     tool_failure_collector,
 )
+from crewai.tools.tool_results import active_tool_results, tool_results_collector
 from crewai.types.callback import SerializableCallable
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
@@ -694,6 +695,7 @@ class Agent(BaseAgent):
         get_env_context()
 
         self.reset_tool_failures()
+        self.reset_tools_results()
 
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
@@ -836,6 +838,9 @@ class Agent(BaseAgent):
             self._rpm_controller.stop_rpm_counter()
 
         result = process_tool_results(self, result)
+        active = active_tool_results()
+        if active is not None:
+            self.tools_results = list(active)
 
         output_for_event = result
         if (
@@ -975,6 +980,9 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        if active_tool_results() is None:
+            with tool_results_collector():
+                return self.execute_task(task, context, tools)
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1117,6 +1125,9 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        if active_tool_results() is None:
+            with tool_results_collector():
+                return await self.aexecute_task(task, context, tools)
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
