@@ -1,8 +1,14 @@
+from collections.abc import Callable
 import os
 import unittest
 from unittest.mock import ANY, MagicMock, patch
 
 from crewai_cli.plus_api import PlusAPI
+import httpx
+import pytest
+
+
+_RealHttpxClient = httpx.Client
 
 
 class TestPlusAPI(unittest.TestCase):
@@ -494,3 +500,53 @@ def test_get_agent_with_org_uuid(mock_settings_class, mock_make_request):
     assert "X-Crewai-Organization-Id" in api.headers
     assert api.headers["X-Crewai-Organization-Id"] == org_uuid
     assert response == mock_response
+
+
+def _requests_sent_by(call: Callable[[PlusAPI], object]) -> list[httpx.Request]:
+    """Run ``call`` against a PlusAPI whose HTTP client answers locally."""
+    sent: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        return httpx.Response(200, json={})
+
+    transport = httpx.MockTransport(answer)
+    with patch(
+        "crewai_core.plus_api.httpx.Client",
+        side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+    ):
+        call(PlusAPI("test_api_key"))
+    return sent
+
+
+@pytest.mark.parametrize(
+    ("call", "path"),
+    [
+        (
+            lambda api: api.get_triggers(),
+            "/crewai_plus/api/v1/integrations/apps",
+        ),
+        (
+            lambda api: api.get_trigger_payload("hubspot", "contact_created"),
+            "/crewai_plus/api/v1/integrations/hubspot/contact_created/payload",
+        ),
+    ],
+    ids=["get_triggers", "get_trigger_payload"],
+)
+def test_trigger_requests_wait_60_seconds_only_for_the_response(call, path):
+    (request,) = _requests_sent_by(call)
+
+    assert request.url.path == path
+    assert request.extensions["timeout"] == {
+        "connect": 5.0,
+        "read": 60.0,
+        "write": 5.0,
+        "pool": 5.0,
+    }
+
+
+def test_requests_without_their_own_timeout_keep_the_httpx_default():
+    (request,) = _requests_sent_by(lambda api: api.get_agent("an_agent"))
+
+    assert request.url.path == "/crewai_plus/api/v1/agents/an_agent"
+    assert request.extensions["timeout"]["read"] == 5.0
