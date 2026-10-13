@@ -213,7 +213,7 @@ mode: "wide"
 
 ## النشر
 
-ادفع Flow إلى **[CrewAI AMP](https://app.crewai.com)** بعد أن يعمل محليًا ويكون المشروع في مستودع **GitHub**. من جذر المشروع:
+ادفع Flow إلى **[CrewAI AMP](https://app.crewai.com)** بعد أن يعمل محليًا. إذا كان للمشروع `origin` في git، ينشر AMP من ذلك المستودع (على **GitHub**، يجب أن يتمكن تكامل GitHub في AMP من الوصول إليه)؛ وإذا لم يكن هناك `origin`، يرفع `crewai deploy create` المشروع كملف ZIP. من جذر المشروع:
 
 <CodeGroup>
 ```bash المصادقة
@@ -235,7 +235,7 @@ crewai deploy push
 
 ```bash عرض النشرات أو حذفها
 crewai deploy list
-crewai deploy remove <deployment_id>
+crewai deploy remove -u <deployment_uuid>
 ```
 </CodeGroup>
 

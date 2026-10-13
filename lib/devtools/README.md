@@ -35,7 +35,7 @@ devtools release 1.10.3 --skip-enterprise  # skip enterprise release phase
 3. Creates version bump PR against main, polls until merged
 4. Generates release notes (OpenAI) from commits since last release
 5. Updates Edge changelogs (`docs/edge/{en,pt-BR,ko,ar}/changelog.mdx`)
-6. Freezes `docs/edge/` into `docs/v<version>/`, registers the version in `docs.json`, and points the canonical `/<lang>/:slug*` redirects at the new default
+6. Downloads the LiteLLM model catalog into `lib/crewai/src/crewai/llms/litellm_catalog/model_prices_and_context_window.json`, freezes `docs/edge/` into `docs/v<version>/`, registers the version in `docs.json`, and points the canonical `/<lang>/:slug*` redirects at the new default
 7. Opens a `[docs-freeze]` PR against main, polls until merged
 8. Tags main and creates GitHub release
 9. Triggers PyPI publish workflow

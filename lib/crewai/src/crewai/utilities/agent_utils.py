@@ -1737,18 +1737,9 @@ def execute_single_native_tool_call(
     output_tool = original_tool or structured_tool
 
     from_cache = False
-    input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
     raw_tool_result: Any = result
     tool_failure: ToolFailure | None = None
-
-    if tools_handler and tools_handler.cache and output_tool is not None:
-        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
-        if cached_result is not None:
-            raw_tool_result = cached_result
-            result = format_native_tool_output_for_agent(output_tool, cached_result)
-            tool_failure = detect_tool_failure(cached_result)
-            from_cache = True
 
     started_at = datetime.now()
     crewai_event_bus.emit(
@@ -1776,12 +1767,24 @@ def execute_single_native_tool_call(
     )
     hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
+    input_str = json.dumps(args_dict) if args_dict else ""
+    if (
+        not hook_blocked
+        and tools_handler
+        and tools_handler.cache
+        and output_tool is not None
+    ):
+        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
+        if cached_result is not None:
+            raw_tool_result = cached_result
+            result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
+            from_cache = True
+
     error_event_emitted = False
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
         raw_tool_result = result
-        # The blocked message replaces any cached result, so a cached failure
-        # must not be attributed to this call.
         tool_failure = None
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
