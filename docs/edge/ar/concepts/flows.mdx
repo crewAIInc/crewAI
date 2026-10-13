@@ -617,6 +617,8 @@ flow.kickoff()
 
 ```python Code
 import random
+from typing import Literal
+
 from crewai.flow.flow import Flow, listen, router, start
 from pydantic import BaseModel
 
@@ -632,7 +634,7 @@ class RouterFlow(Flow[ExampleState]):
         self.state.success_flag = random_boolean
 
     @router(start_method)
-    def second_method(self):
+    def second_method(self) -> Literal["success", "failed"]:
         if self.state.success_flag:
             return "success"
         else:
@@ -668,6 +670,8 @@ Fourth method running
 تستمع `third_method` و `fourth_method` لمخرجات `second_method` وتُنفَّذ بناءً على القيمة المُعادة.
 
 عند تشغيل هذا التدفق، ستتغير المخرجات بناءً على القيمة المنطقية العشوائية المولّدة بواسطة `start_method`.
+
+صرّح بتسميات الموجّه حتى تتمكن الأدوات من رؤية فروعه: حدّد نوع الإرجاع بـ `Literal[...]`، كما تفعل `second_method`، أو مرّرها صراحةً عبر `@router(start_method, emit=["success", "failed"])`. يقرأ `flow.plot()` و `crewai flow plot` التسميات من هناك؛ وبدونها لا يستطيع المخطط رسم فروع الموجّه.
 
 ### الإنسان في الحلقة (التغذية الراجعة البشرية)
 
