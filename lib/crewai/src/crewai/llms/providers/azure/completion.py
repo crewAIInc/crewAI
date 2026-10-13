@@ -247,6 +247,28 @@ class AzureCompletion(BaseLLM):
 
         self._responses_delegate = OpenAICompletion(**delegate_kwargs)
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get input tokens when using the Azure OpenAI Responses API.
+
+        Azure AI Inference's Chat Completions SDK does not expose a token-count
+        operation, so native ``api=\"completions\"`` requests remain unsupported.
+        Azure Responses already delegates to OpenAI's SDK, which does provide one.
+        """
+        if self.api == "responses":
+            return int(
+                self._responses_delegate.get_input_tokens_count(
+                    messages=messages,
+                    tools=tools,
+                    response_model=response_model,
+                )
+            )
+        return super().get_input_tokens_count(messages, tools, response_model)
+
     def _get_responses_base_url(self) -> str:
         """Construct the base URL for the Azure OpenAI Responses API.
 

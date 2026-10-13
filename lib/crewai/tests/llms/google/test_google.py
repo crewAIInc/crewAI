@@ -139,6 +139,35 @@ def test_gemini_completion_initialization_parameters():
     assert llm.top_k == 40
 
 
+def test_gemini_input_token_count_forwards_generation_context():
+    """Count Tokens receives the same prompt context as a Gemini completion."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.models.count_tokens.return_value = MagicMock(total_tokens=42)
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is CrewAI?"},
+    ]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    count_kwargs = client.models.count_tokens.call_args.kwargs
+    assert count_kwargs["model"] == "gemini-2.0-flash-001"
+    assert count_kwargs["contents"][0].role == "user"
+    assert count_kwargs["config"].system_instruction.parts[0].text == "Be concise."
+    assert count_kwargs["config"].tools[0].function_declarations[0].name == "search_docs"
+
 def test_gemini_started_event_surfaces_max_output_tokens():
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallStartedEvent

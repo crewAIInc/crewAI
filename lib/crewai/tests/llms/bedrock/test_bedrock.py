@@ -694,6 +694,54 @@ def test_bedrock_token_usage_tracking():
         assert llm._token_usage['total_tokens'] == 75
 
 
+def test_bedrock_input_token_count_forwards_converse_payload(bedrock_mocks):
+    """Counting preserves the Converse system, message, and tool payload."""
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    client.count_tokens.return_value = {"inputTokens": 42}
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is the weather?"},
+    ]
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location.",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+    assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    client.count_tokens.assert_called_once_with(
+        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        input={
+            "converse": {
+                "system": [{"text": "Be concise."}],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{"text": "What is the weather?"}],
+                    }
+                ],
+                "toolConfig": {
+                    "tools": [
+                        {
+                            "toolSpec": {
+                                "name": "get_weather",
+                                "description": "Get weather for a location.",
+                                "inputSchema": {
+                                    "json": {"type": "object", "properties": {}}
+                                },
+                            }
+                        }
+                    ]
+                },
+            }
+        },
+    )
+
+
 def test_bedrock_tool_use_conversation_flow():
     """
     Test that the Bedrock completion properly handles tool use conversation flow
