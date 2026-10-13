@@ -1466,6 +1466,9 @@ def test_a_location_that_is_not_a_list_of_names_is_no_location(deployed, monkeyp
     clock = [0.0]
     monkeypatch.setattr(eval_module, "_clock", lambda: clock[0])
     monkeypatch.setattr(eval_module.time, "sleep", lambda _s: clock.__setitem__(0, clock[0] + 15))
+    said_at: list[float] = []
+    say = eval_module._say_stop
+    monkeypatch.setattr(eval_module, "_say_stop", lambda stop: (said_at.append(clock[0]), say(stop)))
     odd = {**STOPPED, "where": where}
     install(monkeypatch, FakeModelsAMP(statuses=[running_with(odd), running_with(odd), running_with(odd), compared()]))
 
@@ -1474,8 +1477,8 @@ def test_a_location_that_is_not_a_list_of_names_is_no_location(deployed, monkeyp
     out = capsys.readouterr().out
     assert out.count("### claude-sonnet-5.5 stopped") == 1
     assert "- Where:" not in out and "stopped in s" not in out
-    # not said at the first poll as if placed: it waited out STOP_DETAIL_WAIT_SECONDS (polls at 0, 15, 30 s)
-    assert out.index("### claude-sonnet-5.5 stopped") > out.index("1 of 3 setups done")
+    # polls at 0, 15 and 30 s: said once the wait ran out, never at the first poll as if placed
+    assert said_at == [30.0]
 
 
 def test_the_runs_words_are_read_only_from_reported(deployed, monkeypatch, capsys):
