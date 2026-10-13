@@ -913,7 +913,9 @@ class BaseLLM(BaseModel, ABC):
 
             return None
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
         """Convert messages to standard format.
 
         Args:
@@ -950,9 +952,11 @@ class BaseLLM(BaseModel, ABC):
             }
             cleaned.append(cast(_LLMMessage, copy))
 
-        return self._process_message_files(cleaned)
+        return self._process_message_files(cleaned, api=file_api)
 
-    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
         """Process files attached to messages and format for the provider.
 
         For each message with a `files` field, formats the files into
@@ -977,7 +981,7 @@ class BaseLLM(BaseModel, ABC):
             return messages
 
         formatter = self._multimodal_formatter_name()
-        api = getattr(self, "api", None)
+        api = api if api is not None else getattr(self, "api", None)
 
         for msg in messages:
             files = msg.get("files")

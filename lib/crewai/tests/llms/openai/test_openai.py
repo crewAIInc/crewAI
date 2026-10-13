@@ -824,6 +824,53 @@ def test_openai_input_token_count_uses_responses_without_changing_generation_api
     mock_completions.assert_called_once()
 
 
+def test_openai_input_token_count_uses_responses_file_format():
+    """File content is formatted for the Responses count endpoint."""
+    llm = OpenAICompletion(model="gpt-4o", api="completions")
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=17)
+
+    with (
+        patch.object(
+            llm,
+            "_format_messages",
+            return_value=[{"role": "user", "content": "Hello!"}],
+        ) as format_messages,
+        patch.object(llm, "_get_sync_client", return_value=client),
+    ):
+        assert llm.get_input_tokens_count("Hello!") == 17
+
+    format_messages.assert_called_once_with("Hello!", file_api="responses")
+
+
+@pytest.mark.parametrize(
+    ("previous_response_id", "auto_chain", "last_response_id"),
+    [
+        ("resp_explicit", False, None),
+        (None, True, "resp_auto_chain"),
+    ],
+)
+def test_openai_input_token_count_forwards_previous_response_id(
+    previous_response_id, auto_chain, last_response_id
+):
+    """Counting preserves the conversation context selected for generation."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        previous_response_id=previous_response_id,
+        auto_chain=auto_chain,
+    )
+    llm._last_response_id = last_response_id
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=17)
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("Hello!") == 17
+
+    assert client.responses.input_tokens.count.call_args.kwargs[
+        "previous_response_id"
+    ] == (previous_response_id or last_response_id)
+
+
 def test_openai_input_token_count_forwards_responses_payload():
     """Messages, multimodal content, and tools use the Responses request shape."""
     llm = OpenAICompletion(model="gpt-4o", api="responses")

@@ -139,10 +139,11 @@ def test_gemini_completion_initialization_parameters():
     assert llm.top_k == 40
 
 
-def test_gemini_input_token_count_forwards_generation_context():
-    """Count Tokens receives the same prompt context as a Gemini completion."""
+def test_gemini_input_token_count_forwards_generation_context_for_vertex():
+    """Vertex Count Tokens receives the same prompt context as completion."""
     llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
     client = MagicMock()
+    client.vertexai = True
     client.models.count_tokens.return_value = MagicMock(total_tokens=42)
     messages = [
         {"role": "system", "content": "Be concise."},
@@ -167,6 +168,50 @@ def test_gemini_input_token_count_forwards_generation_context():
     assert count_kwargs["contents"][0].role == "user"
     assert count_kwargs["config"].system_instruction.parts[0].text == "Be concise."
     assert count_kwargs["config"].tools[0].function_declarations[0].name == "search_docs"
+
+
+def test_gemini_developer_token_count_rejects_unrepresentable_context():
+    """Gemini Developer count requests cannot include system prompts or tools."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = False
+
+    with (
+        patch.object(llm, "_get_sync_client", return_value=client),
+        pytest.raises(NotImplementedError, match="system instructions, tools"),
+    ):
+        llm.get_input_tokens_count(
+            [
+                {"role": "system", "content": "Be concise."},
+                {"role": "user", "content": "What is CrewAI?"},
+            ],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_docs",
+                        "description": "Search the documentation.",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                }
+            ],
+        )
+
+
+def test_gemini_developer_token_count_forwards_supported_content():
+    """Developer API counting succeeds when the prompt has no unsupported context."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = False
+    client.models.count_tokens.return_value = MagicMock(total_tokens=42)
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("What is CrewAI?") == 42
+
+    count_kwargs = client.models.count_tokens.call_args.kwargs
+    assert count_kwargs["model"] == "gemini-2.0-flash-001"
+    assert count_kwargs["contents"][0].role == "user"
+    assert count_kwargs["contents"][0].parts[0].text == "What is CrewAI?"
 
 def test_gemini_started_event_surfaces_max_output_tokens():
     from crewai.events.event_bus import crewai_event_bus

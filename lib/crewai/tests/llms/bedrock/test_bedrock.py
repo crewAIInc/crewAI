@@ -742,6 +742,28 @@ def test_bedrock_input_token_count_forwards_converse_payload(bedrock_mocks):
     )
 
 
+def test_bedrock_input_token_count_explains_unsupported_runtime_models(
+    bedrock_mocks,
+):
+    """Runtime models without CountTokens report the Mantle requirement."""
+    from botocore.exceptions import ClientError
+
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/us.anthropic.claude-opus-4-7-v1:0")
+    client.count_tokens.side_effect = ClientError(
+        {
+            "Error": {
+                "Code": "ValidationException",
+                "Message": "This model does not support CountTokens.",
+            }
+        },
+        "CountTokens",
+    )
+
+    with pytest.raises(NotImplementedError, match="Bedrock Mantle"):
+        llm.get_input_tokens_count("Count these input tokens.")
+
+
 def test_bedrock_tool_use_conversation_flow():
     """
     Test that the Bedrock completion properly handles tool use conversation flow

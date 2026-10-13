@@ -140,7 +140,7 @@ def _is_pydantic_model_class(obj: Any) -> TypeGuard[type[BaseModel]]:
     return isinstance(obj, type) and issubclass(obj, BaseModel)
 
 
-def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
+def _contains_file_id_reference(messages: list[LLMMessage]) -> bool:
     """Check if any message content contains a file_id reference.
 
     Anthropic's Files API is in beta and requires a special header when
@@ -365,13 +365,17 @@ class AnthropicCompletion(BaseLLM):
             if key in completion_params
         }
         effective_response_model = response_model or self.response_format
+        uses_file_api = _contains_file_id_reference(formatted_messages)
 
         if _is_pydantic_model_class(effective_response_model):
             schema = transform_schema(effective_response_model.model_json_schema())
             if _supports_native_structured_outputs(self.model):
+                betas = [ANTHROPIC_STRUCTURED_OUTPUTS_BETA]
+                if uses_file_api:
+                    betas.append(ANTHROPIC_FILES_API_BETA)
                 response = self._get_sync_client().beta.messages.count_tokens(
                     **count_params,
-                    betas=[ANTHROPIC_STRUCTURED_OUTPUTS_BETA],
+                    betas=betas,
                     output_format={"type": "json_schema", "schema": schema},
                 )
             else:
@@ -387,6 +391,11 @@ class AnthropicCompletion(BaseLLM):
                     "name": "structured_output",
                 }
                 response = self._get_sync_client().messages.count_tokens(**count_params)
+        elif uses_file_api:
+            response = self._get_sync_client().beta.messages.count_tokens(
+                **count_params,
+                betas=[ANTHROPIC_FILES_API_BETA],
+            )
         else:
             response = self._get_sync_client().messages.count_tokens(**count_params)
 

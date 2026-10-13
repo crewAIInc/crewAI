@@ -402,10 +402,26 @@ class BedrockCompletion(BaseLLM):
                         "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
                     }
 
-        response = self._get_sync_client().count_tokens(
-            modelId=self.model_id,
-            input={"converse": converse_input},
-        )
+        try:
+            response = self._get_sync_client().count_tokens(
+                modelId=self.model_id,
+                input={"converse": converse_input},
+            )
+        except ClientError as error:
+            error_details = error.response.get("Error", {})
+            error_code = error_details.get("Code")
+            error_message = error_details.get("Message", "")
+            if (
+                error_code == "ValidationException"
+                and "counttokens" in error_message.lower()
+                and "support" in error_message.lower()
+            ):
+                raise NotImplementedError(
+                    "Token estimation is not supported for this model by Bedrock "
+                    "Runtime CountTokens. Anthropic models without Runtime support "
+                    "require the Bedrock Mantle count_tokens endpoint."
+                ) from error
+            raise
         return int(response["inputTokens"])
 
     def to_config_dict(self) -> dict[str, Any]:

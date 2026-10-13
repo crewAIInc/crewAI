@@ -157,21 +157,42 @@ class GeminiCompletion(BaseLLM):
             system_instruction, tools, response_model or self.response_format
         )
         config_data = generation_config.model_dump(exclude_none=True)
+        client = self._get_sync_client()
+        if not getattr(client, "vertexai", False):
+            unsupported_context = [
+                name
+                for name, value in (
+                    ("system instructions", config_data.get("system_instruction")),
+                    ("tools", config_data.get("tools")),
+                    ("structured output", response_model or self.response_format),
+                )
+                if value is not None
+            ]
+            if unsupported_context:
+                raise NotImplementedError(
+                    "Gemini Developer API token counting does not support "
+                    f"{', '.join(unsupported_context)}. Use Vertex AI for this request."
+                )
+            response = client.models.count_tokens(
+                model=self.model,
+                contents=formatted_content,
+            )
+            return int(response.total_tokens)
+
         count_config_params: dict[str, Any] = {
             "system_instruction": config_data.pop("system_instruction", None),
             "tools": config_data.pop("tools", None),
         }
-        if self.use_vertexai:
-            generation_config_data = {
-                key: value
-                for key, value in config_data.items()
-                if key in types.GenerationConfig.model_fields
-            }
-            count_config_params["generation_config"] = types.GenerationConfig(
-                **generation_config_data
-            )
+        generation_config_data = {
+            key: value
+            for key, value in config_data.items()
+            if key in types.GenerationConfig.model_fields
+        }
+        count_config_params["generation_config"] = types.GenerationConfig(
+            **generation_config_data
+        )
         count_config = types.CountTokensConfig(**count_config_params)
-        response = self._get_sync_client().models.count_tokens(
+        response = client.models.count_tokens(
             model=self.model,
             contents=formatted_content,
             config=count_config,

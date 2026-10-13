@@ -591,7 +591,7 @@ class OpenAICompletion(BaseLLM):
         users preflight an equivalent Responses payload without changing their
         subsequent generation request.
         """
-        formatted_messages = self._format_messages(messages)
+        formatted_messages = self._format_messages(messages, file_api="responses")
         response_params = self._prepare_responses_params(
             messages=formatted_messages,
             tools=tools,
@@ -599,7 +599,14 @@ class OpenAICompletion(BaseLLM):
         )
         count_params = {
             key: response_params[key]
-            for key in ("model", "input", "instructions", "text", "tools")
+            for key in (
+                "model",
+                "input",
+                "instructions",
+                "text",
+                "tools",
+                "previous_response_id",
+            )
             if key in response_params
         }
         response = self._get_sync_client().responses.input_tokens.count(**count_params)
@@ -3055,9 +3062,11 @@ class OpenAICompletion(BaseLLM):
             return result
         return {"total_tokens": 0}
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
         """Format messages for OpenAI API."""
-        base_formatted = super()._format_messages(messages)
+        base_formatted = super()._format_messages(messages, file_api=file_api)
 
         formatted_messages: list[LLMMessage] = []
 

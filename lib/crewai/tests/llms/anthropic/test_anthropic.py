@@ -682,6 +682,33 @@ def test_anthropic_input_token_count_forwards_completion_payload():
     )
 
 
+def test_anthropic_input_token_count_includes_files_api_beta():
+    """File-backed messages use the same beta header as generation."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+    client = MagicMock()
+    client.beta.messages.count_tokens.return_value = MagicMock(input_tokens=42)
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "document",
+                    "source": {"type": "file", "file_id": "file_123"},
+                }
+            ],
+        }
+    ]
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(messages) == 42
+
+    client.beta.messages.count_tokens.assert_called_once_with(
+        model="claude-3-5-sonnet-20241022",
+        messages=messages,
+        betas=["files-api-2025-04-14"],
+    )
+
+
 @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
 def test_anthropic_input_token_count_live():
     """Anthropic returns a positive input-token count for a real request."""
