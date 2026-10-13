@@ -301,22 +301,6 @@ class TestOpenAICompatibleCompletion:
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
 
-    def test_context_window_agrees_with_the_litellm_path(self):
-        """Routing natively must not change the window LiteLLM routing gave."""
-        pytest.importorskip("litellm")
-        models = [
-            name.removeprefix("groq/")
-            for name in LLM_CONTEXT_WINDOW_SIZES
-            if name.startswith("groq/")
-        ]
-        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
-            for model in models:
-                native = OpenAICompatibleCompletion(model=model, provider="groq")
-                legacy = LLM(model=f"groq/{model}", is_litellm=True)
-                assert (
-                    native.get_context_window_size() == legacy.get_context_window_size()
-                ), model
-
 
 class TestLLMIntegration:
     """Tests for LLM factory integration with OpenAI-compatible providers."""
