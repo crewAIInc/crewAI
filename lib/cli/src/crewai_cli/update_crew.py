@@ -123,6 +123,12 @@ def parse_version(version: str) -> str:
         )
     if version == "*":
         return ""
+    if "," in version:
+        return ",".join(
+            constraint
+            for clause in version.split(",")
+            if (constraint := parse_version(clause))
+        )
     if version.startswith("^"):
         main_lib_version = version[1:].split(",")[0]
         addtional_lib_version = None

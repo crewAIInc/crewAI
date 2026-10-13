@@ -215,3 +215,34 @@ def test_migration_preserves_tilde_minor_bound(
     assert requirement.specifier.contains(version[1:], prereleases=True)
     assert requirement.specifier.contains("1.2.9", prereleases=True)
     assert not requirement.specifier.contains("1.3.0", prereleases=True)
+
+
+@pytest.mark.parametrize(
+    "version",
+    ["~1.2, !=1.2.5", "!=1.2.5, ~1.2", "~1.2, >=1.2.3, !=1.2.5"],
+)
+@pytest.mark.parametrize("table_dependency", [False, True])
+def test_migration_preserves_compound_tilde_constraints(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    version: str,
+    table_dependency: bool,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write_project(tmp_path)
+    dependency = f'{{ version = "{version}" }}' if table_dependency else f'"{version}"'
+    path = tmp_path / "pyproject.toml"
+    path.write_text(_POETRY_PYPROJECT + f"httpx = {dependency}\n", encoding="utf-8")
+
+    migrate_pyproject("pyproject.toml", "pyproject.toml")
+
+    dependencies = _migrated_project(tmp_path)["project"]["dependencies"]
+    requirement = Requirement(
+        next(dep for dep in dependencies if dep.startswith("httpx"))
+    )
+    assert requirement.specifier.contains("1.2.3")
+    assert requirement.specifier.contains("1.2.6")
+    assert not requirement.specifier.contains("1.2.5")
+    assert not requirement.specifier.contains("1.1.9")
+    assert not requirement.specifier.contains("1.3.0")
+    assert requirement.specifier.contains("1.2.2") == (">=1.2.3" not in version)
