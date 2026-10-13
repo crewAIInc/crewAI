@@ -10,9 +10,12 @@ from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, AgentFinish
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
+from crewai.tools import tool
 from crewai.tools.tool_types import ToolResult
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 @pytest.fixture
@@ -452,3 +455,89 @@ class TestAsyncLLMResponseHelper:
                 callbacks=[],
                 printer=Printer(),
             )
+
+
+class TestAsyncMaxIterationsForcedAnswer:
+    """Both async loops request the forced final answer with a trailing user turn."""
+
+    @pytest.mark.asyncio
+    async def test_react_loop_forces_final_answer_with_user_turn(
+        self, executor: CrewAgentExecutor, mock_llm: MagicMock
+    ) -> None:
+        mock_llm.call.return_value = "Final Answer: forced"
+        executor.iterations = executor.max_iter
+        executor.messages = [
+            {"role": "user", "content": "Collect all the data."},
+            {"role": "assistant", "content": "Thought: I need data\nObservation: partial"},
+        ]
+
+        with patch.object(executor, "_show_logs"):
+            result = await executor._ainvoke_loop()
+
+        sent = mock_llm.call.call_args.args[0]
+        assert sent[-1] == {
+            "role": "user",
+            "content": I18N_DEFAULT.errors("force_final_answer"),
+        }
+        assert isinstance(result, AgentFinish)
+        assert result.output == "forced"
+
+    @pytest.mark.asyncio
+    async def test_native_tools_loop_forces_final_answer_with_user_turn(
+        self,
+        test_agent: Agent,
+        test_task: Task,
+        mock_tools_handler: MagicMock,
+    ) -> None:
+        @tool
+        def get_data(step: str) -> str:
+            """Get data for a step."""
+            return f"data for {step}"
+
+        # BaseLLM has no supports_function_calling; the native loop needs it.
+        llm = MagicMock(spec=LLM)
+        llm.stop = []
+        llm.supports_function_calling.return_value = True
+        llm.call.return_value = "Final Answer: forced"
+        executor = CrewAgentExecutor(
+            llm=llm,
+            task=test_task,
+            crew=None,
+            agent=test_agent,
+            prompt={"prompt": "Test prompt {input} {tool_names} {tools}"},
+            max_iter=1,
+            tools=[],
+            original_tools=[get_data],
+            tools_names="get_data",
+            stop_words=[],
+            tools_description="",
+            tools_handler=mock_tools_handler,
+        )
+        executor.iterations = 1
+        executor.messages = [
+            {"role": "user", "content": "Collect all the data."},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "get_data", "arguments": "{}"},
+                    }
+                ],
+            },
+            {"role": "tool", "tool_call_id": "call_1", "name": "get_data", "content": "partial"},
+            {"role": "user", "content": I18N_DEFAULT.slice("post_tool_reasoning")},
+        ]
+
+        with patch.object(executor, "_show_logs"):
+            result = await executor._ainvoke_loop()
+
+        sent = llm.call.call_args.args[0]
+        assert sent[-1] == {
+            "role": "user",
+            "content": I18N_DEFAULT.errors("force_final_answer"),
+        }
+        assert isinstance(result, AgentFinish)
+        assert result.output == "forced"

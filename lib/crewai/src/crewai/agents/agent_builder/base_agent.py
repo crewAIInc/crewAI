@@ -9,6 +9,7 @@ import re
 from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
 
+from crewai_core.platform_apps import PlatformApp
 from pydantic import (
     UUID4,
     BaseModel,
@@ -179,25 +180,6 @@ _SLUG_RE: Final[re.Pattern[str]] = re.compile(
     r"^(?:crewai-amp:)?[a-zA-Z0-9][a-zA-Z0-9_-]*(?:#[\w-]+)?$"
 )
 
-
-PlatformApp = Literal[
-    "asana",
-    "box",
-    "clickup",
-    "github",
-    "gmail",
-    "google_calendar",
-    "google_sheets",
-    "hubspot",
-    "jira",
-    "linear",
-    "notion",
-    "salesforce",
-    "shopify",
-    "slack",
-    "stripe",
-    "zendesk",
-]
 
 PlatformAppOrAction = PlatformApp | str
 
@@ -738,7 +720,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "actions",
         }
 
-        existing_llm = shallow_copy(self.llm)
+        existing_llm = shallow_copy(self._llm_for_copy())
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
         existing_knowledge_sources = None
@@ -780,6 +762,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             knowledge=copied_knowledge,
             knowledge_storage=copied_knowledge_storage,
         )
+
+    def _llm_for_copy(self) -> Any:
+        """The llm a copy is built with; ``Agent`` overrides it for ``llm_overlay``."""
+        return self.llm
 
     def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""

@@ -11,6 +11,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
+from functools import wraps
 import json
 import logging
 import re
@@ -42,6 +43,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.retry import arun_with_rate_limit_retry, run_with_rate_limit_retry
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
@@ -176,6 +178,47 @@ class BaseLLM(BaseModel, ABC):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Wrap concrete client call methods with the shared retry policy."""
+        super().__init_subclass__(**kwargs)
+        cls._wrap_call_method("call")
+        cls._wrap_call_method("acall")
+
+    @classmethod
+    def _wrap_call_method(cls, method_name: str) -> None:
+        """Install one retry wrapper around a subclass-defined public call method."""
+        method = cls.__dict__.get(method_name)
+        if method is None or getattr(method, "_crewai_rate_limit_wrapped", False):
+            return
+
+        if method_name == "call":
+
+            @wraps(method)
+            def wrapped_call(instance: BaseLLM, *args: Any, **kwargs: Any) -> Any:
+                return run_with_rate_limit_retry(
+                    lambda: method(instance, *args, **kwargs)
+                )
+
+            wrapped_call._crewai_rate_limit_wrapped = True  # type: ignore[attr-defined]
+            setattr(cls, method_name, wrapped_call)
+            return
+
+        if method_name == "acall":
+
+            @wraps(method)
+            async def wrapped_acall(
+                instance: BaseLLM, *args: Any, **kwargs: Any
+            ) -> Any:
+                return await arun_with_rate_limit_retry(
+                    lambda: method(instance, *args, **kwargs)
+                )
+
+            wrapped_acall._crewai_rate_limit_wrapped = True  # type: ignore[attr-defined]
+            setattr(cls, method_name, wrapped_acall)
+            return
+
+        raise ValueError(f"Unsupported LLM call method: {method_name}")
 
     llm_type: str = "base"
     model: str

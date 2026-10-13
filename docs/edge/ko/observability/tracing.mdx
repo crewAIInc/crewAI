@@ -150,8 +150,8 @@ result = flow.kickoff()
 
 ### 5단계: CrewAI AMP 대시보드에서 추적 보기
 
-crew 또는 flow를 실행한 후 CrewAI AMP 대시보드에서 CrewAI 애플리케이션이 생성한 추적을 볼 수 있습니다. agent 상호 작용, 도구 사용 및 LLM 호출의 세부 단계를 볼 수 있습니다.
-아래 링크를 클릭하여 추적을 보거나 대시보드의 추적 탭으로 이동하세요 [여기](https://app.crewai.com/crewai_plus/trace_batches)
+추적은 인증된 내보내기 또는 명시적으로 동의한 익명 업로드가 성공한 경우에만 업로드됩니다. 로컬 버퍼가 삭제된 실행에는 업로드된 추적이 없습니다.
+계정에 연결된 추적은 [CrewAI AMP 대시보드의 Traces 탭](https://app.crewai.com/crewai_plus/trace_batches)에서 agent 상호 작용, 도구 사용 및 LLM 호출을 확인하세요.
 ![CrewAI Tracing Interface](/images/view-traces.png)
 
 ### 대안: 환경 변수 구성
@@ -175,11 +175,45 @@ CREWAI_TRACING_ENABLED=true
 Crew 또는 Flow를 처음 실행하면 대화형 터미널에서 다음을 물을 수 있습니다:
 
 ```text
-Would you like to view your execution traces? [y/N]
+Share this execution trace with CrewAI? [y/N]
 ```
 
-보기 링크를 열려면 **yes**를 선택하세요. 나중에 `crewai traces enable` 또는
-`crewai traces disable`로 바꾸거나, Crew 또는 Flow에서 `tracing`을 설정할 수 있습니다.
+버퍼에 저장된 추적을 CrewAI에 업로드하려면 **yes**를 선택하세요. 추적에는
+프롬프트, 입력, 출력이 포함될 수 있습니다. 거절하거나 시간이 초과되거나
+대화형 동의 프롬프트 없이 실행하면 버퍼가 삭제됩니다. 나중에
+`crewai traces enable` 또는 `crewai traces disable`을 사용하거나 Crew 또는
+Flow에서 `tracing`을 설정하여 추적 설정을 변경할 수 있습니다.
+
+### 로컬 버퍼링 및 인증된 내보내기
+
+첫 실행에서 수집한 추적은 저장된 로그인 자격 증명이 있어도 공유에 동의할
+때까지 프로세스 메모리에 보관됩니다. 인증되지 않은 추적도 같은 동의 절차를
+사용합니다. 동의하기 전에는 CrewAI가 업로드 권한을 요청하거나 실행 span을
+전송하지 않습니다.
+
+버퍼는 최대 **1,000개의 span**과 **8 MiB의 인코딩된 OTLP 데이터**를
+보관합니다. `CREWAI_EPHEMERAL_TRACE_MAX_SPANS`와
+`CREWAI_EPHEMERAL_TRACE_MAX_BYTES`를 양의 정수로 설정하여 한도를 조정할
+수 있습니다. 한도를 초과하면 가장 오래된 span부터 삭제하며, 개별 span이
+바이트 한도보다 크면 해당 span을 삭제합니다. 공유하거나 폐기한 후에는
+버퍼를 비웁니다.
+
+추적이 활성화되고 자격 증명을 사용할 수 있으면 CrewAI는 CLI 로그인,
+`CREWAI_USER_PAT` 또는 플랫폼 통합 자격 증명을 AMP에서 실행별 권한으로
+교환합니다. 그런 다음 해당 권한을 사용하여 OpenTelemetry span을 Wharf로
+직접 내보냅니다. 유효하지 않은 자격 증명으로는 익명 업로드로 전환하지 않습니다.
+
+### 호스팅된 실행 세션
+
+호스트는 `crewai.telemetry.tracing`의 `telemetry_session`으로 실행을 감쌀
+수 있습니다. 세션은 CrewAI 수명 주기 이벤트를 사용하여 span을 생성하고
+종료하며 타임스탬프, 부모 관계, HITL 일시 중지/재개 링크를 유지합니다.
+`providers=`에 기존 공급자를 전달하면 호스트의 tracer와 로깅 통합을
+유지할 수 있습니다. `processors=`로 span 프로세서를 전달하고
+`log_emitter=`로 호스트 로깅 콜백을 전달할 수 있습니다. 이러한 통합에서
+데이터 마스킹은 호스트가 담당합니다.
+각 세션은 자체 추적 수명 주기를 관리하며 애플리케이션의 전역
+OpenTelemetry 공급자를 변경하지 않습니다.
 
 ## 추적 보기
 
@@ -221,5 +255,5 @@ CrewAI 추적은 다음에 대한 포괄적인 가시성을 제공합니다:
 
 1. Crew/Flow에서 `tracing=True`가 설정되어 있는지 확인하세요
 2. 환경 변수를 사용하는 경우 `CREWAI_TRACING_ENABLED=true`인지 확인하세요
-3. `crewai login`으로 인증되었는지 확인하세요
-4. crew/flow가 실제로 실행되고 있는지 확인하세요
+3. 인증된 내보내기의 경우 CLI 로그인, `CREWAI_USER_PAT` 또는 플랫폼 통합 자격 증명을 확인하세요. 익명으로 공유하려면 동의 프롬프트에서 명시적으로 동의하세요. 로그인은 필요하지 않습니다
+4. crew/flow가 실행되었고 추적 내보내기가 성공했는지 확인하세요. 동의를 거절하거나 시간이 초과되거나 대화형 동의 프롬프트 없이 실행하면 로컬 버퍼가 업로드되지 않고 삭제됩니다

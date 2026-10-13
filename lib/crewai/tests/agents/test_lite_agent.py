@@ -1295,3 +1295,44 @@ class TestUsageMetricsDeltaSince:
         baseline = UsageMetrics(total_tokens=100, prompt_tokens=90, successful_requests=2)
         delta = UsageMetrics().delta_since(baseline)
         assert delta == UsageMetrics()
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_forces_final_answer_with_user_turn():
+    """The forced final answer is requested with a trailing user turn, not assistant prefill."""
+    from crewai.utilities.i18n import I18N_DEFAULT
+
+    requests: list[list[dict]] = []
+
+    def record_request(messages, **_kwargs):
+        # Snapshot: the agent keeps appending to this same list after the call.
+        requests.append([dict(message) for message in messages])
+        return "Final Answer: forced"
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.side_effect = record_request
+    mock_llm.stop = []
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    agent = LiteAgent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        max_iterations=0,
+        verbose=False,
+    )
+
+    result = agent.kickoff("Collect all the data.")
+
+    assert mock_llm.call.call_count == 1
+    assert requests[0][-1] == {
+        "role": "user",
+        "content": I18N_DEFAULT.errors("force_final_answer"),
+    }
+    assert result.raw == "forced"

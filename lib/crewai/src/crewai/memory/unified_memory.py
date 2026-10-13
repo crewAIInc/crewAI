@@ -147,7 +147,12 @@ class Memory(BaseModel):
     )
     read_only: bool = Field(
         default=False,
-        description="If True, remember() and remember_many() are silent no-ops.",
+        description=(
+            "If True, stored records are left unchanged: remember() and "
+            "remember_many() store nothing, update() leaves the record "
+            "untouched, and recall() does not refresh access times. Explicit "
+            "deletion through forget()/reset() is unaffected."
+        ),
     )
     root_scope: str | None = Field(
         default=None,
@@ -781,7 +786,7 @@ class Memory(BaseModel):
                 )
                 results = flow.state.final_results
 
-            if results:
+            if results and not self.read_only:
                 try:
                     touch = getattr(self._storage, "touch_records", None)
                     if touch is not None:
@@ -869,7 +874,8 @@ class Memory(BaseModel):
             importance: New importance score.
 
         Returns:
-            The updated MemoryRecord.
+            The updated MemoryRecord, or the unchanged record when ``read_only``
+            is set.
 
         Raises:
             ValueError: If the record is not found.
@@ -877,6 +883,8 @@ class Memory(BaseModel):
         existing = self._storage.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
+        if self.read_only:
+            return existing
         now = datetime.utcnow()
         updates: dict[str, Any] = {"last_accessed": now}
         if content is not None:

@@ -23,11 +23,11 @@ class ApplicationSelector:
 
     app: str
     action: str | None
-    connection_id: UUID | None
+    connection_id: UUID | str | None
 
     @classmethod
     def from_string(cls, value: str) -> ApplicationSelector:
-        """Parse the ``application[/action][@connection_uuid]`` syntax.
+        """Parse the ``application[/action][@connection_uuid|private]`` syntax.
 
         Raises:
             ValueError: If the selector does not follow the supported syntax.
@@ -40,6 +40,7 @@ class ApplicationSelector:
                 "connection ID must be the last segment"
             )
 
+        connection_id: UUID | str | None
         app_and_action, connection_separator, connection_id = value.partition("@")
         app, action_separator, action = app_and_action.partition("/")
 
@@ -56,20 +57,23 @@ class ApplicationSelector:
                 f"Invalid application selector {value!r}: connection ID cannot be empty"
             )
 
-        parsed_connection_id = None
         if connection_id:
+            is_alias = connection_id.isascii() and connection_id.isalpha()
             try:
-                parsed_connection_id = UUID(connection_id)
+                if not is_alias:
+                    connection_id = UUID(connection_id)
             except ValueError as error:
                 raise ValueError(
                     f"Invalid application selector {value!r}: "
-                    "connection ID must be a valid UUID"
+                    "connection ID must be a valid UUID or a valid alias (e.g. private)"
                 ) from error
+        else:
+            connection_id = None
 
         return cls(
             app=app,
             action=action if action_separator else None,
-            connection_id=parsed_connection_id,
+            connection_id=connection_id,
         )
 
 
@@ -79,7 +83,7 @@ class ToolInfo:
 
     app: str
     action: str
-    connection_id: UUID | None
+    connection_id: UUID | str | None
     description: str
     parameters: dict[str, Any]
 

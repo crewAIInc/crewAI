@@ -11,7 +11,7 @@ mode: "wide"
 
 ## إنشاء مشروع باستخدام CLI
 
-استخدم CLI الخاص بـ CrewAI لإنشاء هيكل مشروع، وسيُضاف `AGENTS.md` تلقائيًا في الجذر.
+استخدم CLI الخاص بـ CrewAI لإنشاء هيكل مشروع. يُضاف `AGENTS.md` في الجذر، ومعه ملفا `CLAUDE.md` و`GEMINI.md` اللذان يستوردانه، بحيث يقرأ Claude Code وGemini CLI نفس التوجيهات التي يقرأها كل مساعد آخر.
 
 ```bash
 # Crew
@@ -32,23 +32,27 @@ crewai tool create my_tool
 
 ### Claude Code
 
-يخزّن Claude Code ذاكرة المشروع في `CLAUDE.md`. يمكنك تهيئته بـ `/init` وتحريره باستخدام `/memory`. يدعم Claude Code أيضًا الاستيرادات داخل `CLAUDE.md`، فيمكنك إضافة سطر واحد مثل `@AGENTS.md` لسحب التعليمات المشتركة دون تكرارها.
+يقرأ Claude Code ملف `CLAUDE.md` ويتجاهل `AGENTS.md`. تأتي المشاريع المُنشأة بملف `CLAUDE.md` تعليمته الوحيدة هي سطر الاستيراد `@AGENTS.md`، بحيث تُحمَّل التوجيهات المشتركة دون تكرارها. أضف الملاحظات الخاصة بـ Claude تحت هذا السطر واحتفظ بالاصطلاحات المشتركة في `AGENTS.md`.
 
-يمكنك ببساطة استخدام:
+لمشروع أُنشئ قبل أن يُضاف `CLAUDE.md` إلى الهيكل، أضف الاستيراد بنفسك:
 
 ```bash
-mv AGENTS.md CLAUDE.md
+printf '@AGENTS.md\n' > CLAUDE.md
 ```
+
+لا تُعِد تسمية `AGENTS.md` إلى `CLAUDE.md`: يقرأ Codex وCursor ملف `AGENTS.md`، وإعادة التسمية تخفيه عنهما.
 
 ### Gemini CLI وGoogle Antigravity
 
-يقوم Gemini CLI وAntigravity بتحميل ملف سياق المشروع (الافتراضي: `GEMINI.md`) من جذر المستودع والمجلدات الأصلية. يمكنك تهيئته لقراءة `AGENTS.md` بدلاً من ذلك (أو بالإضافة إليه) بتعيين `context.fileName` في إعدادات Gemini CLI. على سبيل المثال، عيّنه إلى `AGENTS.md` فقط، أو أدرج كلاً من `AGENTS.md` و`GEMINI.md` إذا أردت الاحتفاظ بتنسيق كل أداة.
+يقوم Gemini CLI وAntigravity بتحميل ملف سياق المشروع (الافتراضي: `GEMINI.md`) من جذر المستودع والمجلدات الأصلية. تأتي المشاريع المُنشأة بملف `GEMINI.md` تعليمته الوحيدة هي سطر الاستيراد `@./AGENTS.md`، بحيث تُحمَّل التوجيهات المشتركة دون تكرارها. أضف الملاحظات الخاصة بـ Gemini تحت هذا السطر واحتفظ بالاصطلاحات المشتركة في `AGENTS.md`.
 
-يمكنك ببساطة استخدام:
+لمشروع أُنشئ قبل أن يُضاف `GEMINI.md` إلى الهيكل، أضف الاستيراد بنفسك:
 
 ```bash
-mv AGENTS.md GEMINI.md
+printf '@./AGENTS.md\n' > GEMINI.md
 ```
+
+بدلاً من ذلك، عيّن `context.fileName` في إعدادات Gemini CLI ليشمل `AGENTS.md` فيقرأه Gemini مباشرة. لا تُعِد تسمية `AGENTS.md` إلى `GEMINI.md`: يقرأ Codex وCursor ملف `AGENTS.md`، وإعادة التسمية تخفيه عنهما.
 
 ### Cursor
 

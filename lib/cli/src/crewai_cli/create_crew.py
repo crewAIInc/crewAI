@@ -14,6 +14,7 @@ from crewai_cli.provider import (
     select_provider,
 )
 from crewai_cli.utils import (
+    copy_assistant_instructions,
     copy_template,
     get_or_create_project_id,
     is_dmn_mode_enabled,
@@ -151,11 +152,7 @@ def create_folder_structure(
         (folder_path / "src" / folder_name).mkdir(parents=True)
         (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
         (folder_path / "src" / folder_name / "config").mkdir(parents=True)
-
-        package_dir = Path(__file__).parent
-        agents_md_src = package_dir / "templates" / "AGENTS.md"
-        if agents_md_src.exists():
-            shutil.copy2(agents_md_src, folder_path / "AGENTS.md")
+        copy_assistant_instructions(folder_path)
 
     return folder_path, folder_name, class_name
 

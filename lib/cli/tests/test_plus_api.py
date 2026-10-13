@@ -1,8 +1,14 @@
+from collections.abc import Callable
 import os
 import unittest
 from unittest.mock import ANY, MagicMock, patch
 
 from crewai_cli.plus_api import PlusAPI
+import httpx
+import pytest
+
+
+_RealHttpxClient = httpx.Client
 
 
 class TestPlusAPI(unittest.TestCase):
@@ -17,6 +23,87 @@ class TestPlusAPI(unittest.TestCase):
         self.assertEqual(self.api.headers["Content-Type"], "application/json")
         self.assertIn("CrewAI-CLI/", self.api.headers["User-Agent"])
         self.assertTrue(self.api.headers["X-Crewai-Version"])
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.create_evaluation("6f31fe1a-20bd-4bfe-a011-25d6b9341f62")
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={"execution_id": "6f31fe1a-20bd-4bfe-a011-25d6b9341f62"},
+            timeout=120.0,  # AMP reads the run's spans inside this request
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_evaluation_files_it_under_the_project(self, mock_make_request):
+        self.api.create_evaluation("run-1", eval_config="{}", project_id="proj-1")
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={"execution_id": "run-1", "eval_config": "{}", "project_id": "proj-1"},
+            timeout=120.0,
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_models_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.create_models_evaluation(
+            ["openai/gpt-4o-mini", "anthropic/claude-haiku-4-5"],
+            project_id="proj-1",
+            eval_config="// ours\n{}",
+            deployment_id="dep-1",
+        )
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={
+                "kind": "models",
+                "project_id": "proj-1",
+                "models": ["openai/gpt-4o-mini", "anthropic/claude-haiku-4-5"],
+                "eval_config": "// ours\n{}",
+                "deployment_id": "dep-1",
+            },
+            timeout=120.0,
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_create_models_evaluation_sends_only_what_it_was_given(
+        self, mock_make_request
+    ):
+        self.api.create_models_evaluation(["openai/gpt-4o-mini"], project_id="proj-1")
+
+        mock_make_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/tracing/evaluations",
+            json={
+                "kind": "models",
+                "project_id": "proj-1",
+                "models": ["openai/gpt-4o-mini"],
+            },
+            timeout=120.0,
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_get_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.get_evaluation("ev-1")
+
+        mock_make_request.assert_called_once_with(
+            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
+        )
+        self.assertEqual(response, mock_response)
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_login_to_tool_repository(self, mock_make_request):
@@ -226,6 +313,42 @@ class TestPlusAPI(unittest.TestCase):
         )
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_deploy_sends_the_project_id_when_there_is_one(self, mock_make_request):
+        self.api.deploy_by_name("test_project", project_id="proj-1")
+        mock_make_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/by-name/test_project/deploy",
+            json={"project_id": "proj-1"},
+        )
+        self.api.deploy_by_uuid("test_uuid", project_id="proj-1")
+        mock_make_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/test_uuid/deploy",
+            json={"project_id": "proj-1"},
+        )
+
+    @patch("crewai_cli.plus_api.PlusAPI._make_multipart_request")
+    def test_zip_deploys_send_the_project_id_when_there_is_one(
+        self, mock_make_multipart_request
+    ):
+        self.api.create_crew_from_zip("/tmp/test.zip", name="c", project_id="proj-1")
+        mock_make_multipart_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/zip",
+            zip_file_path="/tmp/test.zip",
+            data={"name": "c", "project_id": "proj-1"},
+            timeout=300,
+        )
+        self.api.update_crew_from_zip("u", "/tmp/test.zip", project_id="proj-1")
+        mock_make_multipart_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/u/zip_update",
+            zip_file_path="/tmp/test.zip",
+            data={"project_id": "proj-1"},
+            timeout=300,
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_crew_status_by_name(self, mock_make_request):
         self.api.crew_status_by_name("test_project")
         mock_make_request.assert_called_once_with(
@@ -377,3 +500,53 @@ def test_get_agent_with_org_uuid(mock_settings_class, mock_make_request):
     assert "X-Crewai-Organization-Id" in api.headers
     assert api.headers["X-Crewai-Organization-Id"] == org_uuid
     assert response == mock_response
+
+
+def _requests_sent_by(call: Callable[[PlusAPI], object]) -> list[httpx.Request]:
+    """Run ``call`` against a PlusAPI whose HTTP client answers locally."""
+    sent: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        return httpx.Response(200, json={})
+
+    transport = httpx.MockTransport(answer)
+    with patch(
+        "crewai_core.plus_api.httpx.Client",
+        side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+    ):
+        call(PlusAPI("test_api_key"))
+    return sent
+
+
+@pytest.mark.parametrize(
+    ("call", "path"),
+    [
+        (
+            lambda api: api.get_triggers(),
+            "/crewai_plus/api/v1/integrations/apps",
+        ),
+        (
+            lambda api: api.get_trigger_payload("hubspot", "contact_created"),
+            "/crewai_plus/api/v1/integrations/hubspot/contact_created/payload",
+        ),
+    ],
+    ids=["get_triggers", "get_trigger_payload"],
+)
+def test_trigger_requests_wait_60_seconds_only_for_the_response(call, path):
+    (request,) = _requests_sent_by(call)
+
+    assert request.url.path == path
+    assert request.extensions["timeout"] == {
+        "connect": 5.0,
+        "read": 60.0,
+        "write": 5.0,
+        "pool": 5.0,
+    }
+
+
+def test_requests_without_their_own_timeout_keep_the_httpx_default():
+    (request,) = _requests_sent_by(lambda api: api.get_agent("an_agent"))
+
+    assert request.url.path == "/crewai_plus/api/v1/agents/an_agent"
+    assert request.extensions["timeout"]["read"] == 5.0

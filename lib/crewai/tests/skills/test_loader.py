@@ -134,6 +134,22 @@ class TestLoadSkill:
             "Follow these instructions."
         ]
 
+    def test_loads_inline_skill_with_crlf(self) -> None:
+        inline_skill = (
+            "---\r\n"
+            "name: inline-skill\r\n"
+            "description: Inline guidance\r\n"
+            "---\r\n"
+            "Follow these instructions."
+        )
+
+        skills = load_skill(inline_skill)
+
+        assert [skill.name for skill in skills] == ["inline-skill"]
+        assert [skill.instructions for skill in skills] == [
+            "Follow these instructions."
+        ]
+
     def test_invalid_inline_skill_raises_parse_error(self) -> None:
         with pytest.raises(SkillParseError, match="missing closing"):
             load_skill("---\nname: inline-skill\n")

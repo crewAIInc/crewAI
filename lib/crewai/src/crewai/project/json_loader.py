@@ -1820,6 +1820,9 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
             )
         if not tool_def:
             continue
+        if tool_def.startswith("platform:"):
+            tools.extend(_resolve_platform_tools(tool_def.removeprefix("platform:")))
+            continue
         if tool_def.startswith("custom:"):
             tools.append(_resolve_custom_tool(tool_def[7:], project_root=project_root))
             continue
@@ -1845,6 +1848,30 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
                 f"Failed to initialize tool '{tool_def}': {e}"
             ) from e
     return tools
+
+
+def _resolve_platform_tools(selector: str) -> list[Any]:
+    """Materialize an AMP application selector into CrewAI tools."""
+    if not selector:
+        raise JSONProjectError(
+            "Invalid platform tool reference 'platform:': expected "
+            "'platform:<application>'"
+        )
+
+    try:
+        from crewai_tools import CrewaiPlatformTools
+    except ImportError as e:
+        raise JSONProjectError(
+            "Platform tools require the 'crewai-tools' package. "
+            "Install CrewAI with the tools extra."
+        ) from e
+
+    try:
+        return CrewaiPlatformTools(apps=[selector])
+    except Exception as e:
+        raise JSONProjectError(
+            f"Failed to initialize platform tool 'platform:{selector}': {e}"
+        ) from e
 
 
 def _instantiate_tool_import_ref(ref: str) -> Any:
@@ -1990,19 +2017,25 @@ def _tool_definition_errors(
                 f"got {type(tool_def).__name__}"
             )
             continue
-        if not tool_def.startswith("custom:"):
+        if tool_def.startswith("platform:"):
+            if not tool_def.removeprefix("platform:"):
+                errors.append(
+                    f"{source}: invalid platform tool reference 'platform:': "
+                    "expected 'platform:<application>'"
+                )
             continue
-        try:
-            tool_file = _custom_tool_file(tool_def[7:], project_root)
-        except JSONProjectError as exc:
-            errors.append(f"{source}: {exc}")
-            continue
-        if not tool_file.exists():
-            errors.append(
-                f"{source}: custom tool '{tool_def}' not found: expected "
-                f"{tool_file}. Create the file with a BaseTool subclass, or "
-                f"remove the tool from your crew JSON."
-            )
+        if tool_def.startswith("custom:"):
+            try:
+                tool_file = _custom_tool_file(tool_def[7:], project_root)
+            except JSONProjectError as exc:
+                errors.append(f"{source}: {exc}")
+                continue
+            if not tool_file.exists():
+                errors.append(
+                    f"{source}: custom tool '{tool_def}' not found: expected "
+                    f"{tool_file}. Create the file with a BaseTool subclass, or "
+                    f"remove the tool from your crew JSON."
+                )
     return errors
 
 

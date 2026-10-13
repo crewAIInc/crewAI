@@ -101,7 +101,7 @@ from crewai.utilities.converter import (
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_llm, overlay_llm_for
 from crewai.utilities.pydantic_schema_utils import (
     generate_model_description,
     serialize_model_class,
@@ -319,7 +319,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def setup_llm(self) -> Self:
         """Set up the LLM and other components after initialization."""
-        self.llm = create_llm(self.llm)
+        self.llm = overlay_llm_for(self.role, create_llm(self.llm))
         if not isinstance(self.llm, BaseLLM):
             raise ValueError(
                 f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}"
@@ -929,13 +929,13 @@ class LiteAgent(FlowTrackable, BaseModel):
             try:
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
                     formatted_answer = handle_max_iterations_exceeded(
-                        formatted_answer,
                         printer=PRINTER,
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
                         verbose=self.verbose,
                     )
+                    break
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
