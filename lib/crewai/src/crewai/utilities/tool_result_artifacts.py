@@ -13,6 +13,7 @@ class ToolResultArtifact:
     """An internally-addressable deferred tool result."""
 
     artifact_id: str
+    relative_path: Path
     file_path: Path
 
 
@@ -48,7 +49,16 @@ class ToolResultArtifactStore:
         path = artifact_directory / "result.md"
         path.write_text(content, encoding="utf-8")
         self._artifact_ids.add(artifact_id)
-        return ToolResultArtifact(artifact_id=artifact_id, file_path=path)
+        return ToolResultArtifact(
+            artifact_id=artifact_id,
+            relative_path=path.relative_to(self._directory),
+            file_path=path,
+        )
+
+    @property
+    def directory(self) -> Path:
+        """Return the private root directory for this execution's artifacts."""
+        return self._directory
 
     def cleanup(self) -> None:
         """Delete every artifact in this execution. Safe to call repeatedly."""

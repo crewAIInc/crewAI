@@ -85,6 +85,7 @@ class LLMCallBlockedError(ValueError):
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
+TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD: Final[float] = 0.25
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
 logger = logging.getLogger(__name__)
 
@@ -400,6 +401,26 @@ class BaseLLM(BaseModel, ABC):
                 len(message_content_text(message)) for message in messages
             )
         return (character_count + 3) // 4
+
+    def is_tool_result_overflowing_threshold(self, tool_result: str) -> bool:
+        """Check whether a tool result exceeds the deferred-output threshold.
+
+        The threshold is 25% of the model's usable context window. Providers
+        without input-token estimation support retain the ``NotImplementedError``
+        from :meth:`get_input_tokens_count`.
+
+        Args:
+            tool_result: The formatted text returned by a tool.
+
+        Returns:
+            ``True`` when the result alone uses more than 25% of the usable
+            context window.
+        """
+        tool_result_tokens = self.get_input_tokens_count(tool_result)
+        threshold = (
+            self.get_context_window_size() * TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD
+        )
+        return tool_result_tokens > threshold
 
     @abstractmethod
     def call(
