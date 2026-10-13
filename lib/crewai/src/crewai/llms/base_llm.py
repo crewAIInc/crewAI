@@ -363,6 +363,35 @@ class BaseLLM(BaseModel, ABC):
 
         return config
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get the input-token count a request will consume.
+
+        Providers with token-estimation support should override this method. The
+        request arguments mirror the inputs that can affect a provider's prompt
+        size, while omitting execution-only arguments such as callbacks.
+
+        Args:
+            messages: Input messages for the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            The provider's estimated input-token count.
+
+        Raises:
+            NotImplementedError: If the provider does not support token
+                estimation.
+        """
+        raise NotImplementedError(
+            f"Token estimation is not supported for provider '{self.provider}'."
+        )
+
     @abstractmethod
     def call(
         self,
