@@ -2160,10 +2160,10 @@ class BedrockCompletion(BaseLLM):
         Returns:
             True if the model supports images.
         """
-        from crewai.llms.context_window import BEDROCK_GEO_PREFIXES
+        from crewai.llms.context_window import _REGION_PREFIXES
 
         model_lower = self.model.lower()
-        if model_lower.startswith(BEDROCK_GEO_PREFIXES):
+        if model_lower.startswith(_REGION_PREFIXES):
             model_lower = model_lower.split(".", 1)[1]
         vision_models = (
             "anthropic.claude-3",
