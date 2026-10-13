@@ -15,12 +15,10 @@ suitable for use with LLMs and tool definitions.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from copy import deepcopy
 import datetime
 import logging
-import threading
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -36,7 +34,6 @@ from typing import (
     get_origin,
 )
 import uuid
-import warnings
 
 import jsonref  # type: ignore[import-untyped]
 from pydantic import (
@@ -907,27 +904,6 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
     return model
 
 
-_SHADOW_WARNINGS_LOCK = threading.RLock()
-
-
-@contextmanager
-def _ignore_shadow_warnings(names: list[str]) -> Iterator[None]:
-    # Properties like `schema` or `json` shadow BaseModel attributes but still validate
-    # and dump under their own names. catch_warnings swaps process-global filters (not
-    # thread-safe before 3.14): the lock stops two builds from restoring each other's
-    # filters, and the swap happens only when a name collides.
-    if not names:
-        yield
-        return
-    with _SHADOW_WARNINGS_LOCK, warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message=f'Field name "({"|".join(names)})" in ".+" shadows an attribute',
-            category=UserWarning,
-        )
-        yield
-
-
 def _build_model_from_schema(  # type: ignore[no-any-unimported]
     json_schema: dict[str, Any],
     effective_root: dict[str, Any],
@@ -974,17 +950,15 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
 
     effective_config = __config__ or ConfigDict(extra="forbid")
 
-    shadowed = [name for name in field_definitions if hasattr(BaseModel, name)]
-    with _ignore_shadow_warnings(shadowed):
-        model = create_model_base(
-            effective_name,
-            __config__=effective_config,
-            __base__=__base__,
-            __module__=__module__,
-            __validators__=__validators__,
-            __cls_kwargs__=__cls_kwargs__,
-            **field_definitions,
-        )
+    model = create_model_base(
+        effective_name,
+        __config__=effective_config,
+        __base__=__base__,
+        __module__=__module__,
+        __validators__=__validators__,
+        __cls_kwargs__=__cls_kwargs__,
+        **field_definitions,
+    )
     in_progress[original_id] = model
     if schema_id != original_id:
         in_progress[schema_id] = model

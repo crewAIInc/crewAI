@@ -13,13 +13,10 @@ from __future__ import annotations
 
 import datetime
 from copy import deepcopy
-import threading
 from typing import Any
-from unittest.mock import patch
-import warnings
 
 import pytest
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -526,17 +523,15 @@ class TestModelName:
 
 
 # Property names that collide with BaseModel attributes
-
-
-def _shadow_warnings(recwarn: pytest.WarningsRecorder) -> list[str]:
-    return [str(w.message) for w in recwarn if "shadows an attribute" in str(w.message)]
+#
+# Pydantic warns that such a field "shadows an attribute in parent BaseModel". The
+# warning is cosmetic and is left on: the field keeps its own name everywhere, which
+# is what tools, flow state restore and structured output read.
 
 
 class TestBaseModelAttributeNames:
     @pytest.mark.parametrize("name", ["schema", "json", "copy"])
-    def test_property_does_not_warn_and_keeps_its_name(
-        self, name: str, recwarn: pytest.WarningsRecorder
-    ) -> None:
+    def test_property_keeps_its_name(self, name: str) -> None:
         schema = {
             "type": "object",
             "title": "ActionRequest",
@@ -544,13 +539,14 @@ class TestBaseModelAttributeNames:
             "required": [name],
         }
         Model = create_model_from_schema(schema)
+        instance = Model(**{name: "value"})
 
-        assert _shadow_warnings(recwarn) == []
-        assert Model(**{name: "value"}).model_dump() == {name: "value"}
+        assert list(Model.model_fields) == [name]
+        assert getattr(instance, name) == "value"
+        assert instance.model_dump() == {name: "value"}
+        assert list(Model.model_json_schema()["properties"]) == [name]
 
-    def test_nested_object_property_does_not_warn(
-        self, recwarn: pytest.WarningsRecorder
-    ) -> None:
+    def test_nested_object_property_keeps_its_name(self) -> None:
         schema = {
             "type": "object",
             "title": "CreateList",
@@ -565,7 +561,6 @@ class TestBaseModelAttributeNames:
         }
         Model = create_model_from_schema(schema)
 
-        assert _shadow_warnings(recwarn) == []
         dumped = Model(list={"schema": "columns"}).model_dump()
         assert dumped == {"list": {"schema": "columns"}}
 
@@ -583,43 +578,8 @@ class TestBaseModelAttributeNames:
         with pytest.raises(ValueError, match="schema\n  Input should be a valid integer"):
             Model(schema="not a number")
 
-    def test_unrelated_warning_during_build_still_surfaces(self) -> None:
-        schema = {
-            "type": "object",
-            "title": "ActionRequest",
-            "properties": {
-                "schema": {"type": "string"},
-                "model_dump_extra": {"type": "string"},
-            },
-        }
-        with pytest.warns(
-            UserWarning,
-            match="Field 'model_dump_extra' in 'ActionRequest' conflicts with protected namespace",
-        ) as record:
-            create_model_from_schema(schema)
-
-        assert [str(w.message) for w in record if "shadows" in str(w.message)] == []
-
-    def test_user_models_still_warn_after_a_schema_build(self) -> None:
-        create_model_from_schema(
-            {
-                "type": "object",
-                "title": "ActionRequest",
-                "properties": {"json": {"type": "string"}},
-            }
-        )
-
-        with pytest.warns(
-            UserWarning,
-            match='Field name "schema" in ".*UserModel" shadows an attribute in parent "BaseModel"',
-        ):
-            create_model("UserModel", schema=(str, ...))
-
-    def test_recursive_defs_completed_by_rebuild_do_not_warn(
-        self, recwarn: pytest.WarningsRecorder
-    ) -> None:
-        # B refers back to A, so it is built incomplete and finished by model_rebuild
-        # after the suppressed build; pydantic does not re-emit the warning there.
+    def test_recursive_defs_keep_shadowing_names(self) -> None:
+        # B refers back to A, so it is built incomplete and finished by model_rebuild.
         schema = {
             "type": "object",
             "title": "Root",
@@ -643,50 +603,9 @@ class TestBaseModelAttributeNames:
         }
         Model = create_model_from_schema(schema)
 
-        assert _shadow_warnings(recwarn) == []
         dumped = Model(a={"schema": "s", "b": {"json": "j"}}).model_dump()
         assert dumped["a"]["schema"] == "s"
         assert dumped["a"]["b"]["json"] == "j"
-
-    def test_overlapping_builds_leave_warning_filters_as_they_were(self) -> None:
-        # Without serialization, a build that enters while another is inside restores
-        # the first build's ignore filter on exit, leaking it for every later model.
-        from crewai.utilities import pydantic_schema_utils as psu
-
-        first_inside = threading.Event()
-        second_inside = threading.Event()
-        first_done = threading.Event()
-        real_create_model = psu.create_model_base
-
-        def create_model_base(name: str, **kwargs: Any) -> type[BaseModel]:
-            if name == "First":
-                first_inside.set()
-                second_inside.wait(timeout=0.5)
-            else:
-                second_inside.set()
-                first_done.wait(timeout=0.5)
-            return real_create_model(name, **kwargs)
-
-        def build(title: str) -> None:
-            create_model_from_schema(
-                {"type": "object", "title": title, "properties": {"schema": {"type": "string"}}}
-            )
-            if title == "First":
-                first_done.set()
-
-        filters_before = list(warnings.filters)
-        with patch.object(psu, "create_model_base", create_model_base):
-            first = threading.Thread(target=build, args=("First",))
-            first.start()
-            first_inside.wait(timeout=1)
-            second = threading.Thread(target=build, args=("Second",))
-            second.start()
-            first.join(timeout=5)
-            second.join(timeout=5)
-
-        assert warnings.filters == filters_before
-        with pytest.warns(UserWarning, match='Field name "schema" in ".*UserModel"'):
-            create_model("UserModel", schema=(str, ...))
 
 
 # enrich_descriptions

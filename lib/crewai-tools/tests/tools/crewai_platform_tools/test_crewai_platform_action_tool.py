@@ -182,13 +182,6 @@ class TestCrewAIPlatformActionToolBaseModelAttributeNames:
         },
     )
 
-    def test_building_the_tool_does_not_warn(self, recwarn):
-        CrewAIPlatformActionTool(self.tool_info, client=Mock(spec=IntegrationsClient))
-
-        assert [
-            str(w.message) for w in recwarn if "shadows an attribute" in str(w.message)
-        ] == []
-
     def test_run_sends_the_argument_under_its_original_name(self):
         client = Mock(spec=IntegrationsClient)
         client.execute_action.return_value = ToolExecutionSuccess(output={"ok": True})
