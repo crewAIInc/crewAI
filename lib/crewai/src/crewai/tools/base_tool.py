@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
+import functools
 import importlib
 from inspect import Parameter, signature
 import threading
@@ -101,8 +102,15 @@ def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
     module's globals instead of the caller's; fall back to the raw annotations
     when they cannot be resolved at runtime, as for TYPE_CHECKING-only names.
     """
+    # ``functools.partial`` adapters are not functions, so ``get_type_hints``
+    # cannot evaluate them directly; the parameters that survive in the
+    # adapter's signature belong to the underlying function, whose hints do
+    # resolve in its defining module.
+    target = func
+    while isinstance(target, functools.partial):
+        target = target.func
     try:
-        return get_type_hints(func, include_extras=True)
+        return get_type_hints(target, include_extras=True)
     except Exception:
         return dict(getattr(func, "__annotations__", {}))
 
