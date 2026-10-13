@@ -131,8 +131,10 @@ class SnowflakeCompletion(OpenAICompletion):
             "SNOWFLAKE_ACCOUNT, or pass account_url/base_url/account_identifier."
         )
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
-        formatted_messages = super()._format_messages(messages)
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
+        formatted_messages = super()._format_messages(messages, file_api=file_api)
         if self._is_claude_model():
             formatted_messages = self._normalize_stringified_tool_calls(
                 formatted_messages

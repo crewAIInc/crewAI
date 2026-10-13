@@ -783,16 +783,23 @@ class LLM(BaseLLM):
 
         LiteLLM does not make a provider request for this calculation. Its
         tokenizer uses the same formatted messages and tools as a completion.
-        ``response_model`` is intentionally excluded because LiteLLM applies
-        CrewAI's structured-output parsing after the model response.
         """
-        del response_model
         if not _ensure_litellm() or litellm is None:
             raise ImportError(
                 'LiteLLM is required for token estimation; install it with `uv add "crewai[litellm]"`.'
             )
 
         params = self._prepare_completion_params(messages, tools)
+        if response_model is not None:
+            from instructor import Mode, handle_response_model
+
+            _, structured_output_params = handle_response_model(
+                response_model,
+                mode=Mode.TOOLS,
+                tools=params.get("tools"),
+            )
+            params["tools"] = structured_output_params["tools"]
+            params["tool_choice"] = structured_output_params["tool_choice"]
         return int(
             litellm.token_counter(
                 model=params["model"],
@@ -2226,7 +2233,9 @@ class LLM(BaseLLM):
         """
         return extract_choices_finish_reason_and_id(response_or_chunk)
 
-    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.
 
         For each message with a `files` field, formats the files into

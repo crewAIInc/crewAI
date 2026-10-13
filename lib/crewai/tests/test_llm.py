@@ -834,6 +834,36 @@ def test_litellm_input_token_count_uses_formatted_messages_and_tools():
     )
 
 
+def test_litellm_input_token_count_includes_structured_output_tool():
+    class Answer(BaseModel):
+        value: str
+
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+
+    with patch("crewai.llm.litellm.token_counter", return_value=42) as token_counter:
+        assert llm.get_input_tokens_count("What is CrewAI?", response_model=Answer) == 42
+
+    count_kwargs = token_counter.call_args.kwargs
+    assert count_kwargs["tools"] == [
+        {
+            "type": "function",
+            "function": {
+                "name": "Answer",
+                "description": "Correctly extracted `Answer` with all the required parameters with correct types",
+                "parameters": {
+                    "properties": {"value": {"title": "Value", "type": "string"}},
+                    "required": ["value"],
+                    "type": "object",
+                },
+            },
+        }
+    ]
+    assert count_kwargs["tool_choice"] == {
+        "type": "function",
+        "function": {"name": "Answer"},
+    }
+
+
 def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):
     """
     Test that the retry logic catches LiteLLM's UnsupportedParamsError format
