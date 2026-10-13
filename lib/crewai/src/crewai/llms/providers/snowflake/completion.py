@@ -4,7 +4,7 @@ import ast
 import os
 from typing import Any, Literal
 
-from pydantic import model_validator
+from pydantic import BaseModel, model_validator
 
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.utilities.types import LLMMessage
@@ -129,6 +129,24 @@ class SnowflakeCompletion(OpenAICompletion):
         raise ValueError(
             "Snowflake account URL is required. Set SNOWFLAKE_ACCOUNT_URL or "
             "SNOWFLAKE_ACCOUNT, or pass account_url/base_url/account_identifier."
+        )
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> int:
+        """Raise until Snowflake Cortex token estimation is implemented.
+
+        Snowflake's OpenAI-compatible Cortex endpoint supports only Chat
+        Completions, while the inherited OpenAI implementation requires the
+        Responses input-token-count endpoint.
+        """
+        raise NotImplementedError(
+            "Token estimation is not supported for Snowflake Cortex. "
+            "Use Snowflake AI_COUNT_TOKENS directly for text-only estimates."
         )
 
     def _format_messages(

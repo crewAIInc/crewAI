@@ -98,6 +98,13 @@ class TestSnowflakeConfig:
         with pytest.raises(ValueError, match="supports only the Chat Completions API"):
             SnowflakeCompletion(model="openai-gpt-4.1", api="responses")
 
+    def test_input_token_count_is_not_supported(self, monkeypatch: pytest.MonkeyPatch):
+        _snowflake_env(monkeypatch)
+        llm = SnowflakeCompletion(model="openai-gpt-4.1")
+
+        with pytest.raises(NotImplementedError, match="Snowflake AI_COUNT_TOKENS"):
+            llm.get_input_tokens_count("Count these tokens.")
+
 
 class TestSnowflakeFactory:
     def test_llm_creates_native_snowflake_provider(
