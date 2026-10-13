@@ -1360,6 +1360,16 @@ class Agent(BaseAgent):
         return agent_tools.tools()
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Resolve platform app selectors into tools.
+
+        Args:
+            apps: App or ``app/action`` selectors to resolve.
+
+        Returns:
+            The resolved tools, or an empty list when none resolve or resolution
+            fails. A non-empty ``apps`` that resolves to no tools emits a
+            ``UserWarning`` naming the agent and its apps.
+        """
         platform_tools: list[BaseTool] = []
         try:
             from crewai_tools import (
@@ -1371,10 +1381,8 @@ class Agent(BaseAgent):
             self._logger.log("error", f"Error getting platform tools: {e!s}")
 
         if apps and not platform_tools:
-            # A non-empty `apps` that resolves to zero tools leaves the agent
-            # unable to do what those apps were for — surface it loudly (the
-            # underlying resolver only logs, and Logger.log is verbose-gated) so
-            # it isn't discovered as a mysterious runtime failure.
+            # Logger.log above is verbose-gated; without a warning a bad `apps`
+            # entry only shows up later as a task the agent couldn't do.
             app_names = ", ".join(str(app) for app in apps)
             warnings.warn(
                 f"Agent '{self.role}' declares apps [{app_names}] but none "
