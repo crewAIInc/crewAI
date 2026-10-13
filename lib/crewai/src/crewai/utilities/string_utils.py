@@ -32,10 +32,17 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     Args:
         name: Original tool name.
         max_length: Maximum allowed length (default 64 per OpenAI/Bedrock limits).
+            Must be a positive integer.
 
     Returns:
-        Sanitized tool name (lowercase, a-z0-9_ only, max 64 chars).
+        Sanitized tool name (lowercase, a-z0-9_ only, at most max_length chars).
+
+    Raises:
+        ValueError: If max_length is not a positive integer.
     """
+    if max_length <= 0:
+        raise ValueError(f"max_length must be a positive integer, got {max_length}")
+
     name = unicodedata.normalize("NFKD", name)
     name = name.encode("ascii", "ignore").decode("ascii")
     name = _CAMEL_UPPER_LOWER.sub(r"\1_\2", name)
@@ -47,8 +54,12 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = name.strip("_")
 
     if len(name) > max_length:
-        name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]
-        suffix = f"_{name_hash}"
+        full_hash = hashlib.sha256(name.encode()).hexdigest()
+        suffix = f"_{full_hash[:8]}"
+        if max_length < len(suffix):
+            # Not enough room for a readable prefix plus the full suffix:
+            # fall back to a bare hash truncated to fit max_length exactly.
+            return full_hash[:max_length]
         name = name[: max_length - len(suffix)].rstrip("_") + suffix
 
     return name
