@@ -592,6 +592,12 @@ class OpenAICompletion(BaseLLM):
         users preflight an equivalent Responses payload without changing their
         subsequent generation request.
         """
+        if self._on_compatible_server():
+            raise NotImplementedError(
+                "Token estimation is not supported for OpenAI-compatible "
+                "endpoints. Use the provider's native token-counting API."
+            )
+
         formatted_messages = self._format_messages(messages, file_api="responses")
         response_params = self._prepare_responses_params(
             messages=formatted_messages,

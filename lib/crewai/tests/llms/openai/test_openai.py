@@ -66,6 +66,21 @@ def test_custom_openai_flag_uses_native_openai_without_provider_prefix():
     assert rebuilt.base_url == "https://gateway.example/v1"
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"custom_openai": True, "base_url": "https://vllm.example/v1"},
+        {"base_url": "https://vllm.example/v1"},
+    ],
+)
+def test_openai_compatible_token_count_is_not_supported(kwargs):
+    """Compatible endpoints cannot be assumed to implement Responses counting."""
+    llm = OpenAICompletion(model="custom-model", api_key="test-key", **kwargs)
+
+    with pytest.raises(NotImplementedError, match="OpenAI-compatible endpoints"):
+        llm.get_input_tokens_count("Count these tokens.")
+
+
 def test_custom_openai_flag_requires_custom_base_url():
     """Avoid routing arbitrary custom model ids to api.openai.com by mistake."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
