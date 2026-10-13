@@ -73,12 +73,11 @@ def test_custom_openai_flag_uses_native_openai_without_provider_prefix():
         {"base_url": "https://vllm.example/v1"},
     ],
 )
-def test_openai_compatible_token_count_is_not_supported(kwargs):
-    """Compatible endpoints cannot be assumed to implement Responses counting."""
+def test_openai_compatible_token_count_uses_character_fallback(kwargs):
+    """Compatible endpoints fall back when they lack Responses counting."""
     llm = OpenAICompletion(model="custom-model", api_key="test-key", **kwargs)
 
-    with pytest.raises(NotImplementedError, match="OpenAI-compatible endpoints"):
-        llm.get_input_tokens_count("Count these tokens.")
+    assert llm.get_input_tokens_count("12345") == 2
 
 
 def test_custom_openai_flag_requires_custom_base_url():
@@ -930,17 +929,14 @@ def test_openai_input_token_count_forwards_responses_payload():
     )
 
 
-def test_openai_input_token_count_propagates_api_errors():
-    """Callers can handle count-endpoint errors without a wrapped exception."""
+def test_openai_input_token_count_falls_back_after_api_errors():
+    """Count-endpoint errors fall back to the character estimate."""
     llm = OpenAICompletion(model="gpt-4o")
     client = MagicMock()
     client.responses.input_tokens.count.side_effect = RuntimeError("count failed")
 
-    with (
-        patch.object(llm, "_get_sync_client", return_value=client),
-        pytest.raises(RuntimeError, match="count failed"),
-    ):
-        llm.get_input_tokens_count("Hello!")
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("Hello!") == 2
 
 
 @pytest.mark.vcr(record_mode="once")

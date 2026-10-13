@@ -140,15 +140,11 @@ def test_custom_llm_message_formatting():
     assert result == "Test response"
 
 
-def test_base_llm_input_token_count_is_unsupported_by_default():
-    """Custom providers retain their current behavior until they opt in."""
+def test_base_llm_input_token_count_estimates_text_characters():
+    """Custom providers have a conservative fallback without native support."""
     custom_llm = CustomLLM(model="test-model")
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Token estimation is not supported for provider 'openai'",
-    ):
-        custom_llm.get_input_tokens_count("Test message")
+    assert custom_llm.get_input_tokens_count("12345") == 2
 
 
 class JWTAuthLLM(BaseLLM):

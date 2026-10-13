@@ -346,6 +346,7 @@ class AnthropicCompletion(BaseLLM):
         completion, while excluding generation-only parameters such as output
         limits and sampling settings.
         """
+        fallback_count = super().get_input_tokens_count(messages, tools, response_model)
         formatted_messages, system_message = self._format_messages_for_anthropic(
             messages
         )
@@ -367,14 +368,29 @@ class AnthropicCompletion(BaseLLM):
         effective_response_model = response_model or self.response_format
         uses_file_api = _contains_file_id_reference(formatted_messages)
 
+        def count_tokens(
+            *,
+            betas: list[str] | None = None,
+            output_format: dict[str, Any] | None = None,
+        ) -> Any | None:
+            try:
+                if betas:
+                    return self._get_sync_client().beta.messages.count_tokens(
+                        **count_params,
+                        betas=betas,
+                        **({"output_format": output_format} if output_format else {}),
+                    )
+                return self._get_sync_client().messages.count_tokens(**count_params)
+            except Exception:
+                return None
+
         if _is_pydantic_model_class(effective_response_model):
             schema = transform_schema(effective_response_model.model_json_schema())
             if _supports_native_structured_outputs(self.model):
                 betas = [ANTHROPIC_STRUCTURED_OUTPUTS_BETA]
                 if uses_file_api:
                     betas.append(ANTHROPIC_FILES_API_BETA)
-                response = self._get_sync_client().beta.messages.count_tokens(
-                    **count_params,
+                response = count_tokens(
                     betas=betas,
                     output_format={"type": "json_schema", "schema": schema},
                 )
@@ -391,22 +407,16 @@ class AnthropicCompletion(BaseLLM):
                     "name": "structured_output",
                 }
                 if uses_file_api:
-                    response = self._get_sync_client().beta.messages.count_tokens(
-                        **count_params,
-                        betas=[ANTHROPIC_FILES_API_BETA],
-                    )
+                    response = count_tokens(betas=[ANTHROPIC_FILES_API_BETA])
                 else:
-                    response = self._get_sync_client().messages.count_tokens(
-                        **count_params
-                    )
+                    response = count_tokens()
         elif uses_file_api:
-            response = self._get_sync_client().beta.messages.count_tokens(
-                **count_params,
-                betas=[ANTHROPIC_FILES_API_BETA],
-            )
+            response = count_tokens(betas=[ANTHROPIC_FILES_API_BETA])
         else:
-            response = self._get_sync_client().messages.count_tokens(**count_params)
+            response = count_tokens()
 
+        if response is None:
+            return fallback_count
         return int(response.input_tokens)
 
     def to_config_dict(self) -> dict[str, Any]:

@@ -709,6 +709,16 @@ def test_anthropic_input_token_count_includes_files_api_beta():
     )
 
 
+def test_anthropic_input_token_count_uses_character_fallback():
+    """Count endpoint errors fall back to the character estimate."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+    client = MagicMock()
+    client.messages.count_tokens.side_effect = RuntimeError("count failed")
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("12345") == 2
+
+
 def test_anthropic_input_token_count_uses_files_beta_for_structured_output_fallback():
     """Structured output fallback retains the Files API beta header."""
     class Answer(BaseModel):

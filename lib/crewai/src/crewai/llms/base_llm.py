@@ -369,11 +369,12 @@ class BaseLLM(BaseModel, ABC):
         tools: list[dict[str, BaseTool]] | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> int:
-        """Get the input-token count a request will consume.
+        """Estimate the input-token count a request will consume.
 
-        Providers with token-estimation support should override this method. The
-        request arguments mirror the inputs that can affect a provider's prompt
-        size, while omitting execution-only arguments such as callbacks.
+        Providers with native token-estimation support should override this
+        method. This fallback estimates one token per four text characters,
+        rounded up, so callers can safely preflight requests when a native
+        count endpoint is unavailable.
 
         Args:
             messages: Input messages for the LLM.
@@ -382,15 +383,17 @@ class BaseLLM(BaseModel, ABC):
                 request.
 
         Returns:
-            The provider's estimated input-token count.
-
-        Raises:
-            NotImplementedError: If the provider does not support token
-                estimation.
+            A conservative estimate of the provider's input-token count.
         """
-        raise NotImplementedError(
-            f"Token estimation is not supported for provider '{self.provider}'."
-        )
+        from crewai.utilities.agent_utils import message_content_text
+
+        if isinstance(messages, str):
+            character_count = len(messages)
+        else:
+            character_count = sum(
+                len(message_content_text(message)) for message in messages
+            )
+        return (character_count + 3) // 4
 
     @abstractmethod
     def call(

@@ -742,7 +742,7 @@ def test_bedrock_input_token_count_forwards_converse_payload(bedrock_mocks):
     )
 
 
-def test_bedrock_input_token_count_explains_unsupported_runtime_models(
+def test_bedrock_input_token_count_uses_character_fallback_for_unsupported_models(
     bedrock_mocks,
 ):
     """Runtime models without CountTokens report the Mantle requirement."""
@@ -760,8 +760,7 @@ def test_bedrock_input_token_count_explains_unsupported_runtime_models(
         "CountTokens",
     )
 
-    with pytest.raises(NotImplementedError, match="Bedrock Mantle"):
-        llm.get_input_tokens_count("Count these input tokens.")
+    assert llm.get_input_tokens_count("12345") == 2
 
 
 def test_bedrock_tool_use_conversation_flow():

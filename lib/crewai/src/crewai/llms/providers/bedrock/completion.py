@@ -348,6 +348,7 @@ class BedrockCompletion(BaseLLM):
         additional-model fields that affect input tokenization. Generation-only
         settings, such as output limits and sampling, are excluded.
         """
+        fallback_count = super().get_input_tokens_count(messages, tools, response_model)
         formatted_messages, system_message = self._format_messages_for_converse(
             messages
         )
@@ -407,21 +408,8 @@ class BedrockCompletion(BaseLLM):
                 modelId=self.model_id,
                 input={"converse": converse_input},
             )
-        except ClientError as error:
-            error_details = error.response.get("Error", {})
-            error_code = error_details.get("Code")
-            error_message = error_details.get("Message", "")
-            if (
-                error_code == "ValidationException"
-                and "counttokens" in error_message.lower()
-                and "support" in error_message.lower()
-            ):
-                raise NotImplementedError(
-                    "Token estimation is not supported for this model by Bedrock "
-                    "Runtime CountTokens. Anthropic models without Runtime support "
-                    "require the Bedrock Mantle count_tokens endpoint."
-                ) from error
-            raise
+        except ClientError:
+            return fallback_count
         return int(response["inputTokens"])
 
     def to_config_dict(self) -> dict[str, Any]:

@@ -864,6 +864,13 @@ def test_litellm_input_token_count_includes_structured_output_tool():
     }
 
 
+def test_litellm_input_token_count_uses_character_fallback():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+
+    with patch("crewai.llm.litellm.token_counter", side_effect=RuntimeError):
+        assert llm.get_input_tokens_count("12345") == 2
+
+
 def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):
     """
     Test that the retry logic catches LiteLLM's UnsupportedParamsError format

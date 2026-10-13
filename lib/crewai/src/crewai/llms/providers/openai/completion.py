@@ -591,11 +591,9 @@ class OpenAICompletion(BaseLLM):
         users preflight an equivalent Responses payload without changing their
         subsequent generation request.
         """
+        fallback_count = super().get_input_tokens_count(messages, tools, response_model)
         if self._on_compatible_server():
-            raise NotImplementedError(
-                "Token estimation is not supported for OpenAI-compatible "
-                "endpoints. Use the provider's native token-counting API."
-            )
+            return fallback_count
 
         formatted_messages = self._format_messages(messages, file_api="responses")
         response_params = self._prepare_responses_params(
@@ -615,7 +613,12 @@ class OpenAICompletion(BaseLLM):
             )
             if key in response_params
         }
-        response = self._get_sync_client().responses.input_tokens.count(**count_params)
+        try:
+            response = self._get_sync_client().responses.input_tokens.count(
+                **count_params
+            )
+        except Exception:
+            return fallback_count
         return int(response.input_tokens)
 
     def call(

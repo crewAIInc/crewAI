@@ -137,16 +137,13 @@ class SnowflakeCompletion(OpenAICompletion):
         tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> int:
-        """Raise until Snowflake Cortex token estimation is implemented.
+        """Estimate input tokens until Snowflake Cortex support is implemented.
 
         Snowflake's OpenAI-compatible Cortex endpoint supports only Chat
         Completions, while the inherited OpenAI implementation requires the
         Responses input-token-count endpoint.
         """
-        raise NotImplementedError(
-            "Token estimation is not supported for Snowflake Cortex. "
-            "Use Snowflake AI_COUNT_TOKENS directly for text-only estimates."
-        )
+        return super().get_input_tokens_count(messages, tools, response_model)
 
     def _format_messages(
         self, messages: str | list[LLMMessage], *, file_api: str | None = None
