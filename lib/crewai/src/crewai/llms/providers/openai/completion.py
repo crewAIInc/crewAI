@@ -578,6 +578,33 @@ class OpenAICompletion(BaseLLM):
 
         return client_params
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with OpenAI's Responses API.
+
+        The count endpoint uses the configured model but is independent of the
+        generation endpoint selected by :attr:`api`. This lets Chat Completions
+        users preflight an equivalent Responses payload without changing their
+        subsequent generation request.
+        """
+        formatted_messages = self._format_messages(messages)
+        response_params = self._prepare_responses_params(
+            messages=formatted_messages,
+            tools=tools,
+            response_model=response_model,
+        )
+        count_params = {
+            key: response_params[key]
+            for key in ("model", "input", "instructions", "text", "tools")
+            if key in response_params
+        }
+        response = self._get_sync_client().responses.input_tokens.count(**count_params)
+        return int(response.input_tokens)
+
     def call(
         self,
         messages: str | list[LLMMessage],
