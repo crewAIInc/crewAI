@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 import pytest
@@ -11,7 +12,7 @@ from crewai.utilities.evaluators.crew_evaluator_handler import (
 )
 
 
-class InternalCrewEvaluator:
+class TestInternalCrewEvaluator:
     @pytest.fixture
     def crew_planner(self):
         agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")
@@ -22,7 +23,7 @@ class InternalCrewEvaluator:
         )
         crew = Crew(agents=[agent], tasks=[task])
 
-        return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
+        return CrewEvaluator(crew, eval_llm="gpt-4o-mini")
 
     def test_setup_for_evaluating(self, crew_planner):
         crew_planner._setup_for_evaluating()
@@ -114,7 +115,7 @@ class InternalCrewEvaluator:
                 mock.call().add_column("Avg. Total", justify="center"),
                 mock.call().add_column("Agents", style="green"),
                 mock.call().add_row("Task 1", "10.0", "9.0", "9.5", "- Agent 1"),
-                mock.call().add_row("", "", "", "", "", ""),  # Blank row between tasks
+                mock.call().add_row("", "", "", "", ""),  # Blank row between tasks
                 mock.call().add_row("Task 2", "9.0", "8.0", "8.5", "- Agent 2"),
                 mock.call().add_row("Crew", "9.00", "8.00", "8.5", ""),
                 mock.call().add_row("Execution Time (s)", "135", "155", "145", ""),
@@ -122,12 +123,71 @@ class InternalCrewEvaluator:
         )
 
         # Ensure the console prints the table
-        console.assert_has_calls([mock.call(), mock.call().print(table())])
+        console.assert_has_calls(
+            [mock.call(), mock.call().print("\n"), mock.call().print(table())]
+        )
+
+    @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Console")
+    @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Table")
+    def test_print_crew_evaluation_result_row_cell_count(
+        self, table, console, crew_planner
+    ):
+        """Continuation and separator rows must match the dynamic column count.
+
+        Regression test for https://github.com/crewAIInc/crewAI/issues/8024:
+        with N != 3 evaluation runs, the continuation-agent and blank
+        separator rows must emit exactly 3 + N cells.
+        """
+        for num_runs in (1, 2, 5):
+            table.reset_mock()
+            crew_planner.tasks_scores = {
+                run: [8.0, 9.0] for run in range(1, num_runs + 1)
+            }
+            crew_planner.run_execution_times = {
+                run: [24, 45] for run in range(1, num_runs + 1)
+            }
+
+            crew_planner.crew.tasks = [
+                mock.Mock(
+                    agent=mock.Mock(),
+                    processed_by_agents=["Agent 1", "Agent 2"],
+                ),
+                mock.Mock(
+                    agent=mock.Mock(),
+                    processed_by_agents=["Agent 3"],
+                ),
+            ]
+
+            crew_planner.print_crew_evaluation_result()
+
+            expected_columns = 3 + num_runs
+            expected_padding = [""] * (num_runs + 1)
+            add_row_calls = [
+                call for call in table.mock_calls if call[0] == "().add_row"
+            ]
+            assert add_row_calls, "no add_row calls recorded"
+            for call in add_row_calls:
+                assert len(call.args) == expected_columns, (
+                    f"{len(call.args)} cells for {num_runs} runs: {call.args}"
+                )
+            assert (
+                "",
+                *expected_padding,
+                "- Agent 2",
+            ) in [call.args for call in add_row_calls]
+            assert (
+                "",
+                *expected_padding,
+                "",
+            ) in [call.args for call in add_row_calls]
 
     def test_evaluate(self, crew_planner):
         task_output = TaskOutput(
             description="Task 1", agent=str(crew_planner.crew.agents[0])
         )
+        task = crew_planner.crew.tasks[0]
+        task.end_time = datetime.now(timezone.utc)
+        task.start_time = task.end_time - timedelta(seconds=5)
 
         with mock.patch.object(Task, "execute_sync") as execute:
             execute().pydantic = TaskEvaluationPydanticOutput(quality=9.5)
