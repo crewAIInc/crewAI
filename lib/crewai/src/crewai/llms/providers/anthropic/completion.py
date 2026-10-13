@@ -334,6 +334,64 @@ class AnthropicCompletion(BaseLLM):
             self._async_client = self._build_async_client()
         return self._async_client
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Anthropic's Messages API.
+
+        The token-count request uses the same message and tool formatting as a
+        completion, while excluding generation-only parameters such as output
+        limits and sampling settings.
+        """
+        formatted_messages, system_message = self._format_messages_for_anthropic(
+            messages
+        )
+        completion_params = self._prepare_completion_params(
+            formatted_messages, system_message, tools
+        )
+        count_params = {
+            key: completion_params[key]
+            for key in (
+                "model",
+                "messages",
+                "system",
+                "thinking",
+                "tool_choice",
+                "tools",
+            )
+            if key in completion_params
+        }
+        effective_response_model = response_model or self.response_format
+
+        if _is_pydantic_model_class(effective_response_model):
+            schema = transform_schema(effective_response_model.model_json_schema())
+            if _supports_native_structured_outputs(self.model):
+                response = self._get_sync_client().beta.messages.count_tokens(
+                    **count_params,
+                    betas=[ANTHROPIC_STRUCTURED_OUTPUTS_BETA],
+                    output_format={"type": "json_schema", "schema": schema},
+                )
+            else:
+                count_params["tools"] = [
+                    {
+                        "name": "structured_output",
+                        "description": "Output the structured response",
+                        "input_schema": schema,
+                    }
+                ]
+                count_params["tool_choice"] = {
+                    "type": "tool",
+                    "name": "structured_output",
+                }
+                response = self._get_sync_client().messages.count_tokens(**count_params)
+        else:
+            response = self._get_sync_client().messages.count_tokens(**count_params)
+
+        return int(response.input_tokens)
+
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
         config = super().to_config_dict()

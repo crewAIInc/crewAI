@@ -648,6 +648,48 @@ def test_anthropic_token_usage_tracking():
         assert usage["total_tokens"] == 75
 
 
+def test_anthropic_input_token_count_forwards_completion_payload():
+    """Counting formats system messages and tools like a completion request."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+    client = MagicMock()
+    client.messages.count_tokens.return_value = MagicMock(input_tokens=42)
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is the weather?"},
+    ]
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location.",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    client.messages.count_tokens.assert_called_once_with(
+        model="claude-3-5-sonnet-20241022",
+        system="Be concise.",
+        messages=[{"role": "user", "content": "What is the weather?"}],
+        tools=[
+            {
+                "name": "get_weather",
+                "description": "Get weather for a location.",
+                "input_schema": {"type": "object", "properties": {}},
+            }
+        ],
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_input_token_count_live():
+    """Anthropic returns a positive input-token count for a real request."""
+    llm = LLM(model="anthropic/claude-haiku-4-5")
+
+    assert llm.get_input_tokens_count("Count these input tokens.") > 0
+
+
 def test_anthropic_stop_sequences_sync():
     """Test that stop and stop_sequences attributes stay synchronized."""
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
