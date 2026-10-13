@@ -2420,6 +2420,53 @@ class TestNativeToolCallMaxUsage:
         assert 'result = f"Tool \'{func_name}\' has reached its maximum usage limit' in source
 
 
+class TestDeferredNativeToolResults:
+    """Oversized native results are stored outside the next LLM request."""
+
+    def test_overflowed_result_is_referenced_and_readable_through_file_reader(self):
+        from crewai_tools import FileReadTool
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = True
+        executor = _build_executor(llm=llm, original_tools=[])
+        executor._tool_result_artifact_store = None
+        tool_output = "".join(f"line {index}\n" for index in range(12))
+
+        reference = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": tool_output,
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            reader = next(
+                tool
+                for tool in executor.original_tools
+                if isinstance(tool, FileReadTool)
+            )
+            artifact = next(artifact_store.directory.glob("*/result.md"))
+            alias = artifact.relative_to(artifact_store.directory).as_posix()
+
+            assert "search_docs" in reference
+            assert '"query": "CrewAI"' in reference
+            assert "Preview of the first 10 lines" in reference
+            assert "line 9" in reference
+            assert "line 10" not in reference
+            assert reader.run(file_path=alias, start_line=11, line_count=2) == (
+                "line 10\nline 11\n"
+            )
+            assert executor.state.use_file_system_tool is True
+        finally:
+            if executor._tool_result_artifact_store is not None:
+                executor._tool_result_artifact_store.cleanup()
+
+
 # Executor State Reset on Re-invoke
 
 
