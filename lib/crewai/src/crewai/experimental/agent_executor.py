@@ -298,7 +298,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return result
         try:
             should_defer = self.llm.is_tool_result_overflowing_threshold(result)
-        except NotImplementedError:
+        except Exception:
             return result
         if not should_defer:
             return result
