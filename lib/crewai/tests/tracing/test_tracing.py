@@ -19,6 +19,7 @@ from crewai.events.listeners.tracing.trace_listener import (
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.flow.flow import Flow, start
 from crewai.llms.base_llm import BaseLLM
+from crewai.plus_api import PlusAPI
 from crewai.telemetry.telemetry import Telemetry
 from crewai.telemetry.tracing.ephemeral import trace_consent
 from crewai.telemetry.tracing.grants import (
@@ -870,11 +871,8 @@ class TestTraceBatchIdClearedOnFailure:
 
     def _make_batch_manager(self):
         """Create a TraceBatchManager with a pre-set trace_batch_id (simulating first-time user)."""
-        with patch(
-            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-            return_value="mock_token",
-        ):
-            bm = TraceBatchManager()
+        bm = TraceBatchManager()
+        bm.plus_api = PlusAPI(api_key="mock_token")
         bm.current_batch = TraceBatch(
             user_context={"privacy_level": "standard"},
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
@@ -956,11 +954,8 @@ class TestInitializeBackendBatchRetry:
 
     def _make_batch_manager(self):
         """Create a TraceBatchManager with a pre-set trace_batch_id."""
-        with patch(
-            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-            return_value="mock_token",
-        ):
-            bm = TraceBatchManager()
+        bm = TraceBatchManager()
+        bm.plus_api = PlusAPI(api_key="mock_token")
         bm.current_batch = TraceBatch(
             user_context={"privacy_level": "standard"},
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
@@ -1118,11 +1113,8 @@ class TestFirstTimeHandlerBackendInitGuard:
 
     def _make_handler_with_manager(self):
         """Create a FirstTimeTraceHandler wired to a TraceBatchManager."""
-        with patch(
-            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-            return_value="mock_token",
-        ):
-            bm = TraceBatchManager()
+        bm = TraceBatchManager()
+        bm.plus_api = PlusAPI(api_key="mock_token")
         bm.current_batch = TraceBatch(
             user_context={"privacy_level": "standard"},
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
@@ -1242,11 +1234,8 @@ class TestFirstTimeHandlerAlwaysEphemeral:
     """Tests that first-time handler always uses ephemeral with skip_context_check."""
 
     def _make_handler_with_manager(self):
-        with patch(
-            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-            return_value="mock_token",
-        ):
-            bm = TraceBatchManager()
+        bm = TraceBatchManager()
+        bm.plus_api = PlusAPI(api_key="mock_token")
         bm.current_batch = TraceBatch(
             user_context={"privacy_level": "standard"},
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
@@ -1283,11 +1272,8 @@ class TestAuthFailbackToEphemeral:
 
     def _make_batch_manager(self):
         """Create a TraceBatchManager with a pre-set trace_batch_id."""
-        with patch(
-            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-            return_value="mock_token",
-        ):
-            bm = TraceBatchManager()
+        bm = TraceBatchManager()
+        bm.plus_api = PlusAPI(api_key="mock_token")
         bm.current_batch = TraceBatch(
             user_context={"privacy_level": "standard"},
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
@@ -1437,11 +1423,8 @@ class TestMarkBatchAsFailedRouting:
     """Tests: _mark_batch_as_failed routes to the correct endpoint."""
 
     def _make_batch_manager(self, ephemeral: bool = False):
-        with patch(
-            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-            return_value="mock_token",
-        ):
-            bm = TraceBatchManager()
+        bm = TraceBatchManager()
+        bm.plus_api = PlusAPI(api_key="mock_token")
         bm.is_current_batch_ephemeral = ephemeral
         return bm
 
@@ -1586,11 +1569,8 @@ class TestTraceBatchSentTelemetry:
     """
 
     def _make_manager(self, *, ephemeral: bool) -> TraceBatchManager:
-        with patch(
-            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-            return_value="mock_token",
-        ):
-            bm = TraceBatchManager()
+        bm = TraceBatchManager()
+        bm.plus_api = PlusAPI(api_key="mock_token")
         bm.trace_batch_id = "batch-id"
         bm.is_current_batch_ephemeral = ephemeral
         bm._telemetry = MagicMock()

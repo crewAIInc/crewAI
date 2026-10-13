@@ -86,9 +86,9 @@ class TraceBatchManager:
     def plus_api(self) -> PlusAPI:
         """Return the PlusAPI client, reading the saved auth token on first access.
 
-        Reading the token can create the encryption key on disk, so it waits
-        until tracing first talks to the backend. A missing or unreadable token
-        yields an anonymous client.
+        Reading the token can create the encryption key on disk, so constructing
+        a TraceBatchManager never reads it. A missing or unreadable token yields
+        an anonymous client.
         """
         try:
             return PlusAPI(api_key=get_auth_token())
