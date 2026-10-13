@@ -773,6 +773,35 @@ class LLM(BaseLLM):
 
         return {k: v for k, v in params.items() if v is not None}
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate request input tokens with LiteLLM's local tokenizer.
+
+        LiteLLM does not make a provider request for this calculation. Its
+        tokenizer uses the same formatted messages and tools as a completion.
+        ``response_model`` is intentionally excluded because LiteLLM applies
+        CrewAI's structured-output parsing after the model response.
+        """
+        del response_model
+        if not _ensure_litellm() or litellm is None:
+            raise ImportError(
+                'LiteLLM is required for token estimation; install it with `uv add "crewai[litellm]"`.'
+            )
+
+        params = self._prepare_completion_params(messages, tools)
+        return int(
+            litellm.token_counter(
+                model=params["model"],
+                messages=params["messages"],
+                tools=params.get("tools"),
+                tool_choice=params.get("tool_choice"),
+            )
+        )
+
     def _handle_streaming_response(
         self,
         params: dict[str, Any],

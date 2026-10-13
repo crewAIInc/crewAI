@@ -810,6 +810,30 @@ def test_litellm_non_gpt5_sends_stop_in_params():
     )
 
 
+def test_litellm_input_token_count_uses_formatted_messages_and_tools():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
+
+    with patch("crewai.llm.litellm.token_counter", return_value=42) as token_counter:
+        assert llm.get_input_tokens_count("What is CrewAI?", tools=tools) == 42
+
+    token_counter.assert_called_once_with(
+        model="openai/gpt-4o-mini",
+        messages=[{"role": "user", "content": "What is CrewAI?"}],
+        tools=tools,
+        tool_choice=None,
+    )
+
+
 def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):
     """
     Test that the retry logic catches LiteLLM's UnsupportedParamsError format
