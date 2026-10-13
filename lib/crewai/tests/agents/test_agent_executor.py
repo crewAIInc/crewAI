@@ -2466,6 +2466,47 @@ class TestDeferredNativeToolResults:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
 
+    def test_multiple_overflowed_results_reuse_one_file_reader(self):
+        from crewai_tools import FileReadTool
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = True
+        executor = _build_executor(llm=llm, original_tools=[])
+        executor._tool_result_artifact_store = None
+
+        first_reference = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "first deferred result",
+                "tool_args": {"query": "first"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+        second_reference = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "fetch_page",
+                "result": "second deferred result",
+                "tool_args": {"url": "https://example.com"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            assert len(
+                [tool for tool in executor.original_tools if isinstance(tool, FileReadTool)]
+            ) == 1
+            assert len(list(artifact_store.directory.glob("*/result.md"))) == 2
+            assert first_reference != second_reference
+            assert "search_docs" in first_reference
+            assert "fetch_page" in second_reference
+        finally:
+            if executor._tool_result_artifact_store is not None:
+                executor._tool_result_artifact_store.cleanup()
+
 
 # Executor State Reset on Re-invoke
 
