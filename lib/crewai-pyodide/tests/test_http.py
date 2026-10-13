@@ -259,3 +259,22 @@ async def test_completed_requests_clear_their_timers(fake_js: SimpleNamespace) -
     assert response.json() == {"ok": True}
     assert fake_js.timers == set()
     assert fake_js.aborted == 0
+
+
+@pytest.mark.asyncio
+async def test_closing_an_errored_body_keeps_the_original_error(
+    fake_js: SimpleNamespace,
+) -> None:
+    async def fail() -> SimpleNamespace:
+        raise _JsException("TypeError: network error")
+
+    async def cancel_errored() -> None:
+        # A real reader rejects cancel() with the error that ended its stream.
+        raise _JsException("TypeError: network error")
+
+    async with httpx.AsyncClient(transport=FetchAsyncTransport()) as client:
+        with pytest.raises(httpx.ReadError):
+            async with client.stream("GET", "https://api.example.com/sse") as response:
+                fake_js.reader.read = fail
+                fake_js.reader.cancel = cancel_errored
+                await response.aread()

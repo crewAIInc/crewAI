@@ -145,6 +145,9 @@ def bootstrap() -> None:
 
     # Telemetry exports from a background thread, which cannot run here.
     os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
+    # Trace exporters also batch from a background thread, and flush() cannot
+    # wait for handlers on the host loop.
+    os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
     # The PyPI update check uses urllib, which has no socket support here.
     os.environ.setdefault("CREWAI_DISABLE_VERSION_CHECK", "true")
     install_inline_threads()

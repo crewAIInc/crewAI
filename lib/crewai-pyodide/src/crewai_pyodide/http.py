@@ -98,9 +98,17 @@ class _FetchByteStream(httpx.AsyncByteStream):
             yield chunk.value.to_bytes()
 
     async def aclose(self) -> None:
-        if self._reader is not None:
-            await self._reader.cancel()
-            self._reader = None
+        from pyodide.ffi import JsException
+
+        reader, self._reader = self._reader, None
+        if reader is None:
+            return
+        try:
+            await reader.cancel()
+        except JsException:
+            # cancel() rejects with the stream's error once a timeout aborted
+            # the fetch or the connection dropped; that error was already raised.
+            pass
 
 
 class FetchAsyncTransport(httpx.AsyncBaseTransport):

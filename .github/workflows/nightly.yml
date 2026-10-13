@@ -67,6 +67,7 @@ jobs:
             lib/crewai-core/src/crewai_core/__init__.py \
             lib/crewai-tools/src/crewai_tools/__init__.py \
             lib/crewai-files/src/crewai_files/__init__.py \
+            lib/crewai-pyodide/src/crewai_pyodide/__init__.py \
             lib/cli/src/crewai_cli/__init__.py; do
             sed -i "s/__version__ = .*/__version__ = \"${NIGHTLY}\"/" "$init_file"
             echo "Stamped $init_file -> $NIGHTLY"
