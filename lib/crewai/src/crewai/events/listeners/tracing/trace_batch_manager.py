@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from functools import cached_property
 from logging import getLogger
 from threading import Condition, Lock
 import time
@@ -19,7 +20,7 @@ from crewai_core.settings import Settings
 from rich.console import Console
 from rich.panel import Panel
 
-from crewai.auth.token import AuthError, get_auth_token
+from crewai.auth.token import get_auth_token
 from crewai.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
@@ -80,13 +81,20 @@ class TraceBatchManager:
         self.trace_url: str | None = None
         self.ephemeral_trace_url: str | None = None
         self._telemetry: Telemetry = Telemetry()
+
+    @cached_property
+    def plus_api(self) -> PlusAPI:
+        """Return the PlusAPI client, reading the saved auth token on first access.
+
+        Reading the token can create the encryption key on disk, so it waits
+        until tracing first talks to the backend. A missing or unreadable token
+        yields an anonymous client.
+        """
         try:
-            self.plus_api = PlusAPI(
-                api_key=get_auth_token(),
-            )
-        except AuthError:
-            self.plus_api = PlusAPI()
-        self.ephemeral_trace_url = None
+            return PlusAPI(api_key=get_auth_token())
+        except Exception as e:
+            logger.debug(f"Tracing without a saved auth token: {e}")
+            return PlusAPI()
 
     def initialize_batch(
         self,
@@ -138,7 +146,7 @@ class TraceBatchManager:
         if not skip_context_check and not is_tracing_enabled_in_context():
             return None
 
-        if not self.plus_api or not self.current_batch:
+        if not self.current_batch:
             return None
 
         try:
@@ -286,7 +294,7 @@ class TraceBatchManager:
 
     def _send_events_to_backend(self) -> int:
         """Send buffered events to backend with graceful failure handling"""
-        if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
+        if not self.trace_batch_id or not self.event_buffer:
             return 500
         try:
             batch_metadata: TraceBatchMetadata = {
@@ -392,7 +400,7 @@ class TraceBatchManager:
         with self._finalize_lock:
             batch_id = self.trace_batch_id
             is_ephemeral = self.is_current_batch_ephemeral
-            if self._batch_finalized or not self.plus_api or not batch_id:
+            if self._batch_finalized or not batch_id:
                 return True
 
             try:
