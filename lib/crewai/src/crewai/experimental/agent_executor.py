@@ -120,6 +120,7 @@ from crewai.utilities.planning_types import (
 from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.tool_result_artifacts import ToolResultArtifactStore
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.types import LLMMessage
@@ -148,6 +149,7 @@ class AgentExecutorState(BaseModel):
     is_finished: bool = Field(default=False)
     ask_for_human_input: bool = Field(default=False)
     use_native_tools: bool = Field(default=False)
+    use_file_system_tool: bool = Field(default=False)
     pending_tool_calls: list[Any] = Field(default_factory=list)
     plan: str | None = Field(default=None, description="Generated execution plan")
     plan_ready: bool = Field(
@@ -231,6 +233,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
     _is_feedback_iteration: bool = PrivateAttr(default=False)
+    _tool_result_artifact_store: ToolResultArtifactStore | None = PrivateAttr(
+        default=None
+    )
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -272,6 +277,54 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 self._available_functions,
                 self._tool_name_mapping,
             ) = setup_native_tools(self.original_tools)
+
+    def _prepare_tool_result_for_context(self, execution_result: dict[str, Any]) -> str:
+        """Replace an oversized successful result with a deferred-file reference."""
+        result = cast(str, execution_result["result"])
+        if execution_result.get("tool_failure") is not None:
+            return result
+
+        original_tool = execution_result.get("original_tool")
+        if getattr(original_tool, "result_as_answer", False):
+            return result
+
+        if self.llm is None:
+            return result
+        try:
+            should_defer = self.llm.is_tool_result_overflowing_threshold(result)
+        except NotImplementedError:
+            return result
+        if not should_defer:
+            return result
+
+        if self._tool_result_artifact_store is None:
+            self._tool_result_artifact_store = ToolResultArtifactStore()
+
+        artifact = self._tool_result_artifact_store.store(result)
+        from crewai_tools import FileReadTool
+
+        reader = next(
+            (tool for tool in self.original_tools if isinstance(tool, FileReadTool)),
+            None,
+        )
+        if reader is None:
+            reader = FileReadTool()
+            self.original_tools.append(reader)
+            self._setup_native_tools()
+        reader.allow_file(str(artifact.file_path), artifact.relative_path.as_posix())
+        self.state.use_file_system_tool = True
+
+        tool_args = json.dumps(
+            execution_result.get("tool_args", {}), default=str, sort_keys=True
+        )
+        return (
+            f"The result of `{execution_result['func_name']}` with arguments "
+            f"`{tool_args}` was stored as temporary artifact "
+            f"`{artifact.artifact_id}` at relative file path "
+            f"`{artifact.relative_path.as_posix()}`. Use FileReadTool to read it "
+            "in bounded sections, for "
+            "example with `start_line=1` and `line_count=50`."
+        )
 
     def _downgrade_to_text_tool_calling(self) -> None:
         """Switch a running execution from native tools to text tool calls."""
@@ -1840,7 +1893,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 execution_result = self._execute_single_native_tool_call(tool_call)
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
-                result = cast(str, execution_result["result"])
+                result = self._prepare_tool_result_for_context(execution_result)
                 from_cache = cast(bool, execution_result["from_cache"])
                 original_tool = execution_result["original_tool"]
 
@@ -1880,7 +1933,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
-            result = cast(str, execution_result["result"])
+            result = self._prepare_tool_result_for_context(execution_result)
             from_cache = cast(bool, execution_result["from_cache"])
             original_tool = execution_result["original_tool"]
 
@@ -2184,6 +2237,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "call_id": call_id,
             "func_name": func_name,
             "result": result,
+            "tool_args": args_dict,
             "from_cache": from_cache,
             "original_tool": original_tool,
             "tool_failure": tool_failure,
@@ -2883,7 +2937,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
+            self.state.use_file_system_tool = False
             self.state.pending_tool_calls = []
+            self._tool_result_artifact_store = None
             self.state.plan = None
             self.state.plan_ready = False
             self.state.todos = TodoList()
@@ -3309,7 +3365,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.state.is_finished = False
         self.state.iterations = 0
         self.state.use_native_tools = False
+        self.state.use_file_system_tool = False
         self.state.pending_tool_calls = []
+        self._tool_result_artifact_store = None
         self.state.plan = None
         self.state.plan_ready = False
         self.state.todos = TodoList()

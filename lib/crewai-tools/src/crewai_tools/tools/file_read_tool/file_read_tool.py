@@ -103,6 +103,8 @@ class FileReadTool(BaseTool):
     _declared_realpath: str | None = PrivateAttr(default=None)
     # The label the tool's description shows the LLM for the declared file.
     _declared_label: str | None = PrivateAttr(default=None)
+    # Execution-scoped aliases added by CrewAI for exact deferred-result files.
+    _allowed_file_paths: dict[str, str] = PrivateAttr(default_factory=dict)
 
     def __init__(
         self,
@@ -144,6 +146,16 @@ class FileReadTool(BaseTool):
         )
         self._declared_label = display_path
 
+    def allow_file(self, file_path: str, alias: str) -> None:
+        """Allow one exact file to be addressed through a runtime alias.
+
+        This is intended for framework-managed temporary files. It does not
+        widen ``base_dir`` and is not exposed through the tool's LLM schema.
+        """
+        if not alias:
+            raise ValueError("Allowed file aliases must not be empty.")
+        self._allowed_file_paths[alias] = os.path.realpath(file_path)
+
     def _resolve_path(self, file_path: str) -> str:
         """Resolve *file_path* and confirm the tool is allowed to read it.
 
@@ -164,6 +176,9 @@ class FileReadTool(BaseTool):
             ValueError: If the path resolves outside ``base_dir``.
         """
         declared = self._declared_realpath
+        allowed = self._allowed_file_paths.get(file_path)
+        if allowed is not None:
+            return allowed
         if declared is not None and (
             file_path == self._declared_label
             or _resolve_against_base(file_path, self.base_dir) == declared
