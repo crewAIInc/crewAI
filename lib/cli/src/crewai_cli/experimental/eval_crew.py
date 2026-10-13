@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import contextlib
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
 import json
@@ -1183,15 +1184,37 @@ STOP_QUOTE_LIMIT = 2_000
 _clock = time.monotonic  # the test seam
 
 
+@dataclass(frozen=True)
+class _Stop:
+    """One stopped setup as the service reported it, every field checked once.
+
+    `where` is the service's list of places (step → crew → task → agent): only
+    a list of non-empty strings counts, anything else is no location. The run's
+    own words — the deployment's reason and the failing call's error — come
+    only from `reported`, which the service marks as data, not instructions.
+    """
+
+    key: str
+    model: str
+    run: int | None
+    runs: int | None
+    case: str | None
+    where: tuple[str, ...]
+    plain: str | None
+    reason: str | None
+    error: str | None
+
+
 class _StopAnnouncer:
-    """Says each stopped setup once, the moment the service knows where it broke.
+    """Says each stopped setup once, as soon as the service knows where it broke.
 
     The service's poll answer lists `stopped` setups: the model, the run, where
-    in the project it broke (step → crew → task → agent), the whole reason, and
-    the plain words for it when the service recognises it. Without waiting for
-    the comparison, a coding agent gets a block it can start fixing from, and a
-    person one red line (the report has the rest). An older service sends no
-    `stopped`, and then nothing is said.
+    in the project it broke, its own plain words for the reason when it
+    recognises it, and the run's own words under `reported`. A coding agent
+    gets a block it can start fixing from while the comparison runs, a person
+    one red line (the report has the rest). A stop the service cannot place is
+    said after STOP_DETAIL_WAIT_SECONDS, or when the comparison ends, with what
+    is known. An older service sends no `stopped`, and then nothing is said.
     """
 
     def __init__(self) -> None:
@@ -1199,29 +1222,54 @@ class _StopAnnouncer:
         self.first_seen: dict[str, float] = {}
 
     def see(self, payload: dict[str, Any], *, final: bool = False) -> None:
-        for item in _stopped_setups(payload):
-            key = item["key"]
-            if key in self.said:
+        for stop in _stopped_setups(payload):
+            if stop.key in self.said:
                 continue
-            first = self.first_seen.setdefault(key, _clock())
-            if (
-                final
-                or item.get("where")
-                or _clock() - first >= STOP_DETAIL_WAIT_SECONDS
-            ):
-                self.said.add(key)
-                _say_stop(item)
+            first = self.first_seen.setdefault(stop.key, _clock())
+            if final or stop.where or _clock() - first >= STOP_DETAIL_WAIT_SECONDS:
+                self.said.add(stop.key)
+                _say_stop(stop)
 
 
-def _stopped_setups(payload: dict[str, Any]) -> list[dict[str, Any]]:
+def _text(value: Any) -> str | None:
+    return value if isinstance(value, str) and value.strip() else None
+
+
+def _count(value: Any) -> int | None:
+    return value if type(value) is int and value > 0 else None
+
+
+def _stopped_setups(payload: dict[str, Any]) -> list[_Stop]:
     stopped = payload.get("stopped")
     if not isinstance(stopped, list):
         return []
-    return [
-        item
-        for item in stopped
-        if isinstance(item, dict) and isinstance(item.get("key"), str) and item["key"]
-    ]
+    stops = []
+    for item in stopped:
+        if not isinstance(item, dict) or not _text(item.get("key")):
+            continue
+        where = item.get("where")
+        places = (
+            tuple(_one_line(place, 160) for place in where if _text(place))
+            if isinstance(where, list)
+            else ()
+        )
+        reported = item.get("reported")
+        reported = reported if isinstance(reported, dict) else {}
+        plain, case = _text(item.get("plain")), _text(item.get("case"))
+        stops.append(
+            _Stop(
+                key=item["key"],
+                model=_one_line(_text(item.get("model")) or item["key"], 80),
+                run=_count(item.get("run")),
+                runs=_count(item.get("runs")),
+                case=_one_line(case, 80) if case else None,
+                where=places,
+                plain=_one_line(plain, 120) if plain else None,
+                reason=_text(reported.get("reason")),
+                error=_text(reported.get("error")),
+            )
+        )
+    return stops
 
 
 def _one_line(value: Any, limit: int) -> str:
@@ -1233,47 +1281,34 @@ def _one_line(value: Any, limit: int) -> str:
     return text if len(text) <= limit else f"{text[: limit - 1]}…"
 
 
-def _say_stop(item: dict[str, Any]) -> None:
-    model = _one_line(item.get("model") or item["key"], 80)
-    where = [
-        _one_line(place, 160)
-        for place in item.get("where") or []
-        if isinstance(place, str) and place.strip()
-    ]
-    plain = item.get("plain") if isinstance(item.get("plain"), str) else None
-    reason = item.get("reason") if isinstance(item.get("reason"), str) else None
-    error = item.get("error") if isinstance(item.get("error"), str) else None
+def _say_stop(stop: _Stop) -> None:
     if not nobody_watching():
-        place = where[0].split(" ", 1)[-1] if where else None
-        said = (
-            _one_line(plain, 120)
-            if plain
-            else (_one_line(reason, 160) if reason else "crashed")
-        )
+        place = stop.where[0].split(" ", 1)[-1] if stop.where else None
+        said = stop.plain or (_one_line(stop.reason, 160) if stop.reason else "crashed")
         console.print(
-            Text(f"{model} stopped{f' in {place}' if place else ''}: {said}"),
+            Text(f"{stop.model} stopped{f' in {place}' if place else ''}: {said}"),
             style="red",
         )
         return
-    run, runs = item.get("run"), item.get("runs")
-    on = f" on run {run} of {runs}" if type(run) is int and type(runs) is int else ""
-    case = item.get("case")
+    on = f" on run {stop.run} of {stop.runs}" if stop.run and stop.runs else ""
     lines = [
-        f"### {model} stopped{on}{f' (case `{_one_line(case, 80)}`)' if isinstance(case, str) and case else ''}",
+        f"### {stop.model} stopped{on}{f' (case `{stop.case}`)' if stop.case else ''}",
         "",
     ]
-    if where:
+    if stop.where:
         steps = " → ".join(
             f"{word} `{name}`"
-            for word, _, name in (place.partition(" ") for place in where)
+            for word, _, name in (place.partition(" ") for place in stop.where)
         )
         lines.append(f"- Where: {steps}")
-    if plain:
-        lines.append(f"- What it means: {_one_line(plain, 120)}")
+    if stop.plain:
+        lines.append(f"- What it means: {stop.plain}")
     lines.append(
         "- The other setups keep running; the comparison and its brief follow when they finish."
     )
-    quoted = [_one_line(text, STOP_QUOTE_LIMIT) for text in (reason, error) if text]
+    quoted = [
+        _one_line(text, STOP_QUOTE_LIMIT) for text in (stop.reason, stop.error) if text
+    ]
     if quoted:
         lines += [
             "",
