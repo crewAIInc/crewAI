@@ -1,6 +1,7 @@
 import asyncio
 import builtins
 import keyword
+import re
 import shutil
 import tempfile
 import threading
@@ -8,6 +9,7 @@ import warnings
 from pathlib import Path
 from unittest import mock
 
+import click
 import pytest
 import tomli
 from click.testing import CliRunner
@@ -18,7 +20,7 @@ import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
 from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
-from crewai_cli.utils import render_template
+from crewai_cli.utils import copy_assistant_instructions, render_template
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -1342,3 +1344,87 @@ def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
     assert "it prints a **markdown brief** after the verdict" in agents_md
     assert 'crewai eval --models "provider/model,…"' in agents_md
     assert "crewai-eval:" not in agents_md  # the markers never reach a project
+
+
+def _cli_args(line: str) -> list[str]:
+    """Arguments of a documented `crewai …` line, with `<placeholder>` values filled."""
+    words = line.split("#", 1)[0].split()[1:]
+    return ["value" if re.fullmatch(r"<\w+>", word) else word for word in words]
+
+
+def _parse_cli_args(args: list[str]) -> None:
+    """Parse ARGS against the real CLI without running the command."""
+    command: click.Command = crewai
+    name = "crewai"
+    while isinstance(command, click.Group):
+        name, *args = args
+        subcommand = command.get_command(click.Context(command), name)
+        assert subcommand is not None, f"unknown command {name!r}"
+        command = subcommand
+    command.make_context(name, args)
+
+
+def test_parse_cli_args_rejects_a_positional_deployment_id():
+    with pytest.raises(click.UsageError, match="unexpected extra argument"):
+        _parse_cli_args(_cli_args("crewai deploy remove <id>"))
+
+
+def test_scaffolded_agents_md_deploy_and_org_commands_parse_against_the_cli(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    commands = [
+        line.strip()
+        for line in agents_md.splitlines()
+        if line.strip().startswith(("crewai deploy ", "crewai org "))
+    ]
+
+    for documented in (
+        "crewai deploy remove -u <uuid>",
+        "crewai deploy create -y",
+        "crewai org current",
+        "crewai org switch <id>",
+    ):
+        assert any(line.startswith(documented) for line in commands), documented
+    for line in commands:
+        _parse_cli_args(_cli_args(line))
+
+
+def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "Code is in a GitHub repository" not in agents_md
+    assert "With no `origin`, `crewai deploy create` uploads the project as a ZIP" in agents_md
+    assert "on `create`, and again on `push` for ZIP deployments" in agents_md
+
+
+def test_scaffolded_agents_md_platform_tools_guidance(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    # PLATFORM_APPS lists the apps, but some of its action names resolve to no tool.
+    assert "source of truth" not in agents_md
+    assert '`CrewaiPlatformTools(apps=["app/action"])` must return at least one tool' in agents_md
+    assert "`CREWAI_PLATFORM_INTEGRATION_TOKEN` in `.env`" in agents_md
+    assert "`app[/action][@connection]`" in agents_md
+    assert "  apps:\n    - hubspot/search_companies\n    - slack\n" in agents_md
+
+
+@pytest.mark.parametrize("evaluation", [True, False])
+def test_agents_md_best_practices_are_numbered_without_gaps(tmp_path, evaluation):
+    copy_assistant_instructions(tmp_path, evaluation=evaluation)
+
+    agents_md = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    section = agents_md.split("## Development Best Practices", 1)[1].split("\n## ", 1)[0]
+    numbers = [int(number) for number in re.findall(r"^(\d+)\. ", section, re.M)]
+    assert numbers == list(range(1, len(numbers) + 1))
+    assert ("`crewai eval`" in section) is evaluation
+    assert "crewai test" not in section
