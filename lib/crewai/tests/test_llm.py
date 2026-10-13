@@ -523,6 +523,49 @@ def user_message():
     return {"role": "user", "content": "test"}
 
 
+def test_system_message_content_is_normalized_before_provider_formatting() -> None:
+    """System content must be flattened to text before the o1/Anthropic adapters touch it."""
+    llm = object.__new__(LLM)
+    llm.model = "openai/o1-mini"
+    llm.is_litellm = True
+
+    formatted = llm._format_messages_for_provider(
+        [
+            {
+                "role": "system",
+                "content": [
+                    {"type": "text", "text": "preamble"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "https://example.com/a.png"},
+                    },
+                ],
+            },
+            {"role": "user", "content": "hello"},
+        ]
+    )
+
+    assert formatted[0]["role"] == "assistant"
+    assert formatted[0]["content"] == "preamble"
+
+    anthropic_llm = object.__new__(AnthropicCompletion)
+    anthropic_llm.model = "claude-3-sonnet"
+    anthropic_llm.provider = "anthropic"
+    anthropic_llm.is_litellm = False
+    anthropic_llm.thinking = False
+    anthropic_llm._previous_thinking_blocks = []
+
+    anthropic_formatted, anthropic_system = anthropic_llm._format_messages_for_anthropic(
+        [
+            {"role": "system", "content": None},
+            {"role": "user", "content": "hello"},
+        ]
+    )
+
+    assert anthropic_system == ""
+    assert anthropic_formatted == [{"role": "user", "content": "hello"}]
+
+
 def test_anthropic_message_formatting_edge_cases(anthropic_llm):
     """Test edge cases for Anthropic message formatting."""
     anthropic_llm = AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)

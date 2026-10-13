@@ -58,6 +58,7 @@ from crewai.llms.context_window import (
     resolve_context_window_size,
 )
 from crewai.utilities import InternalInstructor
+from crewai.utilities.agent_utils import message_content_text
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -1598,9 +1599,15 @@ class LLM(BaseLLM):
 
                             tool_calls: list[ChatCompletionDeltaToolCall] | None = None
                             if isinstance(delta, dict):
-                                tool_calls = delta.get("tool_calls")
+                                tool_calls = cast(
+                                    list[ChatCompletionDeltaToolCall] | None,
+                                    delta.get("tool_calls"),
+                                )
                             elif isinstance(delta, LiteLLMDelta):
-                                tool_calls = delta.tool_calls
+                                tool_calls = cast(
+                                    list[ChatCompletionDeltaToolCall] | None,
+                                    delta.tool_calls,
+                                )
 
                             if tool_calls:
                                 for tool_call in tool_calls:
@@ -2306,7 +2313,7 @@ class LLM(BaseLLM):
 
     def _format_messages_for_provider(
         self, messages: list[LLMMessage]
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, Any]]:
         """Format messages according to provider requirements.
 
         Args:
@@ -2330,15 +2337,18 @@ class LLM(BaseLLM):
                 )
 
         if "o1" in self.model.lower():
-            formatted_messages = []
+            formatted_messages: list[dict[str, Any]] = []
             for msg in messages:
                 if msg["role"] == "system":
                     formatted_messages.append(
-                        {"role": "assistant", "content": msg["content"]}
+                        {
+                            "role": "assistant",
+                            "content": message_content_text(msg),
+                        }
                     )
                 else:
-                    formatted_messages.append(msg)  # type: ignore[arg-type]
-            return formatted_messages  # type: ignore[return-value]
+                    formatted_messages.append(cast(dict[str, Any], msg))
+            return formatted_messages
 
         # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
         if "mistral" in self.model.lower():
