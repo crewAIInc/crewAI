@@ -801,6 +801,94 @@ def test_openai_responses_api_default_is_completions():
     assert llm.api == "completions"
 
 
+def test_openai_input_token_count_uses_responses_without_changing_generation_api():
+    """Counting uses Responses while generation keeps the configured API."""
+    llm = OpenAICompletion(model="gpt-4o", api="completions")
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=17)
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("Hello!") == 17
+
+    client.responses.input_tokens.count.assert_called_once_with(
+        model="gpt-4o",
+        input=[{"role": "user", "content": "Hello!"}],
+    )
+    assert llm.api == "completions"
+
+    with patch.object(
+        llm, "_call_completions", return_value="completion result"
+    ) as mock_completions:
+        assert llm.call("Hello!") == "completion result"
+
+    mock_completions.assert_called_once()
+
+
+def test_openai_input_token_count_forwards_responses_payload():
+    """Messages, multimodal content, and tools use the Responses request shape."""
+    llm = OpenAICompletion(model="gpt-4o", api="responses")
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=42)
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": "Describe this image."},
+                {
+                    "type": "input_image",
+                    "image_url": "https://example.com/image.png",
+                },
+            ],
+        },
+    ]
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location.",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    client.responses.input_tokens.count.assert_called_once_with(
+        model="gpt-4o",
+        instructions="Be concise.",
+        input=[messages[1]],
+        tools=[
+            {
+                "type": "function",
+                "name": "get_weather",
+                "description": "Get weather for a location.",
+                "parameters": {"type": "object", "properties": {}},
+            }
+        ],
+    )
+
+
+def test_openai_input_token_count_propagates_api_errors():
+    """Callers can handle count-endpoint errors without a wrapped exception."""
+    llm = OpenAICompletion(model="gpt-4o")
+    client = MagicMock()
+    client.responses.input_tokens.count.side_effect = RuntimeError("count failed")
+
+    with (
+        patch.object(llm, "_get_sync_client", return_value=client),
+        pytest.raises(RuntimeError, match="count failed"),
+    ):
+        llm.get_input_tokens_count("Hello!")
+
+
+@pytest.mark.vcr(record_mode="once")
+def test_openai_input_token_count_live():
+    """OpenAI returns a positive input-token count for a real request."""
+    llm = OpenAICompletion(model="gpt-4o-mini")
+
+    assert llm.get_input_tokens_count("Count these input tokens.") > 0
+
+
 def test_openai_responses_api_prepare_params():
     """Test that Responses API params are prepared correctly."""
     llm = OpenAICompletion(
