@@ -10,6 +10,11 @@ import openai
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.context_window import (
+    CONTEXT_WINDOW_USAGE_RATIO,
+    DEFAULT_CONTEXT_WINDOW_SIZE,
+    LLM_CONTEXT_WINDOW_SIZES,
+)
 from crewai.llms.providers.openai_compatible.completion import (
     OPENAI_COMPATIBLE_PROVIDERS,
     OpenAICompatibleCompletion,
@@ -270,6 +275,33 @@ class TestOpenAICompatibleCompletion:
         """Test that function calling is supported."""
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert completion.supports_function_calling() is True
+
+    def test_context_window_matches_the_catalog_for_every_fireworks_model(self):
+        """Each id the catalog lists under ``fireworks_ai/`` resolves to its own limit."""
+        catalogued = {
+            name.removeprefix("fireworks_ai/"): limit
+            for name, limit in LLM_CONTEXT_WINDOW_SIZES.items()
+            if name.startswith("fireworks_ai/")
+        }
+        assert len(catalogued) >= 100
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "test-key"}):
+            for model, limit in catalogued.items():
+                completion = OpenAICompatibleCompletion(
+                    model=model, provider="fireworks_ai"
+                )
+                assert completion.get_context_window_size() == int(
+                    limit * CONTEXT_WINDOW_USAGE_RATIO
+                ), model
+
+    @pytest.mark.parametrize(
+        "model", ["an-uncatalogued-model", "some-vendor/an-uncatalogued-model"]
+    )
+    def test_context_window_falls_back_to_the_default(self, model):
+        with patch.dict(os.environ, {"FIREWORKS_API_KEY": "test-key"}):
+            completion = OpenAICompatibleCompletion(model=model, provider="fireworks_ai")
+        assert completion.get_context_window_size() == int(
+            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+        )
 
 
 class TestLLMIntegration:

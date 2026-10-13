@@ -292,3 +292,26 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             Whether the model supports function calling.
         """
         return super().supports_function_calling()
+
+    def get_context_window_size(self) -> int:
+        """Get the context window size for the model.
+
+        The catalog lists these providers' models under provider-qualified
+        ids such as ``groq/llama-3.3-70b-versatile``, so that id is looked up
+        first and the id as given second.
+
+        Returns:
+            The usable context window size in tokens.
+        """
+        from crewai.llms.context_window import (
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            LLM_CONTEXT_WINDOW_SIZES,
+            resolve_context_window_size,
+        )
+
+        return resolve_context_window_size(
+            f"{self.provider}/{self.model}",
+            LLM_CONTEXT_WINDOW_SIZES,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            extra_names=(self.model,),
+        )
