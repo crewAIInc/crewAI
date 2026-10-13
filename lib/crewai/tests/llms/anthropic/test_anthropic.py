@@ -1356,6 +1356,211 @@ def test_anthropic_tool_use_conversation_thinking_cleared_after_no_thinking_foll
     assert llm._previous_thinking_blocks == []
 
 
+@pytest.mark.asyncio
+async def test_anthropic_async_tool_use_turn_keeps_thinking_blocks():
+    """Async: a tool-use turn must cache its thinking for the follow-up request
+
+    Regression: `_ahandle_completion` returned tool calls without updating
+    `_previous_thinking_blocks`, so the executor's follow-up `acall` sent a
+    bare `tool_use` assistant turn and Anthropic rejected the request.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    tool_response = MagicMock()
+    tool_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_response.stop_reason = "tool_use"
+    tool_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create = AsyncMock(side_effect=[tool_response, final_response])
+    llm._async_client = mock_client
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    tool_calls = await llm.acall(messages, tools=tools)
+    assert tool_calls[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    assert await llm.acall(messages, tools=tools) == "It is 18C in Paris."
+
+    # The follow-up request must carry the tool turn's thinking blocks on the
+    # matching assistant turn, exactly like the synchronous path.
+    follow_up_messages = mock_client.messages.create.call_args_list[1].kwargs["messages"]
+    tool_turn = next(
+        message
+        for message in follow_up_messages
+        if message["role"] == "assistant"
+        and isinstance(message.get("content"), list)
+        and any(block.get("id") == "toolu_1" for block in message["content"])
+    )
+    assert tool_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Check the weather in Paris.",
+        "signature": "sig-abc",
+    }
+
+
+@pytest.mark.asyncio
+async def test_anthropic_async_streaming_tool_use_turn_keeps_thinking_blocks():
+    """Async streaming: a tool-use turn must cache its thinking as well
+
+    Regression: `_ahandle_streaming_completion` returned tool calls without
+    updating `_previous_thinking_blocks`, so the executor's follow-up `acall`
+    sent a bare `tool_use` assistant turn and Anthropic rejected the request.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(
+        model="claude-fable-5",
+        stream=True,
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    tool_use_final = MagicMock()
+    tool_use_final.content = [
+        {
+            "type": "thinking",
+            "thinking": "Check the weather in Paris.",
+            "signature": "sig-abc",
+        },
+        {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "get_weather",
+            "input": {"city": "Paris"},
+        },
+    ]
+    tool_use_final.usage = MagicMock(input_tokens=10, output_tokens=5)
+    tool_use_final.stop_reason = "tool_use"
+    tool_use_final.id = "msg_1"
+
+    final_message = MagicMock()
+    final_message.content = [types.SimpleNamespace(text="It is 18C in Paris.")]
+    final_message.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_message.stop_reason = "end_turn"
+    final_message.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.stream.side_effect = [
+        _AsyncAnthropicStream([], tool_use_final),
+        _AsyncAnthropicStream([], final_message),
+    ]
+    llm._async_client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+
+    tool_calls = await llm.acall(messages, tools=tools)
+    assert tool_calls[0]["id"] == "toolu_1"
+    messages.append(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"city": "Paris"}',
+                    },
+                }
+            ],
+        }
+    )
+    messages.append({"role": "tool", "tool_call_id": "toolu_1", "content": "18C"})
+
+    await llm.acall(messages, tools=tools)
+
+    # The follow-up request must carry the tool turn's thinking blocks on the
+    # matching assistant turn, exactly like the synchronous streaming path.
+    follow_up_messages = mock_client.messages.stream.call_args_list[1].kwargs["messages"]
+    tool_turn = next(
+        message
+        for message in follow_up_messages
+        if message["role"] == "assistant"
+        and isinstance(message.get("content"), list)
+        and any(block.get("id") == "toolu_1" for block in message["content"])
+    )
+    assert tool_turn["content"][0] == {
+        "type": "thinking",
+        "thinking": "Check the weather in Paris.",
+        "signature": "sig-abc",
+    }
+
+
 @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
 def test_anthropic_function_calling():
     """Test that function calling is properly handled"""
