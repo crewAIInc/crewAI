@@ -13,6 +13,7 @@ from crewai.llm import LLM
 from crewai.llms.context_window import (
     CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
+    LLM_CONTEXT_WINDOW_SIZES,
 )
 from crewai.llms.providers.openai_compatible.completion import (
     OPENAI_COMPATIBLE_PROVIDERS,
@@ -275,24 +276,46 @@ class TestOpenAICompatibleCompletion:
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert completion.supports_function_calling() is True
 
+    def test_context_window_matches_the_catalog_for_every_groq_model(self):
+        """Each id the catalog lists under ``groq/`` resolves to its own limit."""
+        catalogued = {
+            name.removeprefix("groq/"): limit
+            for name, limit in LLM_CONTEXT_WINDOW_SIZES.items()
+            if name.startswith("groq/")
+        }
+        assert len(catalogued) >= 5
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            for model, limit in catalogued.items():
+                completion = OpenAICompatibleCompletion(model=model, provider="groq")
+                assert completion.get_context_window_size() == int(
+                    limit * CONTEXT_WINDOW_USAGE_RATIO
+                ), model
+
     @pytest.mark.parametrize(
-        ("model", "window"),
-        [
-            ("llama-3.3-70b-versatile", 128_000),
-            ("llama-3.1-8b-instant", 131_072),
-            ("gpt-4o", 128_000),
-            ("openai/gpt-oss-120b", 131_072),
-            ("meta-llama/an-uncatalogued-model", DEFAULT_CONTEXT_WINDOW_SIZE),
-            ("an-uncatalogued-model", DEFAULT_CONTEXT_WINDOW_SIZE),
-        ],
+        "model", ["an-uncatalogued-model", "some-vendor/an-uncatalogued-model"]
     )
-    def test_context_window_covers_provider_hosted_models(self, model, window):
-        """Models these providers host are catalogued under LiteLLM's ids, not OpenAI's."""
+    def test_context_window_falls_back_to_the_default(self, model):
         with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
             completion = OpenAICompatibleCompletion(model=model, provider="groq")
         assert completion.get_context_window_size() == int(
-            window * CONTEXT_WINDOW_USAGE_RATIO
+            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
+
+    def test_context_window_agrees_with_the_litellm_path(self):
+        """Routing natively must not change the window LiteLLM routing gave."""
+        pytest.importorskip("litellm")
+        models = [
+            name.removeprefix("groq/")
+            for name in LLM_CONTEXT_WINDOW_SIZES
+            if name.startswith("groq/")
+        ]
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            for model in models:
+                native = OpenAICompatibleCompletion(model=model, provider="groq")
+                legacy = LLM(model=f"groq/{model}", is_litellm=True)
+                assert (
+                    native.get_context_window_size() == legacy.get_context_window_size()
+                ), model
 
 
 class TestLLMIntegration:

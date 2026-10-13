@@ -296,25 +296,22 @@ class OpenAICompatibleCompletion(OpenAICompletion):
     def get_context_window_size(self) -> int:
         """Get the context window size for the model.
 
-        These providers mostly host non-OpenAI models, which are catalogued
-        under LiteLLM's ids, so both catalogs are consulted. OpenAI's entries
-        take precedence when a model id appears in both. Ids that carry a
-        vendor prefix, such as ``openai/gpt-oss-120b``, are also looked up
-        without it.
+        The catalog lists these providers' models under provider-qualified
+        ids such as ``groq/llama-3.3-70b-versatile``, so that id is looked up
+        first and the id as given second.
 
         Returns:
             The usable context window size in tokens.
         """
         from crewai.llms.context_window import (
             DEFAULT_CONTEXT_WINDOW_SIZE,
-            LITELLM_CONTEXT_WINDOWS,
-            OPENAI_CONTEXT_WINDOWS,
+            LLM_CONTEXT_WINDOW_SIZES,
             resolve_context_window_size,
         )
 
         return resolve_context_window_size(
-            self.model,
-            {**LITELLM_CONTEXT_WINDOWS, **OPENAI_CONTEXT_WINDOWS},
+            f"{self.provider}/{self.model}",
+            LLM_CONTEXT_WINDOW_SIZES,
             default=DEFAULT_CONTEXT_WINDOW_SIZE,
-            extra_names=(self.model.rpartition("/")[2],),
+            extra_names=(self.model,),
         )
