@@ -2507,6 +2507,41 @@ class TestDeferredNativeToolResults:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
 
+    def test_existing_file_reader_keeps_local_access_and_reads_artifact(self, tmp_path):
+        from crewai_tools import FileReadTool
+
+        local_files = tmp_path / "local-files"
+        local_files.mkdir()
+        (local_files / "notes.md").write_text("local content")
+        reader = FileReadTool(base_dir=str(local_files))
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = True
+        executor = _build_executor(llm=llm, original_tools=[reader])
+        executor._tool_result_artifact_store = None
+
+        executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "deferred content",
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            artifact = next(artifact_store.directory.glob("*/result.md"))
+            alias = artifact.relative_to(artifact_store.directory).as_posix()
+
+            assert executor.original_tools == [reader]
+            assert reader.run(file_path="notes.md") == "local content"
+            assert reader.run(file_path=alias) == "deferred content"
+        finally:
+            if executor._tool_result_artifact_store is not None:
+                executor._tool_result_artifact_store.cleanup()
+
 
 # Executor State Reset on Re-invoke
 
