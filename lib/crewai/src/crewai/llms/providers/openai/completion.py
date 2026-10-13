@@ -583,6 +583,7 @@ class OpenAICompletion(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
         response_model: type[BaseModel] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Get request input tokens with OpenAI's Responses API.
 

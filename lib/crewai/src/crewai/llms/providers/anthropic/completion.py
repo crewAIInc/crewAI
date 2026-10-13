@@ -339,6 +339,7 @@ class AnthropicCompletion(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Get request input tokens with Anthropic's Messages API.
 
@@ -350,7 +351,7 @@ class AnthropicCompletion(BaseLLM):
             messages
         )
         completion_params = self._prepare_completion_params(
-            formatted_messages, system_message, tools
+            formatted_messages, system_message, tools, available_functions
         )
         count_params = {
             key: completion_params[key]
@@ -390,7 +391,15 @@ class AnthropicCompletion(BaseLLM):
                     "type": "tool",
                     "name": "structured_output",
                 }
-                response = self._get_sync_client().messages.count_tokens(**count_params)
+                if uses_file_api:
+                    response = self._get_sync_client().beta.messages.count_tokens(
+                        **count_params,
+                        betas=[ANTHROPIC_FILES_API_BETA],
+                    )
+                else:
+                    response = self._get_sync_client().messages.count_tokens(
+                        **count_params
+                    )
         elif uses_file_api:
             response = self._get_sync_client().beta.messages.count_tokens(
                 **count_params,

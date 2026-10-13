@@ -778,6 +778,7 @@ class LLM(BaseLLM):
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
         response_model: type[BaseModel] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> int:
         """Estimate request input tokens with LiteLLM's local tokenizer.
 
