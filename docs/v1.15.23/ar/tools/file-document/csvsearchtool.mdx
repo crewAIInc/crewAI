@@ -1,0 +1,92 @@
+---
+title: بحث RAG في CSV
+description: أداة `CSVSearchTool` هي أداة RAG (الاسترجاع المعزز بالتوليد) قوية مصممة لعمليات البحث الدلالي داخل محتوى ملف CSV.
+icon: file-csv
+mode: "wide"
+---
+
+# `CSVSearchTool`
+
+<Note>
+    **تجريبية**: لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+## الوصف
+
+تُستخدم هذه الأداة لإجراء بحث RAG (الاسترجاع المعزز بالتوليد) داخل محتوى ملف CSV. تتيح للمستخدمين البحث دلالياً عن استعلامات في محتوى ملف CSV محدد. هذه الميزة مفيدة بشكل خاص لاستخراج المعلومات من مجموعات بيانات CSV الكبيرة حيث قد تكون طرق البحث التقليدية غير فعالة. جميع الأدوات التي تحتوي على "Search" في اسمها، بما في ذلك CSVSearchTool، هي أدوات RAG مصممة للبحث في مصادر بيانات مختلفة.
+
+## التثبيت
+
+قم بتثبيت حزمة crewai_tools
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+```python Code
+from crewai_tools import CSVSearchTool
+
+# Initialize the tool with a specific CSV file.
+# This setup allows the agent to only search the given CSV file.
+tool = CSVSearchTool(csv='path/to/your/csvfile.csv')
+
+# OR
+
+# Initialize the tool without a specific CSV file.
+# Agent will need to provide the CSV path at runtime.
+tool = CSVSearchTool()
+```
+
+## المعاملات
+
+يمكن استخدام المعاملات التالية لتخصيص سلوك `CSVSearchTool`:
+
+| المعامل       | النوع     | الوصف                                                                                                                         |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **csv**        | `string` | _اختياري_. مسار ملف CSV المراد البحث فيه. هذا معامل إلزامي إذا تمت تهيئة الأداة بدون ملف CSV محدد؛ وإلا فهو اختياري.                                                                            |
+
+## النموذج والتضمينات المخصصة
+
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي:
+
+```python Code
+from chromadb.config import Settings
+
+tool = CSVSearchTool(
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
+)
+```
+
+## الأمان
+
+### التحقق من صحة المسارات
+
+يتم التحقق من مسارات الملفات المقدمة لهذه الأداة مقابل مجلد العمل الحالي. يتم رفض المسارات التي تحل خارج مجلد العمل وإطلاق `ValueError`.
+
+للسماح بالمسارات خارج مجلد العمل (مثلاً في الاختبارات أو خطوط الأنابيب الموثوقة)، عيّن متغير البيئة التالي:
+
+```shell
+CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true
+```
+
+### التحقق من صحة الروابط
+
+يتم التحقق من مدخلات الروابط: يتم حظر مخطط `file://` والطلبات التي تستهدف نطاقات IP الخاصة أو المحجوزة لمنع هجمات تزوير الطلبات من جانب الخادم (SSRF).

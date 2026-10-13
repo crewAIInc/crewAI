@@ -485,20 +485,20 @@ def test_gemini_context_window_size():
     """
     Test that Gemini models return correct context window sizes
     """
-    # Test Gemini 2.0 Flash
-    llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
-    context_size_2_0 = llm_2_0.get_context_window_size()
-    assert context_size_2_0 > 500000
+    # Test Gemini 2.5 Flash
+    llm_2_5 = LLM(model="google/gemini-2.5-flash")
+    context_size_2_5 = llm_2_5.get_context_window_size()
+    assert context_size_2_5 > 500000
 
     # Test Gemini 3.8 Flash
     llm_3_8 = LLM(model="google/gemini-3.8-flash")
     context_size_3_8 = llm_3_8.get_context_window_size()
     assert context_size_3_8 == 891289
 
-    # Test Gemini 1.5 Pro
-    llm_1_5 = LLM(model="google/gemini-1.5-pro")
-    context_size_1_5 = llm_1_5.get_context_window_size()
-    assert context_size_1_5 > 1000000
+    # Test Gemini 2.5 Pro
+    llm_2_5_pro = LLM(model="google/gemini-2.5-pro")
+    context_size_2_5_pro = llm_2_5_pro.get_context_window_size()
+    assert context_size_2_5_pro > 500000
 
 
 def test_gemini_message_formatting():

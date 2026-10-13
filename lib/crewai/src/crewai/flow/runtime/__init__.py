@@ -569,11 +569,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _listener_methods(
         self,
     ) -> Iterator[tuple[FlowMethodName, FlowMethodDefinition, FlowDefinitionCondition]]:
-        # (name, definition, condition) for every non-start method that listens.
+        # (name, definition, condition) for every method that listens, start
+        # methods included: `start: true` plus `listen` runs at kickoff and again
+        # on each listen event (e.g. a review step re-drafting on request_changes).
         # Routers are included (they listen too); callers wanting only plain
         # listeners filter on definition.router.
         for method_name, method_definition in self._definition.methods.items():
-            if method_definition.listen is not None and not method_definition.is_start:
+            if method_definition.listen is not None:
                 yield (
                     FlowMethodName(method_name),
                     method_definition,
@@ -814,6 +816,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
     _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
     _instance_persistence: bool = PrivateAttr(default=False)
+    # Live adapters restore before admission; kickoff must not replace their state.
+    _skip_persistence_restore: bool = PrivateAttr(default=False)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1549,9 +1553,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
-        self._method_outputs.append(
-            {"method": context.method_name, "output": resumed_method_output}
-        )
+        method_output_entry: dict[str, Any] = {
+            "method": context.method_name,
+            "output": resumed_method_output,
+        }
+        if emit and isinstance(result, HumanFeedbackResult):
+            method_output_entry["human_feedback"] = result
+        self._method_outputs.append(method_output_entry)
 
         try:
             if emit and collapsed_outcome:
@@ -2341,6 +2349,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     "id" in inputs
                     and self.persistence is not None
                     and not fork_succeeded
+                    and not self._skip_persistence_restore
                 ):
                     restore_uuid = inputs["id"]
                     stored_state = self.persistence.load_state(restore_uuid)
@@ -2981,12 +2990,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # For @human_feedback methods with emit, the result is the collapsed outcome
             # (e.g., "approved") used for routing. But we want the actual method output
             # to be the stored result (for final flow output). Replace the last entry
-            # if a stashed output exists. Dict-based stash is concurrency-safe and
-            # handles None return values (presence in dict = stashed, not value).
+            # if a stashed output exists, keeping the feedback alongside the output so
+            # expressions read `outputs.<method>` as the full feedback result.
+            # Dict-based stash is concurrency-safe.
             if method_name in self._human_feedback_method_outputs:
-                self._method_outputs[-1]["output"] = (
-                    self._human_feedback_method_outputs.pop(method_name)
-                )
+                feedback_result = self._human_feedback_method_outputs.pop(method_name)
+                self._method_outputs[-1] = {
+                    "method": str(method_name),
+                    "output": feedback_result.output,
+                    "human_feedback": feedback_result,
+                }
 
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
@@ -3144,6 +3157,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         current_trigger = trigger_method
         current_result = result  # Track the result to pass to each router
         current_triggering_event_id = triggering_event_id
+        # Methods already run per trigger, so a conditional start that also
+        # listens to the same event is not run a second time below.
+        ran_for_trigger: dict[str, set[FlowMethodName]] = {}
 
         while True:
             routers_triggered = self._find_triggered_methods(
@@ -3151,6 +3167,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             if not routers_triggered:
                 break
+            ran_for_trigger.setdefault(str(current_trigger), set()).update(
+                routers_triggered
+            )
 
             for router_name in routers_triggered:
                 # For routers triggered by a router outcome, pass the HumanFeedbackResult
@@ -3199,6 +3218,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 listeners_triggered = self._find_triggered_methods(
                     current_trigger, router_only=False
                 )
+                ran_for_trigger.setdefault(str(current_trigger), set()).update(
+                    listeners_triggered
+                )
                 if listeners_triggered:
                     listener_result = router_result_payloads.get(
                         str(current_trigger), result
@@ -3234,6 +3256,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     for method_name in self._start_method_names():
                         if self._start_condition_triggered_by(
                             method_name, current_trigger
+                        ) and method_name not in ran_for_trigger.get(
+                            str(current_trigger), set()
                         ):
                             if method_name in self._completed_methods:
                                 # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
@@ -3660,10 +3684,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
 
         if emit:
-            # Stash the real method output: the collapsed outcome routes
-            # listeners, but the flow's final result stays the method's
-            # actual return value.
-            self._human_feedback_method_outputs[method_name] = method_output
+            # Stash the feedback result: the collapsed outcome routes listeners,
+            # but the flow's final result stays the method's actual return
+            # value (result.output).
+            self._human_feedback_method_outputs[method_name] = result
             return result.outcome
         return result
 

@@ -90,6 +90,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "deepinfra": ProviderConfig(
+        base_url="https://api.deepinfra.com/v1/openai",
+        api_key_env="DEEPINFRA_API_KEY",
+        base_url_env="DEEPINFRA_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -142,6 +148,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
+        - deepinfra: DeepInfra (https://deepinfra.com)
 
     Example:
         # Using provider prefix

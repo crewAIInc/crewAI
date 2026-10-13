@@ -115,6 +115,69 @@ def test_disabling_deferred_trace_discards_without_consent(
     assert get_trace_session() is None and get_execution_uuid() is None
 
 
+@pytest.mark.parametrize("how", ["env", "flag"])
+def test_tracing_asked_for_is_the_answer_and_the_run_is_not_asked_again(
+    traces, monkeypatch, how
+):
+    """Turning tracing on IS consent. The prompt at the end of a run is for the
+    first-time collection nobody asked for — not for a user who said collect it."""
+    buffers, grants, recorders, prompt = traces
+    # the rule only holds where a prompt could have been shown, and a suite is
+    # one of the places it could not — so say a person is here
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
+    if how == "env":
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    else:  # the flag alone must carry it, or this case proves nothing
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "said out loud"
+
+    flow = Conversation(tracing=(how == "flag") or None)
+    assert flow.kickoff() == "said out loud"
+    assert crewai_event_bus.flush()
+
+    prompt.assert_not_called()          # asked once, not twice
+    assert grants and recorders         # and the trace went where it was told to go
+
+
+@pytest.mark.parametrize(
+    "closed", ["no terminal", "under test", "messages suppressed"]
+)
+def test_where_the_prompt_could_not_be_shown_nothing_is_uploaded(
+    traces, monkeypatch, closed
+):
+    """The switch answers a question; where the question could not have been
+    put to anybody, there is nothing to answer. A copied `.env` reaching CI
+    carries the variable, not the person — and a suite under test, and a host
+    that suppressed tracing messages, are the same case. All three have always
+    failed closed, and still do."""
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: closed != "no terminal")
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: closed == "under test")
+    monkeypatch.setattr(
+        f"{utils}.should_suppress_tracing_messages",
+        lambda: closed == "messages suppressed",
+    )
+    prompt.return_value = False  # what the prompt answers where nobody can answer
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "said in a container"
+
+    assert Conversation(tracing=True).kickoff() == "said in a container"
+    assert crewai_event_bus.flush()
+
+    assert not grants and not recorders  # nothing left the machine
+
+
 def test_enabling_deferred_trace_opens_a_new_flow_root(traces):
     buffers, grants, recorders, prompt = traces
     sessions = []

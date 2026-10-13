@@ -15,7 +15,11 @@ from crewai_cli.command import BaseCommand, PlusAPIMixin
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_cli.deploy.archive import ArchiveError, create_project_zip
 from crewai_cli.deploy.validate import DeployValidator, Severity, render_report
-from crewai_cli.utils import fetch_and_json_env_file, get_project_name
+from crewai_cli.utils import (
+    fetch_and_json_env_file,
+    get_project_id,
+    get_project_name,
+)
 
 
 console = Console()
@@ -79,12 +83,28 @@ def _display_git_remote_help() -> None:
     )
 
 
+# AMP's `source_type` for a deployment's code, and whether a push updates it by
+# uploading a ZIP. A Studio install is an archive too (AMP sets it as a ZIP crew).
+_ZIP_SOURCE_TYPES = {"zip": True, "studio": True, "github": False, "any_git": False}
+
+
 def _zip_deployment_flag(status: dict[str, Any] | None) -> bool | None:
-    """Return the AMP zip_deployment flag, or None when it cannot be used."""
-    if not status or "zip_deployment" not in status:
+    """Whether AMP holds this deployment's code as a ZIP, or None when the status
+    does not say.
+
+    AMP's status sends `source_type` ("zip", "studio", "github", "any_git");
+    `zip_deployment`, a boolean, is read first when present. Without either the
+    caller falls back to the local origin remote — which is wrong for a ZIP
+    deployment whose project has since gained a remote: it redeploys the ZIP AMP
+    already holds instead of the code being pushed.
+    """
+    if not status:
         return None
-    value = status["zip_deployment"]
-    return value if isinstance(value, bool) else None
+    value = status.get("zip_deployment")
+    if isinstance(value, bool):
+        return value
+    source = status.get("source_type")
+    return _ZIP_SOURCE_TYPES.get(source) if isinstance(source, str) else None
 
 
 def _env_summary(env_vars: dict[str, str]) -> str:
@@ -232,6 +252,14 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
         self.project_name = get_project_name(require=True)
+        # Sent with every create and push, so AMP knows which project a
+        # deployment runs — `crewai eval --models` finds the deployment by it.
+        # Read, never minted: a deploy does not rewrite pyproject.toml.
+        self.project_id = get_project_id()
+
+    def _project(self) -> dict[str, str]:
+        """`project_id=` for a create or push request, when the project has one."""
+        return {"project_id": self.project_id} if self.project_id else {}
 
     def _standard_no_param_error_message(self) -> None:
         """
@@ -403,7 +431,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         project_name: str | None,
         status: dict[str, Any] | None,
     ) -> bool:
-        """Return True when AMP reported a usable zip_deployment flag."""
+        """Return True when AMP's status says how it holds the code."""
         zip_deployment = _zip_deployment_flag(status)
         if zip_deployment is None:
             return False
@@ -418,16 +446,16 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         repository: git.Repository | None,
         status: dict[str, Any],
     ) -> Any:
-        """Deploy using AMP zip_deployment."""
+        """Deploy the way AMP holds the code: a ZIP upload, or a redeploy of its git source."""
         if _zip_deployment_flag(status):
             deployment_uuid = uuid or str(status["uuid"])
             env_vars = fetch_and_json_env_file()
             return self._update_crew_from_zip(deployment_uuid, repository, env_vars)
         if uuid:
-            return self.plus_api_client.deploy_by_uuid(uuid)
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._project())
         if not project_name:
             raise ValueError("project_name is required to deploy by name")
-        return self.plus_api_client.deploy_by_name(project_name)
+        return self.plus_api_client.deploy_by_name(project_name, **self._project())
 
     def _deploy_from_local_source(
         self,
@@ -438,9 +466,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
     ) -> Any | None:
         """Deploy using local origin, as before AMP zip_deployment existed."""
         if remote_repo_url and uuid:
-            return self.plus_api_client.deploy_by_uuid(uuid)
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._project())
         if remote_repo_url and project_name:
-            return self.plus_api_client.deploy_by_name(project_name)
+            return self.plus_api_client.deploy_by_name(project_name, **self._project())
         if uuid:
             _display_git_remote_help()
             env_vars = fetch_and_json_env_file()
@@ -627,6 +655,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 zip_file_path,
                 name=self.project_name,
                 env=env_vars,
+                **self._project(),
             )
         finally:
             zip_file_path.unlink(missing_ok=True)
@@ -649,6 +678,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 uuid,
                 zip_file_path,
                 env=env_vars,
+                **self._project(),
             )
         finally:
             zip_file_path.unlink(missing_ok=True)
@@ -692,13 +722,16 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         if not self.project_name:
             raise ValueError("project_name is required to create a deployment payload")
-        return {
+        payload: CreateCrewPayload = {
             "deploy": {
                 "name": self.project_name,
                 "repo_clone_url": remote_repo_url,
                 "env": env_vars,
             }
         }
+        if self.project_id:
+            payload["project_id"] = self.project_id
+        return payload
 
     def _display_creation_success(self, json_response: dict[str, Any]) -> None:
         """
@@ -778,6 +811,14 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         console.print(f"Name:\t {status_data['name']}")
         console.print(f"Status:\t {status_data['status']}")
+        # AMP sets these only while the deployment is failed. They carry raw git
+        # and build output, so print them without Rich markup.
+        error_message = status_data.get("error_message")
+        if error_message:
+            console.print(f"Error:\t {error_message}", style="red", markup=False)
+        suggested_fix = status_data.get("error_suggested_fix")
+        if suggested_fix:
+            console.print(f"Fix:\t {suggested_fix}", markup=False)
 
     def get_crew_logs(self, uuid: str | None, log_type: str = "deployment") -> None:
         """
@@ -819,11 +860,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             self._standard_no_param_error_message()
             return
 
+        crew = uuid or self.project_name
         if response.status_code == 204:
-            console.print(
-                f"Crew '{self.project_name}' removed successfully.", style="green"
-            )
+            console.print(f"Crew '{crew}' removed successfully.", style="green")
         else:
-            console.print(
-                f"Failed to remove crew '{self.project_name}'", style="bold red"
-            )
+            console.print(f"Failed to remove crew '{crew}'", style="bold red")
+            self._validate_response(response)
