@@ -1360,15 +1360,40 @@ class Agent(BaseAgent):
         return agent_tools.tools()
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Resolve platform app selectors into tools.
+
+        Args:
+            apps: App or ``app/action`` selectors to resolve.
+
+        Returns:
+            The resolved tools, or an empty list when none resolve or resolution
+            fails. A non-empty ``apps`` that resolves to no tools emits a
+            ``UserWarning`` naming the agent and its apps.
+        """
+        platform_tools: list[BaseTool] = []
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
-            return CrewaiPlatformTools(apps=apps)
+            platform_tools = CrewaiPlatformTools(apps=apps)
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
-            return []
+
+        if apps and not platform_tools:
+            # Logger.log above is verbose-gated; without a warning a bad `apps`
+            # entry only shows up later as a task the agent couldn't do.
+            app_names = ", ".join(str(app) for app in apps)
+            warnings.warn(
+                f"Agent '{self.role}' declares apps [{app_names}] but none "
+                "resolved to any tools; the agent will run without them and may "
+                "be unable to complete its goal. Check that these apps exist and "
+                "are connected, and that CREWAI_PLATFORM_INTEGRATION_TOKEN is set.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        return platform_tools
 
     def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Convert MCP server references/configs to CrewAI tools.
