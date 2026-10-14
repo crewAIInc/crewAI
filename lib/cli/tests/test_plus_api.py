@@ -313,6 +313,23 @@ class TestPlusAPI(unittest.TestCase):
         )
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_a_forced_push_says_so_and_an_unforced_one_sends_what_it_always_did(self, mock_make_request):
+        self.api.deploy_by_uuid("test_uuid", force=True)
+        mock_make_request.assert_called_with(
+            "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy", json={"force": True}
+        )
+        self.api.deploy_by_name("test_project", project_id="proj-1", force=True)
+        mock_make_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/by-name/test_project/deploy",
+            json={"project_id": "proj-1", "force": True},
+        )
+        self.api.deploy_by_uuid("test_uuid", force=False)
+        mock_make_request.assert_called_with(
+            "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy"
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_deploy_sends_the_project_id_when_there_is_one(self, mock_make_request):
         self.api.deploy_by_name("test_project", project_id="proj-1")
         mock_make_request.assert_called_with(
@@ -442,6 +459,8 @@ class TestPlusAPI(unittest.TestCase):
             data={"env[ENV_VAR]": "value"},
             timeout=300,
         )
+        self.api.update_crew_from_zip("test_uuid", "/tmp/test.zip", force=True)
+        assert mock_make_multipart_request.call_args.kwargs["data"] == {"force": "true"}
 
     @patch("crewai_core.plus_api.Settings")
     @patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
