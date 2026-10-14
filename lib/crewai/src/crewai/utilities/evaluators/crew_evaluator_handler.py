@@ -144,11 +144,14 @@ class CrewEvaluator:
                 f"- {agents[0]}" if agents else "",
             )
 
+            # Continuation and separator rows must pad to the same column count
+            # declared by the header (3 + number of runs), not a hard-coded 6.
+            empty_score_columns = [""] * (len(self.tasks_scores) + 1)
             for agent in agents[1:]:
-                table.add_row("", "", "", "", "", f"- {agent}")
+                table.add_row("", *empty_score_columns, f"- {agent}")
 
             if task_index < len(self.crew.tasks) - 1:
-                table.add_row("", "", "", "", "", "")
+                table.add_row("", *empty_score_columns, "")
 
         crew_scores = [
             sum(self.tasks_scores[run]) / len(self.tasks_scores[run])
