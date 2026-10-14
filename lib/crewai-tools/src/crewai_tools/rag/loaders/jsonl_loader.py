@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, NoReturn
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
@@ -9,6 +9,7 @@ class JSONLLoader(BaseLoader):
     """Load a UTF-8 file or inline JSONL into one document.
 
     Empty input produces empty content with a record count of zero.
+    Invalid records raise ValueError with their 1-based line number.
     """
 
     def load(self, content: SourceContent, **kwargs: Any) -> LoaderResult:
@@ -23,8 +24,13 @@ class JSONLLoader(BaseLoader):
             lines.pop()
 
         records = []
-        for line in lines:
-            json.loads(line)
+        for line_number, line in enumerate(lines, start=1):
+            try:
+                json.loads(line, parse_constant=self._reject_constant)
+            except ValueError as error:
+                raise ValueError(
+                    f"Invalid JSONL at line {line_number}: {error}"
+                ) from error
             records.append(line.strip(" \t\r"))
 
         text = "\n".join(records)
@@ -34,3 +40,7 @@ class JSONLLoader(BaseLoader):
             metadata={"format": "jsonl", "record_count": len(records)},
             doc_id=self.generate_doc_id(source_ref=source_ref, content=text),
         )
+
+    @staticmethod
+    def _reject_constant(value: str) -> NoReturn:
+        raise ValueError(f"Invalid JSON constant: {value}")
