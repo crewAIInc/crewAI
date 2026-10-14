@@ -2585,9 +2585,104 @@ class TestDeferredNativeToolResults:
             assert first_reference != second_reference
             assert "search_docs" in first_reference
             assert "fetch_page" in second_reference
+            assert (
+                len(
+                    [
+                        tool
+                        for tool in executor.tools
+                        if isinstance(
+                            getattr(tool, "_original_tool", None),
+                            DeferredToolResultReader,
+                        )
+                    ]
+                )
+                == 1
+            )
         finally:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
+
+    def test_deferred_reader_stays_callable_after_text_tool_downgrade(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+        from crewai.tools.structured_tool import CrewStructuredTool
+        from crewai.utilities.agent_utils import (
+            get_tool_names,
+            render_text_description_and_args,
+        )
+        from crewai.utilities.string_utils import sanitize_tool_name
+
+        def lookup_notes(query: str) -> str:
+            """Look up notes."""
+            return query
+
+        existing = CrewStructuredTool.from_function(lookup_notes, name="lookup_notes")
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(
+            llm=llm,
+            original_tools=[],
+            tools=[existing],
+            tools_names=get_tool_names([existing]),
+            tools_description=render_text_description_and_args([existing]),
+        )
+        executor._tool_result_artifact_store = None
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+
+        executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "deferred content",
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            artifact = next(artifact_store.directory.glob("*/result.md"))
+            alias = artifact.relative_to(artifact_store.directory).as_posix()
+            reader = next(
+                tool
+                for tool in executor.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            )
+            structured_readers = [
+                tool
+                for tool in executor.tools
+                if getattr(tool, "_original_tool", None) is reader
+            ]
+            reader_name = sanitize_tool_name(reader.name)
+
+            assert executor.tools[0] is existing
+            assert len(structured_readers) == 1
+            assert reader_name in executor.tools_names
+            assert "lookup_notes" in executor.tools_names
+            assert f"Tool Name: {reader_name}" in executor.tools_description
+            assert structured_readers[0].invoke({"file_path": alias}) == (
+                "deferred content"
+            )
+
+            executor._downgrade_to_text_tool_calling()
+
+            fallback = executor.state.messages[-1]["content"]
+            assert isinstance(fallback, str)
+            assert reader_name in fallback
+            assert "lookup_notes" in fallback
+            assert executor.state.use_native_tools is False
+        finally:
+            executor._cleanup_deferred_tool_results()
+
+        assert executor.tools == [existing]
+        assert executor.tools_names == get_tool_names([existing])
+        assert executor.tools_description == render_text_description_and_args(
+            [existing]
+        )
+        assert executor.original_tools == []
 
     def test_existing_file_reader_keeps_local_access_when_artifact_reader_is_added(
         self, tmp_path

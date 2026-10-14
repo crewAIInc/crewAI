@@ -97,6 +97,7 @@ from crewai.utilities.agent_utils import (
     format_message_for_llm,
     format_native_tool_output_for_agent,
     get_llm_response,
+    get_tool_names,
     handle_agent_action_core,
     handle_context_length,
     handle_max_iterations_exceeded,
@@ -109,6 +110,7 @@ from crewai.utilities.agent_utils import (
     is_tool_call_list,
     parse_tool_call_args,
     process_llm_response,
+    render_text_description_and_args,
     setup_native_tools,
     track_delegation_if_needed,
 )
@@ -330,9 +332,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         )
         if reader is None:
             reader = DeferredToolResultReader()
-            self.original_tools.append(reader)
-            self._setup_native_tools()
-            self._deferred_file_reader_added_by_executor = True
+            self._register_deferred_file_reader(reader)
         self._deferred_file_reader = reader
         reader.allow_file(str(artifact.file_path), artifact.relative_path.as_posix())
         self._deferred_file_aliases.append(artifact.relative_path.as_posix())
@@ -403,17 +403,22 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if reader is not None:
                 reader.disallow_file(alias)
 
-        if (
-            self._deferred_file_reader_added_by_executor
-            and reader in self.original_tools
-        ):
-            self.original_tools.remove(reader)
-            if self.original_tools:
-                self._setup_native_tools()
-            else:
-                self._openai_tools = []
-                self._available_functions = {}
-                self._tool_name_mapping = {}
+        if self._deferred_file_reader_added_by_executor and reader is not None:
+            if reader in self.original_tools:
+                self.original_tools.remove(reader)
+                if self.original_tools:
+                    self._setup_native_tools()
+                else:
+                    self._openai_tools = []
+                    self._available_functions = {}
+                    self._tool_name_mapping = {}
+            self.tools = [
+                tool
+                for tool in self.tools
+                if getattr(tool, "_original_tool", None) is not reader
+            ]
+            self.tools_names = get_tool_names(self.tools)
+            self.tools_description = render_text_description_and_args(self.tools)
 
         if self._tool_result_artifact_store is not None:
             self._tool_result_artifact_store.cleanup()
@@ -422,6 +427,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._deferred_file_reader = None
         self._deferred_file_reader_added_by_executor = False
         self._deferred_file_aliases.clear()
+
+    def _register_deferred_file_reader(self, reader: DeferredToolResultReader) -> None:
+        """Expose an executor-owned reader to native and text tool calling."""
+        self.original_tools.append(reader)
+        self.tools.append(reader.to_structured_tool())
+        self._setup_native_tools()
+        self.tools_names = get_tool_names(self.tools)
+        self.tools_description = render_text_description_and_args(self.tools)
+        self._deferred_file_reader_added_by_executor = True
 
     def _downgrade_to_text_tool_calling(self) -> None:
         """Switch a running execution from native tools to text tool calls."""
