@@ -27,7 +27,10 @@ class TestSanitizeToolName:
     def test_truncation_never_exceeds_small_max_length(self, limit):
         """Regression for #8111: short max_length values must still be honored exactly."""
         result = sanitize_tool_name("fetch_customer_accounts", max_length=limit)
-        assert len(result) <= limit
+        assert len(result) == limit
+        if limit < 9:
+            digest = hashlib.sha256(b"fetch_customer_accounts").hexdigest()
+            assert result == digest[:limit]
 
     def test_truncation_still_respects_larger_max_length(self):
         """Larger limits keep the original readable-prefix + hash-suffix behavior."""
