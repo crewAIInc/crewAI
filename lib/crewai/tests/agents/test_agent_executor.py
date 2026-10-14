@@ -2495,6 +2495,7 @@ class TestDeferredNativeToolResults:
             assert '"query": "CrewAI"' in reference
             assert "It contains 12 lines and is estimated at 22 tokens" in reference
             assert "about 1.8 tokens per line" in reference
+            assert "roughly 5,000-token read, request about 12 lines" in reference
             assert "Preview of the first 10 lines" in reference
             assert "line 9" in reference
             assert "line 10" not in reference

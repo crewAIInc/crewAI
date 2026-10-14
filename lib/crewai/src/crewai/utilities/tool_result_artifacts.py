@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 
 TOOL_RESULT_PREVIEW_LINE_COUNT = 10
 TOOL_RESULT_PREVIEW_MAX_CHARS = 2_000
+TOOL_RESULT_READ_TARGET_TOKENS = 5_000
 
 
 @dataclass(frozen=True)

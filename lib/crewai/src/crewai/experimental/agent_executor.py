@@ -123,6 +123,7 @@ from crewai.utilities.step_execution_context import StepExecutionContext, StepRe
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_result_artifacts import (
     TOOL_RESULT_PREVIEW_LINE_COUNT,
+    TOOL_RESULT_READ_TARGET_TOKENS,
     ToolResultArtifactStore,
 )
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -337,6 +338,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if artifact.line_count
             else 0
         )
+        recommended_line_count = (
+            min(
+                artifact.line_count,
+                max(
+                    1,
+                    round(TOOL_RESULT_READ_TARGET_TOKENS / average_tokens_per_line),
+                ),
+            )
+            if average_tokens_per_line
+            else 1
+        )
         artifact_reference = (
             f"The result of `{execution_result['func_name']}` with arguments "
             f"`{tool_args}` was stored as temporary artifact "
@@ -346,8 +358,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             f"{artifact.estimated_token_count} tokens (about "
             f"{average_tokens_per_line:.1f} tokens per line).\n\nPreview of the first "
             f"{TOOL_RESULT_PREVIEW_LINE_COUNT} lines:\n---\n{artifact.preview}"
-            f"{preview_suffix}\n---\n\nUse FileReadTool to read it in bounded sections, for "
-            "example with `start_line=1` and `line_count=50`."
+            f"{preview_suffix}\n---\n\nUse FileReadTool to read it in bounded sections. For a "
+            f"roughly {TOOL_RESULT_READ_TARGET_TOKENS:,}-token read, request about "
+            f"{recommended_line_count} lines, for example with `start_line=1` and "
+            f"`line_count={recommended_line_count}`."
         )
         if self.agent and self.agent.verbose:
             self._console.print(
@@ -1956,7 +1970,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
                 result = self._prepare_tool_result_for_context(execution_result)
-                from_cache = cast(bool, execution_result["from_cache"])
                 original_tool = execution_result["original_tool"]
 
                 tool_message: LLMMessage = {
@@ -1966,14 +1979,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "content": result,
                 }
                 self.state.messages.append(tool_message)
-
-                # Log the tool execution
-                if self.agent and self.agent.verbose:
-                    cache_info = " (from cache)" if from_cache else ""
-                    PRINTER.print(
-                        content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-                        color="green",
-                    )
 
                 if (
                     original_tool
@@ -1996,7 +2001,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
             result = self._prepare_tool_result_for_context(execution_result)
-            from_cache = cast(bool, execution_result["from_cache"])
             original_tool = execution_result["original_tool"]
 
             tool_message = {
@@ -2006,14 +2010,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 "content": result,
             }
             self.state.messages.append(tool_message)
-
-            # Log the tool execution
-            if self.agent and self.agent.verbose:
-                cache_info = " (from cache)" if from_cache else ""
-                PRINTER.print(
-                    content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-                    color="green",
-                )
 
             if (
                 original_tool
