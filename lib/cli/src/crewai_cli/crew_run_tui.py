@@ -1355,6 +1355,9 @@ FooterKey .footer-key--key {
         self._record_tui_button_click("evaluate")
         traced = self._traced_execution_id()
         if traced is None:
+            from crewai_cli.experimental.eval_crew import record_stop
+
+            record_stop("untraced")
             self.notify(
                 "This run was not traced, so there is nothing to evaluate. "
                 "Turn tracing on and run it again.",
@@ -1387,6 +1390,7 @@ FooterKey .footer-key--key {
         from crewai_cli.experimental.eval_crew import (
             EvaluationStoppedError,
             evaluate_run,
+            record_stop,
         )
 
         def back(handler: Callable[..., Any], *args: Any) -> None:
@@ -1401,21 +1405,24 @@ FooterKey .footer-key--key {
                 note=lambda text: back(self._evaluation_note, text),
             )
         except EvaluationStoppedError as stopped:
-            back(self._evaluation_failed, str(stopped))
-            return
+            reason, message = stopped.reason, str(stopped)
         except SystemExit as exit_:
             # Nothing on this path should exit any more — a stop is a value
             # now — but an exit carries a code, not a reason, and "1" on screen
             # is worse than saying plainly that the reason did not survive.
-            back(
-                self._evaluation_failed,
-                f"The evaluation stopped without saying why (exit {exit_.code}).",
-            )
-            return
+            reason = "unexpected"
+            message = f"The evaluation stopped without saying why (exit {exit_.code})."
         except Exception as error:  # a client bug is still an answer to show
-            back(self._evaluation_failed, f"{type(error).__name__}: {error}")
+            reason, message = "unexpected", f"{type(error).__name__}: {error}"
+        else:
+            back(self._evaluation_finished, finished)
             return
-        back(self._evaluation_finished, finished)
+        # Answered for, even though it stopped before AMP started it: a
+        # `crewai eval` waiting behind this screen would otherwise try the run
+        # again, and count the same stop twice.
+        self._say_what_became_of_the_evaluation(execution_id)
+        record_stop(reason)
+        back(self._evaluation_failed, message)
 
     def _evaluation_started(self, started: dict[str, Any]) -> None:
         if self._evaluation is None:

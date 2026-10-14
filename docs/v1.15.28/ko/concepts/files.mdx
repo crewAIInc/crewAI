@@ -1,0 +1,267 @@
+---
+title: 파일
+description: 멀티모달 처리를 위해 이미지, PDF, 오디오, 비디오, 텍스트 파일을 에이전트에 전달하세요.
+icon: file-image
+---
+
+## 개요
+
+CrewAI는 네이티브 멀티모달 파일 입력을 지원하여 이미지, PDF, 오디오, 비디오, 텍스트 파일을 에이전트에 직접 전달할 수 있습니다. 파일은 각 LLM 프로바이더의 API 요구사항에 맞게 자동으로 포맷됩니다.
+
+<Note type="info" title="선택적 의존성">
+파일 지원을 위해서는 선택적 `crewai-files` 패키지가 필요합니다. 다음 명령어로 설치하세요:
+
+```bash
+uv add 'crewai[file-processing]'
+```
+</Note>
+
+<Note type="warning" title="얼리 액세스">
+파일 처리 API는 현재 얼리 액세스 단계입니다.
+</Note>
+
+## 파일 타입
+
+CrewAI는 5가지 특정 파일 타입과 타입을 자동 감지하는 일반 `File` 클래스를 지원합니다:
+
+| 타입 | 클래스 | 사용 사례 |
+|:-----|:------|:----------|
+| **이미지** | `ImageFile` | 사진, 스크린샷, 다이어그램, 차트 |
+| **PDF** | `PDFFile` | 문서, 보고서, 논문 |
+| **오디오** | `AudioFile` | 음성 녹음, 팟캐스트, 회의 |
+| **비디오** | `VideoFile` | 화면 녹화, 프레젠테이션 |
+| **텍스트** | `TextFile` | 코드 파일, 로그, 데이터 파일 |
+| **일반** | `File` | 콘텐츠에서 타입 자동 감지 |
+
+```python
+from crewai_files import File, ImageFile, PDFFile, AudioFile, VideoFile, TextFile
+
+image = ImageFile(source="screenshot.png")
+pdf = PDFFile(source="report.pdf")
+audio = AudioFile(source="meeting.mp3")
+video = VideoFile(source="demo.mp4")
+text = TextFile(source="data.csv")
+
+file = File(source="document.pdf")
+```
+
+## 파일 소스
+
+`source` 파라미터는 여러 입력 타입을 받아들이고 적절한 핸들러를 자동으로 감지합니다:
+
+### 경로에서
+
+```python
+from crewai_files import ImageFile
+
+image = ImageFile(source="./images/chart.png")
+```
+
+### URL에서
+
+```python
+from crewai_files import ImageFile
+
+image = ImageFile(source="https://example.com/image.png")
+```
+
+### 바이트에서
+
+```python
+from crewai_files import ImageFile, FileBytes
+
+image_bytes = download_image_from_api()
+image = ImageFile(source=FileBytes(data=image_bytes, filename="downloaded.png"))
+image = ImageFile(source=image_bytes)
+```
+
+## 파일 사용하기
+
+파일은 여러 레벨에서 전달할 수 있으며, 더 구체적인 레벨이 우선순위를 가집니다.
+
+### Crew와 함께
+
+crew를 킥오프할 때 파일을 전달합니다:
+
+```python
+from crewai import Crew
+from crewai_files import ImageFile
+
+crew = Crew(agents=[analyst], tasks=[analysis_task])
+
+result = crew.kickoff(
+    inputs={"topic": "Q4 Sales"},
+    input_files={
+        "chart": ImageFile(source="sales_chart.png"),
+        "report": PDFFile(source="quarterly_report.pdf"),
+    }
+)
+```
+
+### Task와 함께
+
+특정 작업에 파일을 첨부합니다:
+
+```python
+from crewai import Task
+from crewai_files import ImageFile
+
+task = Task(
+    description="매출 차트를 분석하고 {chart}에서 트렌드를 파악하세요",
+    expected_output="주요 트렌드 요약",
+    input_files={
+        "chart": ImageFile(source="sales_chart.png"),
+    }
+)
+```
+
+### Flow와 함께
+
+flow에 파일을 전달하면 자동으로 crew에 상속됩니다:
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai_files import ImageFile
+
+class AnalysisFlow(Flow):
+    @start()
+    def analyze(self):
+        return self.analysis_crew.kickoff()
+
+flow = AnalysisFlow()
+result = flow.kickoff(
+    input_files={"image": ImageFile(source="data.png")}
+)
+```
+
+### 단독 에이전트와 함께
+
+에이전트 킥오프에 직접 파일을 전달합니다:
+
+```python
+from crewai import Agent
+from crewai_files import ImageFile
+
+agent = Agent(
+    role="Image Analyst",
+    goal="Analyze images",
+    backstory="Expert at visual analysis",
+    llm="gpt-4o",
+)
+
+result = agent.kickoff(
+    messages="What's in this image?",
+    input_files={"photo": ImageFile(source="photo.jpg")},
+)
+```
+
+## 파일 우선순위
+
+여러 레벨에서 파일이 전달될 때, 더 구체적인 레벨이 상위 레벨을 오버라이드합니다:
+
+```
+Flow input_files < Crew input_files < Task input_files
+```
+
+예를 들어, Flow와 Task 모두 `"chart"`라는 이름의 파일을 정의하면, Task의 버전이 사용됩니다.
+
+## 프로바이더 지원
+
+각 프로바이더는 서로 다른 파일 타입을 지원합니다. CrewAI는 각 프로바이더의 API에 맞게 파일을 자동으로 포맷합니다.
+
+| 프로바이더 | 이미지 | PDF | 오디오 | 비디오 | 텍스트 |
+|:---------|:-----:|:---:|:-----:|:-----:|:----:|
+| **OpenAI** (completions API) | ✓ | | | | |
+| **OpenAI** (responses API) | ✓ | ✓ | ✓ | | |
+| **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
+| **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
+| **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
+
+<Note type="info" title="최대 파일 지원을 위한 Gemini">
+Google Gemini 모델은 비디오를 포함한 모든 파일 타입을 지원합니다 (최대 1시간, 2GB). 비디오 콘텐츠를 처리해야 할 때 Gemini를 사용하세요.
+</Note>
+
+<Note type="warning" title="지원되지 않는 파일 타입">
+프로바이더가 지원하지 않는 파일 타입을 전달하면 (예: OpenAI에 비디오) `UnsupportedFileTypeError`가 발생합니다. 처리해야 하는 파일 타입에 따라 프로바이더를 선택하세요.
+</Note>
+
+## 파일 전송 방식
+
+CrewAI는 각 프로바이더에 파일을 전송하는 최적의 방법을 자동으로 선택합니다:
+
+| 방식 | 설명 | 사용 조건 |
+|:-------|:------------|:----------|
+| **인라인 Base64** | 파일이 요청에 직접 임베드됨 | 작은 파일 (일반적으로 < 5MB) |
+| **파일 업로드 API** | 파일이 별도로 업로드되고 ID로 참조됨 | 임계값을 초과하는 큰 파일 |
+| **URL 참조** | 직접 URL이 모델에 전달됨 | 파일 소스가 이미 URL인 경우 |
+
+### 프로바이더 전송 방식
+
+| 프로바이더 | 인라인 Base64 | 파일 업로드 API | URL 참조 |
+|:---------|:-------------:|:---------------:|:--------------:|
+| **OpenAI** | ✓ | ✓ (> 5 MB) | ✓ |
+| **Anthropic** | ✓ | ✓ (> 5 MB) | ✓ |
+| **Google Gemini** | ✓ | ✓ (> 20 MB) | ✓ |
+| **AWS Bedrock** | ✓ | | ✓ (S3 URI) |
+| **Azure OpenAI** | ✓ | | ✓ |
+
+<Note type="info" title="자동 최적화">
+이를 직접 관리할 필요가 없습니다. CrewAI는 파일 크기와 프로바이더 기능에 따라 가장 효율적인 방법을 자동으로 사용합니다. 파일 업로드 API가 없는 프로바이더는 모든 파일에 인라인 base64를 사용합니다.
+</Note>
+
+## 파일 처리 모드
+
+프로바이더 제한을 초과할 때 파일 처리 방식을 제어합니다:
+
+```python
+from crewai_files import ImageFile, PDFFile
+
+image = ImageFile(source="large.png", mode="strict")
+image = ImageFile(source="large.png", mode="auto")
+image = ImageFile(source="large.png", mode="warn")
+pdf = PDFFile(source="large.pdf", mode="chunk")
+```
+
+## 프로바이더 제약사항
+
+각 프로바이더는 파일 크기와 규격에 대한 특정 제한이 있습니다:
+
+### OpenAI
+- **이미지**: 최대 20 MB, 요청당 최대 10개 이미지
+- **PDF**: 최대 32 MB, 최대 100 페이지
+- **오디오**: 최대 25 MB, 최대 25분
+
+### Anthropic
+- **이미지**: 최대 5 MB, 최대 8000x8000 픽셀, 최대 100개 이미지
+- **PDF**: 최대 32 MB, 최대 100 페이지
+
+### Google Gemini
+- **이미지**: 최대 100 MB
+- **PDF**: 최대 50 MB
+- **오디오**: 최대 100 MB, 최대 9.5시간
+- **비디오**: 최대 2 GB, 최대 1시간
+
+### AWS Bedrock
+- **이미지**: 최대 4.5 MB, 최대 8000x8000 픽셀
+- **PDF**: 최대 3.75 MB, 최대 100 페이지
+
+## 프롬프트에서 파일 참조하기
+
+작업 설명에서 파일의 키 이름을 사용하여 파일을 참조합니다:
+
+```python
+task = Task(
+    description="""
+    제공된 자료를 분석하세요:
+    1. {sales_chart}에서 차트 검토
+    2. {quarterly_report}의 데이터와 교차 참조
+    3. 주요 발견사항 요약
+    """,
+    expected_output="주요 인사이트가 포함된 분석 요약",
+    input_files={
+        "sales_chart": ImageFile(source="chart.png"),
+        "quarterly_report": PDFFile(source="report.pdf"),
+    }
+)
+```
