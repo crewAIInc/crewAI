@@ -25,8 +25,10 @@ from collections.abc import Callable
 import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from ipaddress import ip_address
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -65,6 +67,11 @@ POLL_RETRIES = 5  # consecutive unreachable / 5xx polls before giving up; the ev
 # evaluation keeps running meanwhile, so being asked to slow down is no reason
 # to stop waiting for it.
 RATE_LIMIT_MAX_WAIT_SECONDS = 120.0
+# Rate-limited without a break for this long, the wait stops — the evaluation
+# keeps running, and the sentence says where to follow it. Counted over the
+# waits a 429 asked for, and reset by any other answer, so a passing limit is
+# ridden out and only one that never lifts ends the wait.
+RATE_LIMITED_FOR_AT_MOST_SECONDS = 15 * 60.0
 
 # A run's spans reach AMP a little after the run ends — the exporter sends them
 # as the process closes and AMP has its own queue behind that. A command that
@@ -817,6 +824,7 @@ def _wait(
     misses = (
         0  # AMP unreachable or answering 5xx: a blip is retried, a streak is reported
     )
+    limited_for = 0.0  # seconds waited on 429s since AMP last answered otherwise
     while True:
         try:
             response = client.get_evaluation(evaluation_id)
@@ -839,8 +847,17 @@ def _wait(
             time.sleep(POLL_SECONDS)
             continue
         if response.status_code == 429:
-            time.sleep(_retry_after(response))
+            if limited_for >= RATE_LIMITED_FOR_AT_MOST_SECONDS:
+                raise EvaluationStoppedError(
+                    f"AMP kept rate-limiting this command for {limited_for / 60:.0f} minutes, so it "
+                    f"stopped waiting; the evaluation keeps running{where}.",
+                    reason=_refusal_reason(response),
+                )
+            wait = _retry_after(response)
+            limited_for += wait
+            time.sleep(wait)
             continue
+        limited_for = 0.0
         if response.status_code != 200:
             raise EvaluationStoppedError(
                 _refusal_message(response, subject),
@@ -867,13 +884,27 @@ def _wait(
 
 
 def _retry_after(response: httpx.Response) -> float:
-    """How long a 429 asks to wait before the next poll: its Retry-After in
-    seconds, never less than a poll's own interval nor more than
-    RATE_LIMIT_MAX_WAIT_SECONDS (a missing or odd header waits a minute)."""
+    """How long a 429 asks to wait before the next poll: its Retry-After —
+    delay-seconds or an HTTP-date, the two forms RFC 9110 allows — never less
+    than a poll's own interval nor more than RATE_LIMIT_MAX_WAIT_SECONDS. A
+    missing header, or one that is neither (a negative or non-finite number,
+    words), waits a minute; a date already past, a poll's interval."""
+    raw = response.headers.get("Retry-After", "").strip()
+    asked = 60.0
     try:
-        asked = float(response.headers.get("Retry-After", ""))
+        number = float(raw)
     except ValueError:
-        asked = 60.0
+        try:
+            when = parsedate_to_datetime(raw)
+        except (TypeError, ValueError, IndexError):
+            when = None
+        if when is not None:
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            asked = (when - datetime.now(timezone.utc)).total_seconds()
+    else:
+        if math.isfinite(number) and number >= 0:
+            asked = number
     return min(RATE_LIMIT_MAX_WAIT_SECONDS, max(POLL_SECONDS, asked))
 
 

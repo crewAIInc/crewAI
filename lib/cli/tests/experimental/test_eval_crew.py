@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -548,7 +549,63 @@ def test_a_rate_limited_poll_waits_what_amp_asks_and_keeps_waiting(project, monk
     out = capsys.readouterr().out
     assert "Goal gate: PASSED" in out and "Too many evaluation requests" not in out
     assert amp.calls.count(("get", "ev-1")) == 10  # more 429s than POLL_RETRIES: never a give-up
-    assert slept[:9] == [60.0] * 7 + [60.0, eval_module.RATE_LIMIT_MAX_WAIT_SECONDS]
+    assert slept == [60.0] * 7 + [60.0, eval_module.RATE_LIMIT_MAX_WAIT_SECONDS]
+
+
+def test_a_rate_limit_that_never_lifts_ends_the_wait_and_a_passing_one_does_not(project, monkeypatch, capsys):
+    """Rate-limited without a break for RATE_LIMITED_FOR_AT_MOST_SECONDS the
+    wait stops, saying the evaluation keeps running; any other answer starts
+    the count again, so a limit that passes is ridden out."""
+    directory, _ = project
+    slept: list[float] = []
+    monkeypatch.setattr(eval_module.time, "sleep", slept.append)
+    limited = httpx.Response(429, headers={"Retry-After": "60"}, json={"error": "rate_limit_exceeded"})
+    running = httpx.Response(200, json={"id": "ev-1", "status": "running", "url": URL})
+
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[limited] * 30))
+    with pytest.raises(SystemExit) as exit_:
+        eval_module.eval_crew()
+    assert exit_.value.code == 1
+    assert (
+        f"AMP kept rate-limiting this command for 15 minutes, so it stopped waiting; the evaluation keeps running at {URL}."
+        in " ".join(capsys.readouterr().out.split())
+    )
+    assert amp.calls.count(("get", "ev-1")) == 16  # fifteen minutes of 60 s waits, then the one that stops
+    assert sum(slept) == eval_module.RATE_LIMITED_FOR_AT_MOST_SECONDS
+
+    record_last_run(directory)
+    amp = install(monkeypatch, FakeAMP(statuses=[limited] * 14 + [running] + [limited] * 14 + [done()]))
+    eval_module.eval_crew()
+    assert "Goal gate: PASSED" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("header", "wait"),
+    [
+        ("90", 90.0),
+        ("0", eval_module.POLL_SECONDS),
+        ("3600", eval_module.RATE_LIMIT_MAX_WAIT_SECONDS),
+        ("-5", 60.0),
+        ("nan", 60.0),
+        ("inf", 60.0),
+        ("-inf", 60.0),
+        ("soon", 60.0),
+        (None, 60.0),
+        ("Wed, 21 Oct 2015 07:28:00 GMT", eval_module.POLL_SECONDS),  # a date already past
+    ],
+)
+def test_retry_after_reads_seconds_or_a_date_and_anything_else_waits_a_minute(header, wait):
+    headers = {"Retry-After": header} if header is not None else {}
+    assert eval_module._retry_after(httpx.Response(429, headers=headers)) == wait
+
+
+def test_retry_after_waits_until_a_date_still_ahead():
+    from email.utils import format_datetime
+
+    ahead = datetime.now(timezone.utc) + timedelta(seconds=95)
+    waited = eval_module._retry_after(httpx.Response(429, headers={"Retry-After": format_datetime(ahead, usegmt=True)}))
+    assert 90.0 <= waited <= 95.0
 
 
 def test_a_refusal_mid_poll_names_the_evaluation_and_an_unknown_status_stops_the_wait(project, monkeypatch, capsys):
