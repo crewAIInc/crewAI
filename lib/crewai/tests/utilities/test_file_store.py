@@ -1,10 +1,11 @@
 """Unit tests for file_store module."""
 
+from contextvars import ContextVar
+from unittest.mock import AsyncMock, patch
 import uuid
 
-import pytest
-
 from crewai.utilities.file_store import (
+    _run_sync,
     clear_files,
     clear_task_files,
     get_all_files,
@@ -14,6 +15,46 @@ from crewai.utilities.file_store import (
     store_task_files,
 )
 from crewai_files import TextFile
+import pytest
+
+
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
+def test_get_files_preserves_storage_error(error_type: type[Exception]) -> None:
+    error = error_type("storage failed")
+    with patch("crewai.utilities.file_store._file_store") as cache:
+        cache.get = AsyncMock(side_effect=error)
+        with pytest.raises(error_type) as exc_info:
+            get_files(uuid.uuid4())
+        assert exc_info.value is error
+        cache.get.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
+async def test_get_files_preserves_storage_error_in_running_loop(
+    error_type: type[Exception],
+) -> None:
+    error = error_type("storage failed")
+    with patch("crewai.utilities.file_store._file_store") as cache:
+        cache.get = AsyncMock(side_effect=error)
+        with pytest.raises(error_type) as exc_info:
+            get_files(uuid.uuid4())
+        assert exc_info.value is error
+        cache.get.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_sync_preserves_context_in_running_loop() -> None:
+    request_id = ContextVar("request_id", default="unset")
+    token = request_id.set("current-request")
+
+    async def read_context() -> str:
+        return request_id.get()
+
+    try:
+        assert _run_sync(read_context()) == "current-request"
+    finally:
+        request_id.reset(token)
 
 
 class TestFileStore:
