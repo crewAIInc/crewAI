@@ -310,6 +310,7 @@ class Task(BaseModel):
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
+    _task_started_event_id: str | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("guardrail")
@@ -655,6 +656,7 @@ class Task(BaseModel):
     ) -> TaskOutput:
         """Run the core execution logic of the task asynchronously."""
         task_id_token = set_current_task_id(str(self.id))
+        self._task_started_event_id = None
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -672,9 +674,9 @@ class Task(BaseModel):
             if not (
                 executor and executor._resuming and resume_task_scope(str(self.id))
             ):
-                crewai_event_bus.emit(
-                    self, TaskStartedEvent(context=context, task=self)
-                )
+                started_event = TaskStartedEvent(context=context, task=self)
+                self._task_started_event_id = started_event.event_id
+                crewai_event_bus.emit(self, started_event)
 
             from crewai.hooks.contexts import StepContext
             from crewai.hooks.dispatch import InterceptionPoint, dispatch
@@ -831,6 +833,7 @@ class Task(BaseModel):
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
         task_id_token = set_current_task_id(str(self.id))
+        self._task_started_event_id = None
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -848,9 +851,9 @@ class Task(BaseModel):
             if not (
                 executor and executor._resuming and resume_task_scope(str(self.id))
             ):
-                crewai_event_bus.emit(
-                    self, TaskStartedEvent(context=context, task=self)
-                )
+                started_event = TaskStartedEvent(context=context, task=self)
+                self._task_started_event_id = started_event.event_id
+                crewai_event_bus.emit(self, started_event)
 
             from crewai.hooks.contexts import StepContext
             from crewai.hooks.dispatch import InterceptionPoint, dispatch

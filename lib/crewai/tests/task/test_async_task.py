@@ -449,11 +449,12 @@ class TestAsyncOutputConversion:
         )
 
         sentinel = '{"value": "ok"}'
-        with patch.object(
-            converter, "_create_instructor"
-        ) as mock_create, patch(
-            "crewai.utilities.converter.asyncio.to_thread", new_callable=AsyncMock
-        ) as mock_to_thread:
+        with (
+            patch.object(converter, "_create_instructor") as mock_create,
+            patch(
+                "crewai.utilities.converter.asyncio.to_thread", new_callable=AsyncMock
+            ) as mock_to_thread,
+        ):
             instructor = MagicMock()
             instructor.to_json = MagicMock(return_value=sentinel)
             mock_create.return_value = instructor
@@ -484,9 +485,7 @@ class TestCancelledTaskCleanup:
     """
 
     @pytest.mark.asyncio
-    async def test_cancelled_task_emits_terminal_event(
-        self, test_agent: Agent
-    ) -> None:
+    async def test_cancelled_task_emits_terminal_event(self, test_agent: Agent) -> None:
         """Cancelling a task emits TaskFailedEvent instead of nothing."""
         seen = threading.Event()
         captured: dict[str, Any] = {}
@@ -510,9 +509,7 @@ class TestCancelledTaskCleanup:
                 with pytest.raises(asyncio.CancelledError):
                     await task.aexecute_sync()
 
-            assert seen.wait(timeout=5), (
-                "a cancelled task emitted no terminal event"
-            )
+            assert seen.wait(timeout=5), "a cancelled task emitted no terminal event"
             assert captured["source"] is task
             assert captured["error_type"] is asyncio.CancelledError
         finally:
@@ -527,8 +524,8 @@ class TestTerminalEventOrdering:
     relation. When the terminal handler ran first there was no span to pop,
     and the started handler then stored one that nothing would ever remove --
     pinning the task, and its agent, crew and tooling, for the life of the
-    process. Reproducing that by racing the two handlers is flaky by
-    construction, so these tests drive them in a fixed order instead.
+    process. These tests drive both fixed orders and pause span creation to cover
+    overlapping handlers without relying on scheduler timing.
     """
 
     @pytest.fixture
@@ -537,7 +534,7 @@ class TestTerminalEventOrdering:
 
         The two handlers have to be driven in an order the thread pool would not
         guarantee, and ``emit`` offers no way to pin that, so they are invoked
-        directly. Registration goes to a local bus and the instance is built
+        directly. Registration uses a temporary handler scope and the instance is built
         with ``object.__new__`` so the ``EventListener`` singleton -- whose
         ``__new__`` clears ``_initialized`` and would re-register handlers on
         the shared bus -- is left untouched.
@@ -551,10 +548,9 @@ class TestTerminalEventOrdering:
         listener.text_stream = StringIO()
         listener.knowledge_retrieval_in_progress = False
         listener.knowledge_query_in_progress = False
-        listener._terminal_task_ids = set()
-        listener._failed_task_ids = set()
+        listener._task_span_lock = threading.RLock()
+        listener._terminal_task_outcomes = {}
         listener.formatter = MagicMock()
-        listener.setup_listeners(bus)
 
         def find(event_type: type, name: str) -> Any:
             matches = [
@@ -565,19 +561,23 @@ class TestTerminalEventOrdering:
             assert matches, f"{name} is not registered for {event_type.__name__}"
             return matches[-1]
 
-        return (
-            listener,
-            find(TaskStartedEvent, "on_task_started"),
-            find(TaskFailedEvent, "on_task_failed"),
-        )
+        with bus.scoped_handlers():
+            listener.setup_listeners(bus)
+            return (
+                listener,
+                find(TaskStartedEvent, "on_task_started"),
+                find(TaskFailedEvent, "on_task_failed"),
+            )
 
     @staticmethod
     def _task(agent: Agent) -> Task:
-        return Task(
+        task = Task(
             description="Ordered task",
             expected_output="Never produced",
             agent=agent,
         )
+        task._task_started_event_id = str(task.id)
+        return task
 
     def test_terminal_before_started_does_not_leak_a_span(
         self, test_agent: Agent, handlers: tuple[Any, Any, Any]
@@ -586,14 +586,24 @@ class TestTerminalEventOrdering:
         listener, on_started, on_failed = handlers
         task = self._task(test_agent)
 
-        on_failed(task, TaskFailedEvent(error="cancelled", task=task))
-        on_started(task, TaskStartedEvent(context=None, task=task))
+        on_failed(
+            task,
+            TaskFailedEvent(
+                error="cancelled",
+                task=task,
+                started_event_id=str(task.id),
+                error_type=asyncio.CancelledError,
+            ),
+        )
+        on_started(
+            task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+        )
 
         assert task not in listener.execution_spans, (
             "started handler ran after the terminal event and stored a span "
             "that will never be popped"
         )
-        assert task.id not in listener._terminal_task_ids, (
+        assert str(task.id) not in listener._terminal_task_outcomes, (
             "reconciled task id was not discarded"
         )
 
@@ -605,11 +615,20 @@ class TestTerminalEventOrdering:
         tasks = [self._task(test_agent) for _ in range(20)]
 
         for task in tasks:
-            on_failed(task, TaskFailedEvent(error="cancelled", task=task))
-            on_started(task, TaskStartedEvent(context=None, task=task))
+            on_failed(
+                task,
+                TaskFailedEvent(
+                    error="cancelled",
+                    task=task,
+                    started_event_id=str(task.id),
+                    error_type=asyncio.CancelledError,
+                ),
+            )
+            on_started(
+                task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+            )
 
-        assert not listener._terminal_task_ids
-        assert not listener._failed_task_ids
+        assert not listener._terminal_task_outcomes
         assert not listener.execution_spans
 
     def test_started_before_terminal_still_closes_the_span(
@@ -619,9 +638,147 @@ class TestTerminalEventOrdering:
         listener, on_started, on_failed = handlers
         task = self._task(test_agent)
 
-        on_started(task, TaskStartedEvent(context=None, task=task))
+        on_started(
+            task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+        )
         assert task in listener.execution_spans
 
-        on_failed(task, TaskFailedEvent(error="cancelled", task=task))
+        on_failed(
+            task,
+            TaskFailedEvent(
+                error="cancelled",
+                task=task,
+                started_event_id=str(task.id),
+                error_type=asyncio.CancelledError,
+            ),
+        )
         assert task not in listener.execution_spans
-        assert not listener._terminal_task_ids
+        assert not listener._terminal_task_outcomes
+
+    def test_early_failure_preserves_error_type(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """An early cancellation closes telemetry as failed, with its exception class."""
+        listener, on_started, on_failed = handlers
+        task = self._task(test_agent)
+        span = listener._telemetry.task_started.return_value
+        on_failed(
+            task,
+            TaskFailedEvent(
+                error="cancelled",
+                error_type=asyncio.CancelledError,
+                task=task,
+                started_event_id=str(task.id),
+            ),
+        )
+        on_started(
+            task, TaskStartedEvent(context=None, task=task, event_id=str(task.id))
+        )
+        listener._telemetry.task_failed.assert_called_once_with(
+            span, task, asyncio.CancelledError
+        )
+        listener._telemetry.task_ended.assert_not_called()
+
+    def test_terminal_without_new_start_keeps_no_marker(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """Pre-start failures and restored scopes have no pending start handler."""
+        listener, _, on_failed = handlers
+        for started_event_id in (None, "restored-start"):
+            task = self._task(test_agent)
+            task._task_started_event_id = None
+            on_failed(
+                task,
+                TaskFailedEvent(
+                    error="failed", task=task, started_event_id=started_event_id
+                ),
+            )
+        task = Task(description="No agent", expected_output="None")
+        on_failed(task, TaskFailedEvent(error="no agent", task=task))
+        assert not listener._terminal_task_outcomes
+        assert not listener.execution_spans
+
+    def test_overlapping_start_and_failure_leave_no_span(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """A failure cannot slip between the terminal check and span storage."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        listener, on_started, on_failed = handlers
+        entered = threading.Event()
+        release = threading.Event()
+        failing = threading.Event()
+        span = listener._telemetry.task_started.return_value
+
+        class PausedSpanMap(dict):
+            def __setitem__(self, key: Task, value: Any) -> None:
+                entered.set()
+                assert release.wait(5)
+                super().__setitem__(key, value)
+
+        listener.execution_spans = PausedSpanMap()
+        task = self._task(test_agent)
+
+        def fail() -> None:
+            failing.set()
+            on_failed(
+                task,
+                TaskFailedEvent(
+                    error="cancelled",
+                    error_type=asyncio.CancelledError,
+                    task=task,
+                    started_event_id=str(task.id),
+                ),
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            started = executor.submit(
+                on_started,
+                task,
+                TaskStartedEvent(context=None, task=task, event_id=str(task.id)),
+            )
+            try:
+                assert entered.wait(5)
+                failed = executor.submit(fail)
+                assert failing.wait(5)
+                with pytest.raises(TimeoutError):
+                    failed.result(timeout=0.1)
+            finally:
+                release.set()
+            started.result(timeout=5)
+            failed.result(timeout=5)
+
+        assert not listener.execution_spans
+        assert not listener._terminal_task_outcomes
+        listener._telemetry.task_failed.assert_called_once_with(
+            span, task, asyncio.CancelledError
+        )
+
+    @pytest.mark.asyncio
+    async def test_repeated_cancellations_close_real_event_bus_spans(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """Task execution and event metadata reconcile repeated real cancellations."""
+        listener, on_started, on_failed = handlers
+        bus = crewai_event_bus
+
+        async def cancelled(self: Agent, *args: object, **kwargs: object) -> None:
+            raise asyncio.CancelledError()
+
+        assert await asyncio.to_thread(bus.flush, 5)
+        with bus.scoped_handlers(), patch.object(Agent, "aexecute_task", cancelled):
+            bus.on(TaskStartedEvent)(on_started)
+            bus.on(TaskFailedEvent)(on_failed)
+            for _ in range(20):
+                task = Task(
+                    description="Cancelled task",
+                    expected_output="Never produced",
+                    agent=test_agent,
+                )
+                with pytest.raises(asyncio.CancelledError):
+                    await task.aexecute_sync()
+                assert await asyncio.to_thread(bus.flush, 5)
+                assert task not in listener.execution_spans
+                assert not listener._terminal_task_outcomes
+        assert listener._telemetry.task_failed.call_count == 20
+        listener._telemetry.task_ended.assert_not_called()
