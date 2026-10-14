@@ -164,9 +164,7 @@ class JevDecisionTool(BaseTool):
                     "error": f"Choice answer selected unknown label: {label}",
                 }
 
-            confidence = None
-            if isinstance(probabilities, Mapping):
-                confidence = probabilities.get(label)
+            confidence = getattr(answer, "confidence", None)
 
             result: dict[str, Any] = {
                 "success": True,
