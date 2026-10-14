@@ -288,6 +288,28 @@ def _as_structured(response: Any, model_type: type[_StructuredT]) -> _Structured
     return model_type.model_validate(response)
 
 
+def _keep_unreviewed(original: BaseModel, reviewed: BaseModel) -> BaseModel:
+    # Secrets reach the LLM masked and excluded fields not at all, so anything the
+    # review left as it was keeps its original value, in nested models and lists too.
+    before = original.model_dump(mode="json")
+    after = reviewed.model_dump(mode="json")
+    update: dict[str, Any] = {}
+    for name in type(original).model_fields:
+        old, new = getattr(original, name), getattr(reviewed, name)
+        if before.get(name) == after.get(name):
+            update[name] = old
+        elif isinstance(old, BaseModel) and type(new) is type(old):
+            update[name] = _keep_unreviewed(old, new)
+        elif isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
+            update[name] = [
+                _keep_unreviewed(o, n)
+                if isinstance(o, BaseModel) and type(n) is type(o)
+                else n
+                for o, n in zip(old, new, strict=True)
+            ]
+    return reviewed.model_copy(update=update)
+
+
 def _pre_review_with_lessons(
     flow_instance: Flow[Any],
     method_name: str,
@@ -335,16 +357,7 @@ def _pre_review_with_lessons(
             reviewed_model = _as_structured(
                 llm_inst.call(messages, response_model=output_type), output_type
             )
-            # Secrets reach the LLM masked and excluded fields not at all, so a field
-            # the review left as it was keeps its original value.
-            before = method_output.model_dump(mode="json")
-            after = reviewed_model.model_dump(mode="json")
-            unchanged = {
-                name: getattr(method_output, name)
-                for name in output_type.model_fields
-                if before.get(name) == after.get(name)
-            }
-            return reviewed_model.model_copy(update=unchanged)
+            return _keep_unreviewed(method_output, reviewed_model)
         if getattr(llm_inst, "supports_function_calling", lambda: False)():
             response = llm_inst.call(messages, response_model=PreReviewResult)
             return _as_structured(response, PreReviewResult).improved_output

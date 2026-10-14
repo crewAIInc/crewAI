@@ -1006,6 +1006,18 @@ class _Credentialed(BaseModel):
     internal_id: str = Field(default="", exclude=True)
 
 
+class _Account(BaseModel):
+    name: str
+    token: SecretStr
+    row_id: str = Field(default="", exclude=True)
+
+
+class _Report(BaseModel):
+    title: str
+    owner: _Account
+    accounts: list[_Account]
+
+
 class TestPreReviewKeepsWhatItCannotSee:
     def test_unserializable_output_falls_back_to_the_original(self):
         original = _WithHandle(title="Launch Day", handle=_Handle())
@@ -1042,6 +1054,39 @@ class TestPreReviewKeepsWhatItCannotSee:
         prompt = llm.call.call_args.args[0][1]["content"]
         assert "sk-live-123" not in prompt
         assert "row-7" not in prompt
+
+
+    def test_nested_hidden_values_survive_edits_to_sibling_fields(self):
+        original = _Report(
+            title="Q3",
+            owner=_Account(name="ana", token=SecretStr("tok-owner"), row_id="r1"),
+            accounts=[
+                _Account(name="bo", token=SecretStr("tok-bo"), row_id="r2"),
+                _Account(name="cy", token=SecretStr("tok-cy"), row_id="r3"),
+            ],
+        )
+        # The review renames the owner and the second account, editing siblings of
+        # the masked tokens and the excluded row ids it never saw.
+        llm = _review_llm(
+            '{"title": "Q3 report", '
+            '"owner": {"name": "Ana", "token": "**********"}, '
+            '"accounts": [{"name": "bo", "token": "**********"}, '
+            '{"name": "Cy", "token": "**********"}]}'
+        )
+
+        _, seen = _run_learning_flow(original, llm)
+
+        reviewed = seen["shown"]
+        assert reviewed.title == "Q3 report"
+        assert reviewed.owner.name == "Ana"
+        assert reviewed.owner.token.get_secret_value() == "tok-owner"
+        assert reviewed.owner.row_id == "r1"
+        assert [a.name for a in reviewed.accounts] == ["bo", "Cy"]
+        assert [a.token.get_secret_value() for a in reviewed.accounts] == [
+            "tok-bo",
+            "tok-cy",
+        ]
+        assert [a.row_id for a in reviewed.accounts] == ["r2", "r3"]
 
 
 class TestDistillationParsesJsonStrings:
