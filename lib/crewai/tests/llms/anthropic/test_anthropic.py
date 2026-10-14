@@ -1473,6 +1473,224 @@ def test_anthropic_thinking_blocks_replayed_when_text_truncated_by_stop_words():
     ]
 
 
+def test_anthropic_thinking_blocks_not_replayed_when_other_conversations_text_is_a_prefix():
+    """A text fingerprint match alone must not replay thinking blocks.
+
+    Regression: the text gate accepted any non-empty prefix or extension
+    of the cached raw text, so on a shared LLM instance a later
+    conversation whose last assistant text happened to be a prefix of the
+    cached response (or vice versa) received that response's signed
+    thinking blocks.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    thinking_response = MagicMock()
+    thinking_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Conversation A reasoning.",
+            "signature": "sig-A",
+        },
+        types.SimpleNamespace(text="The capital of France is Paris, its largest city."),
+    ]
+    thinking_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    thinking_response.stop_reason = "end_turn"
+    thinking_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="B is done.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [thinking_response, final_response]
+    llm._client = mock_client
+
+    # Conversation A caches its thinking blocks with a text fingerprint.
+    llm.call([{"role": "user", "content": "A: capital of France?"}])
+
+    # Conversation B shares this instance. Its last assistant text is a
+    # strict prefix of A's raw response text, but the turn belongs to a
+    # different conversation and must not carry A's thinking blocks.
+    llm.call(
+        [
+            {"role": "user", "content": "B: first question."},
+            {"role": "assistant", "content": "The capital of France"},
+            {"role": "user", "content": "B: second question."},
+        ]
+    )
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    b_structured_turns = [
+        msg
+        for msg in second_call_messages
+        if msg["role"] == "assistant" and isinstance(msg.get("content"), list)
+    ]
+    assert b_structured_turns == []
+
+
+def test_anthropic_thinking_blocks_replayed_when_stop_words_strip_leading_whitespace():
+    """Leading whitespace in the raw text must not hide a truncated turn.
+
+    Regression: ``_apply_stop_words`` strips the truncated return value,
+    and raw response text commonly opens with the whitespace that follows
+    a thinking block. The exact and prefix comparisons both failed on that
+    leading whitespace, so the originating turn lost its thinking blocks.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+        stop=["Observation:"],
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    thinking_response = MagicMock()
+    thinking_response.content = [
+        {
+            "type": "thinking",
+            "thinking": "Answer with the number only.",
+            "signature": "sig-3",
+        },
+        types.SimpleNamespace(text="\n\nThe answer is 42. Observation: hidden tail"),
+    ]
+    thinking_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    thinking_response.stop_reason = "end_turn"
+    thinking_response.id = "msg_1"
+
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="Done.")]
+    final_response.usage = MagicMock(input_tokens=12, output_tokens=6)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_2"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [thinking_response, final_response]
+    llm._client = mock_client
+
+    # The executor persists the provider's truncated-and-stripped return
+    # value, which no longer shares the raw text's leading whitespace.
+    llm.call([{"role": "user", "content": "What is the answer?"}])
+    llm.call(
+        [
+            {"role": "user", "content": "What is the answer?"},
+            {"role": "assistant", "content": "The answer is 42."},
+            {"role": "user", "content": "Continue."},
+        ]
+    )
+
+    follow_up_messages = mock_client.messages.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    text_turns = [
+        msg
+        for msg in follow_up_messages
+        if msg["role"] == "assistant" and isinstance(msg.get("content"), list)
+    ]
+    assert text_turns, "the whitespace-stripped turn must carry its thinking blocks"
+    assert text_turns[0]["content"] == [
+        {
+            "type": "thinking",
+            "thinking": "Answer with the number only.",
+            "signature": "sig-3",
+        },
+        {"type": "text", "text": "The answer is 42."},
+    ]
+
+
+def test_anthropic_thinking_blocks_replayed_on_every_turn_of_a_multi_turn_conversation():
+    """Multi-turn text conversations must keep replaying each turn's thinking.
+
+    Regression: the conversation snapshot stored the replayed turn in its
+    injected (structured) form, while the next request formats that same
+    historical turn as plain text, so the prefix check failed and every
+    other turn silently lost its thinking blocks.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    def thinking_response(signature: str, text: str, message_id: str) -> MagicMock:
+        resp = MagicMock()
+        resp.content = [
+            {"type": "thinking", "thinking": "reasoning", "signature": signature},
+            types.SimpleNamespace(text=text),
+        ]
+        resp.usage = MagicMock(input_tokens=10, output_tokens=5)
+        resp.stop_reason = "end_turn"
+        resp.id = message_id
+        return resp
+
+    mock_client = MagicMock()
+    mock_client.messages.create.side_effect = [
+        thinking_response("sig-1", "first answer.", "msg_1"),
+        thinking_response("sig-2", "second answer.", "msg_2"),
+        thinking_response("sig-3", "third answer.", "msg_3"),
+    ]
+    llm._client = mock_client
+
+    llm.call([{"role": "user", "content": "first question?"}])
+    llm.call(
+        [
+            {"role": "user", "content": "first question?"},
+            {"role": "assistant", "content": "first answer."},
+            {"role": "user", "content": "second question?"},
+        ]
+    )
+    llm.call(
+        [
+            {"role": "user", "content": "first question?"},
+            {"role": "assistant", "content": "first answer."},
+            {"role": "user", "content": "second question?"},
+            {"role": "assistant", "content": "second answer."},
+            {"role": "user", "content": "third question?"},
+        ]
+    )
+
+    second_call_messages = mock_client.messages.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    second_assistant = next(
+        msg for msg in second_call_messages if msg["role"] == "assistant"
+    )
+    assert second_assistant["content"] == [
+        {"type": "thinking", "thinking": "reasoning", "signature": "sig-1"},
+        {"type": "text", "text": "first answer."},
+    ]
+
+    third_call_messages = mock_client.messages.create.call_args_list[2].kwargs[
+        "messages"
+    ]
+    assistant_turns = [msg for msg in third_call_messages if msg["role"] == "assistant"]
+    # The earlier turn is no longer last, so it goes back to plain text.
+    assert assistant_turns[0]["content"] == "first answer."
+    # The latest turn must still carry its own thinking blocks.
+    assert assistant_turns[-1]["content"] == [
+        {"type": "thinking", "thinking": "reasoning", "signature": "sig-2"},
+        {"type": "text", "text": "second answer."},
+    ]
+
+
 def test_anthropic_stale_thinking_not_replayed_after_no_thinking_response():
     """A no-thinking follow-up must clear stored thinking for later turns
 
