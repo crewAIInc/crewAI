@@ -1144,7 +1144,7 @@ class TestConversationalFlow:
 
         @ConversationConfig(defer_trace_finalization=False)
         class MyChat(ConversationalFlow):
-            pass
+            """Minimal conversational flow fixture for the deferral tests."""
 
         flow = MyChat()
         inputs = iter(["quit"])
@@ -1170,11 +1170,12 @@ class TestConversationalFlow:
 
         @ConversationConfig(defer_trace_finalization=False)
         class MyChat(ConversationalFlow):
-            pass
+            """Minimal conversational flow fixture for the deferral tests."""
 
         flow = MyChat()
 
         def input_fn(prompt: str) -> str:
+            """Simulate an abrupt exit by raising the parametrized error."""
             raise error()
 
         with patch.object(flow, "finalize_session_traces") as mock_finalize:
@@ -1188,7 +1189,7 @@ class TestConversationalFlow:
 
         @ConversationConfig(defer_trace_finalization=False)
         class MyChat(ConversationalFlow):
-            pass
+            """Minimal conversational flow fixture for the deferral tests."""
 
         flow = MyChat()
         flow.defer_trace_finalization = True
@@ -1205,7 +1206,7 @@ class TestConversationalFlow:
 
         @ConversationConfig(defer_trace_finalization=False)
         class MyChat(ConversationalFlow):
-            pass
+            """Minimal conversational flow fixture for the deferral tests."""
 
         flow = MyChat()
         flow.defer_trace_finalization = True
