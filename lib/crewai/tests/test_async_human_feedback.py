@@ -1651,7 +1651,7 @@ class TestLearnOnResume:
         assert flow.last_human_feedback.feedback == "Always cite your sources"
         flow.memory.remember_many.assert_not_called()
 
-    def test_strict_distillation_failure_keeps_the_review_pending(self) -> None:
+    def test_strict_distillation_failure_can_be_retried_cleanly(self) -> None:
         class StrictFlow(Flow):
             @start()
             @human_feedback(
@@ -1660,17 +1660,36 @@ class TestLearnOnResume:
             def draft(self):
                 return "draft"
 
+        from crewai.flow.human_feedback import DistilledLessons
+
         with tempfile.TemporaryDirectory() as tmpdir:
             flow = _pause(tmpdir, StrictFlow, "learn-resume-strict")
-            llm = _distill_llm(RuntimeError("distillation model unavailable"))
-            with (
-                patch("crewai.llm.LLM", return_value=llm),
-                pytest.raises(RuntimeError, match="distillation model unavailable"),
-            ):
+            llm = _distill_llm(
+                RuntimeError("distillation model unavailable"),
+                DistilledLessons(lessons=["Cite a source for every claim"]),
+            )
+            with patch("crewai.llm.LLM", return_value=llm):
+                with pytest.raises(
+                    RuntimeError, match="distillation model unavailable"
+                ):
+                    flow.resume("Always cite your sources")
+
+                assert (
+                    flow.persistence.load_pending_feedback("learn-resume-strict")
+                    is not None
+                )
+                assert flow.human_feedback_history == []
+                assert flow.last_human_feedback is None
+                flow.memory.remember_many.assert_not_called()
+
                 flow.resume("Always cite your sources")
 
-            assert flow.persistence.load_pending_feedback("learn-resume-strict") is not None
-        flow.memory.remember_many.assert_not_called()
+        assert [r.feedback for r in flow.human_feedback_history] == [
+            "Always cite your sources"
+        ]
+        flow.memory.remember_many.assert_called_once_with(
+            ["Cite a source for every claim"], source="hitl"
+        )
 
     @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_reply_after_a_paused_kickoff_is_learned(self, mock_emit: MagicMock) -> None:

@@ -1498,6 +1498,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # The serialized context carries the full LLM config (a dict, or a
             # legacy model string) — the single source for cross- and
             # same-process resume.
+            previous_feedback = self.last_human_feedback
             result = await self._finalize_human_feedback(
                 method_name=context.method_name,
                 method_output=context.method_output,
@@ -1520,13 +1521,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if feedback_definition is not None:
                 # A reply that resumes a paused flow (e.g. email review on AMP)
                 # teaches the same lessons as one that arrives during the run.
-                await self._store_feedback_lessons(
-                    feedback_definition,
-                    context.method_name,
-                    context.method_output,
-                    feedback,
-                    context.llm,
-                )
+                try:
+                    await self._store_feedback_lessons(
+                        feedback_definition,
+                        context.method_name,
+                        context.method_output,
+                        feedback,
+                        context.llm,
+                    )
+                except Exception:
+                    # learn_strict re-raised and the review stays pending: undo the
+                    # recorded reply so a retry on this instance records it once.
+                    self.human_feedback_history.pop()
+                    self.last_human_feedback = previous_feedback
+                    raise
 
             self._completed_methods.add(FlowMethodName(context.method_name))
 
