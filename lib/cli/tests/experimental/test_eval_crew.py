@@ -526,6 +526,31 @@ def test_while_waiting_a_blip_is_retried_and_a_streak_is_reported(project, monke
     assert f"Could not reach AMP while waiting (timed out); the evaluation keeps running at {URL}." in capsys.readouterr().out
 
 
+def test_a_rate_limited_poll_waits_what_amp_asks_and_keeps_waiting(project, monkeypatch, capsys):
+    """AMP limits evaluation requests per IP; a models comparison on prod
+    (2026-10-14) ended its CLI with exit 1 on one 429 while the deployment
+    went on running it. A 429 mid-poll is waited out — Retry-After, bounded —
+    and the poll goes on, however many come."""
+    directory, _ = project
+    record_last_run(directory)
+    slept: list[float] = []
+    monkeypatch.setattr(eval_module.time, "sleep", slept.append)
+    limited = httpx.Response(
+        429, headers={"Retry-After": "60"},
+        json={"error": "rate_limit_exceeded", "message": "Too many evaluation requests. Please retry later."},
+    )
+    odd = httpx.Response(429, headers={"Retry-After": "soon"}, json={"error": "rate_limit_exceeded"})
+    long = httpx.Response(429, headers={"Retry-After": "3600"}, json={"error": "rate_limit_exceeded"})
+    amp = install(monkeypatch, FakeAMP(statuses=[limited] * 7 + [odd, long, done()]))
+
+    eval_module.eval_crew()
+
+    out = capsys.readouterr().out
+    assert "Goal gate: PASSED" in out and "Too many evaluation requests" not in out
+    assert amp.calls.count(("get", "ev-1")) == 10  # more 429s than POLL_RETRIES: never a give-up
+    assert slept[:9] == [60.0] * 7 + [60.0, eval_module.RATE_LIMIT_MAX_WAIT_SECONDS]
+
+
 def test_a_refusal_mid_poll_names_the_evaluation_and_an_unknown_status_stops_the_wait(project, monkeypatch, capsys):
     directory, _ = project
     record_last_run(directory)

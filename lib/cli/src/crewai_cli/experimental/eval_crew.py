@@ -60,6 +60,11 @@ LAST_RUN_FILE = Path(".crewai") / "last_run.json"
 TRACING_ENV_VAR = "CREWAI_TRACING_ENABLED"
 POLL_SECONDS = 3.0
 POLL_RETRIES = 5  # consecutive unreachable / 5xx polls before giving up; the evaluation keeps running
+# AMP limits evaluation requests per IP (30 a minute): a poll it answers 429
+# waits what its Retry-After asks, at most this long, and polls again — the
+# evaluation keeps running meanwhile, so being asked to slow down is no reason
+# to stop waiting for it.
+RATE_LIMIT_MAX_WAIT_SECONDS = 120.0
 
 # A run's spans reach AMP a little after the run ends — the exporter sends them
 # as the process closes and AMP has its own queue behind that. A command that
@@ -833,6 +838,9 @@ def _wait(
                 )
             time.sleep(POLL_SECONDS)
             continue
+        if response.status_code == 429:
+            time.sleep(_retry_after(response))
+            continue
         if response.status_code != 200:
             raise EvaluationStoppedError(
                 _refusal_message(response, subject),
@@ -856,6 +864,17 @@ def _wait(
         if on_status is not None:
             on_status(payload)
         time.sleep(POLL_SECONDS)
+
+
+def _retry_after(response: httpx.Response) -> float:
+    """How long a 429 asks to wait before the next poll: its Retry-After in
+    seconds, never less than a poll's own interval nor more than
+    RATE_LIMIT_MAX_WAIT_SECONDS (a missing or odd header waits a minute)."""
+    try:
+        asked = float(response.headers.get("Retry-After", ""))
+    except ValueError:
+        asked = 60.0
+    return min(RATE_LIMIT_MAX_WAIT_SECONDS, max(POLL_SECONDS, asked))
 
 
 def _carries_a_verdict(payload: dict[str, Any]) -> bool:
