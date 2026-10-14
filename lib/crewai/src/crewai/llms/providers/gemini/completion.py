@@ -143,6 +143,65 @@ class GeminiCompletion(BaseLLM):
         """Gemini uses a single client for both sync and async calls."""
         return self._get_sync_client()
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Gemini's Count Tokens API."""
+        formatted_content, system_instruction = self._format_messages_for_gemini(
+            messages
+        )
+        generation_config = self._prepare_generation_config(
+            system_instruction, tools, response_model or self.response_format
+        )
+        config_data = generation_config.model_dump(exclude_none=True)
+        client = self._get_sync_client()
+        if not getattr(client, "vertexai", False):
+            unsupported_context = [
+                name
+                for name, value in (
+                    ("system instructions", config_data.get("system_instruction")),
+                    ("tools", config_data.get("tools")),
+                    ("structured output", response_model or self.response_format),
+                )
+                if value is not None
+            ]
+            if unsupported_context:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            try:
+                response = client.models.count_tokens(
+                    model=self.model,
+                    contents=formatted_content,
+                )
+            except Exception:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            return int(response.total_tokens)
+
+        count_config_params: dict[str, Any] = {
+            "system_instruction": config_data.pop("system_instruction", None),
+            "tools": config_data.pop("tools", None),
+        }
+        generation_config_data = {
+            key: value
+            for key, value in config_data.items()
+            if key in types.GenerationConfig.model_fields
+        }
+        count_config_params["generation_config"] = types.GenerationConfig(
+            **generation_config_data
+        )
+        count_config = types.CountTokensConfig(**count_config_params)
+        try:
+            response = client.models.count_tokens(
+                model=self.model,
+                contents=formatted_content,
+                config=count_config,
+            )
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+        return int(response.total_tokens)
+
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Gemini/Vertex-specific fields."""
         config = super().to_config_dict()
