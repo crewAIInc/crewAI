@@ -126,7 +126,7 @@ from crewai.utilities.step_execution_context import StepExecutionContext, StepRe
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_result_artifacts import (
     TOOL_RESULT_PREVIEW_LINE_COUNT,
-    TOOL_RESULT_READ_TARGET_TOKENS,
+    TOOL_RESULT_READ_CONTEXT_WINDOW_RATIO,
     ToolResultArtifactStore,
 )
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -349,12 +349,19 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if artifact.line_count
             else 0
         )
+        read_target_tokens = max(
+            1,
+            round(
+                self.llm.get_context_window_size()
+                * TOOL_RESULT_READ_CONTEXT_WINDOW_RATIO
+            ),
+        )
         recommended_line_count = (
             min(
                 artifact.line_count,
                 max(
                     1,
-                    round(TOOL_RESULT_READ_TARGET_TOKENS / average_tokens_per_line),
+                    round(read_target_tokens / average_tokens_per_line),
                 ),
             )
             if average_tokens_per_line
@@ -370,7 +377,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             f"{average_tokens_per_line:.1f} tokens per line).\n\nPreview of the first "
             f"{TOOL_RESULT_PREVIEW_LINE_COUNT} lines:\n---\n{artifact.preview}"
             f"{preview_suffix}\n---\n\nUse `{reader_name}` to read it in bounded sections. For a "
-            f"roughly {TOOL_RESULT_READ_TARGET_TOKENS:,}-token read, request about "
+            f"roughly {read_target_tokens:,}-token read, request about "
             f"{recommended_line_count} lines, for example with `start_line=1` and "
             f"`line_count={recommended_line_count}`."
         )

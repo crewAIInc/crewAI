@@ -2486,6 +2486,7 @@ class TestDeferredNativeToolResults:
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(
             llm=llm,
             original_tools=[],
@@ -2526,7 +2527,7 @@ class TestDeferredNativeToolResults:
                 if tool is reader
             )
             assert f"Use `{reader_name}` to read it in bounded sections" in reference
-            assert "roughly 5,000-token read, request about 12 lines" in reference
+            assert "roughly 500-token read, request about 12 lines" in reference
             assert "Preview of the first 10 lines" in reference
             assert "line 9" in reference
             assert "line 10" not in reference
@@ -2547,6 +2548,7 @@ class TestDeferredNativeToolResults:
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(llm=llm, original_tools=[])
         executor._tool_result_artifact_store = None
 
@@ -2601,6 +2603,7 @@ class TestDeferredNativeToolResults:
         reader = FileReadTool(base_dir=str(local_files))
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(llm=llm, original_tools=[reader])
         executor._tool_result_artifact_store = None
 
@@ -2643,6 +2646,7 @@ class TestDeferredNativeToolResults:
         reader = FileReadTool(base_dir=str(local_files))
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(llm=llm, original_tools=[reader])
 
         executor._prepare_tool_result_for_context(
@@ -2680,6 +2684,7 @@ class TestDeferredNativeToolResults:
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(
             agent=SimpleNamespace(verbose=False),
             crew=None,
@@ -2728,6 +2733,7 @@ class TestDeferredNativeToolResults:
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(
             agent=SimpleNamespace(verbose=False),
             crew=None,
