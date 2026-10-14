@@ -2461,7 +2461,12 @@ class TestDeferredNativeToolResults:
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
-        executor = _build_executor(llm=llm, original_tools=[])
+        executor = _build_executor(
+            llm=llm,
+            original_tools=[],
+            agent=SimpleNamespace(verbose=True),
+        )
+        executor._console = Mock()
         executor._tool_result_artifact_store = None
         tool_output = "".join(f"line {index}\n" for index in range(12))
 
@@ -2493,6 +2498,9 @@ class TestDeferredNativeToolResults:
             assert "Preview of the first 10 lines" in reference
             assert "line 9" in reference
             assert "line 10" not in reference
+            panel = executor._console.print.call_args.args[0]
+            assert panel.renderable == reference
+            assert str(panel.title) == "Large tool result deferred"
             assert reader.run(file_path=alias, start_line=11, line_count=2) == (
                 "line 10\nline 11\n"
             )

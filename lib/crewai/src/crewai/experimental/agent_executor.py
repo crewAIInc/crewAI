@@ -20,6 +20,7 @@ from pydantic import (
     model_validator,
 )
 from rich.console import Console
+from rich.panel import Panel
 from rich.text import Text
 from typing_extensions import Self
 
@@ -336,7 +337,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if artifact.line_count
             else 0
         )
-        return (
+        artifact_reference = (
             f"The result of `{execution_result['func_name']}` with arguments "
             f"`{tool_args}` was stored as temporary artifact "
             f"`{artifact.artifact_id}` at relative file path "
@@ -348,6 +349,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             f"{preview_suffix}\n---\n\nUse FileReadTool to read it in bounded sections, for "
             "example with `start_line=1` and `line_count=50`."
         )
+        if self.agent and self.agent.verbose:
+            self._console.print(
+                Panel(
+                    artifact_reference,
+                    title="Large tool result deferred",
+                    border_style="yellow",
+                    padding=(1, 2),
+                )
+            )
+        return artifact_reference
 
     def _cleanup_deferred_tool_results(self) -> None:
         """Remove temporary tool-result files and their reader aliases."""
