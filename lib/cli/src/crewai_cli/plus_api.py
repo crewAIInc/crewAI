@@ -158,14 +158,19 @@ class PlusAPI(_CorePlusAPI):
         *,
         env: dict[str, str] | None = None,
         project_id: str | None = None,
+        force: bool = False,
     ) -> httpx.Response:
         """Update an existing crew deployment from a local project ZIP archive.
 
-        PROJECT_ID as for `create_crew_from_zip`.
+        PROJECT_ID as for `create_crew_from_zip`; FORCE redeploys even while a
+        models comparison runs on the deployment (AMP answers 409
+        ``comparison_running`` otherwise; an older AMP ignores it).
         """
         data: dict[str, str] = {}
         if project_id:
             data["project_id"] = project_id
+        if force:
+            data["force"] = "true"
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(

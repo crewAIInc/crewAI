@@ -384,7 +384,16 @@ def test_deploy_push(command, runner):
     result = runner.invoke(deploy_push, ["-u", uuid])
 
     assert result.exit_code == 0
-    mock_deploy.deploy.assert_called_once_with(uuid=uuid, skip_validate=False)
+    mock_deploy.deploy.assert_called_once_with(uuid=uuid, skip_validate=False, force=False)
+
+
+@mock.patch("crewai_cli.cli.DeployCommand")
+def test_deploy_push_force_goes_ahead_whatever_runs(command, runner):
+    mock_deploy = command.return_value
+    result = runner.invoke(deploy_push, ["-u", "test-uuid", "--force"])
+
+    assert result.exit_code == 0
+    mock_deploy.deploy.assert_called_once_with(uuid="test-uuid", skip_validate=False, force=True)
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
@@ -393,7 +402,7 @@ def test_deploy_push_no_uuid(command, runner):
     result = runner.invoke(deploy_push)
 
     assert result.exit_code == 0
-    mock_deploy.deploy.assert_called_once_with(uuid=None, skip_validate=False)
+    mock_deploy.deploy.assert_called_once_with(uuid=None, skip_validate=False, force=False)
 
 
 @mock.patch("crewai_cli.cli.DeployCommand")
