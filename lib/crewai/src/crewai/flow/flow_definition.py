@@ -330,7 +330,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     )
     learn_strict: bool = Field(
         default=False,
-        description="Whether a failed pre-review or lesson distillation raises instead of falling back to the unreviewed output and storing nothing.",
+        description="Whether a failed pre-review or lesson distillation raises instead of falling back to the unreviewed output and storing nothing. Lessons are written to memory in the background, so a storage failure after that is not raised.",
         examples=[False],
     )
 

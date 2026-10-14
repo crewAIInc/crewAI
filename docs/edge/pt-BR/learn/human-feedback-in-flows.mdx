@@ -642,7 +642,7 @@ O parâmetro `learn=True` habilita um ciclo de feedback entre revisores humanos 
 Com o tempo, o humano vê saídas pré-revisadas progressivamente melhores porque cada correção informa revisões futuras.
 
 <Note>
-O humano aprova a versão revisada, que pode ser diferente do que o método retornou. Nas etapas seguintes, leia-a de `self.last_human_feedback.output` (ou do argumento do listener). O estado que o método definiu antes da revisão ainda guarda o original.
+O humano aprova a versão revisada, que pode ser diferente do que o método retornou. Nas etapas seguintes, leia-a de `self.last_human_feedback.output` (ou do argumento do listener). O estado que o método definiu antes da revisão ainda guarda o original. Se o flow pausou para feedback assíncrono, a saída é restaurada a partir de JSON na retomada, então um modelo Pydantic chega como um `dict`.
 </Note>
 
 ### Exemplo

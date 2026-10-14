@@ -1736,6 +1736,43 @@ class TestLearnOnResume:
             assert persistence.load_pending_feedback("learn-resume-retry") is None
 
     @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_resumed_pydantic_output_arrives_as_a_dict(self, mock_emit: MagicMock) -> None:
+        # The pending review is persisted as JSON, so the docs and the
+        # HumanFeedbackResult.output docstring say a model comes back as a dict.
+        class Draft(BaseModel):
+            title: str
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+
+            class PauseProvider:
+                def request_feedback(
+                    self, context: PendingFeedbackContext, flow: Flow
+                ) -> str:
+                    persistence.save_pending_feedback(
+                        flow_uuid=context.flow_id,
+                        context=context,
+                        state_data=flow.state
+                        if isinstance(flow.state, dict)
+                        else flow.state.model_dump(),
+                    )
+                    raise HumanFeedbackPending(context=context)
+
+            class DraftFlow(Flow):
+                @start()
+                @human_feedback(message="Review:", provider=PauseProvider())
+                def draft(self):
+                    return Draft(title="Launch day")
+
+            pending = DraftFlow(persistence=persistence).kickoff()
+            assert isinstance(pending.context.method_output, Draft)
+
+            resumed = DraftFlow.from_pending(pending.context.flow_id, persistence)
+            resumed.resume("looks good")
+
+        assert resumed.last_human_feedback.output == {"title": "Launch day"}
+
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_reply_after_a_paused_kickoff_is_learned(self, mock_emit: MagicMock) -> None:
         from crewai.flow.human_feedback import DistilledLessons
 

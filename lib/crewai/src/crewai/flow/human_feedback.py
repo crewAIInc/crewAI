@@ -158,7 +158,9 @@ class HumanFeedbackResult:
         output: The output shown to the human for review: the decorated
             method's return value or, with ``learn=True``, that value after
             past lessons were applied (same type). Downstream steps should read
-            the approved output from here, not from state the method set.
+            the approved output from here, not from state the method set. After
+            a flow pauses for async feedback and resumes, the pending review is
+            restored from JSON, so a Pydantic output arrives as a ``dict``.
         feedback: The raw text feedback provided by the human. Empty string
             if no feedback was provided.
         outcome: The collapsed outcome string when emit is specified.
