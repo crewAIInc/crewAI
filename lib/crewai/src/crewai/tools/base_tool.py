@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 import functools
 import importlib
 from inspect import Parameter, signature
+import sys
 import threading
 from typing import (
     Any,
@@ -95,14 +96,38 @@ def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:
     return asyncio.iscoroutine(value) or asyncio.isfuture(value)
 
 
+def _eval_annotation_in_module(target: Callable[..., Any], value: str) -> Any:
+    """Evaluate one raw annotation string in the callable's module namespace.
+
+    Names unresolvable at runtime, typically TYPE_CHECKING-only ones, keep
+    their raw string so pydantic keeps deferring them.
+    """
+    globalns = getattr(target, "__globals__", None)
+    if globalns is None:
+        # Callables without function globals (e.g. class-level callables)
+        # still evaluate against their defining module.
+        module = sys.modules.get(getattr(target, "__module__", "") or "")
+        globalns = getattr(module, "__dict__", None)
+    if globalns is None:
+        return value
+    try:
+        # Annotation strings are type expressions authored with the callable
+        # and evaluated in its own module, exactly as ``get_type_hints`` does.
+        return eval(value, globalns)  # noqa: S307
+    except Exception:
+        return value
+
+
 def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
     """Return a callable's annotations evaluated in its defining module.
 
     PEP 563 stores them as strings, which pydantic would resolve against this
-    module's globals instead of the caller's; fall back to the raw annotations
-    when they cannot be resolved at runtime, as for TYPE_CHECKING-only names.
-    Raw string annotations kept by ``@typing.no_type_check`` callables are
-    evaluated through ``inspect.signature`` first.
+    module's globals instead of the caller's. Each annotation is evaluated on
+    its own so a single name unresolvable at runtime — typically a
+    TYPE_CHECKING-only return type — leaves the other parameters evaluated
+    instead of degrading them all to raw strings; deferred names keep their
+    raw string for pydantic's lazy forward references. ``@typing.no_type_check``
+    callables keep their raw annotations and are evaluated the same way.
     """
     # ``functools.partial`` adapters are not functions, so ``get_type_hints``
     # cannot evaluate them directly; the parameters that survive in the
@@ -114,32 +139,22 @@ def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
     try:
         hints = get_type_hints(target, include_extras=True)
     except Exception:
-        return dict(getattr(func, "__annotations__", {}))
-    # ``@typing.no_type_check`` makes ``get_type_hints`` return an empty dict
-    # while the callable keeps its raw annotations; preserve them so schema
-    # paths do not silently widen every parameter to ``Any``, replacing the
-    # PEP 563 string entries with their defining-module values.
-    if not hints:
-        raw = dict(getattr(target, "__annotations__", None) or {})
-        if raw and any(isinstance(value, str) for value in raw.values()):
-            # ``inspect.signature`` ignores ``__no_type_check__`` and evaluates
-            # the strings in the defining module; TYPE_CHECKING-only names
-            # raise, in which case the raw dict is kept as-is.
-            try:
-                evaluated = signature(target, eval_str=True).parameters
-            except Exception:
-                evaluated = None
-            if evaluated is not None:
-                for name, value in raw.items():
-                    if (
-                        isinstance(value, str)
-                        and name in evaluated
-                        and evaluated[name].annotation is not Parameter.empty
-                    ):
-                        raw[name] = evaluated[name].annotation
-        if raw:
-            return raw
-    return hints
+        hints = None
+    if hints:
+        return hints
+    # ``get_type_hints`` raises when any single annotation fails to evaluate
+    # and returns an empty dict for ``@typing.no_type_check`` callables, whose
+    # raw annotations survive; resolve each entry on its own so one deferred
+    # name cannot block the others.
+    raw = dict(getattr(target, "__annotations__", None) or {})
+    if not raw:
+        return hints or {}
+    return {
+        name: _eval_annotation_in_module(target, value)
+        if isinstance(value, str)
+        else value
+        for name, value in raw.items()
+    }
 
 
 class EnvVar(BaseModel):
