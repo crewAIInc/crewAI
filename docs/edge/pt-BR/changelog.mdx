@@ -4,6 +4,43 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="14 out 2026">
+  ## v1.15.28
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.28)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar o comando crewai eval para relatar onde um modelo parado quebrou.
+  - Usar o catálogo LiteLLM para janelas de contexto.
+
+  ### Correções de Bugs
+  - Corrigir fluxo para aprender com feedback humano retomado e preservar tipos de saída revisados.
+  - Avisar quando aplicativos não vazios resolvem para zero ferramentas de plataforma.
+  - Corrigir fluxo add-crew para encontrar corretamente o pacote a partir do pyproject.
+  - Mostrar razões para falhas de implantação e corrigir verificações de remoção de implantação e lockfile.
+  - Corrigir lista de gatilhos e tempo limite de solicitações de payload para 60 segundos.
+  - Ler o source_type do AMP durante o push de implantação para garantir que implantações ZIP usem o novo código.
+  - Decodificar arquivos JSON locais com UTF-8 BOM em rag.
+  - Permitir arquivos de entrada de imagem para OpenAI GPT-6 Sol/Luna/Astra.
+  - Emitir evento de chamada concluída para chamadas de ferramentas antropicas transmitidas.
+  - Impedir que modelos JSON-schema emitam avisos sobre campos de sombreamento de BaseModel.
+  - Preservar abortos de ferramentas nativas e identidade de cache de pós-gatilho.
+  - Atualizar o catálogo LiteLLM após a fusão do PR de aumento de versão.
+  - Reparar testes de regressão de avaliador deteriorados.
+
+  ### Documentação
+  - Consolidar melhorias na documentação do MongoDB.
+  - Corrigir orientações de implantação e ferramentas de plataforma em AGENTS.md.
+  - Corrigir importações do README para RagTool e XMLSearchTool.
+
+  ## Contributors
+
+  @SIDDARTHAREDDY8, @Vidit-Ostwal, @joaomdmoura, @kimnamu, @lorenzejay, @norareidy, @shaikn6, @zouyonghe
+
+</Update>
+
 <Update label="09 out 2026">
   ## v1.15.27
 
