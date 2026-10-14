@@ -377,7 +377,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if self.agent and self.agent.verbose:
             self._console.print(
                 Panel(
-                    artifact_reference,
+                    Text(artifact_reference),
                     title="📦 Large tool result deferred",
                     border_style="yellow",
                     padding=(1, 2),

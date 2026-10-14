@@ -2499,7 +2499,7 @@ class TestDeferredNativeToolResults:
             {
                 "func_name": "search_docs",
                 "result": tool_output,
-                "tool_args": {"query": "CrewAI"},
+                "tool_args": {"query": "[unclosed"},
                 "original_tool": None,
                 "tool_failure": None,
             }
@@ -2517,7 +2517,7 @@ class TestDeferredNativeToolResults:
             alias = artifact.relative_to(artifact_store.directory).as_posix()
 
             assert "search_docs" in reference
-            assert '"query": "CrewAI"' in reference
+            assert '"query": "[unclosed"' in reference
             assert "It contains 12 lines and is estimated at 22 tokens" in reference
             assert "about 1.8 tokens per line" in reference
             reader_name = next(
@@ -2531,7 +2531,7 @@ class TestDeferredNativeToolResults:
             assert "line 9" in reference
             assert "line 10" not in reference
             panel = executor._console.print.call_args.args[0]
-            assert panel.renderable == reference
+            assert panel.renderable.plain == reference
             assert str(panel.title) == "📦 Large tool result deferred"
             assert reader.run(file_path=alias, start_line=11, line_count=2) == (
                 "line 10\nline 11\n"
