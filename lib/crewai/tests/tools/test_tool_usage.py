@@ -1522,3 +1522,40 @@ def test_prepopulated_agent_tools_results_not_corrupted_by_failed_hook_in_collec
     assert len(agent.tools_results) == 1
     assert agent.tools_results[0]["result"] == "original_valid_value"
     assert agent.tools_results[0]["result_as_answer"] is True
+
+
+def test_nested_agent_execution_preserves_parent_tool_results():
+    """Nested execution (such as coworker delegation) isolates child and parent tool results."""
+    manager = _amount_agent()
+    coworker = _amount_agent()
+
+    # Manager starts a task and accumulates a tool result
+    task1 = Task(description="Manager Task", expected_output="Manager Output", agent=manager)
+    manager._prepare_task_execution(task1, context=None)
+
+    with tool_results_collector() as manager_results:
+        manager_results.append({
+            "tool_name": "amount_tool",
+            "result": "Manager Report: 100",
+            "result_as_answer": True,
+        })
+
+        # Coworker executes a delegated task within the same thread/context
+        task2 = Task(description="Delegated Task", expected_output="Coworker Output", agent=coworker)
+        coworker._prepare_task_execution(task2, context=None)
+        with tool_results_collector() as coworker_results:
+            assert coworker_results is not manager_results
+            coworker_results.append({
+                "tool_name": "amount_tool",
+                "result": "Coworker Report: 200",
+                "result_as_answer": True,
+            })
+            coworker_output = process_tool_results(coworker, "Delegated summary")
+            assert coworker_output == "Coworker Report: 200"
+
+        # Manager resumes; manager's results must be intact and unaffected by coworker
+        assert len(manager_results) == 1
+        assert manager_results[0]["result"] == "Manager Report: 100"
+        manager_output = process_tool_results(manager, "Manager final summary")
+        assert manager_output == "Manager Report: 100"
+
