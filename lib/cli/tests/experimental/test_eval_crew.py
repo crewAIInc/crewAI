@@ -578,6 +578,7 @@ def test_a_rate_limit_that_never_lifts_ends_the_wait_and_a_passing_one_does_not(
     amp = install(monkeypatch, FakeAMP(statuses=[limited] * 14 + [running] + [limited] * 14 + [done()]))
     eval_module.eval_crew()
     assert "Goal gate: PASSED" in capsys.readouterr().out
+    assert amp.calls.count(("get", "ev-1")) == 30  # every 429 ridden out: the 200 between them reset the count
 
 
 @pytest.mark.parametrize(
