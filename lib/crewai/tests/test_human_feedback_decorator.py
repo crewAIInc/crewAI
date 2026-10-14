@@ -12,6 +12,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel, ValidationError
 
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.flow import Flow, human_feedback, listen, persist, start
@@ -878,6 +879,130 @@ class TestHumanFeedbackLearn:
         config = test_method.__human_feedback_config__
         assert config is not None
         assert config.learn_strict is True
+
+
+class _Draft(BaseModel):
+    title: str
+    body: str
+
+
+def _lesson(content: str) -> Any:
+    from crewai.memory.types import MemoryMatch, MemoryRecord
+
+    return MemoryMatch(
+        record=MemoryRecord(content=content, embedding=[]),
+        score=0.9,
+        match_reasons=["semantic"],
+    )
+
+
+def _review_llm(*responses: Any, function_calling: bool = True) -> MagicMock:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = function_calling
+    llm.call.side_effect = list(responses)
+    return llm
+
+
+def _run_learning_flow(
+    output: Any, llm: MagicMock, feedback: str = "", *, learn_strict: bool = False
+) -> tuple[Flow, dict[str, Any]]:
+    """Kick off a one-step learn=True flow whose method returns ``output``."""
+
+    class LearningFlow(Flow):
+        @start()
+        @human_feedback(
+            message="Review:", llm="gpt-4o-mini", learn=True, learn_strict=learn_strict
+        )
+        def draft(self):
+            return output
+
+    flow = LearningFlow()
+    flow.memory = MagicMock()
+    flow.memory.recall.return_value = [_lesson("Titles use sentence case")]
+    seen: dict[str, Any] = {}
+
+    def show(message, output, metadata=None, emit=None, method_name=""):
+        seen["shown"] = output
+        return feedback
+
+    with (
+        patch.object(flow, "_request_human_feedback", side_effect=show),
+        patch("crewai.llm.LLM", return_value=llm),
+    ):
+        flow.kickoff()
+    return flow, seen
+
+
+class TestPreReviewKeepsOutputType:
+    """learn=True pre-review must not change the type of what the human approves."""
+
+    def test_pydantic_output_is_rewritten_into_the_same_model(self):
+        llm = _review_llm(_Draft(title="Launch day", body="We shipped."))
+
+        flow, seen = _run_learning_flow(_Draft(title="Launch Day", body="We shipped."), llm)
+
+        assert seen["shown"] == _Draft(title="Launch day", body="We shipped.")
+        assert flow.last_human_feedback.output == seen["shown"]
+        assert llm.call.call_args.kwargs["response_model"] is _Draft
+        assert '"title":"Launch Day"' in llm.call.call_args.args[0][1]["content"]
+
+    def test_pydantic_output_parses_a_json_string_response(self):
+        # LiteLLM-routed models return structured output as a JSON string.
+        llm = _review_llm('{"title": "Launch day", "body": "We shipped."}')
+
+        _, seen = _run_learning_flow(_Draft(title="Launch Day", body="We shipped."), llm)
+
+        assert seen["shown"] == _Draft(title="Launch day", body="We shipped.")
+
+    def test_dict_output_reaches_the_reviewer_unchanged(self):
+        output = {"title": "Launch Day", "body": "We shipped."}
+        llm = _review_llm()
+
+        flow, seen = _run_learning_flow(output, llm)
+
+        assert seen["shown"] is output
+        assert flow.last_human_feedback.output is output
+        flow.memory.recall.assert_not_called()
+        llm.call.assert_not_called()
+
+    def test_text_output_parses_a_json_string_response(self):
+        llm = _review_llm('{"improved_output": "Launch day"}')
+
+        _, seen = _run_learning_flow("Launch Day", llm)
+
+        assert seen["shown"] == "Launch day"
+
+    def test_invalid_structured_result_falls_back_to_the_original(self):
+        original = _Draft(title="Launch Day", body="We shipped.")
+        llm = _review_llm('{"title": "Launch day"}')
+
+        _, seen = _run_learning_flow(original, llm)
+
+        assert seen["shown"] is original
+
+    def test_invalid_structured_result_raises_when_strict(self):
+        llm = _review_llm('{"title": "Launch day"}')
+
+        with pytest.raises(ValidationError, match="body"):
+            _run_learning_flow(
+                _Draft(title="Launch Day", body="We shipped."), llm, learn_strict=True
+            )
+
+
+class TestDistillationParsesJsonStrings:
+    def test_lessons_returned_as_a_json_string_are_stored(self):
+        from crewai.flow.human_feedback import PreReviewResult
+
+        llm = _review_llm(
+            PreReviewResult(improved_output="Launch day"),
+            '{"lessons": ["Titles use sentence case"]}',
+        )
+
+        flow, _ = _run_learning_flow("Launch Day", llm, feedback="Sentence case, please")
+
+        flow.memory.remember_many.assert_called_once_with(
+            ["Titles use sentence case"], source="hitl"
+        )
 
 
 class TestHumanFeedbackFinalOutputPreservation:
