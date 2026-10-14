@@ -2662,6 +2662,96 @@ def test_agent_without_apps_no_platform_tools():
     assert tools == []
 
 
+def test_get_platform_tools_warns_when_apps_resolve_to_zero_tools(monkeypatch):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(
+        role="Empty Apps Agent",
+        goal="Use apps",
+        backstory="b",
+        apps=["gmail", "slack"],
+    )
+
+    with pytest.warns(
+        UserWarning,
+        # The apps validator dedupes through a set, so either order is possible.
+        match=r"Agent 'Empty Apps Agent' declares apps \[(gmail, slack|slack, gmail)\] "
+        r"but none resolved to any tools",
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_warns_when_no_action_matches_a_selector(monkeypatch):
+    # Runs the real CrewaiPlatformTools factory (it returns a plain list) against an
+    # integrations API that knows no action by this name.
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
+    response = MagicMock()
+    response.json.return_value = {"actions": {}}
+    agent = Agent(
+        role="Slack Agent", goal="g", backstory="b", apps=["slack/send-message"]
+    )
+
+    with (
+        patch(
+            "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get",
+            return_value=response,
+        ) as get,
+        pytest.warns(
+            UserWarning,
+            match=r"Agent 'Slack Agent' declares apps \[slack/send-message\]",
+        ),
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+    assert get.call_args.kwargs["params"] == {"apps": "slack/send-message"}
+
+
+def test_get_platform_tools_warns_when_token_is_missing(monkeypatch, capsys):
+    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+    agent = Agent(
+        role="No Token Agent", goal="g", backstory="b", apps=["gmail"], verbose=True
+    )
+
+    with pytest.warns(
+        UserWarning, match="CREWAI_PLATFORM_INTEGRATION_TOKEN is set"
+    ):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+    assert "No Platform integration token found" in capsys.readouterr().out
+
+
+def test_get_platform_tools_quiet_when_tools_resolve(monkeypatch):
+    @tool
+    def platform_tool() -> str:
+        """A resolved platform tool."""
+        return "ok"
+
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [platform_tool])
+    agent = Agent(role="A", goal="g", backstory="b", apps=["gmail"])
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == [platform_tool]
+    assert not any("resolved to any tools" in str(w.message) for w in caught)
+
+
+def test_crew_prepare_tools_warns_on_empty_apps(monkeypatch):
+    monkeypatch.setattr("crewai_tools.CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="Crew Agent", goal="g", backstory="b", apps=["gmail"])
+    task = Task(description="d", expected_output="o", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.warns(
+        UserWarning, match=r"Agent 'Crew Agent' declares apps \[gmail\]"
+    ):
+        crew._prepare_tools(agent, task, [])
+
+
 def test_agent_mcps_accepts_slug_with_specific_tool():
     """Agent(mcps=["notion#get_page"]) must pass validation (_SLUG_RE)."""
     agent = Agent(
