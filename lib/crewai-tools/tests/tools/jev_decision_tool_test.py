@@ -53,6 +53,7 @@ def test_run_returns_choice_probabilities_and_confidence(
         choices={
             "decision": SimpleNamespace(
                 choice="billing",
+                confidence=0.91,
                 probabilities={"billing": 0.87, "technical": 0.13},
             )
         },
@@ -72,11 +73,12 @@ def test_run_returns_choice_probabilities_and_confidence(
         "success": True,
         "choice": "billing",
         "probabilities": {"billing": 0.87, "technical": 0.13},
-        "confidence": 0.87,
+        "confidence": 0.91,
         "model": "jev-latest",
         "usage": {"input_tokens": 10},
     }
     client.system_one.assert_called_once()
+    assert client.system_one.call_args.kwargs["state"] == "I was charged twice."
     question = client.system_one.call_args.kwargs["questions"]["decision"]
     assert isinstance(question, FakeChoice)
     assert question.instructions == "Which team should handle this?"
