@@ -2500,7 +2500,7 @@ class TestDeferredNativeToolResults:
             assert "line 10" not in reference
             panel = executor._console.print.call_args.args[0]
             assert panel.renderable == reference
-            assert str(panel.title) == "Large tool result deferred"
+            assert str(panel.title) == "📦 Large tool result deferred"
             assert reader.run(file_path=alias, start_line=11, line_count=2) == (
                 "line 10\nline 11\n"
             )

@@ -353,7 +353,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self._console.print(
                 Panel(
                     artifact_reference,
-                    title="Large tool result deferred",
+                    title="📦 Large tool result deferred",
                     border_style="yellow",
                     padding=(1, 2),
                 )
