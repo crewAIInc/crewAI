@@ -552,6 +552,15 @@ def test_anthropic_model_detection():
     for model, expected in models:
         assert LLM._is_anthropic_model(model) == expected, f"Failed for model: {model}"
 
+    with (
+        patch("crewai.llm._ensure_litellm", return_value=True),
+        patch("crewai.llm.litellm", MagicMock()),
+    ):
+        assert (
+            LLM(model="anthropic--claude-sonnet-custom", is_litellm=True).is_anthropic
+            is True
+        )
+
 
 def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
     """Test Anthropic message formatting with fixtures."""
