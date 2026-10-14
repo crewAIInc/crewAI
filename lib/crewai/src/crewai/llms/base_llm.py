@@ -159,6 +159,20 @@ def get_current_call_id() -> str:
     return call_id
 
 
+def _encoded_character_count(payload: Any) -> int:
+    """Count the characters a request payload occupies once encoded.
+
+    Tool schemas and structured-output schemas are sent alongside the messages,
+    so the fallback estimate has to include them to stay conservative. Values
+    that are not JSON encodable fall back to their string form; a payload that
+    cannot be encoded at all contributes nothing rather than failing the count.
+    """
+    try:
+        return len(json.dumps(payload, default=str))
+    except (TypeError, ValueError):
+        return 0
+
+
 class BaseLLM(BaseModel, ABC):
     """Abstract base class for LLM implementations.
 
@@ -399,6 +413,15 @@ class BaseLLM(BaseModel, ABC):
             character_count = sum(
                 len(message_content_text(message)) for message in messages
             )
+
+        if tools:
+            character_count += _encoded_character_count(tools)
+        if response_model is not None:
+            schema = getattr(response_model, "model_json_schema", None)
+            character_count += _encoded_character_count(
+                schema() if callable(schema) else response_model
+            )
+
         return (character_count + 3) // 4
 
     @abstractmethod

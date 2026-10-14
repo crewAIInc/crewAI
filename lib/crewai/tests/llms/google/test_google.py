@@ -175,24 +175,24 @@ def test_gemini_developer_token_count_uses_character_fallback_for_unrepresentabl
     llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
     client = MagicMock()
     client.vertexai = False
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is CrewAI?"},
+    ]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
 
     with patch.object(llm, "_get_sync_client", return_value=client):
-        assert llm.get_input_tokens_count(
-            [
-                {"role": "system", "content": "Be concise."},
-                {"role": "user", "content": "What is CrewAI?"},
-            ],
-            tools=[
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "search_docs",
-                        "description": "Search the documentation.",
-                        "parameters": {"type": "object", "properties": {}},
-                    },
-                }
-            ],
-        ) == 7
+        assert llm.get_input_tokens_count(messages) == 7
+        assert llm.get_input_tokens_count(messages, tools=tools) > 7
 
 
 def test_gemini_developer_token_count_forwards_supported_content():
