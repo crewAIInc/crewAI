@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
 
+
 _active_tool_results: ContextVar[list[dict[str, Any]] | None] = ContextVar(
     "crewai_tool_results", default=None
 )
