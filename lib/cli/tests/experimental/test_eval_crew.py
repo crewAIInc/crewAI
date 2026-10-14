@@ -606,6 +606,22 @@ def test_the_rate_limit_count_never_overruns_and_any_other_answer_restarts_it(pr
     assert "Goal gate: PASSED" in capsys.readouterr().out  # the 503 restarted the count: 840 s, then 840 s again
 
 
+def test_a_rate_limit_answer_breaks_a_streak_of_unreachable_polls(project, monkeypatch, capsys):
+    """POLL_RETRIES counts a streak of 5xx (or unreachable) polls; a 429 is
+    AMP answering, so it breaks the streak like any other answer."""
+    directory, _ = project
+    record_last_run(directory)
+    blip = httpx.Response(503, json={"error": "service_unavailable", "message": "down for a moment"})
+    limited = httpx.Response(429, headers={"Retry-After": "5"}, json={"error": "rate_limit_exceeded"})
+    streak = eval_module.POLL_RETRIES - 1
+    amp = install(monkeypatch, FakeAMP(statuses=[blip] * streak + [limited] + [blip] * streak + [done()]))
+
+    eval_module.eval_crew()
+
+    assert "Goal gate: PASSED" in capsys.readouterr().out
+    assert amp.calls.count(("get", "ev-1")) == 2 * streak + 2
+
+
 @pytest.mark.parametrize(
     ("header", "wait"),
     [

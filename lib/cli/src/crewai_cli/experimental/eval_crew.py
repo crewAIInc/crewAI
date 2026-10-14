@@ -851,6 +851,7 @@ def _wait(
             time.sleep(POLL_SECONDS)
             continue
         if response.status_code == 429:
+            misses = 0  # AMP answered: a streak of unreachable / 5xx polls is broken
             if limited_for >= RATE_LIMITED_FOR_AT_MOST_SECONDS:
                 raise EvaluationStoppedError(
                     f"AMP kept rate-limiting this command for {limited_for / 60:.0f} minutes, so it "
