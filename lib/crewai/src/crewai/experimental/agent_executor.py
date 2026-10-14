@@ -85,6 +85,7 @@ from crewai.tools.tool_failure import (
     reportable_failure,
 )
 from crewai.utilities.agent_utils import (
+    _extract_provider_tool_call_id,
     _llm_stop_words_applied,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
@@ -1969,6 +1970,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             }
 
         call_id, func_name, func_args = info
+        provider_call_id = _extract_provider_tool_call_id(tool_call)
 
         # Parse arguments
         parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
@@ -2033,6 +2035,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self,
             event=ToolUsageStartedEvent(
                 tool_name=func_name,
+                call_id=provider_call_id,
                 tool_args=args_dict,
                 from_agent=self.agent,
                 from_task=self.task,
@@ -2107,6 +2110,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         self,
                         event=ToolUsageErrorEvent(
                             tool_name=func_name,
+                            call_id=provider_call_id,
                             tool_args=args_dict,
                             from_agent=self.agent,
                             from_task=self.task,
@@ -2151,6 +2155,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 event=ToolUsageFinishedEvent(
                     output=result,
                     tool_name=func_name,
+                    call_id=provider_call_id,
                     tool_args=args_dict,
                     from_agent=self.agent,
                     from_task=self.task,
