@@ -93,7 +93,7 @@ from crewai.tools.tool_failure import (
     merge_tool_failures,
     tool_failure_collector,
 )
-from crewai.tools.tool_results import tool_results_collector
+from crewai.tools.tool_results import active_tool_results, tool_results_collector
 from crewai.types.callback import SerializableCallable
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
