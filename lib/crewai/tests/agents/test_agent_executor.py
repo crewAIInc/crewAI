@@ -2480,7 +2480,9 @@ class TestDeferredNativeToolResults:
         llm.is_tool_result_overflowing_threshold.assert_not_called()
 
     def test_overflowed_result_is_referenced_and_readable_through_file_reader(self):
-        from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
@@ -2509,7 +2511,7 @@ class TestDeferredNativeToolResults:
             reader = next(
                 tool
                 for tool in executor.original_tools
-                if isinstance(tool, FileReadTool)
+                if isinstance(tool, DeferredToolResultReader)
             )
             artifact = next(artifact_store.directory.glob("*/result.md"))
             alias = artifact.relative_to(artifact_store.directory).as_posix()
@@ -2533,7 +2535,9 @@ class TestDeferredNativeToolResults:
                 executor._tool_result_artifact_store.cleanup()
 
     def test_multiple_overflowed_results_reuse_one_file_reader(self):
-        from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
@@ -2563,7 +2567,11 @@ class TestDeferredNativeToolResults:
             artifact_store = executor._tool_result_artifact_store
             assert artifact_store is not None
             assert len(
-                [tool for tool in executor.original_tools if isinstance(tool, FileReadTool)]
+                [
+                    tool
+                    for tool in executor.original_tools
+                    if isinstance(tool, DeferredToolResultReader)
+                ]
             ) == 1
             assert len(list(artifact_store.directory.glob("*/result.md"))) == 2
             assert first_reference != second_reference
@@ -2573,8 +2581,13 @@ class TestDeferredNativeToolResults:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
 
-    def test_existing_file_reader_keeps_local_access_and_reads_artifact(self, tmp_path):
+    def test_existing_file_reader_keeps_local_access_when_artifact_reader_is_added(
+        self, tmp_path
+    ):
         from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
 
         local_files = tmp_path / "local-files"
         local_files.mkdir()
@@ -2601,15 +2614,22 @@ class TestDeferredNativeToolResults:
             artifact = next(artifact_store.directory.glob("*/result.md"))
             alias = artifact.relative_to(artifact_store.directory).as_posix()
 
-            assert executor.original_tools == [reader]
+            deferred_reader = next(
+                tool
+                for tool in executor.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            )
             assert reader.run(file_path="notes.md") == "local content"
-            assert reader.run(file_path=alias) == "deferred content"
+            assert deferred_reader.run(file_path=alias) == "deferred content"
         finally:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
 
     def test_cleanup_removes_artifact_and_revokes_existing_reader_alias(self, tmp_path):
         from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
 
         local_files = tmp_path / "local-files"
         local_files.mkdir()
@@ -2634,15 +2654,23 @@ class TestDeferredNativeToolResults:
         alias = next(artifact_directory.glob("*/result.md")).relative_to(
             artifact_directory
         ).as_posix()
+        deferred_reader = next(
+            tool
+            for tool in executor.original_tools
+            if isinstance(tool, DeferredToolResultReader)
+        )
 
         executor._cleanup_deferred_tool_results()
 
         assert not artifact_directory.exists()
         assert reader.run(file_path="notes.md") == "local content"
-        assert "Invalid file path" in reader.run(file_path=alias)
+        assert "not available" in deferred_reader.run(file_path=alias)
+        assert executor.original_tools == [reader]
 
     def test_invoke_cleans_deferred_artifacts_after_completion(self):
-        from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
@@ -2682,13 +2710,15 @@ class TestDeferredNativeToolResults:
         assert artifact_directory is not None
         assert not artifact_directory.exists()
         assert not any(
-            isinstance(tool, FileReadTool) for tool in executor.original_tools
+            isinstance(tool, DeferredToolResultReader) for tool in executor.original_tools
         )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("should_fail", [False, True], ids=["success", "error"])
     async def test_invoke_async_cleans_deferred_artifacts(self, should_fail):
-        from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
 
         llm = Mock()
         llm.is_tool_result_overflowing_threshold.return_value = True
@@ -2737,7 +2767,7 @@ class TestDeferredNativeToolResults:
         assert artifact_directory is not None
         assert not artifact_directory.exists()
         assert not any(
-            isinstance(tool, FileReadTool) for tool in executor.original_tools
+            isinstance(tool, DeferredToolResultReader) for tool in executor.original_tools
         )
 
 

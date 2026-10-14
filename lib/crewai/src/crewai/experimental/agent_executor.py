@@ -74,6 +74,9 @@ from crewai.hooks.types import (
     BeforeLLMCallHookCallable,
     BeforeLLMCallHookType,
 )
+from crewai.tools.agent_tools.deferred_tool_result_reader import (
+    DeferredToolResultReader,
+)
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_failure import (
@@ -312,14 +315,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self._tool_result_artifact_store = ToolResultArtifactStore()
 
         artifact = self._tool_result_artifact_store.store(result)
-        from crewai_tools import FileReadTool
 
         reader = next(
-            (tool for tool in self.original_tools if isinstance(tool, FileReadTool)),
+            (
+                tool
+                for tool in self.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            ),
             None,
         )
         if reader is None:
-            reader = FileReadTool()
+            reader = DeferredToolResultReader()
             self.original_tools.append(reader)
             self._setup_native_tools()
             self._deferred_file_reader_added_by_executor = True
