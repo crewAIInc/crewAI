@@ -3,7 +3,7 @@ from collections.abc import Callable
 from functools import partial
 import json
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, no_type_check
 from unittest.mock import patch
 
 from crewai.agent import Agent
@@ -845,3 +845,56 @@ class TestFromLangchainTypedPartial:
         converted = Tool.from_langchain(self._make_wrapper())
         with pytest.raises(ValueError, match="arguments validation failed"):
             converted.run(name=["a", "b"])
+
+
+class TestNoTypeCheckAnnotationsPreserved:
+    """``@typing.no_type_check`` makes ``get_type_hints`` return an empty
+    dict while the callable keeps its raw annotations; the schema paths must
+    keep the real types instead of widening every parameter to ``Any``.
+    """
+
+    @staticmethod
+    def _shout() -> Callable[..., Any]:
+        @no_type_check
+        def shout(message: str, times: int = 1) -> str:
+            """Repeat the message."""
+            return (message + "!") * times
+
+        return shout
+
+    def _make_wrapper(self) -> SimpleNamespace:
+        return SimpleNamespace(
+            name="shout",
+            description="Repeat the message.",
+            func=self._shout(),
+        )
+
+    def test_tool_decorator_preserves_no_type_check_annotations(self):
+        converted = tool("Repeat the message.")(self._shout())
+        assert converted.args_schema.model_fields["message"].annotation is str
+        assert converted.args_schema.model_fields["times"].annotation is int
+
+    def test_base_tool_from_langchain_preserves_no_type_check_annotations(self):
+        converted = _SchemaConversionTool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["message"].annotation is str
+        assert converted.args_schema.model_fields["times"].annotation is int
+        with pytest.raises(ValueError, match="arguments validation failed"):
+            converted.run(message=["a", "b"])
+
+    def test_tool_from_langchain_preserves_no_type_check_annotations(self):
+        converted = Tool.from_langchain(self._make_wrapper())
+        assert converted.args_schema.model_fields["message"].annotation is str
+        assert converted.args_schema.model_fields["times"].annotation is int
+
+    def test_base_tool_subclass_run_preserves_no_type_check_annotations(self):
+        class ShoutTool(BaseTool):
+            name: str = "shout"
+            description: str = "Repeat the message."
+
+            @no_type_check
+            def _run(self, message: str, times: int = 1) -> str:
+                return (message + "!") * times
+
+        fields = ShoutTool().args_schema.model_fields
+        assert fields["message"].annotation is str
+        assert fields["times"].annotation is int
