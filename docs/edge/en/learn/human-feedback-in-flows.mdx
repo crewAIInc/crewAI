@@ -647,7 +647,7 @@ The `learn=True` parameter enables a feedback loop between human reviewers and t
 ### How It Works
 
 1. **After feedback**: The LLM extracts generalizable lessons from the output + feedback and stores them in memory under `learn_source` (default `"hitl"`). This happens whether the reply arrives during the run or later resumes a paused flow through an [async provider](#async-human-feedback-non-blocking). If the feedback is just approval (e.g. "looks good"), nothing is stored.
-2. **Before next review**: Past HITL lessons are recalled from memory and applied by the LLM to improve the output before the human sees it. Text output is rewritten as text, and a Pydantic model is rewritten as the same model unless it holds a secret or an excluded field, which the LLM can't see. Any other output, such as a `dict` or a `list`, is shown unchanged.
+2. **Before next review**: Past HITL lessons are recalled from memory and applied by the LLM to improve the output before the human sees it. Text output is rewritten as text, and a Pydantic model is rewritten as the same model unless it holds something the LLM can't see: a secret, an excluded field, or a private attribute changed from its default. Any other output, such as a `dict` or a `list`, is shown unchanged.
 
 Over time, the human sees progressively better pre-reviewed output because each correction informs future reviews.
 

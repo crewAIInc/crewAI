@@ -294,6 +294,15 @@ def _has_hidden_values(value: Any) -> bool:
     if isinstance(value, (Secret, SecretStr, SecretBytes)):
         return True
     if isinstance(value, BaseModel):
+        private = value.__pydantic_private__ or {}
+        # A rebuilt model starts private attributes from their defaults, so any
+        # private value that differs from its default would be lost.
+        if any(
+            private[name] != attr.get_default()
+            for name, attr in type(value).__private_attributes__.items()
+            if name in private
+        ):
+            return True
         return any(
             info.exclude or _has_hidden_values(getattr(value, name))
             for name, info in type(value).model_fields.items()
@@ -318,9 +327,9 @@ def _pre_review_with_lessons(
 
     try:
         # Only text and Pydantic outputs can be rewritten without changing their
-        # type, and a model only when the LLM sees all of it: secrets are masked
-        # and excluded fields dropped, so rebuilding from the review would lose
-        # them. Anything else reaches the reviewer as the method returned it.
+        # type, and a model only when the LLM sees all of it: secrets are masked,
+        # excluded fields and private attributes dropped, so rebuilding from the
+        # review would lose them. Anything else reaches the reviewer unchanged.
         if isinstance(method_output, BaseModel):
             if _has_hidden_values(method_output):
                 return method_output

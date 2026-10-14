@@ -637,7 +637,7 @@ O parâmetro `learn=True` habilita um ciclo de feedback entre revisores humanos 
 ### Como Funciona
 
 1. **Após o feedback**: O LLM extrai lições generalizáveis da saída + feedback e as armazena na memória sob `learn_source` (padrão `"hitl"`). Isso acontece tanto quando a resposta chega durante a execução quanto quando ela retoma depois um flow pausado por meio de um [provider assíncrono](#feedback-humano-assíncrono-não-bloqueante). Se o feedback for apenas aprovação (ex: "parece bom"), nada é armazenado.
-2. **Antes da próxima revisão**: Lições HITL passadas são recuperadas da memória e aplicadas pelo LLM para melhorar a saída antes que o humano a veja. Uma saída de texto é reescrita como texto, e um modelo Pydantic é reescrito como o mesmo modelo, a menos que contenha um secret ou um campo excluído, que o LLM não consegue ver. Qualquer outra saída, como um `dict` ou uma `list`, é mostrada sem alterações.
+2. **Antes da próxima revisão**: Lições HITL passadas são recuperadas da memória e aplicadas pelo LLM para melhorar a saída antes que o humano a veja. Uma saída de texto é reescrita como texto, e um modelo Pydantic é reescrito como o mesmo modelo, a menos que contenha algo que o LLM não consegue ver: um secret, um campo excluído ou um atributo privado alterado em relação ao padrão. Qualquer outra saída, como um `dict` ou uma `list`, é mostrada sem alterações.
 
 Com o tempo, o humano vê saídas pré-revisadas progressivamente melhores porque cada correção informa revisões futuras.
 

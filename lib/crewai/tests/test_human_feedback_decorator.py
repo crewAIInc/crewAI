@@ -12,7 +12,14 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    SecretStr,
+    ValidationError,
+)
 
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.flow import Flow, human_feedback, listen, persist, start
@@ -1028,6 +1035,24 @@ class _Aliased(BaseModel):
 _ACCOUNT = _Account(name="ana", token=SecretStr("tok-123"))
 
 
+class _Session(BaseModel):
+    title: str
+    _token: str = PrivateAttr(default="")
+
+
+class _Workspace(BaseModel):
+    title: str
+    owner: _Session | None = None
+    sessions: list[_Session] = []
+    by_name: dict[str, _Session] = {}
+
+
+def _session(token: str = "tok-live") -> _Session:
+    session = _Session(title="Launch Day")
+    session._token = token
+    return session
+
+
 class TestPreReviewKeepsWhatItCannotSee:
     def test_unserializable_output_falls_back_to_the_original(self):
         original = _WithHandle(title="Launch Day", handle=_Handle())
@@ -1057,8 +1082,23 @@ class TestPreReviewKeepsWhatItCannotSee:
             _Report(title="Q3", accounts=[_ACCOUNT]),
             _Report(title="Q3", by_name={"ana": _ACCOUNT}),
             _Report(title="Q3", tagged=[_Tagged(title="t", row_id="r1")]),
+            _session(),
+            _Workspace(title="Q3", owner=_session()),
+            _Workspace(title="Q3", sessions=[_session()]),
+            _Workspace(title="Q3", by_name={"ana": _session()}),
         ],
-        ids=["secret", "excluded", "nested", "list", "dict", "list-excluded"],
+        ids=[
+            "secret",
+            "excluded",
+            "nested",
+            "list",
+            "dict",
+            "list-excluded",
+            "private",
+            "nested-private",
+            "list-private",
+            "dict-private",
+        ],
     )
     def test_model_with_hidden_values_reaches_the_reviewer_unchanged(self, original):
         # The LLM would see secrets masked and excluded fields not at all, so a
@@ -1078,6 +1118,16 @@ class TestPreReviewKeepsWhatItCannotSee:
         _, seen = _run_learning_flow(_Report(title="Q3"), llm)
 
         assert seen["shown"] == _Report(title="Q3 report")
+
+    def test_private_attribute_left_at_its_default_is_still_reviewed(self):
+        # A rebuilt model resets private attributes to their defaults, which only
+        # loses data when the value had changed.
+        llm = _review_llm('{"title": "Launch day"}')
+
+        _, seen = _run_learning_flow(_Session(title="Launch Day"), llm)
+
+        assert seen["shown"] == _Session(title="Launch day")
+        llm.call.assert_called_once()
 
     def test_edits_to_aliased_fields_are_kept(self):
         llm = _review_llm('{"headline": "Launch day", "body": "We shipped."}')
