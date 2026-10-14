@@ -101,6 +101,8 @@ def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
     PEP 563 stores them as strings, which pydantic would resolve against this
     module's globals instead of the caller's; fall back to the raw annotations
     when they cannot be resolved at runtime, as for TYPE_CHECKING-only names.
+    Raw string annotations kept by ``@typing.no_type_check`` callables are
+    evaluated through ``inspect.signature`` first.
     """
     # ``functools.partial`` adapters are not functions, so ``get_type_hints``
     # cannot evaluate them directly; the parameters that survive in the
@@ -115,11 +117,28 @@ def _resolve_annotations(func: Callable[..., Any]) -> dict[str, Any]:
         return dict(getattr(func, "__annotations__", {}))
     # ``@typing.no_type_check`` makes ``get_type_hints`` return an empty dict
     # while the callable keeps its raw annotations; preserve them so schema
-    # paths do not silently widen every parameter to ``Any``.
+    # paths do not silently widen every parameter to ``Any``, replacing the
+    # PEP 563 string entries with their defining-module values.
     if not hints:
-        raw = getattr(target, "__annotations__", None) or {}
+        raw = dict(getattr(target, "__annotations__", None) or {})
+        if raw and any(isinstance(value, str) for value in raw.values()):
+            # ``inspect.signature`` ignores ``__no_type_check__`` and evaluates
+            # the strings in the defining module; TYPE_CHECKING-only names
+            # raise, in which case the raw dict is kept as-is.
+            try:
+                evaluated = signature(target, eval_str=True).parameters
+            except Exception:
+                evaluated = None
+            if evaluated is not None:
+                for name, value in raw.items():
+                    if (
+                        isinstance(value, str)
+                        and name in evaluated
+                        and evaluated[name].annotation is not Parameter.empty
+                    ):
+                        raw[name] = evaluated[name].annotation
         if raw:
-            return dict(raw)
+            return raw
     return hints
 
 
