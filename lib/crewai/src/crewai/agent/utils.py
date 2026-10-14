@@ -250,11 +250,7 @@ def process_tool_results(agent: Agent, result: Any) -> Any:
         The final result, potentially overridden by tool result_as_answer.
     """
     active = active_tool_results()
-    recorded = (
-        active
-        if active is not None
-        else getattr(agent, "tools_results", [])
-    )
+    recorded = active if active is not None else getattr(agent, "tools_results", [])
     for tool_result in recorded:
         if tool_result.get("result_as_answer", False):
             result = tool_result["result"]

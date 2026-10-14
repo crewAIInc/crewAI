@@ -674,7 +674,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         else:
             self.tools_results = []
 
-
     @abstractmethod
     def execute_task(
         self,

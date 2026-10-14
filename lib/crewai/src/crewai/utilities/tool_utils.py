@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
@@ -176,9 +176,7 @@ async def aexecute_tool_and_check_finality(
 
         active = active_tool_results()
         recorded = (
-            active
-            if active is not None
-            else getattr(agent, "tools_results", None)
+            active if active is not None else getattr(agent, "tools_results", None)
         )
         start_index = len(recorded) if recorded is not None else 0
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
@@ -197,15 +195,16 @@ async def aexecute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
         is_final_answer = (
-            getattr(tool, "result_as_answer", False)
-            and tool_usage.last_failure is None
+            getattr(tool, "result_as_answer", False) and tool_usage.last_failure is None
         )
         effective_result = (
             modified_result if modified_result is not None else tool_result
         )
 
         recorded_len = len(recorded) if recorded is not None else 0
-        if modified_result is not None or (is_final_answer and recorded_len <= start_index):
+        if modified_result is not None or (
+            is_final_answer and recorded_len <= start_index
+        ):
             _record_after_hook_result(
                 agent=agent,
                 tool_name=sanitized_tool_name,
@@ -364,9 +363,7 @@ def execute_tool_and_check_finality(
 
         active = active_tool_results()
         recorded = (
-            active
-            if active is not None
-            else getattr(agent, "tools_results", None)
+            active if active is not None else getattr(agent, "tools_results", None)
         )
         start_index = len(recorded) if recorded is not None else 0
         tool_result = tool_usage.use(tool_calling, agent_action.text)
@@ -385,15 +382,16 @@ def execute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
         is_final_answer = (
-            getattr(tool, "result_as_answer", False)
-            and tool_usage.last_failure is None
+            getattr(tool, "result_as_answer", False) and tool_usage.last_failure is None
         )
         effective_result = (
             modified_result if modified_result is not None else tool_result
         )
 
         recorded_len = len(recorded) if recorded is not None else 0
-        if modified_result is not None or (is_final_answer and recorded_len <= start_index):
+        if modified_result is not None or (
+            is_final_answer and recorded_len <= start_index
+        ):
             _record_after_hook_result(
                 agent=agent,
                 tool_name=sanitized_tool_name,

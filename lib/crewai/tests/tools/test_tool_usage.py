@@ -1387,15 +1387,7 @@ def test_agent_concurrent_threads_tool_results_isolation():
 @pytest.mark.asyncio
 async def test_agent_concurrent_tasks_reset_tools_results_does_not_clear_other_task():
     """Calling reset_tools_results() during a task execution only clears that task's results."""
-    from unittest.mock import MagicMock
-    from crewai.agent.core import Agent
-
-    agent = Agent(
-        role="Test Agent",
-        goal="Test Goal",
-        backstory="Test Backstory",
-        llm=MagicMock(),
-    )
+    agent = _amount_agent()
 
     async def task_worker(task_id: int, should_reset: bool):
         with tool_results_collector() as collector:
@@ -1507,16 +1499,9 @@ async def test_concurrent_tasks_shared_agent_real_react_tool_hooks_isolation():
 
 def test_prepopulated_agent_tools_results_not_corrupted_by_failed_hook_in_collector():
     """Active collector operations do not mutate pre-populated agent.tools_results."""
-    from crewai.agent.core import Agent
     from crewai.utilities.tool_utils import _record_after_hook_result
-    from unittest.mock import MagicMock
 
-    agent = Agent(
-        role="Test Agent",
-        goal="Test Goal",
-        backstory="Test Backstory",
-        llm=MagicMock(),
-    )
+    agent = _amount_agent()
     original_entry = {
         "tool_name": "amount_tool",
         "result": "original_valid_value",
