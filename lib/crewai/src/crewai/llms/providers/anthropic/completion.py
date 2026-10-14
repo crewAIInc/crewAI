@@ -771,6 +771,24 @@ class AnthropicCompletion(BaseLLM):
         self._previous_thinking_tool_ids = frozenset(tool_ids)
         self._previous_thinking_text = text
 
+    def _matches_cached_thinking_text(self, persisted_text: str) -> bool:
+        """Whether a history turn's text is the turn that cached thinking.
+
+        The fingerprint is the raw response text, while the persisted turn
+        holds the provider's return value: truncated at a stop word (a
+        prefix of the raw text) and possibly extended by after-call hooks.
+        Accept an exact match or either prefix direction when both sides
+        are non-empty; an empty fingerprint matches only an empty turn.
+        """
+        raw_text = self._previous_thinking_text
+        if persisted_text == raw_text:
+            return True
+        if not persisted_text or not raw_text:
+            return False
+        return raw_text.startswith(persisted_text) or persisted_text.startswith(
+            raw_text
+        )
+
     @staticmethod
     def _convert_image_blocks(content: Any) -> Any:
         """Convert OpenAI-style image_url blocks to Anthropic image blocks.
@@ -938,9 +956,13 @@ class AnthropicCompletion(BaseLLM):
                             assistant_content.append(tool_use)
                     if assistant_content:
                         # Replay the cached thinking only on the assistant
-                        # turn that produced it, matched by tool_use ids: a
-                        # different conversation sharing this LLM instance
-                        # must not receive foreign thinking blocks.
+                        # turn that produced it. Executors can persist only
+                        # part of the batch (the first call, or up to a
+                        # ``result_as_answer`` tool), so accept the turn when
+                        # its tool_use ids are a subset of the cached
+                        # response's ids: ids are unique per response, so a
+                        # shared id identifies the originating turn, and a
+                        # different conversation's ids never overlap.
                         turn_tool_ids = frozenset(
                             tc.get("id", "")
                             for tc in tool_calls
@@ -950,7 +972,8 @@ class AnthropicCompletion(BaseLLM):
                             index == last_assistant_index
                             and self.thinking
                             and self._previous_thinking_blocks
-                            and self._previous_thinking_tool_ids == turn_tool_ids
+                            and turn_tool_ids
+                            and turn_tool_ids <= self._previous_thinking_tool_ids
                         ):
                             assistant_content = [
                                 *self._previous_thinking_blocks,
@@ -966,7 +989,7 @@ class AnthropicCompletion(BaseLLM):
                     and self.thinking
                     and self._previous_thinking_blocks
                     and not self._previous_thinking_tool_ids
-                    and (content if content else "") == self._previous_thinking_text
+                    and self._matches_cached_thinking_text(content if content else "")
                 ):
                     structured_content = cast(
                         list[dict[str, Any]],
