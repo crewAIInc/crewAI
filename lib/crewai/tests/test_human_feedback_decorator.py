@@ -12,7 +12,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.flow import Flow, human_feedback, listen, persist, start
@@ -987,6 +987,61 @@ class TestPreReviewKeepsOutputType:
             _run_learning_flow(
                 _Draft(title="Launch Day", body="We shipped."), llm, learn_strict=True
             )
+
+
+class _Handle:
+    """An object pydantic cannot serialize to JSON."""
+
+
+class _WithHandle(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    title: str
+    handle: _Handle
+
+
+class _Credentialed(BaseModel):
+    title: str
+    api_key: SecretStr
+    internal_id: str = Field(default="", exclude=True)
+
+
+class TestPreReviewKeepsWhatItCannotSee:
+    def test_unserializable_output_falls_back_to_the_original(self):
+        original = _WithHandle(title="Launch Day", handle=_Handle())
+        llm = _review_llm()
+
+        _, seen = _run_learning_flow(original, llm)
+
+        assert seen["shown"] is original
+        llm.call.assert_not_called()
+
+    def test_unserializable_output_raises_when_strict(self):
+        from pydantic_core import PydanticSerializationError
+
+        with pytest.raises(PydanticSerializationError, match="Unable to serialize"):
+            _run_learning_flow(
+                _WithHandle(title="Launch Day", handle=_Handle()),
+                _review_llm(),
+                learn_strict=True,
+            )
+
+    def test_secret_and_excluded_fields_keep_their_values(self):
+        original = _Credentialed(
+            title="Launch Day", api_key=SecretStr("sk-live-123"), internal_id="row-7"
+        )
+        # The LLM only ever sees the masked secret and no excluded field.
+        llm = _review_llm('{"title": "Launch day", "api_key": "**********"}')
+
+        _, seen = _run_learning_flow(original, llm)
+
+        reviewed = seen["shown"]
+        assert reviewed.title == "Launch day"
+        assert reviewed.api_key.get_secret_value() == "sk-live-123"
+        assert reviewed.internal_id == "row-7"
+        prompt = llm.call.call_args.args[0][1]["content"]
+        assert "sk-live-123" not in prompt
+        assert "row-7" not in prompt
 
 
 class TestDistillationParsesJsonStrings:

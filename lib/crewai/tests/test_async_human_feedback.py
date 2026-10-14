@@ -1691,6 +1691,50 @@ class TestLearnOnResume:
             ["Cite a source for every claim"], source="hitl"
         )
 
+    def test_retry_after_a_failed_completion_offers_the_lessons_again(self) -> None:
+        # Lessons are stored before the review is durably completed, which strict
+        # mode needs, so a retry after a later persistence failure stores them again
+        # and memory consolidation absorbs the repeat.
+        from crewai.flow.human_feedback import DistilledLessons
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def draft(self):
+                return "draft"
+
+        lesson = ["Cite a source for every claim"]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            flow = _pause(tmpdir, LearnFlow, "learn-resume-retry")
+            persistence = flow.persistence
+            with (
+                patch(
+                    "crewai.llm.LLM",
+                    return_value=_distill_llm(DistilledLessons(lessons=lesson)),
+                ),
+                patch.object(
+                    SQLiteFlowPersistence,
+                    "clear_pending_feedback",
+                    side_effect=RuntimeError("database is locked"),
+                ),
+                pytest.raises(RuntimeError, match="database is locked"),
+            ):
+                flow.resume("Always cite your sources")
+
+            flow.memory.remember_many.assert_called_once_with(lesson, source="hitl")
+            assert persistence.load_pending_feedback("learn-resume-retry") is not None
+
+            retried = LearnFlow.from_pending("learn-resume-retry", persistence)
+            retried.memory = MagicMock()
+            with patch(
+                "crewai.llm.LLM",
+                return_value=_distill_llm(DistilledLessons(lessons=lesson)),
+            ):
+                retried.resume("Always cite your sources")
+
+            retried.memory.remember_many.assert_called_once_with(lesson, source="hitl")
+            assert persistence.load_pending_feedback("learn-resume-retry") is None
+
     @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_reply_after_a_paused_kickoff_is_learned(self, mock_emit: MagicMock) -> None:
         from crewai.flow.human_feedback import DistilledLessons

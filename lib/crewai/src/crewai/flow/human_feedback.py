@@ -299,16 +299,16 @@ def _pre_review_with_lessons(
 ) -> Any:
     from crewai.hooks.dispatch import HookAborted
 
-    # Only text and Pydantic outputs can be rewritten without changing their type;
-    # anything else reaches the reviewer as the method returned it.
-    if isinstance(method_output, BaseModel):
-        rendered = method_output.model_dump_json()
-    elif isinstance(method_output, str):
-        rendered = method_output
-    else:
-        return method_output
-
     try:
+        # Only text and Pydantic outputs can be rewritten without changing their
+        # type; anything else reaches the reviewer as the method returned it.
+        if isinstance(method_output, BaseModel):
+            rendered = method_output.model_dump_json()
+        elif isinstance(method_output, str):
+            rendered = method_output
+        else:
+            return method_output
+
         mem = flow_instance.memory
         if mem is None:
             return method_output
@@ -332,9 +332,19 @@ def _pre_review_with_lessons(
         ]
         if isinstance(method_output, BaseModel):
             output_type = type(method_output)
-            return _as_structured(
+            reviewed_model = _as_structured(
                 llm_inst.call(messages, response_model=output_type), output_type
             )
+            # Secrets reach the LLM masked and excluded fields not at all, so a field
+            # the review left as it was keeps its original value.
+            before = method_output.model_dump(mode="json")
+            after = reviewed_model.model_dump(mode="json")
+            unchanged = {
+                name: getattr(method_output, name)
+                for name in output_type.model_fields
+                if before.get(name) == after.get(name)
+            }
+            return reviewed_model.model_copy(update=unchanged)
         if getattr(llm_inst, "supports_function_calling", lambda: False)():
             response = llm_inst.call(messages, response_model=PreReviewResult)
             return _as_structured(response, PreReviewResult).improved_output
