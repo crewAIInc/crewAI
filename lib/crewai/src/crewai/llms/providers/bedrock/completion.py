@@ -348,7 +348,6 @@ class BedrockCompletion(BaseLLM):
         additional-model fields that affect input tokenization. Generation-only
         settings, such as output limits and sampling, are excluded.
         """
-        fallback_count = super().get_input_tokens_count(messages, tools, response_model)
         formatted_messages, system_message = self._format_messages_for_converse(
             messages
         )
@@ -409,7 +408,7 @@ class BedrockCompletion(BaseLLM):
                 input={"converse": converse_input},
             )
         except ClientError:
-            return fallback_count
+            return super().get_input_tokens_count(messages, tools, response_model)
         return int(response["inputTokens"])
 
     def to_config_dict(self) -> dict[str, Any]:

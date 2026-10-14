@@ -789,7 +789,6 @@ class LLM(BaseLLM):
                 'LiteLLM is required for token estimation; install it with `uv add "crewai[litellm]"`.'
             )
 
-        fallback_count = super().get_input_tokens_count(messages, tools, response_model)
         params = self._prepare_completion_params(messages, tools)
         if response_model is not None:
             from instructor import Mode, handle_response_model
@@ -811,7 +810,7 @@ class LLM(BaseLLM):
                 )
             )
         except Exception:
-            return fallback_count
+            return super().get_input_tokens_count(messages, tools, response_model)
 
     def _handle_streaming_response(
         self,

@@ -86,6 +86,7 @@ class LLMCallBlockedError(ValueError):
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+logger = logging.getLogger(__name__)
 
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
@@ -385,6 +386,11 @@ class BaseLLM(BaseModel, ABC):
         Returns:
             A conservative estimate of the provider's input-token count.
         """
+        logger.warning(
+            "Using an approximate input token count for model %r: assuming one "
+            "token per four characters because a native token count is unavailable.",
+            self.model,
+        )
         from crewai.utilities.agent_utils import message_content_text
 
         if isinstance(messages, str):

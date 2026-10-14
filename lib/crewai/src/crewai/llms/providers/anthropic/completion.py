@@ -346,7 +346,6 @@ class AnthropicCompletion(BaseLLM):
         completion, while excluding generation-only parameters such as output
         limits and sampling settings.
         """
-        fallback_count = super().get_input_tokens_count(messages, tools, response_model)
         formatted_messages, system_message = self._format_messages_for_anthropic(
             messages
         )
@@ -416,7 +415,7 @@ class AnthropicCompletion(BaseLLM):
             response = count_tokens()
 
         if response is None:
-            return fallback_count
+            return super().get_input_tokens_count(messages, tools, response_model)
         return int(response.input_tokens)
 
     def to_config_dict(self) -> dict[str, Any]:

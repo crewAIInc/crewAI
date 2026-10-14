@@ -591,9 +591,8 @@ class OpenAICompletion(BaseLLM):
         users preflight an equivalent Responses payload without changing their
         subsequent generation request.
         """
-        fallback_count = super().get_input_tokens_count(messages, tools, response_model)
         if self._on_compatible_server():
-            return fallback_count
+            return super().get_input_tokens_count(messages, tools, response_model)
 
         formatted_messages = self._format_messages(messages, file_api="responses")
         response_params = self._prepare_responses_params(
@@ -618,7 +617,7 @@ class OpenAICompletion(BaseLLM):
                 **count_params
             )
         except Exception:
-            return fallback_count
+            return super().get_input_tokens_count(messages, tools, response_model)
         return int(response.input_tokens)
 
     def call(

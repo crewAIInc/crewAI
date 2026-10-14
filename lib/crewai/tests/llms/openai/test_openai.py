@@ -929,7 +929,7 @@ def test_openai_input_token_count_forwards_responses_payload():
     )
 
 
-def test_openai_input_token_count_falls_back_after_api_errors():
+def test_openai_input_token_count_falls_back_after_api_errors(caplog):
     """Count-endpoint errors fall back to the character estimate."""
     llm = OpenAICompletion(model="gpt-4o")
     client = MagicMock()
@@ -937,6 +937,8 @@ def test_openai_input_token_count_falls_back_after_api_errors():
 
     with patch.object(llm, "_get_sync_client", return_value=client):
         assert llm.get_input_tokens_count("Hello!") == 2
+
+    assert "assuming one token per four characters" in caplog.text
 
 
 @pytest.mark.vcr(record_mode="once")
