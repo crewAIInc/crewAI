@@ -949,6 +949,20 @@ def test_using_system_prompt():
     assert agent.agent_executor.prompt.get("system")
 
 
+def test_agent_passes_better_compaction_setting_to_executor():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        use_better_compaction=False,
+    )
+
+    agent.create_agent_executor()
+
+    assert agent.agent_executor is not None
+    assert agent.agent_executor.use_better_compaction is False
+
+
 def test_system_and_prompt_template():
     agent = Agent(
         role="{topic} specialist",

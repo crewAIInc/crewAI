@@ -154,7 +154,6 @@ class AgentExecutorState(BaseModel):
     is_finished: bool = Field(default=False)
     ask_for_human_input: bool = Field(default=False)
     use_native_tools: bool = Field(default=False)
-    use_file_system_tool: bool = Field(default=False)
     pending_tool_calls: list[Any] = Field(default_factory=list)
     plan: str | None = Field(default=None, description="Generated execution plan")
     plan_ready: bool = Field(
@@ -213,6 +212,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     original_tools: list[BaseTool] = Field(default_factory=list, exclude=True)
     function_calling_llm: BaseLLM | None = Field(default=None, exclude=True)
     respect_context_window: bool = Field(default=False, exclude=True)
+    use_better_compaction: bool = Field(default=True, exclude=True)
     request_within_rpm_limit: Callable[[], bool] | None = Field(
         default=None, exclude=True
     )
@@ -296,6 +296,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if getattr(original_tool, "result_as_answer", False):
             return result
 
+        if not self.use_better_compaction:
+            return result
+
         if self.llm is None:
             return result
         try:
@@ -323,7 +326,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._deferred_file_reader = reader
         reader.allow_file(str(artifact.file_path), artifact.relative_path.as_posix())
         self._deferred_file_aliases.append(artifact.relative_path.as_posix())
-        self.state.use_file_system_tool = True
 
         tool_args = json.dumps(
             execution_result.get("tool_args", {}), default=str, sort_keys=True
@@ -400,7 +402,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._deferred_file_reader = None
         self._deferred_file_reader_added_by_executor = False
         self._deferred_file_aliases.clear()
-        self.state.use_file_system_tool = False
 
     def _downgrade_to_text_tool_calling(self) -> None:
         """Switch a running execution from native tools to text tool calls."""
@@ -3084,7 +3085,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
-            self.state.use_file_system_tool = False
             self.state.pending_tool_calls = []
             self.state.plan = None
             self.state.plan_ready = False

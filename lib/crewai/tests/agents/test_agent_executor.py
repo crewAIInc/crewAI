@@ -2454,7 +2454,30 @@ class TestDeferredNativeToolResults:
         assert context_result == result
         assert executor._tool_result_artifact_store is None
         assert executor.original_tools == []
-        assert executor.state.use_file_system_tool is False
+
+    def test_result_stays_inline_when_better_compaction_is_disabled(self):
+        llm = Mock()
+        executor = _build_executor(
+            llm=llm,
+            original_tools=[],
+            use_better_compaction=False,
+        )
+        result = "oversized tool result"
+
+        context_result = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": result,
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        assert context_result == result
+        assert executor._tool_result_artifact_store is None
+        assert executor.original_tools == []
+        llm.is_tool_result_overflowing_threshold.assert_not_called()
 
     def test_overflowed_result_is_referenced_and_readable_through_file_reader(self):
         from crewai_tools import FileReadTool
@@ -2505,7 +2528,6 @@ class TestDeferredNativeToolResults:
             assert reader.run(file_path=alias, start_line=11, line_count=2) == (
                 "line 10\nline 11\n"
             )
-            assert executor.state.use_file_system_tool is True
         finally:
             if executor._tool_result_artifact_store is not None:
                 executor._tool_result_artifact_store.cleanup()
