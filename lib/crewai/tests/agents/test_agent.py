@@ -2685,7 +2685,7 @@ def test_get_platform_tools_warns_when_apps_resolve_to_zero_tools(monkeypatch):
 def test_get_platform_tools_warns_when_no_action_matches_a_selector(monkeypatch):
     # Runs the real CrewaiPlatformTools factory (it returns a plain list) against an
     # integrations API that knows no action by this name.
-    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
     response = MagicMock()
     response.json.return_value = {"actions": {}}
     agent = Agent(
@@ -2709,18 +2709,18 @@ def test_get_platform_tools_warns_when_no_action_matches_a_selector(monkeypatch)
 
 
 def test_get_platform_tools_warns_when_token_is_missing(monkeypatch, capsys):
-    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", raising=False)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
     agent = Agent(
         role="No Token Agent", goal="g", backstory="b", apps=["gmail"], verbose=True
     )
 
     with pytest.warns(
-        UserWarning, match="CREWAI_PLATFORM_INTEGRATION_TOKEN is set"
+        UserWarning, match="CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set"
     ):
         result = agent.get_platform_tools(agent.apps)
 
     assert result == []
-    assert "No Platform integration token found" in capsys.readouterr().out
+    assert "No Enterprise Action Auth Token found" in capsys.readouterr().out
 
 
 def test_get_platform_tools_quiet_when_tools_resolve(monkeypatch):
