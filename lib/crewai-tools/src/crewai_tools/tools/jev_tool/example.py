@@ -15,7 +15,7 @@ class SupportTicketRoutingFlow(Flow):
 
     @start()
     def evaluate_ticket(self) -> dict[str, Any]:
-        # Synthetic Jev Choice answer (no live API call or credentials required)
+        """Generate a synthetic Jev Choice decision for the incoming ticket."""
         return {
             "selected_choice": "REFUND_REQUEST",
             "confidence": 0.88,
@@ -23,12 +23,11 @@ class SupportTicketRoutingFlow(Flow):
 
     @router(evaluate_ticket)
     def route_ticket(self) -> str:
-        # Extract decision from previous step output in state
+        """Route ticket based on Jev Choice confidence thresholding."""
         decision = self.state.get("evaluate_ticket", {})
         selected_choice = decision.get("selected_choice")
         confidence = decision.get("confidence")
 
-        # Map to flow route labels using confidence threshold
         return select_jev_route(
             choice=selected_choice,
             confidence=confidence,
@@ -39,14 +38,17 @@ class SupportTicketRoutingFlow(Flow):
 
     @listen("REFUND_REQUEST")
     def process_refund(self) -> str:
+        """Process refund request for high-confidence automated refund decisions."""
         return "Processed via automated refund pathway"
 
     @listen("TECH_SUPPORT")
     def process_tech_support(self) -> str:
+        """Process technical support ticket for technical inquiry decisions."""
         return "Routed to tier-2 engineering"
 
     @listen("GENERAL_INQUIRY")
     def process_general_inquiry(self) -> str:
+        """Handle fallback route for low-confidence or ambiguous classifications."""
         return "Routed to general triage queue (fallback)"
 
 
