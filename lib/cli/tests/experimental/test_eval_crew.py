@@ -581,6 +581,31 @@ def test_a_rate_limit_that_never_lifts_ends_the_wait_and_a_passing_one_does_not(
     assert amp.calls.count(("get", "ev-1")) == 30  # every 429 ridden out: the 200 between them reset the count
 
 
+def test_the_rate_limit_count_never_overruns_and_any_other_answer_restarts_it(project, monkeypatch, capsys):
+    """The last wait is what is left of RATE_LIMITED_FOR_AT_MOST_SECONDS, so
+    the wait never runs past it; a 5xx between 429s is an answer too and
+    restarts the count."""
+    directory, _ = project
+    slept: list[float] = []
+    monkeypatch.setattr(eval_module.time, "sleep", slept.append)
+    long_wait = httpx.Response(429, headers={"Retry-After": "120"}, json={"error": "rate_limit_exceeded"})
+    blip = httpx.Response(503, json={"error": "service_unavailable", "message": "down for a moment"})
+
+    record_last_run(directory)
+    install(monkeypatch, FakeAMP(statuses=[long_wait] * 20))
+    with pytest.raises(SystemExit):
+        eval_module.eval_crew()
+    capsys.readouterr()
+    assert slept == [120.0] * 7 + [60.0]  # 840 s, then the 60 s left of the fifteen minutes
+    assert sum(slept) == eval_module.RATE_LIMITED_FOR_AT_MOST_SECONDS
+
+    slept.clear()
+    record_last_run(directory)
+    install(monkeypatch, FakeAMP(statuses=[long_wait] * 7 + [blip] + [long_wait] * 7 + [done()]))
+    eval_module.eval_crew()
+    assert "Goal gate: PASSED" in capsys.readouterr().out  # the 503 restarted the count: 840 s, then 840 s again
+
+
 @pytest.mark.parametrize(
     ("header", "wait"),
     [

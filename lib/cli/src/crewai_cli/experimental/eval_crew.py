@@ -837,6 +837,10 @@ def _wait(
                 ) from error
             time.sleep(POLL_SECONDS)
             continue
+        if response.status_code != 429:
+            limited_for = (
+                0.0  # AMP answered otherwise: the next limit is counted afresh
+            )
         if response.status_code >= 500:
             misses += 1
             if misses >= POLL_RETRIES:
@@ -853,11 +857,13 @@ def _wait(
                     f"stopped waiting; the evaluation keeps running{where}.",
                     reason=_refusal_reason(response),
                 )
-            wait = _retry_after(response)
+            # never past the limit: the last wait is what is left of it
+            wait = min(
+                _retry_after(response), RATE_LIMITED_FOR_AT_MOST_SECONDS - limited_for
+            )
             limited_for += wait
             time.sleep(wait)
             continue
-        limited_for = 0.0
         if response.status_code != 200:
             raise EvaluationStoppedError(
                 _refusal_message(response, subject),
