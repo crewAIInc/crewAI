@@ -53,6 +53,7 @@ Pick the simplest action that does the job.
 {% endif %}
 {% if include_hitl %}
 - Use `human_feedback` when a method needs a human checkpoint.
+- After a `human_feedback` method, read the review as `outputs.method_name.feedback` and `outputs.method_name.outcome`, and the method's own result as `outputs.method_name.output` (for example `${outputs.method_name.output.raw}`). This holds with or without `emit`.
 {% endif %}
 {% if include_script_action %}
 - Use `call: script` only for trusted inline Python. Scripts are not sandboxed.

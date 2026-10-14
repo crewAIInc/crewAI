@@ -328,6 +328,10 @@ def _print_flow_post_tui_summary(app: Any) -> None:
             )
         )
 
+    from crewai_cli.run_crew import _print_evaluation_line
+
+    _print_evaluation_line(app, console, crewai_teal)
+
 
 def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
     """Resolve kickoff inputs from the flow's state schema.
