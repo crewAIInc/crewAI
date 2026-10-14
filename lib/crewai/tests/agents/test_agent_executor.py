@@ -2437,7 +2437,7 @@ class TestDeferredNativeToolResults:
         if overflow_result in (NotImplementedError, RuntimeError):
             llm.is_tool_result_overflowing_threshold.side_effect = overflow_result
         else:
-            llm.is_tool_result_overflowing_threshold.return_value = overflow_result
+            llm.is_tool_result_overflowing_threshold.return_value = (False, 10)
         executor = _build_executor(llm=llm, original_tools=[])
         result = "small tool result"
 
@@ -2485,7 +2485,7 @@ class TestDeferredNativeToolResults:
         )
 
         llm = Mock()
-        llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 48)
         llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(
             llm=llm,
@@ -2519,8 +2519,8 @@ class TestDeferredNativeToolResults:
 
             assert "search_docs" in reference
             assert '"query": "[unclosed"' in reference
-            assert "It contains 12 lines and is estimated at 22 tokens" in reference
-            assert "about 1.8 tokens per line" in reference
+            assert "It contains 12 lines and is estimated at 48 tokens" in reference
+            assert "about 4.0 tokens per line" in reference
             reader_name = next(
                 name
                 for name, tool in executor._tool_name_mapping.items()
@@ -2547,7 +2547,7 @@ class TestDeferredNativeToolResults:
         )
 
         llm = Mock()
-        llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
         llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(llm=llm, original_tools=[])
         executor._tool_result_artifact_store = None
@@ -2602,7 +2602,7 @@ class TestDeferredNativeToolResults:
         (local_files / "notes.md").write_text("local content")
         reader = FileReadTool(base_dir=str(local_files))
         llm = Mock()
-        llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
         llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(llm=llm, original_tools=[reader])
         executor._tool_result_artifact_store = None
@@ -2645,7 +2645,7 @@ class TestDeferredNativeToolResults:
         (local_files / "notes.md").write_text("local content")
         reader = FileReadTool(base_dir=str(local_files))
         llm = Mock()
-        llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
         llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(llm=llm, original_tools=[reader])
 
@@ -2683,7 +2683,7 @@ class TestDeferredNativeToolResults:
         )
 
         llm = Mock()
-        llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
         llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(
             agent=SimpleNamespace(verbose=False),
@@ -2732,7 +2732,7 @@ class TestDeferredNativeToolResults:
         )
 
         llm = Mock()
-        llm.is_tool_result_overflowing_threshold.return_value = True
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
         llm.get_context_window_size.return_value = 10_000
         executor = _build_executor(
             agent=SimpleNamespace(verbose=False),

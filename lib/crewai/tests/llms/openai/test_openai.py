@@ -955,7 +955,10 @@ def test_openai_tool_result_overflow_threshold_uses_input_token_count(
         patch.object(llm, "get_input_tokens_count", return_value=input_tokens),
         patch.object(llm, "get_context_window_size", return_value=1_000),
     ):
-        assert llm.is_tool_result_overflowing_threshold("tool output") is expected
+        assert llm.is_tool_result_overflowing_threshold("tool output") == (
+            expected,
+            input_tokens,
+        )
 
 
 @pytest.mark.vcr(record_mode="once")

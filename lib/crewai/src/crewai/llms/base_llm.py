@@ -402,25 +402,27 @@ class BaseLLM(BaseModel, ABC):
             )
         return (character_count + 3) // 4
 
-    def is_tool_result_overflowing_threshold(self, tool_result: str) -> bool:
+    def is_tool_result_overflowing_threshold(
+        self, tool_result: str
+    ) -> tuple[bool, int]:
         """Check whether a tool result exceeds the deferred-output threshold.
 
-        The threshold is 25% of the model's usable context window. Providers
-        without input-token estimation support retain the ``NotImplementedError``
-        from :meth:`get_input_tokens_count`.
+        The threshold is 25% of the model's usable context window. The count
+        comes from one call to :meth:`get_input_tokens_count`, which uses the
+        provider's estimator or the four-characters-per-token fallback.
 
         Args:
             tool_result: The formatted text returned by a tool.
 
         Returns:
-            ``True`` when the result alone uses more than 25% of the usable
-            context window.
+            Whether the result alone uses more than 25% of the usable context
+            window, and the input-token count from that same check.
         """
         tool_result_tokens = self.get_input_tokens_count(tool_result)
         threshold = (
             self.get_context_window_size() * TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD
         )
-        return tool_result_tokens > threshold
+        return tool_result_tokens > threshold, tool_result_tokens
 
     @abstractmethod
     def call(

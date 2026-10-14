@@ -305,7 +305,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if self.llm is None:
             return result
         try:
-            should_defer = self.llm.is_tool_result_overflowing_threshold(result)
+            should_defer, token_count = self.llm.is_tool_result_overflowing_threshold(
+                result
+            )
         except Exception:
             return result
         if not should_defer:
@@ -314,7 +316,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if self._tool_result_artifact_store is None:
             self._tool_result_artifact_store = ToolResultArtifactStore()
 
-        artifact = self._tool_result_artifact_store.store(result)
+        artifact = self._tool_result_artifact_store.store(
+            result, estimated_token_count=token_count
+        )
 
         reader = next(
             (

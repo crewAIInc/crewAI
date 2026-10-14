@@ -51,8 +51,13 @@ class ToolResultArtifactStore:
         self._directory = Path(self._temporary_directory.name)
         self._artifact_ids: set[str] = set()
 
-    def store(self, content: str) -> ToolResultArtifact:
-        """Persist content and return its internal binding details."""
+    def store(self, content: str, estimated_token_count: int) -> ToolResultArtifact:
+        """Persist content and return its internal binding details.
+
+        Args:
+            content: Tool result text to store.
+            estimated_token_count: Token count already produced for this content.
+        """
         artifact_id = f"tool-result-{token_urlsafe(16)}"
         artifact_directory = self._directory / artifact_id
         artifact_directory.mkdir(mode=0o700)
@@ -72,7 +77,7 @@ class ToolResultArtifactStore:
             relative_path=path.relative_to(self._directory),
             file_path=path,
             line_count=line_count,
-            estimated_token_count=(len(content) + 3) // 4,
+            estimated_token_count=estimated_token_count,
             preview=preview,
             preview_truncated=preview_truncated,
         )
