@@ -1514,6 +1514,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 else result
             )
 
+            feedback_definition = self._definition.methods[
+                context.method_name
+            ].human_feedback
+            if feedback_definition is not None:
+                # A reply that resumes a paused flow (e.g. email review on AMP)
+                # teaches the same lessons as one that arrives during the run.
+                await self._store_feedback_lessons(
+                    feedback_definition,
+                    context.method_name,
+                    context.method_output,
+                    feedback,
+                    context.llm,
+                )
+
             self._completed_methods.add(FlowMethodName(context.method_name))
 
             await asyncio.to_thread(
@@ -3671,17 +3685,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             metadata=metadata or {},
         )
 
-        if learn and raw_feedback.strip():
-            await asyncio.to_thread(
-                _distill_and_store_lessons,
-                self,
-                method_name,
-                method_output,
-                raw_feedback,
-                llm=llm_instance,
-                learn_source=feedback_definition.learn_source,
-                learn_strict=feedback_definition.learn_strict,
-            )
+        await self._store_feedback_lessons(
+            feedback_definition, method_name, method_output, raw_feedback, llm_instance
+        )
 
         if emit:
             # Stash the feedback result: the collapsed outcome routes listeners,
@@ -3690,6 +3696,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._human_feedback_method_outputs[method_name] = result
             return result.outcome
         return result
+
+    async def _store_feedback_lessons(
+        self,
+        feedback_definition: FlowHumanFeedbackDefinition,
+        method_name: str,
+        method_output: Any,
+        raw_feedback: str,
+        llm: Any,
+    ) -> None:
+        if not (
+            feedback_definition.learn
+            and self.memory is not None
+            and raw_feedback.strip()
+        ):
+            return
+        await asyncio.to_thread(
+            _distill_and_store_lessons,
+            self,
+            method_name,
+            method_output,
+            raw_feedback,
+            llm=llm,
+            learn_source=feedback_definition.learn_source,
+            learn_strict=feedback_definition.learn_strict,
+        )
 
     async def _finalize_human_feedback(
         self,
