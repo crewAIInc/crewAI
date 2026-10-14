@@ -9,6 +9,7 @@ def test_store_returns_opaque_identifier_and_preserves_content(tmp_path: Path) -
     artifact = store.store("first line\nsecond line")
 
     assert artifact.artifact_id.startswith("tool-result-")
+    assert artifact.directory == store.directory
     assert artifact.relative_path == Path(artifact.artifact_id) / "result.md"
     assert artifact.file_path.name == "result.md"
     assert artifact.file_path.read_text(encoding="utf-8") == "first line\nsecond line"

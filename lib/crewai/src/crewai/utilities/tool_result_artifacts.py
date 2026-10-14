@@ -18,6 +18,7 @@ class ToolResultArtifact:
     """An internally-addressable deferred tool result."""
 
     artifact_id: str
+    directory: Path
     relative_path: Path
     file_path: Path
     line_count: int
@@ -67,6 +68,7 @@ class ToolResultArtifactStore:
             preview_truncated = True
         return ToolResultArtifact(
             artifact_id=artifact_id,
+            directory=self._directory,
             relative_path=path.relative_to(self._directory),
             file_path=path,
             line_count=line_count,
