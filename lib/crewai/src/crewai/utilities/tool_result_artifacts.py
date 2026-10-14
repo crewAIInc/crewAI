@@ -19,6 +19,8 @@ class ToolResultArtifact:
     artifact_id: str
     relative_path: Path
     file_path: Path
+    line_count: int
+    estimated_token_count: int
     preview: str
     preview_truncated: bool
 
@@ -56,6 +58,7 @@ class ToolResultArtifactStore:
         path.write_text(content, encoding="utf-8")
         self._artifact_ids.add(artifact_id)
         preview_lines = content.splitlines(keepends=True)
+        line_count = len(preview_lines)
         preview = "".join(preview_lines[:TOOL_RESULT_PREVIEW_LINE_COUNT])
         preview_truncated = len(preview_lines) > TOOL_RESULT_PREVIEW_LINE_COUNT
         if len(preview) > TOOL_RESULT_PREVIEW_MAX_CHARS:
@@ -65,6 +68,8 @@ class ToolResultArtifactStore:
             artifact_id=artifact_id,
             relative_path=path.relative_to(self._directory),
             file_path=path,
+            line_count=line_count,
+            estimated_token_count=(len(content) + 3) // 4,
             preview=preview,
             preview_truncated=preview_truncated,
         )

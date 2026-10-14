@@ -331,11 +331,19 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if artifact.preview_truncated
             else ""
         )
+        average_tokens_per_line = (
+            artifact.estimated_token_count / artifact.line_count
+            if artifact.line_count
+            else 0
+        )
         return (
             f"The result of `{execution_result['func_name']}` with arguments "
             f"`{tool_args}` was stored as temporary artifact "
             f"`{artifact.artifact_id}` at relative file path "
-            f"`{artifact.relative_path.as_posix()}`.\n\nPreview of the first "
+            f"`{artifact.relative_path.as_posix()}`. It contains "
+            f"{artifact.line_count} lines and is estimated at "
+            f"{artifact.estimated_token_count} tokens (about "
+            f"{average_tokens_per_line:.1f} tokens per line).\n\nPreview of the first "
             f"{TOOL_RESULT_PREVIEW_LINE_COUNT} lines:\n---\n{artifact.preview}"
             f"{preview_suffix}\n---\n\nUse FileReadTool to read it in bounded sections, for "
             "example with `start_line=1` and `line_count=50`."
