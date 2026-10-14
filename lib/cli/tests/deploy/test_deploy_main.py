@@ -457,11 +457,17 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.crew_status_by_uuid.return_value = self._status_response(zip_deployment=False)
         held = MagicMock()
         held.status_code = 409
+        sentence = (
+            "A models comparison is running on this deployment (started 05:03 UTC): redeploying now "
+            "stops it, and the runs under way are lost. Wait for it to finish, or redeploy anyway from the "
+            "deployment's page, or with `crewai deploy push --force` (a crewAI CLI newer than 1.15.28)."
+        )
+        # AMP's 409: the sentence in `error` too, for CLIs that print only that
         held.json.return_value = {
-            "error": "comparison_running",
-            "message": "A models comparison is running on this deployment (started 05:03 UTC): redeploying now "
-            "stops it, and the runs under way are lost. Wait for it to finish, or redeploy anyway with "
-            "`crewai deploy push --force`.",
+            "error": sentence,
+            "code": "comparison_running",
+            "message": sentence,
+            "evaluation": {"id": "a78a325f-9e04-4962-94b3-1280003333e3", "started_at": "2026-10-14T05:03:00Z"},
         }
         self.mock_client.deploy_by_uuid.return_value = held
 
@@ -474,6 +480,7 @@ class TestDeployCommand(unittest.TestCase):
         self.assertIn("`crewai deploy push --force`", printed)
         self.assertIn("Nothing was deployed.", printed)
         self.assertNotIn("comparison_running", printed)
+        self.assertNotIn("Request to Enterprise API failed", printed)
         mock_display.assert_not_called()
 
         ok = MagicMock()
@@ -496,7 +503,8 @@ class TestDeployCommand(unittest.TestCase):
         held = MagicMock()
         held.status_code = 409
         held.json.return_value = {
-            "error": "comparison_running",
+            "error": "A comparison [bold]running[/] on [crew] [/unmatched] — redeploy with --force.",
+            "code": "comparison_running",
             "message": "A comparison [bold]running[/] on [crew] [/unmatched] — redeploy with --force.",
         }
         self.mock_client.deploy_by_uuid.return_value = held

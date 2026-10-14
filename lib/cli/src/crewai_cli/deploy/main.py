@@ -193,14 +193,17 @@ def _response_failure_reason(response: httpx.Response) -> DeployFailureReason | 
 def _refuse_on_running_comparison(response: httpx.Response) -> None:
     """AMP held the push back because a models comparison is running on the
     deployment (a redeploy would stop it and lose its runs): say so in AMP's
-    own sentence, which names `--force`, and exit 1 — nothing was deployed."""
+    own sentence, which names `--force`, and exit 1 — nothing was deployed.
+
+    AMP names the refusal in `code`; its `error` carries the sentence, which is
+    what a CLI without this function prints."""
     if response.status_code != 409:
         return
     try:
         body = response.json()
     except ValueError:
         return
-    if not isinstance(body, dict) or body.get("error") != "comparison_running":
+    if not isinstance(body, dict) or body.get("code") != "comparison_running":
         return
     # AMP's words, printed as they are: Rich markup in them (a bracketed
     # word, a stray closing tag) must neither vanish nor raise.
