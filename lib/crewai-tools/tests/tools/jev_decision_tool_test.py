@@ -82,7 +82,10 @@ def test_run_returns_choice_probabilities_and_confidence(
     question = client.system_one.call_args.kwargs["questions"]["decision"]
     assert isinstance(question, FakeChoice)
     assert question.instructions == "Which team should handle this?"
-    assert question.criteria["billing"] == "Payment or subscription problems"
+    assert question.criteria == {
+        "billing": "Payment or subscription problems",
+        "technical": "Bugs or integrations",
+    }
 
 
 def test_run_reports_missing_choice_answer(monkeypatch: pytest.MonkeyPatch) -> None:
