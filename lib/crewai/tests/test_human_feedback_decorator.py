@@ -1000,22 +1000,32 @@ class _WithHandle(BaseModel):
     handle: _Handle
 
 
-class _Credentialed(BaseModel):
-    title: str
-    api_key: SecretStr
-    internal_id: str = Field(default="", exclude=True)
-
-
 class _Account(BaseModel):
     name: str
     token: SecretStr
+
+
+class _Tagged(BaseModel):
+    title: str
     row_id: str = Field(default="", exclude=True)
 
 
 class _Report(BaseModel):
     title: str
-    owner: _Account
-    accounts: list[_Account]
+    owner: _Account | None = None
+    accounts: list[_Account] = []
+    by_name: dict[str, _Account] = {}
+    tagged: list[_Tagged] = []
+
+
+class _Aliased(BaseModel):
+    model_config = ConfigDict(serialize_by_alias=True, validate_by_name=True)
+
+    title: str = Field(alias="headline")
+    body: str
+
+
+_ACCOUNT = _Account(name="ana", token=SecretStr("tok-123"))
 
 
 class TestPreReviewKeepsWhatItCannotSee:
@@ -1038,55 +1048,46 @@ class TestPreReviewKeepsWhatItCannotSee:
                 learn_strict=True,
             )
 
-    def test_secret_and_excluded_fields_keep_their_values(self):
-        original = _Credentialed(
-            title="Launch Day", api_key=SecretStr("sk-live-123"), internal_id="row-7"
+    @pytest.mark.parametrize(
+        "original",
+        [
+            _Account(name="ana", token=SecretStr("tok-123")),
+            _Tagged(title="Launch Day", row_id="r1"),
+            _Report(title="Q3", owner=_ACCOUNT),
+            _Report(title="Q3", accounts=[_ACCOUNT]),
+            _Report(title="Q3", by_name={"ana": _ACCOUNT}),
+            _Report(title="Q3", tagged=[_Tagged(title="t", row_id="r1")]),
+        ],
+        ids=["secret", "excluded", "nested", "list", "dict", "list-excluded"],
+    )
+    def test_model_with_hidden_values_reaches_the_reviewer_unchanged(self, original):
+        # The LLM would see secrets masked and excluded fields not at all, so a
+        # model rebuilt from its review would lose them.
+        llm = _review_llm()
+
+        flow, seen = _run_learning_flow(original, llm)
+
+        assert seen["shown"] is original
+        assert flow.last_human_feedback.output is original
+        flow.memory.recall.assert_not_called()
+        llm.call.assert_not_called()
+
+    def test_model_without_hidden_values_is_still_reviewed(self):
+        llm = _review_llm('{"title": "Q3 report", "owner": null}')
+
+        _, seen = _run_learning_flow(_Report(title="Q3"), llm)
+
+        assert seen["shown"] == _Report(title="Q3 report")
+
+    def test_edits_to_aliased_fields_are_kept(self):
+        llm = _review_llm('{"headline": "Launch day", "body": "We shipped."}')
+
+        _, seen = _run_learning_flow(
+            _Aliased(title="Launch Day", body="We shipped."), llm
         )
-        # The LLM only ever sees the masked secret and no excluded field.
-        llm = _review_llm('{"title": "Launch day", "api_key": "**********"}')
 
-        _, seen = _run_learning_flow(original, llm)
-
-        reviewed = seen["shown"]
-        assert reviewed.title == "Launch day"
-        assert reviewed.api_key.get_secret_value() == "sk-live-123"
-        assert reviewed.internal_id == "row-7"
-        prompt = llm.call.call_args.args[0][1]["content"]
-        assert "sk-live-123" not in prompt
-        assert "row-7" not in prompt
-
-
-    def test_nested_hidden_values_survive_edits_to_sibling_fields(self):
-        original = _Report(
-            title="Q3",
-            owner=_Account(name="ana", token=SecretStr("tok-owner"), row_id="r1"),
-            accounts=[
-                _Account(name="bo", token=SecretStr("tok-bo"), row_id="r2"),
-                _Account(name="cy", token=SecretStr("tok-cy"), row_id="r3"),
-            ],
-        )
-        # The review renames the owner and the second account, editing siblings of
-        # the masked tokens and the excluded row ids it never saw.
-        llm = _review_llm(
-            '{"title": "Q3 report", '
-            '"owner": {"name": "Ana", "token": "**********"}, '
-            '"accounts": [{"name": "bo", "token": "**********"}, '
-            '{"name": "Cy", "token": "**********"}]}'
-        )
-
-        _, seen = _run_learning_flow(original, llm)
-
-        reviewed = seen["shown"]
-        assert reviewed.title == "Q3 report"
-        assert reviewed.owner.name == "Ana"
-        assert reviewed.owner.token.get_secret_value() == "tok-owner"
-        assert reviewed.owner.row_id == "r1"
-        assert [a.name for a in reviewed.accounts] == ["bo", "Cy"]
-        assert [a.token.get_secret_value() for a in reviewed.accounts] == [
-            "tok-bo",
-            "tok-cy",
-        ]
-        assert [a.row_id for a in reviewed.accounts] == ["r2", "r3"]
+        assert seen["shown"].title == "Launch day"
+        assert '"headline":"Launch Day"' in llm.call.call_args.args[0][1]["content"]
 
 
 class TestDistillationParsesJsonStrings:

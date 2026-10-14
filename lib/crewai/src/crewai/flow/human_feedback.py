@@ -64,7 +64,7 @@ from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Secret, SecretBytes, SecretStr
 
 
 if TYPE_CHECKING:
@@ -288,26 +288,19 @@ def _as_structured(response: Any, model_type: type[_StructuredT]) -> _Structured
     return model_type.model_validate(response)
 
 
-def _keep_unreviewed(original: BaseModel, reviewed: BaseModel) -> BaseModel:
-    # Secrets reach the LLM masked and excluded fields not at all, so anything the
-    # review left as it was keeps its original value, in nested models and lists too.
-    before = original.model_dump(mode="json")
-    after = reviewed.model_dump(mode="json")
-    update: dict[str, Any] = {}
-    for name in type(original).model_fields:
-        old, new = getattr(original, name), getattr(reviewed, name)
-        if before.get(name) == after.get(name):
-            update[name] = old
-        elif isinstance(old, BaseModel) and type(new) is type(old):
-            update[name] = _keep_unreviewed(old, new)
-        elif isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
-            update[name] = [
-                _keep_unreviewed(o, n)
-                if isinstance(o, BaseModel) and type(n) is type(o)
-                else n
-                for o, n in zip(old, new, strict=True)
-            ]
-    return reviewed.model_copy(update=update)
+def _has_hidden_values(value: Any) -> bool:
+    if isinstance(value, (Secret, SecretStr, SecretBytes)):
+        return True
+    if isinstance(value, BaseModel):
+        return any(
+            info.exclude or _has_hidden_values(getattr(value, name))
+            for name, info in type(value).model_fields.items()
+        )
+    if isinstance(value, dict):
+        return any(_has_hidden_values(item) for item in value.values())
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return any(_has_hidden_values(item) for item in value)
+    return False
 
 
 def _pre_review_with_lessons(
@@ -323,8 +316,12 @@ def _pre_review_with_lessons(
 
     try:
         # Only text and Pydantic outputs can be rewritten without changing their
-        # type; anything else reaches the reviewer as the method returned it.
+        # type, and a model only when the LLM sees all of it: secrets are masked
+        # and excluded fields dropped, so rebuilding from the review would lose
+        # them. Anything else reaches the reviewer as the method returned it.
         if isinstance(method_output, BaseModel):
+            if _has_hidden_values(method_output):
+                return method_output
             rendered = method_output.model_dump_json()
         elif isinstance(method_output, str):
             rendered = method_output
@@ -354,10 +351,9 @@ def _pre_review_with_lessons(
         ]
         if isinstance(method_output, BaseModel):
             output_type = type(method_output)
-            reviewed_model = _as_structured(
+            return _as_structured(
                 llm_inst.call(messages, response_model=output_type), output_type
             )
-            return _keep_unreviewed(method_output, reviewed_model)
         if getattr(llm_inst, "supports_function_calling", lambda: False)():
             response = llm_inst.call(messages, response_model=PreReviewResult)
             return _as_structured(response, PreReviewResult).improved_output
