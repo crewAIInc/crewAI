@@ -1531,9 +1531,8 @@ def test_nested_agent_execution_preserves_parent_tool_results():
 
     # Manager starts a task and accumulates a tool result
     task1 = Task(description="Manager Task", expected_output="Manager Output", agent=manager)
-    manager._prepare_task_execution(task1, context=None)
-
     with tool_results_collector() as manager_results:
+        manager._prepare_task_execution(task1, context=None)
         manager_results.append({
             "tool_name": "amount_tool",
             "result": "Manager Report: 100",
@@ -1542,8 +1541,8 @@ def test_nested_agent_execution_preserves_parent_tool_results():
 
         # Coworker executes a delegated task within the same thread/context
         task2 = Task(description="Delegated Task", expected_output="Coworker Output", agent=coworker)
-        coworker._prepare_task_execution(task2, context=None)
         with tool_results_collector() as coworker_results:
+            coworker._prepare_task_execution(task2, context=None)
             assert coworker_results is not manager_results
             coworker_results.append({
                 "tool_name": "amount_tool",
