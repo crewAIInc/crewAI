@@ -196,14 +196,18 @@ def _refuse_on_running_comparison(response: httpx.Response) -> None:
     own sentence, which names `--force`, and exit 1 — nothing was deployed.
 
     AMP names the refusal in `code`; its `error` carries the sentence, which is
-    what a CLI without this function prints."""
+    what a CLI without this function prints. An AMP from before that change
+    named it in `error` and is still recognised."""
     if response.status_code != 409:
         return
     try:
         body = response.json()
     except ValueError:
         return
-    if not isinstance(body, dict) or body.get("code") != "comparison_running":
+    if not isinstance(body, dict) or "comparison_running" not in (
+        body.get("code"),
+        body.get("error"),
+    ):
         return
     # AMP's words, printed as they are: Rich markup in them (a bracketed
     # word, a stray closing tag) must neither vanish nor raise.
