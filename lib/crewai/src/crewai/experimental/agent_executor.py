@@ -332,6 +332,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._deferred_file_reader = reader
         reader.allow_file(str(artifact.file_path), artifact.relative_path.as_posix())
         self._deferred_file_aliases.append(artifact.relative_path.as_posix())
+        reader_name = next(
+            name for name, tool in self._tool_name_mapping.items() if tool is reader
+        )
 
         tool_args = json.dumps(
             execution_result.get("tool_args", {}), default=str, sort_keys=True
@@ -366,7 +369,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             f"{artifact.estimated_token_count} tokens (about "
             f"{average_tokens_per_line:.1f} tokens per line).\n\nPreview of the first "
             f"{TOOL_RESULT_PREVIEW_LINE_COUNT} lines:\n---\n{artifact.preview}"
-            f"{preview_suffix}\n---\n\nUse FileReadTool to read it in bounded sections. For a "
+            f"{preview_suffix}\n---\n\nUse `{reader_name}` to read it in bounded sections. For a "
             f"roughly {TOOL_RESULT_READ_TARGET_TOKENS:,}-token read, request about "
             f"{recommended_line_count} lines, for example with `start_line=1` and "
             f"`line_count={recommended_line_count}`."
