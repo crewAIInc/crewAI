@@ -487,6 +487,29 @@ class TestDeployCommand(unittest.TestCase):
 
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_amps_hold_back_sentence_is_printed_literally_whatever_brackets_it_has(
+        self, mock_display, mock_repository
+    ):
+        mock_repository.return_value.origin_url.return_value = "https://github.com/test/repo.git"
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = False
+        self.mock_client.crew_status_by_uuid.return_value = self._status_response(zip_deployment=False)
+        held = MagicMock()
+        held.status_code = 409
+        held.json.return_value = {
+            "error": "comparison_running",
+            "message": "A comparison [bold]running[/] on [crew] [/unmatched] — redeploy with --force.",
+        }
+        self.mock_client.deploy_by_uuid.return_value = held
+
+        with patch("sys.stdout", new=StringIO()) as out, self.assertRaises(SystemExit):
+            self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
+
+        printed = " ".join(out.getvalue().split())
+        self.assertIn("A comparison [bold]running[/] on [crew] [/unmatched] — redeploy with --force.", printed)
+        self.assertIn("Nothing was deployed.", printed)
+
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
     def test_deploy_with_project_name(self, mock_display, mock_repository):
         mock_repository.return_value.origin_url.return_value = (
             "https://github.com/test/repo.git"

@@ -202,11 +202,14 @@ def _refuse_on_running_comparison(response: httpx.Response) -> None:
         return
     if not isinstance(body, dict) or body.get("error") != "comparison_running":
         return
+    # AMP's words, printed as they are: Rich markup in them (a bracketed
+    # word, a stray closing tag) must neither vanish nor raise.
     console.print(
         str(
             body.get("message") or "A models comparison is running on this deployment."
         ),
         style="bold yellow",
+        markup=False,
     )
     console.print("Nothing was deployed.")
     raise SystemExit(1)
