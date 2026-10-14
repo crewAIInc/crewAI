@@ -114,7 +114,6 @@ class StepExecutor:
         self.function_calling_llm = function_calling_llm
         self.request_within_rpm_limit = request_within_rpm_limit
         self.callbacks = callbacks or []
-        self._tool_call_counts: dict[int, int] = {}
 
         self._use_native_tools = check_native_tool_support(
             self.llm, self.original_tools
@@ -153,7 +152,7 @@ class StepExecutor:
         """
         start_time = time.monotonic()
         tool_calls_made: list[str] = []
-        self._tool_call_counts = {}
+        tool_call_counts: dict[int, int] = {}
 
         try:
             enforce_rpm_limit(self.request_within_rpm_limit)
@@ -164,6 +163,7 @@ class StepExecutor:
                     messages,
                     todo,
                     tool_calls_made,
+                    tool_call_counts=tool_call_counts,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
                     start_time=start_time,
@@ -173,6 +173,7 @@ class StepExecutor:
                     messages,
                     todo,
                     tool_calls_made,
+                    tool_call_counts=tool_call_counts,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
                     start_time=start_time,
@@ -217,6 +218,7 @@ class StepExecutor:
                         messages,
                         todo,
                         tool_calls_made,
+                        tool_call_counts=tool_call_counts,
                         max_step_iterations=max_step_iterations,
                         step_timeout=step_timeout,
                         start_time=start_time,
@@ -338,6 +340,7 @@ class StepExecutor:
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
         start_time: float | None = None,
+        tool_call_counts: dict[int, int] | None = None,
     ) -> str:
         """Execute step using text-parsed tool calling with a multi-turn loop.
 
@@ -348,6 +351,8 @@ class StepExecutor:
         """
         use_stop_words = self.llm.supports_stop_words() if self.llm else False
         last_tool_result = ""
+        if tool_call_counts is None:
+            tool_call_counts = {}
 
         for _ in range(max_step_iterations):
             if step_timeout and start_time:
@@ -379,7 +384,7 @@ class StepExecutor:
                 tool_calls_made.append(formatted.tool)
                 tool_result = self._execute_text_tool_with_events(formatted, todo)
                 check_repeated_tool_call(
-                    self._tool_call_counts,
+                    tool_call_counts,
                     tool_name=formatted.tool,
                     tool_args=formatted.tool_input,
                     result=tool_result,
@@ -562,6 +567,7 @@ class StepExecutor:
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
         start_time: float | None = None,
+        tool_call_counts: dict[int, int] | None = None,
     ) -> str:
         """Execute step using native function calling with a multi-turn loop.
 
@@ -571,6 +577,8 @@ class StepExecutor:
         correct mistakes, and issue follow-up commands — all within one step.
         """
         accumulated_results: list[str] = []
+        if tool_call_counts is None:
+            tool_call_counts = {}
 
         for _ in range(max_step_iterations):
             if step_timeout and start_time:
@@ -599,7 +607,7 @@ class StepExecutor:
 
             if isinstance(answer, list) and answer and is_tool_call_list(answer):
                 result = self._execute_native_tool_calls(
-                    answer, messages, todo, tool_calls_made
+                    answer, messages, todo, tool_calls_made, tool_call_counts
                 )
                 accumulated_results.append(result)
                 continue
@@ -619,6 +627,7 @@ class StepExecutor:
         messages: list[LLMMessage],
         todo: TodoItem,
         tool_calls_made: list[str],
+        tool_call_counts: dict[int, int],
     ) -> str:
         """Execute a batch of native tool calls and return their results.
 
@@ -651,7 +660,7 @@ class StepExecutor:
                 tool_calls_made.append(call_result.func_name)
             info = extract_tool_call_info(tool_call)
             check_repeated_tool_call(
-                self._tool_call_counts,
+                tool_call_counts,
                 tool_name=call_result.func_name,
                 tool_args=info[2] if info else None,
                 result=call_result.result,
