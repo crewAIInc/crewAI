@@ -1775,3 +1775,113 @@ class TestSuccessfulToolsUnaffected:
         agent.llm = ScriptedLLM(_slack_steps())
         crew.kickoff()
         assert len(agent.last_tool_failures) == 1, "records must not accumulate"
+
+
+from crewai.utilities.agent_utils import MAX_REPEATED_TOOL_CALLS  # noqa: E402
+
+
+class LoopingNativeLLM(LLM):
+    """Asks for the same native tool call forever, like a stuck agent."""
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "LoopingNativeLLM":
+        return object.__new__(cls)
+
+    def __init__(self) -> None:
+        super().__init__(model="gpt-4o")
+        self.calls = 0
+
+    def call(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+        self.calls += 1
+        return [
+            {
+                "id": f"call_{self.calls}",
+                "type": "function",
+                "function": {"name": "echo", "arguments": '{"text": "hi"}'},
+            }
+        ]
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+
+class TestRepeatedToolCallStopsTheRun:
+    """Same call + same result means no progress: stop before the context fills."""
+
+    def test_helper_raises_on_the_last_identical_call(self) -> None:
+        from crewai.utilities.agent_utils import check_repeated_tool_call
+
+        agent = Agent(role="Looper", goal="g", backstory="b")
+        counts: dict[int, int] = {}
+        for _ in range(MAX_REPEATED_TOOL_CALLS - 1):
+            check_repeated_tool_call(
+                counts, tool_name="echo", tool_args={"text": "hi"}, result="x", agent=agent
+            )
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            check_repeated_tool_call(
+                counts, tool_name="echo", tool_args={"text": "hi"}, result="x", agent=agent
+            )
+
+        record = exc_info.value.record
+        assert record.failure.reason is ToolFailureReason.REPEATED_CALL
+        assert record.tool_name == "echo"
+        assert "Looper" in str(exc_info.value)
+
+    def test_helper_allows_repeats_whose_result_changes(self) -> None:
+        from crewai.utilities.agent_utils import check_repeated_tool_call
+
+        counts: dict[int, int] = {}
+        for status in ["queued", "running", "running-2", "running-3", "done", "done-2"]:
+            check_repeated_tool_call(
+                counts, tool_name="poll", tool_args={"id": 1}, result=status
+            )
+
+    def test_native_loop_stops_the_crew_early(self) -> None:
+        llm = LoopingNativeLLM()
+        agent = Agent(
+            role="Looper", goal="g", backstory="b", llm=llm, tools=[WorkingTool()]
+        )
+        task = Task(description="echo", expected_output="x", agent=agent)
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
+        assert "Looper" in str(exc_info.value)
+        # Stopped on the last allowed call, not after max_iter, and not retried.
+        assert llm.calls == MAX_REPEATED_TOOL_CALLS
+
+    def test_text_loop_stops_the_crew_early(self) -> None:
+        step = 'Thought: again\nAction: echo\nAction Input: {"text": "hi"}'
+        llm = ScriptedLLM([step])
+        agent = Agent(
+            role="Looper", goal="g", backstory="b", llm=llm, tools=[WorkingTool()]
+        )
+        task = Task(description="echo", expected_output="x", agent=agent)
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
+        # ToolUsage nudges every other identical call, so the count is not exact.
+        assert llm._index < agent.max_iter
+
+    def test_planning_step_loop_raises_instead_of_failing_the_step(self) -> None:
+        from crewai.agents.step_executor import StepExecutor
+        from crewai.utilities.planning_types import TodoItem
+        from crewai.utilities.step_execution_context import StepExecutionContext
+
+        executor = StepExecutor(
+            llm=LoopingNativeLLM(),
+            tools=[],
+            agent=Agent(role="Looper", goal="g", backstory="b"),
+            original_tools=[WorkingTool()],
+        )
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            executor.execute(
+                TodoItem(step_number=1, description="echo"),
+                StepExecutionContext(task_description="t", task_goal="g"),
+            )
+
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL

@@ -34,9 +34,11 @@ from crewai.utilities.agent_utils import (
     build_text_tool_calling_fallback_message,
     build_tool_calls_assistant_message,
     check_native_tool_support,
+    check_repeated_tool_call,
     enforce_rpm_limit,
     execute_single_native_tool_call,
     extract_task_section,
+    extract_tool_call_info,
     format_message_for_llm,
     is_native_tool_calling_unsupported_error,
     is_tool_call_list,
@@ -112,6 +114,7 @@ class StepExecutor:
         self.function_calling_llm = function_calling_llm
         self.request_within_rpm_limit = request_within_rpm_limit
         self.callbacks = callbacks or []
+        self._tool_call_counts: dict[int, int] = {}
 
         self._use_native_tools = check_native_tool_support(
             self.llm, self.original_tools
@@ -150,6 +153,7 @@ class StepExecutor:
         """
         start_time = time.monotonic()
         tool_calls_made: list[str] = []
+        self._tool_call_counts = {}
 
         try:
             enforce_rpm_limit(self.request_within_rpm_limit)
@@ -374,6 +378,14 @@ class StepExecutor:
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
                 tool_result = self._execute_text_tool_with_events(formatted, todo)
+                check_repeated_tool_call(
+                    self._tool_call_counts,
+                    tool_name=formatted.tool,
+                    tool_args=formatted.tool_input,
+                    result=tool_result,
+                    agent=self.agent,
+                    task=self.task,
+                )
                 last_tool_result = tool_result
                 messages.append({"role": "assistant", "content": answer_str})
                 messages.append(self._build_observation_message(tool_result))
@@ -637,6 +649,15 @@ class StepExecutor:
 
             if call_result.func_name:
                 tool_calls_made.append(call_result.func_name)
+            info = extract_tool_call_info(tool_call)
+            check_repeated_tool_call(
+                self._tool_call_counts,
+                tool_name=call_result.func_name,
+                tool_args=info[2] if info else None,
+                result=call_result.result,
+                agent=self.agent,
+                task=self.task,
+            )
 
             if call_result.result_as_answer:
                 return str(call_result.result)
