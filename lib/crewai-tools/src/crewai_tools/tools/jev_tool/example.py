@@ -7,7 +7,7 @@ from typing import Any
 from crewai.flow.dsl import listen, router, start
 from crewai.flow.flow import Flow
 
-from crewai_tools.tools.jev_tool.route_selector import select_jev_route
+from crewai_tools import select_jev_route
 
 
 class SupportTicketRoutingFlow(Flow):
@@ -16,17 +16,19 @@ class SupportTicketRoutingFlow(Flow):
     @start()
     def evaluate_ticket(self) -> dict[str, Any]:
         """Generate a synthetic Jev Choice decision for the incoming ticket."""
-        return {
+        decision = {
             "selected_choice": "REFUND_REQUEST",
             "confidence": 0.88,
         }
+        self.state["decision"] = decision
+        return decision
 
     @router(evaluate_ticket)
-    def route_ticket(self) -> str:
+    def route_ticket(self, decision: dict[str, Any] | None = None) -> str:
         """Route ticket based on Jev Choice confidence thresholding."""
-        decision = self.state.get("evaluate_ticket", {})
-        selected_choice = decision.get("selected_choice")
-        confidence = decision.get("confidence")
+        ticket_decision = decision or self.state.get("decision", {})
+        selected_choice = ticket_decision.get("selected_choice")
+        confidence = ticket_decision.get("confidence")
 
         return select_jev_route(
             choice=selected_choice,

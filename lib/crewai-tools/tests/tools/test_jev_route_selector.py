@@ -11,7 +11,7 @@ try:
         select_choice_route,
         select_jev_route,
     )
-except (ImportError, Exception):
+except ImportError:
     import importlib.util
     from pathlib import Path
 
@@ -30,11 +30,11 @@ except (ImportError, Exception):
     select_choice_route = module.select_choice_route
 
 try:
-    from crewai.flow.flow import Flow
     from crewai.flow.dsl import listen, router, start
+    from crewai.flow.flow import Flow
 
     HAS_FLOW = True
-except (ImportError, Exception):
+except ImportError:
     HAS_FLOW = False
 
 
@@ -301,6 +301,11 @@ class TestInvalidConfiguration:
         with pytest.raises(TypeError, match="allowed_routes must be a collection"):
             select_jev_route("ROUTE_A", 0.8, 123, min_confidence=0.5, fallback=DEFAULT_FALLBACK)  # type: ignore[arg-type]
 
+    def test_single_string_allowed_routes_raises_type_error(self) -> None:
+        """Verify single string allowed_routes raises TypeError."""
+        with pytest.raises(TypeError, match="allowed_routes must be a collection"):
+            select_jev_route("ROUTE_A", 0.8, "ROUTE_A", min_confidence=0.5, fallback="ROUTE_A")  # type: ignore[arg-type]
+
     def test_allowed_routes_with_empty_or_non_string_raises_value_error(self) -> None:
         """Verify allowed_routes with empty or non-string items raises ValueError."""
         with pytest.raises(ValueError, match="allowed_routes elements must be non-empty strings"):
@@ -308,6 +313,11 @@ class TestInvalidConfiguration:
 
         with pytest.raises(ValueError, match="allowed_routes elements must be non-empty strings"):
             select_jev_route("ROUTE_A", 0.8, ["ROUTE_A", None], min_confidence=0.5, fallback="ROUTE_A")  # type: ignore[list-item]
+
+    def test_allowed_routes_with_unhashable_element_raises_value_error(self) -> None:
+        """Verify allowed_routes with unhashable element raises ValueError."""
+        with pytest.raises(ValueError, match="allowed_routes elements must be non-empty strings"):
+            select_jev_route("ROUTE_A", 0.8, [["ROUTE_A"]], min_confidence=0.5, fallback="ROUTE_A")  # type: ignore[list-item]
 
 
 class TestAliasAndExports:
@@ -319,6 +329,26 @@ class TestAliasAndExports:
 
         result = select_choice_route("ROUTE_A", 0.85, ROUTES, 0.7, DEFAULT_FALLBACK)
         assert result == "ROUTE_A"
+
+    def test_public_namespace_exports(self) -> None:
+        """Verify select_jev_route and select_choice_route are exposed in crewai_tools."""
+        try:
+            import sys
+            from pathlib import Path
+
+            src_dir = str(Path(__file__).resolve().parent.parent.parent / "src")
+            if src_dir not in sys.path:
+                sys.path.insert(0, src_dir)
+
+            import crewai_tools
+
+            assert hasattr(crewai_tools, "select_jev_route")
+            assert hasattr(crewai_tools, "select_choice_route")
+            assert crewai_tools.select_jev_route is select_jev_route
+            assert crewai_tools.select_choice_route is select_choice_route
+        except ImportError:
+            # Full crewai-tools dependency tree not present in stripped local environment
+            pass
 
 
 class TestFlowRouterIntegration:
@@ -351,15 +381,17 @@ class TestFlowRouterIntegration:
             @start()
             def make_decision(self) -> dict[str, Any]:
                 """Generate synthetic decision at flow start."""
-                return {"choice": "ROUTE_A", "confidence": 0.92}
+                decision = {"choice": "ROUTE_A", "confidence": 0.92}
+                self.state["decision"] = decision
+                return decision
 
             @router(make_decision)
-            def decide_next(self) -> str:
+            def decide_next(self, res: dict[str, Any] | None = None) -> str:
                 """Route flow based on synthetic decision confidence."""
-                res = self.state.get("make_decision", {})
+                decision = res or self.state.get("decision", {})
                 return select_jev_route(
-                    choice=res.get("choice"),
-                    confidence=res.get("confidence"),
+                    choice=decision.get("choice"),
+                    confidence=decision.get("confidence"),
                     allowed_routes=ROUTES,
                     min_confidence=0.8,
                     fallback=DEFAULT_FALLBACK,
@@ -388,15 +420,17 @@ class TestFlowRouterIntegration:
             @start()
             def make_decision(self) -> dict[str, Any]:
                 """Generate synthetic low-confidence decision at flow start."""
-                return {"choice": "ROUTE_A", "confidence": 0.45}
+                decision = {"choice": "ROUTE_A", "confidence": 0.45}
+                self.state["decision"] = decision
+                return decision
 
             @router(make_decision)
-            def decide_next(self) -> str:
+            def decide_next(self, res: dict[str, Any] | None = None) -> str:
                 """Route flow to fallback based on low confidence."""
-                res = self.state.get("make_decision", {})
+                decision = res or self.state.get("decision", {})
                 return select_jev_route(
-                    choice=res.get("choice"),
-                    confidence=res.get("confidence"),
+                    choice=decision.get("choice"),
+                    confidence=decision.get("confidence"),
                     allowed_routes=ROUTES,
                     min_confidence=0.8,
                     fallback=DEFAULT_FALLBACK,

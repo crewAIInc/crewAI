@@ -63,20 +63,21 @@ def select_jev_route(
             f"min_confidence must be between 0.0 and 1.0 inclusive, got {min_conf}."
         )
 
-    if not isinstance(allowed_routes, Collection):
+    if not isinstance(allowed_routes, Collection) or isinstance(allowed_routes, (str, bytes)):
         raise TypeError(
-            f"allowed_routes must be a collection of strings, got {type(allowed_routes).__name__}."
+            f"allowed_routes must be a collection of route labels, got {type(allowed_routes).__name__}."
         )
 
-    routes_set = set(allowed_routes)
-    if not routes_set:
+    if len(allowed_routes) == 0:
         raise ValueError("allowed_routes cannot be empty.")
 
-    for r in routes_set:
+    for r in allowed_routes:
         if not isinstance(r, str) or not r.strip():
             raise ValueError(
                 f"allowed_routes elements must be non-empty strings, got {r!r}."
             )
+
+    routes_set = set(allowed_routes)
 
     if not isinstance(fallback, str):
         raise TypeError(
