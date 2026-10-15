@@ -703,6 +703,7 @@ class TestTerminalEventOrdering:
     ) -> None:
         """A failure cannot slip between the terminal check and span storage."""
         from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import TimeoutError as FutureTimeoutError
 
         listener, on_started, on_failed = handlers
         entered = threading.Event()
@@ -741,7 +742,7 @@ class TestTerminalEventOrdering:
                 assert entered.wait(5)
                 failed = executor.submit(fail)
                 assert failing.wait(5)
-                with pytest.raises(TimeoutError):
+                with pytest.raises(FutureTimeoutError):
                     failed.result(timeout=0.1)
             finally:
                 release.set()
@@ -782,3 +783,45 @@ class TestTerminalEventOrdering:
                 assert not listener._terminal_task_outcomes
         assert listener._telemetry.task_failed.call_count == 20
         listener._telemetry.task_ended.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_nested_agent_scope_cancellation_before_started_handler(
+        self, test_agent: Agent, handlers: tuple[Any, Any, Any]
+    ) -> None:
+        """A nested agent scope must not prevent task span reconciliation."""
+        from crewai.events.types.agent_events import AgentExecutionStartedEvent
+
+        listener, on_started, on_failed = handlers
+        bus = crewai_event_bus
+        pending: list[tuple[Any, Any]] = []
+
+        def delay_started(source: Any, event: TaskStartedEvent) -> None:
+            pending.append((source, event))
+
+        async def cancelled(self: Agent, task: Task, **kwargs: Any) -> None:
+            bus.emit(
+                self,
+                AgentExecutionStartedEvent(
+                    agent=self, task=task, tools=[], task_prompt="cancelled task"
+                ),
+            )
+            raise asyncio.CancelledError()
+
+        assert await asyncio.to_thread(bus.flush, 5)
+        with bus.scoped_handlers(), patch.object(Agent, "aexecute_task", cancelled):
+            bus.on(TaskStartedEvent)(delay_started)
+            bus.on(TaskFailedEvent)(on_failed)
+            for _ in range(20):
+                task = Task(
+                    description="Nested cancellation",
+                    expected_output="None",
+                    agent=test_agent,
+                )
+                with pytest.raises(asyncio.CancelledError):
+                    await task.aexecute_sync()
+                assert await asyncio.to_thread(bus.flush, 5)
+                source, started = pending.pop()
+                on_started(source, started)
+                assert task not in listener.execution_spans
+                assert not listener._terminal_task_outcomes
+        assert listener._telemetry.task_failed.call_count == 20

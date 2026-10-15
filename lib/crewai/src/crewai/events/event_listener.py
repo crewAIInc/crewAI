@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import CancelledError
 from io import StringIO
 from threading import RLock
 import time
@@ -288,9 +289,9 @@ class EventListener(BaseEventListener):
                 outcome = self._terminal_task_outcomes.pop(event.event_id, None)
                 if outcome is None:
                     self.execution_spans[source] = span
-                elif outcome[0]:
+                elif span is not None and outcome[0]:
                     self._telemetry.task_failed(span, source, outcome[1])
-                else:
+                elif span is not None:
                     self._telemetry.task_ended(span, source, source.agent.crew)
 
             task_name = get_task_name(source)
@@ -324,17 +325,22 @@ class EventListener(BaseEventListener):
                     self._telemetry.task_failed(span, source, event.error_type)
                 elif (
                     not started
-                    and event.started_event_id is not None
-                    and source._task_started_event_id == event.started_event_id
+                    and source._task_started_event_id is not None
+                    and (
+                        source._task_started_event_id == event.started_event_id
+                        or event.error_type is CancelledError
+                    )
                 ):
-                    self._terminal_task_outcomes[event.started_event_id] = (
+                    # Cancellation may leave a nested agent scope on the event stack.
+                    # Use the task's own start id to reconcile its delayed handler.
+                    self._terminal_task_outcomes[source._task_started_event_id] = (
                         True,
                         event.error_type,
                     )
 
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
-                source.id, getattr(source.agent, "role", None), "failed", task_name
+                source.id, getattr(source.agent, "role", ""), "failed", task_name
             )
 
         @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
