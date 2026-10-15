@@ -17,6 +17,7 @@ from pydantic import (
     BaseModel,
     Field,
     PrivateAttr,
+    field_validator,
     model_validator,
 )
 from rich.console import Console
@@ -189,9 +190,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
     _skip_auto_memory: bool = True
 
-    # Persisted discriminator. Previously serialized executors still say
-    # "experimental"; keep that value so they load after this move.
-    executor_type: Literal["experimental"] = "experimental"
+    executor_type: Literal["agent"] = "agent"
     suppress_flow_events: bool = True  # always suppress for executor
     is_crewai_internal: ClassVar[bool] = True
     llm: BaseLLM | None = Field(default=None, exclude=True)
@@ -233,6 +232,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
     _is_feedback_iteration: bool = PrivateAttr(default=False)
+
+    @field_validator("executor_type", mode="before")
+    @classmethod
+    def _migrate_legacy_executor_type(cls, value: Any) -> Any:
+        """Load executors serialized before AgentExecutor became stable."""
+        return "agent" if value == "experimental" else value
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:

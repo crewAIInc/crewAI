@@ -173,7 +173,7 @@ LLM 실행 상태에 대한 액세스를 제공합니다:
 
 ```python
 class LLMCallHookContext:
-    executor: AgentExecutor | CrewAgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
+    executor: CrewAgentExecutor  # 전체 실행자 액세스
     messages: list               # 변경 가능한 메시지 목록
     agent: Agent                 # 현재 에이전트
     task: Task                   # 현재 작업
@@ -182,8 +182,6 @@ class LLMCallHookContext:
     iterations: int              # 현재 반복 횟수
     response: str | None         # LLM 응답 (후 훅용)
 ```
-
-에이전트는 `crewai.agents.agent_executor`의 `AgentExecutor`로 실행됩니다. `crewai.agents.crew_agent_executor`의 `CrewAgentExecutor`는 더 이상 사용되지 않으며 향후 릴리스에서 제거됩니다. `from crewai.experimental.agent_executor import AgentExecutor`는 계속 동작하며 `DeprecationWarning`을 발생시킵니다.
 
 ### ToolCallHookContext
 

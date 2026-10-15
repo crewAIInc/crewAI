@@ -28,6 +28,7 @@ from pydantic import (
     ValidationError,
 )
 from pydantic.functional_serializers import PlainSerializer
+from typing_extensions import deprecated
 
 from crewai.agents.agent_builder.base_agent import _serialize_llm_ref, _validate_llm_ref
 from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
@@ -97,8 +98,12 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
+@deprecated(
+    "Use crewai.agents.agent_executor.AgentExecutor instead.",
+    category=None,
+)
 class CrewAgentExecutor(BaseAgentExecutor):
-    """Executor for crew agents.
+    """Deprecated executor for crew agents.
 
     Manages the execution lifecycle of an agent including prompt formatting,
     LLM interactions, tool execution, and feedback handling.

@@ -64,7 +64,7 @@ class LLMCallHookContext:
     response: str | None         # LLM response (after hooks only)
 ```
 
-يعمل الوكلاء عبر `AgentExecutor` من `crewai.agents.agent_executor`. إن `CrewAgentExecutor` في `crewai.agents.crew_agent_executor` مهمل وستتم إزالته في إصدار لاحق. ما يزال `from crewai.experimental.agent_executor import AgentExecutor` يعمل ويُصدر `DeprecationWarning`.
+أصبح `AgentExecutor` الآن مستقراً ومتاحاً من `crewai.agents`. تم إهمال `CrewAgentExecutor` بالكامل وستتم إزالته في إصدار لاحق. تظل عمليات الاستيراد من `crewai.experimental` متوافقة مؤقتاً وتُصدر `DeprecationWarning`.
 
 ### تعديل الرسائل
 

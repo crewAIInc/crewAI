@@ -64,7 +64,7 @@ class LLMCallHookContext:
     response: str | None         # LLM 응답 (후 훅용)
 ```
 
-에이전트는 `crewai.agents.agent_executor`의 `AgentExecutor`로 실행됩니다. `crewai.agents.crew_agent_executor`의 `CrewAgentExecutor`는 더 이상 사용되지 않으며 향후 릴리스에서 제거됩니다. `from crewai.experimental.agent_executor import AgentExecutor`는 계속 동작하며 `DeprecationWarning`을 발생시킵니다.
+`AgentExecutor`는 이제 안정화되었으며 `crewai.agents`에서 사용할 수 있습니다. `CrewAgentExecutor`는 완전히 사용 중단되었으며 향후 릴리스에서 제거됩니다. `crewai.experimental`에서 가져오는 방식은 일시적으로 호환되지만 `DeprecationWarning`을 발생시킵니다.
 
 ### 메시지 수정
 

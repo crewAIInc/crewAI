@@ -2687,6 +2687,20 @@ def test_stable_package_export_is_the_executor_class() -> None:
     assert ExportedExecutor is ModuleExecutor
 
 
+def test_agent_executor_uses_stable_discriminator() -> None:
+    executor = AgentExecutor.model_validate({})
+
+    assert executor.executor_type == "agent"
+    assert executor.model_dump()["executor_type"] == "agent"
+
+
+def test_legacy_experimental_discriminator_migrates_to_stable_value() -> None:
+    executor = AgentExecutor.model_validate({"executor_type": "experimental"})
+
+    assert executor.executor_type == "agent"
+    assert executor.model_dump()["executor_type"] == "agent"
+
+
 def test_experimental_import_path_warns_and_returns_the_stable_class() -> None:
     import importlib
     import sys

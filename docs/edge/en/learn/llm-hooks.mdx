@@ -66,7 +66,7 @@ class LLMCallHookContext:
     response: str | None         # LLM response (POST_MODEL_CALL only)
 ```
 
-Agents run on `AgentExecutor` from `crewai.agents.agent_executor`. `CrewAgentExecutor` in `crewai.agents.crew_agent_executor` is deprecated and will be removed in a future release. `from crewai.experimental.agent_executor import AgentExecutor` still works and emits a `DeprecationWarning`.
+`AgentExecutor` is now stable and available from `crewai.agents`. `CrewAgentExecutor` is fully deprecated and will be removed in a future release. Imports from `crewai.experimental` remain temporarily compatible and emit a `DeprecationWarning`.
 
 The context also exposes `request_human_input(prompt, default_message)`, which
 pauses live console updates and collects input from the terminal — useful for
