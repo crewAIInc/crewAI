@@ -3061,7 +3061,11 @@ class TestMaxIterationsForcedAnswer:
         executor.iterations = 0
         executor.max_iter = 2
         executor.respect_context_window = True
-        executor.messages = [{"role": "user", "content": "large context"}]
+        executor.messages = [
+            {"role": "user", "content": "earlier context"},
+            {"role": "assistant", "content": "earlier response"},
+            {"role": "user", "content": "large context"},
+        ]
         events: list[str] = []
 
         with (
@@ -3092,7 +3096,11 @@ class TestMaxIterationsForcedAnswer:
         executor.iterations = 0
         executor.max_iter = 2
         executor.respect_context_window = True
-        executor.messages = [{"role": "user", "content": "large context"}]
+        executor.messages = [
+            {"role": "user", "content": "earlier context"},
+            {"role": "assistant", "content": "earlier response"},
+            {"role": "user", "content": "large context"},
+        ]
         events: list[str] = []
 
         with (

@@ -611,7 +611,11 @@ def test_lite_agent_summarizes_before_calling_the_llm():
         llm=llm,
         verbose=False,
     )
-    agent._messages = [{"role": "user", "content": "large context"}]
+    agent._messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
     events: list[str] = []
 
     with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
