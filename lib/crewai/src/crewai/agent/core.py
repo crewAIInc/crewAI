@@ -146,6 +146,34 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
     HookAborted,
 )
 
+# Dedicated worker pool for the sync-in-loop fallback in
+# Agent._execute_without_timeout. When the sync AgentExecutor.invoke() API is
+# called from inside a running event loop, invoke() returns a coroutine
+# (magic auto-async for Flows) instead of a result; the coroutine is driven
+# to completion on one of these threads, each of which owns a fresh event
+# loop, so the caller's loop stays free and the pre-1.14.5 sync contract
+# (e.g. crew.kickoff() inside a Jupyter cell) keeps working. The pool is
+# bounded to limit thread creation, and workers never submit back into it,
+# so a blocking future.result() on the caller side cannot deadlock the pool.
+_sync_invoke_pool = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4,
+    thread_name_prefix="crewai-sync-invoke",
+)
+
+
+def _run_awaitable_on_worker_thread(
+    coro: Coroutine[Any, Any, dict[str, Any]],
+) -> dict[str, Any]:
+    """Drive a coroutine to completion on a worker thread with a fresh loop.
+
+    Propagates the caller's contextvars to the worker thread. Exceptions
+    raised by the coroutine are re-raised on the caller via future.result().
+    """
+    ctx = contextvars.copy_context()
+    future = _sync_invoke_pool.submit(ctx.run, asyncio.run, coro)
+    return future.result()
+
+
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "AgentExecutor": AgentExecutor,
 }
@@ -1088,11 +1116,15 @@ class Agent(BaseAgent):
             }
         )
         if inspect.isawaitable(invoke_result):
-            invoke_result.close()
-            raise RuntimeError(
-                "Agent execution was invoked synchronously from within a running "
-                "event loop. Use `agent.kickoff_async()` / `crew.kickoff_async()` "
-                "(or `await agent.aexecute_task(...)`) when calling from async code."
+            # invoke() returned a coroutine because we are inside a running
+            # event loop (magic auto-async). Run it to completion on a worker
+            # thread with a fresh event loop instead of raising, preserving
+            # the sync contract crew.kickoff() has always had (e.g. from a
+            # Jupyter/Colab cell). If the executor is already running its
+            # async path, invoke_async's own concurrency guard raises from
+            # within the coroutine, so that protection is not lost.
+            invoke_result = _run_awaitable_on_worker_thread(
+                cast("Coroutine[Any, Any, dict[str, Any]]", invoke_result)
             )
         return invoke_result["output"]
 
