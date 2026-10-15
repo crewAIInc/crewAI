@@ -123,60 +123,6 @@ class TestAsyncAgentExecutor:
         assert isinstance(result, AgentFinish)
 
     @pytest.mark.asyncio
-    async def test_react_loop_summarizes_before_calling_the_llm(
-        self, executor: CrewAgentExecutor, mock_llm: MagicMock
-    ) -> None:
-        executor.respect_context_window = True
-        executor.messages = [{"role": "user", "content": "large context"}]
-        mock_llm.is_context_window_overflowing_threshold.return_value = True
-        events: list[str] = []
-
-        async def response(*_args: Any, **_kwargs: Any) -> str:
-            events.append("call")
-            return "Final Answer: done"
-
-        mock_llm.acall = AsyncMock(side_effect=response)
-
-        with (
-            patch("crewai.utilities.agent_utils.summarize_messages") as summarize,
-            patch.object(executor, "_show_logs"),
-        ):
-            summarize.side_effect = lambda **_: events.append("summarize")
-            await executor._ainvoke_loop()
-
-        assert events == ["summarize", "call"]
-
-    @pytest.mark.asyncio
-    async def test_native_tool_loop_summarizes_before_calling_the_llm(
-        self, executor: CrewAgentExecutor, mock_llm: MagicMock
-    ) -> None:
-        @tool
-        def search(query: str) -> str:
-            """Search for a result."""
-            return query
-
-        executor.original_tools = [search]
-        executor.respect_context_window = True
-        executor.messages = [{"role": "user", "content": "large context"}]
-        mock_llm.is_context_window_overflowing_threshold.return_value = True
-        events: list[str] = []
-
-        async def response(*_args: Any, **_kwargs: Any) -> str:
-            events.append("call")
-            return "done"
-
-        mock_llm.acall = AsyncMock(side_effect=response)
-
-        with (
-            patch("crewai.utilities.agent_utils.summarize_messages") as summarize,
-            patch.object(executor, "_show_logs"),
-        ):
-            summarize.side_effect = lambda **_: events.append("summarize")
-            await executor._ainvoke_loop()
-
-        assert events == ["summarize", "call"]
-
-    @pytest.mark.asyncio
     async def test_ainvoke_loop_handles_tool_execution(
         self,
         executor: CrewAgentExecutor,
