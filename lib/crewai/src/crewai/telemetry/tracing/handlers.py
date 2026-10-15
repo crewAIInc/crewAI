@@ -2122,7 +2122,7 @@ def handle_llm_call_completed(
     if getattr(event, "agent_role", None):
         attrs["crewai.agent.role"] = event.agent_role
 
-    if usage and (usage.prompt_tokens or usage.completion_tokens):
+    if usage and (usage.prompt_tokens or usage.completion_tokens or usage.total_tokens):
         attrs.update(
             semantic_conventions.gen_ai_usage(
                 input_tokens=usage.prompt_tokens,

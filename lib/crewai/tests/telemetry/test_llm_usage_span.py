@@ -112,3 +112,53 @@ def test_call_llm_span_and_flow_totals_count_provider_usage(
     assert flow_metrics["completion_tokens"] == 25
     assert flow_metrics["total_tokens"] == 75
     assert flow_metrics["successful_requests"] == 1
+
+
+def test_fully_cached_bedrock_call_still_counts() -> None:
+    """A Bedrock call can read its whole prompt from cache and return no
+    output, so inputTokens and outputTokens are 0 while totalTokens is not."""
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    tracer = provider.get_tracer("test")
+    ctx = TelemetryExecutionContext(
+        kickoff_id="kickoff", automation_name="test", tracer=tracer
+    )
+    ctx.flow_crew_usage_metrics["flow"] = {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
+        "successful_requests": 0,
+        "crew_count": 0,
+    }
+    providers = _Providers(tracer)
+
+    started = LLMCallStartedEvent(
+        model="m", messages=[{"role": "user", "content": "hi"}], call_id="c1"
+    )
+    handlers.handle_llm_call_started(providers, ctx, None, started)
+    completed = LLMCallCompletedEvent(
+        model="m",
+        response="",
+        call_type=LLMCallType.LLM_CALL,
+        call_id="c1",
+        usage={
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "totalTokens": 40,
+            "cacheReadInputTokens": 40,
+            "cacheWriteInputTokens": 0,
+        },
+    )
+    completed.started_event_id = started.event_id
+    handlers.handle_llm_call_completed(providers, ctx, None, completed)
+
+    [span] = [s for s in exporter.get_finished_spans() if s.name == "call llm"]
+    assert span.attributes["gen_ai.usage.cache_read.input_tokens"] == 40
+    flow_metrics = ctx.flow_crew_usage_metrics["flow"]
+    assert flow_metrics["total_tokens"] == 40
+    assert flow_metrics["cached_prompt_tokens"] == 40
+    assert flow_metrics["successful_requests"] == 1
