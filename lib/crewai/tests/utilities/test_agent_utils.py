@@ -342,6 +342,45 @@ async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
 
 
 @pytest.mark.asyncio
+async def test_aget_llm_response_offloads_proactive_compaction() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "pending request"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = False
+    llm.acall = AsyncMock(return_value="response")
+
+    with patch(
+        "crewai.utilities.agent_utils.asyncio.to_thread",
+        wraps=asyncio.to_thread,
+    ) as to_thread:
+        assert (
+            await aget_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    assert to_thread.await_count == 1
+    assert to_thread.call_args.args[0].__name__ == "_proactively_summarize_context"
+    llm.is_context_window_overflowing_threshold.assert_called_once()
+    llm.acall.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_aget_llm_response_skips_preflight_when_context_respect_is_disabled() -> None:
     messages = [{"role": "user", "content": "large context"}]
     executor = SimpleNamespace(

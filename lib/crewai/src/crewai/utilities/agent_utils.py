@@ -744,7 +744,8 @@ async def aget_llm_response(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
         if getattr(executor_context, "respect_context_window", False):
-            _proactively_summarize_context(
+            await asyncio.to_thread(
+                _proactively_summarize_context,
                 llm=llm,
                 messages=prepared_messages,
                 callbacks=callbacks,
