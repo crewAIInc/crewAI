@@ -423,3 +423,23 @@ class TestFromProviderDictAnthropicCacheTokens:
         assert first.total_tokens == 240
         assert first.cached_prompt_tokens == 30
         assert first.successful_requests == 2
+
+
+class TestFromProviderDictBedrock:
+    def test_bedrock_converse_usage_is_counted(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 50,
+                "outputTokens": 25,
+                "totalTokens": 75,
+                "cacheReadInputTokens": 10,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 50
+        assert metrics.completion_tokens == 25
+        assert metrics.total_tokens == 75
+        assert metrics.cached_prompt_tokens == 10
