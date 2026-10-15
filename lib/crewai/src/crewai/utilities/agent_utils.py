@@ -555,6 +555,12 @@ def _summarize_context_before_llm_call(
     from_agent: BaseAgent | None = None,
 ) -> None:
     """Compact messages after a preflight context-window check."""
+    non_system_messages = [
+        message for message in messages if message.get("role") != "system"
+    ]
+    if len(non_system_messages) == 1 and non_system_messages[0].get("role") == "user":
+        return
+
     model = getattr(llm, "model", None)
     if not isinstance(model, str):
         model = None

@@ -53,7 +53,11 @@ _chunk_messages = _summarizer._chunk_messages
 
 
 def test_summarizes_context_before_llm_call() -> None:
-    messages = [{"role": "user", "content": "large context"}]
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
     llm = MagicMock()
 
     with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
@@ -71,7 +75,11 @@ def test_summarizes_context_before_llm_call() -> None:
 
 
 def test_context_summarization_shows_triggered_and_completed_panels() -> None:
-    messages = [{"role": "user", "content": "large context"}]
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
     llm = MagicMock()
 
     with (
@@ -92,7 +100,11 @@ def test_context_summarization_shows_triggered_and_completed_panels() -> None:
 
 
 def test_context_summarization_emits_lifecycle_events_with_llm_agent_and_task() -> None:
-    messages = [{"role": "user", "content": "large context"}]
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
     llm = MagicMock(model="gpt-4o-mini")
     task = SimpleNamespace(id="task-id", name="Research", description="Research")
     agent = SimpleNamespace(id="agent-id", role="Researcher")
@@ -124,7 +136,11 @@ def test_context_summarization_emits_lifecycle_events_with_llm_agent_and_task() 
 
 
 def test_get_llm_response_summarizes_before_the_model_call() -> None:
-    messages = [{"role": "user", "content": "large context"}]
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
     executor = SimpleNamespace(
         messages=messages,
         respect_context_window=True,
@@ -155,6 +171,38 @@ def test_get_llm_response_summarizes_before_the_model_call() -> None:
     assert events == ["summarize", "call"]
 
 
+def test_get_llm_response_preserves_a_single_pending_user_request() -> None:
+    messages = [
+        {"role": "system", "content": "You are helpful."},
+        {"role": "user", "content": "large context"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = True
+    llm.call.return_value = "response"
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        assert (
+            get_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    summarize.assert_not_called()
+    assert llm.call.call_args.args[0] == messages
+
+
 def test_get_llm_response_skips_preflight_when_context_respect_is_disabled() -> None:
     messages = [{"role": "user", "content": "large context"}]
     executor = SimpleNamespace(
@@ -183,7 +231,11 @@ def test_get_llm_response_skips_preflight_when_context_respect_is_disabled() -> 
 
 @pytest.mark.asyncio
 async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
-    messages = [{"role": "user", "content": "large context"}]
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
     executor = SimpleNamespace(
         messages=messages,
         respect_context_window=True,
