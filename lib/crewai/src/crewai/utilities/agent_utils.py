@@ -609,12 +609,11 @@ def get_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        exceeds_context_window = False
-        if getattr(executor_context, "respect_context_window", False):
-            exceeds_context_window = llm.is_context_window_overflowing_threshold(
-                prepared_messages, tools, response_model
-            )
-        if exceeds_context_window is True:
+        if getattr(
+            executor_context, "respect_context_window", False
+        ) and llm.is_context_window_overflowing_threshold(
+            prepared_messages, tools, response_model
+        ):
             _summarize_context_before_llm_call(
                 llm=llm,
                 messages=prepared_messages,
@@ -676,12 +675,11 @@ async def aget_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
-        exceeds_context_window = False
-        if getattr(executor_context, "respect_context_window", False):
-            exceeds_context_window = llm.is_context_window_overflowing_threshold(
-                prepared_messages, tools, response_model
-            )
-        if exceeds_context_window is True:
+        if getattr(
+            executor_context, "respect_context_window", False
+        ) and llm.is_context_window_overflowing_threshold(
+            prepared_messages, tools, response_model
+        ):
             _summarize_context_before_llm_call(
                 llm=llm,
                 messages=prepared_messages,

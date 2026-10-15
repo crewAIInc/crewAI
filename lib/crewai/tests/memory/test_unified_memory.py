@@ -797,6 +797,7 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: PostgreSQL is the database."
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.supports_function_calling.return_value = False

@@ -72,6 +72,7 @@ def test_agent_kickoff_preserves_parameters(verbose):
     """Test that Agent.kickoff() uses the correct parameters from the Agent."""
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Test response"
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
 
     from crewai.types.usage_metrics import UsageMetrics
@@ -303,6 +304,7 @@ def test_sets_flow_context_when_inside_flow():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Test response"
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
 
     from crewai.types.usage_metrics import UsageMetrics
@@ -890,6 +892,7 @@ def test_agent_kickoff_with_files_parameter():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: I can see the file content."
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
@@ -936,6 +939,7 @@ def test_prepare_kickoff_extracts_files_from_messages():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
@@ -976,6 +980,7 @@ def test_prepare_kickoff_merges_files_from_messages_and_parameter():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
@@ -1022,6 +1027,7 @@ def test_prepare_kickoff_param_files_override_message_files():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
@@ -1062,6 +1068,7 @@ def test_lite_agent_verbose_false_suppresses_printer_output():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Hello!"
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
@@ -1097,6 +1104,7 @@ def test_lite_agent_memory_none_default():
     """With memory=None (default), _memory is None and no memory is used."""
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Ok"
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
         total_tokens=10,
@@ -1123,6 +1131,7 @@ def test_lite_agent_memory_true_resolves_to_default_memory():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Ok"
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
         total_tokens=10,
@@ -1149,6 +1158,7 @@ def test_lite_agent_memory_instance_recall_and_save_called():
     """With a custom memory instance, kickoff calls recall and then extract_memories/remember."""
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: The answer is 42."
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.supports_stop_words.return_value = False
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
@@ -1356,6 +1366,7 @@ def test_lite_agent_forces_final_answer_with_user_turn():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.side_effect = record_request
+    mock_llm.is_context_window_overflowing_threshold.return_value = False
     mock_llm.stop = []
     mock_llm.get_token_usage_summary.return_value = UsageMetrics(
         total_tokens=10,
