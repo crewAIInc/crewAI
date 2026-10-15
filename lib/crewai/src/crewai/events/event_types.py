@@ -74,6 +74,8 @@ from crewai.events.types.knowledge_events import (
     KnowledgeSearchQueryFailedEvent,
 )
 from crewai.events.types.llm_events import (
+    ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationStartedEvent,
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
@@ -181,6 +183,8 @@ EventTypes = (
     | ToolUsageErrorEvent
     | ToolFailureDetectedEvent
     | ToolUsageStartedEvent
+    | ContextWindowSummarizationStartedEvent
+    | ContextWindowSummarizationCompletedEvent
     | LLMCallStartedEvent
     | LLMCallCompletedEvent
     | LLMCallFailedEvent

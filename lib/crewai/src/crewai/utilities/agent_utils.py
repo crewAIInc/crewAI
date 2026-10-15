@@ -25,6 +25,11 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import (
+    ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationStartedEvent,
+)
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
@@ -546,8 +551,22 @@ def _summarize_context_before_llm_call(
     callbacks: list[TokenCalcHandler],
     printer: Printer,
     verbose: bool,
+    from_task: Task | None = None,
+    from_agent: BaseAgent | None = None,
 ) -> None:
     """Compact messages after a preflight context-window check."""
+    model = getattr(llm, "model", None)
+    if not isinstance(model, str):
+        model = None
+
+    crewai_event_bus.emit(
+        llm,
+        event=ContextWindowSummarizationStartedEvent(
+            from_task=from_task,
+            from_agent=from_agent,
+            model=model,
+        ),
+    )
     if verbose:
         console.print(
             Panel(
@@ -559,6 +578,14 @@ def _summarize_context_before_llm_call(
             )
         )
     summarize_messages(messages=messages, llm=llm, callbacks=callbacks, verbose=verbose)
+    crewai_event_bus.emit(
+        llm,
+        event=ContextWindowSummarizationCompletedEvent(
+            from_task=from_task,
+            from_agent=from_agent,
+            model=model,
+        ),
+    )
     if verbose:
         console.print(
             Panel(
@@ -620,6 +647,8 @@ def get_llm_response(
                 callbacks=callbacks,
                 printer=printer,
                 verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
             )
         answer = llm.call(
             prepared_messages,
@@ -686,6 +715,8 @@ async def aget_llm_response(
                 callbacks=callbacks,
                 printer=printer,
                 verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
             )
         answer = await llm.acall(
             prepared_messages,

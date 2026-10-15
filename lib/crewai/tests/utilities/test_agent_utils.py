@@ -18,6 +18,11 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.agents.parser import AgentFinish
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import (
+    ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationStartedEvent,
+)
 from crewai.tools.base_tool import BaseTool
 from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
@@ -84,6 +89,38 @@ def test_context_summarization_shows_triggered_and_completed_panels() -> None:
     assert print_panel.call_count == 2
     assert "triggered" in str(print_panel.call_args_list[0].args[0].title).lower()
     assert "completed" in str(print_panel.call_args_list[1].args[0].title).lower()
+
+
+def test_context_summarization_emits_lifecycle_events_with_llm_agent_and_task() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    llm = MagicMock(model="gpt-4o-mini")
+    task = SimpleNamespace(id="task-id", name="Research", description="Research")
+    agent = SimpleNamespace(id="agent-id", role="Researcher")
+
+    with (
+        patch("crewai.utilities.agent_utils.summarize_messages"),
+        patch.object(crewai_event_bus, "emit") as emit,
+    ):
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=False,
+            from_task=task,
+            from_agent=agent,
+        )
+
+    events = [call.kwargs["event"] for call in emit.call_args_list]
+    assert len(events) == 2
+    assert isinstance(events[0], ContextWindowSummarizationStartedEvent)
+    assert isinstance(events[1], ContextWindowSummarizationCompletedEvent)
+    for event in events:
+        assert event.model == "gpt-4o-mini"
+        assert event.agent_id == "agent-id"
+        assert event.agent_role == "Researcher"
+        assert event.task_id == "task-id"
+        assert event.task_name == "Research"
 
 
 def test_get_llm_response_summarizes_before_the_model_call() -> None:
