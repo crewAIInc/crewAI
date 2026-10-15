@@ -329,27 +329,37 @@ class PlusAPI:
         )
 
     def deploy_by_name(
-        self, project_name: str, *, project_id: str | None = None
+        self, project_name: str, *, project_id: str | None = None, force: bool = False
     ) -> httpx.Response:
         """Redeploy by name, with PROJECT_ID (`[tool.crewai].project_id`) when set.
 
-        The body is sent only when there is a project id. An AMP that predates
-        project ids ignores it: this route has read its body through Rails'
-        ``params.permit`` since the v1 API (2024-08), which drops a key it does
-        not name, and AMP never made unpermitted keys an error.
+        The body is sent only when there is something in it. An AMP that
+        predates project ids ignores it: this route has read its body through
+        Rails' ``params.permit`` since the v1 API (2024-08), which drops a key
+        it does not name, and AMP never made unpermitted keys an error. FORCE
+        redeploys even while a models comparison runs on the deployment (AMP
+        answers 409 ``comparison_running`` otherwise; an older AMP ignores it).
         """
         endpoint = f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
-        if project_id:
-            return self._make_request("POST", endpoint, json={"project_id": project_id})
-        return self._make_request("POST", endpoint)
+        return self._redeploy(endpoint, project_id=project_id, force=force)
 
     def deploy_by_uuid(
-        self, uuid: str, *, project_id: str | None = None
+        self, uuid: str, *, project_id: str | None = None, force: bool = False
     ) -> httpx.Response:
-        """Redeploy by uuid, with PROJECT_ID as for `deploy_by_name`."""
+        """Redeploy by uuid, with PROJECT_ID and FORCE as for `deploy_by_name`."""
         endpoint = f"{self.CREWS_RESOURCE}/{uuid}/deploy"
+        return self._redeploy(endpoint, project_id=project_id, force=force)
+
+    def _redeploy(
+        self, endpoint: str, *, project_id: str | None, force: bool
+    ) -> httpx.Response:
+        body: dict[str, Any] = {}
         if project_id:
-            return self._make_request("POST", endpoint, json={"project_id": project_id})
+            body["project_id"] = project_id
+        if force:
+            body["force"] = True
+        if body:
+            return self._make_request("POST", endpoint, json=body)
         return self._make_request("POST", endpoint)
 
     def crew_status_by_name(self, project_name: str) -> httpx.Response:
@@ -421,14 +431,17 @@ class PlusAPI:
         *,
         env: dict[str, str] | None = None,
         project_id: str | None = None,
+        force: bool = False,
     ) -> httpx.Response:
         """Update an existing crew deployment from a local project ZIP archive.
 
-        PROJECT_ID as for `create_crew_from_zip`.
+        PROJECT_ID as for `create_crew_from_zip`, FORCE as for `deploy_by_name`.
         """
         data: dict[str, str] = {}
         if project_id:
             data["project_id"] = project_id
+        if force:
+            data["force"] = "true"
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(

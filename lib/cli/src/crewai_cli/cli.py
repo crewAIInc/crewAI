@@ -833,7 +833,16 @@ def deploy_list() -> None:
     is_flag=True,
     help="Skip the pre-deploy validation checks.",
 )
-def deploy_push(uuid: str | None, skip_validate: bool) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    help=(
+        "Redeploy even while a models comparison is running on the deployment. "
+        "It stops the comparison and its runs under way are lost; without it, "
+        "AMP holds the push back."
+    ),
+)
+def deploy_push(uuid: str | None, skip_validate: bool, force: bool) -> None:
     """Deploy the Crew."""
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.
     # Safe in every command the user explicitly invoked: get_or_create_project_id
@@ -841,7 +850,7 @@ def deploy_push(uuid: str | None, skip_validate: bool) -> None:
     # never rewrites an unrelated directory. Never called from the SDK during kickoff.
     get_or_create_project_id()
     deploy_cmd = DeployCommand()
-    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate)
+    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate, force=force)
 
 
 @deploy.command(name="validate")
