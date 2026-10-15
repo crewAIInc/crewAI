@@ -2384,7 +2384,11 @@ def exported(files=None, kind="models"):
 
 
 def files_in(folder: Path) -> dict[str, str]:
-    return {p.relative_to(folder).as_posix(): p.read_text() for p in folder.rglob("*") if p.is_file()}
+    return {
+        p.relative_to(folder).as_posix(): p.read_text(encoding="utf-8")
+        for p in folder.rglob("*")
+        if p.is_file()
+    }
 
 
 def test_the_eval_group_keeps_every_old_invocation_and_adds_export(monkeypatch):
@@ -2501,6 +2505,24 @@ def test_a_symlink_already_in_the_folder_cannot_lead_a_file_out(project, monkeyp
     assert list(outside.iterdir()) == []
     assert (directory / FOLDER / "report.md").read_text() == "r"
     assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ — start with report.md {SKIPPED}\n"
+
+
+def test_a_gitignore_link_already_in_the_folder_is_replaced_never_followed(
+    project, monkeypatch
+):
+    directory, _ = project
+    elsewhere = directory / "keep.txt"
+    elsewhere.write_text("not ours to change\n", encoding="utf-8")
+    (directory / FOLDER).mkdir()
+    (directory / FOLDER / ".gitignore").symlink_to(elsewhere)
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "r"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert elsewhere.read_text(encoding="utf-8") == "not ours to change\n"
+    gitignore = directory / FOLDER / ".gitignore"
+    assert not gitignore.is_symlink()
+    assert gitignore.read_text(encoding="utf-8") == "*\n"
 
 
 def test_content_that_is_not_text_is_skipped(project, monkeypatch, capsys):

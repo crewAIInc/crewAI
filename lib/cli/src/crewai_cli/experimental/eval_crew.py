@@ -1833,7 +1833,12 @@ def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
     try:
         folder.mkdir(parents=True, exist_ok=True)
         root = folder.resolve()
-        (root / ".gitignore").write_text("*\n", encoding="utf-8")
+        gitignore = root / ".gitignore"
+        # A `.gitignore` already there that is a link would carry the write
+        # outside the folder: it is replaced by a file of this command's own.
+        if gitignore.is_symlink():
+            gitignore.unlink()
+        gitignore.write_text("*\n", encoding="utf-8")
     except OSError as error:
         _fail(f"Could not write the export into {folder}/: {error}")
     written: list[str] = []
