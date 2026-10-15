@@ -32,8 +32,10 @@ from crewai.tools.structured_tool import (
     strip_composite_description_prefix,
 )
 from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
     ToolFailure,
     ToolFailureReason,
+    ToolFailureRecord,
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
@@ -2115,3 +2117,55 @@ def _setup_after_llm_call_hooks(
             answer = hook_response
 
     return answer
+
+
+MAX_REPEATED_TOOL_CALLS = 5
+
+
+def check_repeated_tool_call(
+    counts: dict[int, int],
+    *,
+    tool_name: str,
+    tool_args: dict[str, Any] | str | None,
+    result: Any,
+    agent: BaseAgent | LiteAgent | None = None,
+    task: Task | None = None,
+) -> None:
+    """Stop a run that keeps repeating an identical tool call.
+
+    Args:
+        counts: Per-run tally of seen (tool, args, result) keys. Updated in place.
+        tool_name: Name of the tool that was called.
+        tool_args: Arguments the tool was called with.
+        result: What the tool returned.
+        agent: The calling agent, named in the error.
+        task: The task in flight, named in the error.
+
+    Raises:
+        ToolExecutionFailedError: On the MAX_REPEATED_TOOL_CALLS-th identical call.
+    """
+    key = hash(
+        json.dumps([tool_name, tool_args, str(result)], sort_keys=True, default=str)
+    )
+    counts[key] = counts.get(key, 0) + 1
+    if counts[key] < MAX_REPEATED_TOOL_CALLS:
+        return
+
+    role = getattr(agent, "role", None)
+    raise ToolExecutionFailedError(
+        ToolFailureRecord(
+            tool_name=tool_name,
+            failure=ToolFailure(
+                message=(
+                    f"Agent '{role}' called '{tool_name}' with the same "
+                    f"arguments {MAX_REPEATED_TOOL_CALLS} times and got the same "
+                    "result each time. Stopped because it is not making progress."
+                ),
+                reason=ToolFailureReason.REPEATED_CALL,
+            ),
+            tool_args=tool_args,
+            agent_role=role,
+            task_name=(task.name or task.description) if task else None,
+            task_id=str(task.id) if task else None,
+        )
+    )
