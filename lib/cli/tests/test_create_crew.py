@@ -488,6 +488,19 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     assert "More tools" not in labels
 
 
+def test_platform_action_picker_is_searchable(monkeypatch):
+    picker_calls: list[dict[str, object]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append(kwargs)
+        return []
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    assert json_crew._select_platform_actions(["platform:github"]) == []
+    assert picker_calls[0]["searchable"] is True
+
+
 def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
 
@@ -804,8 +817,7 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         return original_import(name, globals, locals, fromlist, level)
 
     monkeypatch.setattr(builtins, "__import__", import_with_warning)
-    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "ignored-token")
-    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
@@ -816,10 +828,10 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         "warning after import"
     ]
     output = capsys.readouterr().out
-    assert "Checking for CREWAI_PLATFORM_INTEGRATION_TOKEN" in output
+    assert "Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN" in output
     assert (
-        "Platform Integration token found via "
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable" in output
+        "Enterprise Action Auth Token found via "
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable" in output
     )
 
 
@@ -866,7 +878,7 @@ def test_platform_validation_announces_concurrent_apps_together(capsys):
     output = capsys.readouterr().out
     assert (failed_apps, token_invalid) == ([], False)
     assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
-    assert "Checking CrewAI Platform Integration token and GitHub" not in output
+    assert "Checking Enterprise Action Auth Token and GitHub" not in output
 
 
 def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
@@ -896,8 +908,8 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
     assert (failed_apps, token_invalid) == ([], False)
     assert checked_apps == ["github", "gmail"]
     output = capsys.readouterr().out
-    assert "Checking CrewAI Platform Integration token and GitHub integration" in output
-    assert "Checking CrewAI Platform Integration token and Gmail integration" in output
+    assert "Checking Enterprise Action Auth Token and GitHub integration" in output
+    assert "Checking Enterprise Action Auth Token and Gmail integration" in output
 
 
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
@@ -1157,7 +1169,7 @@ def test_json_create_saves_platform_token_to_env_file(tmp_path, monkeypatch):
     json_crew.create_json_crew("Platform Crew", skip_provider=True)
 
     env_file = tmp_path / "platform_crew" / ".env"
-    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN=token" in env_file.read_text()
+    assert "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN=token" in env_file.read_text()
 
 
 def test_json_crew_uses_template_files():
