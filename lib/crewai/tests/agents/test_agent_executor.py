@@ -498,7 +498,13 @@ class TestAgentExecutor:
     ):
         executor = _build_executor(**mock_dependencies, callbacks=[])
         executor.respect_context_window = True
-        executor.state.messages = [{"role": "user", "content": "large context"}]
+        executor.task.id = "test-task-id"
+        executor.task.name = "Test task"
+        executor.state.messages = [
+            {"role": "user", "content": "earlier context"},
+            {"role": "assistant", "content": "earlier response"},
+            {"role": "user", "content": "large context"},
+        ]
         executor.llm.is_context_window_overflowing_threshold.return_value = True
         executor.llm.call.return_value = "Final Answer: done"
         events: list[str] = []
