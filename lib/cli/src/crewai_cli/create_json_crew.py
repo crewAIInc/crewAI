@@ -549,6 +549,7 @@ def _select_platform_actions(selected_tools: list[str]) -> list[str]:
         action_indices = pick_many(
             f"{PLATFORM_APP_DISPLAY_NAMES[app]} actions for this agent (space to toggle):",
             [f"{item.display_name} ({item.slug})" for item in app_tools],
+            searchable=True,
             preselected={
                 index
                 for index, item in enumerate(app_tools)
