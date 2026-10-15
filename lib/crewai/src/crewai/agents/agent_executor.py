@@ -92,6 +92,7 @@ from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
+    check_repeated_tool_call,
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
@@ -234,6 +235,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _console: Console = PrivateAttr(default_factory=Console)
     _last_parser_error: OutputParserError | None = PrivateAttr(default=None)
     _last_context_error: Exception | None = PrivateAttr(default=None)
+    _tool_call_counts: dict[int, int] = PrivateAttr(default_factory=dict)
     _execution_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _finalize_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _finalize_called: bool = PrivateAttr(default=False)
@@ -1465,7 +1467,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # todo ↔ result (or exception) mapping.
         step_results: list[tuple[TodoItem, StepResult]] = []
         for todo, item in zip(ready, gathered, strict=True):
-            if isinstance(item, HookAborted):
+            if isinstance(item, (HookAborted, ToolExecutionFailedError)):
                 raise item
             if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
@@ -1877,6 +1879,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             return "tool_completed"
 
+        check_repeated_tool_call(
+            self._tool_call_counts,
+            tool_name=action.tool,
+            tool_args=action.tool_input,
+            result=tool_result.result,
+            agent=self.agent,
+            task=self.task,
+        )
         result = self._handle_agent_action(action, tool_result)
         self.state.current_answer = result
 
@@ -2328,6 +2338,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 task=self.task,
                 crew=self.crew,
             )
+
+        check_repeated_tool_call(
+            self._tool_call_counts,
+            tool_name=func_name,
+            tool_args=args_dict,
+            result=result,
+            agent=self.agent,
+            task=self.task,
+        )
 
         return {
             "call_id": call_id,
@@ -3031,6 +3050,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
+            self._tool_call_counts.clear()
+            if self.tools_handler:
+                self.tools_handler.last_used_tool = None
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
@@ -3119,6 +3141,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
+            self._tool_call_counts.clear()
+            if self.tools_handler:
+                self.tools_handler.last_used_tool = None
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
@@ -3462,6 +3487,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.state.current_answer = None
         self.state.is_finished = False
         self.state.iterations = 0
+        self._tool_call_counts.clear()
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = None
         self.state.use_native_tools = False
         self.state.pending_tool_calls = []
         self.state.plan = None
