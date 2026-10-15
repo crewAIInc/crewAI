@@ -3050,6 +3050,69 @@ class TestMaxIterationsForcedAnswer:
         assert isinstance(result, AgentFinish)
         assert result.output == "forced"
 
+    def test_react_loop_summarizes_before_calling_the_llm(self) -> None:
+        llm = MagicMock(spec=LLM)
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+        llm.supports_function_calling.return_value = False
+        llm.is_context_window_overflowing_threshold.return_value = True
+        llm.call.return_value = "Final Answer: done"
+        executor = self._make_executor(llm, original_tools=[])
+        executor.iterations = 0
+        executor.max_iter = 2
+        executor.respect_context_window = True
+        executor.messages = [
+            {"role": "user", "content": "earlier context"},
+            {"role": "assistant", "content": "earlier response"},
+            {"role": "user", "content": "large context"},
+        ]
+        events: list[str] = []
+
+        with (
+            patch("crewai.utilities.agent_utils.summarize_messages") as summarize,
+            patch.object(executor, "_show_logs"),
+        ):
+            summarize.side_effect = lambda **_: events.append("summarize")
+            llm.call.side_effect = (
+                lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
+            )
+            executor._invoke_loop()
+
+        assert events == ["summarize", "call"]
+
+    def test_native_tool_loop_summarizes_before_calling_the_llm(self) -> None:
+        @tool
+        def search(query: str) -> str:
+            """Search for a result."""
+            return query
+
+        llm = MagicMock(spec=LLM)
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+        llm.supports_function_calling.return_value = True
+        llm.is_context_window_overflowing_threshold.return_value = True
+        llm.call.return_value = "done"
+        executor = self._make_executor(llm, original_tools=[search])
+        executor.iterations = 0
+        executor.max_iter = 2
+        executor.respect_context_window = True
+        executor.messages = [
+            {"role": "user", "content": "earlier context"},
+            {"role": "assistant", "content": "earlier response"},
+            {"role": "user", "content": "large context"},
+        ]
+        events: list[str] = []
+
+        with (
+            patch("crewai.utilities.agent_utils.summarize_messages") as summarize,
+            patch.object(executor, "_show_logs"),
+        ):
+            summarize.side_effect = lambda **_: events.append("summarize")
+            llm.call.side_effect = lambda *_args, **_kwargs: events.append("call") or "done"
+            executor._invoke_loop()
+
+        assert events == ["summarize", "call"]
+
     def test_native_tools_loop_forces_final_answer_with_user_turn(self) -> None:
         from crewai.utilities.i18n import I18N_DEFAULT
 

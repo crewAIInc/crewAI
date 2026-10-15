@@ -493,6 +493,43 @@ class TestAgentExecutor:
         assert result == "parsed"
         assert get_llm_response_mock.call_args.kwargs["response_model"] is None
 
+    def test_call_llm_and_parse_summarizes_before_the_model_call(
+        self, mock_dependencies
+    ):
+        executor = _build_executor(**mock_dependencies, callbacks=[])
+        executor.respect_context_window = True
+        executor.task.id = "test-task-id"
+        executor.task.name = "Test task"
+        executor.state.messages = [
+            {"role": "user", "content": "earlier context"},
+            {"role": "assistant", "content": "earlier response"},
+            {"role": "user", "content": "large context"},
+        ]
+        executor.llm.is_context_window_overflowing_threshold.return_value = True
+        executor.llm.call.return_value = "Final Answer: done"
+        events: list[str] = []
+
+        with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+            summarize.side_effect = lambda **_: events.append("summarize")
+            executor.llm.call.side_effect = (
+                lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
+            )
+            assert executor.call_llm_and_parse() == "parsed"
+
+        assert events == ["summarize", "call"]
+
+    def test_call_llm_and_parse_skips_preflight_when_context_respect_is_disabled(
+        self, mock_dependencies
+    ):
+        executor = _build_executor(**mock_dependencies, callbacks=[])
+        executor.respect_context_window = False
+        executor.state.messages = [{"role": "user", "content": "large context"}]
+        executor.llm.call.return_value = "Final Answer: done"
+
+        assert executor.call_llm_and_parse() == "parsed"
+
+        executor.llm.is_context_window_overflowing_threshold.assert_not_called()
+
     def test_call_llm_native_tools_does_not_pass_response_model_with_tools(
         self, mock_dependencies
     ):

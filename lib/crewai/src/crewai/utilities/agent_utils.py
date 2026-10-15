@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import inspect
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
@@ -16,6 +17,7 @@ from crewai_core.printer import PRINTER, ColoredText, Printer
 from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
+from rich.panel import Panel
 
 from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from crewai.agents.parser import (
@@ -24,6 +26,13 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import (
+    ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationFailedEvent,
+    ContextWindowSummarizationStartedEvent,
+)
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
@@ -63,6 +72,7 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 _create_plus_client_hook: Callable[[], Any] | None = None
+logger = logging.getLogger(__name__)
 
 
 def resolve_plus_client(default: Callable[[], Any]) -> Any:
@@ -539,6 +549,119 @@ def _validate_and_finalize_llm_response(
     )
 
 
+def _summarize_context_before_llm_call(
+    llm: LLM | BaseLLM,
+    messages: list[LLMMessage],
+    callbacks: list[TokenCalcHandler],
+    printer: Printer,
+    verbose: bool,
+    from_task: Task | None = None,
+    from_agent: BaseAgent | None = None,
+) -> None:
+    """Compact messages after a preflight context-window check."""
+    non_system_messages = [
+        message for message in messages if message.get("role") != "system"
+    ]
+    if len(non_system_messages) == 1 and non_system_messages[0].get("role") == "user":
+        return
+
+    model = getattr(llm, "model", None)
+    if not isinstance(model, str):
+        model = None
+
+    crewai_event_bus.emit(
+        llm,
+        event=ContextWindowSummarizationStartedEvent(
+            from_task=from_task,
+            from_agent=from_agent,
+            model=model,
+        ),
+    )
+    if verbose:
+        console.print(
+            Panel(
+                "The pending request is nearing the model context limit. "
+                "Compacting the conversation before the next model call.",
+                title="🧠 Context summarization triggered",
+                border_style="yellow",
+                padding=(1, 2),
+            )
+        )
+    try:
+        summarize_messages(
+            messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
+        )
+    except Exception as error:
+        crewai_event_bus.emit(
+            llm,
+            event=ContextWindowSummarizationFailedEvent(
+                from_task=from_task,
+                from_agent=from_agent,
+                model=model,
+                error=str(error),
+            ),
+        )
+        if verbose:
+            console.print(
+                Panel(
+                    "Conversation context could not be compacted. Continuing with the original request.",
+                    title="⚠️ Context summarization failed",
+                    border_style="red",
+                    padding=(1, 2),
+                )
+            )
+        raise
+    crewai_event_bus.emit(
+        llm,
+        event=ContextWindowSummarizationCompletedEvent(
+            from_task=from_task,
+            from_agent=from_agent,
+            model=model,
+        ),
+    )
+    if verbose:
+        console.print(
+            Panel(
+                "Conversation context has been compacted and is ready for the next model call.",
+                title="✅ Context summarization completed",
+                border_style="green",
+                padding=(1, 2),
+            )
+        )
+
+
+def _proactively_summarize_context(
+    llm: LLM | BaseLLM,
+    messages: list[LLMMessage],
+    callbacks: list[TokenCalcHandler],
+    printer: Printer,
+    tools: list[dict[str, Any]] | None,
+    response_model: type[BaseModel] | None,
+    verbose: bool,
+    from_task: Task | None = None,
+    from_agent: BaseAgent | None = None,
+) -> None:
+    """Try to summarize oversized context without blocking a valid LLM call."""
+    try:
+        if llm.is_context_window_overflowing_threshold(messages, tools, response_model):
+            _summarize_context_before_llm_call(
+                llm=llm,
+                messages=messages,
+                callbacks=callbacks,
+                printer=printer,
+                verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+    except (HookAborted, LLMCallBlockedError):
+        raise
+    except Exception:
+        logger.debug(
+            "Proactive context preflight or summarization failed; continuing with the LLM call.",
+            exc_info=True,
+        )
+
+
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
@@ -578,6 +701,18 @@ def get_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
+        if getattr(executor_context, "respect_context_window", False):
+            _proactively_summarize_context(
+                llm=llm,
+                messages=prepared_messages,
+                callbacks=callbacks,
+                printer=printer,
+                tools=tools,
+                response_model=response_model,
+                verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
         answer = llm.call(
             prepared_messages,
             tools=tools,
@@ -632,6 +767,19 @@ async def aget_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
+        if getattr(executor_context, "respect_context_window", False):
+            await asyncio.to_thread(
+                _proactively_summarize_context,
+                llm=llm,
+                messages=prepared_messages,
+                callbacks=callbacks,
+                printer=printer,
+                tools=tools,
+                response_model=response_model,
+                verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
         answer = await llm.acall(
             prepared_messages,
             tools=tools,
