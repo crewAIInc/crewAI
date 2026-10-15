@@ -54,7 +54,7 @@ def after_hook(context: LLMCallHookContext) -> str | None:
 
 ```python
 class LLMCallHookContext:
-    executor: AgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
+    executor: AgentExecutor  # Full executor reference
     messages: list               # Mutable message list
     agent: Agent                 # Current agent
     task: Task                   # Current task
