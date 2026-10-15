@@ -943,8 +943,8 @@ class BaseLLM(BaseModel, ABC):
             return [{"role": "user", "content": messages}]
 
         # Validate then copy each message, dropping the cache-breakpoint
-        # flag in the copy only. The caller (e.g. AgentExecutor,
-        # CrewAgentExecutor) reuses its messages buffer across
+        # flag in the copy only. The caller (AgentExecutor) reuses its
+        # messages buffer across
         # many LLM calls in the tool-use loop; mutating their dicts
         # in place would erase the markers after the first call and
         # break prompt caching for every subsequent iteration.

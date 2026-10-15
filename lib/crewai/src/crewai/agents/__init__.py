@@ -7,7 +7,6 @@ from crewai.agents.tools_handler import ToolsHandler
 
 if TYPE_CHECKING:
     from crewai.agents.agent_executor import AgentExecutor, AgentExecutorState
-    from crewai.agents.crew_agent_executor import CrewAgentExecutor
 
 
 __all__ = [
@@ -16,7 +15,6 @@ __all__ = [
     "AgentExecutorState",
     "AgentFinish",
     "CacheHandler",
-    "CrewAgentExecutor",
     "OutputParserError",
     "ToolsHandler",
     "parse",
@@ -25,7 +23,6 @@ __all__ = [
 _LAZY_EXPORTS = {
     "AgentExecutor": ("crewai.agents.agent_executor", "AgentExecutor"),
     "AgentExecutorState": ("crewai.agents.agent_executor", "AgentExecutorState"),
-    "CrewAgentExecutor": ("crewai.agents.crew_agent_executor", "CrewAgentExecutor"),
 }
 
 

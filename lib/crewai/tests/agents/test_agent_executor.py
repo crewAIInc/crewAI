@@ -2680,6 +2680,23 @@ class TestEnsureForceFinalAnswer:
         llm.call.assert_not_called()
 
 
+def test_crew_agent_executor_cannot_be_selected() -> None:
+    import importlib
+
+    from crewai import Agent
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("crewai.agents.crew_agent_executor")
+
+    with pytest.raises(ValueError, match="CrewAgentExecutor has been removed"):
+        Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            executor_class="CrewAgentExecutor",
+        )
+
+
 def test_stable_package_export_is_the_executor_class() -> None:
     from crewai.agents import AgentExecutor as ExportedExecutor
     from crewai.agents.agent_executor import AgentExecutor as ModuleExecutor

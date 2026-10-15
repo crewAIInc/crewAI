@@ -138,22 +138,17 @@ try:
         Crew.__module__,
         Flow.__module__,
         Task.__module__,
-        "crewai.agents.crew_agent_executor",
         _runtime_state_mod.__name__,
         _AgentExecutor.__module__,
     ):
         sys.modules[_mod_name].__dict__.update(_resolve_namespace)
 
-    from crewai.agents.crew_agent_executor import (
-        CrewAgentExecutor as _CrewAgentExecutor,
-    )
     from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
 
     _BaseAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
     Task.model_rebuild(force=True, _types_namespace=_full_namespace)
     _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
-    _CrewAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
     Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)

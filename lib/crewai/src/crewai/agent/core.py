@@ -53,7 +53,6 @@ from crewai.agents.agent_builder.base_agent import (
 )
 from crewai.agents.agent_executor import AgentExecutor
 from crewai.agents.cache.cache_handler import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
@@ -148,34 +147,30 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
 )
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
-    "CrewAgentExecutor": CrewAgentExecutor,
     "AgentExecutor": AgentExecutor,
 }
 
 
 def _is_resuming_agent_executor(
-    executor: CrewAgentExecutor | AgentExecutor | None,
+    executor: AgentExecutor | None,
 ) -> TypeIs[AgentExecutor]:
     """Type guard: True when the executor is resuming from a checkpoint."""
     return isinstance(executor, AgentExecutor) and executor._resuming
 
 
 def _validate_executor_class(value: Any) -> Any:
+    if getattr(value, "__name__", None) == "CrewAgentExecutor" or (
+        isinstance(value, str) and value == "CrewAgentExecutor"
+    ):
+        raise ValueError(
+            "CrewAgentExecutor has been removed. Use "
+            "crewai.agents.agent_executor.AgentExecutor."
+        )
     if isinstance(value, str):
         cls = _EXECUTOR_CLASS_MAP.get(value)
         if cls is None:
             raise ValueError(f"Unknown executor class: {value}")
-        value = cls
-    import warnings
-
-    if value is CrewAgentExecutor:
-        warnings.warn(
-            "crewai.agents.crew_agent_executor.CrewAgentExecutor is deprecated and "
-            "will be removed in a future release. Agents use "
-            "crewai.agents.agent_executor.AgentExecutor by default.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        return cls
     return value
 
 
@@ -222,7 +217,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of AgentExecutor, or the deprecated CrewAgentExecutor.
+            agent_executor: The AgentExecutor running this agent.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -386,17 +381,17 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
+    agent_executor: AgentExecutor | None = Field(
         default=None,
-        description="Executor running this agent. Defaults to AgentExecutor.",
+        description="Executor running this agent.",
     )
     executor_class: Annotated[
-        type[CrewAgentExecutor] | type[AgentExecutor],
+        type[AgentExecutor],
         BeforeValidator(_validate_executor_class),
         PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
     ] = Field(
         default=AgentExecutor,
-        description="Class to use for the agent executor. Defaults to AgentExecutor, can optionally use CrewAgentExecutor.",
+        description="Class to use for the agent executor. CrewAgentExecutor has been removed.",
     )
 
     @model_validator(mode="before")
@@ -1259,11 +1254,7 @@ class Agent(BaseAgent):
     def create_agent_executor(
         self, tools: list[BaseTool] | None = None, task: Task | None = None
     ) -> None:
-        """Create an agent executor for the agent.
-
-        Uses AgentExecutor unless ``executor_class`` selects the deprecated
-        CrewAgentExecutor.
-        """
+        """Create the AgentExecutor for the agent."""
         configured_tools = tools if tools is not None else self.tools or []
         raw_tools = self._add_skill_loader_tool(list(configured_tools), task=task)
         parsed_tools = parse_tools(raw_tools)
@@ -1341,10 +1332,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        if isinstance(self.agent_executor, AgentExecutor):
-            self.agent_executor.stop_words = stop_words
-        else:
-            self.agent_executor.stop = stop_words
+        self.agent_executor.stop_words = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (

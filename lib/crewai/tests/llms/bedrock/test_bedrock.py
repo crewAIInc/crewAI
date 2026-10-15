@@ -987,7 +987,7 @@ def test_bedrock_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Bedrock API."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    # Set stop sequences via the stop attribute (simulating an executor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
     with patch.object(llm._client, 'converse') as mock_converse:

@@ -751,7 +751,6 @@ class TestRaisePolicySurvivesEveryWrapper:
         from crewai.agents.step_executor import StepExecutor
         from crewai.agents.agent_executor import AgentExecutor
 
-        # CrewAgentExecutor is deprecated and deliberately excluded.
         sites = [
             (AgentCls._execute_with_timeout, "_passthrough_exceptions"),
             (StepExecutor.execute, "ToolExecutionFailedError"),
@@ -1292,23 +1291,6 @@ class TestMalformedArgumentsAreReported:
         from crewai.utilities import agent_utils
 
         assert "INVALID_INPUT" in inspect.getsource(agent_utils.parse_tool_call_args)
-
-
-class TestDeprecatedExecutorIsNotIntegrated:
-    """CrewAgentExecutor is deprecated; the feature must not extend into it."""
-
-    def test_no_tool_failure_integration(self) -> None:
-        from importlib import import_module
-        from pathlib import Path
-
-        # Read the file directly: importing this module by name resolves to a
-        # different one in this package, so inspect would read the wrong source.
-        package = import_module(Agent.__module__.split(".")[0])
-        source = (
-            Path(package.__file__).parent / "agents" / "crew_agent_executor.py"
-        ).read_text()
-        assert "tool_failure" not in source
-        assert "ToolExecutionFailedError" not in source
 
 
 class TestConcurrentExecutionsAreIsolated:

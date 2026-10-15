@@ -4,7 +4,6 @@ import os
 from unittest.mock import Mock, patch
 
 from crewai.agent import Agent
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_listener import EventListener
