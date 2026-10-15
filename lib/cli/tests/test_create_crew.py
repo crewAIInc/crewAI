@@ -1,6 +1,7 @@
 import asyncio
 import builtins
 import keyword
+import re
 import shutil
 import tempfile
 import threading
@@ -8,6 +9,7 @@ import warnings
 from pathlib import Path
 from unittest import mock
 
+import click
 import pytest
 import tomli
 from click.testing import CliRunner
@@ -18,7 +20,7 @@ import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
 from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
-from crewai_cli.utils import render_template
+from crewai_cli.utils import copy_assistant_instructions, render_template
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -486,6 +488,19 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     assert "More tools" not in labels
 
 
+def test_platform_action_picker_is_searchable(monkeypatch):
+    picker_calls: list[dict[str, object]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append(kwargs)
+        return []
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    assert json_crew._select_platform_actions(["platform:github"]) == []
+    assert picker_calls[0]["searchable"] is True
+
+
 def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
 
@@ -802,8 +817,7 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         return original_import(name, globals, locals, fromlist, level)
 
     monkeypatch.setattr(builtins, "__import__", import_with_warning)
-    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "ignored-token")
-    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test-token")
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
@@ -814,10 +828,10 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         "warning after import"
     ]
     output = capsys.readouterr().out
-    assert "Checking for CREWAI_PLATFORM_INTEGRATION_TOKEN" in output
+    assert "Checking for CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN" in output
     assert (
-        "Platform Integration token found via "
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN environment variable" in output
+        "Enterprise Action Auth Token found via "
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable" in output
     )
 
 
@@ -864,7 +878,7 @@ def test_platform_validation_announces_concurrent_apps_together(capsys):
     output = capsys.readouterr().out
     assert (failed_apps, token_invalid) == ([], False)
     assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
-    assert "Checking CrewAI Platform Integration token and GitHub" not in output
+    assert "Checking Enterprise Action Auth Token and GitHub" not in output
 
 
 def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
@@ -894,8 +908,8 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
     assert (failed_apps, token_invalid) == ([], False)
     assert checked_apps == ["github", "gmail"]
     output = capsys.readouterr().out
-    assert "Checking CrewAI Platform Integration token and GitHub integration" in output
-    assert "Checking CrewAI Platform Integration token and Gmail integration" in output
+    assert "Checking Enterprise Action Auth Token and GitHub integration" in output
+    assert "Checking Enterprise Action Auth Token and Gmail integration" in output
 
 
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
@@ -1155,7 +1169,7 @@ def test_json_create_saves_platform_token_to_env_file(tmp_path, monkeypatch):
     json_crew.create_json_crew("Platform Crew", skip_provider=True)
 
     env_file = tmp_path / "platform_crew" / ".env"
-    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN=token" in env_file.read_text()
+    assert "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN=token" in env_file.read_text()
 
 
 def test_json_crew_uses_template_files():
@@ -1342,3 +1356,87 @@ def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
     assert "it prints a **markdown brief** after the verdict" in agents_md
     assert 'crewai eval --models "provider/model,…"' in agents_md
     assert "crewai-eval:" not in agents_md  # the markers never reach a project
+
+
+def _cli_args(line: str) -> list[str]:
+    """Arguments of a documented `crewai …` line, with `<placeholder>` values filled."""
+    words = line.split("#", 1)[0].split()[1:]
+    return ["value" if re.fullmatch(r"<\w+>", word) else word for word in words]
+
+
+def _parse_cli_args(args: list[str]) -> None:
+    """Parse ARGS against the real CLI without running the command."""
+    command: click.Command = crewai
+    name = "crewai"
+    while isinstance(command, click.Group):
+        name, *args = args
+        subcommand = command.get_command(click.Context(command), name)
+        assert subcommand is not None, f"unknown command {name!r}"
+        command = subcommand
+    command.make_context(name, args)
+
+
+def test_parse_cli_args_rejects_a_positional_deployment_id():
+    with pytest.raises(click.UsageError, match="unexpected extra argument"):
+        _parse_cli_args(_cli_args("crewai deploy remove <id>"))
+
+
+def test_scaffolded_agents_md_deploy_and_org_commands_parse_against_the_cli(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    commands = [
+        line.strip()
+        for line in agents_md.splitlines()
+        if line.strip().startswith(("crewai deploy ", "crewai org "))
+    ]
+
+    for documented in (
+        "crewai deploy remove -u <uuid>",
+        "crewai deploy create -y",
+        "crewai org current",
+        "crewai org switch <id>",
+    ):
+        assert any(line.startswith(documented) for line in commands), documented
+    for line in commands:
+        _parse_cli_args(_cli_args(line))
+
+
+def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "Code is in a GitHub repository" not in agents_md
+    assert "With no `origin`, `crewai deploy create` uploads the project as a ZIP" in agents_md
+    assert "on `create`, and again on `push` for ZIP deployments" in agents_md
+
+
+def test_scaffolded_agents_md_platform_tools_guidance(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    create_crew("my-crew", skip_provider=True)
+
+    agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
+    # PLATFORM_APPS lists the apps, but some of its action names resolve to no tool.
+    assert "source of truth" not in agents_md
+    assert '`CrewaiPlatformTools(apps=["app/action"])` must return at least one tool' in agents_md
+    assert "`CREWAI_PLATFORM_INTEGRATION_TOKEN` in `.env`" in agents_md
+    assert "`app[/action][@connection]`" in agents_md
+    assert "  apps:\n    - hubspot/search_companies\n    - slack\n" in agents_md
+
+
+@pytest.mark.parametrize("evaluation", [True, False])
+def test_agents_md_best_practices_are_numbered_without_gaps(tmp_path, evaluation):
+    copy_assistant_instructions(tmp_path, evaluation=evaluation)
+
+    agents_md = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    section = agents_md.split("## Development Best Practices", 1)[1].split("\n## ", 1)[0]
+    numbers = [int(number) for number in re.findall(r"^(\d+)\. ", section, re.M)]
+    assert numbers == list(range(1, len(numbers) + 1))
+    assert ("`crewai eval`" in section) is evaluation
+    assert "crewai test" not in section

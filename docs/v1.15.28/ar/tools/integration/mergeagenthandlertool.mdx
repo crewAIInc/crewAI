@@ -1,0 +1,367 @@
+---
+title: أداة معالج وكيل Merge
+description: تتيح لوكلاء CrewAI الوصول بأمان إلى تكاملات الأطراف الثالثة مثل Linear و GitHub و Slack والمزيد من خلال منصة معالج الوكيل من Merge
+icon: diagram-project
+mode: "wide"
+---
+
+# `MergeAgentHandlerTool`
+
+تتيح `MergeAgentHandlerTool` لوكلاء CrewAI الوصول بأمان إلى تكاملات الأطراف الثالثة من خلال منصة [معالج الوكيل من Merge](https://www.merge.dev/products/merge-agent-handler). يوفر معالج الوكيل موصلات جاهزة وآمنة لأدوات شائعة مثل Linear و GitHub و Slack و Notion ومئات غيرها - جميعها مع مصادقة وصلاحيات ومراقبة مدمجة.
+
+## التثبيت
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## المتطلبات
+
+- حساب معالج وكيل Merge مع حزمة أدوات مُهيأة
+- مفتاح API لمعالج الوكيل
+- مستخدم مسجل واحد على الأقل مرتبط بحزمة الأدوات الخاصة بك
+- تكاملات أطراف ثالثة مُهيأة في حزمة الأدوات الخاصة بك
+
+## البدء مع معالج الوكيل
+
+1. **التسجيل** في حساب معالج وكيل Merge على [ah.merge.dev/signup](https://ah.merge.dev/signup)
+2. **إنشاء حزمة أدوات** وتكوين التكاملات التي تحتاجها
+3. **تسجيل المستخدمين** الذين سيقومون بالمصادقة مع خدمات الأطراف الثالثة
+4. **الحصول على مفتاح API** من لوحة تحكم معالج الوكيل
+5. **تعيين متغير البيئة**: `export AGENT_HANDLER_API_KEY='your-key-here'`
+6. **البدء بالبناء** مع MergeAgentHandlerTool في CrewAI
+
+## ملاحظات
+
+- يمكن العثور على معرّفات حزمة الأدوات ومعرّفات المستخدمين المسجلين في لوحة تحكم معالج الوكيل أو إنشاؤها عبر API
+- تستخدم الأداة بروتوكول سياق النموذج (MCP) للتواصل مع معالج الوكيل
+- يتم توليد معرّفات الجلسة تلقائياً ولكن يمكن تخصيصها لاستمرارية السياق
+- يتم تسجيل جميع استدعاءات الأدوات وإمكانية مراجعتها من خلال منصة معالج الوكيل
+- يتم اكتشاف معاملات الأدوات ديناميكياً من واجهة برمجة تطبيقات معالج الوكيل والتحقق منها تلقائياً
+
+## الاستخدام
+
+### استخدام أداة واحدة
+
+إليك كيفية استخدام أداة محددة من حزمة الأدوات الخاصة بك:
+
+```python {2, 4-9}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Create a tool for Linear issue creation
+linear_create_tool = MergeAgentHandlerTool.from_tool_name(
+    tool_name="linear__create_issue",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+)
+
+# Create a CrewAI agent that uses the tool
+project_manager = Agent(
+    role='Project Manager',
+    goal='Manage project tasks and issues efficiently',
+    backstory='I am an expert at tracking project work and creating actionable tasks.',
+    tools=[linear_create_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+create_issue_task = Task(
+    description="Create a new high-priority issue in Linear titled 'Implement user authentication' with a detailed description of the requirements.",
+    agent=project_manager,
+    expected_output="Confirmation that the issue was created with its ID"
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[project_manager],
+    tasks=[create_issue_task],
+    verbose=True
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+### تحميل أدوات متعددة من حزمة أدوات
+
+يمكنك تحميل جميع الأدوات المتاحة من حزمة الأدوات دفعة واحدة:
+
+```python {2, 4-8}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Load all tools from the Tool Pack
+tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+)
+
+# Create an agent with access to all tools
+automation_expert = Agent(
+    role='Automation Expert',
+    goal='Automate workflows across multiple platforms',
+    backstory='I can work with any tool in the toolbox to get things done.',
+    tools=tools,
+    verbose=True
+)
+
+automation_task = Task(
+    description="Check for any high-priority issues in Linear and post a summary to Slack.",
+    agent=automation_expert
+)
+
+crew = Crew(
+    agents=[automation_expert],
+    tasks=[automation_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+### تحميل أدوات محددة فقط
+
+تحميل الأدوات التي تحتاجها فقط:
+
+```python {2, 4-10}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Load specific tools from the Tool Pack
+selected_tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    tool_names=["linear__create_issue", "linear__get_issues", "slack__post_message"]
+)
+
+developer_assistant = Agent(
+    role='Developer Assistant',
+    goal='Help developers track and communicate about their work',
+    backstory='I help developers stay organized and keep the team informed.',
+    tools=selected_tools,
+    verbose=True
+)
+
+daily_update_task = Task(
+    description="Get all issues assigned to the current user in Linear and post a summary to the #dev-updates Slack channel.",
+    agent=developer_assistant
+)
+
+crew = Crew(
+    agents=[developer_assistant],
+    tasks=[daily_update_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+## معاملات الأداة
+
+### طريقة `from_tool_name()`
+
+| المعامل | النوع | مطلوب | الافتراضي | الوصف |
+|:---------|:-----|:---------|:--------|:------------|
+| **tool_name** | `str` | نعم | None | اسم الأداة المحددة المراد استخدامها (مثل "linear__create_issue") |
+| **tool_pack_id** | `str` | نعم | None | معرّف UUID لحزمة أدوات معالج الوكيل |
+| **registered_user_id** | `str` | نعم | None | معرّف UUID أو origin_id للمستخدم المسجل |
+| **base_url** | `str` | لا | "https://ah-api.merge.dev" | عنوان URL الأساسي لواجهة برمجة تطبيقات معالج الوكيل |
+| **session_id** | `str` | لا | يتم توليده تلقائياً | معرّف جلسة MCP للحفاظ على السياق |
+
+### طريقة `from_tool_pack()`
+
+| المعامل | النوع | مطلوب | الافتراضي | الوصف |
+|:---------|:-----|:---------|:--------|:------------|
+| **tool_pack_id** | `str` | نعم | None | معرّف UUID لحزمة أدوات معالج الوكيل |
+| **registered_user_id** | `str` | نعم | None | معرّف UUID أو origin_id للمستخدم المسجل |
+| **tool_names** | `list[str]` | لا | None | أسماء أدوات محددة للتحميل. إذا كانت None، يتم تحميل جميع الأدوات المتاحة |
+| **base_url** | `str` | لا | "https://ah-api.merge.dev" | عنوان URL الأساسي لواجهة برمجة تطبيقات معالج الوكيل |
+
+## متغيرات البيئة
+
+```bash
+AGENT_HANDLER_API_KEY=your_api_key_here  # Required for authentication
+```
+
+## الاستخدام المتقدم
+
+### سير عمل متعدد الوكلاء مع صلاحيات أدوات مختلفة
+
+```python {2, 4-20}
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MergeAgentHandlerTool
+
+# Create specialized tools for different agents
+github_tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    tool_names=["github__create_pull_request", "github__get_pull_requests"]
+)
+
+linear_tools = MergeAgentHandlerTool.from_tool_pack(
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    tool_names=["linear__create_issue", "linear__update_issue"]
+)
+
+slack_tool = MergeAgentHandlerTool.from_tool_name(
+    tool_name="slack__post_message",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+)
+
+# Create specialized agents
+code_reviewer = Agent(
+    role='Code Reviewer',
+    goal='Review pull requests and ensure code quality',
+    backstory='I am an expert at reviewing code changes and providing constructive feedback.',
+    tools=github_tools
+)
+
+task_manager = Agent(
+    role='Task Manager',
+    goal='Track and update project tasks based on code changes',
+    backstory='I keep the project board up to date with the latest development progress.',
+    tools=linear_tools
+)
+
+communicator = Agent(
+    role='Team Communicator',
+    goal='Keep the team informed about important updates',
+    backstory='I make sure everyone knows what is happening in the project.',
+    tools=[slack_tool]
+)
+
+# Create sequential tasks
+review_task = Task(
+    description="Review all open pull requests in the 'api-service' repository and identify any that need attention.",
+    agent=code_reviewer,
+    expected_output="List of pull requests that need review or have issues"
+)
+
+update_task = Task(
+    description="Update Linear issues based on the pull request review findings. Mark completed PRs as done.",
+    agent=task_manager,
+    expected_output="Summary of updated Linear issues"
+)
+
+notify_task = Task(
+    description="Post a summary of today's code review and task updates to the #engineering Slack channel.",
+    agent=communicator,
+    expected_output="Confirmation that the message was posted"
+)
+
+# Create a crew with sequential processing
+crew = Crew(
+    agents=[code_reviewer, task_manager, communicator],
+    tasks=[review_task, update_task, notify_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+### إدارة الجلسات المخصصة
+
+الحفاظ على السياق عبر استدعاءات أدوات متعددة باستخدام معرّفات الجلسة:
+
+```python {2, 4-17}
+from crewai import Agent, Task, Crew
+from crewai_tools import MergeAgentHandlerTool
+
+# Create tools with the same session ID to maintain context
+session_id = "project-sprint-planning-2024"
+
+create_tool = MergeAgentHandlerTool(
+    name="linear_create_issue",
+    description="Creates a new issue in Linear",
+    tool_name="linear__create_issue",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    session_id=session_id
+)
+
+update_tool = MergeAgentHandlerTool(
+    name="linear_update_issue",
+    description="Updates an existing issue in Linear",
+    tool_name="linear__update_issue",
+    tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
+    registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
+    session_id=session_id
+)
+
+sprint_planner = Agent(
+    role='Sprint Planner',
+    goal='Plan and organize sprint tasks',
+    backstory='I help teams plan effective sprints with well-defined tasks.',
+    tools=[create_tool, update_tool],
+    verbose=True
+)
+
+planning_task = Task(
+    description="Create 5 sprint tasks for the authentication feature and set their priorities based on dependencies.",
+    agent=sprint_planner
+)
+
+crew = Crew(
+    agents=[sprint_planner],
+    tasks=[planning_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+## حالات الاستخدام
+
+### الوصول الموحد للتكاملات
+- الوصول إلى مئات أدوات الأطراف الثالثة من خلال واجهة برمجة تطبيقات موحدة واحدة دون إدارة حزم SDK متعددة
+- تمكين الوكلاء من العمل مع Linear و GitHub و Slack و Notion و Jira و Asana والمزيد من نقطة تكامل واحدة
+- تقليل تعقيد التكامل من خلال السماح لمعالج الوكيل بإدارة المصادقة وإصدارات API
+
+### سير عمل المؤسسات الآمنة
+- الاستفادة من إدارة المصادقة والصلاحيات المدمجة لجميع تكاملات الأطراف الثالثة
+- الحفاظ على معايير أمان المؤسسة مع التحكم المركزي في الوصول وتسجيل المراجعة
+- تمكين الوكلاء من الوصول إلى أدوات الشركة دون كشف مفاتيح API أو بيانات الاعتماد في الكود
+
+### الأتمتة عبر المنصات
+- بناء سير عمل يمتد عبر منصات متعددة (مثل إنشاء مشكلات GitHub من مهام Linear، مزامنة صفحات Notion مع Slack)
+- تمكين تدفق البيانات السلس بين الأدوات المختلفة في مجموعتك التقنية
+- إنشاء أتمتة ذكية تفهم السياق عبر المنصات المختلفة
+
+### اكتشاف الأدوات الديناميكي
+- تحميل جميع الأدوات المتاحة أثناء التشغيل دون ترميز منطق التكامل بشكل ثابت
+- تمكين الوكلاء من اكتشاف واستخدام أدوات جديدة عند إضافتها إلى حزمة الأدوات
+- بناء وكلاء مرنة يمكنها التكيف مع تغير توفر الأدوات
+
+### الوصول إلى الأدوات حسب المستخدم
+- يمكن لمستخدمين مختلفين الحصول على صلاحيات ومستويات وصول مختلفة للأدوات
+- تمكين سير عمل متعدد المستأجرين حيث تعمل الوكلاء نيابة عن مستخدمين محددين
+- الحفاظ على الإسناد والصلاحيات المناسبة لجميع إجراءات الأدوات
+
+## التكاملات المتاحة
+
+يدعم معالج وكيل Merge مئات التكاملات عبر فئات متعددة:
+
+- **إدارة المشاريع**: Linear، Jira، Asana، Monday.com، ClickUp
+- **إدارة الكود**: GitHub، GitLab، Bitbucket
+- **التواصل**: Slack، Microsoft Teams، Discord
+- **التوثيق**: Notion، Confluence، Google Docs
+- **إدارة علاقات العملاء**: Salesforce، HubSpot، Pipedrive
+- **والمزيد...**
+
+قم بزيارة [وثائق معالج وكيل Merge](https://docs.ah.merge.dev/) للحصول على قائمة كاملة بالتكاملات المتاحة.
+
+## معالجة الأخطاء
+
+توفر الأداة معالجة شاملة للأخطاء:
+
+- **أخطاء المصادقة**: مفاتيح API غير صالحة أو مفقودة
+- **أخطاء الصلاحيات**: المستخدم يفتقر إلى صلاحية الإجراء المطلوب
+- **أخطاء API**: مشكلات في التواصل مع معالج الوكيل أو خدمات الأطراف الثالثة
+- **أخطاء التحقق**: معاملات غير صالحة مُمررة لطرق الأداة
+
+يتم تغليف جميع الأخطاء في `MergeAgentHandlerToolError` لمعالجة أخطاء متسقة.
