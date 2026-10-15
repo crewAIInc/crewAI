@@ -37,6 +37,7 @@ import pytest
 def test_load_jsonl(
     tmp_path: Path, from_file: bool, content: str, expected: str, count: int
 ) -> None:
+    """Preserve valid records and derive consistent metadata for file or inline input."""
     source = SourceContent(content)
     if from_file:
         path = tmp_path / "records.jsonl"
@@ -53,6 +54,7 @@ def test_load_jsonl(
 
 
 def test_doc_id_changes_with_file_content(tmp_path: Path) -> None:
+    """Changing records at the same path must change the document ID."""
     path = tmp_path / "records.jsonl"
     path.write_text("1", encoding="utf-8")
     source = SourceContent(path)
@@ -87,6 +89,7 @@ def test_doc_id_changes_with_file_content(tmp_path: Path) -> None:
 def test_invalid_jsonl_record(
     tmp_path: Path, from_file: bool, content: str, line_number: int
 ) -> None:
+    """Report the 1-based line containing a blank or invalid JSON record."""
     source = SourceContent(content)
     if from_file:
         path = tmp_path / "invalid.jsonl"

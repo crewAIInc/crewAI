@@ -13,6 +13,7 @@ class JSONLLoader(BaseLoader):
     """
 
     def load(self, content: SourceContent, **kwargs: Any) -> LoaderResult:
+        """Validate JSONL records and return their text, count, and source identity."""
         source_ref = content.source_ref
         text = content.source
         if content.path_exists():
@@ -43,4 +44,5 @@ class JSONLLoader(BaseLoader):
 
     @staticmethod
     def _reject_constant(value: str) -> NoReturn:
+        """Reject NaN and infinity tokens, which are not valid JSON values."""
         raise ValueError(f"Invalid JSON constant: {value}")
