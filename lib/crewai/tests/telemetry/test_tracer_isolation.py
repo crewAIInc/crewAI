@@ -94,6 +94,56 @@ def test_our_own_spans_still_reach_our_exporter(telemetry_with_exporter):
     assert [span.name for span in exporter.get_finished_spans()] == ["Feature Usage"]
 
 
+def test_a_feature_span_keeps_only_what_the_feature_may_send(telemetry_with_exporter):
+    """The same policy as crewai-core's: each feature names what it may add, and
+    the dimensions every span already carries cannot be overwritten."""
+    telemetry, exporter = telemetry_with_exporter
+    telemetry.set_tracer()
+    offered = {
+        "authenticated": "false",
+        "execution_id": "run-1",
+        "organization_id": "org-1",
+        "feature": "someone_else",
+    }
+
+    telemetry.feature_usage_span("cli_usage:eval", offered)
+    telemetry.feature_usage_span("cli_usage:deploy", offered)
+
+    eval_span, deploy_span = exporter.get_finished_spans()
+    assert eval_span.attributes["authenticated"] == "false"
+    assert eval_span.attributes["feature"] == "cli_usage:eval"
+    assert "execution_id" not in eval_span.attributes
+    assert "organization_id" not in eval_span.attributes
+    assert "authenticated" not in deploy_span.attributes
+    assert deploy_span.attributes["feature"] == "cli_usage:deploy"
+
+
+def test_the_models_span_carries_the_models_compared_and_nothing_else(
+    telemetry_with_exporter,
+):
+    telemetry, exporter = telemetry_with_exporter
+    telemetry.set_tracer()
+
+    telemetry.feature_usage_span(
+        "cli_usage:eval_models",
+        {
+            "authenticated": "true",
+            "models": "openai/gpt-4o-mini,anthropic/claude-haiku-4-5",
+            "models_count": "2",
+            "evaluation_id": "ev-1",
+            "organization_id": "org-1",
+        },
+    )
+
+    (span,) = exporter.get_finished_spans()
+    assert span.attributes["feature"] == "cli_usage:eval_models"
+    assert span.attributes["authenticated"] == "true"
+    assert span.attributes["models"] == "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"
+    assert span.attributes["models_count"] == "2"
+    assert "evaluation_id" not in span.attributes
+    assert "organization_id" not in span.attributes
+
+
 def test_our_spans_are_unaffected_by_an_application_provider(telemetry_with_exporter):
     """An app that installs its own provider must not divert our telemetry.
 

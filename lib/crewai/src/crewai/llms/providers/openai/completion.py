@@ -578,6 +578,48 @@ class OpenAICompletion(BaseLLM):
 
         return client_params
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with OpenAI's Responses API.
+
+        The count endpoint uses the configured model but is independent of the
+        generation endpoint selected by :attr:`api`. This lets Chat Completions
+        users preflight an equivalent Responses payload without changing their
+        subsequent generation request.
+        """
+        if self._on_compatible_server():
+            return super().get_input_tokens_count(messages, tools, response_model)
+
+        formatted_messages = self._format_messages(messages, file_api="responses")
+        response_params = self._prepare_responses_params(
+            messages=formatted_messages,
+            tools=tools,
+            response_model=response_model,
+        )
+        count_params = {
+            key: response_params[key]
+            for key in (
+                "model",
+                "input",
+                "instructions",
+                "text",
+                "tools",
+                "previous_response_id",
+            )
+            if key in response_params
+        }
+        try:
+            response = self._get_sync_client().responses.input_tokens.count(
+                **count_params
+            )
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+        return int(response.input_tokens)
+
     def call(
         self,
         messages: str | list[LLMMessage],
@@ -2968,43 +3010,15 @@ class OpenAICompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            OPENAI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        # Longest prefix first. Always insert new keys in that order so
-        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
-        context_windows = {
-            "gpt-4.1-mini-2025-04-14": 1047576,
-            "gpt-4.1-nano-2025-04-14": 1047576,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-4o-mini": 128000,
-            "gpt-5-mini": 1047576,
-            "gpt-5-nano": 1047576,
-            "o1-preview": 128000,
-            "gpt-5.6": 1050000,
-            "o1-mini": 128000,
-            "o3-mini": 200000,
-            "o4-mini": 200000,
-            "gpt-4.1": 1047576,
-            "gpt-4o": 128000,
-            "gpt-5": 1047576,
-            "gpt-4": 8192,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model, OPENAI_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Newer OpenAI chat models cap via ``max_completion_tokens``."""
@@ -3056,9 +3070,11 @@ class OpenAICompletion(BaseLLM):
             return result
         return {"total_tokens": 0}
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
         """Format messages for OpenAI API."""
-        base_formatted = super()._format_messages(messages)
+        base_formatted = super()._format_messages(messages, file_api=file_api)
 
         formatted_messages: list[LLMMessage] = []
 
