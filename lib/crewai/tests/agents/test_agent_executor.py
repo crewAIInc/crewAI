@@ -2726,6 +2726,5 @@ def test_experimental_executor_import_is_removed() -> None:
 
     experimental = importlib.import_module("crewai.experimental")
     for name in ("AgentExecutor", "CrewAgentExecutorFlow"):
-        experimental.__dict__.pop(name, None)
         with pytest.raises(AttributeError):
             getattr(experimental, name)

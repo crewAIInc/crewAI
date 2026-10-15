@@ -54,7 +54,7 @@ def after_hook(context: LLMCallHookContext) -> str | None:
 
 ```python
 class LLMCallHookContext:
-    executor: AgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
+    executor: AgentExecutor | LiteAgent | None  # 실행자 (직접 LLM 호출 시 None)
     messages: list               # 변경 가능한 메시지 목록
     agent: Agent                 # 현재 에이전트
     task: Task                   # 현재 작업

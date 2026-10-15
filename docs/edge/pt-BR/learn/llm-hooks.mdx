@@ -54,7 +54,7 @@ O objeto `LLMCallHookContext` fornece acesso abrangente ao estado de execução:
 
 ```python
 class LLMCallHookContext:
-    executor: AgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
+    executor: AgentExecutor | LiteAgent | None  # Executor (None para chamadas diretas ao LLM)
     messages: list               # Lista de mensagens mutável
     agent: Agent                 # Agente atual
     task: Task                   # Tarefa atual
