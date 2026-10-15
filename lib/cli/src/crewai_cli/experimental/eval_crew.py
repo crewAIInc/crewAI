@@ -1722,8 +1722,11 @@ _WINDOWS_DEVICE_NAMES = frozenset(
 # is checked first and opened again later, when another process may have put
 # a link in its way (`_put_through_handles`). Windows cannot; there each path
 # is resolved and checked to stay inside the folder before it is written
-# (`_put_by_path`) — a check another process could race, but making a link
-# there takes a privilege an account lacks by default.
+# (`_put_by_path`). That check can be raced: a process that can write inside
+# the export folder could swap a junction in between, and any account can make
+# one. The bounded loss, accepted: such a process already writes where this
+# user does (the folder is in the user's own working directory), unless the
+# CLI runs elevated in a folder a less trusted account may write to.
 _WRITES_THROUGH_HANDLES = (
     hasattr(os, "O_NOFOLLOW")
     and hasattr(os, "O_DIRECTORY")
@@ -1896,9 +1899,15 @@ def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
     skipped = 0
     with _export_folder(folder) as put:
         try:
-            put([".gitignore"], b"*\n")
+            ignored = put([".gitignore"], b"*\n")
         except OSError as error:
             _fail(f"Could not write the export into {folder}/: {error}")
+        if not ignored:
+            # The data never goes into the folder without it.
+            _fail(
+                f"{folder}/.gitignore is a folder, not this command's file: remove it "
+                "and export again, so the data is never committed by accident."
+            )
         for name, content in files.items():
             segments = _export_target(name)
             if segments is None or not isinstance(content, str):
