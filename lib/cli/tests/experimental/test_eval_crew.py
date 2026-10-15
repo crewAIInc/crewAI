@@ -2588,6 +2588,22 @@ def test_a_file_where_a_folder_goes_skips_what_goes_under_it(project, monkeypatc
 
 
 @pytest.mark.usefixtures("writes")
+def test_a_folder_where_the_gitignore_goes_stops_the_export_before_any_data(project, monkeypatch):
+    directory, _ = project
+    (directory / FOLDER / ".gitignore").mkdir(parents=True)
+    install(monkeypatch, FakeExportAMP())
+
+    result = CliRunner().invoke(eval_command, ["export", EVALUATION_ID])
+
+    assert result.exit_code == 1
+    assert result.output == (
+        f"{FOLDER}/.gitignore is a folder, not this command's file: remove it "
+        "and export again, so the data is never committed by accident.\n"
+    )
+    assert [p.name for p in (directory / FOLDER).iterdir()] == [".gitignore"]  # no data written
+
+
+@pytest.mark.usefixtures("writes")
 def test_a_folder_where_a_file_goes_is_skipped_and_the_export_goes_on(project, monkeypatch, capsys):
     directory, _ = project
     (directory / FOLDER / "run").mkdir(parents=True)
