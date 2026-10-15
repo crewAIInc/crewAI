@@ -1994,7 +1994,7 @@ def _put_through_handles(root: int, segments: list[str], data: bytes) -> bool:
                 return False  # a folder where a file goes
             os.unlink(leaf, dir_fd=folder)
         except FileNotFoundError:
-            pass
+            pass  # nothing at the file's place yet: it is simply made
         descriptor = os.open(leaf, _NEW_FILE_FLAGS, 0o666, dir_fd=folder)
         try:
             out = open(descriptor, "wb")
