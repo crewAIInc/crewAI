@@ -613,6 +613,44 @@ from crewai.flow import (
 )
 ```
 
+## Experimental: comandos `/btw`
+
+<Warning>
+`/btw` é um extra experimental. Flows conversacionais ignoram linhas com barra até você ativar o extra, e a API pode mudar.
+</Warning>
+
+Cada `handle_turn()` trata a linha do usuário como uma nova execução do grafo. `/btw` é um canal lateral para intercalar uma nota de direção — ou forçar uma rota — **sem** anexar uma mensagem de usuário nem rodar o grafo.
+
+```python
+from crewai.experimental.conversation_commands import btw_commands
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+
+
+@btw_commands
+@ConversationConfig()
+class SupportFlow(Flow[ConversationState]):
+    @listen("RESEARCH")
+    def handle_research(self) -> str:
+        """Fresh web research."""
+        reply = "I would research that."
+        self.append_assistant_message(reply)
+        return reply
+```
+
+| Linha | Efeito |
+|------|--------|
+| `/btw keep answers under 20 words` | Persiste uma nota de direção. Nenhum turno de usuário é gravado. As notas entram depois nos prompts de `converse` e do router. |
+| `/btw route RESEARCH` | Força o **próximo** turno para essa rota e depois volta ao roteamento normal. |
+| `/btw stay RESEARCH` ou `/btw route RESEARCH persist` | Continua forçando essa rota até `/btw clear`. |
+| `/btw clear` | Remove notas e rotas forçadas. |
+| `/btw` ou `/btw show` | Mostra a direção atual. |
+| `/help` | Lista os comandos. |
+| `What's the weather /btw keep it to one sentence` | Aplica o comando e executa o texto restante como turno do usuário. |
+
+Para um flow já construído (incluindo `Flow.from_declaration(...)`), chame `enable_btw_commands(flow)` em vez do decorator.
+
+Linhas `/btw` isoladas devolvem um acknowledgement e não chamam `kickoff()`. Como `chat()` e o TUI da CLI encapsulam `handle_turn()`, o extra passa a valer automaticamente depois de instalado. Flows sem o extra ainda tratam `/btw …` como mensagem normal de usuário.
+
 ## Veja também
 
 - [Dominando o Gerenciamento de Estado em Flows](/pt-BR/guides/flows/mastering-flow-state) — persistência, estado Pydantic, `@persist`
