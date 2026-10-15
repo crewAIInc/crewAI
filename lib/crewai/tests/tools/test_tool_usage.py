@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -347,6 +347,27 @@ def test_validate_tool_input_rejects_truncated_string_value():
     emit_error.assert_called_once_with(
         "Tool input must be a valid dictionary in JSON or Python literal format"
     )
+
+
+def test_tool_calling_does_not_repair_truncated_json_with_function_calling_llm():
+    tool = RandomNumberTool().to_structured_tool()
+    action = MagicMock()
+    action.tool = tool.name
+    action.tool_input = '{"query": "XYZ'
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=MagicMock(),
+        agent=None,
+        action=action,
+    )
+
+    with patch.object(tool_usage, "_function_calling") as function_calling:
+        result = tool_usage._tool_calling('Action Input: {"query": "XYZ')
+
+    assert isinstance(result, ToolUsageError)
+    function_calling.assert_not_called()
 
 
 def test_validate_tool_input_with_special_characters():

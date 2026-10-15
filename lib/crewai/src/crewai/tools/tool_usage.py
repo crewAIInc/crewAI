@@ -915,6 +915,8 @@ class ToolUsage:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
+            except ToolUsageError as error:
+                return ToolUsageError(error.message)
             except Exception:
                 if self.function_calling_llm:
                     return self._function_calling(tool_string)
@@ -971,7 +973,7 @@ class ToolUsage:
                 "Tool input must be a valid dictionary in JSON or Python literal format"
             )
             self._emit_validate_input_error(error_message)
-            raise Exception(error_message)
+            raise ToolUsageError(error_message)
 
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
