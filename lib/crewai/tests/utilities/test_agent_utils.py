@@ -23,6 +23,8 @@ from crewai.events.types.llm_events import (
     ContextWindowSummarizationCompletedEvent,
     ContextWindowSummarizationStartedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import LLMCallBlockedError
 from crewai.tools.base_tool import BaseTool
 from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
@@ -201,6 +203,82 @@ def test_get_llm_response_preserves_a_single_pending_user_request() -> None:
 
     summarize.assert_not_called()
     assert llm.call.call_args.args[0] == messages
+
+
+@pytest.mark.parametrize(
+    "failure_source",
+    ["preflight", "summarization"],
+)
+def test_get_llm_response_continues_when_proactive_compaction_fails(
+    failure_source: str,
+) -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "pending request"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.call.return_value = "response"
+    if failure_source == "preflight":
+        llm.is_context_window_overflowing_threshold.side_effect = RuntimeError(
+            "token counting failed"
+        )
+        summarize = patch("crewai.utilities.agent_utils.summarize_messages")
+    else:
+        llm.is_context_window_overflowing_threshold.return_value = True
+        summarize = patch(
+            "crewai.utilities.agent_utils.summarize_messages",
+            side_effect=RuntimeError("summarization failed"),
+        )
+
+    with summarize:
+        assert (
+            get_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    llm.call.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "error", [HookAborted("blocked"), LLMCallBlockedError("blocked")])
+def test_get_llm_response_propagates_explicit_proactive_compaction_blocks(
+    error: Exception,
+) -> None:
+    messages = [{"role": "user", "content": "pending request"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.side_effect = error
+
+    with pytest.raises(type(error)):
+        get_llm_response(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            executor_context=executor,
+            verbose=False,
+        )
+
+    llm.call.assert_not_called()
 
 
 def test_get_llm_response_skips_preflight_when_context_respect_is_disabled() -> None:
