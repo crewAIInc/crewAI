@@ -162,3 +162,103 @@ def test_source_and_doc_id(
     notebook["cells"][0]["source"] = "Changed"
     changed = loader.load(source_for(json.dumps(notebook)))
     assert changed.doc_id != result.doc_id
+
+
+@pytest.mark.parametrize("text", ["", '{"nbformat": 4,'])
+def test_invalid_json(source_for: Callable[[str], SourceContent], text: str) -> None:
+    with pytest.raises(ValueError):
+        NotebookLoader().load(source_for(text))
+
+
+@pytest.mark.parametrize(
+    "notebook, error",
+    [
+        (None, "notebook"),
+        ([], "notebook"),
+        (42, "notebook"),
+        ("text", "notebook"),
+        ({"cells": []}, "nbformat"),
+        ({"nbformat": 3, "cells": []}, "nbformat"),
+        ({"nbformat": 5, "cells": []}, "nbformat"),
+        ({"nbformat": 4.0, "cells": []}, "nbformat"),
+        ({"nbformat": True, "cells": []}, "nbformat"),
+        ({"nbformat": 4}, "cells"),
+        ({"nbformat": 4, "cells": None}, "cells"),
+        ({"nbformat": 4, "cells": {}}, "cells"),
+        ({"nbformat": 4, "cells": "text"}, "cells"),
+    ],
+)
+def test_invalid_notebook(
+    load_notebook: Callable[[Any], LoaderResult], notebook: Any, error: str
+) -> None:
+    with pytest.raises(ValueError, match=error):
+        load_notebook(notebook)
+
+
+@pytest.mark.parametrize(
+    "cell",
+    [
+        None,
+        [],
+        "text",
+        {"source": "text"},
+        {"cell_type": "unknown", "source": "text"},
+        {"cell_type": [], "source": "text"},
+        {"cell_type": None, "source": "text"},
+        {"cell_type": "code"},
+        {"cell_type": "code", "source": None},
+        {"cell_type": "code", "source": 42},
+        {"cell_type": "code", "source": {}},
+        {"cell_type": "code", "source": ["valid", 42]},
+    ],
+)
+def test_invalid_cell(load_notebook: Callable[[Any], LoaderResult], cell: Any) -> None:
+    with pytest.raises(ValueError, match="cell 2"):
+        load_notebook(
+            {"nbformat": 4, "cells": [{"cell_type": "raw", "source": "ok"}, cell]}
+        )
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        None,
+        [],
+        "text",
+        {"language_info": None, "kernelspec": []},
+        {"language_info": [], "kernelspec": "text"},
+        {"language_info": "text", "kernelspec": None},
+        {"language_info": {"name": 42}, "kernelspec": {"name": []}},
+        {"cell_count": 999, "format": "other", "nested": {"a": "b"}},
+    ],
+)
+def test_optional_metadata(
+    load_notebook: Callable[[Any], LoaderResult], metadata: Any
+) -> None:
+    result = load_notebook(
+        {
+            "nbformat": 4,
+            "metadata": metadata,
+            "cells": [{"cell_type": "raw", "source": "text"}],
+        }
+    )
+    assert result.content == "[cell 1: raw]\ntext"
+    assert result.metadata == {
+        "format": "ipynb",
+        "nbformat": 4,
+        "cell_count": 1,
+        "markdown_cells": 0,
+        "code_cells": 0,
+        "raw_cells": 1,
+    }
+
+
+@pytest.mark.parametrize("minor", [0, 99, None, "5", -1, True, 5.0])
+def test_minor_version(
+    load_notebook: Callable[[Any], LoaderResult], minor: Any
+) -> None:
+    result = load_notebook({"nbformat": 4, "nbformat_minor": minor, "cells": []})
+    if type(minor) is int and minor >= 0:
+        assert result.metadata["nbformat_minor"] == minor
+    else:
+        assert "nbformat_minor" not in result.metadata
