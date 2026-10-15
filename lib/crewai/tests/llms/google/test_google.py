@@ -922,7 +922,7 @@ def test_gemini_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Gemini API."""
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    # Set stop sequences via the stop attribute (simulating an executor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
     with patch.object(llm._client.models, 'generate_content') as mock_generate:
