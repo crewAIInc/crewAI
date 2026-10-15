@@ -3055,7 +3055,7 @@ class TestMaxIterationsForcedAnswer:
         llm.stop = []
         llm.supports_stop_words.return_value = True
         llm.supports_function_calling.return_value = False
-        llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+        llm.is_context_window_overflowing_threshold.return_value = True
         llm.call.return_value = "Final Answer: done"
         executor = self._make_executor(llm, original_tools=[])
         executor.iterations = 0
@@ -3086,7 +3086,7 @@ class TestMaxIterationsForcedAnswer:
         llm.stop = []
         llm.supports_stop_words.return_value = True
         llm.supports_function_calling.return_value = True
-        llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+        llm.is_context_window_overflowing_threshold.return_value = True
         llm.call.return_value = "done"
         executor = self._make_executor(llm, original_tools=[search])
         executor.iterations = 0

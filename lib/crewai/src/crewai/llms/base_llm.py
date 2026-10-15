@@ -429,7 +429,7 @@ class BaseLLM(BaseModel, ABC):
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> tuple[bool, int]:
+    ) -> bool:
         """Check whether a pending request exceeds the usable context window.
 
         ``get_context_window_size`` already reserves 15% of the raw model
@@ -443,11 +443,10 @@ class BaseLLM(BaseModel, ABC):
                 request.
 
         Returns:
-            Whether the pending request exceeds the usable context window, and
-            its estimated input-token count.
+            Whether the pending request exceeds the usable context window.
         """
         input_tokens = self.get_input_tokens_count(messages, tools, response_model)
-        return input_tokens > self.get_context_window_size(), input_tokens
+        return input_tokens > self.get_context_window_size()
 
     @abstractmethod
     def call(

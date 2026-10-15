@@ -601,7 +601,7 @@ def test_lite_agent_summarizes_before_calling_the_llm():
     llm = Mock(spec=LLM)
     llm.stop = []
     llm.supports_stop_words.return_value = True
-    llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+    llm.is_context_window_overflowing_threshold.return_value = True
     agent = LiteAgent(
         role="Test",
         goal="Test goal",

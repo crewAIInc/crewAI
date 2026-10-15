@@ -95,7 +95,7 @@ def test_get_llm_response_summarizes_before_the_model_call() -> None:
         after_llm_call_hooks=[],
     )
     llm = MagicMock()
-    llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+    llm.is_context_window_overflowing_threshold.return_value = True
     llm.call.return_value = "response"
     events: list[str] = []
 
@@ -144,6 +144,28 @@ def test_get_llm_response_skips_preflight_when_context_respect_is_disabled() -> 
     llm.is_context_window_overflowing_threshold.assert_not_called()
 
 
+def test_get_llm_response_ignores_unconfigured_mock_preflight_result() -> None:
+    """Plain LLM mocks do not need to implement the preflight tuple contract."""
+    from crewai.llm import LLM
+
+    llm = MagicMock(spec=LLM)
+    llm.call.return_value = "done"
+    executor_context = MagicMock()
+    executor_context.respect_context_window = True
+
+    result = get_llm_response(
+        llm=llm,
+        messages=[{"role": "user", "content": "hello"}],
+        callbacks=[],
+        printer=Printer(),
+        executor_context=executor_context,
+        verbose=False,
+    )
+
+    assert result == "done"
+    llm.call.assert_called_once()
+
+
 @pytest.mark.asyncio
 async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
     messages = [{"role": "user", "content": "large context"}]
@@ -154,7 +176,7 @@ async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
         after_llm_call_hooks=[],
     )
     llm = MagicMock()
-    llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+    llm.is_context_window_overflowing_threshold.return_value = True
     llm.acall = AsyncMock(return_value="response")
 
     with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:

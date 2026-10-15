@@ -94,13 +94,13 @@ def test_context_window_preflight_triggers_only_above_usable_limit():
         patch.object(llm, "get_context_window_size", return_value=850),
         patch.object(llm, "get_input_tokens_count", return_value=850),
     ):
-        assert llm.is_context_window_overflowing_threshold(messages) == (False, 850)
+        assert llm.is_context_window_overflowing_threshold(messages) is False
 
     with (
         patch.object(llm, "get_context_window_size", return_value=850),
         patch.object(llm, "get_input_tokens_count", return_value=851),
     ):
-        assert llm.is_context_window_overflowing_threshold(messages) == (True, 851)
+        assert llm.is_context_window_overflowing_threshold(messages) is True
 
 
 @pytest.mark.vcr()

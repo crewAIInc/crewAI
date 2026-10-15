@@ -128,7 +128,7 @@ class TestAsyncAgentExecutor:
     ) -> None:
         executor.respect_context_window = True
         executor.messages = [{"role": "user", "content": "large context"}]
-        mock_llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+        mock_llm.is_context_window_overflowing_threshold.return_value = True
         events: list[str] = []
 
         async def response(*_args: Any, **_kwargs: Any) -> str:
@@ -158,7 +158,7 @@ class TestAsyncAgentExecutor:
         executor.original_tools = [search]
         executor.respect_context_window = True
         executor.messages = [{"role": "user", "content": "large context"}]
-        mock_llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+        mock_llm.is_context_window_overflowing_threshold.return_value = True
         events: list[str] = []
 
         async def response(*_args: Any, **_kwargs: Any) -> str:
