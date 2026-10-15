@@ -89,10 +89,17 @@ class PlusAPI(_CorePlusAPI):
         )
 
     def get_evaluation(self, evaluation_id: str) -> httpx.Response:
-        """The evaluation's status and, once done, its verdict."""
+        """The evaluation's status and, once done, its verdict.
+
+        `can_export=1` says this CLI has `crewai eval export`, so the brief may
+        point at it. AMP passes it on to the evaluation service; an AMP from
+        before exports drops it, so the brief names the command only when the
+        CLI, AMP and the service all serve it.
+        """
         return self._make_request(
             "GET",
             f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}",
+            params={"can_export": "1"},
             timeout=self.EVALUATION_POLL_TIMEOUT,
         )
 
