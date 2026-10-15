@@ -135,8 +135,12 @@ def test_hosts_in_no_proxy_are_reached_directly(
 
 @pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
 def test_without_proxy_variables_requests_go_directly(
-    proxy: _RecordingServer, amp: _RecordingServer
+    proxy: _RecordingServer, amp: _RecordingServer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # With no variables set, httpx falls back to the macOS or Windows system proxy
+    # settings (urllib's getproxies); model a machine with none configured.
+    monkeypatch.setattr("httpx._utils.getproxies", dict)
+
     response = PlusAPI("amp-token", base_url=amp.url).get_agent("researcher")
 
     assert response.json() == {"served_by": "amp"}
