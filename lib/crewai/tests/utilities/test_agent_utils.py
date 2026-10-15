@@ -65,6 +65,27 @@ def test_summarizes_context_before_llm_call() -> None:
     )
 
 
+def test_context_summarization_shows_triggered_and_completed_panels() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    llm = MagicMock()
+
+    with (
+        patch("crewai.utilities.agent_utils.summarize_messages"),
+        patch("crewai.utilities.agent_utils.console.print") as print_panel,
+    ):
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=True,
+        )
+
+    assert print_panel.call_count == 2
+    assert "triggered" in str(print_panel.call_args_list[0].args[0].title).lower()
+    assert "completed" in str(print_panel.call_args_list[1].args[0].title).lower()
+
+
 def test_get_llm_response_summarizes_before_the_model_call() -> None:
     messages = [{"role": "user", "content": "large context"}]
     executor = SimpleNamespace(

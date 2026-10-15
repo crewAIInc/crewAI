@@ -16,6 +16,7 @@ from crewai_core.printer import PRINTER, ColoredText, Printer
 from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
+from rich.panel import Panel
 
 from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from crewai.agents.parser import (
@@ -548,11 +549,25 @@ def _summarize_context_before_llm_call(
 ) -> None:
     """Compact messages after a preflight context-window check."""
     if verbose:
-        printer.print(
-            content="Context window is nearing its limit. Summarizing content before the next model call. Might take a while...",
-            color="yellow",
+        console.print(
+            Panel(
+                "The pending request is nearing the model context limit. "
+                "Compacting the conversation before the next model call.",
+                title="🧠 Context summarization triggered",
+                border_style="yellow",
+                padding=(1, 2),
+            )
         )
     summarize_messages(messages=messages, llm=llm, callbacks=callbacks, verbose=verbose)
+    if verbose:
+        console.print(
+            Panel(
+                "Conversation context has been compacted and is ready for the next model call.",
+                title="✅ Context summarization completed",
+                border_style="green",
+                padding=(1, 2),
+            )
+        )
 
 
 def get_llm_response(
