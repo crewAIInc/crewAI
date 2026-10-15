@@ -4,6 +4,141 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 10월 14일">
+  ## v1.15.28
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.28)
+
+  ## 변경 사항
+
+  ### 기능
+  - 중단된 모델이 어디에서 오류가 발생했는지 보고하기 위해 crewai eval 명령 추가.
+  - 컨텍스트 창을 위해 LiteLLM 카탈로그 사용.
+
+  ### 버그 수정
+  - 재개된 인간 피드백으로부터 학습하고 검토된 출력 유형을 보존하는 흐름 수정.
+  - 비어 있지 않은 앱이 0 플랫폼 도구로 해결될 때 경고.
+  - pyproject에서 패키지를 올바르게 찾도록 add-crew 흐름 수정.
+  - 배포 실패 사유 표시 및 배포 제거 및 lockfile 검사를 수정.
+  - 트리거 목록 및 페이로드 요청의 타임아웃을 60초로 수정.
+  - ZIP 배포가 새 코드를 사용하도록 배포 푸시 중 AMP의 source_type 읽기.
+  - rag에서 UTF-8 BOM으로 로컬 JSON 파일 디코딩.
+  - OpenAI GPT-6 Sol/Luna/Astra에 대한 이미지 input_files 허용.
+  - 스트리밍된 인류 도구 호출에 대한 호출 완료 이벤트 발생.
+  - JSON-schema 모델이 BaseModel 그림자 필드에 대해 경고하지 않도록 중지.
+  - 네이티브 도구 중단 및 후속 후크 캐시 ID 보존.
+  - 버전 증가 PR 병합 후 LiteLLM 카탈로그 새로 고침.
+  - 손상된 평가자 회귀 테스트 복구.
+
+  ### 문서
+  - MongoDB 문서의 개선 사항 통합.
+  - AGENTS.md에서 배포 및 플랫폼 도구 안내 수정.
+  - RagTool 및 XMLSearchTool에 대한 README 가져오기 수정.
+
+  ## 기여자
+
+  @SIDDARTHAREDDY8, @Vidit-Ostwal, @joaomdmoura, @kimnamu, @lorenzejay, @norareidy, @shaikn6, @zouyonghe
+
+</Update>
+
+<Update label="2026년 10월 9일">
+  ## v1.15.27
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.27)
+
+  ## 변경 사항
+
+  ### 기능
+  - OpenCLIP 제공 장치 옵션에 XPU 추가
+  - OpenAI 호환 제공자로 deepinfra 추가
+  - 평가가 판결 전에 중단된 이유 기록
+  - 실행 앱의 배포가 시도 전에 충족한 조건 기록
+  - crewai eval --models에서 반복된 진행 라인 없이 실행당 비용 및 시간 추적 구현
+
+  ### 버그 수정
+  - stopSequences가 OpenAI GPT-6/GPT-5.6/gpt-oss로 전송되는 문제 수정
+  - GitHub 로더 소스 출처 보존
+  - SQLite 흐름 초기화 경합 문제 수정
+
+  ### 문서
+  - v1.15.26에 대한 스냅샷 및 변경 로그 추가
+
+  ## 기여자
+
+  @StoyanD, @ats3v, @joaomdmoura, @kimnamu, @lorenzejay, @mhbuehler, @zouyonghe
+
+</Update>
+
+<Update label="2026년 10월 8일">
+  ## v1.15.26
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.26)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 획득이 중단될 때 rwlock의 소유권 유지 문제 수정.
+  - 문서 사이트 소스 URL이 보존되지 않는 문제 해결.
+  - log-tasks-outputs에서 실제 출력을 표시하도록 작업 출력 표시 수정.
+
+  ### 문서
+  - 버전 v1.15.25에 대한 스냅샷 및 변경 로그 업데이트.
+
+  ## 기여자
+
+  @Velmet44, @Vidit-Ostwal, @joaomdmoura, @leilei3167, @lorenzejay, @lux-liang
+
+</Update>
+
+<Update label="2026년 10월 7일">
+  ## v1.15.25
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.25)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.15.24의 스냅샷 및 변경 로그
+
+  ## 기여자
+
+  @lorenzejay
+
+</Update>
+
+<Update label="2026년 10월 7일">
+  ## v1.15.24
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.24)
+
+  ## 변경 사항
+
+  ### 기능
+  - 에이전트에 의해 실행될 때 마크다운 요약을 인쇄하기 위해 crewai eval 추가
+  - 관련 배경 응답 대기열 추가
+  - 실험적인 턴 및 응답 아이덴티티 추가
+  - Oracle 통합 추가
+  - 실험적인 작업 생애 주기 및 러너 추가
+  - 모델 및 역할을 교체하기 위한 crewai eval --models 및 llm_overlay 추가
+
+  ### 버그 수정
+  - CLI에서 훈련 파일 이름 오류 메시지 수정
+  - 수신하는 이벤트에서 시작 단계를 재실행할 수 있도록 허용
+  - human_feedback에서 단계가 출력에 리뷰를 노출하도록 emit하도록 설정
+  - 게이트를 통과하지 않는 한 crewai eval이 코드 1로 종료되도록 보장하고, 아무것도 추적되지 않은 경우 로그인하라는 프롬프트 표시
+  - grant exporter에서 전송된 추적 사용량 보고
+  - 여러 종속성 권고 사항을 해결하고 관련 패키지 업데이트
+
+  ### 리팩토링
+  - 메시지 요약을 SummarizeMessages로 이동
+  - 컨텍스트 창 중앙 집중화 및 새로 고침
+
+  ## 기여자
+
+  @Velmet44, @Vidit-Ostwal, @dependabot[bot], @fileames, @gabemilani, @github-actions[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="2026년 9월 28일">
   ## v1.15.23
 

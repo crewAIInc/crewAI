@@ -745,3 +745,63 @@ runner.interrupt(
 لا يوفر هذا الإصدار queues للردود الخلفية أو جدولة دور الكلام أو إيصالات التشغيل أو محاذاة الكلمات الدقيقة أو speculative generation أو pause/resume للـ jobs. تحتوي snapshots على سجلات لا أقفال أو إشارات إلغاء أو تنفيذ نشط، ولا تستأنف العمل أو تعيد تشغيل الرد. استعد الحالة قبل بدء دور حي متتبع جديد؛ ويرفض wrapper خيار `from_checkpoint` و`restore_from_state_id` عمدًا. تبقى المصالحة المستمرة وحفظ سجلات التتبع النهائية عملًا منفصلًا. استخدم واجهات Flow المستقرة لمسارات checkpoint الموجودة.
 
 أثناء التنفيذ المتتبع، تظل الحالة المستعادة الحالية هي المرجع: يُمنع التحميل التلقائي لحالة الجلسة كي لا تُفقد سجلات turn/reply المقبولة أو تحديثات jobs الخلفية. تحتفظ واجهات Flow الأصلية بسلوك تحميل الحالة المحفوظة المعتاد. لا يؤدي إغلاق iterator بعد حدث نهائي إلى مقاطعة الرد المكتمل. ويظل حدث الفشل إشارة نهائية مقبولة لدورة الحياة إذا وصلت المقاطعة بعد الفشل.
+
+## الردود الخلفية التجريبية المنتظرة
+
+تضيف `crewai.experimental.flow_replies` الأنواع `ReplyQueueState` و`ReplyQueue` و`DeliveryRecord` و`DeliveryFloor` و`CoveredUpdate` و`ClientActivity` فوق عقد الأدوار والردود. اجمع `ReplyQueueState` مع `JobState[MyJob]` وأنشئ `TurnRunner` **واحدًا** و`ReplyQueue` **واحدًا** لكل Flow حي. تبقى الواجهات اختيارية ولا يتغير منفذ jobs أو واجهات المحادثة المستقرة.
+
+تتوفر نتائج job الناجح في الحالة فورًا، حتى إن انتظر الإعلان. تقبل `enqueue(job)` فقط job حاليًا ملتزمًا بحالة `completed` وله دور أصلي معروف. يسجل التسليم revision وattempt وتسلسل التحديث المقبول؛ تندمج الإشعارات المكررة في `delivery_id` نفسه، وهو أيضًا هوية `ReplyRecord` العام لاحقًا. يحصل كل إنجاز job على إعلان قابل للإسناد، ولا تنشئ تحديثات المراحل المتوسطة طابور كلام.
+
+```python
+from crewai.experimental.flow_jobs import JobState
+from crewai.experimental.flow_turns import TurnRunner
+from crewai.experimental.flow_replies import (
+    ClientActivity, CoveredUpdate, ReplyQueue, ReplyQueueState,
+)
+
+class WorkChatState(ReplyQueueState, JobState[MyJob]):
+    pass
+
+# Your conversational Flow uses WorkChatState; jobs is its JobRunner.
+turns = TurnRunner(flow)
+replies = ReplyQueue(turns, is_relevant=lambda job: job.job_id not in cancelled_job_ids)
+
+async def on_job_snapshot(snapshot):
+    async with jobs.state_lock:
+        for job in flow.state.jobs.values():
+            if job.status == "completed":
+                replies.enqueue(job)
+    # Publish snapshots and wake your application-owned delivery task.
+
+async def try_delivery():
+    async with jobs.state_lock:
+        delivery = replies.claim()
+        if delivery is None:
+            return
+        events = replies.prepare(
+            delivery.delivery_id,
+            lambda current_jobs: "\n\n".join(job.answer for job in current_jobs),
+        )
+    for event in events:
+        async with jobs.state_lock:
+            if not replies.accepts_output(delivery.delivery_id):
+                replies.settle(delivery.delivery_id, "skipped")
+                return
+            if turns.accept_event(event):
+                await send_public_event(event)
+    # Generation has completed. The speaking floor is still leased.
+    # Validate whole-message adapter feedback before calling:
+    # replies.settle(delivery.delivery_id, "completed")
+```
+
+سلسل enqueue وclaim وإعداد النص وتغييرات التغطية وتسليم المخرجات باستخدام `JobRunner.state_lock` نفسه المستخدم للأدوار والتحديثات. يحمي `ReplyQueue` أوامره بقفل إضافي لمنع استحواذ claim متزامنين على دور الكلام. تقرأ `prepare()` نسخًا من **المخرجات الحالية المقبولة**، لا نصًا محفوظًا عند enqueue، وتصدر أحداث `started`/`text`/`completed` العامة مع هوية الأصل وjob. لا تنفذ LLM أو تضيف تاريخًا أو تجدول TTS؛ يختار التطبيق النص العام والتاريخ ومهام التسليم والنقل.
+
+تحجز `set_foreground(True)` البوابة خلال التوليد والتصفية في المقدمة، بما في ذلك طلبات المستخدم المنتظرة؛ حررها بعد الاستقرار. تقبل `observe_client(ClientActivity(...))` الجلسة المالكة وتسلسل client المتزايد فقط، وقيمًا منطقية صارمة لـ `recording` و`playback` و`muted`. يجب أن يكون التشغيل المحدد تابعًا لـ Flow؛ ولا يمسح توقف قديم لرد مختلف تشغيلًا أحدث. تسمح `delivery_id` الفارغة بإقرار صوتي محلي محفوظ. يمنع التسجيل أو التشغيل أو الكتم أو الدور الجاري أو إغلاق الجلسة أو تسليم نشط `claim()`. إذا بدأ التسجيل/الكتم أو وصل طلب مستخدم أثناء الإعلان، فعلى adapter مقاطعة التسليم وإيقافه ثم تحديث النشاط وإيقاظ الجدولة.
+
+تغير `claim()` تسليمًا مؤهلًا واحدًا ذريًا من `pending` إلى `scheduled`. قبل الإعداد و**كل** تسليم، تحقق عبر `accepts_output(delivery_id)` واقبل أحداث النص بواسطة `turns.accept_event(event)`. تغيّر الهوية/الإصدار أو غياب jobs أو عدم نجاحها أو انتهاء الجلسة أو تغطية التحديث أو سياسة `is_relevant(job)` يبطل الإعلان. يجب أن تكون callback بلا آثار جانبية؛ استخدمها لسياسة الإلغاء والاستبدال الخاصة بالتطبيق خارج عقد jobs الحالي. أيقظ مهمة التسليم عند تغير النشاط أو الصلة. لا تحذف التجاوزات المخرجات المحفوظة.
+
+بعد تسليم ملخص مطلوب فعليًا، تسجل `mark_covered(CoveredUpdate.from_job(job))` الإصدار المقبول وتتجاوز الإعلانات المطابقة المنتظرة. مجرد طلب الملخص ليس تسليمًا. يظل إصدار job اللاحق مؤهلًا. لا تعتبر كل jobs في السياق مغطاة برد حالة أو محادثة غير مرتبطة.
+
+تحرر `settle(delivery_id, status, reason=...)` التسليم النشط فقط ومرة واحدة. الحالات النهائية هي `completed` و`interrupted` و`skipped` و`failed`؛ اكتمال التوليد وحده **لا** ينهي التسليم. تحقق من الجلسة والدور وinput revision وهوية التسليم عند حدود adapter، واقبل الاكتمال بعد استقرار التوليد فقط. اكتمال الرسالة عند adapter ملاحظة جدولة لا إثبات للكلمات المسموعة. عند المقاطعة أو الفشل أو الإبطال، أوقف التشغيل المحلي والتسليم الجاري واحجب المخرجات المتبقية وأبق النتيجة متاحة. لا تعاد الإعلانات المقطوعة/الفاشلة تلقائيًا؛ يمكن طلب ملخص جديد. لا يغيّر فشل TTS نجاح job.
+
+استدع `close()` قبل إلغاء وتصفية مهام التسليم التابعة للتطبيق. يحجب الردود المنتظرة/النشطة ويحفظ مخرجات jobs. تتضمن snapshot ملاحظات الدور وسجلات التسليم، لا مؤقتًا أو اتصالًا صوتيًا أو حجزًا قابلًا للاستئناف. لا تعيد الاستعادة تشغيل التسليم؛ سوّ السجلات النشطة وفق سياسة استرداد التطبيق. تبقى إيصالات المقاطع والسياق المنطوق الدقيق والإلغاء/الاستبدال التلقائي للـ jobs والجدولة الموزعة ومهل التشغيل ميزات منفصلة. العميل الذي لا يبلغ الاكتمال يحافظ تحفظيًا على الحجز حتى المقاطعة أو الإغلاق؛ يمكن للتطبيق إضافة سياسة مهلة صريحة.

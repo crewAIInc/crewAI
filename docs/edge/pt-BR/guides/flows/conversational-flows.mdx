@@ -746,3 +746,63 @@ Para combinar com trabalho em segundo plano, declare `class WorkChatState(TurnSt
 Esta etapa não oferece filas de respostas em segundo plano, agendamento da vez de falar, recibos de reprodução, alinhamento exato de palavras, geração especulativa ou pause/resume de jobs. Snapshots contêm registros, não locks, sinais de cancelamento ou execuções ativas. Não retomam trabalho nem repetem entregas. Restaure o estado antes de criar um novo turno acompanhado; este wrapper rejeita `from_checkpoint` e `restore_from_state_id` deliberadamente. Reconciliação durável e persistência dos registros finais de acompanhamento continuam sendo trabalhos separados. Use as APIs estáveis de Flow para workflows existentes de checkpoint.
 
 Durante a execução acompanhada, o estado atual restaurado permanece como referência: o recarregamento automático da sessão é suprimido para não descartar registros de turn/reply admitidos nem atualizações aceitas de jobs em segundo plano. As APIs nativas de turno do Flow mantêm seu comportamento de recarregamento de persistência. Fechar o iterator após um evento terminal não interrompe a resposta concluída. Uma falha continua sendo um sinal terminal de ciclo de vida aceito se a interrupção chegar após a falha.
+
+## Respostas experimentais em fila para trabalho em segundo plano
+
+`crewai.experimental.flow_replies` adiciona `ReplyQueueState`, `ReplyQueue`, `DeliveryRecord`, `DeliveryFloor`, `CoveredUpdate` e `ClientActivity` ao contrato de turnos/respostas. Combine `ReplyQueueState` com `JobState[MyJob]` e crie **um** `TurnRunner` e **uma** `ReplyQueue` por Flow ativo. A integração é opcional; o executor de jobs e as APIs estáveis de conversa não mudam.
+
+Um job bem-sucedido fica disponível imediatamente no estado, mesmo quando seu anúncio espera. `enqueue(job)` aceita apenas um job atual, já confirmado como `completed`, com turno de origem existente. A entrega pendente guarda revision, attempt e sequência de atualização aceita; notificações duplicadas usam o mesmo `delivery_id`. Esse ID também identifica o `ReplyRecord` público posterior. Cada conclusão de job recebe um anúncio atribuível; progresso intermediário de etapas não cria uma fila de fala.
+
+```python
+from crewai.experimental.flow_jobs import JobState
+from crewai.experimental.flow_turns import TurnRunner
+from crewai.experimental.flow_replies import (
+    ClientActivity, CoveredUpdate, ReplyQueue, ReplyQueueState,
+)
+
+class WorkChatState(ReplyQueueState, JobState[MyJob]):
+    pass
+
+# Your conversational Flow uses WorkChatState; jobs is its JobRunner.
+turns = TurnRunner(flow)
+replies = ReplyQueue(turns, is_relevant=lambda job: job.job_id not in cancelled_job_ids)
+
+async def on_job_snapshot(snapshot):
+    async with jobs.state_lock:
+        for job in flow.state.jobs.values():
+            if job.status == "completed":
+                replies.enqueue(job)
+    # Publish snapshots and wake your application-owned delivery task.
+
+async def try_delivery():
+    async with jobs.state_lock:
+        delivery = replies.claim()
+        if delivery is None:
+            return
+        events = replies.prepare(
+            delivery.delivery_id,
+            lambda current_jobs: "\n\n".join(job.answer for job in current_jobs),
+        )
+    for event in events:
+        async with jobs.state_lock:
+            if not replies.accepts_output(delivery.delivery_id):
+                replies.settle(delivery.delivery_id, "skipped")
+                return
+            if turns.accept_event(event):
+                await send_public_event(event)
+    # Generation has completed. The speaking floor is still leased.
+    # Validate whole-message adapter feedback before calling:
+    # replies.settle(delivery.delivery_id, "completed")
+```
+
+Serialize enqueue, claim, preparação, alterações de coverage e envio de saída com o mesmo `JobRunner.state_lock` usado por turnos e commits de jobs. `ReplyQueue` protege seus controles com outro lock para que dois claims não adquiram a vez de falar. `prepare()` lê cópias dos **resultados atuais aceitos**, em vez de texto guardado no enqueue, e emite os eventos públicos compartilhados `started`/`text`/`completed` com origem e identidade do job. Não executa LLM, adiciona histórico ou agenda TTS. A aplicação escolhe texto público, histórico, tarefas de entrega e transporte.
+
+`set_foreground(True)` mantém o bloqueio durante geração e encerramento em primeiro plano, incluindo pedidos pendentes do usuário; libere após o trabalho terminar. `observe_client(ClientActivity(...))` aceita apenas a sessão dona e sequência crescente do client, com booleanos estritos `recording`, `playback` e `muted`. Playback identificado deve pertencer ao Flow; um stop antigo de outra resposta não pode liberar playback mais recente. `delivery_id` nulo permite acknowledgment local em cache. Gravação, playback, mute, turno em execução, sessão encerrada ou entrega já ativa bloqueiam `claim()`. Se gravação/mute ou um novo pedido chegar durante um anúncio, o adapter deve interromper e parar a entrega ativa, atualizar atividade e acordar o agendamento.
+
+`claim()` muda atomicamente uma entrega elegível de `pending` para `scheduled`. Antes da preparação e de **cada** envio, confira relevância com `accepts_output(delivery_id)` e aceite eventos de texto com `turns.accept_event(event)`. Mudanças de identidade/versão, jobs ausentes, trabalho sem sucesso, sessões encerradas, atualizações já cobertas e a política `is_relevant(job)` invalidam anúncios. O callback deve ser livre de efeitos colaterais; use-o para cancelamento/substituição da aplicação além do contrato atual de jobs. Acorde a tarefa quando atividade ou relevância mudar. Pular anúncios nunca remove resultados retidos.
+
+Depois que um resumo solicitado for realmente enviado, `mark_covered(CoveredUpdate.from_job(job))` registra a versão aceita e pula anúncios pendentes correspondentes. Apenas pedir um resumo não é entrega. Uma versão posterior do job continua elegível. Não marque todos os jobs do contexto como cobertos por uma resposta de status ou conversa não relacionada.
+
+`settle(delivery_id, status, reason=...)` libera apenas a entrega ativa, uma vez. Os estados finais são `completed`, `interrupted`, `skipped` e `failed`; terminar a geração **não** conclui a entrega. Valide sessão, turno, input revision e identidade no adapter e aceite conclusão apenas após a geração da saída terminar. Conclusão de mensagem inteira no adapter é uma observação de agendamento, não prova de palavras audíveis. Em interrupção, falha ou invalidação, pare playback local e entrega em andamento, bloqueie saída pública restante e mantenha o resultado disponível. Anúncios interrompidos/falhos não repetem automaticamente; usuários podem pedir um novo resumo. Falha no TTS não altera sucesso do job.
+
+Chame `close()` antes de cancelar e aguardar tarefas de entrega da aplicação. Isso bloqueia entregas pendentes/ativas e mantém resultados dos jobs. Snapshot inclui observações da vez de falar e registros de entrega, não timer, conexão de mídia ou lease retomável. Restaurar não reinicia entrega; reconcilie registros ativos pela política de recuperação da aplicação. Recibos de segmentos, contexto falado exato, cancelamento/substituição automática de jobs, agendamento distribuído e timeout de playback são funcionalidades separadas. Um client que nunca informa conclusão mantém conservadoramente a vez de falar até interrupção ou fechamento; a aplicação pode adicionar uma política explícita de timeout.
