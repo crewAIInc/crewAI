@@ -291,7 +291,8 @@ class BaseTool(BaseModel, ABC):
         if self.args_schema is not None and self.args_schema.model_fields:
             try:
                 validated = self.args_schema.model_validate(kwargs)
-                return validated.model_dump()
+                # Pass validated values to the callable without serializing nested models.
+                return dict(validated)
             except Exception as e:
                 hint = build_schema_hint(self.args_schema)
                 raise ValueError(

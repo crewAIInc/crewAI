@@ -372,7 +372,8 @@ class CrewStructuredTool(BaseModel):
             return raw_args if isinstance(raw_args, dict) else {}
         try:
             validated_args = self.args_schema.model_validate(raw_args)
-            return dict(validated_args.model_dump())
+            # Pass validated values to the callable without serializing nested models.
+            return dict(validated_args)
         except Exception as e:
             hint = build_schema_hint(self.args_schema)
             raise ValueError(f"Arguments validation failed: {e}{hint}") from e
