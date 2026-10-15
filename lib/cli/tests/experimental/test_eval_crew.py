@@ -2587,10 +2587,41 @@ def test_a_file_where_a_folder_goes_skips_what_goes_under_it(project, monkeypatc
     assert capsys.readouterr().out == f"Wrote 2 files to {FOLDER}/ — start with report.md {SKIPPED}\n"
 
 
+@pytest.mark.usefixtures("writes")
+def test_a_folder_where_a_file_goes_is_skipped_and_the_export_goes_on(project, monkeypatch, capsys):
+    directory, _ = project
+    (directory / FOLDER / "run").mkdir(parents=True)
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "r", "run": "a file", "notes.md": "n"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert (directory / FOLDER / "run").is_dir()
+    assert files_in(directory / FOLDER) == {"report.md": "r", "notes.md": "n", ".gitignore": "*\n"}
+    assert capsys.readouterr().out == f"Wrote 2 files to {FOLDER}/ — start with report.md {SKIPPED}\n"
+
+
+def test_an_export_folder_that_resolves_elsewhere_stops_the_export(project, monkeypatch):
+    """A Windows junction is not a link to `is_symlink`, but resolves elsewhere:
+    the path writer refuses any folder that does not resolve to itself."""
+    directory, _ = project
+    outside = directory / "outside"
+    outside.mkdir()
+    monkeypatch.setattr(eval_module, "_WRITES_THROUGH_HANDLES", False)
+    real_resolve = Path.resolve
+    monkeypatch.setattr(
+        Path, "resolve", lambda self, *a, **k: real_resolve(outside) if self.name == FOLDER else real_resolve(self, *a, **k)
+    )
+    install(monkeypatch, FakeExportAMP())
+
+    result = CliRunner().invoke(eval_command, ["export", EVALUATION_ID])
+
+    assert result.exit_code == 1
+    assert result.output == f"{FOLDER} is a link; the export writes only into a folder of its own.\n"
+    assert list(outside.iterdir()) == []
+
+
 @pytest.mark.parametrize("link", ["symbolic", "hard"])
 def test_a_link_where_a_file_goes_is_replaced_never_written_through(project, monkeypatch, capsys, writes, link):
-    if link == "hard" and writes == "paths":
-        pytest.skip("only a file made anew through a folder handle is free of a hard link")
     directory, _ = project
     elsewhere = directory / "keep.md"
     elsewhere.write_text("not ours to change\n", encoding="utf-8")

@@ -37,6 +37,7 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 import time
 from typing import Any, Literal, NoReturn, cast
@@ -1729,6 +1730,8 @@ _WRITES_THROUGH_HANDLES = (
     and os.open in os.supports_dir_fd
     and os.mkdir in os.supports_dir_fd
     and os.unlink in os.supports_dir_fd
+    and os.stat in os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
 )
 _FOLDER_FLAGS = (
     os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
@@ -1983,10 +1986,22 @@ def _put_through_handles(root: int, segments: list[str], data: bytes) -> bool:
             if folder != root:
                 os.close(folder)
             folder = inner
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(segments[-1], dir_fd=folder)
-        descriptor = os.open(segments[-1], _NEW_FILE_FLAGS, 0o666, dir_fd=folder)
-        with open(descriptor, "wb") as out:
+        leaf = segments[-1]
+        try:
+            if stat.S_ISDIR(
+                os.stat(leaf, dir_fd=folder, follow_symlinks=False).st_mode
+            ):
+                return False  # a folder where a file goes
+            os.unlink(leaf, dir_fd=folder)
+        except FileNotFoundError:
+            pass
+        descriptor = os.open(leaf, _NEW_FILE_FLAGS, 0o666, dir_fd=folder)
+        try:
+            out = open(descriptor, "wb")
+        except BaseException:
+            os.close(descriptor)
+            raise
+        with out:
             out.write(data)
         return True
     finally:
@@ -1995,21 +2010,31 @@ def _put_through_handles(root: int, segments: list[str], data: bytes) -> bool:
 
 
 def _export_root_by_path(folder: Path) -> Path:
-    """FOLDER, made when missing, as the absolute path the files go under."""
+    """FOLDER, made when missing, as the absolute path the files go under.
+
+    It must resolve to itself, here: a link, or a Windows junction (which
+    `is_symlink` does not see, and which any account can make), would carry
+    every file somewhere else.
+    """
     if folder.is_symlink():
         _export_root_is_a_link(folder)
     try:
         folder.mkdir(exist_ok=True)
-        return folder.resolve()
+        root = folder.resolve()
     except OSError as error:
         _fail(f"Could not write the export into {folder}/: {error}")
+    if os.path.normcase(root) != os.path.normcase(Path.cwd().resolve() / folder.name):
+        _export_root_is_a_link(folder)
+    return root
 
 
 def _put_by_path(root: Path, segments: list[str], data: bytes) -> bool:
     """Write DATA at SEGMENTS under ROOT, where a folder cannot be opened
     without following a link: the path is resolved first, and written only
     when its folder is inside ROOT (False otherwise, or when a file stands
-    where a folder goes). A link at the file's own place is replaced."""
+    where a folder goes, or a folder where the file goes). Whatever is at the
+    file's own place, a link symbolic or hard, is removed and the file made
+    anew, so nothing is written through it."""
     parent = root.joinpath(*segments[:-1]).resolve()
     if not parent.is_relative_to(root):
         return False
@@ -2018,7 +2043,9 @@ def _put_by_path(root: Path, segments: list[str], data: bytes) -> bool:
     except (FileExistsError, NotADirectoryError):
         return False
     target = parent / segments[-1]
-    if target.is_symlink():
-        target.unlink()
-    target.write_bytes(data)
+    if target.is_dir() and not target.is_symlink():
+        return False  # a folder, or a junction, where a file goes
+    target.unlink(missing_ok=True)
+    with open(target, "xb") as out:
+        out.write(data)
     return True
