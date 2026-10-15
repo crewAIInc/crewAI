@@ -1,0 +1,196 @@
+---
+title: E2B Sandbox Tools
+description: The `E2BExecTool`, `E2BPythonTool`, and `E2BFileTool` give CrewAI agents shell, Python, and filesystem access inside isolated, ephemeral E2B remote sandboxes.
+icon: box
+mode: "wide"
+---
+
+# E2B Sandbox Tools
+
+## Description
+
+The E2B sandbox tools let CrewAI agents run code in isolated, ephemeral VMs hosted by [E2B](https://e2b.dev). Three tools share a common base class and connection model:
+
+- `E2BExecTool` — execute shell commands.
+- `E2BPythonTool` — execute Python in a Jupyter-style code interpreter (returns stdout, stderr, and rich results such as charts, dataframes, HTML, SVG, and PNG).
+- `E2BFileTool` — perform filesystem operations (read, write, append, list, delete, mkdir, info, exists), including binary content via base64.
+
+Use these tools when you want to give an agent the ability to run arbitrary code or perform file operations without exposing the host environment.
+
+## Installation
+
+Install the `e2b` extra for `crewai-tools` and set your E2B API key:
+
+```shell
+uv add "crewai-tools[e2b]"
+```
+
+```shell
+export E2B_API_KEY="e2b_..."
+```
+
+## Tools
+
+### `E2BExecTool`
+
+Runs shell commands inside the sandbox via `sandbox.commands.run`.
+
+**Arguments**
+
+- `command: str` — Required. The shell command to execute.
+- `cwd: str | None` — Optional. Working directory for the command.
+- `envs: dict[str, str] | None` — Optional. Per-call environment variables.
+- `timeout: float | None` — Optional. Timeout in seconds.
+
+**Returns**
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "...",
+  "stderr": "...",
+  "error": null
+}
+```
+
+### `E2BPythonTool`
+
+Runs Python code in a Jupyter-style code interpreter using the `e2b_code_interpreter` SDK.
+
+**Arguments**
+
+- `code: str` — Required. The code to execute.
+- `language: str | None` — Optional. Language identifier (defaults to Python).
+- `envs: dict[str, str] | None` — Optional. Per-call environment variables.
+- `timeout: float | None` — Optional. Timeout in seconds.
+
+**Returns**
+
+```json
+{
+  "text": "...",
+  "stdout": "...",
+  "stderr": "...",
+  "error": null,
+  "results": [],
+  "execution_count": 1
+}
+```
+
+`results` can include charts, dataframes, HTML, SVG, and PNG output produced by the cell.
+
+### `E2BFileTool`
+
+Performs filesystem operations inside the sandbox. Auto-creates parent directories on write and handles binary content via base64.
+
+**Arguments**
+
+- `action: "read" | "write" | "append" | "list" | "delete" | "mkdir" | "info" | "exists"` — Required.
+- `path: str` — Required. Target path inside the sandbox.
+- `content: str | None` — Optional. Content for `write` / `append`. Base64-encoded when `binary=True`.
+- `binary: bool` — Optional. Treat `content` as binary (base64). Default `False`.
+- `depth: int` — Optional. Recursion depth for `list`.
+
+## Shared parameters (`E2BBaseTool`)
+
+All three tools accept the same connection / lifecycle parameters:
+
+- `api_key: SecretStr | None` — Falls back to the `E2B_API_KEY` environment variable.
+- `domain: str | None` — Falls back to the `E2B_DOMAIN` environment variable.
+- `template: str | None` — Custom sandbox template or snapshot.
+- `persistent: bool` — Default `False`. See [Sandbox modes](#sandbox-modes).
+- `sandbox_id: str | None` — Attach to an existing sandbox.
+- `sandbox_timeout: int` — Idle timeout in seconds. Default `300`.
+- `envs: dict[str, str] | None` — Environment variables injected at sandbox creation.
+- `metadata: dict[str, str] | None` — Metadata attached at sandbox creation.
+
+## Sandbox modes
+
+| Mode | How to activate | Sandbox lifetime |
+| --- | --- | --- |
+| Ephemeral (default) | `persistent=False` | A new sandbox is created and killed for every `_run` call. |
+| Persistent | `persistent=True` | A sandbox is lazily created on the first call and killed at process exit via `atexit`. |
+| Attach | `sandbox_id="sbx_..."` | The tool attaches to an existing sandbox and never kills it. |
+
+Use ephemeral mode for one-off tasks — it minimizes blast radius. Use persistent mode when an agent needs to keep state across multiple tool calls (e.g. a shell session plus filesystem ops on the same files). Use attach mode when an outside system manages the sandbox lifecycle.
+
+## Examples
+
+### One-shot Python (ephemeral)
+
+```python Code
+from crewai_tools import E2BPythonTool
+
+tool = E2BPythonTool()
+result = tool.run(code="print(sum(range(10)))")
+```
+
+### Persistent shell + filesystem session
+
+```python Code
+from crewai_tools import E2BExecTool, E2BFileTool
+
+exec_tool = E2BExecTool(persistent=True)
+file_tool = E2BFileTool(persistent=True)
+```
+
+When the process exits, both tools clean up the sandbox via `atexit`.
+
+### Attach to an existing sandbox
+
+```python Code
+from crewai_tools import E2BExecTool
+
+tool = E2BExecTool(sandbox_id="sbx_...")
+```
+
+The tool will not kill a sandbox it attached to.
+
+### Custom template, timeout, env vars, and metadata
+
+```python Code
+from crewai_tools import E2BExecTool
+
+tool = E2BExecTool(
+    persistent=True,
+    template="my-custom-template",
+    sandbox_timeout=600,
+    envs={"MY_FLAG": "1"},
+    metadata={"owner": "crewai-agent"},
+)
+```
+
+### Full agent example
+
+```python Code
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import E2BPythonTool
+
+python_tool = E2BPythonTool()
+
+analyst = Agent(
+    role="Data Analyst",
+    goal="Run Python in a sandbox to answer analytical questions",
+    backstory="An analyst who delegates computation to an isolated E2B sandbox.",
+    tools=[python_tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Compute the mean of [1, 2, 3, 4, 5] and return the result.",
+    expected_output="The numerical mean.",
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[task], process=Process.sequential)
+result = crew.kickoff()
+```
+
+## Security considerations
+
+These tools give agents arbitrary shell, Python, and filesystem access inside the sandbox. The sandbox isolates execution from your host, but you should still treat tool output as untrusted and design with prompt-injection in mind:
+
+- Ephemeral mode is the primary blast-radius control — every `_run` call gets a fresh VM. Prefer it unless persistent state is required.
+- Persistent and attached sandboxes accumulate state across calls. Anything seeded into them (credentials, tokens, files) is reachable by every subsequent tool invocation, including ones whose inputs were influenced by untrusted content.
+- Avoid injecting secrets into long-lived sandboxes that an agent can read or exfiltrate. Use short-lived credentials and the smallest scope necessary.
+- `sandbox_timeout` bounds idle time but does not cap total execution. Set it to the smallest value that fits your workload.
