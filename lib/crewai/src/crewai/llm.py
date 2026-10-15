@@ -725,7 +725,10 @@ class LLM(BaseLLM):
             bool: True if the model is from Anthropic, False otherwise.
         """
         model_lower = model.lower()
-        return model_lower.startswith(ANTHROPIC_PREFIXES) or "anthropic.claude-" in model_lower
+        return (
+            model_lower.startswith(ANTHROPIC_PREFIXES)
+            or "anthropic.claude-" in model_lower
+        )
 
     def _prepare_completion_params(
         self,
