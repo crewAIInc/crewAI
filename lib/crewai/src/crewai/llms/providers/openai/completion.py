@@ -1138,8 +1138,18 @@ class OpenAICompletion(BaseLLM):
 
         if tools:
             function_tools = self._convert_tools_for_responses(tools)
-            if self.tool_search is not None and len(function_tools) >= 2:
-                all_tools = self._apply_tool_search(all_tools, function_tools)
+            # OpenAI rejects a deferred function tool unless tool_search is
+            # also present, so an explicit defer_loading=True always needs it.
+            explicitly_deferred = any(
+                t.get("defer_loading") is True for t in function_tools
+            )
+            defer_unspecified = (
+                self.tool_search is not None and len(function_tools) >= 2
+            )
+            if explicitly_deferred or defer_unspecified:
+                all_tools = self._apply_tool_search(
+                    all_tools, function_tools, defer_unspecified=defer_unspecified
+                )
             else:
                 all_tools.extend(function_tools)
 
@@ -1217,17 +1227,19 @@ class OpenAICompletion(BaseLLM):
         self,
         other_tools: list[dict[str, Any]],
         function_tools: list[dict[str, Any]],
+        defer_unspecified: bool = True,
     ) -> list[dict[str, Any]]:
         """Add the hosted tool search tool and defer the function tools.
 
         Tools that already set ``defer_loading`` keep their value, so a caller
-        can keep selected tools eagerly loaded.
+        can keep selected tools eagerly loaded. With ``defer_unspecified=False``
+        only tools that ask for deferral are deferred.
         """
         result = list(other_tools)
         if not any(t.get("type") == "tool_search" for t in result):
             result.append({"type": "tool_search"})
         for tool in function_tools:
-            if "defer_loading" not in tool:
+            if defer_unspecified and "defer_loading" not in tool:
                 tool = {**tool, "defer_loading": True}
             result.append(tool)
         return result

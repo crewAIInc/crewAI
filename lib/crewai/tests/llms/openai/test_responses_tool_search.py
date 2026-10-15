@@ -79,6 +79,32 @@ def test_tool_search_skipped_for_single_tool():
     assert "defer_loading" not in tools[0]
 
 
+def test_single_explicitly_deferred_tool_gets_tool_search():
+    """A deferred tool is only valid alongside tool_search, even when alone."""
+    llm = build(tool_search=True)
+
+    tools = llm._prepare_responses_params(
+        MESSAGES, tools=[make_tool("get_weather", defer_loading=True)]
+    )["tools"]
+
+    assert tools[0] == {"type": "tool_search"}
+    assert tools[1]["name"] == "get_weather"
+    assert tools[1]["defer_loading"] is True
+
+
+def test_explicitly_deferred_tool_gets_tool_search_without_config():
+    llm = build()
+    tools = [make_tool("get_weather", defer_loading=True), make_tool("get_time")]
+
+    converted = llm._prepare_responses_params(MESSAGES, tools=tools)["tools"]
+
+    assert converted[0] == {"type": "tool_search"}
+    by_name = {t["name"]: t for t in converted if t["type"] == "function"}
+    assert by_name["get_weather"]["defer_loading"] is True
+    # tool_search was not enabled, so tools without the flag stay eager
+    assert "defer_loading" not in by_name["get_time"]
+
+
 def test_tool_search_not_duplicated_when_listed_as_builtin():
     llm = build(tool_search=True, builtin_tools=["web_search", "tool_search"])
 
