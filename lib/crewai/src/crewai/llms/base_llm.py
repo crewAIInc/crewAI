@@ -86,6 +86,7 @@ class LLMCallBlockedError(ValueError):
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+logger = logging.getLogger(__name__)
 
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
@@ -362,6 +363,43 @@ class BaseLLM(BaseModel, ABC):
             config["stop"] = self.stop
 
         return config
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate the input-token count a request will consume.
+
+        Providers with native token-estimation support should override this
+        method. This fallback estimates one token per four text characters,
+        rounded up, so callers can safely preflight requests when a native
+        count endpoint is unavailable.
+
+        Args:
+            messages: Input messages for the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            A conservative estimate of the provider's input-token count.
+        """
+        logger.warning(
+            "Using an approximate input token count for model %r: assuming one "
+            "token per four characters because a native token count is unavailable.",
+            self.model,
+        )
+        from crewai.utilities.agent_utils import message_content_text
+
+        if isinstance(messages, str):
+            character_count = len(messages)
+        else:
+            character_count = sum(
+                len(message_content_text(message)) for message in messages
+            )
+        return (character_count + 3) // 4
 
     @abstractmethod
     def call(
@@ -884,7 +922,9 @@ class BaseLLM(BaseModel, ABC):
 
             return None
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
         """Convert messages to standard format.
 
         Args:
@@ -921,9 +961,11 @@ class BaseLLM(BaseModel, ABC):
             }
             cleaned.append(cast(_LLMMessage, copy))
 
-        return self._process_message_files(cleaned)
+        return self._process_message_files(cleaned, api=file_api)
 
-    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
         """Process files attached to messages and format for the provider.
 
         For each message with a `files` field, formats the files into
@@ -948,7 +990,7 @@ class BaseLLM(BaseModel, ABC):
             return messages
 
         formatter = self._multimodal_formatter_name()
-        api = getattr(self, "api", None)
+        api = api if api is not None else getattr(self, "api", None)
 
         for msg in messages:
             files = msg.get("files")

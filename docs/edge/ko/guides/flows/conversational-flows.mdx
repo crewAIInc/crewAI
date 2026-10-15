@@ -741,3 +741,63 @@ runner.interrupt(
 이 단계는 백그라운드 응답 queue, 발언권 스케줄링, 재생 receipt, 정확한 단어 정렬, speculative generation, job pause/resume를 제공하지 않습니다. snapshot에는 기록만 있고 lock, 취소 신호, 실행 중인 작업은 없습니다. 작업을 재개하거나 delivery를 다시 재생하지 않습니다. 새 추적 live turn 전에 상태를 복원하세요. wrapper는 `from_checkpoint` 및 `restore_from_state_id`를 의도적으로 거부합니다. 영속적인 조정과 최종 추적 기록 저장은 별도 작업입니다. 기존 checkpoint 워크플로에는 안정적인 Flow API를 계속 사용하세요.
 
 추적 실행 중에는 현재 복원된 상태가 기준이 됩니다. 자동 세션 재로드를 억제하여 등록된 turn/reply 기록이나 승인된 백그라운드 job 업데이트가 사라지지 않도록 합니다. 기본 Flow 턴 API의 기존 영속 상태 재로드 동작은 유지됩니다. 종료 이벤트 이후 iterator를 닫아도 완료된 응답을 중단하지 않습니다. 실패 이후 중단 요청이 도착해도 실패 이벤트는 유효한 종료 수명 주기 신호로 처리됩니다.
+
+## 실험적 백그라운드 응답 큐
+
+`crewai.experimental.flow_replies`는 턴/응답 계약 위에 `ReplyQueueState`, `ReplyQueue`, `DeliveryRecord`, `DeliveryFloor`, `CoveredUpdate`, `ClientActivity`를 추가합니다. 상태에 `ReplyQueueState`와 `JobState[MyJob]`를 조합하고 live Flow마다 `TurnRunner` **하나**와 `ReplyQueue` **하나**를 만드세요. 기존 Flow는 선택적으로 사용하며 job 실행기와 안정적인 대화 API는 바뀌지 않습니다.
+
+성공한 job 결과는 안내가 기다리는 동안에도 즉시 상태에 있습니다. `enqueue(job)`은 현재 커밋된 `completed` job과 기존 원래 턴만 허용합니다. 대기 delivery는 job의 revision, attempt, 승인된 업데이트 순서를 저장하고 중복 알림을 같은 `delivery_id`로 합칩니다. 이 ID가 이후 공개 `ReplyRecord`의 ID이기도 합니다. job 완료마다 출처를 추적할 수 있는 안내 하나를 만들며 중간 단계 진행은 발화 큐를 만들지 않습니다.
+
+```python
+from crewai.experimental.flow_jobs import JobState
+from crewai.experimental.flow_turns import TurnRunner
+from crewai.experimental.flow_replies import (
+    ClientActivity, CoveredUpdate, ReplyQueue, ReplyQueueState,
+)
+
+class WorkChatState(ReplyQueueState, JobState[MyJob]):
+    pass
+
+# Your conversational Flow uses WorkChatState; jobs is its JobRunner.
+turns = TurnRunner(flow)
+replies = ReplyQueue(turns, is_relevant=lambda job: job.job_id not in cancelled_job_ids)
+
+async def on_job_snapshot(snapshot):
+    async with jobs.state_lock:
+        for job in flow.state.jobs.values():
+            if job.status == "completed":
+                replies.enqueue(job)
+    # Publish snapshots and wake your application-owned delivery task.
+
+async def try_delivery():
+    async with jobs.state_lock:
+        delivery = replies.claim()
+        if delivery is None:
+            return
+        events = replies.prepare(
+            delivery.delivery_id,
+            lambda current_jobs: "\n\n".join(job.answer for job in current_jobs),
+        )
+    for event in events:
+        async with jobs.state_lock:
+            if not replies.accepts_output(delivery.delivery_id):
+                replies.settle(delivery.delivery_id, "skipped")
+                return
+            if turns.accept_event(event):
+                await send_public_event(event)
+    # Generation has completed. The speaking floor is still leased.
+    # Validate whole-message adapter feedback before calling:
+    # replies.settle(delivery.delivery_id, "completed")
+```
+
+enqueue, claim, 준비, coverage 변경, 출력 전달을 foreground 턴 및 job 커밋과 같은 `JobRunner.state_lock`으로 직렬화하세요. `ReplyQueue`는 자체 제어도 lock으로 보호하므로 두 claim이 동시에 발언권을 얻을 수 없습니다. `prepare()`는 enqueue 당시 저장한 텍스트가 아니라 복사한 **현재 승인된 결과**를 읽고 원래 턴과 job ID를 포함한 공통 `started`/`text`/`completed` 이벤트를 만듭니다. LLM 실행, history 삽입, TTS 예약은 하지 않습니다. 공개 텍스트, history, delivery task, transport는 애플리케이션이 선택합니다.
+
+`set_foreground(True)`는 대기 중인 사용자 요청을 포함하여 foreground 생성과 종료 대기 동안 gate를 유지합니다. 작업이 끝난 뒤 해제하세요. `observe_client(ClientActivity(...))`는 소유 세션과 증가하는 client 순서, 엄격한 boolean `recording`, `playback`, `muted`만 허용합니다. ID가 있는 playback은 이 Flow 소유여야 하며 다른 응답의 오래된 stop은 새 playback을 해제할 수 없습니다. null `delivery_id`는 로컬 캐시 acknowledgment를 허용합니다. 녹음, playback, mute, 실행 중인 턴, 세션 종료, 이미 활성인 delivery는 `claim()`을 막습니다. 안내 중 녹음/mute 또는 새 사용자 요청이 오면 adapter가 활성 delivery를 중단하고 멈춘 뒤 activity를 갱신하고 스케줄러를 깨워야 합니다.
+
+`claim()`은 적합한 delivery 하나를 원자적으로 `pending`에서 `scheduled`로 바꿉니다. 준비 전과 **모든** 전달 전에 `accepts_output(delivery_id)`로 relevance를 확인하고 `turns.accept_event(event)`로 텍스트 이벤트를 승인하세요. ID/버전 변경, 사라진 job, 성공하지 않은 작업, 끝난 세션, 이미 coverage된 업데이트, 애플리케이션 `is_relevant(job)` 정책은 안내를 무효화합니다. callback은 부수 효과가 없어야 합니다. 기존 job 계약 밖의 애플리케이션 취소/교체 정책에 사용하세요. activity 또는 relevance가 바뀌면 delivery task를 깨우세요. 건너뛰어도 보존한 결과는 삭제하지 않습니다.
+
+요청한 요약이 실제 전달된 뒤 `mark_covered(CoveredUpdate.from_job(job))`은 승인된 버전을 기록하고 일치하는 pending 안내를 건너뜁니다. 요약 요청만으로 delivery가 되지 않습니다. 이후 job 버전은 계속 적합합니다. 상태 응답이나 관련 없는 대화로 context의 모든 job을 coverage 처리하지 마세요.
+
+`settle(delivery_id, status, reason=...)`은 활성 delivery만 한 번 해제합니다. 최종 상태는 `completed`, `interrupted`, `skipped`, `failed`입니다. 생성 완료만으로 delivery가 완료되지는 **않습니다**. adapter 경계에서 feedback의 세션, 턴, input revision, delivery ID를 검증하고 출력 생성이 끝난 뒤에만 completion을 받으세요. 전체 메시지 adapter completion은 스케줄링 관측이며 들린 단어의 증거가 아닙니다. 중단, 실패, 무효화 시 로컬 playback과 진행 중인 adapter delivery를 멈추고 남은 공개 출력을 차단하며 결과를 보존하세요. 중단/실패 안내는 자동 재생하지 않고 사용자가 새 요약을 요청할 수 있습니다. TTS 실패는 job 성공을 바꾸지 않습니다.
+
+애플리케이션 delivery task를 취소하고 기다리기 전에 `close()`를 호출하세요. pending/active delivery를 차단하고 job 결과를 보존합니다. snapshot에는 발언권 관측과 delivery 기록이 있고 timer, media 연결, 재개 가능한 lease는 없습니다. 복원은 delivery를 재시작하지 않습니다. 활성 기록은 애플리케이션 recovery 정책으로 조정하세요. segment receipt, 정확한 spoken context, 자동 job 취소/교체, 분산 스케줄링, playback timeout은 별도 기능입니다. completion을 보내지 않는 client는 보수적으로 중단 또는 종료까지 발언권을 유지합니다. 애플리케이션이 명시적인 timeout 정책을 추가할 수 있습니다.

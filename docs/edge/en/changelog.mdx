@@ -4,6 +4,141 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Oct 14, 2026">
+  ## v1.15.28
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.28)
+
+  ## What's Changed
+
+  ### Features
+  - Add crewai eval command to report where a stopped model broke.
+  - Use LiteLLM catalog for context windows.
+
+  ### Bug Fixes
+  - Fix flow to learn from resumed human feedback and preserve reviewed output types.
+  - Warn when non-empty apps resolve to zero platform tools.
+  - Fix flow add-crew to correctly find the package from pyproject.
+  - Show reasons for deployment failures and fix deploy remove and lockfile checks.
+  - Fix trigger list and payload requests timeout to 60 seconds.
+  - Read AMP's source_type during deploy push to ensure ZIP deployments use the new code.
+  - Decode local JSON files with UTF-8 BOM in rag.
+  - Allow image input_files for OpenAI GPT-6 Sol/Luna/Astra.
+  - Emit call completed event for streamed anthropic tool calls.
+  - Stop JSON-schema models from warning about BaseModel-shadowing fields.
+  - Preserve native tool aborts and post-hook cache identity.
+  - Refresh LiteLLM catalog after the version-bump PR merges.
+  - Repair rotted evaluator regression tests.
+
+  ### Documentation
+  - Consolidate improvements in MongoDB documentation.
+  - Correct deploy and platform-tool guidance in AGENTS.md.
+  - Fix README imports for RagTool and XMLSearchTool.
+
+  ## Contributors
+
+  @SIDDARTHAREDDY8, @Vidit-Ostwal, @joaomdmoura, @kimnamu, @lorenzejay, @norareidy, @shaikn6, @zouyonghe
+
+</Update>
+
+<Update label="Oct 09, 2026">
+  ## v1.15.27
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.27)
+
+  ## What's Changed
+
+  ### Features
+  - Add XPU to OpenCLIP provider device options
+  - Add deepinfra as an OpenAI-compatible provider
+  - Record why an evaluation stopped before its verdict
+  - Record what the run app's Deploy met before an attempt
+  - Implement per-run cost and time tracking in crewai eval --models without repeated progress lines
+
+  ### Bug Fixes
+  - Fix issue where stopSequences were sent to OpenAI GPT-6/GPT-5.6/gpt-oss
+  - Preserve GitHub loader source attribution
+  - Fix SQLite flow initialization contention
+
+  ### Documentation
+  - Add snapshot and changelog for v1.15.26
+
+  ## Contributors
+
+  @StoyanD, @ats3v, @joaomdmoura, @kimnamu, @lorenzejay, @mhbuehler, @zouyonghe
+
+</Update>
+
+<Update label="Oct 08, 2026">
+  ## v1.15.26
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.26)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix ownership retention of rwlock when acquisition is interrupted.
+  - Resolve issue with documentation site source URLs not being preserved.
+  - Fix task output display in log-tasks-outputs to show actual output.
+
+  ### Documentation
+  - Update snapshot and changelog for version v1.15.25.
+
+  ## Contributors
+
+  @Velmet44, @Vidit-Ostwal, @joaomdmoura, @leilei3167, @lorenzejay, @lux-liang
+
+</Update>
+
+<Update label="Oct 07, 2026">
+  ## v1.15.25
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.25)
+
+  ## What's Changed
+
+  ### Documentation
+  - Snapshot and changelog for v1.15.24
+
+  ## Contributors
+
+  @lorenzejay
+
+</Update>
+
+<Update label="Oct 07, 2026">
+  ## v1.15.24
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.24)
+
+  ## What's Changed
+
+  ### Features
+  - Add crewai eval to print a markdown brief when run by an agent
+  - Queue relevant background replies
+  - Add experimental turn and reply identities
+  - Add Oracle Integrations
+  - Add experimental job lifecycle and runner
+  - Add crewai eval --models, and llm_overlay to swap models as well as roles
+
+  ### Bug Fixes
+  - Fix train filename error message in CLI
+  - Allow a start step to re-run on the events it listens to
+  - Let human_feedback emit steps expose the review in outputs
+  - Ensure crewai eval exits with code 1 unless the gate passed and prompt to log in when nothing was traced unattended
+  - Report tracing sent usage from the grant exporter
+  - Address multiple dependency advisories and update relevant packages
+
+  ### Refactoring
+  - Move message summarization into SummarizeMessages
+  - Centralize and refresh context windows
+
+  ## Contributors
+
+  @Velmet44, @Vidit-Ostwal, @dependabot[bot], @fileames, @gabemilani, @github-actions[bot], @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="Sep 28, 2026">
   ## v1.15.23
 
