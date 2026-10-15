@@ -2391,6 +2391,23 @@ def files_in(folder: Path) -> dict[str, str]:
     }
 
 
+NO_EXPORT_ROUTE = "The AMP at https://amp.test does not serve `crewai eval export` yet: it needs an update."
+handles_only = pytest.mark.skipif(
+    not eval_module._WRITES_THROUGH_HANDLES,
+    reason="this platform cannot open a file inside a folder handle without following a link",
+)
+
+
+@pytest.fixture(params=["handles", "paths"])
+def writes(request, monkeypatch):
+    """Both ways the export writes: through folder handles (Linux, macOS), and
+    by a checked path where those are missing (Windows)."""
+    if request.param == "handles" and not eval_module._WRITES_THROUGH_HANDLES:
+        pytest.skip("this platform cannot open a file inside a folder handle without following a link")
+    monkeypatch.setattr(eval_module, "_WRITES_THROUGH_HANDLES", request.param == "handles")
+    return request.param
+
+
 def test_the_eval_group_keeps_every_old_invocation_and_adds_export(monkeypatch):
     from crewai_cli.cli import crewai
 
@@ -2422,6 +2439,36 @@ def test_the_eval_group_keeps_every_old_invocation_and_adds_export(monkeypatch):
     assert "export Download evaluation ID's full data into ./crewai-eval-ID/." in help_text
 
 
+def test_the_eval_group_keeps_every_old_exit_code(monkeypatch):
+    """A CI job gates on `crewai eval`: the command's own exit code still comes
+    out of the group, and what was a usage error still is one."""
+    from crewai_cli.cli import crewai
+
+    def exits_1(*args, **kwargs):
+        raise SystemExit(1)
+
+    monkeypatch.setattr("crewai_cli.cli.eval_crew", exits_1)
+    monkeypatch.setattr("crewai_cli.cli.eval_models", exits_1)
+    monkeypatch.setattr("crewai_cli.cli.eval_export", exits_1)
+    runner = CliRunner()
+
+    for args in (
+        ["eval"],
+        ["eval", "--run", EXECUTION_ID],
+        ["eval", "--models", MODELS],
+        ["eval", "--models", MODELS, "--deployment", DEPLOYMENT],
+        ["eval", "export", EVALUATION_ID],
+    ):
+        assert runner.invoke(crewai, args).exit_code == 1, args
+    for args in (
+        ["eval", "--models", MODELS, "--run", EXECUTION_ID],
+        ["eval", "--deployment", DEPLOYMENT],
+        ["eval", "an-argument"],
+    ):
+        assert runner.invoke(crewai, args).exit_code == 2, args
+
+
+@pytest.mark.usefixtures("writes")
 def test_export_writes_every_file_and_a_gitignore_and_exits_0(project, monkeypatch):
     directory, opened = project
     amp = install(monkeypatch, FakeExportAMP())
@@ -2447,6 +2494,7 @@ def test_the_id_is_sent_and_named_in_its_canonical_form(project, monkeypatch, ca
     assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ — start with report.md\n"
 
 
+@pytest.mark.usefixtures("writes")
 def test_exporting_again_overwrites_the_files(project, monkeypatch, capsys):
     directory, _ = project
     install(monkeypatch, FakeExportAMP(exported({"report.md": "first", "run/checks.md": "old"})))
@@ -2457,6 +2505,7 @@ def test_exporting_again_overwrites_the_files(project, monkeypatch, capsys):
     assert files_in(directory / FOLDER) == {"report.md": "second", "run/checks.md": "new", ".gitignore": "*\n"}
 
 
+@pytest.mark.usefixtures("writes")
 @pytest.mark.parametrize(
     "name",
     [
@@ -2478,6 +2527,13 @@ def test_exporting_again_overwrites_the_files(project, monkeypatch, capsys):
         ".Git./config",
         ".gitignore",  # the folder's own
         ".GITIGNORE",
+        # names Windows keeps for its devices, with any extension
+        "NUL.md",
+        "nul",
+        "com1.txt",
+        "Aux./x.md",
+        "run/lpt9.tar.gz",
+        "CON",
     ],
 )
 def test_an_unsafe_path_is_skipped_and_nothing_is_written_outside(project, monkeypatch, capsys, name):
@@ -2492,6 +2548,19 @@ def test_an_unsafe_path_is_skipped_and_nothing_is_written_outside(project, monke
     assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ — start with report.md {SKIPPED}\n"
 
 
+@pytest.mark.usefixtures("writes")
+def test_a_name_that_only_starts_like_a_windows_device_is_written(project, monkeypatch, capsys):
+    directory, _ = project
+    names = {"console.md": "c", "nullable.md": "n", "com10.md": "10", "auxiliary/x.md": "x"}
+    install(monkeypatch, FakeExportAMP(exported(names)))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert files_in(directory / FOLDER) == {**names, ".gitignore": "*\n"}
+    assert capsys.readouterr().out == f"Wrote 4 files to {FOLDER}/\n"
+
+
+@pytest.mark.usefixtures("writes")
 def test_a_symlink_already_in_the_folder_cannot_lead_a_file_out(project, monkeypatch, capsys):
     directory, _ = project
     outside = directory / "outside"
@@ -2507,6 +2576,40 @@ def test_a_symlink_already_in_the_folder_cannot_lead_a_file_out(project, monkeyp
     assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ — start with report.md {SKIPPED}\n"
 
 
+@pytest.mark.usefixtures("writes")
+def test_a_file_where_a_folder_goes_skips_what_goes_under_it(project, monkeypatch, capsys):
+    directory, _ = project
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "r", "run": "a file", "run/outputs.md": "o"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert files_in(directory / FOLDER) == {"report.md": "r", "run": "a file", ".gitignore": "*\n"}
+    assert capsys.readouterr().out == f"Wrote 2 files to {FOLDER}/ — start with report.md {SKIPPED}\n"
+
+
+@pytest.mark.parametrize("link", ["symbolic", "hard"])
+def test_a_link_where_a_file_goes_is_replaced_never_written_through(project, monkeypatch, capsys, writes, link):
+    if link == "hard" and writes == "paths":
+        pytest.skip("only a file made anew through a folder handle is free of a hard link")
+    directory, _ = project
+    elsewhere = directory / "keep.md"
+    elsewhere.write_text("not ours to change\n", encoding="utf-8")
+    (directory / FOLDER / "run").mkdir(parents=True)
+    placed = directory / FOLDER / "run" / "outputs.md"
+    if link == "symbolic":
+        placed.symlink_to(elsewhere)
+    else:
+        os.link(elsewhere, placed)
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "r", "run/outputs.md": "o"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert elsewhere.read_text(encoding="utf-8") == "not ours to change\n"
+    assert not placed.is_symlink() and placed.read_text(encoding="utf-8") == "o"
+    assert capsys.readouterr().out == f"Wrote 2 files to {FOLDER}/ — start with report.md\n"
+
+
+@pytest.mark.usefixtures("writes")
 def test_a_gitignore_link_already_in_the_folder_is_replaced_never_followed(
     project, monkeypatch
 ):
@@ -2523,6 +2626,97 @@ def test_a_gitignore_link_already_in_the_folder_is_replaced_never_followed(
     gitignore = directory / FOLDER / ".gitignore"
     assert not gitignore.is_symlink()
     assert gitignore.read_text(encoding="utf-8") == "*\n"
+
+
+@pytest.mark.usefixtures("writes")
+@pytest.mark.parametrize("leads_to", ["a folder", "nowhere"])
+def test_an_export_folder_that_is_a_link_stops_the_export(project, monkeypatch, leads_to):
+    directory, _ = project
+    outside = directory / "outside"
+    if leads_to == "a folder":
+        outside.mkdir()
+    (directory / FOLDER).symlink_to(outside, target_is_directory=True)
+    install(monkeypatch, FakeExportAMP())
+
+    result = CliRunner().invoke(eval_command, ["export", EVALUATION_ID])
+
+    assert result.exit_code == 1
+    assert result.output == f"{FOLDER} is a link; the export writes only into a folder of its own.\n"
+    left = {FOLDER, "outside"} if leads_to == "a folder" else {FOLDER}
+    assert {p.name for p in directory.iterdir()} == left  # nothing made where the link leads
+    if leads_to == "a folder":
+        assert list(outside.iterdir()) == []
+
+
+@handles_only
+def test_a_folder_swapped_for_a_link_while_the_export_runs_is_not_gone_through(project, monkeypatch, capsys):
+    """The race a check-then-write loses: `run` is a folder when the first file
+    goes in, and a link out of the export by the time the second one does,
+    swapped in after the name was checked and before the folder is opened."""
+    directory, _ = project
+    outside = directory / "outside"
+    outside.mkdir()
+    real_mkdir = os.mkdir
+    asked: list[str] = []
+
+    def mkdir_then_swap(path, mode=0o777, *, dir_fd=None):
+        asked.append(path)
+        try:
+            real_mkdir(path, mode, dir_fd=dir_fd)
+        finally:
+            if asked.count("run") == 2:
+                (directory / FOLDER / "run").rename(directory / FOLDER / "moved")
+                (directory / FOLDER / "run").symlink_to(outside, target_is_directory=True)
+
+    monkeypatch.setattr(os, "mkdir", mkdir_then_swap)
+    install(monkeypatch, FakeExportAMP(exported({"run/a.md": "a", "run/b.md": "b"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert asked.count("run") == 2  # the swap happened
+    assert list(outside.iterdir()) == []
+    assert files_in(directory / FOLDER) == {"moved/a.md": "a", ".gitignore": "*\n"}
+    assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ {SKIPPED}\n"
+
+
+@handles_only
+def test_the_export_folder_swapped_for_a_link_while_the_export_runs_is_not_gone_through(project, monkeypatch):
+    """The folder itself is held open: moved away and replaced by a link once
+    the export has begun, the files still go into it and nowhere else."""
+    directory, _ = project
+    outside = directory / "outside"
+    outside.mkdir()
+    real_mkdir = os.mkdir
+
+    def mkdir_then_swap(path, mode=0o777, *, dir_fd=None):
+        if path == "run" and not (directory / "moved").exists():
+            (directory / FOLDER).rename(directory / "moved")
+            (directory / FOLDER).symlink_to(outside, target_is_directory=True)
+        real_mkdir(path, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(os, "mkdir", mkdir_then_swap)
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "r", "run/a.md": "a"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert list(outside.iterdir()) == []
+    assert files_in(directory / "moved") == {"report.md": "r", "run/a.md": "a", ".gitignore": "*\n"}
+
+
+@handles_only
+def test_every_folder_handle_is_closed(project, monkeypatch):
+    directory, _ = project
+    outside = directory / "outside"
+    outside.mkdir()
+    (directory / FOLDER / "a").mkdir(parents=True)
+    (directory / FOLDER / "a" / "link").symlink_to(outside, target_is_directory=True)
+    install(monkeypatch, FakeExportAMP(exported({"a/b/c.md": "c", "a/link/x.md": "x", "report.md": "r"})))
+    open_before = len(os.listdir("/dev/fd"))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert len(os.listdir("/dev/fd")) == open_before
+    assert files_in(directory / FOLDER) == {"a/b/c.md": "c", "report.md": "r", ".gitignore": "*\n"}
 
 
 def test_content_that_is_not_text_is_skipped(project, monkeypatch, capsys):
@@ -2569,11 +2763,36 @@ def test_an_id_that_is_not_a_uuid_is_refused_without_a_request(project, monkeypa
     [
         (httpx.Response(404, json={"error": "not_found", "message": "Evaluation not found."}), True,
          "Evaluation not found."),
-        (httpx.Response(404), True,
+        (httpx.Response(404, json={"error": "not_found"}), True,
          f"AMP holds no evaluation {EVALUATION_ID} that this login may read."),
-        (httpx.Response(404), False,
+        (httpx.Response(404, json={"error": "not_found"}), False,
          f"AMP holds no evaluation {EVALUATION_ID} that can be read without a login; "
          "if it is your account's, log in with `crewai login` and export it again."),
+        # an AMP from before exports has no route: its 404 is not AMP's `not_found`
+        (httpx.Response(404), True, NO_EXPORT_ROUTE),
+        (httpx.Response(404), False, NO_EXPORT_ROUTE),
+        (httpx.Response(404, json={"status": 404, "error": "Not Found"}), True, NO_EXPORT_ROUTE),
+        (httpx.Response(404, content=b"<html>The page you were looking for doesn't exist.</html>"), True,
+         NO_EXPORT_ROUTE),
+        # an AMP whose evaluation service predates exports
+        (httpx.Response(501, json={"error": "export_unsupported",
+                                   "message": "This AMP's evaluation service cannot export yet; update it."}), True,
+         "This AMP's evaluation service cannot export yet; update it."),
+        (httpx.Response(501, json={"error": "export_unsupported"}), True,
+         "This AMP's evaluation service does not export evaluations yet: it needs an update."),
+        # an export over 64 MB is refused whole, by the evaluation service (413) or by AMP (502)
+        (httpx.Response(413, json={"error": "export_too_large",
+                                   "message": "This export is 80 MB; an export stops at 64 MB."}), True,
+         "This export is 80 MB; an export stops at 64 MB."),
+        (httpx.Response(502, json={"error": "export_too_large",
+                                   "message": "The export is over 64 MB, more than AMP carries."}), False,
+         "The export is over 64 MB, more than AMP carries."),
+        (httpx.Response(413, json={"error": "export_too_large"}), True,
+         f"Evaluation {EVALUATION_ID} is too large to export."),
+        (httpx.Response(502, json={"error": "export_too_large"}), True,
+         f"Evaluation {EVALUATION_ID} is too large to export."),
+        (httpx.Response(502, json={"error": "bad_gateway", "message": "Upstream down"}), True,
+         "AMP answered 502: Upstream down."),
         (httpx.Response(404, json={"error": "not_found", "message": "Evaluation not found."}), False,
          "Evaluation not found; if it is your account's, log in with `crewai login` and export it again."),
         (httpx.Response(409, json={"error": "not_finished", "message": "[b]Still[/b] grading."}), True,

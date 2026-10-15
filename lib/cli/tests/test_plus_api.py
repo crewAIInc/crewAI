@@ -101,7 +101,10 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.get_evaluation("ev-1")
 
         mock_make_request.assert_called_once_with(
-            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
+            "GET",
+            "/crewai_plus/api/v1/tracing/evaluations/ev-1",
+            params={"can_export": "1"},
+            timeout=30.0,
         )
         self.assertEqual(response, mock_response)
 
@@ -598,3 +601,13 @@ def test_an_export_waits_two_minutes_for_its_large_answer():
         "write": 30.0,
         "pool": 30.0,
     }
+
+
+def test_reading_an_evaluation_says_this_cli_can_export_it():
+    """`can_export=1` lets the brief name `crewai eval export`: an AMP that does
+    not know the parameter drops it, and the brief stays silent about it."""
+    (request,) = _requests_sent_by(lambda api: api.get_evaluation("ev-1"))
+
+    assert request.method == "GET"
+    assert request.url.path == "/crewai_plus/api/v1/tracing/evaluations/ev-1"
+    assert dict(request.url.params) == {"can_export": "1"}
