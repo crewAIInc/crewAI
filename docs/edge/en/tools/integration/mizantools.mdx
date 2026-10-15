@@ -1,6 +1,6 @@
 ---
 title: MIZAN Track-Record Verification
-description: Verify a trading agent's MIZAN zero-knowledge track-record credential before paying, copying or allocating to it.
+description: Check a trading agent against the MIZAN registry before following, copying, paying or allocating to it.
 icon: shield-check
 mode: "wide"
 ---
@@ -9,9 +9,9 @@ mode: "wide"
 
 ## Description
 
-[MIZAN](https://mizan.market) issues zero-knowledge (STARK) credentials for trading track records and publishes passes and fails in a public registry. The `mizan-agent-tools` package provides CrewAI tools that let an agent look up a credential and check its proof bundle's sha256 against the registry anchor before paying, copying, following or allocating to a trading agent or strategy.
+[MIZAN](https://mizan.market) issues zero-knowledge (STARK) credentials for trading track records and publishes passes and fails in a public registry. The `mizan-agent-tools` package provides CrewAI tools that let an agent check a counterparty before following, copying, paying, hiring or allocating to it, and hash-check any credential it relies on.
 
-No API key is required. All calls go to public endpoints.
+No API key is required. All calls go to public endpoints. At the time of writing, every credential in the registry was minted by MIZAN itself; the issuer is shown on each result.
 
 ## Installation
 
@@ -25,10 +25,14 @@ pip install "mizan-agent-tools[crewai]"
 
 | Tool | What it does |
 | --- | --- |
-| `MizanVerifyCredentialTool` | Looks up a credential by id or bundle sha256, downloads the bundle and checks its hash against the registry anchor. Returns the verdict as issued (PASS, FAIL, NOT SIGNIFICANT, ...), `verified` and `hash_match` flags, engine era, dataset, owner-disclosed metrics and links. |
+| `MizanCheckAgentTool` | Primary tool. Takes anything that identifies an agent (name or alias, credential id, wallet address, ERC-8004 id, agent-card URL or sha256) and the action about to be taken. Returns `status` PROVEN, REFUSED, NOT_SIGNIFICANT or UNVERIFIED, the matching credentials, a summary and a caveat. |
+| `MizanVerifyCredentialTool` | Looks up a credential by id or bundle sha256, downloads the bundle and checks its hash against the registry anchor. Returns the verdict as issued, `verified` and `hash_match` flags, engine era, dataset, owner-disclosed metrics and links. |
 | `MizanSearchCredentialsTool` | Filters the public registry by alias, issuer or verdict. |
+| `MizanListProvenAgentsTool` | Lists credentials that passed the gate (Bitcoin-confirmed, non-sandbox by default). |
 | `MizanListDatasetsTool` | Lists the canonical markets a record can be proven on. |
 | `MizanMintPreviewTool` | Opt-in. Free, rate-limited gate preview of your own position series. Nothing is kept; not a credential. |
+
+`get_mizan_tools()` returns the first five tools, with `MizanCheckAgentTool` first.
 
 ## Example
 
@@ -47,8 +51,11 @@ analyst = Agent(
 )
 
 task = Task(
-    description="Verify MIZAN credential 'v12-btc-trend-4h' and advise whether to copy this bot.",
-    expected_output="Verdict as issued, whether the hash matched, and a short recommendation.",
+    description=(
+        "Before we copy the bot 'v12-btc-trend-4h', check it with MIZAN, "
+        "hash-check any credential you rely on, and advise."
+    ),
+    expected_output="Status as issued, whether the hash matched, and a short recommendation.",
     agent=analyst,
 )
 
@@ -75,9 +82,9 @@ The remote server exposes more than verification (including minting tools that t
 
 ## Reading the result
 
-- `verified: true` means the credential is listed and its bundle hash matches the registry anchor. It does not mean the record passed; read `verdict`.
-- A FAIL or NOT SIGNIFICANT verdict means the record did not establish the claimed edge.
-- No credential found means the claimed performance is unproven.
+- Report `status` exactly as returned. UNVERIFIED means no credential was found: the claim is unproven, which is not the same as false. The result then includes a `forward_to_counterparty` message the agent may pass on.
+- REFUSED or NOT_SIGNIFICANT means a record was submitted and did not clear the bar.
+- `check_agent` matches server-side. For a credential you rely on, `MizanVerifyCredentialTool` checks the proof bundle's hash against the registry anchor. `verified: true` means listed and intact, not passed; read the verdict.
 - A credential is a seal on a past record, not a forecast. These tools do not re-run the STARK proof; the offline `mizan-verify` binary does.
 
 Source: [github.com/muaviamohammed/mizan-agent-tools](https://github.com/muaviamohammed/mizan-agent-tools)
