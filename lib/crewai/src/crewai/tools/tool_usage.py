@@ -966,6 +966,13 @@ class ToolUsage:
         except (JSONDecodeError, ValueError, TypeError):
             pass
 
+        if self._has_unterminated_json_string(tool_input):
+            error_message = (
+                "Tool input must be a valid dictionary in JSON or Python literal format"
+            )
+            self._emit_validate_input_error(error_message)
+            raise Exception(error_message)
+
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             if self.agent and self.agent.verbose:
@@ -983,6 +990,24 @@ class ToolUsage:
         )
         self._emit_validate_input_error(error_message)
         raise Exception(error_message)
+
+    @staticmethod
+    def _has_unterminated_json_string(tool_input: str) -> bool:
+        in_string = False
+        escaped = False
+
+        for character in tool_input:
+            if not in_string:
+                if character == '"':
+                    in_string = True
+            elif escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+
+        return in_string
 
     def _emit_validate_input_error(self, final_error: str) -> None:
         tool_selection_data = {
