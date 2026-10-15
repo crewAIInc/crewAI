@@ -54,7 +54,10 @@ def build_env_with_all_tool_credentials() -> dict[str, Any]:
                     index = config.get("index")
                     if index:
                         index_env = build_env_with_tool_repository_credentials(index)
-                        env.update(index_env)
+                        normalized = index.upper().replace("-", "_")
+                        for suffix in ("USERNAME", "PASSWORD"):
+                            key = f"UV_INDEX_{normalized}_{suffix}"
+                            env[key] = index_env[key]
     except Exception:  # noqa: S110
         pass
 

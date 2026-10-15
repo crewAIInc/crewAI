@@ -63,3 +63,30 @@ def test_credentials_for_uv_source_shapes(
     assert {key: env[key] for key in credential_keys if key in env} == expected
     assert env["CREWAI_TEST_PARENT_ENV"] == "preserved"
     assert all(key not in os.environ for key in credential_keys)
+
+
+def test_later_index_does_not_restore_stale_credentials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep collected credentials when a later helper copies the parent env."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.uv.sources]\ncustom-tool = [{index = "first"}, {index = "second"}]\n'
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        tool_credentials,
+        "Settings",
+        lambda: SimpleNamespace(
+            tool_repository_username="new-user", tool_repository_password="new-password"
+        ),
+    )
+    monkeypatch.setenv("UV_INDEX_FIRST_USERNAME", "old-user")
+    monkeypatch.setenv("UV_INDEX_FIRST_PASSWORD", "old-password")
+
+    env = tool_credentials.build_env_with_all_tool_credentials()
+
+    assert env["UV_INDEX_FIRST_USERNAME"] == "new-user"
+    assert env["UV_INDEX_FIRST_PASSWORD"] == "new-password"
+    assert env["UV_INDEX_SECOND_USERNAME"] == "new-user"
+    assert env["UV_INDEX_SECOND_PASSWORD"] == "new-password"
+    assert os.environ["UV_INDEX_FIRST_USERNAME"] == "old-user"
