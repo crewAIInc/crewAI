@@ -6,11 +6,11 @@ from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 import warnings
 
-from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.agents.parser import AgentFinish
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -734,7 +734,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
         "function": {"name": "get_greetings", "arguments": "{}"},
     }
     with patch(
-        "crewai.experimental.agent_executor.get_llm_response",
+        "crewai.agents.agent_executor.get_llm_response",
         return_value=[tool_call],
     ) as mock_llm_response:
         result = crew.kickoff()
@@ -758,61 +758,6 @@ def test_agent_definition_based_on_dict():
     assert agent.backstory == "test backstory"
     assert agent.verbose is True
     assert agent.tools == []
-
-
-@pytest.mark.vcr()
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_agent_human_input():
-    from crewai.core.providers.human_input import SyncHumanInputProvider
-
-    # Agent configuration
-    config = {
-        "role": "test role",
-        "goal": "test goal",
-        "backstory": "test backstory",
-        "executor_class": CrewAgentExecutor,
-    }
-
-    agent = Agent(**config)
-
-    # Task configuration with human input enabled
-    task = Task(
-        agent=agent,
-        description="Say the word: Hi",
-        expected_output="The word: Hi",
-        human_input=True,
-    )
-
-    # Side effect function for _prompt_input to simulate multiple feedback iterations
-    feedback_responses = iter(
-        [
-            "Don't say hi, say Hello instead!",
-            "",
-        ]
-    )
-
-    def prompt_input_side_effect(*args, **kwargs):
-        return next(feedback_responses)
-
-    # Patch both _prompt_input on provider and _invoke_loop to avoid real API/network calls.
-    with (
-        patch.object(
-            SyncHumanInputProvider,
-            "_prompt_input",
-            side_effect=prompt_input_side_effect,
-        ) as mock_prompt_input,
-        patch.object(
-            CrewAgentExecutor,
-            "_invoke_loop",
-            return_value=AgentFinish(output="Hello", thought="", text=""),
-        ),
-    ):
-        output = agent.execute_task(task)
-
-        # Assertions to ensure the agent behaves correctly.
-        # It should have requested feedback twice.
-        assert mock_prompt_input.call_count == 2
-        assert output.strip().lower() == "hello"
 
 
 def test_agent_default_executor_human_input():
@@ -1003,7 +948,7 @@ Thought:<|eot_id|>
 
 """
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     with patch.object(AgentExecutor, "_format_prompt") as mock_format_prompt:
         mock_format_prompt.return_value = expected_prompt
@@ -1332,7 +1277,7 @@ def test_agent_max_retry_limit():
 
     agent.create_agent_executor(task=task)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     error_message = "Error happening while sending prompt to model."
     with patch.object(
@@ -1511,7 +1456,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
 
     agent.create_agent_executor(task=task)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     with patch.object(
         AgentExecutor, "invoke", wraps=agent.agent_executor.invoke
@@ -2128,60 +2073,6 @@ def test_litellm_auth_error_handling():
         agent.execute_task(task)
 
     mock_llm_call.assert_called_once()
-
-
-def test_crew_agent_executor_litellm_auth_error():
-    """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
-    from crewai.agents.tools_handler import ToolsHandler
-    from litellm.exceptions import AuthenticationError
-
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        llm=LLM(model="gpt-4", api_key="invalid_api_key", is_litellm=True),
-    )
-    task = Task(
-        description="Test task",
-        expected_output="Test output",
-        agent=agent,
-    )
-
-    executor = CrewAgentExecutor(
-        agent=agent,
-        task=task,
-        llm=agent.llm,
-        crew=None,
-        prompt={"system": "You are a test agent", "user": "Execute the task: {input}"},
-        max_iter=5,
-        tools=[],
-        tools_names="",
-        stop_words=[],
-        tools_description="",
-        tools_handler=ToolsHandler(),
-    )
-
-    with (
-        patch.object(LLM, "call") as mock_llm_call,
-        pytest.raises(AuthenticationError) as exc_info,
-    ):
-        mock_llm_call.side_effect = AuthenticationError(
-            message="Invalid API key", llm_provider="openai", model="gpt-4"
-        )
-        executor.invoke(
-            {
-                "input": "test input",
-                "tool_names": "",
-                "tools": "",
-            }
-        )
-
-    mock_llm_call.assert_called_once()
-
-    assert exc_info.type is AuthenticationError
-    assert "Invalid API key".lower() in exc_info.value.message.lower()
-    assert exc_info.value.llm_provider == "openai"
-    assert exc_info.value.model == "gpt-4"
 
 
 def test_litellm_anthropic_error_handling():
@@ -2839,25 +2730,9 @@ class TestSharedLLMStopWords:
     """
 
     @staticmethod
-    def _make_executor(llm: LLM, stop_words: list[str]) -> CrewAgentExecutor:
-        """Build a CrewAgentExecutor with minimal deps."""
-        from crewai.agents.tools_handler import ToolsHandler
-
-        agent = Agent(role="r", goal="g", backstory="b")
-        task = Task(description="d", expected_output="o", agent=agent)
-        return CrewAgentExecutor(
-            agent=agent,
-            task=task,
-            llm=llm,
-            crew=None,
-            prompt={"prompt": "p {input} {tool_names} {tools}"},
-            max_iter=5,
-            tools=[],
-            tools_names="",
-            stop_words=stop_words,
-            tools_description="",
-            tools_handler=ToolsHandler(),
-        )
+    def _make_executor(llm: LLM, stop_words: list[str]) -> AgentExecutor:
+        """Build an AgentExecutor carrying only the fields this test reads."""
+        return AgentExecutor.model_construct(llm=llm, stop_words=stop_words)
 
     def test_executor_init_does_not_mutate_shared_llm(self) -> None:
         """Constructing executors must not touch the shared LLM's stop list."""
@@ -2933,7 +2808,7 @@ class TestSharedLLMStopWords:
         exec_a = self._make_executor(shared, stop_words=["StopA:"])
         exec_b = self._make_executor(shared, stop_words=["StopB:"])
 
-        async def run(executor: CrewAgentExecutor, expected: str) -> set[str]:
+        async def run(executor: AgentExecutor, expected: str) -> set[str]:
             with _llm_stop_words_applied(shared, executor):
                 await asyncio.sleep(0)
                 seen = set(shared.stop_sequences)
@@ -2994,163 +2869,3 @@ class TestSharedLLMStopWords:
         assert seen == [{"Original:", "Observation:"}]
         assert shared.stop == ["Original:"]
 
-
-class TestMaxIterationsForcedAnswer:
-    """Both sync loops request the forced final answer with a trailing user turn.
-
-    Current Claude models reject a request that ends on an assistant message,
-    so the nudge must never be sent as assistant prefill.
-    """
-
-    @staticmethod
-    def _make_executor(llm: MagicMock, original_tools: list) -> CrewAgentExecutor:
-        from crewai.agents.tools_handler import ToolsHandler
-
-        agent = Agent(role="r", goal="g", backstory="b", llm=llm, verbose=False)
-        task = Task(description="d", expected_output="o", agent=agent)
-        executor = CrewAgentExecutor(
-            agent=agent,
-            task=task,
-            llm=llm,
-            crew=None,
-            prompt={"prompt": "p {input} {tool_names} {tools}"},
-            max_iter=1,
-            tools=[],
-            original_tools=original_tools,
-            tools_names="",
-            stop_words=[],
-            tools_description="",
-            tools_handler=ToolsHandler(),
-        )
-        executor.iterations = 1
-        return executor
-
-    def test_react_loop_forces_final_answer_with_user_turn(self) -> None:
-        from crewai.utilities.i18n import I18N_DEFAULT
-
-        llm = MagicMock(spec=LLM)
-        llm.stop = []
-        llm.supports_stop_words.return_value = True
-        llm.supports_function_calling.return_value = False
-        llm.call.return_value = "Final Answer: forced"
-        executor = self._make_executor(llm, original_tools=[])
-        executor.messages = [
-            {"role": "user", "content": "Collect all the data."},
-            {"role": "assistant", "content": "Thought: I need data\nObservation: partial"},
-        ]
-
-        with patch.object(executor, "_show_logs"):
-            result = executor._invoke_loop()
-
-        sent = llm.call.call_args.args[0]
-        assert sent[-1] == {
-            "role": "user",
-            "content": I18N_DEFAULT.errors("force_final_answer"),
-        }
-        assert isinstance(result, AgentFinish)
-        assert result.output == "forced"
-
-    def test_react_loop_summarizes_before_calling_the_llm(self) -> None:
-        llm = MagicMock(spec=LLM)
-        llm.stop = []
-        llm.supports_stop_words.return_value = True
-        llm.supports_function_calling.return_value = False
-        llm.is_context_window_overflowing_threshold.return_value = True
-        llm.call.return_value = "Final Answer: done"
-        executor = self._make_executor(llm, original_tools=[])
-        executor.iterations = 0
-        executor.max_iter = 2
-        executor.respect_context_window = True
-        executor.messages = [
-            {"role": "user", "content": "earlier context"},
-            {"role": "assistant", "content": "earlier response"},
-            {"role": "user", "content": "large context"},
-        ]
-        events: list[str] = []
-
-        with (
-            patch("crewai.utilities.agent_utils.summarize_messages") as summarize,
-            patch.object(executor, "_show_logs"),
-        ):
-            summarize.side_effect = lambda **_: events.append("summarize")
-            llm.call.side_effect = (
-                lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
-            )
-            executor._invoke_loop()
-
-        assert events == ["summarize", "call"]
-
-    def test_native_tool_loop_summarizes_before_calling_the_llm(self) -> None:
-        @tool
-        def search(query: str) -> str:
-            """Search for a result."""
-            return query
-
-        llm = MagicMock(spec=LLM)
-        llm.stop = []
-        llm.supports_stop_words.return_value = True
-        llm.supports_function_calling.return_value = True
-        llm.is_context_window_overflowing_threshold.return_value = True
-        llm.call.return_value = "done"
-        executor = self._make_executor(llm, original_tools=[search])
-        executor.iterations = 0
-        executor.max_iter = 2
-        executor.respect_context_window = True
-        executor.messages = [
-            {"role": "user", "content": "earlier context"},
-            {"role": "assistant", "content": "earlier response"},
-            {"role": "user", "content": "large context"},
-        ]
-        events: list[str] = []
-
-        with (
-            patch("crewai.utilities.agent_utils.summarize_messages") as summarize,
-            patch.object(executor, "_show_logs"),
-        ):
-            summarize.side_effect = lambda **_: events.append("summarize")
-            llm.call.side_effect = lambda *_args, **_kwargs: events.append("call") or "done"
-            executor._invoke_loop()
-
-        assert events == ["summarize", "call"]
-
-    def test_native_tools_loop_forces_final_answer_with_user_turn(self) -> None:
-        from crewai.utilities.i18n import I18N_DEFAULT
-
-        @tool
-        def get_data(step: str) -> str:
-            """Get data for a step."""
-            return f"data for {step}"
-
-        llm = MagicMock(spec=LLM)
-        llm.stop = []
-        llm.supports_stop_words.return_value = True
-        llm.supports_function_calling.return_value = True
-        llm.call.return_value = "Final Answer: forced"
-        executor = self._make_executor(llm, original_tools=[get_data])
-        executor.messages = [
-            {"role": "user", "content": "Collect all the data."},
-            {
-                "role": "assistant",
-                "content": None,
-                "tool_calls": [
-                    {
-                        "id": "call_1",
-                        "type": "function",
-                        "function": {"name": "get_data", "arguments": "{}"},
-                    }
-                ],
-            },
-            {"role": "tool", "tool_call_id": "call_1", "name": "get_data", "content": "partial"},
-            {"role": "user", "content": I18N_DEFAULT.slice("post_tool_reasoning")},
-        ]
-
-        with patch.object(executor, "_show_logs"):
-            result = executor._invoke_loop()
-
-        sent = llm.call.call_args.args[0]
-        assert sent[-1] == {
-            "role": "user",
-            "content": I18N_DEFAULT.errors("force_final_answer"),
-        }
-        assert isinstance(result, AgentFinish)
-        assert result.output == "forced"
