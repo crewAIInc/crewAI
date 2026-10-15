@@ -186,8 +186,14 @@ class UsageMetrics(BaseModel):
             usage_data.get("cache_creation_tokens")
         ) or _coerce_int(usage_data.get("cache_creation_input_tokens"))
 
+        # Bedrock's inputTokens leaves out cache reads and writes, but its
+        # totalTokens counts them, as BedrockCompletion's own tracker does.
+        total_tokens = _coerce_int(usage_data.get("totalTokens")) or (
+            prompt_tokens + completion_tokens
+        )
+
         return cls(
-            total_tokens=prompt_tokens + completion_tokens,
+            total_tokens=total_tokens,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             cached_prompt_tokens=cached_prompt_tokens,

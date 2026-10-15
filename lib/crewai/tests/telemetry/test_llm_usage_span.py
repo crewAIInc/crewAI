@@ -7,6 +7,8 @@ at all for Bedrock, and the flow-level crew totals missed the same calls.
 
 from __future__ import annotations
 
+from typing import Any
+
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallStartedEvent,
@@ -17,6 +19,7 @@ from crewai.telemetry.tracing.context import TelemetryExecutionContext
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import Tracer
 import pytest
 
 
@@ -30,13 +33,13 @@ def enable_otel_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class _Providers:
-    def __init__(self, tracer) -> None:
+    def __init__(self, tracer: Tracer) -> None:
         self._tracer = tracer
 
-    def get_tracer(self, name: str | None = None):
+    def get_tracer(self, name: str | None = None) -> Tracer:
         return self._tracer
 
-    def emit_log(self, *args, **kwargs) -> None:
+    def emit_log(self, *args: Any, **kwargs: Any) -> None:
         pass
 
 
@@ -55,11 +58,19 @@ class _Providers:
             "reasoning_tokens": 0,
         },
         # Bedrock Converse response["usage"], passed through unchanged
-        {"inputTokens": 50, "outputTokens": 25, "totalTokens": 75},
+        {
+            "inputTokens": 50,
+            "outputTokens": 25,
+            "totalTokens": 75,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+        },
     ],
     ids=["openai", "gemini", "bedrock"],
 )
-def test_call_llm_span_and_flow_totals_count_provider_usage(usage) -> None:
+def test_call_llm_span_and_flow_totals_count_provider_usage(
+    usage: dict[str, Any],
+) -> None:
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exporter))
