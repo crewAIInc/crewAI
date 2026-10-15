@@ -298,6 +298,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return result
 
         original_tool = execution_result.get("original_tool")
+        if isinstance(original_tool, DeferredToolResultReader):
+            return result
+
         if getattr(original_tool, "result_as_answer", False):
             return result
 

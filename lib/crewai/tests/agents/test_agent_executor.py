@@ -2479,6 +2479,30 @@ class TestDeferredNativeToolResults:
         assert executor.original_tools == []
         llm.is_tool_result_overflowing_threshold.assert_not_called()
 
+    def test_deferred_reader_result_is_not_deferred_again(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        llm = Mock()
+        reader = DeferredToolResultReader()
+        executor = _build_executor(llm=llm, original_tools=[reader])
+        result = "large deferred tool result"
+
+        context_result = executor._prepare_tool_result_for_context(
+            {
+                "func_name": reader.name,
+                "result": result,
+                "tool_args": {"file_path": "artifact/result.md"},
+                "original_tool": reader,
+                "tool_failure": None,
+            }
+        )
+
+        assert context_result == result
+        assert executor._tool_result_artifact_store is None
+        llm.is_tool_result_overflowing_threshold.assert_not_called()
+
     def test_overflowed_result_is_referenced_and_readable_through_file_reader(self):
         from crewai.tools.agent_tools.deferred_tool_result_reader import (
             DeferredToolResultReader,
