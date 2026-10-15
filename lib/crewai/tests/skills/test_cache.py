@@ -165,6 +165,20 @@ class TestSkillCacheManager:
         names = {e["name"] for e in entries}
         assert names == {"skill-a", "skill-b", "skill-c"}
 
+    @pytest.mark.parametrize("metadata", [b"\xff\xfe", b"{invalid json"])
+    def test_list_cached_skips_unreadable_metadata(
+        self, tmp_path: Path, metadata: bytes
+    ) -> None:
+        cache = SkillCacheManager(cache_root=tmp_path)
+        archive = _make_tar_gz({"SKILL.md": "content"})
+        broken = cache.store("acme", "a-broken", "1.0.0", archive)
+        healthy = cache.store("acme", "z-healthy", "1.0.0", archive)
+        (broken / ".crewai_meta.json").write_bytes(metadata)
+        expected = json.loads((healthy / ".crewai_meta.json").read_text())
+
+        assert cache.list_cached() == [expected]
+        assert (broken / ".crewai_meta.json").read_bytes() == metadata
+
     def test_invalidate_existing(self, tmp_path: Path) -> None:
         cache = SkillCacheManager(cache_root=tmp_path)
         archive = _make_tar_gz({"SKILL.md": "x"})
