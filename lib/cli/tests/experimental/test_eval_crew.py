@@ -2348,3 +2348,256 @@ def test_a_failing_usage_count_never_changes_what_the_command_does(project, monk
 
     assert exited.value.code == 1
     assert eval_module._refusal_message(refusal, f"run {EXECUTION_ID}") in capsys.readouterr().out
+
+
+# --- crewai eval export ------------------------------------------------------
+
+EVALUATION_ID = "0b6c1f5e-8d2a-4f3b-9c4e-7a1d2e3f4a5b"
+FOLDER = f"crewai-eval-{EVALUATION_ID}"
+EXPORT_FILES = {
+    "report.md": "# Report\n\nThe gate passed.\n",
+    "run/outputs.md": "## Final output\n\nThree trends.\n",
+    "run/checks.md": "- goal: passed — the output names three trends\n",
+    "run/trace.json": '{"spans": []}\n',
+    "gemini-4-argon/outputs.md": "## Final output\n\nTwo trends.\n",
+}
+SKIPPED = "(skipped 1: an unsafe path, or content that is not text)"
+
+
+class FakeExportAMP(FakeAMP):
+    def __init__(self, answer=None):
+        super().__init__()
+        self.answer = answer if answer is not None else exported()
+
+    def export_evaluation(self, evaluation_id):
+        self.calls.append(("export", evaluation_id))
+        if isinstance(self.answer, Exception):
+            raise self.answer
+        return self.answer
+
+
+def exported(files=None, kind="models"):
+    return httpx.Response(
+        200,
+        json={"id": EVALUATION_ID, "kind": kind, "files": EXPORT_FILES if files is None else files},
+    )
+
+
+def files_in(folder: Path) -> dict[str, str]:
+    return {p.relative_to(folder).as_posix(): p.read_text() for p in folder.rglob("*") if p.is_file()}
+
+
+def test_the_eval_group_keeps_every_old_invocation_and_adds_export(monkeypatch):
+    from crewai_cli.cli import crewai
+
+    calls = []
+    monkeypatch.setattr("crewai_cli.cli.eval_crew", lambda **kwargs: calls.append(("run", kwargs)))
+    monkeypatch.setattr("crewai_cli.cli.eval_models", lambda *args, **kwargs: calls.append(("models", args, kwargs)))
+    monkeypatch.setattr("crewai_cli.cli.eval_export", lambda *args: calls.append(("export", args)))
+    runner = CliRunner()
+
+    assert runner.invoke(crewai, ["eval"]).exit_code == 0
+    assert runner.invoke(crewai, ["eval", "--run", EXECUTION_ID]).exit_code == 0
+    assert runner.invoke(crewai, ["eval", "--models", MODELS, "--deployment", DEPLOYMENT]).exit_code == 0
+    assert runner.invoke(crewai, ["eval", "export", EVALUATION_ID]).exit_code == 0
+    assert calls == [
+        ("run", {"run_id": None}),
+        ("run", {"run_id": EXECUTION_ID}),
+        ("models", (MODELS,), {"deployment_id": DEPLOYMENT}),
+        ("export", (EVALUATION_ID,)),
+    ]
+
+    # an option meant for `crewai eval` itself is refused, never dropped
+    mixed = runner.invoke(eval_command, ["--run", EXECUTION_ID, "export", EVALUATION_ID])
+    assert mixed.exit_code == 2 and "takes no --run, --models or --deployment" in mixed.output
+    assert runner.invoke(eval_command, ["export"]).exit_code == 2  # the id is required
+    assert len(calls) == 4
+
+    help_text = " ".join(runner.invoke(eval_command, ["--help"]).output.split())
+    assert "`crewai eval export ID` downloads an evaluation's full data as files" in help_text
+    assert "export Download evaluation ID's full data into ./crewai-eval-ID/." in help_text
+
+
+def test_export_writes_every_file_and_a_gitignore_and_exits_0(project, monkeypatch):
+    directory, opened = project
+    amp = install(monkeypatch, FakeExportAMP())
+
+    result = CliRunner().invoke(eval_command, ["export", EVALUATION_ID])
+
+    assert result.exit_code == 0, result.output
+    assert amp.calls == [("export", EVALUATION_ID)]
+    assert amp.api_key == "login-token"
+    assert files_in(directory / FOLDER) == {**EXPORT_FILES, ".gitignore": "*\n"}
+    assert result.output == f"Wrote 5 files to {FOLDER}/ — start with report.md\n"
+    assert opened == []
+
+
+def test_the_id_is_sent_and_named_in_its_canonical_form(project, monkeypatch, capsys):
+    directory, _ = project
+    amp = install(monkeypatch, FakeExportAMP(exported({"report.md": "r"})))
+
+    eval_module.export_evaluation(f"  {EVALUATION_ID.upper()} ")
+
+    assert amp.calls == [("export", EVALUATION_ID)]
+    assert files_in(directory / FOLDER) == {"report.md": "r", ".gitignore": "*\n"}
+    assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ — start with report.md\n"
+
+
+def test_exporting_again_overwrites_the_files(project, monkeypatch, capsys):
+    directory, _ = project
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "first", "run/checks.md": "old"})))
+    eval_module.export_evaluation(EVALUATION_ID)
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "second", "run/checks.md": "new"})))
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert files_in(directory / FOLDER) == {"report.md": "second", "run/checks.md": "new", ".gitignore": "*\n"}
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "../x.md",
+        "{tmp}/outside.md",  # absolute
+        "a/../../b.md",
+        "run/../../b.md",
+        "a\\b.md",
+        "..\\x.md",
+        "a//b.md",  # empty segment
+        "run/",
+        "",
+        "./report.md",
+        "run/./checks.md",
+        "C:/x.md",
+        "run/a b.md",
+        "run/x\n.md",
+        ".git/config",
+        ".Git./config",
+        ".gitignore",  # the folder's own
+        ".GITIGNORE",
+    ],
+)
+def test_an_unsafe_path_is_skipped_and_nothing_is_written_outside(project, monkeypatch, capsys, name):
+    directory, _ = project
+    name = name.replace("{tmp}", str(directory))
+    install(monkeypatch, FakeExportAMP(exported({name: "!*\nnot yours", "report.md": "# Report\n"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert [p.name for p in directory.iterdir()] == [FOLDER]
+    assert files_in(directory / FOLDER) == {"report.md": "# Report\n", ".gitignore": "*\n"}
+    assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ — start with report.md {SKIPPED}\n"
+
+
+def test_a_symlink_already_in_the_folder_cannot_lead_a_file_out(project, monkeypatch, capsys):
+    directory, _ = project
+    outside = directory / "outside"
+    outside.mkdir()
+    (directory / FOLDER).mkdir()
+    (directory / FOLDER / "run").symlink_to(outside, target_is_directory=True)
+    install(monkeypatch, FakeExportAMP(exported({"report.md": "r", "run/outputs.md": "o"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert list(outside.iterdir()) == []
+    assert (directory / FOLDER / "report.md").read_text() == "r"
+    assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/ — start with report.md {SKIPPED}\n"
+
+
+def test_content_that_is_not_text_is_skipped(project, monkeypatch, capsys):
+    directory, _ = project
+    body = (
+        '{"id": "%s", "kind": "trace", "files": {"report.md": "# Report", "n.json": 5, "none.md": null,'
+        ' "list.md": ["a"], "object.md": {"a": 1}, "half.md": "\\ud800"}}' % EVALUATION_ID
+    )
+    install(monkeypatch, FakeExportAMP(httpx.Response(200, content=body.encode())))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert files_in(directory / FOLDER) == {"report.md": "# Report", ".gitignore": "*\n"}
+    assert capsys.readouterr().out == (
+        f"Wrote 1 file to {FOLDER}/ — start with report.md "
+        "(skipped 5: an unsafe path, or content that is not text)\n"
+    )
+
+
+def test_an_export_without_a_report_does_not_point_at_one(project, monkeypatch, capsys):
+    directory, _ = project
+    install(monkeypatch, FakeExportAMP(exported({"run/outputs.md": "o"})))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert capsys.readouterr().out == f"Wrote 1 file to {FOLDER}/\n"
+
+
+@pytest.mark.parametrize("given", ["not-a-uuid", "", "../../etc", f"{EVALUATION_ID}0", "[red]x[/red]"])
+def test_an_id_that_is_not_a_uuid_is_refused_without_a_request(project, monkeypatch, given):
+    directory, _ = project
+    amp = install(monkeypatch, FakeExportAMP())
+
+    result = CliRunner().invoke(eval_command, ["export", given])
+
+    assert result.exit_code == 1
+    assert result.output == f"{given!r} is not an evaluation id: an evaluation id is a UUID.\n"
+    assert amp.calls == []
+    assert list(directory.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("answer", "logged_in", "said"),
+    [
+        (httpx.Response(404, json={"error": "not_found", "message": "Evaluation not found."}), True,
+         "Evaluation not found."),
+        (httpx.Response(404), True,
+         f"AMP holds no evaluation {EVALUATION_ID} that this login may read."),
+        (httpx.Response(404), False,
+         f"AMP holds no evaluation {EVALUATION_ID} that can be read without a login; "
+         "if it is your account's, log in with `crewai login` and export it again."),
+        (httpx.Response(404, json={"error": "not_found", "message": "Evaluation not found."}), False,
+         "Evaluation not found; if it is your account's, log in with `crewai login` and export it again."),
+        (httpx.Response(409, json={"error": "not_finished", "message": "[b]Still[/b] grading."}), True,
+         "[b]Still[/b] grading."),
+        (httpx.Response(409), True,
+         f"Evaluation {EVALUATION_ID} is still running; export it once it has finished."),
+        (httpx.Response(410, json={"error": "report_closed", "message": "This report was opened and is closed."}), False,
+         "This report was opened and is closed."),
+        (httpx.Response(410), False,
+         f"The report of evaluation {EVALUATION_ID} was opened already and is closed; "
+         "log in with `crewai login` and evaluate the run again."),
+        (httpx.Response(503, json={"error": "service_unavailable", "message": "Back soon"}), True,
+         "AMP answered 503: Back soon."),
+        (httpx.Response(429, json={"message": "Slow down"}, headers={"Retry-After": "30"}), True,
+         "Slow down — retry after 30s."),
+        (httpx.Response(401, json={"error": "bad_credentials", "message": "Token expired"}), True,
+         "Token expired. Log in with `crewai login` and try again."),
+        (httpx.ConnectError("connection refused"), True,
+         f"Could not reach AMP to export evaluation {EVALUATION_ID}: connection refused"),
+        (httpx.Response(200, json={"id": EVALUATION_ID, "kind": "trace"}), True,
+         f"AMP answered without the files of evaluation {EVALUATION_ID} (protocol error)."),
+        (httpx.Response(200, content=b"<html>"), True,
+         f"AMP answered without the files of evaluation {EVALUATION_ID} (protocol error)."),
+    ],
+)
+def test_a_refused_export_says_why_in_one_sentence_and_exits_1(project, monkeypatch, answer, logged_in, said):
+    directory, _ = project
+    if not logged_in:
+        monkeypatch.setattr(eval_module, "saved_login", lambda: None)
+    amp = install(monkeypatch, FakeExportAMP(answer))
+
+    result = CliRunner().invoke(eval_command, ["export", EVALUATION_ID])
+
+    assert result.exit_code == 1
+    assert result.output == f"{said}\n"  # AMP's words printed as they are, brackets and all
+    assert amp.calls == [("export", EVALUATION_ID)]
+    assert (amp.api_key is not None) is logged_in
+    if not logged_in:
+        assert "X-Crewai-Organization-Id" not in amp.headers
+    assert list(directory.iterdir()) == []
+
+
+def test_the_written_line_stays_one_line_in_a_narrow_pipe(project, monkeypatch, capsys):
+    install(monkeypatch, FakeExportAMP())
+    monkeypatch.setattr(eval_module, "console", Console(width=40))
+
+    eval_module.export_evaluation(EVALUATION_ID)
+
+    assert capsys.readouterr().out == f"Wrote 5 files to {FOLDER}/ — start with report.md\n"

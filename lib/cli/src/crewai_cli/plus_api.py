@@ -26,6 +26,9 @@ class PlusAPI(_CorePlusAPI):
     # AMP reads the run's spans from Wharf inside the POST; a large run takes a while.
     EVALUATION_START_TIMEOUT = 120.0
     EVALUATION_POLL_TIMEOUT = 30.0
+    # The export carries every setup's outputs, checks and traces — tens of MB
+    # for a large comparison — and AMP gathers them before it answers.
+    EVALUATION_EXPORT_TIMEOUT = httpx.Timeout(EVALUATION_POLL_TIMEOUT, read=120.0)
 
     def create_evaluation(
         self,
@@ -91,6 +94,15 @@ class PlusAPI(_CorePlusAPI):
             "GET",
             f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}",
             timeout=self.EVALUATION_POLL_TIMEOUT,
+        )
+
+    def export_evaluation(self, evaluation_id: str) -> httpx.Response:
+        """The evaluation's full data as files (crewai eval export):
+        `{"id", "kind", "files": {relative path: text}}`."""
+        return self._make_request(
+            "GET",
+            f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}/export",
+            timeout=self.EVALUATION_EXPORT_TIMEOUT,
         )
 
     def _make_multipart_request(

@@ -17,6 +17,10 @@ deployed and once per model; each run is graded, and the comparison — the four
 grades, cost and time per model, and what would make the agents do better — is
 printed when it is done. It always needs the login: it runs the deployment.
 Every evaluation, of either kind, is filed under the project id.
+
+`crewai eval export ID` downloads an evaluation's full data — the report,
+every setup's outputs, every check with the judge's words, and the traces —
+into `./crewai-eval-<ID>/`, for a coding agent to dig into.
 """
 
 from __future__ import annotations
@@ -31,6 +35,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import sys
 import time
 from typing import Any, Literal, NoReturn, cast
@@ -1694,3 +1699,159 @@ def _fail(message: str) -> NoReturn:
     # comes from `style`.
     console.print(Text(message), style="bold red")
     raise SystemExit(1)
+
+
+# ── crewai eval export ───────────────────────────────────────────────────────
+
+EXPORT_DIR_PREFIX = "crewai-eval-"
+EXPORT_START_HERE = "report.md"
+# One path segment of an exported file: plain names only. Everything else —
+# a separator other than `/`, a drive, a space, a control character — is not
+# a path this command writes.
+_EXPORT_SEGMENT = re.compile(r"[A-Za-z0-9._-]+")
+
+
+def export_evaluation(evaluation_id: str) -> None:
+    """Write evaluation EVALUATION_ID's full data into `./crewai-eval-<id>/`.
+
+    The files are AMP's: the report, every setup's outputs and checks with the
+    judge's words, and the traces. They are written as sent, one file per
+    path, beside a `.gitignore` of `*` — this is a customer's data, and a
+    folder dropped into a repository must not be committed by accident.
+    Re-running overwrites them.
+    """
+    try:
+        canonical = str(uuid.UUID(evaluation_id.strip()))
+    except ValueError:
+        _fail(f"{evaluation_id!r} is not an evaluation id: an evaluation id is a UUID.")
+    # Read before the project's .env is loaded, so a project cannot add itself.
+    trusted = _trusted_amp_origins()
+    _load_project_env()
+    try:
+        client = _amp_client(trusted)
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
+    try:
+        response = client.export_evaluation(canonical)
+    except httpx.HTTPError as error:
+        _fail(f"Could not reach AMP to export evaluation {canonical}: {error}")
+    if response.status_code != 200:
+        _fail(
+            _export_refusal(response, canonical, logged_in=client.api_key is not None)
+        )
+    files = (_payload(response) or {}).get("files")
+    if not isinstance(files, dict):
+        _fail(
+            f"AMP answered without the files of evaluation {canonical} (protocol error)."
+        )
+
+    folder = Path(f"{EXPORT_DIR_PREFIX}{canonical}")
+    written, skipped = _write_export(folder, files)
+    line = f"Wrote {len(written)} file{'' if len(written) == 1 else 's'} to {folder}/"
+    if EXPORT_START_HERE in written:
+        line += f" — start with {EXPORT_START_HERE}"
+    if skipped:
+        line += f" (skipped {skipped}: an unsafe path, or content that is not text)"
+    # One line whatever the width: an agent reads the folder off it, and a
+    # pipe is 80 columns to Rich.
+    console.print(Text(line), soft_wrap=True)
+
+
+def _export_refusal(
+    response: httpx.Response, evaluation_id: str, *, logged_in: bool
+) -> str:
+    """AMP's refusal of an export as one sentence, in AMP's own words when it sent them."""
+    message = str((_payload(response) or {}).get("message") or "").strip()
+    status = response.status_code
+    if status == 404:
+        if logged_in:
+            return message or (
+                f"AMP holds no evaluation {evaluation_id} that this login may read."
+            )
+        found = message or (
+            f"AMP holds no evaluation {evaluation_id} that can be read without a login"
+        )
+        if "crewai login" in found:
+            return found
+        return (
+            f"{found.rstrip('.')}; if it is your account's, log in with "
+            "`crewai login` and export it again."
+        )
+    if status == 409:
+        return message or (
+            f"Evaluation {evaluation_id} is still running; export it once it has finished."
+        )
+    if status == 410:
+        return message or (
+            f"The report of evaluation {evaluation_id} was opened already and is "
+            "closed; log in with `crewai login` and evaluate the run again."
+        )
+    # 401 / 403 / 429 / 5xx read as every other evaluation call reads them.
+    return _refusal_message(response, f"evaluation {evaluation_id}")
+
+
+def _export_target(root: Path, name: str) -> Path | None:
+    """Where the exported file NAME goes under ROOT, or None when it may not be written.
+
+    The paths come from whichever AMP answered — which a project's `.env` may
+    choose — so a path is written only when it is relative, `/`-separated,
+    every segment a plain name (`[A-Za-z0-9._-]+`, never `.` or `..`), and it
+    resolves inside ROOT (a symlink already there cannot lead it out). A `.git`
+    segment is refused too: a `.git/config` there could name a command for the
+    next `git status` in the folder to run, and a shell prompt runs one. The
+    top `.gitignore` is this command's own. Both are compared as a
+    case-insensitive filesystem that drops trailing dots would see them.
+    """
+    segments = name.split("/")
+    for segment in segments:
+        if (
+            not _EXPORT_SEGMENT.fullmatch(segment)
+            or segment in {".", ".."}
+            or _as_a_filesystem_sees_it(segment) == ".git"
+        ):
+            return None
+    if len(segments) == 1 and _as_a_filesystem_sees_it(segments[0]) == ".gitignore":
+        return None
+    target = root.joinpath(*segments).resolve()
+    if target == root or not target.is_relative_to(root):
+        return None
+    return target
+
+
+def _as_a_filesystem_sees_it(segment: str) -> str:
+    """SEGMENT as macOS and Windows compare names: case ignored, trailing dots dropped."""
+    return segment.rstrip(".").lower()
+
+
+def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
+    """Write FILES under FOLDER: the names written, and how many were skipped.
+
+    The `.gitignore` goes first, so the data is never in the folder without it.
+    A file that cannot be written stops the export with the reason: half an
+    export that says it is whole would mislead the agent reading it.
+    """
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        root = folder.resolve()
+        (root / ".gitignore").write_text("*\n", encoding="utf-8")
+    except OSError as error:
+        _fail(f"Could not write the export into {folder}/: {error}")
+    written: list[str] = []
+    skipped = 0
+    for name, content in files.items():
+        target = _export_target(root, name)
+        if target is None or not isinstance(content, str):
+            skipped += 1
+            continue
+        try:
+            data = content.encode("utf-8")
+        except UnicodeEncodeError:  # a lone surrogate JSON allowed through
+            skipped += 1
+            continue
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+        except OSError as error:
+            _fail(f"Could not write {folder}/{name}: {error}")
+        written.append(name)
+    return written, skipped
