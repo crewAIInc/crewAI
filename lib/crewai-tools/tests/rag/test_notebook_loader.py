@@ -14,7 +14,10 @@ import pytest
 def source_for(
     request: pytest.FixtureRequest, tmp_path: Path
 ) -> Callable[[str], SourceContent]:
+    """Provide notebook input through both file and inline source paths."""
+
     def make_source(text: str) -> SourceContent:
+        """Wrap text in the selected source representation."""
         if request.param == "file":
             path = tmp_path / "notebook.ipynb"
             path.write_text(text, encoding="utf-8")
@@ -28,7 +31,10 @@ def source_for(
 def load_notebook(
     source_for: Callable[[str], SourceContent],
 ) -> Callable[[Any], LoaderResult]:
+    """Provide a loader for serialized notebook fixtures."""
+
     def load(notebook: Any) -> LoaderResult:
+        """Serialize a fixture and load it through the selected source path."""
         return NotebookLoader().load(
             source_for(json.dumps(notebook, ensure_ascii=False))
         )
@@ -38,6 +44,7 @@ def load_notebook(
 
 @pytest.fixture
 def notebook() -> dict[str, Any]:
+    """Build a notebook with mixed cell types, Unicode, and scalar metadata."""
     return {
         "nbformat": 4,
         "nbformat_minor": 5,
@@ -56,6 +63,7 @@ def notebook() -> dict[str, Any]:
 def test_mixed_cells(
     load_notebook: Callable[[Any], LoaderResult], notebook: dict[str, Any]
 ) -> None:
+    """Preserve mixed cell order and source text with numbered type markers."""
     result = load_notebook(notebook)
     assert result.content == (
         "[cell 1: markdown]\n# Café\n\n\n"
@@ -67,6 +75,7 @@ def test_mixed_cells(
 def test_metadata(
     load_notebook: Callable[[Any], LoaderResult], notebook: dict[str, Any]
 ) -> None:
+    """Retain notebook versions, language, kernel, and counts for each cell type."""
     assert load_notebook(notebook).metadata == {
         "format": "ipynb",
         "nbformat": 4,
@@ -81,6 +90,7 @@ def test_metadata(
 
 
 def test_empty_notebook(load_notebook: Callable[[Any], LoaderResult]) -> None:
+    """Return empty content and zero counts when the notebook has no cells."""
     result = load_notebook({"nbformat": 4, "cells": []})
     assert result.content == ""
     assert result.metadata == {
@@ -97,6 +107,7 @@ def test_empty_notebook(load_notebook: Callable[[Any], LoaderResult]) -> None:
 def test_empty_cell(
     load_notebook: Callable[[Any], LoaderResult], source: str | list[str]
 ) -> None:
+    """Keep an empty cell's marker and include it in the cell counts."""
     result = load_notebook(
         {"nbformat": 4, "cells": [{"cell_type": "code", "source": source}]}
     )
@@ -111,6 +122,7 @@ def test_empty_cell(
 def test_source_fragments(
     load_notebook: Callable[[Any], LoaderResult], source: str | list[str]
 ) -> None:
+    """Join source fragments without changing whitespace or Unicode characters."""
     result = load_notebook(
         {"nbformat": 4, "cells": [{"cell_type": "raw", "source": source}]}
     )
@@ -120,6 +132,7 @@ def test_source_fragments(
 def test_ignores_outputs_and_attachments(
     load_notebook: Callable[[Any], LoaderResult], tmp_path: Path
 ) -> None:
+    """Extract only cell source, omitting payloads and never executing code."""
     sentinel = tmp_path / "executed"
     code = f"from pathlib import Path\nPath({str(sentinel)!r}).touch()"
     result = load_notebook(
@@ -153,6 +166,7 @@ def test_ignores_outputs_and_attachments(
 def test_source_and_doc_id(
     source_for: Callable[[str], SourceContent], notebook: dict[str, Any]
 ) -> None:
+    """Keep source identity stable and update the document ID when content changes."""
     source = source_for(json.dumps(notebook))
     loader = NotebookLoader()
     result = loader.load(source)
@@ -166,6 +180,7 @@ def test_source_and_doc_id(
 
 @pytest.mark.parametrize("text", ["", '{"nbformat": 4,'])
 def test_invalid_json(source_for: Callable[[str], SourceContent], text: str) -> None:
+    """Reject empty or malformed JSON instead of returning a partial notebook."""
     with pytest.raises(ValueError):
         NotebookLoader().load(source_for(text))
 
@@ -191,6 +206,7 @@ def test_invalid_json(source_for: Callable[[str], SourceContent], text: str) -> 
 def test_invalid_notebook(
     load_notebook: Callable[[Any], LoaderResult], notebook: Any, error: str
 ) -> None:
+    """Reject unsupported versions and malformed required notebook fields."""
     with pytest.raises(ValueError, match=error):
         load_notebook(notebook)
 
@@ -213,6 +229,7 @@ def test_invalid_notebook(
     ],
 )
 def test_invalid_cell(load_notebook: Callable[[Any], LoaderResult], cell: Any) -> None:
+    """Identify the cell with an invalid type, structure, or source value."""
     with pytest.raises(ValueError, match="cell 2"):
         load_notebook(
             {"nbformat": 4, "cells": [{"cell_type": "raw", "source": "ok"}, cell]}
@@ -235,6 +252,7 @@ def test_invalid_cell(load_notebook: Callable[[Any], LoaderResult], cell: Any) -
 def test_optional_metadata(
     load_notebook: Callable[[Any], LoaderResult], metadata: Any
 ) -> None:
+    """Ignore malformed optional metadata and protect generated counts."""
     result = load_notebook(
         {
             "nbformat": 4,
@@ -257,6 +275,7 @@ def test_optional_metadata(
 def test_minor_version(
     load_notebook: Callable[[Any], LoaderResult], minor: Any
 ) -> None:
+    """Retain nonnegative integer minor versions and omit other values."""
     result = load_notebook({"nbformat": 4, "nbformat_minor": minor, "cells": []})
     if type(minor) is int and minor >= 0:
         assert result.metadata["nbformat_minor"] == minor

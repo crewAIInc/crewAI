@@ -13,6 +13,7 @@ class NotebookLoader(BaseLoader):
     """
 
     def load(self, content: SourceContent, **kwargs: Any) -> LoaderResult:
+        """Return ordered cell source text, scalar metadata, and source identity."""
         source_ref = content.source_ref
         text = content.source
         if content.path_exists():
@@ -61,6 +62,7 @@ class NotebookLoader(BaseLoader):
 
     @staticmethod
     def _extract_metadata(notebook: dict[str, Any]) -> dict[str, Any]:
+        """Retain notebook versions and valid language and kernel names."""
         metadata = {"format": "ipynb", "nbformat": notebook["nbformat"]}
         minor = notebook.get("nbformat_minor")
         if isinstance(minor, int) and not isinstance(minor, bool) and minor >= 0:
