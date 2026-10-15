@@ -20,6 +20,7 @@ from crewai.agents.parser import AgentFinish
 from crewai.tools.base_tool import BaseTool
 from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
+    _summarize_context_before_llm_call,
     message_content_text,
     format_message_for_llm,
     LLMContextLengthExceededError,
@@ -33,6 +34,7 @@ from crewai.utilities.agent_utils import (
     summarize_messages,
     SummarizeMessages,
 )
+from crewai_core.printer import Printer
 from crewai.utilities.i18n import I18N_DEFAULT
 
 _summarizer = SummarizeMessages()
@@ -41,6 +43,23 @@ _conversation_text = _summarizer._conversation_text
 _messages_ready_to_chunk = _summarizer._messages_ready_to_chunk
 _chunk_messages = _summarizer._chunk_messages
 
+
+def test_summarizes_context_before_llm_call() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    llm = MagicMock()
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=False,
+        )
+
+    summarize.assert_called_once_with(
+        messages=messages, llm=llm, callbacks=[], verbose=False
+    )
 
 def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
     """Estimate tokens for the full summarization LLM request for one chunk."""

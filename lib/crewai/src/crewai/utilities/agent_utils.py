@@ -539,6 +539,22 @@ def _validate_and_finalize_llm_response(
     )
 
 
+def _summarize_context_before_llm_call(
+    llm: LLM | BaseLLM,
+    messages: list[LLMMessage],
+    callbacks: list[TokenCalcHandler],
+    printer: Printer,
+    verbose: bool,
+) -> None:
+    """Compact messages after a preflight context-window check."""
+    if verbose:
+        printer.print(
+            content="Context window is nearing its limit. Summarizing content before the next model call. Might take a while...",
+            color="yellow",
+        )
+    summarize_messages(messages=messages, llm=llm, callbacks=callbacks, verbose=verbose)
+
+
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
@@ -578,6 +594,19 @@ def get_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
+        if (
+            getattr(executor_context, "respect_context_window", False)
+            and llm.is_context_window_overflowing_threshold(
+                prepared_messages, tools, response_model
+            )[0]
+        ):
+            _summarize_context_before_llm_call(
+                llm=llm,
+                messages=prepared_messages,
+                callbacks=callbacks,
+                printer=printer,
+                verbose=verbose,
+            )
         answer = llm.call(
             prepared_messages,
             tools=tools,
@@ -632,6 +661,19 @@ async def aget_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
+        if (
+            getattr(executor_context, "respect_context_window", False)
+            and llm.is_context_window_overflowing_threshold(
+                prepared_messages, tools, response_model
+            )[0]
+        ):
+            _summarize_context_before_llm_call(
+                llm=llm,
+                messages=prepared_messages,
+                callbacks=callbacks,
+                printer=printer,
+                verbose=verbose,
+            )
         answer = await llm.acall(
             prepared_messages,
             tools=tools,
