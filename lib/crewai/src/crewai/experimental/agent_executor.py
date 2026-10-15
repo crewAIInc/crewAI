@@ -20,6 +20,7 @@ from pydantic import (
     model_validator,
 )
 from rich.console import Console
+from rich.panel import Panel
 from rich.text import Text
 from typing_extensions import Self
 
@@ -73,6 +74,9 @@ from crewai.hooks.types import (
     BeforeLLMCallHookCallable,
     BeforeLLMCallHookType,
 )
+from crewai.tools.agent_tools.deferred_tool_result_reader import (
+    DeferredToolResultReader,
+)
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_failure import (
@@ -88,11 +92,13 @@ from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
+    check_repeated_tool_call,
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
     format_native_tool_output_for_agent,
     get_llm_response,
+    get_tool_names,
     handle_agent_action_core,
     handle_context_length,
     handle_max_iterations_exceeded,
@@ -105,6 +111,7 @@ from crewai.utilities.agent_utils import (
     is_tool_call_list,
     parse_tool_call_args,
     process_llm_response,
+    render_text_description_and_args,
     setup_native_tools,
     track_delegation_if_needed,
 )
@@ -120,6 +127,11 @@ from crewai.utilities.planning_types import (
 from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.tool_result_artifacts import (
+    TOOL_RESULT_PREVIEW_LINE_COUNT,
+    TOOL_RESULT_READ_CONTEXT_WINDOW_RATIO,
+    ToolResultArtifactStore,
+)
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.types import LLMMessage
@@ -206,6 +218,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     original_tools: list[BaseTool] = Field(default_factory=list, exclude=True)
     function_calling_llm: BaseLLM | None = Field(default=None, exclude=True)
     respect_context_window: bool = Field(default=False, exclude=True)
+    use_better_compaction: bool = Field(default=True, exclude=True)
     request_within_rpm_limit: Callable[[], bool] | None = Field(
         default=None, exclude=True
     )
@@ -222,6 +235,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _console: Console = PrivateAttr(default_factory=Console)
     _last_parser_error: OutputParserError | None = PrivateAttr(default=None)
     _last_context_error: Exception | None = PrivateAttr(default=None)
+    _tool_call_counts: dict[int, int] = PrivateAttr(default_factory=dict)
     _execution_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _finalize_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _finalize_called: bool = PrivateAttr(default=False)
@@ -231,6 +245,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
     _is_feedback_iteration: bool = PrivateAttr(default=False)
+    _tool_result_artifact_store: ToolResultArtifactStore | None = PrivateAttr(
+        default=None
+    )
+    _deferred_file_reader: Any = PrivateAttr(default=None)
+    _deferred_file_reader_added_by_executor: bool = PrivateAttr(default=False)
+    _deferred_file_aliases: list[str] = PrivateAttr(default_factory=list)
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -272,6 +292,155 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 self._available_functions,
                 self._tool_name_mapping,
             ) = setup_native_tools(self.original_tools)
+
+    def _prepare_tool_result_for_context(self, execution_result: dict[str, Any]) -> str:
+        """Replace an oversized successful result with a deferred-file reference."""
+        result = cast(str, execution_result["result"])
+        if execution_result.get("tool_failure") is not None:
+            return result
+
+        original_tool = execution_result.get("original_tool")
+        if isinstance(original_tool, DeferredToolResultReader):
+            return result
+
+        if getattr(original_tool, "result_as_answer", False):
+            return result
+
+        if not self.use_better_compaction:
+            return result
+
+        if self.llm is None:
+            return result
+        try:
+            should_defer, token_count = self.llm.is_tool_result_overflowing_threshold(
+                result
+            )
+        except Exception:
+            return result
+        if not should_defer:
+            return result
+
+        if self._tool_result_artifact_store is None:
+            self._tool_result_artifact_store = ToolResultArtifactStore()
+
+        artifact = self._tool_result_artifact_store.store(
+            result, estimated_token_count=token_count
+        )
+
+        reader = next(
+            (
+                tool
+                for tool in self.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            ),
+            None,
+        )
+        if reader is None:
+            reader = DeferredToolResultReader()
+            self._register_deferred_file_reader(reader)
+        self._deferred_file_reader = reader
+        reader.allow_file(str(artifact.file_path), artifact.relative_path.as_posix())
+        self._deferred_file_aliases.append(artifact.relative_path.as_posix())
+        reader_name = next(
+            name for name, tool in self._tool_name_mapping.items() if tool is reader
+        )
+
+        tool_args = json.dumps(
+            execution_result.get("tool_args", {}), default=str, sort_keys=True
+        )
+        preview_suffix = (
+            "\n[Preview truncated; read the artifact for more.]"
+            if artifact.preview_truncated
+            else ""
+        )
+        average_tokens_per_line = (
+            artifact.estimated_token_count / artifact.line_count
+            if artifact.line_count
+            else 0
+        )
+        read_target_tokens = max(
+            1,
+            round(
+                self.llm.get_context_window_size()
+                * TOOL_RESULT_READ_CONTEXT_WINDOW_RATIO
+            ),
+        )
+        recommended_line_count = (
+            min(
+                artifact.line_count,
+                max(
+                    1,
+                    round(read_target_tokens / average_tokens_per_line),
+                ),
+            )
+            if average_tokens_per_line
+            else 1
+        )
+        artifact_reference = (
+            f"The result of `{execution_result['func_name']}` with arguments "
+            f"`{tool_args}` was stored as temporary artifact "
+            f"`{artifact.artifact_id}` at relative file path "
+            f"`{artifact.relative_path.as_posix()}`. It contains "
+            f"{artifact.line_count} lines and is estimated at "
+            f"{artifact.estimated_token_count} tokens (about "
+            f"{average_tokens_per_line:.1f} tokens per line).\n\nPreview of the first "
+            f"{TOOL_RESULT_PREVIEW_LINE_COUNT} lines:\n---\n{artifact.preview}"
+            f"{preview_suffix}\n---\n\nUse `{reader_name}` to read it in bounded sections. For a "
+            f"roughly {read_target_tokens:,}-token read, request about "
+            f"{recommended_line_count} lines, for example with `start_line=1` and "
+            f"`line_count={recommended_line_count}`."
+        )
+        if self.agent and self.agent.verbose:
+            self._console.print(
+                Panel(
+                    Text(artifact_reference),
+                    title="📦 Large tool result deferred",
+                    border_style="yellow",
+                    padding=(1, 2),
+                )
+            )
+        return artifact_reference
+
+    def _cleanup_deferred_tool_results(self) -> None:
+        """Remove temporary tool-result files and their reader aliases."""
+        reader = self._deferred_file_reader
+        for alias in self._deferred_file_aliases:
+            if reader is not None:
+                reader.disallow_file(alias)
+
+        if self._deferred_file_reader_added_by_executor and reader is not None:
+            if reader in self.original_tools:
+                self.original_tools.remove(reader)
+                if self.original_tools:
+                    self._setup_native_tools()
+                else:
+                    self._openai_tools = []
+                    self._available_functions = {}
+                    self._tool_name_mapping = {}
+            self.tools = [
+                tool
+                for tool in self.tools
+                if getattr(tool, "_original_tool", None) is not reader
+            ]
+            self.tools_names = get_tool_names(self.tools)
+            self.tools_description = render_text_description_and_args(self.tools)
+
+        if self._tool_result_artifact_store is not None:
+            self._tool_result_artifact_store.cleanup()
+
+        self._tool_result_artifact_store = None
+        self._deferred_file_reader = None
+        self._deferred_file_reader_added_by_executor = False
+        self._deferred_file_aliases.clear()
+
+    def _register_deferred_file_reader(self, reader: DeferredToolResultReader) -> None:
+        """Expose an executor-owned reader to native and text tool calling."""
+        self.original_tools.append(reader)
+        self.tools.append(reader.to_structured_tool())
+        self._setup_native_tools()
+        self.tools_names = get_tool_names(self.tools)
+        self.tools_description = render_text_description_and_args(self.tools)
+        self._deferred_file_reader_added_by_executor = True
 
     def _downgrade_to_text_tool_calling(self) -> None:
         """Switch a running execution from native tools to text tool calls."""
@@ -1298,7 +1467,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # todo ↔ result (or exception) mapping.
         step_results: list[tuple[TodoItem, StepResult]] = []
         for todo, item in zip(ready, gathered, strict=True):
-            if isinstance(item, HookAborted):
+            if isinstance(item, (HookAborted, ToolExecutionFailedError)):
                 raise item
             if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
@@ -1710,6 +1879,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             return "tool_completed"
 
+        check_repeated_tool_call(
+            self._tool_call_counts,
+            tool_name=action.tool,
+            tool_args=action.tool_input,
+            result=tool_result.result,
+            agent=self.agent,
+            task=self.task,
+        )
         result = self._handle_agent_action(action, tool_result)
         self.state.current_answer = result
 
@@ -1840,8 +2017,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 execution_result = self._execute_single_native_tool_call(tool_call)
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
-                result = cast(str, execution_result["result"])
-                from_cache = cast(bool, execution_result["from_cache"])
+                result = self._prepare_tool_result_for_context(execution_result)
                 original_tool = execution_result["original_tool"]
 
                 tool_message: LLMMessage = {
@@ -1851,14 +2027,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "content": result,
                 }
                 self.state.messages.append(tool_message)
-
-                # Log the tool execution
-                if self.agent and self.agent.verbose:
-                    cache_info = " (from cache)" if from_cache else ""
-                    PRINTER.print(
-                        content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-                        color="green",
-                    )
 
                 if (
                     original_tool
@@ -1880,8 +2048,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
             func_name = cast(str, execution_result["func_name"])
-            result = cast(str, execution_result["result"])
-            from_cache = cast(bool, execution_result["from_cache"])
+            result = self._prepare_tool_result_for_context(execution_result)
             original_tool = execution_result["original_tool"]
 
             tool_message = {
@@ -1891,14 +2058,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 "content": result,
             }
             self.state.messages.append(tool_message)
-
-            # Log the tool execution
-            if self.agent and self.agent.verbose:
-                cache_info = " (from cache)" if from_cache else ""
-                PRINTER.print(
-                    content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-                    color="green",
-                )
 
             if (
                 original_tool
@@ -2180,10 +2339,20 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 crew=self.crew,
             )
 
+        check_repeated_tool_call(
+            self._tool_call_counts,
+            tool_name=func_name,
+            tool_args=args_dict,
+            result=result,
+            agent=self.agent,
+            task=self.task,
+        )
+
         return {
             "call_id": call_id,
             "func_name": func_name,
             "result": result,
+            "tool_args": args_dict,
             "from_cache": from_cache,
             "original_tool": original_tool,
             "tool_failure": tool_failure,
@@ -2877,9 +3046,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         try:
             # Reset state for fresh execution
+            self._cleanup_deferred_tool_results()
             self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
+            self._tool_call_counts.clear()
+            if self.tools_handler:
+                self.tools_handler.last_used_tool = None
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
@@ -2937,6 +3110,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
+            self._cleanup_deferred_tool_results()
             self._is_executing = False
 
     async def invoke_async(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -2963,9 +3137,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         try:
             # Reset state for fresh execution
+            self._cleanup_deferred_tool_results()
             self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
+            self._tool_call_counts.clear()
+            if self.tools_handler:
+                self.tools_handler.last_used_tool = None
             self.state.current_answer = None
             self.state.is_finished = False
             self.state.use_native_tools = False
@@ -3025,6 +3203,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
+            self._cleanup_deferred_tool_results()
             self._is_executing = False
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -3308,6 +3487,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.state.current_answer = None
         self.state.is_finished = False
         self.state.iterations = 0
+        self._tool_call_counts.clear()
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = None
         self.state.use_native_tools = False
         self.state.pending_tool_calls = []
         self.state.plan = None
