@@ -130,10 +130,12 @@ def test_affected_model_ids_use_their_specific_context_windows(
         ("gemma-4-31b-it", GEMINI_CONTEXT_WINDOWS, 262_144),
         ("amazon.nova-2-lite-v1:0", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
         ("global.moonshotai.kimi-k3", BEDROCK_CONTEXT_WINDOWS, 1_000_000),
+        # 200k: LiteLLM's catalog had 1M here until its refresh for 1.15.28
+        # corrected it to the model's documented window.
         (
             "anthropic.claude-3-5-sonnet-20241022-v2:0",
             BEDROCK_CONTEXT_WINDOWS,
-            1_000_000,
+            200_000,
         ),
         ("us.anthropic.claude-opus-4-1-20250805-v1:0", BEDROCK_CONTEXT_WINDOWS, 200_000),
         (
