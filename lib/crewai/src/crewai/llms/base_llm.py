@@ -417,10 +417,15 @@ class BaseLLM(BaseModel, ABC):
         if tools:
             character_count += _encoded_character_count(tools)
         if response_model is not None:
-            schema = getattr(response_model, "model_json_schema", None)
-            character_count += _encoded_character_count(
-                schema() if callable(schema) else response_model
-            )
+            try:
+                schema = getattr(response_model, "model_json_schema", None)
+                schema_payload = schema() if callable(schema) else response_model
+            except Exception:
+                logger.warning(
+                    "Response model JSON schema unavailable for token estimation"
+                )
+            else:
+                character_count += _encoded_character_count(schema_payload)
 
         return (character_count + 3) // 4
 

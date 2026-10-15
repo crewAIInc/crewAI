@@ -212,6 +212,20 @@ def test_base_llm_input_token_count_accepts_response_model_without_schema():
     assert custom_llm.get_input_tokens_count("12345", response_model=WithoutSchema) >= 2
 
 
+def test_base_llm_input_token_count_tolerates_unavailable_json_schema() -> None:
+    """A real Pydantic model may validate values without supporting JSON schema."""
+
+    class Arbitrary:
+        pass
+
+    class Answer(BaseModel):
+        model_config = {"arbitrary_types_allowed": True}
+        value: Arbitrary
+
+    custom_llm = CustomLLM(model="test-model")
+    assert custom_llm.get_input_tokens_count("12345", response_model=Answer) == 2
+
+
 class JWTAuthLLM(BaseLLM):
     """Custom LLM implementation with JWT authentication."""
 
