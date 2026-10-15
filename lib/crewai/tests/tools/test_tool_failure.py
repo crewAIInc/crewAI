@@ -1882,7 +1882,7 @@ class TestRepeatedToolCallStopsTheRun:
 
     @pytest.mark.asyncio
     async def test_parallel_step_loop_stops_the_agent(self) -> None:
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import TodoItem
 
         record = ToolFailureRecord(
