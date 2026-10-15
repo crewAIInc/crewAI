@@ -237,6 +237,14 @@ class TestMalformedResponses:
         with pytest.raises(DecisionResponseError, match="no valid probability"):
             adapter.predicate(TEXT, name=NAME, instructions=INSTRUCTIONS)
 
+    @pytest.mark.parametrize("probability", [10**399, -(10**399)])
+    def test_oversized_integer_probability_raises(self, probability: int) -> None:
+        """A JSON integer too large for float() must stay a decision error."""
+        adapter, _client = _adapter(_predicate_response(probability=probability))
+
+        with pytest.raises(DecisionResponseError, match="no valid probability"):
+            adapter.predicate(TEXT, name=NAME, instructions=INSTRUCTIONS)
+
     def test_missing_probability_raises(self) -> None:
         adapter, _client = _adapter(
             _predicate_response(include_probability=False)

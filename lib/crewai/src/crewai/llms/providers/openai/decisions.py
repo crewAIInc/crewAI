@@ -266,11 +266,16 @@ def _is_unit_probability(value: object) -> TypeGuard[int | float]:
     """Whether ``value`` is a real, finite number in ``[0, 1]``.
 
     Bools are rejected. ``bool`` is a subclass of ``int``, so that check has
-    to run before the numeric one.
+    to run before the numeric one. Integers with hundreds of digits overflow
+    when converted to float; that is an invalid probability, not an unexpected
+    error.
     """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
-    return math.isfinite(value) and 0.0 <= value <= 1.0
+    try:
+        return math.isfinite(value) and 0.0 <= value <= 1.0
+    except OverflowError:
+        return False
 
 
 def _parse_predicate_answer(payload: object, *, name: str) -> PredicateAnswer | None:
