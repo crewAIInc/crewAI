@@ -1074,7 +1074,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         call_id = cast(str, execution_result["call_id"])
         func_name = cast(str, execution_result["func_name"])
         result = cast(str, execution_result["result"])
-        from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
 
         tool_message: LLMMessage = {
@@ -1084,13 +1083,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "content": result,
         }
         self.messages.append(tool_message)
-
-        if self.agent and self.agent.verbose:
-            cache_info = " (from cache)" if from_cache else ""
-            PRINTER.print(
-                content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-                color="green",
-            )
 
         if (
             original_tool
