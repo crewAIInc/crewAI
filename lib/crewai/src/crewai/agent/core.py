@@ -1388,7 +1388,7 @@ class Agent(BaseAgent):
                 f"Agent '{self.role}' declares apps [{app_names}] but none "
                 "resolved to any tools; the agent will run without them and may "
                 "be unable to complete its goal. Check that these apps exist and "
-                "are connected, and that CREWAI_PLATFORM_INTEGRATION_TOKEN is set.",
+                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.",
                 UserWarning,
                 stacklevel=2,
             )
