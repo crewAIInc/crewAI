@@ -103,6 +103,22 @@ def test_empty_notebook(load_notebook: Callable[[Any], LoaderResult]) -> None:
     }
 
 
+def test_utf8_bom_file(tmp_path: Path) -> None:
+    """Ignore a file's UTF-8 BOM while preserving BOM characters inside cells."""
+    path = tmp_path / "notebook.ipynb"
+    text = json.dumps(
+        {"nbformat": 4, "cells": [{"cell_type": "raw", "source": "a\ufeffb"}]},
+        ensure_ascii=False,
+    )
+    path.write_text(text, encoding="utf-8-sig")
+    result = NotebookLoader().load(SourceContent(path))
+    assert result.content == "[cell 1: raw]\na\ufeffb"
+    assert result.source == str(path)
+
+    path.write_text(text, encoding="utf-8")
+    assert result == NotebookLoader().load(SourceContent(path))
+
+
 @pytest.mark.parametrize("source", ["", []])
 def test_empty_cell(
     load_notebook: Callable[[Any], LoaderResult], source: str | list[str]

@@ -17,7 +17,7 @@ class NotebookLoader(BaseLoader):
         source_ref = content.source_ref
         text = content.source
         if content.path_exists():
-            with open(source_ref, encoding="utf-8") as file:
+            with open(source_ref, encoding="utf-8-sig") as file:
                 text = file.read()
 
         notebook = json.loads(text)
