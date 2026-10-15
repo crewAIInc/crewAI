@@ -424,6 +424,30 @@ class BaseLLM(BaseModel, ABC):
         )
         return tool_result_tokens > threshold, tool_result_tokens
 
+    def is_context_window_overflowing_threshold(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> bool:
+        """Check whether a pending request exceeds the usable context window.
+
+        ``get_context_window_size`` already reserves 15% of the raw model
+        window, so this preflight check triggers compaction once a request
+        reaches more than 85% of the provider's advertised limit.
+
+        Args:
+            messages: The messages that will be sent to the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            Whether the pending request exceeds the usable context window.
+        """
+        input_tokens = self.get_input_tokens_count(messages, tools, response_model)
+        return input_tokens > self.get_context_window_size()
+
     @abstractmethod
     def call(
         self,

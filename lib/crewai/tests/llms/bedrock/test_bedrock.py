@@ -763,6 +763,19 @@ def test_bedrock_input_token_count_uses_character_fallback_for_unsupported_model
     assert llm.get_input_tokens_count("12345") == 2
 
 
+def test_bedrock_input_token_count_uses_character_fallback_for_transport_errors(
+    bedrock_mocks,
+):
+    """VCR transport failures do not prevent proactive context preflight."""
+    from botocore.exceptions import HTTPClientError
+
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
+    client.count_tokens.side_effect = HTTPClientError(error=RuntimeError("VCR miss"))
+
+    assert llm.get_input_tokens_count("12345") == 2
+
+
 def test_bedrock_tool_use_conversation_flow():
     """
     Test that the Bedrock completion properly handles tool use conversation flow
