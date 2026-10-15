@@ -160,6 +160,15 @@ class ContextWindowSummarizationCompletedEvent(ContextWindowSummarizationEvent):
     )
 
 
+class ContextWindowSummarizationFailedEvent(ContextWindowSummarizationEvent):
+    """Event emitted when proactive context summarization fails."""
+
+    error: str
+    type: Literal["context_window_summarization_failed"] = (
+        "context_window_summarization_failed"
+    )
+
+
 class FunctionCall(BaseModel):
     arguments: str
     name: str | None = None

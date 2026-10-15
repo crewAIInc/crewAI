@@ -21,6 +21,7 @@ from crewai.agents.parser import AgentFinish
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationFailedEvent,
     ContextWindowSummarizationStartedEvent,
 )
 from crewai.hooks.dispatch import HookAborted
@@ -135,6 +136,37 @@ def test_context_summarization_emits_lifecycle_events_with_llm_agent_and_task() 
         assert event.agent_role == "Researcher"
         assert event.task_id == "task-id"
         assert event.task_name == "Research"
+
+
+def test_context_summarization_emits_failed_event_when_compaction_fails() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
+    llm = MagicMock(model="gpt-4o-mini")
+
+    with (
+        patch(
+            "crewai.utilities.agent_utils.summarize_messages",
+            side_effect=RuntimeError("summarization failed"),
+        ),
+        patch.object(crewai_event_bus, "emit") as emit,
+        pytest.raises(RuntimeError, match="summarization failed"),
+    ):
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=False,
+        )
+
+    events = [call.kwargs["event"] for call in emit.call_args_list]
+    assert len(events) == 2
+    assert isinstance(events[0], ContextWindowSummarizationStartedEvent)
+    assert isinstance(events[1], ContextWindowSummarizationFailedEvent)
+    assert events[1].error == "summarization failed"
 
 
 def test_get_llm_response_summarizes_before_the_model_call() -> None:

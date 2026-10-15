@@ -75,6 +75,7 @@ from crewai.events.types.knowledge_events import (
 )
 from crewai.events.types.llm_events import (
     ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationFailedEvent,
     ContextWindowSummarizationStartedEvent,
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
@@ -185,6 +186,7 @@ EventTypes = (
     | ToolUsageStartedEvent
     | ContextWindowSummarizationStartedEvent
     | ContextWindowSummarizationCompletedEvent
+    | ContextWindowSummarizationFailedEvent
     | LLMCallStartedEvent
     | LLMCallCompletedEvent
     | LLMCallFailedEvent

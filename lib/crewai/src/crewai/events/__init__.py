@@ -88,6 +88,7 @@ if TYPE_CHECKING:
     )
     from crewai.events.types.llm_events import (
         ContextWindowSummarizationCompletedEvent,
+        ContextWindowSummarizationFailedEvent,
         ContextWindowSummarizationStartedEvent,
         LLMCallCompletedEvent,
         LLMCallFailedEvent,
@@ -214,6 +215,7 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "KnowledgeRetrievalStartedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeSearchQueryFailedEvent": "crewai.events.types.knowledge_events",
     "ContextWindowSummarizationCompletedEvent": "crewai.events.types.llm_events",
+    "ContextWindowSummarizationFailedEvent": "crewai.events.types.llm_events",
     "ContextWindowSummarizationStartedEvent": "crewai.events.types.llm_events",
     "LLMCallCompletedEvent": "crewai.events.types.llm_events",
     "LLMCallFailedEvent": "crewai.events.types.llm_events",
@@ -320,6 +322,7 @@ __all__ = [
     "CheckpointStartedEvent",
     "CircularDependencyError",
     "ContextWindowSummarizationCompletedEvent",
+    "ContextWindowSummarizationFailedEvent",
     "ContextWindowSummarizationStartedEvent",
     "ConversationMessageAddedEvent",
     "ConversationRouteSelectedEvent",

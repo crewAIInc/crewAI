@@ -29,6 +29,7 @@ from crewai.agents.parser import (
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationFailedEvent,
     ContextWindowSummarizationStartedEvent,
 )
 from crewai.hooks.dispatch import HookAborted
@@ -586,7 +587,30 @@ def _summarize_context_before_llm_call(
                 padding=(1, 2),
             )
         )
-    summarize_messages(messages=messages, llm=llm, callbacks=callbacks, verbose=verbose)
+    try:
+        summarize_messages(
+            messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
+        )
+    except Exception as error:
+        crewai_event_bus.emit(
+            llm,
+            event=ContextWindowSummarizationFailedEvent(
+                from_task=from_task,
+                from_agent=from_agent,
+                model=model,
+                error=str(error),
+            ),
+        )
+        if verbose:
+            console.print(
+                Panel(
+                    "Conversation context could not be compacted. Continuing with the original request.",
+                    title="⚠️ Context summarization failed",
+                    border_style="red",
+                    padding=(1, 2),
+                )
+            )
+        raise
     crewai_event_bus.emit(
         llm,
         event=ContextWindowSummarizationCompletedEvent(
