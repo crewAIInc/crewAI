@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from types import SimpleNamespace
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -21,6 +22,8 @@ from crewai.tools.base_tool import BaseTool
 from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     _summarize_context_before_llm_call,
+    aget_llm_response,
+    get_llm_response,
     message_content_text,
     format_message_for_llm,
     LLMContextLengthExceededError,
@@ -60,6 +63,121 @@ def test_summarizes_context_before_llm_call() -> None:
     summarize.assert_called_once_with(
         messages=messages, llm=llm, callbacks=[], verbose=False
     )
+
+
+def test_get_llm_response_summarizes_before_the_model_call() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+    llm.call.return_value = "response"
+    events: list[str] = []
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        summarize.side_effect = lambda **_: events.append("summarize")
+        llm.call.side_effect = lambda *_args, **_kwargs: events.append("call") or "response"
+
+        assert (
+            get_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    assert events == ["summarize", "call"]
+
+
+def test_get_llm_response_skips_preflight_when_context_respect_is_disabled() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=False,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.call.return_value = "response"
+
+    assert (
+        get_llm_response(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            executor_context=executor,
+            verbose=False,
+        )
+        == "response"
+    )
+
+    llm.is_context_window_overflowing_threshold.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+    llm.acall = AsyncMock(return_value="response")
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        assert (
+            await aget_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    summarize.assert_called_once()
+    llm.acall.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_aget_llm_response_skips_preflight_when_context_respect_is_disabled() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=False,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.acall = AsyncMock(return_value="response")
+
+    assert (
+        await aget_llm_response(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            executor_context=executor,
+            verbose=False,
+        )
+        == "response"
+    )
+
+    llm.is_context_window_overflowing_threshold.assert_not_called()
 
 def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
     """Estimate tokens for the full summarization LLM request for one chunk."""
