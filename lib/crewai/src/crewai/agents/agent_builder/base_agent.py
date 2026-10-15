@@ -139,8 +139,6 @@ def _resolve_agent(value: Any, info: Any) -> Any:
 _EXECUTOR_TYPE_REGISTRY: dict[str, str] = {
     "base": "crewai.agents.agent_builder.base_agent_executor.BaseAgentExecutor",
     "agent": "crewai.agents.agent_executor.AgentExecutor",
-    # Compatibility for AgentExecutor payloads serialized before stabilization.
-    "experimental": "crewai.agents.agent_executor.AgentExecutor",
 }
 
 

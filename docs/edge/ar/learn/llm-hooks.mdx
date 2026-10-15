@@ -64,7 +64,7 @@ class LLMCallHookContext:
     response: str | None         # LLM response (after hooks only)
 ```
 
-`AgentExecutor` هو منفّذ الوكيل وهو متاح من `crewai.agents`. تمت إزالة `CrewAgentExecutor`. يظل استيراد `AgentExecutor` من `crewai.experimental` متوافقاً مؤقتاً ويُصدر `DeprecationWarning`.
+يُستورَد `AgentExecutor` من `crewai.agents`. تمت إزالة `CrewAgentExecutor` ومسار الاستيراد `crewai.experimental.agent_executor`.
 
 ### تعديل الرسائل
 

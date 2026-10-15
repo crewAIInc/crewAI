@@ -17,7 +17,6 @@ from pydantic import (
     BaseModel,
     Field,
     PrivateAttr,
-    field_validator,
     model_validator,
 )
 from rich.console import Console
@@ -232,12 +231,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
     _is_feedback_iteration: bool = PrivateAttr(default=False)
-
-    @field_validator("executor_type", mode="before")
-    @classmethod
-    def _migrate_legacy_executor_type(cls, value: Any) -> Any:
-        """Load executors serialized before AgentExecutor became stable."""
-        return "agent" if value == "experimental" else value
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -3364,7 +3357,3 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         return format_message_for_llm(
             I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
         )
-
-
-# Backward compatibility alias (deprecated)
-CrewAgentExecutorFlow = AgentExecutor

@@ -64,7 +64,7 @@ class LLMCallHookContext:
     response: str | None         # Resposta do LLM (apenas hooks posteriores)
 ```
 
-`AgentExecutor` é o executor do agente e está disponível em `crewai.agents`. `CrewAgentExecutor` foi removido. As importações de `AgentExecutor` a partir de `crewai.experimental` permanecem temporariamente compatíveis e emitem um `DeprecationWarning`.
+`AgentExecutor` é importado de `crewai.agents`. `CrewAgentExecutor` e o caminho de importação `crewai.experimental.agent_executor` foram removidos.
 
 ### Modificando Mensagens
 

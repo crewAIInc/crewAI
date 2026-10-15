@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-import warnings
 
 # Conversational Flow graduated to ``crewai.flow``. Keep these exports so
 # existing ``from crewai.experimental import ...`` imports continue to work.
@@ -18,8 +17,6 @@ from crewai.flow.conversational import (
     RouterConfig,
 )
 
-
-_LAZY_FROM_AGENT_EXECUTOR = {"AgentExecutor", "CrewAgentExecutorFlow"}
 
 _LAZY_FROM_EVALUATION = {
     "AgentEvaluationResult",
@@ -46,32 +43,7 @@ def __getattr__(name: str) -> Any:
     """Lazily resolve symbols whose modules import ``Flow`` or ``Task``.
 
     Eager re-exports would deadlock when ``Flow`` or ``Task`` is still loading.
-    Callers like ``from crewai.experimental import AgentExecutor`` still work —
-    the real import just runs lazily, after the original loader finishes, and
-    warns that the symbol now lives in ``crewai.agents.agent_executor``.
     """
-    if name in _LAZY_FROM_AGENT_EXECUTOR:
-        if name == "CrewAgentExecutorFlow":
-            message = (
-                "CrewAgentExecutorFlow is deprecated and will be removed in a "
-                "future release. Use crewai.agents.agent_executor.AgentExecutor."
-            )
-        else:
-            message = (
-                "Importing AgentExecutor from crewai.experimental is deprecated "
-                "and will be removed in a future release. Import it from "
-                "crewai.agents.agent_executor."
-            )
-        warnings.warn(message, DeprecationWarning, stacklevel=2)
-        from crewai.agents.agent_executor import (
-            AgentExecutor,
-            CrewAgentExecutorFlow,
-        )
-
-        globals()["AgentExecutor"] = AgentExecutor
-        globals()["CrewAgentExecutorFlow"] = CrewAgentExecutorFlow
-        return globals()[name]
-
     if name in _LAZY_FROM_EVALUATION:
         from crewai.experimental import evaluation as _evaluation_mod
 
@@ -85,14 +57,12 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "AgentEvaluationResult",
     "AgentEvaluator",
-    "AgentExecutor",
     "AgentMessage",
     "BaseEvaluator",
     "ConversationConfig",
     "ConversationEvent",
     "ConversationMessage",
     "ConversationState",
-    "CrewAgentExecutorFlow",  # Deprecated alias for AgentExecutor
     "EvaluationScore",
     "EvaluationTraceCallback",
     "ExperimentResult",

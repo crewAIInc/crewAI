@@ -2711,41 +2711,21 @@ def test_agent_executor_uses_stable_discriminator() -> None:
     assert executor.model_dump()["executor_type"] == "agent"
 
 
-def test_legacy_experimental_discriminator_migrates_to_stable_value() -> None:
-    executor = AgentExecutor.model_validate({"executor_type": "experimental"})
+def test_legacy_experimental_discriminator_is_rejected() -> None:
+    from pydantic import ValidationError
 
-    assert executor.executor_type == "agent"
-    assert executor.model_dump()["executor_type"] == "agent"
+    with pytest.raises(ValidationError):
+        AgentExecutor.model_validate({"executor_type": "experimental"})
 
 
-def test_experimental_import_path_warns_and_returns_the_stable_class() -> None:
+def test_experimental_executor_import_is_removed() -> None:
     import importlib
-    import sys
 
-    stable = importlib.import_module("crewai.agents.agent_executor")
-    sys.modules.pop("crewai.experimental.agent_executor", None)
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("crewai.experimental.agent_executor")
+
     experimental = importlib.import_module("crewai.experimental")
     for name in ("AgentExecutor", "CrewAgentExecutorFlow"):
         experimental.__dict__.pop(name, None)
-
-    with pytest.warns(
-        DeprecationWarning, match="crewai.experimental.agent_executor is deprecated"
-    ):
-        legacy = importlib.import_module("crewai.experimental.agent_executor")
-
-    assert legacy.AgentExecutor is stable.AgentExecutor
-    assert legacy.AgentExecutorState is stable.AgentExecutorState
-
-    experimental.__dict__.pop("AgentExecutor", None)
-    with pytest.warns(
-        DeprecationWarning, match="Importing AgentExecutor from crewai.experimental"
-    ):
-        package_executor = experimental.AgentExecutor
-
-    assert package_executor is stable.AgentExecutor
-
-    experimental.__dict__.pop("CrewAgentExecutorFlow", None)
-    with pytest.warns(DeprecationWarning, match="CrewAgentExecutorFlow is deprecated"):
-        alias = experimental.CrewAgentExecutorFlow
-
-    assert alias is stable.AgentExecutor
+        with pytest.raises(AttributeError):
+            getattr(experimental, name)
