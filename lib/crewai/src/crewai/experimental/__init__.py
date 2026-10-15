@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+import warnings
 
 # Conversational Flow graduated to ``crewai.flow``. Keep these exports so
 # existing ``from crewai.experimental import ...`` imports continue to work.
@@ -46,10 +47,23 @@ def __getattr__(name: str) -> Any:
 
     Eager re-exports would deadlock when ``Flow`` or ``Task`` is still loading.
     Callers like ``from crewai.experimental import AgentExecutor`` still work —
-    the real import just runs lazily, after the original loader finishes.
+    the real import just runs lazily, after the original loader finishes, and
+    warns that the symbol now lives in ``crewai.agents.agent_executor``.
     """
     if name in _LAZY_FROM_AGENT_EXECUTOR:
-        from crewai.experimental.agent_executor import (
+        if name == "CrewAgentExecutorFlow":
+            message = (
+                "CrewAgentExecutorFlow is deprecated and will be removed in a "
+                "future release. Use crewai.agents.agent_executor.AgentExecutor."
+            )
+        else:
+            message = (
+                "Importing AgentExecutor from crewai.experimental is deprecated "
+                "and will be removed in a future release. Import it from "
+                "crewai.agents.agent_executor."
+            )
+        warnings.warn(message, DeprecationWarning, stacklevel=2)
+        from crewai.agents.agent_executor import (
             AgentExecutor,
             CrewAgentExecutorFlow,
         )

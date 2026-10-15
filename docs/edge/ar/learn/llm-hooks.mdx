@@ -54,7 +54,7 @@ def after_hook(context: LLMCallHookContext) -> str | None:
 
 ```python
 class LLMCallHookContext:
-    executor: CrewAgentExecutor  # Full executor reference
+    executor: AgentExecutor | CrewAgentExecutor | LiteAgent | None  # Executor (None for direct LLM calls)
     messages: list               # Mutable message list
     agent: Agent                 # Current agent
     task: Task                   # Current task
@@ -63,6 +63,8 @@ class LLMCallHookContext:
     iterations: int              # Current iteration count
     response: str | None         # LLM response (after hooks only)
 ```
+
+يعمل الوكلاء عبر `AgentExecutor` من `crewai.agents.agent_executor`. إن `CrewAgentExecutor` في `crewai.agents.crew_agent_executor` مهمل وستتم إزالته في إصدار لاحق. ما يزال `from crewai.experimental.agent_executor import AgentExecutor` يعمل ويُصدر `DeprecationWarning`.
 
 ### تعديل الرسائل
 

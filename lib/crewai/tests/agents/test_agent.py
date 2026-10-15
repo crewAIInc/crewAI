@@ -10,7 +10,7 @@ from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
-from crewai.experimental.agent_executor import AgentExecutor
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -734,7 +734,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
         "function": {"name": "get_greetings", "arguments": "{}"},
     }
     with patch(
-        "crewai.experimental.agent_executor.get_llm_response",
+        "crewai.agents.agent_executor.get_llm_response",
         return_value=[tool_call],
     ) as mock_llm_response:
         result = crew.kickoff()
@@ -989,7 +989,7 @@ Thought:<|eot_id|>
 
 """
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     with patch.object(AgentExecutor, "_format_prompt") as mock_format_prompt:
         mock_format_prompt.return_value = expected_prompt
@@ -1318,7 +1318,7 @@ def test_agent_max_retry_limit():
 
     agent.create_agent_executor(task=task)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     error_message = "Error happening while sending prompt to model."
     with patch.object(
@@ -1497,7 +1497,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
 
     agent.create_agent_executor(task=task)
 
-    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
 
     with patch.object(
         AgentExecutor, "invoke", wraps=agent.agent_executor.invoke

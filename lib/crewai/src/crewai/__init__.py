@@ -71,8 +71,8 @@ try:
     from crewai.agents.agent_builder.base_agent_executor import (
         BaseAgentExecutor as _BaseAgentExecutor,
     )
+    from crewai.agents.agent_executor import AgentExecutor as _AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
-    from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
     from crewai.hooks.llm_hooks import LLMCallHookContext as _LLMCallHookContext
     from crewai.tools.tool_types import ToolResult as _ToolResult
     from crewai.utilities.prompts import (

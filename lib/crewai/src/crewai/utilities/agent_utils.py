@@ -53,9 +53,9 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task

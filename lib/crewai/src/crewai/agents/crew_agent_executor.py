@@ -1,8 +1,10 @@
 # mypy: disable-error-code="union-attr,arg-type"
-"""Agent executor for crew AI agents.
+"""Deprecated agent executor.
 
-Handles agent execution flow including LLM interactions, tool execution,
-and memory management.
+``CrewAgentExecutor`` is deprecated and will be removed in a future release.
+Agents use ``crewai.agents.agent_executor.AgentExecutor`` by default.
+Constructing this class, or selecting it through ``Agent.executor_class``,
+emits a ``DeprecationWarning``.
 """
 
 from __future__ import annotations
@@ -143,9 +145,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         warnings.warn(
-            "CrewAgentExecutor is deprecated and will be removed in a future release.\n"
-            "Agents inside Crews now use AgentExecutor (crewai.experimental.AgentExecutor) by default.\n"
-            "To suppress this warning, migrate to AgentExecutor.",
+            "crewai.agents.crew_agent_executor.CrewAgentExecutor is deprecated and "
+            "will be removed in a future release. Use "
+            "crewai.agents.agent_executor.AgentExecutor, which is the default.",
             DeprecationWarning,
             stacklevel=2,
         )

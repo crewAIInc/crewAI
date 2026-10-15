@@ -749,7 +749,7 @@ class TestRaisePolicySurvivesEveryWrapper:
 
         from crewai.agent.core import Agent as AgentCls
         from crewai.agents.step_executor import StepExecutor
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         # CrewAgentExecutor is deprecated and deliberately excluded.
         sites = [
@@ -1632,7 +1632,7 @@ class TestParallelAbortCancelsPendingSiblings:
         """
         import inspect
 
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.execute_native_tool)
         assert "cancel_futures=True" in source

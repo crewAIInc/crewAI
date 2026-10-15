@@ -51,6 +51,7 @@ from crewai.agents.agent_builder.base_agent import (
     _serialize_llm_ref,
     _validate_llm_ref,
 )
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
@@ -74,7 +75,6 @@ from crewai.events.types.memory_events import (
 )
 from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.execution import begin_execution, end_execution
-from crewai.experimental.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -170,9 +170,9 @@ def _validate_executor_class(value: Any) -> Any:
 
     if value is CrewAgentExecutor:
         warnings.warn(
-            "CrewAgentExecutor is deprecated and will be removed in a future release. "
-            "Agents inside Crews now use AgentExecutor by default. "
-            "Switch to crewai.experimental.AgentExecutor.",
+            "crewai.agents.crew_agent_executor.CrewAgentExecutor is deprecated and "
+            "will be removed in a future release. Agents use "
+            "crewai.agents.agent_executor.AgentExecutor by default.",
             DeprecationWarning,
             stacklevel=3,
         )
@@ -222,7 +222,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor or AgentExecutor class.
+            agent_executor: An instance of AgentExecutor, or the deprecated CrewAgentExecutor.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -387,7 +387,8 @@ class Agent(BaseAgent):
         """,
     )
     agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
+        default=None,
+        description="Executor running this agent. Defaults to AgentExecutor.",
     )
     executor_class: Annotated[
         type[CrewAgentExecutor] | type[AgentExecutor],
@@ -1260,8 +1261,8 @@ class Agent(BaseAgent):
     ) -> None:
         """Create an agent executor for the agent.
 
-        Returns:
-            An instance of the CrewAgentExecutor class.
+        Uses AgentExecutor unless ``executor_class`` selects the deprecated
+        CrewAgentExecutor.
         """
         configured_tools = tools if tools is not None else self.tools or []
         raw_tools = self._add_skill_loader_tool(list(configured_tools), task=task)

@@ -6,11 +6,14 @@ from crewai.agents.tools_handler import ToolsHandler
 
 
 if TYPE_CHECKING:
+    from crewai.agents.agent_executor import AgentExecutor, AgentExecutorState
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
 
 
 __all__ = [
     "AgentAction",
+    "AgentExecutor",
+    "AgentExecutorState",
     "AgentFinish",
     "CacheHandler",
     "CrewAgentExecutor",
@@ -19,10 +22,19 @@ __all__ = [
     "parse",
 ]
 
+_LAZY_EXPORTS = {
+    "AgentExecutor": ("crewai.agents.agent_executor", "AgentExecutor"),
+    "AgentExecutorState": ("crewai.agents.agent_executor", "AgentExecutorState"),
+    "CrewAgentExecutor": ("crewai.agents.crew_agent_executor", "CrewAgentExecutor"),
+}
+
 
 def __getattr__(name: str) -> Any:
-    if name == "CrewAgentExecutor":
-        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    if name in _LAZY_EXPORTS:
+        import importlib
 
-        return CrewAgentExecutor
+        module_path, attr = _LAZY_EXPORTS[name]
+        value = getattr(importlib.import_module(module_path), attr)
+        globals()[name] = value
+        return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

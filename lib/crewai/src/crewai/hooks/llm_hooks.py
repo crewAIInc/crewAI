@@ -22,8 +22,8 @@ from crewai.hooks.types import (
 
 
 if TYPE_CHECKING:
+    from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
-    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llms.base_llm import BaseLLM
     from crewai.utilities.types import LLMMessage
@@ -38,7 +38,7 @@ class LLMCallHookContext:
     Supports both executor-based calls (agents in crews/flows) and direct LLM calls.
 
     Attributes:
-        executor: Reference to the executor (CrewAgentExecutor/LiteAgent) or None for direct calls
+        executor: Reference to the executor (AgentExecutor, the deprecated CrewAgentExecutor, or LiteAgent), or None for direct calls
         messages: Direct reference to messages (mutable list).
             Can be modified in both before_llm_call and after_llm_call hooks.
             Modifications in after_llm_call hooks persist to the next iteration,
@@ -78,7 +78,7 @@ class LLMCallHookContext:
         """Initialize hook context with executor reference or direct parameters.
 
         Args:
-            executor: The CrewAgentExecutor or LiteAgent instance (None for direct LLM calls)
+            executor: The AgentExecutor, deprecated CrewAgentExecutor, or LiteAgent instance (None for direct LLM calls)
             response: Optional response string (for after_llm_call hooks)
             messages: Optional messages list (for direct LLM calls when executor is None)
             llm: Optional LLM instance (for direct LLM calls when executor is None)
