@@ -597,6 +597,51 @@ def test_lite_agent_with_custom_llm_and_guardrails():
     assert result2.raw == "Modified by guardrail"
 
 
+def test_lite_agent_summarizes_before_calling_the_llm():
+    llm = Mock(spec=LLM)
+    llm.stop = []
+    llm.supports_stop_words.return_value = True
+    llm.is_context_window_overflowing_threshold.return_value = (True, 851)
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=llm,
+        verbose=False,
+    )
+    agent._messages = [{"role": "user", "content": "large context"}]
+    events: list[str] = []
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        summarize.side_effect = lambda **_: events.append("summarize")
+        llm.call.side_effect = (
+            lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
+        )
+        agent._invoke_loop()
+
+    assert events == ["summarize", "call"]
+
+
+def test_lite_agent_skips_preflight_when_context_respect_is_disabled():
+    llm = Mock(spec=LLM)
+    llm.stop = []
+    llm.supports_stop_words.return_value = True
+    llm.call.return_value = "Final Answer: done"
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=llm,
+        respect_context_window=False,
+        verbose=False,
+    )
+    agent._messages = [{"role": "user", "content": "large context"}]
+
+    agent._invoke_loop()
+
+    llm.is_context_window_overflowing_threshold.assert_not_called()
+
+
 @pytest.mark.vcr()
 def test_lite_agent_with_invalid_llm():
     """Test that LiteAgent raises proper error when create_llm returns None."""
