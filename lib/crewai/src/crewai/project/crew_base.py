@@ -19,7 +19,7 @@ from typing import (
 from dotenv import load_dotenv
 import yaml
 
-from crewai.project.wrappers import CrewClass, CrewMetadata
+from crewai.project.wrappers import CallbackMethod, CrewClass, CrewMetadata
 from crewai.tools import BaseTool
 
 
@@ -712,6 +712,98 @@ def map_all_task_variables(self: CrewInstance) -> None:
         )
 
 
+def _declared_callback(owner: Any, name: str) -> Callable[..., Any] | None:
+    """Return the undecorated callback method declared on the crew class.
+
+    Args:
+        owner: Crew instance that owns the callback.
+        name: Callback method name from the task config.
+
+    Returns:
+        The original function, or None when it cannot be recovered.
+    """
+    try:
+        descriptor = inspect.getattr_static(type(owner), name)
+    except AttributeError:
+        return None
+
+    original: Any = (
+        descriptor.unwrap() if isinstance(descriptor, CallbackMethod) else descriptor
+    )
+    seen: set[int] = set()
+    while callable(original) and id(original) not in seen:
+        seen.add(id(original))
+        wrapped = getattr(original, "__wrapped__", None)
+        if not callable(wrapped):
+            break
+        original = wrapped
+    if not callable(original):
+        return None
+    return cast(Callable[..., Any], original)
+
+
+def _callback_is_factory(original: Callable[..., Any]) -> bool:
+    """Return whether a callback method returns the callable instead of accepting output.
+
+    Args:
+        original: Undecorated callback function, including its ``self`` parameter.
+
+    Returns:
+        True when the method takes no parameters besides ``self``.
+    """
+    try:
+        signature = inspect.signature(original)
+    except (TypeError, ValueError):
+        return False
+    return all(param.name == "self" for param in signature.parameters.values())
+
+
+def _resolve_task_callback(
+    owner: Any,
+    name: str,
+    callback_functions: dict[str, Callable[..., Any]],
+) -> Callable[..., Any]:
+    """Resolve one tasks.yaml callback name to the callable Task should store.
+
+    Args:
+        owner: Crew instance that owns the callback.
+        name: Callback method name.
+        callback_functions: Decorated callback methods bound to the crew instance.
+
+    Returns:
+        A callable that accepts the task output.
+
+    Raises:
+        TypeError: If a no-argument callback does not return a callable.
+    """
+    bound = callback_functions[name]
+    original = _declared_callback(owner, name)
+    if original is None or not _callback_is_factory(original):
+        return bound
+
+    produced = bound()
+    if not callable(produced):
+        raise TypeError(f"Task callback {name!r} did not return a callable")
+    return cast(Callable[..., Any], produced)
+
+
+def _run_task_callbacks(callbacks: list[Callable[..., Any]]) -> Callable[..., Any]:
+    """Run every task callback with the same task output.
+
+    Args:
+        callbacks: Callbacks named by one task, in config order.
+
+    Returns:
+        A single callback Task can store.
+    """
+
+    def run_all(output: Any) -> None:
+        for fn in callbacks:
+            fn(output)
+
+    return run_all
+
+
 def _map_task_variables(
     self: CrewInstance,
     task_name: str,
@@ -758,10 +850,22 @@ def _map_task_variables(
             output_pydantic
         ]
 
-    if callbacks := task_info.get("callbacks"):
-        self.tasks_config[task_name]["callbacks"] = [
-            callback_functions[callback]() for callback in callbacks
+    callback_names: list[str] = []
+    callback_name = task_info.get("callback")
+    if isinstance(callback_name, str):
+        callback_names.append(callback_name)
+    raw_callbacks = task_info.get("callbacks")
+    if isinstance(raw_callbacks, list):
+        callback_names.extend(name for name in raw_callbacks if isinstance(name, str))
+    if callback_names:
+        resolved = [
+            _resolve_task_callback(self, name, callback_functions)
+            for name in callback_names
         ]
+        self.tasks_config[task_name]["callback"] = (
+            resolved[0] if len(resolved) == 1 else _run_task_callbacks(resolved)
+        )
+        self.tasks_config[task_name].pop("callbacks", None)
 
     if guardrail := task_info.get("guardrail"):
         self.tasks_config[task_name]["guardrail"] = guardrail
