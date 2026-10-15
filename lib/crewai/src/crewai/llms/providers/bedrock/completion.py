@@ -407,7 +407,7 @@ class BedrockCompletion(BaseLLM):
                 modelId=self.model_id,
                 input={"converse": converse_input},
             )
-        except ClientError:
+        except (BotoCoreError, ClientError):
             return super().get_input_tokens_count(messages, tools, response_model)
         return int(response["inputTokens"])
 
