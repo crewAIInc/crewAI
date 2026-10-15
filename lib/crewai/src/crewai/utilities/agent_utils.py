@@ -1893,13 +1893,6 @@ def execute_single_native_tool_call(
         "content": result,
     }
 
-    if verbose and printer:
-        cache_info = " (from cache)" if from_cache else ""
-        printer.print(
-            content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-            color="green",
-        )
-
     is_result_as_answer = bool(
         original_tool
         and hasattr(original_tool, "result_as_answer")
