@@ -66,6 +66,20 @@ def test_custom_openai_flag_uses_native_openai_without_provider_prefix():
     assert rebuilt.base_url == "https://gateway.example/v1"
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"custom_openai": True, "base_url": "https://vllm.example/v1"},
+        {"base_url": "https://vllm.example/v1"},
+    ],
+)
+def test_openai_compatible_token_count_uses_character_fallback(kwargs):
+    """Compatible endpoints fall back when they lack Responses counting."""
+    llm = OpenAICompletion(model="custom-model", api_key="test-key", **kwargs)
+
+    assert llm.get_input_tokens_count("12345") == 2
+
+
 def test_custom_openai_flag_requires_custom_base_url():
     """Avoid routing arbitrary custom model ids to api.openai.com by mistake."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
@@ -799,6 +813,160 @@ def test_openai_responses_api_default_is_completions():
     llm = OpenAICompletion(model="gpt-4o")
 
     assert llm.api == "completions"
+
+
+def test_openai_input_token_count_uses_responses_without_changing_generation_api():
+    """Counting uses Responses while generation keeps the configured API."""
+    llm = OpenAICompletion(model="gpt-4o", api="completions")
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=17)
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("Hello!") == 17
+
+    client.responses.input_tokens.count.assert_called_once_with(
+        model="gpt-4o",
+        input=[{"role": "user", "content": "Hello!"}],
+    )
+    assert llm.api == "completions"
+
+    with patch.object(
+        llm, "_call_completions", return_value="completion result"
+    ) as mock_completions:
+        assert llm.call("Hello!") == "completion result"
+
+    mock_completions.assert_called_once()
+
+
+def test_openai_input_token_count_uses_responses_file_format():
+    """File content is formatted for the Responses count endpoint."""
+    llm = OpenAICompletion(model="gpt-4o", api="completions")
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=17)
+
+    with (
+        patch.object(
+            llm,
+            "_format_messages",
+            return_value=[{"role": "user", "content": "Hello!"}],
+        ) as format_messages,
+        patch.object(llm, "_get_sync_client", return_value=client),
+    ):
+        assert llm.get_input_tokens_count("Hello!") == 17
+
+    format_messages.assert_called_once_with("Hello!", file_api="responses")
+
+
+@pytest.mark.parametrize(
+    ("previous_response_id", "auto_chain", "last_response_id"),
+    [
+        ("resp_explicit", False, None),
+        (None, True, "resp_auto_chain"),
+    ],
+)
+def test_openai_input_token_count_forwards_previous_response_id(
+    previous_response_id, auto_chain, last_response_id
+):
+    """Counting preserves the conversation context selected for generation."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        previous_response_id=previous_response_id,
+        auto_chain=auto_chain,
+    )
+    llm._last_response_id = last_response_id
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=17)
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("Hello!") == 17
+
+    assert client.responses.input_tokens.count.call_args.kwargs[
+        "previous_response_id"
+    ] == (previous_response_id or last_response_id)
+
+
+def test_openai_input_token_count_forwards_responses_payload():
+    """Messages, multimodal content, and tools use the Responses request shape."""
+    llm = OpenAICompletion(model="gpt-4o", api="responses")
+    client = MagicMock()
+    client.responses.input_tokens.count.return_value = MagicMock(input_tokens=42)
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": "Describe this image."},
+                {
+                    "type": "input_image",
+                    "image_url": "https://example.com/image.png",
+                },
+            ],
+        },
+    ]
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location.",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    client.responses.input_tokens.count.assert_called_once_with(
+        model="gpt-4o",
+        instructions="Be concise.",
+        input=[messages[1]],
+        tools=[
+            {
+                "type": "function",
+                "name": "get_weather",
+                "description": "Get weather for a location.",
+                "parameters": {"type": "object", "properties": {}},
+            }
+        ],
+    )
+
+
+def test_openai_input_token_count_falls_back_after_api_errors(caplog):
+    """Count-endpoint errors fall back to the character estimate."""
+    llm = OpenAICompletion(model="gpt-4o")
+    client = MagicMock()
+    client.responses.input_tokens.count.side_effect = RuntimeError("count failed")
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("Hello!") == 2
+
+    assert "assuming one token per four characters" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("input_tokens", "expected"),
+    [(250, False), (251, True)],
+)
+def test_openai_tool_result_overflow_threshold_uses_input_token_count(
+    input_tokens: int, expected: bool
+):
+    """A result over one quarter of the usable context window is deferred."""
+    llm = OpenAICompletion(model="gpt-4o")
+
+    with (
+        patch.object(llm, "get_input_tokens_count", return_value=input_tokens),
+        patch.object(llm, "get_context_window_size", return_value=1_000),
+    ):
+        assert llm.is_tool_result_overflowing_threshold("tool output") == (
+            expected,
+            input_tokens,
+        )
+
+
+@pytest.mark.vcr(record_mode="once")
+def test_openai_input_token_count_live():
+    """OpenAI returns a positive input-token count for a real request."""
+    llm = OpenAICompletion(model="gpt-4o-mini")
+
+    assert llm.get_input_tokens_count("Count these input tokens.") > 0
 
 
 def test_openai_responses_api_prepare_params():
@@ -1874,21 +2042,23 @@ def test_openai_gpt5_still_applies_stop_words_client_side():
 def test_openai_gpt56_family_uses_official_context_window(model: str) -> None:
     """Native OpenAI must not inherit the shorter gpt-5 window for GPT-5.6."""
     llm = OpenAICompletion(model=model)
-    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(922_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_openai_prefixed_gpt56_luna_uses_official_context_window() -> None:
     llm = LLM(model="openai/gpt-5.6-luna")
     assert isinstance(llm, OpenAICompletion)
     assert llm.model == "gpt-5.6-luna"
-    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm.get_context_window_size() == int(922_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_openai_gpt5_and_gpt54_mini_keep_their_windows() -> None:
     gpt5 = OpenAICompletion(model="gpt-5")
     gpt54_mini = OpenAICompletion(model="gpt-5.4-mini")
-    assert gpt5.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
-    assert gpt54_mini.get_context_window_size() == int(400_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt5.get_context_window_size() == int(272_000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt54_mini.get_context_window_size() == int(
+        272_000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 def test_openai_stop_words_still_applied_to_regular_responses():

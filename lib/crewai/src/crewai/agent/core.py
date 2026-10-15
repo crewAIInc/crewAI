@@ -299,6 +299,10 @@ class Agent(BaseAgent):
         default=True,
         description="Keep messages under the context window size by summarizing content.",
     )
+    use_better_compaction: bool = Field(
+        default=True,
+        description="Defer oversized tool results to temporary artifacts for bounded reads.",
+    )
     max_retry_limit: int = Field(
         default=2,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
@@ -1307,6 +1311,8 @@ class Agent(BaseAgent):
                 if task
                 else None,
             )
+            if isinstance(self.agent_executor, AgentExecutor):
+                self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def _update_executor_parameters(
         self,
@@ -1354,21 +1360,48 @@ class Agent(BaseAgent):
 
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Resolve platform app selectors into tools.
+
+        Args:
+            apps: App or ``app/action`` selectors to resolve.
+
+        Returns:
+            The resolved tools, or an empty list when none resolve or resolution
+            fails. A non-empty ``apps`` that resolves to no tools emits a
+            ``UserWarning`` naming the agent and its apps.
+        """
+        platform_tools: list[BaseTool] = []
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
-            return CrewaiPlatformTools(apps=apps)
+            platform_tools = CrewaiPlatformTools(apps=apps)
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
-            return []
+
+        if apps and not platform_tools:
+            # Logger.log above is verbose-gated; without a warning a bad `apps`
+            # entry only shows up later as a task the agent couldn't do.
+            app_names = ", ".join(str(app) for app in apps)
+            warnings.warn(
+                f"Agent '{self.role}' declares apps [{app_names}] but none "
+                "resolved to any tools; the agent will run without them and may "
+                "be unable to complete its goal. Check that these apps exist and "
+                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        return platform_tools
 
     def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Convert MCP server references/configs to CrewAI tools.
@@ -1654,6 +1687,7 @@ class Agent(BaseAgent):
                 BaseLLM | None, self.function_calling_llm
             )
             executor.respect_context_window = self.respect_context_window
+            executor.use_better_compaction = self.use_better_compaction
             executor.request_within_rpm_limit = rpm_limit_fn
             executor.callbacks = [TokenCalcHandler(self._token_process)]
         else:
@@ -1671,6 +1705,7 @@ class Agent(BaseAgent):
                 step_callback=self.step_callback,
                 function_calling_llm=self.function_calling_llm,
                 respect_context_window=self.respect_context_window,
+                use_better_compaction=self.use_better_compaction,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
                 response_model=response_format,

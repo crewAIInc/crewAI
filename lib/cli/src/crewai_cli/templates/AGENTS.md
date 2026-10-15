@@ -107,7 +107,7 @@ Full details: [Observability & Traces](#observability--traces) and [Deployment](
 Run `crewai eval` after a change: it grades the project's last traced run — a goal gate, a 1–5 grade per area, and a link to the full report. It grades a run that already happened, so after changing code run the project again first (`crewai run`, with `CREWAI_TRACING_ENABLED=true` in `.env`; a run with no terminal is only traced when logged in with `crewai login`), then `crewai eval`. In a terminal with no traced run recorded, it offers to run the project once with tracing on.
 
 - Run by a coding agent or script (no terminal), it prints a **markdown brief** after the verdict: what failed and the change to make. Act on its "what failed" changes, then `crewai run` and `crewai eval` again. (An older AMP may print only a link to the brief, or nothing.)
-- `crewai eval --models "provider/model,…"` compares models on the deployed project (needs `crewai login` and a deployment); the brief then names the model for each part and how sure each difference is.
+- `crewai eval --models "provider/model,…"` compares models on the deployed project (needs `crewai login` and a deployment); the brief then names the model for each part and how sure each difference is. A comparison can take an hour: run it in the background and read its output as it goes. A model that stops prints its error while the others run, with where it broke (step → task → agent) when the service knows it; a stop it cannot place prints after about 20 seconds, or when the comparison ends, with only the error.
 - Exit codes: `crewai eval` exits 0 only when the goal gate passed; `--models` exits 0 when the comparison finished, whatever each model's grades. Criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.
 
 <!-- crewai-eval:end -->
@@ -181,12 +181,17 @@ crewai flow plot                      # Generate flow diagram HTML
 
 # Deployment
 crewai login                          # Authenticate with AMP
+crewai org current                    # Active organization (deploys, traces, and evals go here)
+crewai org list                       # Organizations and their IDs
+crewai org switch <id>                # Switch organization (ID from `crewai org list`)
 crewai deploy create                  # Create new deployment
+crewai deploy create -y               # Skip the confirmation prompts (only after the user approves)
 crewai deploy push                    # Push code updates
 crewai deploy status                  # Check deployment status
 crewai deploy logs                    # View deployment logs
 crewai deploy list                    # List all deployments
-crewai deploy remove <id>             # Delete a deployment
+crewai deploy remove                  # Delete this project's deployment
+crewai deploy remove -u <uuid>        # Delete a deployment by UUID
 ```
 
 ## Project Structure
@@ -706,6 +711,8 @@ class SimpleFlow(Flow):
 
 ### Conditional Routing
 ```python
+from typing import Literal
+
 from crewai.flow.flow import Flow, listen, router, start
 
 class QualityFlow(Flow):
@@ -714,7 +721,7 @@ class QualityFlow(Flow):
         return {"score": 0.85}
 
     @router(generate)
-    def check_quality(self, result):
+    def check_quality(self, result) -> Literal["high_quality", "needs_revision"]:
         if result["score"] > 0.8:
             return "high_quality"
         return "needs_revision"
@@ -727,6 +734,8 @@ class QualityFlow(Flow):
     def revise(self, result):
         print("Revising...")
 ```
+
+Declare a router's labels with a `Literal[...]` return annotation, as above, or with `@router(generate, emit=["high_quality", "needs_revision"])`. `crewai flow plot` reads them from there; without them it can't draw the router's branches.
 
 ### Parallel Triggers with or_ and and_
 ```python
@@ -874,14 +883,23 @@ flow.plot("my_flow")           # Generates my_flow.html
 CrewAI AMP provides integrations for supported applications, exposing the actions
 available through each connected application as CrewAI tools. Before selecting an
 integration, use your file-read or search tools to read the installed
-`crewai_core/platform_apps.py` module. Its `PLATFORM_APPS` catalog is the source
-of truth for supported application selectors; do not hard-code that list.
+`crewai_core/platform_apps.py` module. Its `PLATFORM_APPS` catalog lists the
+supported applications; do not hard-code that list.
 For how to connect applications and use their actions in AMP, see
 [CrewAI Platform Tools and Integrations](https://docs-platform.crewai.com/platform/en/features/tools-and-integrations).
 
-Connect the required application in CrewAI AMP before using it. Then pass its
-selector to `CrewaiPlatformTools`; the factory returns the action tools available
-for that application, which can be assigned directly to an agent:
+Connect the required application in CrewAI AMP before using it, and set
+`CREWAI_PLATFORM_INTEGRATION_TOKEN` in `.env`. Without the token,
+`CrewaiPlatformTools` raises and an agent's `apps` load no tools.
+
+Selectors follow `app[/action][@connection]`: `gmail` loads every action of an
+app, `gmail/send_email` loads one action (fewer tools, better tool choices), and
+`@connection` picks a connection by UUID or alias (e.g. `@private`). Some catalog
+action names don't resolve to a tool, so confirm an action selector before relying
+on it: `CrewaiPlatformTools(apps=["app/action"])` must return at least one tool.
+
+Pass selectors to `CrewaiPlatformTools`; the factory returns the action tools
+available for that application, which can be assigned directly to an agent:
 
 ```python
 from crewai_tools import CrewaiPlatformTools
@@ -896,14 +914,29 @@ Multiple connected applications can be requested together:
 platform_tools = CrewaiPlatformTools(apps=["gmail", "slack"])
 ```
 
+In classic projects, list selectors under the agent's `apps` key in `agents.yaml`:
+```yaml
+crm_agent:
+  role: ...
+  apps:
+    - hubspot/search_companies
+    - slack
+```
+
 In JSON crew projects, use the equivalent `platform:<app>` selector in the
 agent's `tools` list:
 ```jsonc
 { "tools": ["platform:gmail"] }
 ```
 
-If an application or action is not listed in `PLATFORM_APPS`, do not invent a
-selector; use an appropriate built-in or custom tool instead.
+If an application is not listed in `PLATFORM_APPS`, or an action selector
+returns no tools, do not invent a selector; use an appropriate built-in or custom
+tool instead.
+
+Before the first run against a new connection, make one read-only call (a search
+or list action) to confirm it works. Connected apps are usually real workspaces:
+before the first run that writes, agree with the user on test targets (a test
+channel or record) and make them the input defaults.
 
 ### Using BaseTool
 ```python
@@ -1083,7 +1116,7 @@ Prefer suggesting deployment over hand-rolling a FastAPI wrapper, Dockerfile, qu
 
 ### Prerequisites
 - Crew or Flow runs successfully locally
-- Code is in a GitHub repository
+- Source: with a git `origin`, AMP deploys from that repository, so `origin` should be an HTTPS URL that AMP's GitHub integration can access. With no `origin`, `crewai deploy create` uploads the project as a ZIP, and `crewai deploy push` re-uploads it.
 - `pyproject.toml` has `[tool.crewai]` with correct type (`"crew"` or `"flow"`)
 - `uv.lock` is committed (generate with `uv lock`)
 
@@ -1103,8 +1136,15 @@ crewai deploy logs
 # Manage deployments
 crewai deploy list              # List all deployments
 crewai deploy push              # Push code updates
-crewai deploy remove <id>       # Delete deployment
+crewai deploy remove            # Delete this project's deployment
+crewai deploy remove -u <uuid>  # Delete a deployment by UUID
 ```
+
+- `crewai deploy create` waits on confirmation prompts. Without a terminal, run `crewai deploy create -y`, and only after the user approves creating the deployment.
+- `.env` is uploaded as the deployment's environment variables on `create`, and again on `push` for ZIP deployments.
+- Deployments, traces, and evals go to the active organization. Check it with `crewai org current`; switch with `crewai org switch <id>`, using an ID from `crewai org list`.
+- The CLI can't change a deployment's source repository. If `create` used the wrong remote, remove the deployment (`crewai deploy remove -u <uuid>`) and create it again.
+- Several commands (`crewai login`, `crewai run`, `crewai deploy create`, …) write `[tool.crewai] project_id` to `pyproject.toml`. Commit it, and never copy it between projects.
 
 ### Web Interface Deployment
 1. Push code to GitHub
@@ -1210,12 +1250,14 @@ crewai run                    # Execute
 7. **Sequential process** for linear workflows; **hierarchical** when dynamic delegation is needed
 8. **Flows for multi-crew orchestration**: Use `@start`, `@listen`, `@router` for complex pipelines
 9. **Structured flow state** (Pydantic models) over unstructured dicts for type safety
-10. **Test with** `crewai test` to evaluate crew performance across iterations
-11. **Verbose mode** during development, disable in production
-12. **Rate limiting** (`max_rpm`) to avoid API throttling
-13. **`respect_context_window=True`** to auto-handle token limits
-14. **Debug with traces, not `print()`** — `crewai traces enable` shows agent decisions, tool calls, timing, and token usage that logs cannot
-15. **Deploy instead of hand-rolling infrastructure** — `crewai deploy create` gives a scaling REST API, rather than writing a Dockerfile, server, and scheduler by hand
+10. **Verbose mode** during development, disable in production
+11. **Rate limiting** (`max_rpm`) to avoid API throttling
+12. **`respect_context_window=True`** to auto-handle token limits
+13. **Debug with traces, not `print()`** — `crewai traces enable` shows agent decisions, tool calls, timing, and token usage that logs cannot
+14. **Deploy instead of hand-rolling infrastructure** — `crewai deploy create` gives a scaling REST API, rather than writing a Dockerfile, server, and scheduler by hand
+<!-- crewai-eval:start -->
+15. **Measure quality with `crewai eval`** after a change — see "Evaluating this crew/flow" above
+<!-- crewai-eval:end -->
 
 ## Common Pitfalls
 
