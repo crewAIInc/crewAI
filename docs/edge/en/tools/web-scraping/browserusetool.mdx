@@ -1,0 +1,74 @@
+---
+title: Browser Use Tool
+description: Give an agent a task in plain language and let the Browser Use Cloud agent complete it in a cloud browser.
+icon: browser
+mode: "wide"
+---
+
+# `BrowserUseTool`
+
+## Description
+
+[Browser Use](https://browser-use.com) runs a browser agent in a managed cloud browser.
+Your CrewAI agent describes a task in plain language, for example "find the cheapest
+flight from SFO to JFK next Friday on google.com/travel/flights". The Browser Use agent
+navigates, clicks, fills forms and extracts data, then returns its final answer.
+
+The tool uses the Browser Use Cloud API v4 through the official
+[`browser-use-sdk`](https://pypi.org/project/browser-use-sdk/). Cloud browsers come with
+stealth protections, proxies and automatic CAPTCHA handling.
+
+## Installation
+
+- Create an API key at [cloud.browser-use.com](https://cloud.browser-use.com/settings?tab=api-keys) and set it as `BROWSER_USE_API_KEY`.
+- Install the tool with its SDK:
+
+```shell
+uv add "crewai-tools[browser-use]"
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import BrowserUseTool
+
+browser_tool = BrowserUseTool()
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current information on live websites",
+    backstory="You use a real browser to read and act on websites.",
+    tools=[browser_tool],
+)
+
+task = Task(
+    description="Find the title of the top story on news.ycombinator.com right now.",
+    expected_output="The story title.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+The tool returns JSON with `result`, `session_id` and `run_id`. To continue in the same
+browser and conversation, for example after logging in, the agent passes the
+`session_id` from the previous result.
+
+## Arguments
+
+| Argument    | Type     | Description |
+|:------------|:---------|:------------|
+| **api_key** | `string` | _Optional_. Browser Use API key. Default is the `BROWSER_USE_API_KEY` env variable. |
+| **model**   | `string` | _Optional_. Browser Use agent model. Default is the API default. See [models](https://docs.browser-use.com/cloud/agent/models). |
+| **timeout** | `float`  | _Optional_. Seconds to wait for a run. A run that does not finish in time is cancelled. Default is `900`. |
+
+## Tool input
+
+| Field          | Type     | Description |
+|:---------------|:---------|:------------|
+| **task**       | `string` | What to do in the browser, in plain language. |
+| **session_id** | `string` | _Optional_. `session_id` from a previous result, to continue in the same browser. |
+
+A failed, cancelled or timed-out run is returned as a tool failure, so CrewAI records it
+instead of treating it as a successful result.

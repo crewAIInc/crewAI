@@ -1,0 +1,74 @@
+---
+title: Ferramenta Browser Use
+description: Dê ao agente uma tarefa em linguagem natural e deixe o agente do Browser Use Cloud concluí-la em um navegador na nuvem.
+icon: browser
+mode: "wide"
+---
+
+# `BrowserUseTool`
+
+## Descrição
+
+O [Browser Use](https://browser-use.com) executa um agente de navegador em um navegador gerenciado na nuvem.
+Seu agente CrewAI descreve uma tarefa em linguagem natural, por exemplo "encontre o voo mais
+barato de SFO para JFK na próxima sexta-feira em google.com/travel/flights". O agente do Browser Use
+navega, clica, preenche formulários e extrai dados, e então retorna a resposta final.
+
+A ferramenta usa a API v4 do Browser Use Cloud por meio do SDK oficial
+[`browser-use-sdk`](https://pypi.org/project/browser-use-sdk/). Os navegadores na nuvem incluem
+proteções stealth, proxies e tratamento automático de CAPTCHA.
+
+## Instalação
+
+- Crie uma chave de API em [cloud.browser-use.com](https://cloud.browser-use.com/settings?tab=api-keys) e defina-a como `BROWSER_USE_API_KEY`.
+- Instale a ferramenta com o SDK:
+
+```shell
+uv add "crewai-tools[browser-use]"
+```
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import BrowserUseTool
+
+browser_tool = BrowserUseTool()
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current information on live websites",
+    backstory="You use a real browser to read and act on websites.",
+    tools=[browser_tool],
+)
+
+task = Task(
+    description="Find the title of the top story on news.ycombinator.com right now.",
+    expected_output="The story title.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+A ferramenta retorna JSON com `result`, `session_id` e `run_id`. Para continuar no mesmo
+navegador e na mesma conversa, por exemplo depois de fazer login, o agente passa o
+`session_id` do resultado anterior.
+
+## Argumentos
+
+| Argumento   | Tipo     | Descrição |
+|:------------|:---------|:----------|
+| **api_key** | `string` | _Opcional_. Chave de API do Browser Use. O padrão é a variável de ambiente `BROWSER_USE_API_KEY`. |
+| **model**   | `string` | _Opcional_. Modelo do agente do Browser Use. O padrão é o padrão da API. Veja os [modelos](https://docs.browser-use.com/cloud/agent/models). |
+| **timeout** | `float`  | _Opcional_. Segundos de espera por uma execução. Uma execução que não termina a tempo é cancelada. O padrão é `900`. |
+
+## Entrada da ferramenta
+
+| Campo          | Tipo     | Descrição |
+|:---------------|:---------|:----------|
+| **task**       | `string` | O que fazer no navegador, em linguagem natural. |
+| **session_id** | `string` | _Opcional_. `session_id` de um resultado anterior, para continuar no mesmo navegador. |
+
+Uma execução que falha, é cancelada ou excede o tempo limite é retornada como falha da
+ferramenta, para que o CrewAI a registre em vez de tratá-la como um resultado bem-sucedido.

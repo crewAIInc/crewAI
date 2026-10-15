@@ -1,0 +1,73 @@
+---
+title: أداة Browser Use
+description: امنح الوكيل مهمة بلغة طبيعية ودع وكيل Browser Use Cloud ينجزها في متصفح سحابي.
+icon: browser
+mode: "wide"
+---
+
+# `BrowserUseTool`
+
+## الوصف
+
+يشغّل [Browser Use](https://browser-use.com) وكيل متصفح داخل متصفح سحابي مُدار.
+يصف وكيل CrewAI مهمة بلغة طبيعية، مثل "ابحث عن أرخص رحلة من SFO إلى JFK يوم الجمعة القادم
+على google.com/travel/flights". يتنقل وكيل Browser Use بين الصفحات وينقر ويملأ النماذج
+ويستخرج البيانات، ثم يعيد إجابته النهائية.
+
+تستخدم الأداة واجهة Browser Use Cloud API v4 عبر حزمة SDK الرسمية
+[`browser-use-sdk`](https://pypi.org/project/browser-use-sdk/). تأتي المتصفحات السحابية مع
+حماية التخفي والوكلاء (proxies) والتعامل التلقائي مع CAPTCHA.
+
+## التثبيت
+
+- أنشئ مفتاح API من [cloud.browser-use.com](https://cloud.browser-use.com/settings?tab=api-keys) واضبطه في `BROWSER_USE_API_KEY`.
+- ثبّت الأداة مع حزمة SDK:
+
+```shell
+uv add "crewai-tools[browser-use]"
+```
+
+## مثال
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import BrowserUseTool
+
+browser_tool = BrowserUseTool()
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current information on live websites",
+    backstory="You use a real browser to read and act on websites.",
+    tools=[browser_tool],
+)
+
+task = Task(
+    description="Find the title of the top story on news.ycombinator.com right now.",
+    expected_output="The story title.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+تعيد الأداة JSON يحتوي على `result` و`session_id` و`run_id`. للمتابعة في المتصفح والمحادثة
+نفسيهما، مثلًا بعد تسجيل الدخول، يمرّر الوكيل `session_id` من النتيجة السابقة.
+
+## المعاملات
+
+| المعامل     | النوع    | الوصف |
+|:------------|:---------|:------|
+| **api_key** | `string` | _اختياري_. مفتاح Browser Use API. القيمة الافتراضية هي متغير البيئة `BROWSER_USE_API_KEY`. |
+| **model**   | `string` | _اختياري_. نموذج وكيل Browser Use. القيمة الافتراضية هي الافتراضي في الـ API. راجع [النماذج](https://docs.browser-use.com/cloud/agent/models). |
+| **timeout** | `float`  | _اختياري_. عدد الثواني لانتظار التشغيل. يُلغى التشغيل الذي لا ينتهي في الوقت المحدد. القيمة الافتراضية `900`. |
+
+## مدخلات الأداة
+
+| الحقل          | النوع    | الوصف |
+|:---------------|:---------|:------|
+| **task**       | `string` | ما يجب فعله في المتصفح، بلغة طبيعية. |
+| **session_id** | `string` | _اختياري_. قيمة `session_id` من نتيجة سابقة، للمتابعة في المتصفح نفسه. |
+
+يُعاد التشغيل الفاشل أو الملغى أو الذي انتهت مهلته كفشل للأداة، فيسجّله CrewAI بدلًا من
+اعتباره نتيجة ناجحة.

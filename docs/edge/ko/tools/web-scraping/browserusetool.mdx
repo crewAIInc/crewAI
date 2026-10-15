@@ -1,0 +1,73 @@
+---
+title: Browser Use 도구
+description: 에이전트에게 자연어로 작업을 주고 Browser Use Cloud 에이전트가 클라우드 브라우저에서 완료하도록 합니다.
+icon: browser
+mode: "wide"
+---
+
+# `BrowserUseTool`
+
+## 설명
+
+[Browser Use](https://browser-use.com)는 관리형 클라우드 브라우저에서 브라우저 에이전트를 실행합니다.
+CrewAI 에이전트가 자연어로 작업을 설명하면(예: "google.com/travel/flights에서 다음 주 금요일
+SFO에서 JFK로 가는 가장 저렴한 항공편 찾기") Browser Use 에이전트가 페이지를 탐색하고,
+클릭하고, 양식을 작성하고, 데이터를 추출한 뒤 최종 답변을 반환합니다.
+
+이 도구는 공식 [`browser-use-sdk`](https://pypi.org/project/browser-use-sdk/)를 통해
+Browser Use Cloud API v4를 사용합니다. 클라우드 브라우저에는 스텔스 보호, 프록시,
+자동 CAPTCHA 처리가 포함됩니다.
+
+## 설치
+
+- [cloud.browser-use.com](https://cloud.browser-use.com/settings?tab=api-keys)에서 API 키를 만들고 `BROWSER_USE_API_KEY`로 설정합니다.
+- SDK와 함께 도구를 설치합니다:
+
+```shell
+uv add "crewai-tools[browser-use]"
+```
+
+## 예시
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import BrowserUseTool
+
+browser_tool = BrowserUseTool()
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current information on live websites",
+    backstory="You use a real browser to read and act on websites.",
+    tools=[browser_tool],
+)
+
+task = Task(
+    description="Find the title of the top story on news.ycombinator.com right now.",
+    expected_output="The story title.",
+    agent=researcher,
+)
+
+Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+도구는 `result`, `session_id`, `run_id`가 포함된 JSON을 반환합니다. 같은 브라우저와 대화를
+이어가려면(예: 로그인 후) 에이전트가 이전 결과의 `session_id`를 전달합니다.
+
+## 인자
+
+| 인자        | 타입     | 설명 |
+|:------------|:---------|:-----|
+| **api_key** | `string` | _선택 사항_. Browser Use API 키. 기본값은 `BROWSER_USE_API_KEY` 환경 변수입니다. |
+| **model**   | `string` | _선택 사항_. Browser Use 에이전트 모델. 기본값은 API 기본값입니다. [모델](https://docs.browser-use.com/cloud/agent/models)을 참고하세요. |
+| **timeout** | `float`  | _선택 사항_. 실행을 기다리는 시간(초). 시간 내에 끝나지 않은 실행은 취소됩니다. 기본값은 `900`입니다. |
+
+## 도구 입력
+
+| 필드           | 타입     | 설명 |
+|:---------------|:---------|:-----|
+| **task**       | `string` | 브라우저에서 할 일을 자연어로 설명합니다. |
+| **session_id** | `string` | _선택 사항_. 같은 브라우저에서 이어가기 위한 이전 결과의 `session_id`. |
+
+실패, 취소 또는 시간 초과된 실행은 도구 실패로 반환되므로 CrewAI는 이를 성공 결과로
+처리하지 않고 기록합니다.
