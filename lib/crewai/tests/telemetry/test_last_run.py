@@ -61,7 +61,7 @@ def test_nothing_is_recorded_under_the_test_suite(monkeypatch, tmp_path):
 
 
 def test_a_project_using_platform_tools_is_still_recorded(monkeypatch, tmp_path):
-    """`crewai create crew` writes CREWAI_PLATFORM_INTEGRATION_TOKEN into the project's
+    """`crewai create crew` writes CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN into the project's
     own .env, so it says "this developer uses platform tools", never "this is a
     deployment". Reading it as a deployment marker would leave those users with no
     run for `crewai eval` to find.
@@ -70,7 +70,7 @@ def test_a_project_using_platform_tools_is_still_recorded(monkeypatch, tmp_path)
     is the very thing under test here."""
     monkeypatch.setattr(last_run, "project_dir", lambda: tmp_path)
     monkeypatch.delenv("CREWAI_TESTING", raising=False)
-    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "a token from the project's .env")
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "a token from the project's .env")
 
     assert last_run.recording_enabled() is True  # the real guard, not the fixture's stub
     path = last_run.record_last_run(execution_id="local", tier="authenticated", started_at_ns=None, finished_at_ns=None, amp_base_url=None)

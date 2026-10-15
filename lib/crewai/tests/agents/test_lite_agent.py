@@ -611,7 +611,7 @@ def test_lite_agent_with_invalid_llm():
         assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch.dict("os.environ", {"CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN": "test_token"})
 @patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post")
 @patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
 @pytest.mark.vcr()

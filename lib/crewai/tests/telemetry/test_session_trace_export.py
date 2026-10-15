@@ -48,7 +48,7 @@ def tracing_environment(monkeypatch):
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
     for name in (
         "CREWAI_USER_PAT",
-        "CREWAI_PLATFORM_INTEGRATION_TOKEN",
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN",
         "CREWAI_EPHEMERAL_TRACE_MAX_SPANS",
         "CREWAI_EPHEMERAL_TRACE_MAX_BYTES",
     ):
@@ -374,14 +374,14 @@ def test_an_export_without_a_viewer_url_is_recorded_all_the_same(
 
 def test_credential_precedence_and_missing_login(monkeypatch):
     monkeypatch.setenv("CREWAI_USER_PAT", "pat")
-    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "integration")
+    monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "integration")
     login = Mock(return_value="login")
     monkeypatch.setattr("crewai.telemetry.tracing.grants.get_auth_token", login)
     assert tracing_credential() == "pat"
     monkeypatch.delenv("CREWAI_USER_PAT")
     assert tracing_credential() == "integration"
     login.assert_not_called()
-    monkeypatch.delenv("CREWAI_PLATFORM_INTEGRATION_TOKEN")
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN")
     assert tracing_credential() == "login"
     login.side_effect = AuthError("No saved login")
     assert tracing_credential() is None
