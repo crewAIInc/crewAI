@@ -20,6 +20,7 @@ import pytest
 
 @pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
 def test_get_files_preserves_storage_error(error_type: type[Exception]) -> None:
+    """Propagate backend errors unchanged when called without an event loop."""
     error = error_type("storage failed")
     with patch("crewai.utilities.file_store._file_store") as cache:
         cache.get = AsyncMock(side_effect=error)
@@ -34,6 +35,7 @@ def test_get_files_preserves_storage_error(error_type: type[Exception]) -> None:
 async def test_get_files_preserves_storage_error_in_running_loop(
     error_type: type[Exception],
 ) -> None:
+    """Propagate backend errors unchanged when called from an async context."""
     error = error_type("storage failed")
     with patch("crewai.utilities.file_store._file_store") as cache:
         cache.get = AsyncMock(side_effect=error)
@@ -45,6 +47,7 @@ async def test_get_files_preserves_storage_error_in_running_loop(
 
 @pytest.mark.asyncio
 async def test_run_sync_preserves_context_in_running_loop() -> None:
+    """Preserve the caller's context variables in the worker thread."""
     request_id = ContextVar("request_id", default="unset")
     token = request_id.set("current-request")
 
