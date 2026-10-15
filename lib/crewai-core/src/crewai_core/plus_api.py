@@ -204,7 +204,7 @@ class PlusAPI:
             request_kwargs["params"] = params
         if timeout is not None:
             request_kwargs["timeout"] = timeout
-        with httpx.Client(trust_env=False, verify=verify) as client:
+        with httpx.Client(verify=verify) as client:
             return client.request(method, url, **request_kwargs)
 
     def _make_multipart_request(
@@ -230,7 +230,7 @@ class PlusAPI:
 
         with (
             path.open("rb") as file_handle,
-            httpx.Client(trust_env=False, verify=verify) as client,
+            httpx.Client(verify=verify) as client,
         ):
             files = {
                 "zip_file": (path.name, file_handle, "application/zip"),

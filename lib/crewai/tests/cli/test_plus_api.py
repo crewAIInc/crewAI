@@ -261,7 +261,7 @@ class TestPlusAPI(unittest.TestCase):
 
         response = self.api._make_request("GET", "test_endpoint")
 
-        mock_client_class.assert_called_once_with(trust_env=False, verify=True)
+        mock_client_class.assert_called_once_with(verify=True)
         mock_client_instance.request.assert_called_once_with(
             "GET", f"{self.api.base_url}/test_endpoint", headers=self.api.headers
         )

@@ -116,7 +116,7 @@ class PlusAPI(_CorePlusAPI):
 
         with (
             path.open("rb") as file_handle,
-            httpx.Client(trust_env=False, verify=verify) as client,
+            httpx.Client(verify=verify) as client,
         ):
             files = {
                 "zip_file": (path.name, file_handle, "application/zip"),
