@@ -173,7 +173,7 @@ Fornece acesso ao estado de execução do LLM:
 
 ```python
 class LLMCallHookContext:
-    executor: CrewAgentExecutor  # Acesso completo ao executor
+    executor: AgentExecutor  # Acesso completo ao executor
     messages: list               # Lista de mensagens mutável
     agent: Agent                 # Agente atual
     task: Task                   # Tarefa atual
