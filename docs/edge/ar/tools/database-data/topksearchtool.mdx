@@ -113,7 +113,7 @@ alice_notes = TopKSearchTool(collection_name="notes", partition="user-alice")
 | --- | --- | --- |
 | `collection_name` | (مطلوب) | مجموعة TopK المراد البحث فيها. |
 | `text_field` | `"text"` | الحقل الذي يحمل `semantic_index()`. |
-| `return_fields` | `["text"]` | الحقول المُرجعة لكل نتيجة إلى جانب `id` و `score`. |
+| `return_fields` | `["text"]` | الحقول المُرجعة لكل نتيجة إلى جانب `id` و `score` (اللذين يصفان النتيجة دائمًا). |
 | `partition` | `None` | البحث في هذا القسم فقط. |
 | `limit` | `5` | عدد النتائج لكل بحث (1-100). |
 | `hybrid_alpha` | `0.5` | وزن الدرجة الدلالية في البحث الهجين، ويحصل BM25 على `1 - hybrid_alpha`. كلتاهما درجات خام غير محدودة من TopK تُوزن كما هي، لذا راجع بعض النتائج قبل ضبطه. |

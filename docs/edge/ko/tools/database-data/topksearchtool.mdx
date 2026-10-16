@@ -113,7 +113,7 @@ alice_notes = TopKSearchTool(collection_name="notes", partition="user-alice")
 | --- | --- | --- |
 | `collection_name` | (필수) | 검색할 TopK 컬렉션. |
 | `text_field` | `"text"` | `semantic_index()`가 있는 필드. |
-| `return_fields` | `["text"]` | 각 결과에서 `id`, `score`와 함께 반환할 필드. |
+| `return_fields` | `["text"]` | 각 결과에서 `id`, `score`(항상 해당 결과를 나타냄)와 함께 반환할 필드. |
 | `partition` | `None` | 이 파티션만 검색. |
 | `limit` | `5` | 검색당 결과 수 (1-100). |
 | `hybrid_alpha` | `0.5` | 하이브리드 검색에서 시맨틱 점수의 가중치이며, BM25는 `1 - hybrid_alpha`를 받습니다. 두 점수 모두 정규화되지 않은 TopK 원점수를 그대로 가중하므로, 조정하기 전에 결과를 몇 개 확인하세요. |

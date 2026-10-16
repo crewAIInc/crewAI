@@ -82,6 +82,13 @@ def test_return_fields_are_selected_and_returned():
     assert out[0]["source"] == "faq"
 
 
+def test_document_fields_cannot_override_id_or_score():
+    rows = [{"_id": "a", "id": "other", "score": 99, "text": "t", "topk_score": 1.0}]
+    tool, _, _ = make_tool(rows=rows, return_fields=["text", "id", "score"])
+    out = json.loads(tool._run("x", search_mode="semantic"))
+    assert out[0]["id"] == "a" and out[0]["score"] == 1.0 and out[0]["text"] == "t"
+
+
 def test_filters_translate_to_topk_expressions():
     tool, sdk, _ = make_tool()
     field = sdk.query.field

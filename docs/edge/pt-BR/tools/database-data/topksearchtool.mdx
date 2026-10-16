@@ -113,7 +113,7 @@ Escreva na mesma partição com `client.collection("notes", partition="user-alic
 | --- | --- | --- |
 | `collection_name` | (obrigatório) | Coleção do TopK a pesquisar. |
 | `text_field` | `"text"` | Campo com um `semantic_index()`. |
-| `return_fields` | `["text"]` | Campos retornados em cada resultado, junto com `id` e `score`. |
+| `return_fields` | `["text"]` | Campos retornados em cada resultado, junto com `id` e `score` (que sempre descrevem o resultado). |
 | `partition` | `None` | Pesquisa apenas esta partição. |
 | `limit` | `5` | Resultados por busca (1-100). |
 | `hybrid_alpha` | `0.5` | Peso da pontuação semântica na busca híbrida; o BM25 recebe `1 - hybrid_alpha`. As duas são pontuações brutas e sem limite do TopK, ponderadas como estão, então confira alguns resultados antes de ajustar. |

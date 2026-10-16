@@ -113,7 +113,7 @@ Write to the same partition with `client.collection("notes", partition="user-ali
 | --- | --- | --- |
 | `collection_name` | (required) | TopK collection to search. |
 | `text_field` | `"text"` | Field with a `semantic_index()`. |
-| `return_fields` | `["text"]` | Fields returned for each result, alongside `id` and `score`. |
+| `return_fields` | `["text"]` | Fields returned for each result, alongside `id` and `score` (which always describe the match). |
 | `partition` | `None` | Search only this partition. |
 | `limit` | `5` | Results per search (1-100). |
 | `hybrid_alpha` | `0.5` | Weight of the semantic score in hybrid search; BM25 gets `1 - hybrid_alpha`. Both are raw, unbounded TopK scores weighted as-is, so check a few results before tuning it. |

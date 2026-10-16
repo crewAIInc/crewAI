@@ -186,8 +186,9 @@ class TopKSearchTool(BaseTool):
                 ) * (1.0 - self.hybrid_alpha)
             else:
                 score = row.get("topk_score") or 0.0
-            result = {"id": row["_id"], "score": round(float(score), 4)}
-            result.update({f: row[f] for f in self.return_fields if f in row})
+            result = {f: row[f] for f in self.return_fields if f in row}
+            # id and score always describe the match, even if a document field shares the name.
+            result.update({"id": row["_id"], "score": round(float(score), 4)})
             results.append(result)
         return json.dumps(results, indent=2, default=str)
 
