@@ -19,6 +19,28 @@ from crewai.events.types.flow_events import (
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 
 
+@pytest.mark.parametrize("asynchronous", [False, True])
+def test_flow_without_start_fails_at_kickoff(asynchronous: bool):
+    class State(BaseModel):
+        x: int = 0
+
+    class NoStartFlow(Flow[State]):
+        @listen("never_emitted")
+        def orphan(self):
+            self.state.x = 99
+
+    flow = NoStartFlow()
+
+    with pytest.raises(ValueError, match=r"NoStartFlow.*@start"):
+        if asynchronous:
+            asyncio.run(flow.kickoff_async())
+        else:
+            flow.kickoff()
+
+    assert flow.state.x == 0
+    assert flow.method_outputs == []
+
+
 def test_simple_sequential_flow():
     """Test a simple flow with two steps called sequentially."""
     execution_order = []
