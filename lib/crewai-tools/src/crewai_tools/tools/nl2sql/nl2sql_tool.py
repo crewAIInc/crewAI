@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, model_validator
 
 try:
     from sqlalchemy import create_engine, text
+    from sqlalchemy.engine import make_url
     from sqlalchemy.orm import sessionmaker
 
     SQLALCHEMY_AVAILABLE = True
@@ -23,6 +24,19 @@ except ImportError:
     SQLALCHEMY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+_DIALECT_GUIDANCE = {
+    "postgresql": (
+        "Generate PostgreSQL-compatible SQL. PostgreSQL features such as ILIKE, "
+        "DATE_TRUNC, INTERVAL, and :: casts are available."
+    ),
+    "sqlite": (
+        "Generate SQLite-compatible SQL. Use LOWER(column) LIKE LOWER(pattern) "
+        "for case-insensitive matching, SQLite date/time functions such as "
+        "strftime(), and || for string concatenation. Do not use ILIKE, "
+        "DATE_TRUNC, INTERVAL, or :: casts."
+    ),
+}
 
 # Commands allowed in read-only mode
 # NOTE: WITH is intentionally excluded — writable CTEs start with WITH, so the
@@ -237,6 +251,14 @@ class NL2SQLTool(BaseTool):
         title="Database URI",
         description="The URI of the database to connect to.",
     )
+    dialect: str | None = Field(
+        default=None,
+        title="SQL Dialect",
+        description=(
+            "SQL dialect used when generating queries. Inferred from db_uri when "
+            "not provided."
+        ),
+    )
     allow_dml: bool = Field(
         default=False,
         title="Allow DML",
@@ -268,6 +290,18 @@ class NL2SQLTool(BaseTool):
                 "sqlalchemy is not installed. Please install it with "
                 "`pip install crewai-tools[sqlalchemy]`"
             )
+
+        self.dialect = (
+            self.dialect.strip().lower()
+            if self.dialect and self.dialect.strip()
+            else make_url(self.db_uri).get_backend_name()
+        )
+        guidance = _DIALECT_GUIDANCE.get(
+            self.dialect,
+            f"Generate SQL compatible with the {self.dialect} dialect.",
+        )
+        if guidance not in self.description:
+            self.description = f"{self.description.rstrip()} {guidance}"
 
         if self.allow_dml:
             logger.warning(
