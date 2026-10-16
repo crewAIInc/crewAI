@@ -128,6 +128,7 @@ class ConversationMessage(BaseModel):
     tool_calls: list[dict[str, Any]] | None = None
     files: dict[str, Any] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    id: str = Field(default_factory=lambda: str(uuid4()))
 
 
 class AgentMessage(BaseModel):
@@ -176,7 +177,7 @@ def message_to_llm_dict(message: Any) -> LLMMessage:
 
     return cast(
         LLMMessage,
-        {key: value for key, value in data.items() if key != "metadata"},
+        {key: value for key, value in data.items() if key not in {"metadata", "id"}},
     )
 
 
