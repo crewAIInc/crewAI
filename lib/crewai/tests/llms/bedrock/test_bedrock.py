@@ -1512,6 +1512,23 @@ def test_bedrock_structured_output_tool_choice_for_models_rejecting_forced_tools
     assert result == City(name="Paris", country="France")
 
 
+@pytest.mark.parametrize(
+    "model,expect_forced",
+    [("us.anthropic.claude-opus-5-5", False), ("us.anthropic.claude-opus-5", True)],
+)
+def test_bedrock_input_token_count_structured_output_tool_choice(
+    bedrock_mocks, model, expect_forced
+):
+    """CountTokens gets the same structured_output toolChoice as the Converse call."""
+    _, client = bedrock_mocks
+    client.count_tokens.return_value = {"inputTokens": 42}
+    llm = LLM(model=f"bedrock/{model}")
+
+    assert llm.get_input_tokens_count("Paris", response_model=_city_model()) == 42
+    tool_config = client.count_tokens.call_args.kwargs["input"]["converse"]["toolConfig"]
+    assert ("toolChoice" in tool_config) is expect_forced
+
+
 @pytest.mark.parametrize("handler", _CONVERSE_HANDLERS)
 @pytest.mark.parametrize(
     "text,parsed",

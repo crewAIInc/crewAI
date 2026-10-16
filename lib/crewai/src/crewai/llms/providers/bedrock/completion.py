@@ -411,7 +411,9 @@ class BedrockCompletion(BaseLLM):
             ):
                 existing_tools.append(structured_tool)
                 converse_input["toolConfig"] = {"tools": existing_tools}
-                if len(existing_tools) == 1:
+                if len(existing_tools) == 1 and _supports_forced_tool_choice(
+                    self.model
+                ):
                     converse_input["toolConfig"]["toolChoice"] = {
                         "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
                     }
