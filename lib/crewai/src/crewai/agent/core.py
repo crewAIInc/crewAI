@@ -93,6 +93,7 @@ from crewai.tools.tool_failure import (
     merge_tool_failures,
     tool_failure_collector,
 )
+from crewai.tools.tool_results import active_tool_results, tool_results_collector
 from crewai.types.callback import SerializableCallable
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
@@ -694,6 +695,7 @@ class Agent(BaseAgent):
         get_env_context()
 
         self.reset_tool_failures()
+        self.reset_tools_results()
 
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
@@ -836,6 +838,9 @@ class Agent(BaseAgent):
             self._rpm_controller.stop_rpm_counter()
 
         result = process_tool_results(self, result)
+        active = active_tool_results()
+        if active is not None:
+            self.tools_results = list(active)
 
         output_for_event = result
         if (
@@ -975,56 +980,57 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        task_prompt = self._prepare_task_execution(task, context)
+        with tool_results_collector():
+            task_prompt = self._prepare_task_execution(task, context)
 
-        knowledge_config = get_knowledge_config(self)
-        task_prompt = handle_knowledge_retrieval(
-            self,
-            task,
-            task_prompt,
-            knowledge_config,
-            self.knowledge.query if self.knowledge else lambda *a, **k: None,
-            self.crew.query_knowledge
-            if self.crew and not isinstance(self.crew, str)
-            else lambda *a, **k: None,
-        )
-
-        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
-
-        try:
-            crewai_event_bus.emit(
+            knowledge_config = get_knowledge_config(self)
+            task_prompt = handle_knowledge_retrieval(
                 self,
-                event=AgentExecutionStartedEvent(
-                    agent=self,
-                    tools=self.tools,
-                    task_prompt=task_prompt,
-                    task=task,
-                ),
+                task,
+                task_prompt,
+                knowledge_config,
+                self.knowledge.query if self.knowledge else lambda *a, **k: None,
+                self.crew.query_knowledge
+                if self.crew and not isinstance(self.crew, str)
+                else lambda *a, **k: None,
             )
 
-            validate_max_execution_time(self.max_execution_time)
-            if self.max_execution_time is not None:
-                result = self._execute_with_timeout(
-                    task_prompt, task, self.max_execution_time
+            task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
+
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionStartedEvent(
+                        agent=self,
+                        tools=self.tools,
+                        task_prompt=task_prompt,
+                        task=task,
+                    ),
                 )
-            else:
-                result = self._execute_without_timeout(task_prompt, task)
 
-        except TimeoutError as e:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
-            raise e
-        except Exception as e:
-            # The retry runs a whole execute_task of its own, result already finalized.
-            return self._handle_execution_error(e, task, context, tools)
+                validate_max_execution_time(self.max_execution_time)
+                if self.max_execution_time is not None:
+                    result = self._execute_with_timeout(
+                        task_prompt, task, self.max_execution_time
+                    )
+                else:
+                    result = self._execute_without_timeout(task_prompt, task)
 
-        return self._finalize_task_execution(task, result)
+            except TimeoutError as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
+            except Exception as e:
+                # The retry runs a whole execute_task of its own, result already finalized.
+                return self._handle_execution_error(e, task, context, tools)
+
+            return self._finalize_task_execution(task, result)
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
@@ -1117,49 +1123,50 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        task_prompt = self._prepare_task_execution(task, context)
+        with tool_results_collector():
+            task_prompt = self._prepare_task_execution(task, context)
 
-        knowledge_config = get_knowledge_config(self)
-        task_prompt = await ahandle_knowledge_retrieval(
-            self, task, task_prompt, knowledge_config
-        )
-
-        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
-
-        try:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionStartedEvent(
-                    agent=self,
-                    tools=self.tools,
-                    task_prompt=task_prompt,
-                    task=task,
-                ),
+            knowledge_config = get_knowledge_config(self)
+            task_prompt = await ahandle_knowledge_retrieval(
+                self, task, task_prompt, knowledge_config
             )
 
-            validate_max_execution_time(self.max_execution_time)
-            if self.max_execution_time is not None:
-                result = await self._aexecute_with_timeout(
-                    task_prompt, task, self.max_execution_time
+            task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
+
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionStartedEvent(
+                        agent=self,
+                        tools=self.tools,
+                        task_prompt=task_prompt,
+                        task=task,
+                    ),
                 )
-            else:
-                result = await self._aexecute_without_timeout(task_prompt, task)
 
-        except TimeoutError as e:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
-            raise e
-        except Exception as e:
-            # The retry runs a whole aexecute_task of its own, result already finalized.
-            return await self._handle_execution_error_async(e, task, context, tools)
+                validate_max_execution_time(self.max_execution_time)
+                if self.max_execution_time is not None:
+                    result = await self._aexecute_with_timeout(
+                        task_prompt, task, self.max_execution_time
+                    )
+                else:
+                    result = await self._aexecute_without_timeout(task_prompt, task)
 
-        return self._finalize_task_execution(task, result)
+            except TimeoutError as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
+            except Exception as e:
+                # The retry runs a whole aexecute_task of its own, result already finalized.
+                return await self._handle_execution_error_async(e, task, context, tools)
+
+            return self._finalize_task_execution(task, result)
 
     async def _aexecute_with_timeout(
         self, task_prompt: str, task: Task, timeout: int
