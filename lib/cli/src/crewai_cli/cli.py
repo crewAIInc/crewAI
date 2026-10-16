@@ -415,8 +415,8 @@ def replay(
                 )
                 return
 
-            for index, task in enumerate(tasks, 1):
-                click.echo(f"Task {index}: {task['task_id']}")
+            for task in tasks:
+                click.echo(f"Task {task['task_index']}: {task['task_id']}")
                 click.echo(f"Expected output: {task['expected_output']}")
                 click.echo("------")
         except Exception as e:

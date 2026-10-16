@@ -251,18 +251,26 @@ def test_replay_list_tasks(
     args: list[str],
 ) -> None:
     mock_load.return_value = [
-        {"task_id": "task_123", "expected_output": "Research findings"},
-        {"task_id": "task_456", "expected_output": "A final report"},
+        {
+            "task_index": 0,
+            "task_id": "task_123",
+            "expected_output": "Research findings",
+        },
+        {
+            "task_index": 7,
+            "task_id": "task_456",
+            "expected_output": "A final report",
+        },
     ]
 
     result = runner.invoke(replay, args)
 
     assert result.exit_code == 0, result.output
     assert result.output == (
-        "Task 1: task_123\n"
+        "Task 0: task_123\n"
         "Expected output: Research findings\n"
         "------\n"
-        "Task 2: task_456\n"
+        "Task 7: task_456\n"
         "Expected output: A final report\n"
         "------\n"
     )
