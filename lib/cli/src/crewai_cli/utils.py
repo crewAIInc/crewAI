@@ -9,9 +9,7 @@ from typing import Any, Literal
 
 import click
 from crewai_core.project import (
-    get_or_create_project_id as get_or_create_project_id,
     get_project_description as get_project_description,
-    get_project_id as get_project_id,
     get_project_name as get_project_name,
     get_project_version as get_project_version,
     parse_toml as parse_toml,
@@ -64,6 +62,34 @@ def warn_deprecated(
         f"Warning: The {label} '{old}' is deprecated. Use '{new}' instead.",
         fg="yellow",
     )
+
+
+# Imported lazily, not at module scope: ``crewai run`` loads this CLI package
+# into the *project's* environment, which may pin an older ``crewai-core`` that
+# predates the project-id helpers (added in 1.15.x). A module-scope import makes
+# that ImportError fatal at load time and breaks every JSON-crew run, even
+# though a project id is optional telemetry metadata. Resolving them on call
+# keeps the runner working and degrades only the id itself.
+def get_project_id(*args: Any, **kwargs: Any) -> str | None:
+    """Return ``[tool.crewai].project_id``, or None on an older ``crewai-core``."""
+    try:
+        from crewai_core.project import get_project_id as _get_project_id
+    except ImportError:
+        return None
+
+    return _get_project_id(*args, **kwargs)
+
+
+def get_or_create_project_id(*args: Any, **kwargs: Any) -> str | None:
+    """Return the project's id, minting one, or None on an older ``crewai-core``."""
+    try:
+        from crewai_core.project import (
+            get_or_create_project_id as _get_or_create_project_id,
+        )
+    except ImportError:
+        return None
+
+    return _get_or_create_project_id(*args, **kwargs)
 
 
 console = Console()
