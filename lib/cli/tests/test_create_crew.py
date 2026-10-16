@@ -1,7 +1,9 @@
 import asyncio
 import builtins
 import keyword
+import itertools
 import re
+import shlex
 import shutil
 import tempfile
 import threading
@@ -1272,7 +1274,7 @@ def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
 
     project_root = tmp_path / "my_crew"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
-    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert agents_md.index("## Working in this project") < agents_md.index("## Reference")
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
     cursor_md = (project_root / "CURSOR.md").read_text(encoding="utf-8")
@@ -1291,12 +1293,12 @@ def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
     [keep_on] = [
         line
         for line in agents_md.splitlines()
-        if "Never disable, block, or silence CrewAI's built-in observability" in line
+        if line.startswith("Never turn off tracing or telemetry")
     ]
-    assert "any of the instrumentation that ships execution data out" in keep_on
-    assert "Turning it off is the user's decision to make" in keep_on
-    assert "- Treating built-in observability" in agents_md
+    assert "to silence errors, speed things up or tidy the setup" in keep_on
+    assert "that's the user's decision" in keep_on
     assert "free" not in agents_md.lower()
+    assert "pricing" not in agents_md.lower()
 
 
 def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
@@ -1332,8 +1334,8 @@ def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
 
     project_root = tmp_path / "json_crew"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
-    assert "CrewAI Reference for AI Coding Assistants" in agents_md
-    assert "## Evaluating this crew/flow" in agents_md
+    assert "## Working in this project" in agents_md
+    assert "### Check every change: run, trace, evaluate" in agents_md
     assert "crewai-eval:" not in agents_md
     assert "crew.jsonc" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
@@ -1351,17 +1353,17 @@ def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
     create_crew("my-crew", skip_provider=True)
 
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
-    assert "## Evaluating this crew/flow" in agents_md
-    assert "Run `crewai eval` after a change" in agents_md
-    assert "it prints a **markdown brief** after the verdict" in agents_md
-    assert 'crewai eval --models "provider/model,…"' in agents_md
+    assert "is done when a traced run passes `crewai eval`, not when the code runs" in agents_md
+    assert "prints a markdown brief of what failed and the change to make" in agents_md
+    assert "It exits 0 only when the goal gate passed" in agents_md
+    assert "`crewai eval --models " in agents_md
     assert "crewai-eval:" not in agents_md  # the markers never reach a project
 
 
 def _cli_args(line: str) -> list[str]:
     """Arguments of a documented `crewai …` line, with `<placeholder>` values filled."""
-    words = line.split("#", 1)[0].split()[1:]
-    return ["value" if re.fullmatch(r"<\w+>", word) else word for word in words]
+    words = shlex.split(line.split("#", 1)[0])[1:]
+    return ["value" if "<" in word else word for word in words]
 
 
 def _parse_cli_args(args: list[str]) -> None:
@@ -1381,28 +1383,37 @@ def test_parse_cli_args_rejects_a_positional_deployment_id():
         _parse_cli_args(_cli_args("crewai deploy remove <id>"))
 
 
-def test_scaffolded_agents_md_deploy_and_org_commands_parse_against_the_cli(
-    tmp_path, monkeypatch
-):
+def _documented_commands(agents_md: str) -> list[str]:
+    """Every inline `crewai …` command in AGENTS.md, one per `a|b` alternative."""
+    commands = []
+    for span in re.findall(r"`(crewai [^`]+)`", agents_md):
+        words = shlex.split(span)
+        alternatives = [word.split("|") if "|" in word and "<" not in word else [word] for word in words]
+        for choice in itertools.product(*alternatives):
+            commands.append(" ".join(choice))
+    return commands
+
+
+def test_scaffolded_agents_md_commands_parse_against_the_cli(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     create_crew("my-crew", skip_provider=True)
 
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
-    commands = [
-        line.strip()
-        for line in agents_md.splitlines()
-        if line.strip().startswith(("crewai deploy ", "crewai org "))
-    ]
+    commands = _documented_commands(agents_md)
 
     for documented in (
         "crewai deploy remove -u <uuid>",
         "crewai deploy create -y",
-        "crewai org current",
-        "crewai org switch <id>",
+        "crewai org list",
+        "crewai org switch <uuid>",
+        "crewai eval",
     ):
-        assert any(line.startswith(documented) for line in commands), documented
-    for line in commands:
-        _parse_cli_args(_cli_args(line))
+        assert documented in commands, documented
+    for command in commands:
+        try:
+            _parse_cli_args(_cli_args(command))
+        except click.MissingParameter:
+            pass  # named without its arguments in prose, e.g. "the old `crewai tool create` style"
 
 
 def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
@@ -1413,8 +1424,8 @@ def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
 
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
     assert "Code is in a GitHub repository" not in agents_md
-    assert "With no `origin`, `crewai deploy create` uploads the project as a ZIP" in agents_md
-    assert "on `create`, and again on `push` for ZIP deployments" in agents_md
+    assert "With no git `origin` it uploads a ZIP" in agents_md
+    assert "uploads `.env` as its environment variables" in agents_md
 
 
 def test_scaffolded_agents_md_platform_tools_guidance(tmp_path, monkeypatch):
@@ -1424,19 +1435,26 @@ def test_scaffolded_agents_md_platform_tools_guidance(tmp_path, monkeypatch):
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
     # PLATFORM_APPS lists the apps, but some of its action names resolve to no tool.
     assert "source of truth" not in agents_md
-    assert '`CrewaiPlatformTools(apps=["app/action"])` must return at least one tool' in agents_md
-    assert "`CREWAI_PLATFORM_INTEGRATION_TOKEN` in `.env`" in agents_md
+    assert "copy selectors from those; a selector must load at least one tool" in agents_md
+    assert "`CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` in `.env`" in agents_md
+    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN" not in agents_md
     assert "`app[/action][@connection]`" in agents_md
-    assert "  apps:\n    - hubspot/search_companies\n    - slack\n" in agents_md
+    assert "`apps: [slack/send_message]` in YAML" in agents_md
 
 
 @pytest.mark.parametrize("evaluation", [True, False])
-def test_agents_md_best_practices_are_numbered_without_gaps(tmp_path, evaluation):
+def test_agents_md_numbered_lists_have_no_gaps(tmp_path, evaluation):
+    # The evaluation blocks are cut from tool projects; what remains must still read in order.
     copy_assistant_instructions(tmp_path, evaluation=evaluation)
 
     agents_md = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
-    section = agents_md.split("## Development Best Practices", 1)[1].split("\n## ", 1)[0]
-    numbers = [int(number) for number in re.findall(r"^(\d+)\. ", section, re.M)]
-    assert numbers == list(range(1, len(numbers) + 1))
-    assert ("`crewai eval`" in section) is evaluation
-    assert "crewai test" not in section
+    numbers: list[int] = []
+    for line in [*agents_md.splitlines(), ""]:
+        item = re.match(r"(\d+)\. ", line)
+        if item:
+            numbers.append(int(item.group(1)))
+        elif not line.startswith((" ", "\t")):  # an indented line continues the item
+            assert numbers == list(range(1, len(numbers) + 1)), numbers
+            numbers = []
+    assert not re.search(r"^### \d", agents_md, re.M)
+    assert ("crewai eval" in agents_md) is evaluation
