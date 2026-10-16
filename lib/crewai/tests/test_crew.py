@@ -1834,12 +1834,14 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1
     )
 
-    researcher.llm.get_token_usage_summary = MagicMock(return_value=researcher_metrics)
-
-    # Mock the manager's _token_process since it uses the fallback path
-    manager._token_process = MagicMock(
-        get_summary=MagicMock(return_value=manager_metrics)
-    )
+    # Stand in for the LLM calls each agent makes during the task: every call
+    # is credited to the agent that made it, and the crew sums those.
+    def _execute(*_args, **_kwargs) -> TaskOutput:
+        researcher._record_llm_usage(researcher.llm, researcher_metrics)
+        manager._record_llm_usage(manager.llm, manager_metrics)
+        return TaskOutput(
+            description="dummy", raw="Hello", agent=researcher.role, messages=[]
+        )
 
     crew = Crew(
         agents=[researcher],
@@ -1849,13 +1851,7 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
     )
 
     # We don't care about LLM output here; patch execute_sync to avoid network
-    with patch.object(
-        Task,
-        "execute_sync",
-        return_value=TaskOutput(
-            description="dummy", raw="Hello", agent=researcher.role, messages=[]
-        ),
-    ):
+    with patch.object(Task, "execute_sync", side_effect=_execute):
         crew.kickoff()
 
     assert (
