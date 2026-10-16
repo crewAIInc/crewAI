@@ -1070,6 +1070,7 @@ def test_execute_uv_script_propagates_child_exit_code(monkeypatch, capsys):
     monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
 
     def fake_subprocess_run(command, **kwargs):
+        """Simulate a subprocess raising CalledProcessError."""
         raise subprocess.CalledProcessError(
             42, command, output="Script crashed with code 42"
         )
@@ -1092,6 +1093,7 @@ def test_execute_uv_script_exits_code_1_on_unexpected_exception(monkeypatch, cap
     )
 
     def fake_subprocess_run(command, **kwargs):
+        """Simulate a subprocess launch error."""
         raise FileNotFoundError("uv executable not found")
 
     monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
@@ -1111,6 +1113,7 @@ def test_execute_uv_script_success_completes_without_exit(monkeypatch):
     called = []
 
     def fake_subprocess_run(command, **kwargs):
+        """Record successful command invocation."""
         called.append(command)
 
     monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
