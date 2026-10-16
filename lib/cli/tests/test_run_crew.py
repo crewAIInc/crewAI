@@ -1178,3 +1178,27 @@ def test_execute_uv_script_formats_error_for_flow_entity(monkeypatch, capsys):
 
     assert exc_info.value.code == 1
     assert "An error occurred while running the flow" in capsys.readouterr().err
+
+
+def test_execute_uv_script_propagates_exit_code_even_if_read_toml_fails(monkeypatch):
+    """Failure reading pyproject.toml in _handle_run_error must not block exit code propagation."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+
+    def failing_read_toml():
+        """Simulate an unreadable or corrupt pyproject.toml."""
+        raise OSError("Permission denied: pyproject.toml")
+
+    monkeypatch.setattr(run_crew_module, "read_toml", failing_read_toml)
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate child process failure."""
+        raise subprocess.CalledProcessError(42, command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 42
