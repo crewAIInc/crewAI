@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
     from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
     from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+    from crewai.rag.embeddings.providers.deepinfra.types import DeepInfraProviderSpec
     from crewai.rag.embeddings.providers.google.genai_vertex_embedding import (
         GoogleGenAIVertexEmbeddingFunction,
     )
@@ -97,6 +98,7 @@ PROVIDER_PATHS = {
     "amazon-bedrock": "crewai.rag.embeddings.providers.aws.bedrock.BedrockProvider",
     "cohere": "crewai.rag.embeddings.providers.cohere.cohere_provider.CohereProvider",
     "custom": "crewai.rag.embeddings.providers.custom.custom_provider.CustomProvider",
+    "deepinfra": "crewai.rag.embeddings.providers.deepinfra.deepinfra_provider.DeepInfraProvider",
     "google-generativeai": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
     "google": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
     "google-vertex": "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider",
@@ -215,6 +217,12 @@ def build_embedder_from_dict(
 def build_embedder_from_dict(
     spec: OpenCLIPProviderSpec,
 ) -> OpenCLIPEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: DeepInfraProviderSpec,
+) -> OpenAIEmbeddingFunction: ...
 
 
 @overload
@@ -356,6 +364,10 @@ def build_embedder(spec: RoboflowProviderSpec) -> RoboflowEmbeddingFunction: ...
 
 @overload
 def build_embedder(spec: OpenCLIPProviderSpec) -> OpenCLIPEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: DeepInfraProviderSpec) -> OpenAIEmbeddingFunction: ...
 
 
 @overload
