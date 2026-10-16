@@ -686,3 +686,58 @@ class TestDirectLLMScopedHooks:
             )
 
         assert result == "contains [REDACTED]"
+
+
+class TestNativeProviderAfterHooksAsync:
+    """Native providers run after_llm_call hooks on direct acall() as they do on call()."""
+
+    @staticmethod
+    def _openai_llm():
+        from unittest.mock import AsyncMock, MagicMock
+
+        from openai.types.chat import ChatCompletion
+
+        from crewai.llm import LLM
+
+        completion = ChatCompletion.model_validate(
+            {
+                "id": "chatcmpl-1",
+                "object": "chat.completion",
+                "created": 0,
+                "model": "gpt-4o-mini",
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {"role": "assistant", "content": "the SECRET is 42"},
+                    }
+                ],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            }
+        )
+        raw = MagicMock()
+        raw.parse.return_value = completion
+        raw.text = completion.model_dump_json()
+
+        llm = LLM(model="gpt-4o-mini", api_key="sk-test")
+        sync_client = MagicMock()
+        sync_client.chat.completions.with_raw_response.create.return_value = raw
+        async_client = MagicMock()
+        async_client.chat.completions.with_raw_response.create = AsyncMock(return_value=raw)
+        llm._get_sync_client = lambda: sync_client  # type: ignore[method-assign]
+        llm._get_async_client = lambda: async_client  # type: ignore[method-assign]
+        return llm
+
+    @pytest.mark.asyncio
+    async def test_global_after_hook_runs_on_direct_acall(self):
+        from crewai.hooks import register_after_llm_call_hook
+
+        def redact(context: LLMCallHookContext) -> str | None:
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        register_after_llm_call_hook(redact)
+        llm = self._openai_llm()
+        messages = [{"role": "user", "content": "hi"}]
+
+        assert llm.call(messages) == "the [REDACTED] is 42"
+        assert await llm.acall(messages) == "the [REDACTED] is 42"
