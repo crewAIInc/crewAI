@@ -25,7 +25,7 @@ Para utilizar o recurso de treinamento, siga estes passos:
 crewai train -n <n_iterations> <filename> (optional)
 ```
 <Tip>
-  Substitua `<n_iterations>` pelo número desejado de iterações de treinamento e `<filename>` pelo nome de arquivo apropriado terminando com `.pkl`.
+  Substitua `<n_iterations>` pelo número desejado de iterações de treinamento e `<filename>` pelo nome de arquivo apropriado terminando com `.json`.
 </Tip>
 
 ### Treinando sua Crew Programaticamente
@@ -39,7 +39,7 @@ Para treinar sua crew de forma programática, siga estes passos:
 ```python Code
 n_iteracoes = 2
 entradas = {"topic": "Treinamento CrewAI"}
-nome_arquivo = "seu_modelo.pkl"
+nome_arquivo = "seu_modelo.json"
 
 try:
     SuaCrew().crew().train(
@@ -54,7 +54,7 @@ except Exception as e:
 ### Pontos Importantes
 
 - **Requisito de Número Inteiro Positivo:** Certifique-se de que o número de iterações (`n_iterations`) seja um inteiro positivo. O código lançará um `ValueError` se essa condição não for atendida.
-- **Requisito de Nome de Arquivo:** Certifique-se de que o nome do arquivo termine com `.pkl`. O código lançará um `ValueError` se essa condição não for atendida.
+- **Requisito de Nome de Arquivo:** Certifique-se de que o nome do arquivo termine com `.json`. O código lançará um `ValueError` se essa condição não for atendida.
 - **Tratamento de Erros:** O código trata erros de subprocessos e exceções inesperadas, fornecendo mensagens de erro ao usuário.
 
 É importante observar que o processo de treinamento pode levar algum tempo, dependendo da complexidade dos seus agentes e também exigirá seu feedback em cada iteração.

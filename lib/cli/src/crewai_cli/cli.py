@@ -335,7 +335,7 @@ def version(tools: bool) -> None:
     "-f",
     "--filename",
     type=str,
-    default="trained_agents_data.pkl",
+    default="trained_agents_data.json",
     help="Path to a custom file for training",
 )
 def train(
@@ -379,9 +379,9 @@ def train(
     type=str,
     default=None,
     help=(
-        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "Path to trained-agents JSON data (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
-        "default trained_agents_data.pkl. Equivalent to setting "
+        "default trained_agents_data.json. Equivalent to setting "
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
@@ -394,7 +394,7 @@ def replay(
 
     Args:
         task_id: The ID of the task to replay from.
-        trained_agents_file: Optional trained-agents pickle path.
+        trained_agents_file: Optional trained-agents JSON path.
     """
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.
     # Safe in every command the user explicitly invoked: get_or_create_project_id
@@ -607,9 +607,9 @@ def memory(
     type=str,
     default=None,
     help=(
-        "Crew-only: path to a trained-agents pickle (produced by `crewai train -f`). "
+        "Crew-only: path to trained-agents JSON data (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
-        "default trained_agents_data.pkl. Equivalent to setting "
+        "default trained_agents_data.json. Equivalent to setting "
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
@@ -654,9 +654,9 @@ def install(context: click.Context) -> None:
     type=str,
     default=None,
     help=(
-        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "Path to trained-agents JSON data (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
-        "default trained_agents_data.pkl. Equivalent to setting "
+        "default trained_agents_data.json. Equivalent to setting "
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )

@@ -25,10 +25,10 @@ def runner() -> CliRunner:
 
 @mock.patch("crewai_cli.run_crew.run_crew")
 def test_run_passes_filename_to_run_crew(run_crew_mock: mock.Mock, runner: CliRunner) -> None:
-    result = runner.invoke(run, ["-f", "my_custom_trained.pkl"])
+    result = runner.invoke(run, ["-f", "my_custom_trained.json"])
 
     run_crew_mock.assert_called_once_with(
-        trained_agents_file="my_custom_trained.pkl",
+        trained_agents_file="my_custom_trained.json",
         definition=None,
         inputs=None,
     )
@@ -58,11 +58,11 @@ def test_execute_command_sets_env_var_when_filename_provided(
     _execute_uv_script(
         "run_crew",
         entity_type="crew",
-        trained_agents_file="my_custom_trained.pkl",
+        trained_agents_file="my_custom_trained.json",
     )
 
     _, kwargs = subprocess_run.call_args
-    assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom_trained.pkl"
+    assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom_trained.json"
     assert kwargs["env"]["EXISTING"] == "value"
 
 

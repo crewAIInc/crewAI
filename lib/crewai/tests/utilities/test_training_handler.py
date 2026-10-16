@@ -8,7 +8,7 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 class InternalCrewTrainingHandler(unittest.TestCase):
     def setUp(self):
-        self.temp_file = tempfile.NamedTemporaryFile(suffix=".pkl", delete=False)
+        self.temp_file = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
         self.temp_file.close()
         self.handler = CrewTrainingHandler(self.temp_file.name)
 
@@ -38,10 +38,10 @@ class InternalCrewTrainingHandler(unittest.TestCase):
 
         data = self.handler.load()
         assert agent_id in data
-        assert initial_iteration in data[agent_id]
-        assert train_iteration in data[agent_id]
-        assert data[agent_id][initial_iteration] == initial_data
-        assert data[agent_id][train_iteration] == new_data
+        assert str(initial_iteration) in data[agent_id]
+        assert str(train_iteration) in data[agent_id]
+        assert data[agent_id][str(initial_iteration)] == initial_data
+        assert data[agent_id][str(train_iteration)] == new_data
 
     def test_append_new_agent(self):
         train_iteration = 1
@@ -50,10 +50,10 @@ class InternalCrewTrainingHandler(unittest.TestCase):
         self.handler.append(train_iteration, agent_id, new_data)
 
         data = self.handler.load()
-        assert data[agent_id][train_iteration] == new_data
+        assert data[agent_id][str(train_iteration)] == new_data
 
     def test_load_missing_file_does_not_acquire_lock(self):
-        handler = CrewTrainingHandler(self.temp_file.name + ".missing")
+        handler = CrewTrainingHandler(self.temp_file.name + ".missing.json")
 
         with patch(
             "crewai.utilities.file_handler.store_lock",
