@@ -1391,3 +1391,61 @@ def test_execute_uv_script_success_completes_without_exit(monkeypatch):
 
     run_crew_module._execute_uv_script("run_crew", entity_type="crew")
     assert called == [["uv", "run", "run_crew"]]
+
+
+@pytest.mark.parametrize(
+    ("returncode", "expected_status"),
+    [
+        (0, 0),
+        (1, 1),
+        (42, 42),
+        (-9, 137),  # SIGKILL -> 128 + 9
+        (-15, 143),  # SIGTERM -> 128 + 15
+        (-2, 130),  # SIGINT -> 128 + 2
+    ],
+)
+def test_exit_code_from_process_error_normalizes_signals(
+    returncode: int, expected_status: int
+):
+    """Subprocess signal terminations (negative return codes) normalize to 128 + signum."""
+    error = subprocess.CalledProcessError(returncode, ["uv", "run", "run_crew"])
+    assert run_crew_module._exit_code_from_process_error(error) == expected_status
+
+
+def test_execute_uv_script_normalizes_signal_termination(monkeypatch):
+    """When a child uv script is terminated by a signal, exit code maps to 128 + signum."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate a subprocess terminated by SIGKILL (-9)."""
+        raise subprocess.CalledProcessError(-9, command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 137
+
+
+def test_execute_uv_script_formats_error_for_flow_entity(monkeypatch, capsys):
+    """Verify entity_type='flow' formats 'running the flow' in error diagnostics."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    def fake_subprocess_run(command, **kwargs):
+        """Simulate a flow kickoff script failure."""
+        raise subprocess.CalledProcessError(1, command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("kickoff", entity_type="flow")
+
+    assert exc_info.value.code == 1
+    assert "An error occurred while running the flow" in capsys.readouterr().err
