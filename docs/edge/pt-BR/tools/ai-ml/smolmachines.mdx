@@ -1,0 +1,52 @@
+---
+title: Ferramentas de sandbox Smol Machines
+description: Execute comandos shell, Python e operações com arquivos em microVMs isoladas, locais ou na nuvem.
+icon: box
+mode: "wide"
+---
+
+# Ferramentas de sandbox Smol Machines
+
+Ofereça a um Agent um computador isolado com `SmolExecTool`, `SmolPythonTool` e `SmolFileTool`. Por padrão, as ferramentas executam em microVMs locais; use `target="cloud"` para usar Smol Machines Cloud. As três compartilham a mesma API de VM, permitindo alternar entre desenvolvimento local e execução hospedada.
+
+## Instalação
+
+```shell
+uv add "crewai-tools[smol]"
+```
+
+A execução local exige Linux com `/dev/kvm` ou um Mac com Apple Silicon. A execução na nuvem exige `SMOL_CLOUD_TOKEN` no worker.
+
+## Uso básico
+
+```python
+from crewai import Agent
+from crewai_tools import SmolExecTool
+
+agent = Agent(
+    role="Developer",
+    goal="Implement and test a feature",
+    backstory="Build and verify changes in an isolated computer.",
+    tools=[SmolExecTool()],
+)
+```
+
+Cada chamada cria e exclui uma VM por padrão. Use `persistent=True` para preservar o estado entre chamadas e feche a VM ao terminar:
+
+```python
+from crewai_tools import SmolExecTool, SmolFileTool
+
+shell = SmolExecTool(target="cloud", persistent=True)
+try:
+    shell.run(command="echo hello > /workspace/message.txt")
+    files = SmolFileTool(target="cloud", machine_id=shell.active_machine_id)
+    print(files.run(action="read", path="/workspace/message.txt"))
+finally:
+    shell.close()
+```
+
+A ferramenta de arquivos anexada não exclui a VM pertencente a `shell`. `SmolPythonTool` aceita `code` e, opcionalmente, `argv`, `env` e `timeout`. A ferramenta de arquivos aceita `read` e `write`; use `binary=True` para dados em base64.
+
+A rede da VM fica habilitada por padrão para tarefas que precisam de acesso à rede, como instalar pacotes. Use `network=False` para bloquear a saída de rede da VM. Imagens de registro em cache ainda podem iniciar sem rede na VM; para VMs locais, o SmolVM 1.23.0 ou posterior também baixa imagens não armazenadas em cache pelo host. O destino local permanece local mesmo quando há credenciais Cloud. Consulte o README do pacote de ferramentas para mais exemplos de ciclo de vida.
+
+Em versões locais anteriores do SmolVM, habilite a rede da VM para baixar imagens de registro não armazenadas em cache ou forneça um diretório rootfs local ou um arquivo `docker save` em `image`.
