@@ -1,8 +1,10 @@
 """Centralised lock factory.
 
 By default, if ``REDIS_URL`` is set and the ``redis`` package is installed,
-locks are distributed via ``portalocker.RedisLock``. Otherwise, falls back to
-the standard file-based ``portalocker.Lock`` in the system temp dir.
+locks are distributed via a redis-py ``SET NX PX`` lease that a background
+thread renews while the lock is held, so a holder that dies stops blocking
+others once its lease expires. Otherwise, falls back to the standard
+file-based ``portalocker.Lock`` in the system temp dir.
 
 The backend can be replaced via :func:`set_lock_backend` to plug in a custom
 locking strategy (e.g. a different distributed lock service, or an in-process
@@ -18,7 +20,9 @@ from hashlib import md5
 import logging
 import os
 import tempfile
+import threading
 from typing import TYPE_CHECKING, Final
+import uuid
 
 import portalocker
 import portalocker.exceptions
@@ -26,6 +30,7 @@ import portalocker.exceptions
 
 if TYPE_CHECKING:
     import redis
+    import redis.lock
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +38,12 @@ logger = logging.getLogger(__name__)
 _REDIS_URL: str | None = os.environ.get("REDIS_URL")
 
 _DEFAULT_TIMEOUT: Final[int] = 120
+
+# Seconds a Redis lock outlives its holder. The holder renews it every third of
+# this, so it only expires when the holder stops renewing.
+_LEASE_SECONDS: float = 30.0
+
+_RETRY_SECONDS: Final[float] = 0.05
 
 # A backend is called as ``backend(name, timeout=...)`` and returns a context
 # manager that holds the lock while the ``with`` block runs.
@@ -97,11 +108,7 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
     channel = f"crewai:{md5(name.encode(), usedforsecurity=False).hexdigest()}"
 
     if _redis_available():
-        with portalocker.RedisLock(
-            channel=channel,
-            connection=_redis_connection(),
-            timeout=timeout,
-        ):
+        with _redis_lease(name, channel, timeout):
             yield
     else:
         lock_dir = tempfile.gettempdir()
@@ -119,3 +126,57 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
             yield
         finally:
             pl.release()  # type: ignore[no-untyped-call]
+
+
+@contextmanager
+def _redis_lease(name: str, key: str, timeout: float) -> Iterator[None]:
+    """Hold ``key`` in Redis as a renewed ``SET NX PX`` lease while the block runs.
+
+    ``SET NX`` is atomic, so of any number of simultaneous callers exactly one
+    gets the lock and the rest retry until ``timeout``.
+    """
+    from redis.exceptions import LockError
+
+    lease = _redis_connection().lock(
+        key, timeout=_LEASE_SECONDS, sleep=_RETRY_SECONDS, thread_local=False
+    )
+    if not lease.acquire(blocking_timeout=timeout, token=uuid.uuid4().hex):
+        raise portalocker.exceptions.LockException(
+            f"Failed to acquire lock '{name}' in Redis (timeout={timeout}s)."
+        )
+
+    stop = threading.Event()
+    renewer = threading.Thread(
+        target=_renew_lease,
+        args=(lease, name, stop),
+        name=f"crewai-lock-renew:{name}",
+        daemon=True,
+    )
+    renewer.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        renewer.join()
+        try:
+            lease.release()
+        except LockError:
+            logger.warning(
+                "Lock '%s' expired before release; another holder may have run "
+                "concurrently with this one.",
+                name,
+            )
+
+
+def _renew_lease(lease: redis.lock.Lock, name: str, stop: threading.Event) -> None:
+    """Reset the lease TTL every third of ``_LEASE_SECONDS`` until ``stop`` is set."""
+    from redis.exceptions import LockError, RedisError
+
+    while not stop.wait(_LEASE_SECONDS / 3):
+        try:
+            lease.reacquire()
+        except LockError:  # noqa: PERF203
+            logger.warning("Lost lock '%s' while holding it; stopping renewal.", name)
+            return
+        except RedisError:
+            logger.warning("Failed to renew lock '%s'; retrying.", name, exc_info=True)
