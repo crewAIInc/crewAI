@@ -190,6 +190,38 @@ def _response_failure_reason(response: httpx.Response) -> DeployFailureReason | 
     return None
 
 
+def _refuse_on_running_comparison(response: httpx.Response) -> None:
+    """AMP held the push back because a models comparison is running on the
+    deployment (a redeploy would stop it and lose its runs): say so in AMP's
+    own sentence, which names `--force`, and exit 1 — nothing was deployed.
+
+    AMP names the refusal in `code`; its `error` carries the sentence, which is
+    what a CLI without this function prints. An AMP from before that change
+    named it in `error` and is still recognised."""
+    if response.status_code != 409:
+        return
+    try:
+        body = response.json()
+    except ValueError:
+        return
+    if not isinstance(body, dict) or "comparison_running" not in (
+        body.get("code"),
+        body.get("error"),
+    ):
+        return
+    # AMP's words, printed as they are: Rich markup in them (a bracketed
+    # word, a stray closing tag) must neither vanish nor raise.
+    console.print(
+        str(
+            body.get("message") or "A models comparison is running on this deployment."
+        ),
+        style="bold yellow",
+        markup=False,
+    )
+    console.print("Nothing was deployed.")
+    raise SystemExit(1)
+
+
 def _needs_lockfile_for_deploy(project_root: Path | None = None) -> bool:
     """Return True when deploy should create the project's first lockfile."""
     root = project_root or Path.cwd()
@@ -256,10 +288,18 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         # deployment runs — `crewai eval --models` finds the deployment by it.
         # Read, never minted: a deploy does not rewrite pyproject.toml.
         self.project_id = get_project_id()
+        # `crewai deploy push --force`: go ahead even while a models
+        # comparison runs on the deployment (`deploy` sets it per push).
+        self._force = False
 
     def _project(self) -> dict[str, str]:
         """`project_id=` for a create or push request, when the project has one."""
         return {"project_id": self.project_id} if self.project_id else {}
+
+    def _push(self) -> dict[str, Any]:
+        """A push request's options: `project_id=` as `_project`, and
+        `force=True` when the push was asked to go ahead whatever runs."""
+        return {**self._project(), **({"force": True} if self._force else {})}
 
     def _standard_no_param_error_message(self) -> None:
         """
@@ -371,6 +411,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         uuid: str | None = None,
         skip_validate: bool = False,
         source: DeploySource = "cli",
+        force: bool = False,
     ) -> None:
         """
         Deploy a crew using either UUID or project name.
@@ -379,7 +420,10 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
             source (DeploySource): Where the deployment was initiated from.
+            force (bool): Redeploy even while a models comparison runs on the
+                deployment, which stops it (AMP refuses otherwise).
         """
+        self._force = force
         if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid, source=source)
@@ -402,6 +446,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 self._standard_no_param_error_message()
                 return
 
+        _refuse_on_running_comparison(response)
         self._validate_response(response)
         self._display_deployment_info(response.json())
 
@@ -452,10 +497,10 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             env_vars = fetch_and_json_env_file()
             return self._update_crew_from_zip(deployment_uuid, repository, env_vars)
         if uuid:
-            return self.plus_api_client.deploy_by_uuid(uuid, **self._project())
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._push())
         if not project_name:
             raise ValueError("project_name is required to deploy by name")
-        return self.plus_api_client.deploy_by_name(project_name, **self._project())
+        return self.plus_api_client.deploy_by_name(project_name, **self._push())
 
     def _deploy_from_local_source(
         self,
@@ -466,9 +511,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
     ) -> Any | None:
         """Deploy using local origin, as before AMP zip_deployment existed."""
         if remote_repo_url and uuid:
-            return self.plus_api_client.deploy_by_uuid(uuid, **self._project())
+            return self.plus_api_client.deploy_by_uuid(uuid, **self._push())
         if remote_repo_url and project_name:
-            return self.plus_api_client.deploy_by_name(project_name, **self._project())
+            return self.plus_api_client.deploy_by_name(project_name, **self._push())
         if uuid:
             _display_git_remote_help()
             env_vars = fetch_and_json_env_file()
@@ -678,7 +723,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 uuid,
                 zip_file_path,
                 env=env_vars,
-                **self._project(),
+                **self._push(),
             )
         finally:
             zip_file_path.unlink(missing_ok=True)
