@@ -36,6 +36,7 @@ def _record_after_hook_result(
     agent: Agent | BaseAgent | LiteAgent | None,
     tool_name: str,
     result: str,
+    start_index: int,
 ) -> None:
     """Keep the agent's recorded tool result in step with a hook replacement.
 
@@ -44,11 +45,18 @@ def _record_after_hook_result(
     The ToolResult returned from here already carries the replacement, so
     without this the replacement is applied to the answer and then overwritten
     by the original copy.
+
+    Only entries appended by this call are considered, which is what
+    ``start_index`` marks. ToolUsage records nothing for a cache hit, a
+    usage-limit refusal or a tool that raised, while an earlier entry for the
+    same tool may still carry ``result_as_answer`` -- so searching the whole
+    list would let a failed call's error text overwrite the answer a previous
+    successful call had established.
     """
     recorded = getattr(agent, "tools_results", None)
     if not recorded:
         return
-    for entry in reversed(recorded):
+    for entry in reversed(recorded[start_index:]):
         if entry.get("tool_name") == tool_name:
             entry["result"] = result
             return
@@ -164,6 +172,10 @@ async def aexecute_tool_and_check_finality(
                 False,
             )
 
+        # Captured before the call so the after-hook update can be confined to
+        # the entry this call appends, if it appends one.
+        recorded = getattr(agent, "tools_results", None)
+        recorded_start = len(recorded) if recorded is not None else 0
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
 
@@ -180,7 +192,9 @@ async def aexecute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
         if modified_result is not None:
-            _record_after_hook_result(agent, sanitized_tool_name, modified_result)
+            _record_after_hook_result(
+                agent, sanitized_tool_name, modified_result, recorded_start
+            )
 
         # After the hooks, so post_tool_call can still inspect or rewrite the
         # result before the policy aborts.
@@ -329,6 +343,10 @@ def execute_tool_and_check_finality(
                 False,
             )
 
+        # Captured before the call so the after-hook update can be confined to
+        # the entry this call appends, if it appends one.
+        recorded = getattr(agent, "tools_results", None)
+        recorded_start = len(recorded) if recorded is not None else 0
         tool_result = tool_usage.use(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
 
@@ -345,7 +363,9 @@ def execute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
         if modified_result is not None:
-            _record_after_hook_result(agent, sanitized_tool_name, modified_result)
+            _record_after_hook_result(
+                agent, sanitized_tool_name, modified_result, recorded_start
+            )
 
         # After the hooks, so post_tool_call can still inspect or rewrite the
         # result before the policy aborts.

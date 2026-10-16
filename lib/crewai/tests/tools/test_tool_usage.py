@@ -1030,3 +1030,93 @@ def test_react_after_hook_that_returns_none_leaves_the_result_alone():
     assert seen == ["amount: 100"]
     assert tool_result.result == "amount: 100"
     assert process_tool_results(agent, tool_result.result) == "amount: 100"
+
+
+class SelectiveAmountToolInput(BaseModel):
+    which: str = Field(..., description="Which case to report an amount for")
+
+
+class SelectiveAmountTool(BaseTool):
+    name: str = "amount_tool"
+    description: str = "Reports an amount for a named case."
+    result_as_answer: bool = True
+    args_schema: type[BaseModel] = SelectiveAmountToolInput
+
+    def _run(self, which: str) -> str:
+        if which == "bad":
+            raise RuntimeError("upstream timeout")
+        return f"amount for {which}: 100"
+
+
+def _selective_action(which: str) -> AgentAction:
+    tool_input = json.dumps({"which": which})
+    return AgentAction(
+        thought="",
+        tool="amount_tool",
+        tool_input=tool_input,
+        text="Action: amount_tool\nAction Input: " + tool_input,
+    )
+
+
+def test_failed_call_does_not_overwrite_an_earlier_result_as_answer():
+    """A failing call must not rewrite the answer an earlier good call established.
+
+    ToolUsage records nothing on ``agent.tools_results`` when a tool raises, so
+    an update that searched the whole list would land on the entry the earlier
+    successful call left behind. That entry still carries ``result_as_answer``,
+    so the error text would become the task's final answer -- past the guard in
+    ToolUsage that deliberately withholds ``result_as_answer`` from a failure.
+
+    Two paths reach a good call followed by a failing one: the planning
+    StepExecutor keeps calling inside a single task, and across tasks only
+    LiteAgent clears ``tools_results``, so a second task on the same Agent
+    starts with the first task's entry still present.
+    """
+    agent = Agent(
+        role="Teller",
+        goal="Report amounts",
+        backstory="You report amounts.",
+        tools=[SelectiveAmountTool()],
+    )
+    agent.tools_results = []
+    tools = [SelectiveAmountTool().to_structured_tool()]
+    tools_handler = ToolsHandler(cache=CacheHandler())
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return f"[audited] {context.tool_result}"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        good = execute_tool_and_check_finality(
+            agent_action=_selective_action("good"),
+            tools=tools,
+            tools_handler=tools_handler,
+            agent=agent,
+        )
+        bad = execute_tool_and_check_finality(
+            agent_action=_selective_action("bad"),
+            tools=tools,
+            tools_handler=tools_handler,
+            agent=agent,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert good.result == "[audited] amount for good: 100"
+    assert good.result_as_answer is True
+
+    # The failing call must not be offered as the answer, and must leave no
+    # record of its own -- asserted so the test cannot pass merely because the
+    # failure never happened.
+    assert bad.result_as_answer is False
+    assert "upstream timeout" in bad.result
+    assert [entry["tool_name"] for entry in agent.tools_results] == ["amount_tool"]
+    assert agent.tools_results[0]["result"] == "[audited] amount for good: 100"
+    assert agent.tools_results[0]["result_as_answer"] is True
+
+    # What process_tool_results would hand back as the task's answer.
+    assert (
+        process_tool_results(agent, "untouched")
+        == "[audited] amount for good: 100"
+    )
