@@ -184,3 +184,24 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+    def test_value_containing_placeholder_is_not_reinterpolated(self):
+        """A substituted value that looks like another placeholder stays literal."""
+        template = "Write about {topic} in {year}"
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+            "topic": "{year} trends",
+            "year": "2024",
+        }
+
+        result = interpolate_only(template, inputs)
+
+        assert result == "Write about {year} trends in 2024"
+
+    def test_reinterpolation_does_not_depend_on_input_order(self):
+        """The result is the same whichever order the inputs are listed in."""
+        template = "{a} {b}"
+
+        first = interpolate_only(template, {"a": "{b}", "b": "X"})
+        second = interpolate_only(template, {"b": "X", "a": "{b}"})
+
+        assert first == second == "{b} X"
