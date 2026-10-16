@@ -70,6 +70,16 @@ try:
 except ImportError:  # pragma: no cover - crewai requires pydantic v2
     _ImportString = None  # type: ignore[assignment]
 
+try:
+    from pydantic import BeforeValidator as _BeforeValidator
+except ImportError:  # pragma: no cover - crewai requires pydantic v2
+    _BeforeValidator = None  # type: ignore[assignment]
+
+try:
+    from crewai.types.callback import string_to_callable as _string_to_callable
+except ImportError:  # pragma: no cover - defensive; base_tool imports it too
+    _string_to_callable = None  # type: ignore[assignment]
+
 
 _ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
     {
@@ -117,14 +127,57 @@ def _is_allowlisted_tool_module(module_name: str) -> bool:
     )
 
 
-def _annotation_resolves_import(annotation: Any) -> bool:
+def _is_import_string(tp: Any) -> bool:
+    """Match pydantic's ImportString as a class, an instance, or by name.
+
+    ``ImportString[Callable]`` is ``Annotated[Callable, ImportString()]``: an
+    *instance* in Annotated metadata, which ``field.annotation`` may carry
+    directly or pydantic may strip into ``field.metadata``, depending on the
+    version. The bare class and the "ImportString" forward-reference string
+    are matched too; anything unrecognized fails closed by name.
+    """
+    if _ImportString is not None and (
+        tp is _ImportString or isinstance(tp, _ImportString)
+    ):
+        return True
+    return (
+        getattr(tp, "__name__", "") == "ImportString"
+        or type(tp).__name__ == "ImportString"
+    )
+
+
+def _is_string_to_callable_validator(tp: Any) -> bool:
+    """Match a validator that resolves dotted-path strings into callables.
+
+    ``SerializableCallable`` is
+    ``Annotated[Callable, BeforeValidator(string_to_callable), ...]``: its
+    validator imports a string like ``"os.system"`` into a live callable at
+    validation time, and ``BaseTool`` pre-resolves ``cache_function`` strings
+    through the same importer before validation. A field carrying this
+    validator is import-resolving, exactly like ``ImportString``.
+    """
+    return (
+        _BeforeValidator is not None
+        and _string_to_callable is not None
+        and isinstance(tp, _BeforeValidator)
+        and tp.func is _string_to_callable
+    )
+
+
+def _annotation_resolves_import(
+    annotation: Any, metadata: Sequence[Any] | None = None
+) -> bool:
     """Detect annotations that turn a string into an imported Python object.
 
     ``pydantic.ImportString`` (including inside ``Optional``/``Union`` or
-    containers such as ``list[ImportString]``) resolves a dotted-path string
-    to the referenced object at validation time. A repository record is remote
-    JSON, so a string init_param for such a field becomes an arbitrary
-    callable (e.g. ``"os.system"``) on the loader's host.
+    containers such as ``list[ImportString]``, and in its parameterized
+    ``ImportString[Callable]`` form) and ``SerializableCallable`` (via its
+    ``string_to_callable`` validator) resolve a dotted-path string to the
+    referenced object at validation time. Depending on the pydantic version,
+    ``Annotated`` metadata may live inside ``field.annotation`` or be
+    stripped into ``field.metadata`` — both are scanned. A repository record
+    is remote JSON, so a string init_param for such a field becomes an
+    arbitrary callable (e.g. ``"os.system"``) on the loader's host.
     """
     seen: set[int] = set()
 
@@ -132,14 +185,16 @@ def _annotation_resolves_import(annotation: Any) -> bool:
         if tp is None or id(tp) in seen:
             return False
         seen.add(id(tp))
-        if tp is _ImportString or getattr(tp, "__name__", "") == "ImportString":
+        if _is_import_string(tp) or _is_string_to_callable_validator(tp):
             return True
         if tp == "ImportString":  # unresolved forward reference, fail closed
             return True
         # Unwrap Annotated / Optional / Union / generic containers.
         return any(_walk(arg) for arg in get_args(tp))
 
-    return _walk(annotation)
+    if _walk(annotation):
+        return True
+    return any(_walk(item) for item in (metadata or []))
 
 
 def _is_json_value(value: Any) -> bool:
@@ -173,8 +228,8 @@ def _validate_repository_tool_params(
     - ``init_params`` must be a JSON object;
     - every key must be a declared pydantic field of the tool class, so a
       record cannot smuggle unexpected keyword arguments into ``__init__``;
-    - no field may use an import-resolving annotation (``ImportString``,
-      including inside ``Optional``/containers): such a field turns a remote
+    - no field may use an import-resolving annotation (``ImportString`` in
+      any form, or ``SerializableCallable``): such a field turns a remote
       string like ``"os.system"`` into a live callable, which the tool may
       then invoke — arbitrary code execution on the loader's host;
     - every value must be JSON-typed.
@@ -196,7 +251,9 @@ def _validate_repository_tool_params(
                 f"Tool {tool_name!r} does not declare init parameter {key!r}; "
                 "repository records may only set declared tool fields."
             )
-        if _annotation_resolves_import(field.annotation):
+        if _annotation_resolves_import(
+            field.annotation, getattr(field, "metadata", None)
+        ):
             raise AgentRepositoryError(
                 f"Tool {tool_name!r} init parameter {key!r} uses an "
                 "import-resolving annotation: a repository string value would "
