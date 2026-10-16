@@ -25,7 +25,7 @@ CrewAI의 학습 기능을 사용하면 커맨드라인 인터페이스(CLI)를 
 crewai train -n <n_iterations> <filename> (optional)
 ```
 <Tip>
-  `<n_iterations>`를 원하는 학습 반복 횟수로, `<filename>`을 `.pkl`로 끝나는 적절한 파일 이름으로 바꿔 입력하세요.
+  `<n_iterations>`를 원하는 학습 반복 횟수로, `<filename>`을 `.json`으로 끝나는 적절한 파일 이름으로 바꿔 입력하세요.
 </Tip>
 
 ### 크루를 프로그래밍 방식으로 훈련시키기
@@ -39,7 +39,7 @@ crewai train -n <n_iterations> <filename> (optional)
 ```python Code
 n_iterations = 2
 inputs = {"topic": "CrewAI Training"}
-filename = "your_model.pkl"
+filename = "your_model.json"
 
 try:
     YourCrewName_Crew().crew().train(
@@ -55,7 +55,7 @@ except Exception as e:
 ### 주요 참고 사항
 
 - **양의 정수 필수 조건:** 반복 횟수(`n_iterations`)가 양의 정수인지 확인하세요. 이 조건이 충족되지 않으면 코드에서 `ValueError`가 발생합니다.
-- **파일명 필수 조건:** 파일명이 `.pkl`로 끝나는지 확인하세요. 이 조건이 충족되지 않으면 코드에서 `ValueError`가 발생합니다.
+- **파일명 필수 조건:** 파일명이 `.json`으로 끝나는지 확인하세요. 이 조건이 충족되지 않으면 코드에서 `ValueError`가 발생합니다.
 - **에러 처리:** 코드는 서브프로세스 오류 및 예기치 않은 예외를 처리하며, 사용자에게 에러 메시지를 제공합니다.
 
 에이전트의 복잡성에 따라 훈련 과정이 다소 시간이 소요될 수 있으며, 각 반복마다 사용자의 피드백이 필요함을 유의하세요.

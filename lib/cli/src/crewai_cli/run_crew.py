@@ -751,10 +751,10 @@ def run_crew(
     """Run the crew or flow.
 
     Args:
-        trained_agents_file: Optional path to a trained-agents pickle produced
+        trained_agents_file: Optional path to trained-agents JSON data produced
             by ``crewai train -f``. When set, exported as
             ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
-            file instead of the default ``trained_agents_data.pkl``.
+            file instead of the default ``trained_agents_data.json``.
         definition: Optional path to a declarative Flow definition.
         inputs: Optional JSON object of runtime inputs for a declarative flow
             or declarative (JSON) crew. Layered over the definition's own
@@ -900,7 +900,7 @@ def _execute_uv_script(
     Args:
         script_name: The project script to run.
         entity_type: The user-facing entity being run.
-        trained_agents_file: Optional trained-agents pickle path forwarded to
+        trained_agents_file: Optional trained-agents JSON path forwarded to
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
     command = ["uv", "run", script_name]

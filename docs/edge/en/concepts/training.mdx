@@ -22,14 +22,14 @@ To use the training feature, follow these steps:
 3. Run the following command:
 
 ```shell
-crewai train -n <n_iterations> -f <filename.pkl>
+crewai train -n <n_iterations> -f <filename.json>
 ```
 <Tip>
-  Replace `<n_iterations>` with the desired number of training iterations and `<filename>` with the appropriate filename ending with `.pkl`.
+  Replace `<n_iterations>` with the desired number of training iterations and `<filename>` with the appropriate filename ending with `.json`.
 </Tip>
 
 <Note>
-  If you omit `-f`, the output defaults to `trained_agents_data.pkl` in the current working directory. You can pass an absolute path to control where the file is written.
+  If you omit `-f`, the output defaults to `trained_agents_data.json` in the current working directory. You can pass an absolute path to control where the file is written.
 </Note>
 
 ### Training your Crew programmatically
@@ -43,7 +43,7 @@ To train your crew programmatically, use the following steps:
 ```python Code
 n_iterations = 2
 inputs = {"topic": "CrewAI Training"}
-filename = "your_model.pkl"
+filename = "your_model.json"
 
 try:
     YourCrewName_Crew().crew().train(
@@ -64,13 +64,13 @@ CrewAI uses the training artifacts in two ways: during training to incorporate y
 
 ```mermaid
 flowchart TD
-  A["Start training<br/>CLI: crewai train -n -f<br/>or Python: crew.train(...)"] --> B["Setup training mode<br/>- task.human_input = true<br/>- disable delegation<br/>- init training_data.pkl + trained file"]
+  A["Start training<br/>CLI: crewai train -n -f<br/>or Python: crew.train(...)"] --> B["Setup training mode<br/>- task.human_input = true<br/>- disable delegation<br/>- init training_data.json + trained file"]
 
   subgraph "Iterations"
     direction LR
     C["Iteration i<br/>initial_output"] --> D["User human_feedback"]
     D --> E["improved_output"]
-    E --> F["Append to training_data.pkl<br/>by agent_id and iteration"]
+    E --> F["Append to training_data.json<br/>by agent_id and iteration"]
   end
 
   B --> C
@@ -79,10 +79,10 @@ flowchart TD
   G -- "No" --> H["Evaluate per agent<br/>aggregate iterations"]
 
   H --> I["Consolidate<br/>suggestions[] + quality + final_summary"]
-  I --> J["Save by agent role to trained file<br/>(default: trained_agents_data.pkl)"]
+  I --> J["Save by agent role to trained file<br/>(default: trained_agents_data.json)"]
 
   J --> K["Normal (non-training) runs"]
-  K --> L["Auto-load suggestions<br/>from trained_agents_data.pkl"]
+  K --> L["Auto-load suggestions<br/>from trained_agents_data.json"]
   L --> M["Append to prompt<br/>for consistent improvements"]
 ```
 
@@ -92,7 +92,7 @@ flowchart TD
   - `initial_output`: the agent’s first answer
   - `human_feedback`: your inline feedback when prompted
   - `improved_output`: the agent’s follow-up answer after feedback
-- This data is stored in a working file named `training_data.pkl` keyed by the agent’s internal ID and iteration.
+- This data is stored in a working JSON file named `training_data.json` keyed by the agent’s internal ID and iteration.
 - While training is active, the agent automatically appends your prior human feedback to its prompt to enforce those instructions on subsequent attempts within the training session.
   Training is interactive: tasks set `human_input = true`, so running in a non-interactive environment will block on user input.
 
@@ -102,16 +102,16 @@ flowchart TD
   - `suggestions`: clear, actionable instructions distilled from your feedback and the difference between initial/improved outputs
   - `quality`: a 0–10 score capturing improvement
   - `final_summary`: a step-by-step set of action items for future tasks
-- These consolidated results are saved to the filename you pass to `train(...)` (default via CLI is `trained_agents_data.pkl`). Entries are keyed by the agent’s `role` so they can be applied across sessions.
+- These consolidated results are saved to the filename you pass to `train(...)` (default via CLI is `trained_agents_data.json`). Entries are keyed by the agent’s `role` so they can be applied across sessions.
 - During normal (non-training) execution, each agent automatically loads its consolidated `suggestions` and appends them to the task prompt as mandatory instructions. This gives you consistent improvements without changing your agent definitions.
 
 ### File summary
 
-- `training_data.pkl` (ephemeral, per-session):
+- `training_data.json` (ephemeral, per-session):
   - Structure: `agent_id -> { iteration_number: { initial_output, human_feedback, improved_output } }`
   - Purpose: capture raw data and human feedback during training
   - Location: saved in the current working directory (CWD)
-- `trained_agents_data.pkl` (or your custom filename):
+- `trained_agents_data.json` (or your custom filename):
   - Structure: `agent_role -> { suggestions: string[], quality: number, final_summary: string }`
   - Purpose: persist consolidated guidance for future runs
   - Location: written to the CWD by default; use `-f` to set a custom (including absolute) path
@@ -184,10 +184,10 @@ flowchart TD
 ### Key Points to Note
 
 - **Positive Integer Requirement:** Ensure that the number of iterations (`n_iterations`) is a positive integer. The code will raise a `ValueError` if this condition is not met.
-- **Filename Requirement:** Ensure that the filename ends with `.pkl`. The code will raise a `ValueError` if this condition is not met.
+- **Filename Requirement:** Ensure that the filename ends with `.json`. The code will raise a `ValueError` if this condition is not met.
 - **Error Handling:** The code handles subprocess errors and unexpected exceptions, providing error messages to the user.
 - Trained guidance is applied at prompt time; it does not modify your Python/YAML agent configuration.
-- Agents automatically load trained suggestions from a file named `trained_agents_data.pkl` located in the current working directory. If you trained to a different filename, pass that path with `Crew(trained_agents_file="my_custom_trained.pkl")`, set `CREWAI_TRAINED_AGENTS_FILE`, or use `crewai run -f my_custom_trained.pkl`.
+- Agents automatically load trained suggestions from a file named `trained_agents_data.json` located in the current working directory. If you trained to a different filename, pass that path with `Crew(trained_agents_file="my_custom_trained.json")`, set `CREWAI_TRAINED_AGENTS_FILE`, or use `crewai run -f my_custom_trained.json`.
 - You can change the output filename when calling `crewai train` with `-f/--filename`. Absolute paths are supported if you want to save outside the CWD.
 
 It is important to note that the training process may take some time, depending on the complexity of your agents and will also require your feedback on each iteration.
