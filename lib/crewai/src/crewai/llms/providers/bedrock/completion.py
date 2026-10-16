@@ -1300,6 +1300,7 @@ class BedrockCompletion(BaseLLM):
 
         if response_model:
             # Text instead of a structured_output call: parse it as the OpenAI provider does.
+            # Intentionally no after_llm_call hooks: this handler's text return never ran them.
             try:
                 return self._validate_structured_output(full_response, response_model)  # type: ignore[return-value]
             except ValueError as e:
@@ -1563,6 +1564,7 @@ class BedrockCompletion(BaseLLM):
 
             if response_model:
                 # Text instead of a structured_output call: parse it as the OpenAI provider does.
+                # Intentionally no after_llm_call hooks: this handler's text return never ran them.
                 try:
                     return self._validate_structured_output(
                         text_content, response_model
