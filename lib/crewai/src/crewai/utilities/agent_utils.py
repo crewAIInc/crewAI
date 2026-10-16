@@ -64,9 +64,8 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
-    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -331,7 +330,7 @@ def extract_task_section(text: str) -> str:
 
 
 def _executor_stop_words(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
 ) -> list[str]:
     """Return the executor's stop words, regardless of which field name it uses."""
     if executor_context is None:
@@ -345,7 +344,7 @@ def _executor_stop_words(
 @contextlib.contextmanager
 def _llm_stop_words_applied(
     llm: LLM | BaseLLM,
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
 ) -> Iterator[None]:
     """Apply the executor's stop words to the LLM for the duration of one call.
 
@@ -481,7 +480,7 @@ def enforce_rpm_limit(
 
 @contextlib.contextmanager
 def _prepare_llm_call(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     messages: list[LLMMessage],
     printer: Printer,
     verbose: bool = True,
@@ -518,7 +517,7 @@ def _prepare_llm_call(
 
 def _validate_and_finalize_llm_response(
     answer: Any,
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     printer: Printer,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
@@ -672,7 +671,7 @@ def get_llm_response(
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
+    executor_context: AgentExecutor | LiteAgent | None = None,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
     """Call the LLM and return the response, handling any invalid responses.
@@ -738,7 +737,7 @@ async def aget_llm_response(
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | AgentExecutor | None = None,
+    executor_context: AgentExecutor | None = None,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
     """Call the LLM asynchronously and return the response.
@@ -2102,7 +2101,7 @@ def parse_tool_call_args(
 
 
 def _setup_before_llm_call_hooks(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     printer: Printer,
     verbose: bool = True,
 ) -> bool:
@@ -2179,7 +2178,7 @@ def _setup_before_llm_call_hooks(
 
 
 def _setup_after_llm_call_hooks(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     answer: str | BaseModel,
     printer: Printer,
     verbose: bool = True,
