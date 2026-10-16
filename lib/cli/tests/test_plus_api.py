@@ -292,7 +292,7 @@ class TestPlusAPI(unittest.TestCase):
 
         response = self.api._make_request("GET", "test_endpoint")
 
-        mock_client_class.assert_called_once_with(trust_env=False, verify=True)
+        mock_client_class.assert_called_once_with(verify=True)
         mock_client_instance.request.assert_called_once_with(
             "GET", f"{self.api.base_url}/test_endpoint", headers=self.api.headers
         )
@@ -569,3 +569,52 @@ def test_requests_without_their_own_timeout_keep_the_httpx_default():
 
     assert request.url.path == "/crewai_plus/api/v1/agents/an_agent"
     assert request.extensions["timeout"]["read"] == 5.0
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_zip_deploy_uploads_go_through_the_proxy_named_in_the_environment(
+    tmp_path, monkeypatch
+):
+    # Corporate networks and coding-agent sandboxes only allow traffic through
+    # the proxy in HTTP(S)_PROXY; the CLI's own ZIP upload must use it too.
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import threading
+    import zipfile
+
+    seen = []
+
+    class Proxy(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            seen.append((self.path, self.headers.get("Authorization"), body))
+            self.send_response(201)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, format, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Proxy)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(name.lower(), raising=False)
+    monkeypatch.setenv("HTTP_PROXY", f"http://127.0.0.1:{server.server_address[1]}")
+    project_zip = tmp_path / "project.zip"
+    with zipfile.ZipFile(project_zip, "w") as archive:
+        archive.writestr("pyproject.toml", "[project]\nname = 'demo'\n")
+
+    try:
+        response = PlusAPI("amp-token", base_url="http://amp.test").create_crew_from_zip(
+            project_zip, name="demo"
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.status_code == 201
+    ((target, authorization, body),) = seen
+    assert target == "http://amp.test/crewai_plus/api/v1/crews/zip"
+    assert authorization == "Bearer amp-token"
+    assert b'filename="project.zip"' in body
