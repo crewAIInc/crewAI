@@ -686,3 +686,127 @@ class TestDirectLLMScopedHooks:
             )
 
         assert result == "contains [REDACTED]"
+
+
+class TestNativeProviderAfterHooksAsync:
+    """Native providers run after_llm_call hooks on direct acall() as they do on call()."""
+
+    @staticmethod
+    def _openai_llm():
+        from unittest.mock import AsyncMock, MagicMock
+
+        from openai.types.chat import ChatCompletion
+
+        from crewai.llm import LLM
+
+        completion = ChatCompletion.model_validate(
+            {
+                "id": "chatcmpl-1",
+                "object": "chat.completion",
+                "created": 0,
+                "model": "gpt-4o-mini",
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {"role": "assistant", "content": "the SECRET is 42"},
+                    }
+                ],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            }
+        )
+        raw = MagicMock()
+        raw.parse.return_value = completion
+        raw.text = completion.model_dump_json()
+
+        llm = LLM(model="gpt-4o-mini", api_key="sk-test")
+        sync_client = MagicMock()
+        sync_client.chat.completions.with_raw_response.create.return_value = raw
+        async_client = MagicMock()
+        async_client.chat.completions.with_raw_response.create = AsyncMock(return_value=raw)
+        llm._get_sync_client = lambda: sync_client  # type: ignore[method-assign]
+        llm._get_async_client = lambda: async_client  # type: ignore[method-assign]
+        return llm
+
+    @pytest.mark.asyncio
+    async def test_global_after_hook_runs_on_direct_acall(self):
+        from crewai.hooks import register_after_llm_call_hook
+
+        def redact(context: LLMCallHookContext) -> str | None:
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        register_after_llm_call_hook(redact)
+        llm = self._openai_llm()
+        messages = [{"role": "user", "content": "hi"}]
+
+        assert llm.call(messages) == "the [REDACTED] is 42"
+        assert await llm.acall(messages) == "the [REDACTED] is 42"
+
+    @staticmethod
+    def _bedrock_llm(monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from crewai.llm import LLM
+        from crewai.llms.providers.bedrock import completion as bedrock_completion
+
+        monkeypatch.setattr(bedrock_completion, "AIOBOTOCORE_AVAILABLE", True)
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "test-access-key")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "test-secret-key")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+        with patch("crewai.llms.providers.bedrock.completion.Session"):
+            llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+        response = {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "the SECRET is 42"}],
+                }
+            },
+            "usage": {"inputTokens": 1, "outputTokens": 1, "totalTokens": 2},
+        }
+        sync_client = MagicMock()
+        sync_client.converse.return_value = response
+        sync_client.converse_stream.side_effect = lambda **_: {
+            "stream": [
+                {"messageStart": {"role": "assistant"}},
+                {"contentBlockDelta": {"delta": {"text": "the SECRET "}}},
+                {"contentBlockDelta": {"delta": {"text": "is 42"}}},
+                {"contentBlockStop": {}},
+                {"messageStop": {"stopReason": "end_turn"}},
+            ]
+        }
+        async_client = MagicMock()
+        async_client.converse = AsyncMock(return_value=response)
+        llm._get_sync_client = lambda: sync_client  # type: ignore[method-assign]
+        llm._ensure_async_client = AsyncMock(return_value=async_client)  # type: ignore[method-assign]
+        return llm
+
+    @pytest.mark.asyncio
+    async def test_after_hook_abort_propagates_from_bedrock_converse(self, monkeypatch):
+        from crewai.hooks import register_after_llm_call_hook
+        from crewai.hooks.dispatch import HookAborted
+
+        def deny(context: LLMCallHookContext) -> str | None:
+            raise HookAborted("response blocked")
+
+        register_after_llm_call_hook(deny)
+        llm = self._bedrock_llm(monkeypatch)
+        messages = [{"role": "user", "content": "hi"}]
+
+        with pytest.raises(HookAborted, match="response blocked"):
+            llm.call(messages)
+        with pytest.raises(HookAborted, match="response blocked"):
+            await llm.acall(messages)
+
+    def test_global_after_hook_runs_on_bedrock_sync_streaming(self, monkeypatch):
+        from crewai.hooks import register_after_llm_call_hook
+
+        def redact(context: LLMCallHookContext) -> str | None:
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        register_after_llm_call_hook(redact)
+        llm = self._bedrock_llm(monkeypatch)
+        llm.stream = True
+
+        assert llm.call([{"role": "user", "content": "hi"}]) == "the [REDACTED] is 42"
