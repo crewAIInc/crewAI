@@ -777,10 +777,16 @@ mode: "wide"
   </Accordion>
 
   <Accordion title="Groq">
+    يتصل CrewAI بـ Groq عبر عميل OpenAI الأصلي، لذا لا حاجة لتثبيت LiteLLM.
+
     عيّن متغيرات البيئة التالية في ملف `.env`:
 
     ```toml Code
+    # Required
     GROQ_API_KEY=<your-api-key>
+
+    # Optional, point at a proxy or a private deployment endpoint
+    GROQ_BASE_URL=https://api.groq.com/openai/v1
     ```
 
     مثال الاستخدام في مشروع CrewAI:
@@ -793,10 +799,7 @@ mode: "wide"
 
     تميز Groq بين نماذج production وpreview وتسحب معرّفات النماذج بانتظام. تحقق من [كتالوج نماذج Groq](https://console.groq.com/docs/models) و[صفحة الإيقاف](https://console.groq.com/docs/deprecations) قبل اختيار نموذج للإنتاج.
 
-    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
-    ```bash
-    uv add 'crewai[litellm]'
-    ```
+    لا تقبل واجهة Groq كل معاملات OpenAI؛ على سبيل المثال، `logprobs` و`logit_bias` غير مدعومين. راجع [ملاحظات توافق Groq مع OpenAI](https://console.groq.com/docs/openai).
   </Accordion>
 
   <Accordion title="IBM watsonx.ai">

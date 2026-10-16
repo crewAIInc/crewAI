@@ -96,6 +96,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "groq": ProviderConfig(
+        base_url="https://api.groq.com/openai/v1",
+        api_key_env="GROQ_API_KEY",
+        base_url_env="GROQ_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -149,6 +155,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - groq: Groq (https://groq.com)
 
     Example:
         # Using provider prefix
@@ -285,3 +292,26 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             Whether the model supports function calling.
         """
         return super().supports_function_calling()
+
+    def get_context_window_size(self) -> int:
+        """Get the context window size for the model.
+
+        The catalog lists these providers' models under provider-qualified
+        ids such as ``groq/llama-3.3-70b-versatile``, so that id is looked up
+        first and the id as given second.
+
+        Returns:
+            The usable context window size in tokens.
+        """
+        from crewai.llms.context_window import (
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            LLM_CONTEXT_WINDOW_SIZES,
+            resolve_context_window_size,
+        )
+
+        return resolve_context_window_size(
+            f"{self.provider}/{self.model}",
+            LLM_CONTEXT_WINDOW_SIZES,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+            extra_names=(self.model,),
+        )
