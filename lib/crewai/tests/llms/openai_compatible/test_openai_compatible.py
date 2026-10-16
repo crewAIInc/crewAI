@@ -459,6 +459,25 @@ class TestTrustedRouter:
             assert llm.provider == "trustedrouter"
             assert llm.model == f"trustedrouter/{alias}"
 
+    def test_overlay_model_key_for_bare_alias_skips_router_aliases(self):
+        """Test a model:auto overlay key does not remap trustedrouter/auto."""
+        from crewai.llm_overlay import llm_overlay, overlay_model_for_model
+
+        overlay = {"model:auto": "openai/gpt-4o"}
+        with llm_overlay(overlay):
+            # As written, and as an existing instance records it
+            assert overlay_model_for_model("trustedrouter/auto") is None
+            assert (
+                overlay_model_for_model("trustedrouter/auto", "trustedrouter")
+                is None
+            )
+        with llm_overlay({"model:trustedrouter/auto": "openai/gpt-4o"}):
+            assert overlay_model_for_model("trustedrouter/auto") == "openai/gpt-4o"
+            assert (
+                overlay_model_for_model("trustedrouter/auto", "trustedrouter")
+                == "openai/gpt-4o"
+            )
+
     def test_missing_api_key_raises_error(self):
         """Test that a missing TrustedRouter API key raises ValueError."""
         original = os.environ.pop("TRUSTEDROUTER_API_KEY", None)

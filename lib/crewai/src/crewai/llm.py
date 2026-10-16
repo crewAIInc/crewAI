@@ -228,6 +228,17 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
 }
 
 
+def route_keeps_prefix(provider: str | None, model_part: str) -> bool:
+    """Whether ``<prefix>/<model_part>`` routed to ``provider`` keeps its prefix.
+
+    Every TrustedRouter model id is namespaced. ``trustedrouter/auto`` names a
+    router alias whose id keeps the prefix, while
+    ``trustedrouter/moonshotai/kimi-k3`` prefixes an upstream id that is
+    stripped. A bare remainder means the former.
+    """
+    return provider == "trustedrouter" and "/" not in model_part
+
+
 class Delta(TypedDict):
     content: str | None
     role: str | None
@@ -520,11 +531,7 @@ class LLM(BaseLLM):
             if canonical_provider and (valid_native_model or custom_openai_route):
                 provider = canonical_provider
                 use_native = True
-                # Every TrustedRouter model id is namespaced. "trustedrouter/auto"
-                # names a router alias whose id keeps the prefix, while
-                # "trustedrouter/moonshotai/kimi-k3" prefixes an upstream id that
-                # must be stripped. A bare remainder means the former.
-                if canonical_provider == "trustedrouter" and "/" not in model_part:
+                if route_keeps_prefix(canonical_provider, model_part):
                     model_string = model
                 else:
                     model_string = model_part
