@@ -1,0 +1,115 @@
+---
+title: Scrapewise Product Data Tool
+description: The `ScrapewiseProductDataTool` reads structured competitor product and pricing data already collected by ScrapeWise scrapers.
+icon: tags
+mode: "wide"
+---
+
+# `ScrapewiseProductDataTool`
+
+## Description
+
+The `ScrapewiseProductDataTool` reads structured product and pricing rows from [ScrapeWise](https://scrapewise.ai), a managed e-commerce scraping platform. ScrapeWise runs and maintains the scrapers; this tool reads the rows they have already stored — title, price, availability, product identifiers — so the agent never fetches or parses HTML itself.
+
+That makes it different from the live-scraping tools in this category: there is no page fetch, no bot wall, and no HTML in the tool output. The trade-off is that a site must already be configured as a scraper in your ScrapeWise account.
+
+## Installation
+
+To use this tool, install the ScrapeWise Python client:
+
+```shell
+uv add scrapewise
+```
+
+You'll also need to set up your ScrapeWise API key as an environment variable:
+
+```shell
+export SCRAPEWISE_API_KEY="your_api_key"
+```
+
+You can obtain an API key from the [ScrapeWise dashboard](https://portal.scrapewise.ai).
+
+## Steps to Get Started
+
+To effectively use the `ScrapewiseProductDataTool`, follow these steps:
+
+1. **Install Dependencies**: Install the required package using the command above.
+2. **Set Up API Key**: Set your ScrapeWise API key as an environment variable or provide it during initialization.
+3. **Find a Scraper ID**: Copy the id of the scraper whose data you want to read from the ScrapeWise dashboard.
+4. **Initialize the Tool**: Pin the tool to one scraper, or leave `scraper_id` out and let the agent pass it per call.
+
+## Example
+
+The following example demonstrates how to use the `ScrapewiseProductDataTool` to read competitor pricing:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapewiseProductDataTool
+
+# Initialize the tool, pinned to one scraper
+product_data_tool = ScrapewiseProductDataTool(scraper_id="68d4f1c9ab12cd34ef567890")
+
+# Define an agent that uses the tool
+pricing_analyst = Agent(
+    role="Pricing Analyst",
+    goal="Understand how competitor prices move across a product range",
+    backstory="An analyst who works from structured product feeds rather than raw web pages.",
+    tools=[product_data_tool],
+    verbose=True,
+)
+
+# Example task to summarise competitor pricing
+pricing_task = Task(
+    description="Read the latest competitor product rows and report the ten cheapest in-stock items.",
+    expected_output="A ranked list of ten products with price and availability.",
+    agent=pricing_analyst,
+)
+
+# Create and run the crew
+crew = Crew(agents=[pricing_analyst], tasks=[pricing_task])
+result = crew.kickoff()
+```
+
+Leave `scraper_id` out to let the agent choose the source per call:
+
+```python Code
+product_data_tool = ScrapewiseProductDataTool()
+```
+
+## Arguments
+
+The `ScrapewiseProductDataTool` accepts the following arguments on construction:
+
+- `scraper_id`: Optional. Pins the tool to a single ScrapeWise scraper. When set, the agent no longer needs to supply it.
+- `api_key`: Optional. Your ScrapeWise API key. Falls back to the `SCRAPEWISE_API_KEY` environment variable.
+- `base_url`: Optional. Override the API base URL. Only needed for non-default deployments.
+- `timeout`: Optional. Request timeout in seconds.
+
+At call time the tool accepts:
+
+- `scraper_id`: Required unless fixed on construction.
+- `max_rows`: Optional, default `25`. Must be between 1 and 100.
+
+## Environment Variables
+
+- `SCRAPEWISE_API_KEY`: Required. Your ScrapeWise API key.
+
+## Row Limit
+
+The ScrapeWise sample-data endpoint returns at most 100 rows per call, so `max_rows` is validated against that ceiling. It is a sample of the stored rows, not the full dataset — use ScrapeWise exports for full-volume analysis.
+
+## Error Handling
+
+The tool returns errors as text rather than raising, so a failed read does not abort the crew:
+
+- A missing `scrapewise` package raises `ImportError` at construction time, carrying the install command.
+- A missing API key raises `ValueError` at construction time.
+- A `max_rows` value outside 1–100 is rejected by the input schema.
+- API and transport failures are returned as `Error reading ScrapeWise product data: ...`.
+- A scraper that has no stored rows yet returns an explicit message saying so, not an empty string.
+
+## Best Practices
+
+- Pin `scraper_id` when the crew only ever reads one site — it removes a parameter the model can get wrong.
+- Keep `max_rows` low (25 or less) for reasoning tasks; large row dumps crowd the context window.
+- Use one tool instance per scraper when an agent compares two sites, and name the agents after the sites so the model keeps them apart.
