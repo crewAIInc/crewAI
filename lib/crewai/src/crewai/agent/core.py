@@ -10,6 +10,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+import threading
 import time
 from typing import (
     TYPE_CHECKING,
@@ -153,11 +154,15 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
 # to completion on one of these threads, each of which owns a fresh event
 # loop, so the caller's loop stays free and the pre-1.14.5 sync contract
 # (e.g. crew.kickoff() inside a Jupyter cell) keeps working. The pool is
-# bounded to limit thread creation, and workers never submit back into it,
-# so a blocking future.result() on the caller side cannot deadlock the pool.
+# bounded to limit thread creation. Calls that originate on a pool worker
+# itself (a re-entrant sync kickoff, e.g. from an executor step callback that
+# calls crew.kickoff()) run on a dedicated thread instead: submitting back
+# into the bounded pool and blocking could deadlock once every worker is
+# waiting on a queued job.
+_SYNC_INVOKE_THREAD_PREFIX = "crewai-sync-invoke"
 _sync_invoke_pool = concurrent.futures.ThreadPoolExecutor(
     max_workers=4,
-    thread_name_prefix="crewai-sync-invoke",
+    thread_name_prefix=_SYNC_INVOKE_THREAD_PREFIX,
 )
 
 
@@ -170,8 +175,39 @@ def _run_awaitable_on_worker_thread(
     raised by the coroutine are re-raised on the caller via future.result().
     """
     ctx = contextvars.copy_context()
+    if threading.current_thread().name.startswith(_SYNC_INVOKE_THREAD_PREFIX):
+        return _run_awaitable_on_dedicated_thread(ctx, coro)
     future = _sync_invoke_pool.submit(ctx.run, asyncio.run, coro)
     return future.result()
+
+
+def _run_awaitable_on_dedicated_thread(
+    ctx: contextvars.Context, coro: Coroutine[Any, Any, dict[str, Any]]
+) -> dict[str, Any]:
+    """Drive a coroutine to completion on a fresh thread with its own loop.
+
+    Used for re-entrant sync-in-loop invocations (see above): a new thread
+    per call keeps the bounded pool deadlock-free, and the depth of such
+    nesting is bounded by user code.
+    """
+    outcome: dict[str, Any] = {}
+
+    def _target() -> None:
+        try:
+            outcome["result"] = ctx.run(asyncio.run, coro)
+        except BaseException as exc:  # re-raised on the caller below
+            outcome["error"] = exc
+
+    thread = threading.Thread(
+        target=_target,
+        name=f"{_SYNC_INVOKE_THREAD_PREFIX}-reentrant",
+        daemon=True,
+    )
+    thread.start()
+    thread.join()
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome["result"]
 
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
