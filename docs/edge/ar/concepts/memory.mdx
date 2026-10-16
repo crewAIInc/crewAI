@@ -695,6 +695,41 @@ def my_embedder(texts: list[str]) -> list[list[float]]:
 memory = Memory(embedder=my_embedder)
 ```
 </Accordion>
+
+<Accordion title="Oracle Database">
+
+ثبّت `oracledb` (`uv add oracledb`) واستورد نموذج تضمين إلى Oracle Database قبل استخدام هذا المزود. عيّن `ORACLE_EMBEDDING_MODEL` إلى نموذج يستطيع الحساب المكوّن الوصول إليه. يستدعي المزود `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS`.
+
+```python
+import os
+
+from crewai import Memory
+
+memory = Memory(embedder={
+    "provider": "oracle",
+    "config": {
+        "connection_params": {
+            "user": os.environ["ORACLE_DB_USERNAME"],
+            "password": os.environ["ORACLE_DB_SECRET"],
+            "dsn": os.environ["ORACLE_DB_DSN"],
+        },
+        "embedding_params": {
+            "provider": "database",
+            "model": os.environ["ORACLE_EMBEDDING_MODEL"],
+        },
+    },
+})
+```
+
+وفّر واحداً فقط من `connection_params` أو كائن اتصال `conn` يمرّر برمجياً. لا تُستخدم `ORACLE_CONN` ككائن اتصال.
+
+تضبط `proxy` أو `ORACLE_PROXY` الاختياريتان `UTL_HTTP` لطلبات التضمين البعيدة.
+
+يجب ألا تتجاوز المستندات 4000 حرف؛ تُرتّب المتجهات المعادة وفق `embed_id`، وتؤدي النتائج المفقودة أو المكررة إلى خطأ.
+
+يختار هذا الإعداد مزود التضمين، بينما يُضبط تخزين Memory وLLM الخاص به بصورة مستقلة. للبحث في مستندات جداول Oracle، استخدم [Oracle Vector Search](/edge/ar/tools/database-data/oraclevectorsearchtool).
+
+</Accordion>
 </AccordionGroup>
 
 ### مرجع المزودين
@@ -702,6 +737,7 @@ memory = Memory(embedder=my_embedder)
 | المزود | المفتاح | النموذج النموذجي | ملاحظات |
 | :--- | :--- | :--- | :--- |
 | OpenAI | `openai` | `text-embedding-3-small` | افتراضي. عيّن `OPENAI_API_KEY`. |
+| Oracle Database | `oracle` | `ORACLE_EMBEDDING_MODEL` | نموذج مستورد في Oracle؛ يتطلب `oracledb` والوصول إلى `DBMS_VECTOR_CHAIN`. |
 | Ollama | `ollama` | `mxbai-embed-large` | محلي، لا حاجة لمفتاح API. |
 | Azure OpenAI | `azure` | `text-embedding-ada-002` | يتطلب `deployment_id`. |
 | Google AI | `google-generativeai` | `gemini-embedding-001` | عيّن `GOOGLE_API_KEY`. |
