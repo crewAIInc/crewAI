@@ -23,6 +23,7 @@ import sys
 
 PROMPTS = ["alpha", "beta"]
 TOOLS = ["tool_a", "tool_b"]
+REPEAT_CURSOR = "--repeat-cursor" in sys.argv
 
 
 def send(obj):
@@ -43,6 +44,8 @@ def tool_obj(name):
 
 
 def page(items, builder, cursor, next_cursor):
+    if REPEAT_CURSOR:
+        return {"items": [builder(items[0])], "nextCursor": next_cursor}
     if cursor is None:
         return {"items": [builder(items[0])], "nextCursor": next_cursor}
     if cursor == next_cursor:
@@ -189,3 +192,93 @@ async def test_resolver_discovery_follows_pagination(monkeypatch):
 
     assert sorted(schemas) == ["page_one_tool", "page_two_tool"]
     assert requested_cursors == [None, "cursor-2"]
+
+
+@pytest.mark.asyncio
+async def test_repeated_prompt_cursor_is_rejected(paged_server):
+    """A server that answers every page with the same cursor must not be followed forever.
+
+    Without the guard the loop would request the same page until the discovery
+    timeout expires, discarding the prompts it had already collected.
+    """
+    from crewai.mcp.client import MCPClient
+    from crewai.mcp.transports.stdio import StdioTransport
+
+    client = MCPClient(
+        transport=StdioTransport(
+            command=sys.executable, args=[paged_server, "--repeat-cursor"]
+        )
+    )
+    try:
+        await client.connect()
+        with pytest.raises(ConnectionError, match="repeated prompts/list pagination cursor"):
+            await client.list_prompts()
+    finally:
+        await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_repeated_tool_cursor_is_rejected(monkeypatch):
+    """The same guard on the HTTPS discovery path, where no retry wrapper hides it."""
+    import mcp
+    import mcp.client.streamable_http
+
+    requested_cursors = []
+
+    class FakeListToolsResult:
+        def __init__(self):
+            self.tools = [
+                type(
+                    "Tool",
+                    (),
+                    {
+                        "name": "sticky_tool",
+                        "description": "sticky",
+                        "inputSchema": {"type": "object", "properties": {}},
+                    },
+                )()
+            ]
+            self.nextCursor = "sticky"
+
+    class FakeSession:
+        def __init__(self, read, write, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def initialize(self):
+            return None
+
+        async def list_tools(self, cursor=None, *, params=None):
+            requested_cursors.append(
+                cursor if cursor is not None else getattr(params, "cursor", None)
+            )
+            return FakeListToolsResult()
+
+    class FakeStreamableHttpClient:
+        def __init__(self, url, *args, **kwargs):
+            self.url = url
+
+        async def __aenter__(self):
+            return (object(), object(), lambda: "session-id")
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(
+        mcp.client.streamable_http, "streamablehttp_client", FakeStreamableHttpClient
+    )
+    monkeypatch.setattr(mcp, "ClientSession", FakeSession)
+
+    from crewai.mcp.tool_resolver import MCPToolResolver
+
+    resolver = MCPToolResolver(agent=None, logger=logging.getLogger(__name__))
+    with pytest.raises(RuntimeError, match="repeated tools/list pagination cursor"):
+        await resolver._discover_mcp_tools("https://example.invalid/mcp")
+
+    # It gave up on the second page rather than asking for the same one again.
+    assert requested_cursors == [None, "sticky"]

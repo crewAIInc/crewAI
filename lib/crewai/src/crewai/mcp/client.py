@@ -647,6 +647,7 @@ class MCPClient:
     async def _list_prompts_impl(self) -> list[dict[str, Any]]:
         """Internal implementation of list_prompts."""
         prompts: list[dict[str, Any]] = []
+        seen_cursors: set[str] = set()
         cursor: str | None = None
 
         while True:
@@ -666,6 +667,11 @@ class MCPClient:
 
             if prompts_result.nextCursor is None:
                 return prompts
+            if prompts_result.nextCursor in seen_cursors:
+                raise RuntimeError(
+                    "MCP server returned a repeated prompts/list pagination cursor"
+                )
+            seen_cursors.add(prompts_result.nextCursor)
             cursor = prompts_result.nextCursor
 
     async def get_prompt(

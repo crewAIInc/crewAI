@@ -670,6 +670,7 @@ class MCPToolResolver:
                 )
 
                 schemas = {}
+                seen_cursors: set[str] = set()
                 cursor: str | None = None
 
                 while True:
@@ -692,6 +693,11 @@ class MCPToolResolver:
 
                     if tools_result.nextCursor is None:
                         return schemas
+                    if tools_result.nextCursor in seen_cursors:
+                        raise RuntimeError(
+                            "MCP server returned a repeated tools/list pagination cursor"
+                        )
+                    seen_cursors.add(tools_result.nextCursor)
                     cursor = tools_result.nextCursor
 
     @staticmethod
