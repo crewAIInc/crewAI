@@ -7,7 +7,7 @@ class-level defaults via ``ConversationalConfig``. Session identity is ``state.i
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 from uuid import uuid4
@@ -58,13 +58,22 @@ class ChatState(BaseModel):
     session_ready: bool = False
 
 
-def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
+def _coerce_user_message_text(user_message: str | Mapping[str, Any] | Any) -> str:
+    """Coerce conversational user message into plain text.
+
+    Collapses strings, mapping structures, and model messages containing text or
+    multimodal content parts into a promptable string.
+    """
     if isinstance(user_message, str):
         return user_message
-    if isinstance(user_message, dict):
-        content = user_message.get("content")
-        if content is not None:
-            return str(content)
+    from crewai.utilities.agent_utils import message_content_text
+
+    if isinstance(user_message, Mapping) and "content" in user_message:
+        return message_content_text(dict(user_message))
+    if isinstance(user_message, BaseModel) and hasattr(user_message, "content"):
+        return message_content_text(user_message.model_dump())
+    if hasattr(user_message, "content"):
+        return message_content_text({"content": user_message.content})
     return str(user_message)
 
 
