@@ -434,20 +434,34 @@ class MCPClient:
 
     async def _list_tools_impl(self) -> list[dict[str, Any]]:
         """Internal implementation of list_tools."""
-        tools_result = await asyncio.wait_for(
-            self.session.list_tools(),
-            timeout=self.discovery_timeout,
-        )
+        tools: list[dict[str, Any]] = []
+        cursor: str | None = None
 
-        return [
-            {
-                "name": sanitize_tool_name(tool.name),
-                "original_name": tool.name,
-                "description": getattr(tool, "description", ""),
-                "inputSchema": getattr(tool, "inputSchema", {}),
-            }
-            for tool in tools_result.tools
-        ]
+        while True:
+            if cursor is None:
+                tools_result = await asyncio.wait_for(
+                    self.session.list_tools(),
+                    timeout=self.discovery_timeout,
+                )
+            else:
+                tools_result = await asyncio.wait_for(
+                    self.session.list_tools(cursor=cursor),
+                    timeout=self.discovery_timeout,
+                )
+
+            tools.extend(
+                {
+                    "name": sanitize_tool_name(tool.name),
+                    "original_name": tool.name,
+                    "description": getattr(tool, "description", ""),
+                    "inputSchema": getattr(tool, "inputSchema", {}),
+                }
+                for tool in tools_result.tools
+            )
+
+            cursor = tools_result.nextCursor
+            if cursor is None:
+                return tools
 
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
