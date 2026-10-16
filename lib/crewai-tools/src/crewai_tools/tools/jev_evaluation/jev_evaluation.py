@@ -406,13 +406,15 @@ def _query(
             }
         )
     if isinstance(record, RouteRecord):
-        probabilities = getattr(answer, "probabilities", None) or {}
+        probabilities = getattr(answer, "probabilities", None)
+        if probabilities is None:
+            probabilities = {}
+        elif isinstance(probabilities, Mapping):
+            probabilities = dict(probabilities)
         decision = {
             "choice": getattr(answer, "choice", None),
             "confidence": getattr(answer, "confidence", None),
-            "probabilities": dict(probabilities)
-            if isinstance(probabilities, Mapping)
-            else probabilities,
+            "probabilities": probabilities,
         }
     else:
         decision = {"noul": getattr(answer, "noul", None)}

@@ -568,8 +568,9 @@ def test_live_answer_of_the_wrong_type_fails(record, answers, error):
     assert outcome_of(record).outcome == "failed"
 
 
-def test_malformed_probabilities_fail_without_stopping_collection():
-    bad = SimpleNamespace(choice="tech", confidence=0.9, probabilities=42)
+@pytest.mark.parametrize("probabilities", [42, 0, False, "", []])
+def test_malformed_probabilities_fail_without_stopping_collection(probabilities):
+    bad = SimpleNamespace(choice="tech", confidence=0.9, probabilities=probabilities)
     good = SimpleNamespace(choice="tech", confidence=0.9, probabilities={"tech": 0.9})
     client = FakeClient(
         SimpleNamespace(answers={"route": bad}),
