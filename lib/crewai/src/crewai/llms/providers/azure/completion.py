@@ -10,7 +10,10 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
+from crewai.llms._finish_reason_utils import (
+    extract_choices_finish_reason_and_id,
+    warn_if_truncated,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -883,6 +886,13 @@ class AzureCompletion(BaseLLM):
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
+        warn_if_truncated(
+            finish_reason,
+            "azure",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
+
         # Without available_functions, return tool_calls so the caller (executor) handles execution
         if message.tool_calls and not available_functions:
             self._emit_call_completed_event(
@@ -1076,6 +1086,12 @@ class AzureCompletion(BaseLLM):
         Returns:
             Final response content after processing, or structured output
         """
+        warn_if_truncated(
+            finish_reason,
+            "azure",
+            log=logging.getLogger(),
+            token_limit=params.get("max_tokens"),
+        )
         if usage_data:
             self._track_token_usage_internal(usage_data)
 

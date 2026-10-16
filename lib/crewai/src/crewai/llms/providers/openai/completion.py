@@ -47,7 +47,10 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
+from crewai.llms._finish_reason_utils import (
+    extract_choices_finish_reason_and_id,
+    warn_if_truncated,
+)
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -1198,6 +1201,13 @@ class OpenAICompletion(BaseLLM):
                 response
             )
 
+            warn_if_truncated(
+                finish_reason,
+                "openai",
+                log=logging.getLogger(),
+                token_limit=self._request_token_limit(params),
+            )
+
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1343,6 +1353,13 @@ class OpenAICompletion(BaseLLM):
 
             finish_reason, response_id = self._extract_responses_finish_reason_and_id(
                 response
+            )
+
+            warn_if_truncated(
+                finish_reason,
+                "openai",
+                log=logging.getLogger(),
+                token_limit=self._request_token_limit(params),
             )
 
             if self.parse_tool_outputs:
@@ -1504,7 +1521,11 @@ class OpenAICompletion(BaseLLM):
                         }
                     )
 
-            elif event.type == "response.completed":
+            elif event.type in ("response.completed", "response.incomplete"):
+                # A token-capped stream ends with ``response.incomplete``,
+                # not ``response.completed`` — capture it here too so the
+                # truncation warning, usage tracking and chaining see the
+                # terminal response instead of None (#7013).
                 final_response = event.response
                 if self.auto_chain and event.response and event.response.id:
                     self._last_response_id = event.response.id
@@ -1520,6 +1541,13 @@ class OpenAICompletion(BaseLLM):
             self._extract_responses_finish_reason_and_id(final_response)
             if final_response is not None
             else (None, response_id_stream)
+        )
+
+        warn_if_truncated(
+            finish_reason,
+            "openai",
+            log=logging.getLogger(),
+            token_limit=self._request_token_limit(params),
         )
 
         if self.parse_tool_outputs and final_response:
@@ -1641,7 +1669,11 @@ class OpenAICompletion(BaseLLM):
                         }
                     )
 
-            elif event.type == "response.completed":
+            elif event.type in ("response.completed", "response.incomplete"):
+                # A token-capped stream ends with ``response.incomplete``,
+                # not ``response.completed`` — capture it here too so the
+                # truncation warning, usage tracking and chaining see the
+                # terminal response instead of None (#7013).
                 final_response = event.response
                 if self.auto_chain and event.response and event.response.id:
                     self._last_response_id = event.response.id
@@ -1657,6 +1689,13 @@ class OpenAICompletion(BaseLLM):
             self._extract_responses_finish_reason_and_id(final_response)
             if final_response is not None
             else (None, response_id_stream)
+        )
+
+        warn_if_truncated(
+            finish_reason,
+            "openai",
+            log=logging.getLogger(),
+            token_limit=self._request_token_limit(params),
         )
 
         if self.parse_tool_outputs and final_response:
@@ -2243,6 +2282,13 @@ class OpenAICompletion(BaseLLM):
                 parsed_finish_reason, parsed_response_id = (
                     self._extract_chat_finish_reason_and_id(parsed_response)
                 )
+
+                warn_if_truncated(
+                    parsed_finish_reason,
+                    "openai",
+                    log=logging.getLogger(),
+                    token_limit=self._request_token_limit(params),
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -2277,6 +2323,13 @@ class OpenAICompletion(BaseLLM):
             message = choice.message
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
+            )
+
+            warn_if_truncated(
+                finish_reason,
+                "openai",
+                log=logging.getLogger(),
+                token_limit=self._request_token_limit(params),
             )
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
@@ -2422,6 +2475,12 @@ class OpenAICompletion(BaseLLM):
             tool execution result when available_functions is provided,
             or the text response string.
         """
+        warn_if_truncated(
+            finish_reason,
+            "openai",
+            log=logging.getLogger(),
+            token_limit=self._request_token_limit(params),
+        )
         if usage_data:
             self._track_token_usage_internal(usage_data)
 
@@ -2538,6 +2597,13 @@ class OpenAICompletion(BaseLLM):
                     self._track_token_usage_internal(usage)
                     parsed_finish_reason, parsed_response_id = (
                         self._extract_chat_finish_reason_and_id(final_completion)
+                    )
+
+                    warn_if_truncated(
+                        parsed_finish_reason,
+                        "openai",
+                        log=logging.getLogger(),
+                        token_limit=self._request_token_limit(params),
                     )
                     if final_completion.choices:
                         parsed_result = final_completion.choices[0].message.parsed
@@ -2685,6 +2751,13 @@ class OpenAICompletion(BaseLLM):
                 parsed_finish_reason, parsed_response_id = (
                     self._extract_chat_finish_reason_and_id(parsed_response)
                 )
+
+                warn_if_truncated(
+                    parsed_finish_reason,
+                    "openai",
+                    log=logging.getLogger(),
+                    token_limit=self._request_token_limit(params),
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -2717,6 +2790,13 @@ class OpenAICompletion(BaseLLM):
             message = choice.message
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
+            )
+
+            warn_if_truncated(
+                finish_reason,
+                "openai",
+                log=logging.getLogger(),
+                token_limit=self._request_token_limit(params),
             )
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
@@ -2882,6 +2962,13 @@ class OpenAICompletion(BaseLLM):
             if usage_data:
                 self._track_token_usage_internal(usage_data)
 
+            warn_if_truncated(
+                parsed_stream_finish_reason,
+                "openai",
+                log=logging.getLogger(),
+                token_limit=self._request_token_limit(params),
+            )
+
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)
 
@@ -3039,11 +3126,35 @@ class OpenAICompletion(BaseLLM):
     ) -> tuple[str | None, str | None]:
         """Extract finish_reason and response_id from an OpenAI Responses
         API ``Response`` object. The Responses API exposes ``status`` rather
-        than ``finish_reason``; we forward the raw status value.
+        than ``finish_reason``; we forward the raw status value, except for
+        ``incomplete``: that status also covers non-token stops (e.g.
+        ``content_filter``), so ``incomplete_details.reason`` is forwarded
+        instead (``max_output_tokens`` when the token cap was hit). An
+        ``incomplete`` without a usable reason stays ``incomplete``, which
+        never matches the truncation mapping.
+        """
+        status = getattr(response, "status", None)
+        if status == "incomplete":
+            details = getattr(response, "incomplete_details", None)
+            reason = getattr(details, "reason", None)
+            return (reason if isinstance(reason, str) and reason else "incomplete"), (
+                getattr(response, "id", None)
+            )
+        return status, getattr(response, "id", None)
+
+    @staticmethod
+    def _request_token_limit(params: dict[str, Any]) -> int | None:
+        """Return the token cap actually sent with this request, if any.
+
+        Read from ``params`` — the value on the wire — rather than the
+        configured ``max_tokens`` field: the Responses API remaps it to
+        ``max_output_tokens`` and newer chat models use
+        ``max_completion_tokens`` (#7013 asks for the effective limit).
         """
         return (
-            getattr(response, "status", None),
-            getattr(response, "id", None),
+            params.get("max_output_tokens")
+            or params.get("max_completion_tokens")
+            or params.get("max_tokens")
         )
 
     def _extract_openai_token_usage(

@@ -13,6 +13,7 @@ from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
+from crewai.llms._finish_reason_utils import warn_if_truncated
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
 from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -772,9 +773,13 @@ class BedrockCompletion(BaseLLM):
             stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
-                if stop_reason == "max_tokens":
-                    logging.warning("Response truncated due to max_tokens limit")
-                elif stop_reason == "content_filtered":
+                warn_if_truncated(
+                    stop_reason,
+                    "bedrock",
+                    log=logging.getLogger(),
+                    token_limit=self.max_tokens,
+                )
+                if stop_reason == "content_filtered":
                     logging.warning("Response was filtered due to content policy")
 
             # Extract content following AWS response structure
@@ -1223,11 +1228,13 @@ class BedrockCompletion(BaseLLM):
                         stop_reason = event["messageStop"].get("stopReason")
                         stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
-                        if stop_reason == "max_tokens":
-                            logging.warning(
-                                "Streaming response truncated due to max_tokens"
-                            )
-                        elif stop_reason == "content_filtered":
+                        warn_if_truncated(
+                            stop_reason,
+                            "bedrock",
+                            log=logging.getLogger(),
+                            token_limit=self.max_tokens,
+                        )
+                        if stop_reason == "content_filtered":
                             logging.warning(
                                 "Streaming response filtered due to content policy"
                             )
@@ -1387,9 +1394,13 @@ class BedrockCompletion(BaseLLM):
             stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
-                if stop_reason == "max_tokens":
-                    logging.warning("Response truncated due to max_tokens limit")
-                elif stop_reason == "content_filtered":
+                warn_if_truncated(
+                    stop_reason,
+                    "bedrock",
+                    log=logging.getLogger(),
+                    token_limit=self.max_tokens,
+                )
+                if stop_reason == "content_filtered":
                     logging.warning("Response was filtered due to content policy")
 
             output = response.get("output", {})
@@ -1838,11 +1849,13 @@ class BedrockCompletion(BaseLLM):
                         stop_reason = event["messageStop"].get("stopReason")
                         stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
-                        if stop_reason == "max_tokens":
-                            logging.warning(
-                                "Streaming response truncated due to max_tokens"
-                            )
-                        elif stop_reason == "content_filtered":
+                        warn_if_truncated(
+                            stop_reason,
+                            "bedrock",
+                            log=logging.getLogger(),
+                            token_limit=self.max_tokens,
+                        )
+                        if stop_reason == "content_filtered":
                             logging.warning(
                                 "Streaming response filtered due to content policy"
                             )
