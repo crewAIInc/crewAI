@@ -33,6 +33,14 @@ class TestParseFrontmatter:
         assert fm == {"name": "test", "description": "A test"}
         assert body == "Body text here."
 
+    def test_utf8_bom_frontmatter_and_body(self) -> None:
+        content = "\ufeff---\nname: test\ndescription: A test\n---\nBody text here."
+
+        fm, body = parse_frontmatter(content)
+
+        assert fm == {"name": "test", "description": "A test"}
+        assert body == "Body text here."
+
     def test_empty_body(self) -> None:
         content = "---\nname: test\ndescription: A test\n---"
         fm, body = parse_frontmatter(content)
@@ -84,6 +92,18 @@ class TestParseSkillMd:
         fm, body = parse_skill_md(skill_md)
         assert fm.name == "my-skill"
         assert body == "Instructions here."
+
+    def test_utf8_bom_file(self, tmp_path: Path) -> None:
+        skill_md = tmp_path / "SKILL.md"
+        skill_md.write_bytes(
+            b"\xef\xbb\xbf---\nname: my-skill\ndescription: d\n---\nBody"
+        )
+
+        fm, body = parse_skill_md(skill_md)
+
+        assert fm.name == "my-skill"
+        assert fm.description == "d"
+        assert body == "Body"
 
     def test_file_not_found(self, tmp_path: Path) -> None:
         with pytest.raises(FileNotFoundError):
