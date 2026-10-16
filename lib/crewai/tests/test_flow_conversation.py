@@ -1139,6 +1139,89 @@ class TestConversationalFlow:
         else:
             raise AssertionError("Flow.chat() should reject regular flows")
 
+    def test_chat_restores_deferral_setting_when_finalization_fails(self) -> None:
+        """Regression test for #8069: a raising finalizer must not leak the temporary deferral."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            """Minimal conversational flow fixture for the deferral tests."""
+
+        flow = MyChat()
+        inputs = iter(["quit"])
+
+        with (
+            patch.object(
+                flow,
+                "finalize_session_traces",
+                side_effect=RuntimeError("finalization failed"),
+            ) as mock_finalize,
+            pytest.raises(RuntimeError, match="finalization failed"),
+        ):
+            flow.chat(input_fn=lambda _: next(inputs), output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    @pytest.mark.parametrize("error", [EOFError, KeyboardInterrupt])
+    def test_chat_restores_deferral_setting_on_abrupt_exit(
+        self, error: type[BaseException]
+    ) -> None:
+        """EOF/KeyboardInterrupt exits must still restore the deferral setting."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            """Minimal conversational flow fixture for the deferral tests."""
+
+        flow = MyChat()
+
+        def input_fn(prompt: str) -> str:
+            """Simulate an abrupt exit by raising the parametrized error."""
+            raise error()
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=input_fn, output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    def test_chat_preserves_initially_enabled_deferral_setting(self) -> None:
+        """An initially enabled deferral must survive chat() unchanged."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            """Minimal conversational flow fixture for the deferral tests."""
+
+        flow = MyChat()
+        flow.defer_trace_finalization = True
+        inputs = iter(["quit"])
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=lambda _: next(inputs), output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is True
+
+    def test_chat_opt_out_leaves_deferral_setting_untouched(self) -> None:
+        """Passing defer_trace_finalization=False must not touch the setting."""
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            """Minimal conversational flow fixture for the deferral tests."""
+
+        flow = MyChat()
+        flow.defer_trace_finalization = True
+        inputs = iter(["quit"])
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(
+                input_fn=lambda _: next(inputs),
+                output_fn=lambda _: None,
+                defer_trace_finalization=False,
+            )
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is True
+
     def test_defer_trace_finalization_skips_per_turn_finalize(self) -> None:
         """``defer_trace_finalization = True`` suppresses per-turn ``finalize_batch``.
 
