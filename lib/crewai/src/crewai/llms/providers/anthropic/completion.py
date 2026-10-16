@@ -125,6 +125,32 @@ def _supports_native_structured_outputs(model: str) -> bool:
     return any(prefix in model_lower for prefix in NATIVE_STRUCTURED_OUTPUT_MODELS)
 
 
+# These models reject tool_choice {"type": "tool"} / {"type": "any"} with a 400.
+FORCED_TOOL_CHOICE_UNSUPPORTED_MODELS: Final[tuple[str, ...]] = (
+    "claude-fable-5-1",
+    "claude-mythos-5-1",
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+)
+
+
+def _supports_forced_tool_choice(model: str) -> bool:
+    """Check if given model supports a forced tool_choice ("tool" or "any").
+
+    Args:
+        model: The model name/identifier.
+
+    Returns:
+        False for models that reject forced tool use; tool_choice is then
+        left unset so the API applies its "auto" default.
+    """
+    model_lower = model.lower()
+    for unsupported_forced_tool_model in FORCED_TOOL_CHOICE_UNSUPPORTED_MODELS:
+        if unsupported_forced_tool_model in model_lower:
+            return False
+    return True
+
+
 def _is_pydantic_model_class(obj: Any) -> TypeGuard[type[BaseModel]]:
     """Check if an object is a Pydantic model class.
 
@@ -625,7 +651,8 @@ class AnthropicCompletion(BaseLLM):
             system_message: Extracted system message
             tools: Tool definitions
             available_functions: Available functions for tool calling. When provided
-                with a single tool, tool_choice is automatically set to force tool use.
+                with a single tool, tool_choice is automatically set to force tool use
+                on models that accept a forced tool_choice.
 
         Returns:
             Parameters dictionary for Anthropic API
@@ -664,7 +691,11 @@ class AnthropicCompletion(BaseLLM):
 
             params["tools"] = converted_tools
 
-            if available_functions and len(regular_tools) == 1:
+            if (
+                available_functions
+                and len(regular_tools) == 1
+                and _supports_forced_tool_choice(self.model)
+            ):
                 tool_name = regular_tools[0].get("name")
                 if tool_name and tool_name in available_functions:
                     params["tool_choice"] = {"type": "tool", "name": tool_name}

@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
 from pydantic import BaseModel
@@ -1513,6 +1514,55 @@ def test_tool_search_single_tool_skips_search_and_forces_choice():
     assert "defer_loading" not in params["tools"][0]
 
 
+def _single_tool_completion_params(model: str) -> dict[str, Any]:
+    llm = LLM(model=model)
+    tool = {
+        "type": "function",
+        "function": {
+            "name": "test_tool",
+            "description": "A test tool",
+            "parameters": {
+                "type": "object",
+                "properties": {"q": {"type": "string"}},
+                "required": ["q"],
+            },
+        },
+    }
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    return llm._prepare_completion_params(
+        formatted_messages,
+        system_message,
+        [tool],
+        available_functions={"test_tool": lambda q: "result"},
+    )
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "anthropic/claude-fable-5-1",
+        "anthropic/claude-mythos-5-1",
+        "anthropic/claude-opus-5-5",
+        "anthropic/claude-sonnet-5-5",
+    ],
+)
+def test_single_tool_not_forced_on_models_rejecting_forced_tool_choice(model: str):
+    """These models return a 400 for tool_choice "tool"/"any", so a single
+    tool is offered without forcing it (the API's "auto" default)."""
+    params = _single_tool_completion_params(model)
+
+    assert "tool_choice" not in params
+    assert [t["name"] for t in params["tools"]] == ["test_tool"]
+
+
+def test_single_tool_still_forced_on_claude_sonnet_5():
+    params = _single_tool_completion_params("anthropic/claude-sonnet-5")
+
+    assert params["tool_choice"] == {"type": "tool", "name": "test_tool"}
+
+
 def test_tool_search_via_llm_class():
     """Verify tool_search param passes through LLM class correctly."""
     from crewai.llms.providers.anthropic.completion import (
@@ -1940,7 +1990,9 @@ def test_anthropic_missing_cache_fields_default_to_zero():
 
 NATIVE_STRUCTURED_OUTPUT_MODELS_UNDER_TEST = [
     "claude-opus-5",
+    "claude-opus-5-5",
     "claude-sonnet-5",
+    "claude-sonnet-5-5",
     "claude-fable-5",
     "claude-opus-4-8",
     "claude-haiku-4-5",
