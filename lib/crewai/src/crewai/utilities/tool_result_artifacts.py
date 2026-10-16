@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from io import StringIO
 from pathlib import Path
 from secrets import token_urlsafe
 from tempfile import TemporaryDirectory
@@ -62,9 +63,10 @@ class ToolResultArtifactStore:
         artifact_directory = self._directory / artifact_id
         artifact_directory.mkdir(mode=0o700)
         path = artifact_directory / "result.md"
-        path.write_text(content, encoding="utf-8")
+        path.write_text(content, encoding="utf-8", newline="")
         self._artifact_ids.add(artifact_id)
-        preview_lines = content.splitlines(keepends=True)
+        with StringIO(content, newline=None) as artifact_text:
+            preview_lines = artifact_text.readlines()
         line_count = len(preview_lines)
         preview = "".join(preview_lines[:TOOL_RESULT_PREVIEW_LINE_COUNT])
         preview_truncated = len(preview_lines) > TOOL_RESULT_PREVIEW_LINE_COUNT
