@@ -1,0 +1,133 @@
+---
+title: TopK Search Tool
+description: Busca por palavra-chave (BM25), semântica e híbrida para agentes CrewAI com TopK, com embeddings no servidor, filtros e partições por usuário.
+icon: magnifying-glass-plus
+mode: "wide"
+---
+
+# `TopKSearchTool`
+
+## Descrição
+
+Pesquise uma coleção do [TopK](https://topk.io) a partir de um agente CrewAI. Em cada chamada, o agente escolhe um `search_mode`:
+
+| `search_mode` | O que faz | Use para |
+| --- | --- | --- |
+| `keyword` | Busca de texto completo BM25. Retorna apenas documentos que contêm os termos. | Códigos de erro exatos, IDs, SKUs, nomes de produtos ou funções |
+| `semantic` | Busca por significado com os embeddings nativos do TopK. | Perguntas parafraseadas ou conceituais |
+| `hybrid` (padrão) | Similaridade semântica e BM25 ranqueados juntos em uma única consulta. | Perguntas que misturam significado e termos exatos |
+
+O TopK gera os embeddings no servidor, então a ferramenta não precisa de chave da OpenAI nem de outro modelo de embeddings. Você envia apenas texto. O `semantic_index()` do TopK gera o embedding de cada documento na escrita e de cada consulta na busca, e cria o índice BM25 usado pelas buscas por palavra-chave e híbrida. Não há modelo de embeddings, coluna de vetores ou pipeline de embeddings para gerenciar. O agente também pode passar `filters` para restringir os resultados, e `partition` limita uma ferramenta aos dados de um único cliente ou usuário.
+
+## Instalação
+
+```bash
+uv add topk-sdk
+```
+
+## Variáveis de Ambiente
+
+```bash
+TOPK_API_KEY=your_topk_api_key        # https://console.topk.io
+TOPK_REGION=aws-us-east-1-elastica    # https://docs.topk.io/regions
+```
+
+## Criar uma coleção
+
+A ferramenta pesquisa uma coleção existente. Dê ao campo de texto um `semantic_index()` e insira texto simples: o TopK gera o embedding de cada documento na escrita, então não há vetores para calcular ou armazenar.
+
+```python
+import os
+from topk_sdk import Client
+from topk_sdk.schema import semantic_index, text
+
+client = Client(api_key=os.environ["TOPK_API_KEY"], region=os.environ["TOPK_REGION"])
+client.collections().create("runbook", schema={"text": text().required().index(semantic_index())})
+
+client.collection("runbook").upsert([
+    {"_id": "e4021", "text": "Error code E-4021 means the payment gateway timed out.", "source": "runbook", "year": 2024},
+    {"_id": "e4012", "text": "Error code E-4012 means the card was declined by the bank.", "source": "runbook", "year": 2024},
+    {"_id": "churn", "text": "Customers cancel subscriptions mostly because onboarding takes too long.", "source": "notes", "year": 2025},
+])
+```
+
+## Uso Básico
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import TopKSearchTool
+
+search = TopKSearchTool(collection_name="runbook", return_fields=["text", "source"])
+
+support_agent = Agent(
+    role="Support Engineer",
+    goal="Answer questions about errors and incidents from the runbook",
+    backstory="You always search the runbook before answering.",
+    tools=[search],
+)
+
+task = Task(
+    description="A customer reports error E-4021 at checkout. What does it mean?",
+    expected_output="The meaning of the error and what to do next",
+    agent=support_agent,
+)
+
+Crew(agents=[support_agent], tasks=[task]).kickoff()
+```
+
+Para um código exato como `E-4021`, o agente pode chamar a ferramenta com `search_mode="keyword"`. Só a busca semântica não distingue com segurança `E-4021` de `E-4012`.
+
+## Filtros
+
+O agente passa `filters` como um objeto JSON sobre os campos da sua coleção. Use pontos para campos aninhados:
+
+```python
+search.run(query="payment failures", filters={"source": "runbook", "year": {"$gte": 2024}})
+```
+
+Operadores: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$contains`. Um valor simples equivale a `$eq`.
+
+## Dados por usuário com partições
+
+As [partições](https://docs.topk.io/concepts#multi-tenancy) do TopK são totalmente isoladas, então você pode dar uma a cada usuário ou cliente e criar uma ferramenta por usuário. Um agente com essa ferramenta não vê os dados de mais ninguém:
+
+```python
+alice_notes = TopKSearchTool(collection_name="notes", partition="user-alice")
+```
+
+Escreva na mesma partição com `client.collection("notes", partition="user-alice").upsert([...])`.
+
+## Argumentos
+
+### Entradas do agente
+
+| Argumento | Tipo | Descrição |
+| --- | --- | --- |
+| `query` | `str` | O que pesquisar (obrigatório). |
+| `search_mode` | `"hybrid" \| "keyword" \| "semantic"` | Padrão: `"hybrid"`. |
+| `filters` | `dict` | Filtro opcional de campos (veja acima). |
+
+### Configuração da ferramenta
+
+| Argumento | Padrão | Descrição |
+| --- | --- | --- |
+| `collection_name` | (obrigatório) | Coleção do TopK a pesquisar. |
+| `text_field` | `"text"` | Campo com um `semantic_index()`. |
+| `return_fields` | `["text"]` | Campos retornados em cada resultado, junto com `id` e `score`. |
+| `partition` | `None` | Pesquisa apenas esta partição. |
+| `limit` | `5` | Resultados por busca (1-100). |
+| `hybrid_alpha` | `0.5` | Peso da pontuação semântica na busca híbrida; o BM25 recebe `1 - hybrid_alpha`. As duas são pontuações brutas e sem limite do TopK, ponderadas como estão, então confira alguns resultados antes de ajustar. |
+| `api_key`, `region` | variáveis de ambiente | Padrão: `TOPK_API_KEY` e `TOPK_REGION`. |
+| `client` | `None` | Reutiliza um `topk_sdk.Client` existente. |
+
+## Saída
+
+Uma lista JSON, com o melhor resultado primeiro:
+
+```json
+[
+  {"id": "e4021", "score": 1.7231, "text": "Error code E-4021 means the payment gateway timed out.", "source": "runbook"}
+]
+```
+
+O modo `keyword` retorna `[]` quando nenhum documento contém os termos, então o agente sabe que o termo não aparece em lugar nenhum.

@@ -109,6 +109,14 @@ def test_empty_partition_returns_no_results():
         tool._run("x")
 
 
+def test_in_filter_accepts_a_bare_value():
+    tool, sdk, _ = make_tool()
+    tool._run("x", search_mode="semantic", filters={"source": {"$in": "runbook"}})
+    sdk.query.field.return_value.in_.assert_called_with(["runbook"])
+    tool._run("x", search_mode="semantic", filters={"year": {"$nin": 2024}})
+    sdk.query.field.return_value.in_.assert_called_with([2024])
+
+
 def test_unknown_filter_operator_is_rejected():
     tool, _, _ = make_tool()
     with pytest.raises(ValueError, match="Unknown filter operator"):

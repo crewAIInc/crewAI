@@ -116,7 +116,7 @@ Write to the same partition with `client.collection("notes", partition="user-ali
 | `return_fields` | `["text"]` | Fields returned for each result, alongside `id` and `score`. |
 | `partition` | `None` | Search only this partition. |
 | `limit` | `5` | Results per search (1-100). |
-| `hybrid_alpha` | `0.5` | Weight of semantic similarity in hybrid search; BM25 gets `1 - hybrid_alpha`. |
+| `hybrid_alpha` | `0.5` | Weight of the semantic score in hybrid search; BM25 gets `1 - hybrid_alpha`. Both are raw, unbounded TopK scores weighted as-is, so check a few results before tuning it. |
 | `api_key`, `region` | env vars | Default to `TOPK_API_KEY` and `TOPK_REGION`. |
 | `client` | `None` | Reuse an existing `topk_sdk.Client`. |
 

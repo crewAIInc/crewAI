@@ -97,7 +97,10 @@ class TopKSearchTool(BaseTool):
         default=0.5,
         ge=0.0,
         le=1.0,
-        description="Weight of semantic similarity in hybrid search; BM25 gets 1 - alpha.",
+        description=(
+            "Weight of the semantic score in hybrid search; the BM25 score gets 1 - alpha. "
+            "Both are raw, unbounded TopK scores and alpha weights them as-is."
+        ),
     )
     api_key: str | None = Field(default=None, description="Defaults to TOPK_API_KEY.")
     region: str | None = Field(default=None, description="Defaults to TOPK_REGION.")
@@ -202,7 +205,13 @@ class TopKSearchTool(BaseTool):
                         f"Unknown filter operator {op!r}; use one of {', '.join(_FILTER_OPERATORS)}."
                     )
                 if op in ("$in", "$nin"):
-                    clause = f.in_(list(operand))
+                    # A bare value means a one-item list, not its characters.
+                    values = (
+                        list(operand)
+                        if isinstance(operand, (list, tuple, set))
+                        else [operand]
+                    )
+                    clause = f.in_(values)
                     clauses.append(q.not_(clause) if op == "$nin" else clause)
                 else:
                     method = {

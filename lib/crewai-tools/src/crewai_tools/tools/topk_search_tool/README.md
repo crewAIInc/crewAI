@@ -17,10 +17,17 @@ from crewai import Agent
 from crewai_tools import TopKSearchTool
 
 search = TopKSearchTool(collection_name="runbook", return_fields=["text", "source"])
-agent = Agent(role="Support Engineer", goal="Answer from the runbook", backstory="...", tools=[search])
+agent = Agent(
+    role="Support Engineer",
+    goal="Answer from the runbook",
+    backstory="...",
+    tools=[search],
+)
 
 search.run(query="E-4021", search_mode="keyword")
-search.run(query="payment failures", filters={"source": "runbook", "year": {"$gte": 2024}})
+search.run(
+    query="payment failures", filters={"source": "runbook", "year": {"$gte": 2024}}
+)
 ```
 
 The collection's text field needs a `semantic_index()`:
@@ -28,7 +35,9 @@ The collection's text field needs a `semantic_index()`:
 ```python
 from topk_sdk.schema import semantic_index, text
 
-client.collections().create("runbook", schema={"text": text().required().index(semantic_index())})
+client.collections().create(
+    "runbook", schema={"text": text().required().index(semantic_index())}
+)
 ```
 
 Pass `partition="user-42"` to search only one user's or tenant's partition. See the [docs page](https://docs.crewai.com/en/tools/database-data/topksearchtool) for every argument.
