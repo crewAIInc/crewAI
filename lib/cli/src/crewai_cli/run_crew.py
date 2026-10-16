@@ -941,7 +941,11 @@ def _handle_run_error(error: subprocess.CalledProcessError, entity_type: str) ->
     if error.output:
         click.echo(error.output, err=True, nl=True)
 
-    pyproject_data = read_toml()
+    try:
+        pyproject_data = read_toml()
+    except Exception:
+        pyproject_data = {}
+
     if pyproject_data.get("tool", {}).get("poetry"):
         click.secho(
             "It's possible that you are using an old version of crewAI that uses poetry, "
