@@ -17,20 +17,27 @@ deployed and once per model; each run is graded, and the comparison — the four
 grades, cost and time per model, and what would make the agents do better — is
 printed when it is done. It always needs the login: it runs the deployment.
 Every evaluation, of either kind, is filed under the project id.
+
+`crewai eval export ID` downloads an evaluation's full data — the report,
+every setup's outputs, every check with the judge's words, and the traces —
+into `./crewai-eval-<ID>/`, for a coding agent to dig into.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+import errno
 from ipaddress import ip_address
 import json
 import math
 import os
 from pathlib import Path
+import re
+import stat
 import sys
 import time
 from typing import Any, Literal, NoReturn, cast
@@ -1694,3 +1701,360 @@ def _fail(message: str) -> NoReturn:
     # comes from `style`.
     console.print(Text(message), style="bold red")
     raise SystemExit(1)
+
+
+# ── crewai eval export ───────────────────────────────────────────────────────
+
+EXPORT_DIR_PREFIX = "crewai-eval-"
+EXPORT_START_HERE = "report.md"
+# One path segment of an exported file: plain names only. Everything else —
+# a separator other than `/`, a drive, a space, a control character — is not
+# a path this command writes.
+_EXPORT_SEGMENT = re.compile(r"[A-Za-z0-9._-]+")
+# The names Windows keeps for its devices, whatever the extension: there a
+# file called `NUL.md` is the null device, and what is written to it is gone.
+_WINDOWS_DEVICE_NAMES = frozenset(
+    {"con", "prn", "aux", "nul"}
+    | {f"{port}{n}" for port in ("com", "lpt") for n in range(10)}
+)
+# Linux and macOS open a file inside an open folder, and can refuse to go
+# through a link while doing it, so the export is written that way: no path
+# is checked first and opened again later, when another process may have put
+# a link in its way (`_put_through_handles`). Windows cannot; there each path
+# is resolved and checked to stay inside the folder before it is written
+# (`_put_by_path`). That check can be raced: a process that can write inside
+# the export folder could swap a junction in between, and any account can make
+# one. The bounded loss, accepted: such a process already writes where this
+# user does (the folder is in the user's own working directory), unless the
+# CLI runs elevated in a folder a less trusted account may write to.
+_WRITES_THROUGH_HANDLES = (
+    hasattr(os, "O_NOFOLLOW")
+    and hasattr(os, "O_DIRECTORY")
+    and os.open in os.supports_dir_fd
+    and os.mkdir in os.supports_dir_fd
+    and os.unlink in os.supports_dir_fd
+    and os.stat in os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
+)
+_FOLDER_FLAGS = (
+    os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+)
+_NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+
+
+def export_evaluation(evaluation_id: str) -> None:
+    """Write evaluation EVALUATION_ID's full data into `./crewai-eval-<id>/`.
+
+    The files are AMP's: the report, every setup's outputs and checks with the
+    judge's words, and the traces. They are written as sent, one file per
+    path, beside a `.gitignore` of `*` — this is a customer's data, and a
+    folder dropped into a repository must not be committed by accident.
+    Re-running overwrites them.
+    """
+    try:
+        canonical = str(uuid.UUID(evaluation_id.strip()))
+    except ValueError:
+        _fail(f"{evaluation_id!r} is not an evaluation id: an evaluation id is a UUID.")
+    # Read before the project's .env is loaded, so a project cannot add itself.
+    trusted = _trusted_amp_origins()
+    _load_project_env()
+    try:
+        client = _amp_client(trusted)
+    except EvaluationStoppedError as stopped:
+        _fail(str(stopped))
+    try:
+        response = client.export_evaluation(canonical)
+    except httpx.HTTPError as error:
+        _fail(f"Could not reach AMP to export evaluation {canonical}: {error}")
+    if response.status_code != 200:
+        _fail(
+            _export_refusal(
+                response,
+                canonical,
+                logged_in=client.api_key is not None,
+                amp=client.base_url,
+            )
+        )
+    files = (_payload(response) or {}).get("files")
+    if not isinstance(files, dict):
+        _fail(
+            f"AMP answered without the files of evaluation {canonical} (protocol error)."
+        )
+
+    folder = Path(f"{EXPORT_DIR_PREFIX}{canonical}")
+    written, skipped = _write_export(folder, files)
+    line = f"Wrote {len(written)} file{'' if len(written) == 1 else 's'} to {folder}/"
+    if EXPORT_START_HERE in written:
+        line += f" — start with {EXPORT_START_HERE}"
+    if skipped:
+        line += f" (skipped {skipped}: an unsafe path, or content that is not text)"
+    # One line whatever the width: an agent reads the folder off it, and a
+    # pipe is 80 columns to Rich.
+    console.print(Text(line), soft_wrap=True)
+
+
+def _export_refusal(
+    response: httpx.Response, evaluation_id: str, *, logged_in: bool, amp: str
+) -> str:
+    """AMP's refusal of an export as one sentence, in AMP's own words when it sent them.
+
+    A self-hosted install updates AMP, its evaluation service and this CLI
+    apart, so a part older than exports says which one needs the update.
+    """
+    payload = _payload(response) or {}
+    message = str(payload.get("message") or "").strip()
+    error = str(payload.get("error") or "")
+    status = response.status_code
+    # AMP's 501: its evaluation service predates exports.
+    if error == "export_unsupported":
+        return message or (
+            "This AMP's evaluation service does not export evaluations yet: "
+            "it needs an update."
+        )
+    # AMP's 502 or the evaluation service's 413: an export too large to carry
+    # is refused whole, never cut short.
+    if error == "export_too_large":
+        return message or f"Evaluation {evaluation_id} is too large to export."
+    # AMP says `not_found` of an evaluation it does not hold or this login may
+    # not read; a 404 without it is an AMP with no export route at all.
+    if status == 404 and error != "not_found":
+        return (
+            f"The AMP at {amp.rstrip('/')} does not serve `crewai eval export` "
+            "yet: it needs an update."
+        )
+    if status == 404:
+        if logged_in:
+            return message or (
+                f"AMP holds no evaluation {evaluation_id} that this login may read."
+            )
+        found = message or (
+            f"AMP holds no evaluation {evaluation_id} that can be read without a login"
+        )
+        if "crewai login" in found:
+            return found
+        return (
+            f"{found.rstrip('.')}; if it is your account's, log in with "
+            "`crewai login` and export it again."
+        )
+    if status == 409:
+        return message or (
+            f"Evaluation {evaluation_id} is still running; export it once it has finished."
+        )
+    if status == 410:
+        return message or (
+            f"The report of evaluation {evaluation_id} was opened already and is "
+            "closed; log in with `crewai login` and evaluate the run again."
+        )
+    # 401 / 403 / 429 / 5xx read as every other evaluation call reads them.
+    return _refusal_message(response, f"evaluation {evaluation_id}")
+
+
+def _export_target(name: str) -> list[str] | None:
+    """The path segments the exported file NAME is written at, or None when it may not be.
+
+    The paths come from whichever AMP answered — which a project's `.env` may
+    choose — so a path is written only when it is relative, `/`-separated, and
+    every segment a plain name (`[A-Za-z0-9._-]+`, never `.` or `..`). A `.git`
+    segment is refused too: a `.git/config` there could name a command for the
+    next `git status` in the folder to run, and a shell prompt runs one. The
+    top `.gitignore` is this command's own. So is a name Windows keeps for a
+    device (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9`, `LPT0`-`LPT9`, with any
+    extension), on every platform, since the folder may be opened on Windows
+    later or sit on a drive it shares: there `NUL.md` is the null device, and
+    the export would report a file written that nobody can read. All are
+    compared as a case-insensitive filesystem that drops trailing dots would
+    see them. Where the segments lead, through a link or not, is the writer's
+    to check (`_export_folder`).
+    """
+    segments = name.split("/")
+    for segment in segments:
+        seen = _as_a_filesystem_sees_it(segment)
+        if (
+            not _EXPORT_SEGMENT.fullmatch(segment)
+            or segment in {".", ".."}
+            or seen == ".git"
+            or seen.split(".", 1)[0] in _WINDOWS_DEVICE_NAMES
+        ):
+            return None
+    if len(segments) == 1 and _as_a_filesystem_sees_it(segments[0]) == ".gitignore":
+        return None
+    return segments
+
+
+def _as_a_filesystem_sees_it(segment: str) -> str:
+    """SEGMENT as macOS and Windows compare names: case ignored, trailing dots dropped."""
+    return segment.rstrip(".").lower()
+
+
+def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
+    """Write FILES under FOLDER: the names written, and how many were skipped.
+
+    The `.gitignore` goes first, so the data is never in the folder without it.
+    A file whose path would go through a link, or through a file where a
+    folder belongs, is skipped like any other unsafe path. A file that cannot
+    be written stops the export with the reason: half an export that says it
+    is whole would mislead the agent reading it.
+    """
+    written: list[str] = []
+    skipped = 0
+    with _export_folder(folder) as put:
+        try:
+            ignored = put([".gitignore"], b"*\n")
+        except OSError as error:
+            _fail(f"Could not write the export into {folder}/: {error}")
+        if not ignored:
+            # The data never goes into the folder without it.
+            _fail(
+                f"{folder}/.gitignore is a folder, not this command's file: remove it "
+                "and export again, so the data is never committed by accident."
+            )
+        for name, content in files.items():
+            segments = _export_target(name)
+            if segments is None or not isinstance(content, str):
+                skipped += 1
+                continue
+            try:
+                data = content.encode("utf-8")
+            except UnicodeEncodeError:  # a lone surrogate JSON allowed through
+                skipped += 1
+                continue
+            try:
+                put_there = put(segments, data)
+            except OSError as error:
+                _fail(f"Could not write {folder}/{name}: {error}")
+            if put_there:
+                written.append(name)
+            else:
+                skipped += 1
+    return written, skipped
+
+
+@contextlib.contextmanager
+def _export_folder(folder: Path) -> Iterator[Callable[[list[str], bytes], bool]]:
+    """FOLDER, made when missing, as a function that writes one file into it.
+
+    The function takes the file's path segments and its bytes, and answers
+    False, with nothing written, when a link or a file stands where one of the
+    path's folders goes. FOLDER, a name in the current directory, being a link
+    itself stops the export: the export writes only into a folder of its own.
+    """
+    if not _WRITES_THROUGH_HANDLES:
+        root = _export_root_by_path(folder)
+        yield lambda segments, data: _put_by_path(root, segments, data)
+        return
+    handle = _export_root_handle(folder)
+    try:
+        yield lambda segments, data: _put_through_handles(handle, segments, data)
+    finally:
+        os.close(handle)
+
+
+def _export_root_is_a_link(folder: Path) -> NoReturn:
+    """Stop: whoever made FOLDER a link chose where it leads, not this command."""
+    _fail(f"{folder} is a link; the export writes only into a folder of its own.")
+
+
+def _export_root_handle(folder: Path) -> int:
+    """A handle on FOLDER, made when missing, opened inside the current
+    directory and never through a link."""
+    try:
+        here = os.open(".", _FOLDER_FLAGS)
+        try:
+            with contextlib.suppress(FileExistsError):
+                os.mkdir(folder.name, dir_fd=here)
+            return os.open(folder.name, _FOLDER_FLAGS, dir_fd=here)
+        finally:
+            os.close(here)
+    except OSError as error:
+        if folder.is_symlink():
+            _export_root_is_a_link(folder)
+        _fail(f"Could not write the export into {folder}/: {error}")
+
+
+def _put_through_handles(root: int, segments: list[str], data: bytes) -> bool:
+    """Write DATA at SEGMENTS under the folder ROOT is a handle on, through no link.
+
+    Each folder of the path is opened inside the one before it, and the file
+    inside the last, so no path is checked first and opened again later: a
+    link where a folder goes, left there or swapped in while the export runs,
+    is never gone through, and the file is not written (False). The file's own
+    place is emptied first and the file made anew, so a link there, symbolic
+    or hard, is replaced rather than written through.
+    """
+    folder = root
+    try:
+        for segment in segments[:-1]:
+            with contextlib.suppress(FileExistsError):
+                os.mkdir(segment, dir_fd=folder)
+            try:
+                inner = os.open(segment, _FOLDER_FLAGS, dir_fd=folder)
+            except OSError as error:
+                if error.errno in (errno.ELOOP, errno.ENOTDIR):
+                    return False  # a link, or a file, where a folder goes
+                raise
+            if folder != root:
+                os.close(folder)
+            folder = inner
+        leaf = segments[-1]
+        try:
+            if stat.S_ISDIR(
+                os.stat(leaf, dir_fd=folder, follow_symlinks=False).st_mode
+            ):
+                return False  # a folder where a file goes
+            os.unlink(leaf, dir_fd=folder)
+        except FileNotFoundError:
+            pass  # nothing at the file's place yet: it is simply made
+        descriptor = os.open(leaf, _NEW_FILE_FLAGS, 0o666, dir_fd=folder)
+        try:
+            out = open(descriptor, "wb")
+        except BaseException:
+            os.close(descriptor)
+            raise
+        with out:
+            out.write(data)
+        return True
+    finally:
+        if folder != root:
+            os.close(folder)
+
+
+def _export_root_by_path(folder: Path) -> Path:
+    """FOLDER, made when missing, as the absolute path the files go under.
+
+    It must resolve to itself, here: a link, or a Windows junction (which
+    `is_symlink` does not see, and which any account can make), would carry
+    every file somewhere else.
+    """
+    if folder.is_symlink():
+        _export_root_is_a_link(folder)
+    try:
+        folder.mkdir(exist_ok=True)
+        root = folder.resolve()
+    except OSError as error:
+        _fail(f"Could not write the export into {folder}/: {error}")
+    if os.path.normcase(root) != os.path.normcase(Path.cwd().resolve() / folder.name):
+        _export_root_is_a_link(folder)
+    return root
+
+
+def _put_by_path(root: Path, segments: list[str], data: bytes) -> bool:
+    """Write DATA at SEGMENTS under ROOT, where a folder cannot be opened
+    without following a link: the path is resolved first, and written only
+    when its folder is inside ROOT (False otherwise, or when a file stands
+    where a folder goes, or a folder where the file goes). Whatever is at the
+    file's own place, a link symbolic or hard, is removed and the file made
+    anew, so nothing is written through it."""
+    parent = root.joinpath(*segments[:-1]).resolve()
+    if not parent.is_relative_to(root):
+        return False
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+    except (FileExistsError, NotADirectoryError):
+        return False
+    target = parent / segments[-1]
+    if target.is_dir() and not target.is_symlink():
+        return False  # a folder, or a junction, where a file goes
+    target.unlink(missing_ok=True)
+    with open(target, "xb") as out:
+        out.write(data)
+    return True
