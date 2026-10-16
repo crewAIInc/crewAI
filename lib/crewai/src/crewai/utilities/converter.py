@@ -60,26 +60,16 @@ class Converter(OutputConverter):
         try:
             return self.model.model_validate_json(response)
         except ValidationError:
-            partial = handle_partial_json(
-                result=response,
-                model=self.model,
-                is_json_output=False,
-                agent=None,
-            )
-            if isinstance(partial, BaseModel):
-                return partial
-            if isinstance(partial, dict):
-                return self.model.model_validate(partial)
-            if isinstance(partial, str):
+            match = _JSON_PATTERN.search(response)
+            if match:
                 try:
-                    return self.model.model_validate_json(partial)
-                except Exception as parse_err:
-                    raise ConverterError(
-                        f"Failed to convert partial JSON result into Pydantic: {parse_err}"
-                    ) from parse_err
-            raise ConverterError(
-                "handle_partial_json returned an unexpected type."
-            ) from None
+                    partial = json.loads(match.group(), strict=False)
+                except json.JSONDecodeError:
+                    pass
+                else:
+                    return self.model.model_validate(partial)
+            # The existing outer loop owns retries; post-processing must not start another converter.
+            raise
 
     def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
         """Convert text to pydantic.
