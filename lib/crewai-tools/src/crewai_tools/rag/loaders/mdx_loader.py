@@ -1,5 +1,5 @@
+from collections.abc import Iterator
 import re
-from collections.abc import Callable, Iterator
 from typing import Any, Final
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
@@ -72,27 +72,36 @@ def _iter_blocks(content: str) -> Iterator[tuple[bool, str]]:
         yield False, "".join(pending)
 
 
-def _iter_inline_code(
-    text: str, is_inside_tag: Callable[[int], bool] | None = None
-) -> Iterator[tuple[bool, str]]:
+def _iter_inline_code(text: str) -> Iterator[tuple[bool, str]]:
     """Split prose into ``(is_code, text)`` pairs.
 
     Inline code spans are delimited by a run of backticks closed by a run of
     the same length, so ``x`` and ``` `` ``a`b`` `` ``` are handled correctly.
-    Backtick runs without a matching closer stay in the prose. When
-    ``is_inside_tag`` is given, backticks for which it returns ``True`` are
-    ignored, so an attribute value such as ``<Foo bar={`x`} />`` is not read as
-    Markdown inline code.
+    Backtick runs without a matching closer stay in the prose.
+
+    The scan steps over escaped characters and over ``<...>`` tags in the same
+    left-to-right pass. An escaped backtick is literal text and never opens a
+    span, and a backtick inside a tag attribute is an attribute value rather
+    than Markdown inline code. Because a tag is only stepped over in the prose,
+    a ``<`` inside a code span cannot start one either.
     """
-    start = 0
+    prose_start = 0
     index = 0
     length = len(text)
 
-    def _is_ignored(position: int) -> bool:
-        return is_inside_tag is not None and is_inside_tag(position)
-
     while index < length:
-        if text[index] != "`" or _is_ignored(index):
+        char = text[index]
+
+        if char == "\\" and index + 1 < length:
+            index += 2
+            continue
+
+        if char == "<":
+            tag = _JSX_TAG_PATTERN.match(text, index)
+            index = tag.end() if tag is not None else index + 1
+            continue
+
+        if char != "`":
             index += 1
             continue
 
@@ -101,10 +110,13 @@ def _iter_inline_code(
             open_end += 1
         run = open_end - index
 
-        scan = open_end
         close_start = -1
+        scan = open_end
         while scan < length:
-            if text[scan] != "`" or _is_ignored(scan):
+            if text[scan] == "\\" and scan + 1 < length:
+                scan += 2
+                continue
+            if text[scan] != "`":
                 scan += 1
                 continue
             run_end = scan
@@ -119,34 +131,30 @@ def _iter_inline_code(
             index = open_end
             continue
 
-        if index > start:
-            yield False, text[start:index]
+        if index > prose_start:
+            yield False, text[prose_start:index]
         yield True, text[index : close_start + run]
         index = close_start + run
-        start = index
+        prose_start = index
 
-    if start < length:
-        yield False, text[start:]
+    if prose_start < length:
+        yield False, text[prose_start:]
 
 
 def _clean_prose(text: str) -> str:
     """Strip real MDX syntax from a prose segment, leaving code untouched."""
-    # Backticks that sit inside a JSX/HTML tag are attribute values rather than
-    # Markdown inline code, so collect the tag spans up front and ignore any
-    # backtick that falls inside one.
-    tag_ranges = [match.span() for match in _JSX_TAG_PATTERN.finditer(text)]
-
-    def is_inside_tag(position: int) -> bool:
-        return any(start <= position < end for start, end in tag_ranges)
+    # Imports and exports are whole lines and can carry a template literal that
+    # would otherwise be read as an inline code span and survive as residue, so
+    # they are removed before the text is split into code and prose.
+    text = _IMPORT_PATTERN.sub("", text)
+    text = _EXPORT_PATTERN.sub("", text)
 
     out: list[str] = []
-    for is_code, segment in _iter_inline_code(text, is_inside_tag):
+    for is_code, segment in _iter_inline_code(text):
         if is_code:
             out.append(segment)
             continue
-        cleaned = _IMPORT_PATTERN.sub("", segment)
-        cleaned = _EXPORT_PATTERN.sub("", cleaned)
-        cleaned = _JSX_TAG_PATTERN.sub("", cleaned)
+        cleaned = _JSX_TAG_PATTERN.sub("", segment)
         out.append(_EXTRA_NEWLINES_PATTERN.sub("\n\n", cleaned))
     return "".join(out)
 

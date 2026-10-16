@@ -265,3 +265,23 @@ Final text.
         assert "export const" not in result.content
         assert "<B" not in result.content
         assert "```python\nimport json\n```" in result.content
+
+    def test_escaped_backticks_do_not_hide_a_tag(self):
+        content = "Escaped \\`<Widget />\\` here"
+        result = MDXLoader().load(SourceContent(content))
+        assert "<Widget" not in result.content
+        assert result.content.strip() == "Escaped \\`\\` here"
+
+    def test_tag_after_a_code_span_is_not_swallowed(self):
+        content = "Use `x < y` and <Widget /> then `z`."
+        result = MDXLoader().load(SourceContent(content))
+        assert "`x < y`" in result.content
+        assert "`z`" in result.content
+        assert "<Widget" not in result.content
+
+    def test_export_with_a_template_literal_is_fully_removed(self):
+        content = "export const meta = { title: `Hello` }\n\n# Guide"
+        result = MDXLoader().load(SourceContent(content))
+        assert "export" not in result.content
+        assert "`Hello`" not in result.content
+        assert result.content.strip() == "# Guide"
