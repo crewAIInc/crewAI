@@ -1017,17 +1017,23 @@ def _json_schema_to_pydantic_field(
         else (... if is_required else None)
     )
 
-    if isinstance(type_, type) and issubclass(type_, (int, float)):
-        if "minimum" in json_schema:
-            field_params["ge"] = json_schema["minimum"]
-        if "exclusiveMinimum" in json_schema:
-            field_params["gt"] = json_schema["exclusiveMinimum"]
-        if "maximum" in json_schema:
-            field_params["le"] = json_schema["maximum"]
-        if "exclusiveMaximum" in json_schema:
-            field_params["lt"] = json_schema["exclusiveMaximum"]
-        if "multipleOf" in json_schema:
-            field_params["multiple_of"] = json_schema["multipleOf"]
+    # Which primitive kinds does this schema declare, ignoring `null`?
+    # A list-form type such as `{"type": ["string", "null"]}` resolves to a
+    # Union, so the historical `isinstance(type_, type)` guards below skipped
+    # *every* constraint for nullable fields -- `pattern`/`minimum`/... were
+    # silently dropped and invalid values reached the tool. Drive the
+    # constraints off the declared JSON types instead: numeric constraints
+    # attach only when a number-ish type is declared, string constraints only
+    # when `string` is declared, never cross-applied. Pydantic then applies a
+    # field-level constraint only to the matching union member, leaving `null`
+    # accepted.
+    raw_type = json_schema.get("type")
+    if isinstance(raw_type, list):
+        declared_types = {t for t in raw_type if t != "null"}
+    elif isinstance(raw_type, str):
+        declared_types = {raw_type}
+    else:
+        declared_types = set()
 
     format_ = json_schema.get("format")
     if format_ in FORMAT_TYPE_MAP:
@@ -1059,13 +1065,100 @@ def _json_schema_to_pydantic_field(
                 )
             ]
 
-    if isinstance(type_, type) and issubclass(type_, str):
+    # Some schemas carry their type through a composed keyword instead of a
+    # local `type` key, e.g. `{"allOf":[{"type":"integer"}],"minimum":5}` or a
+    # composed nullable member `{"allOf":[{"type":["string","null"]}],...}`. The
+    # resolved annotation (`type_`) already reflects that composed type, so when
+    # no local type was declared we fall back to it: numeric constraints attach
+    # only to resolved `int`/`float` members and string constraints only to a
+    # resolved `str` member. This runs after `format` narrowing, so a string
+    # member narrowed to `date`/`datetime`/`Url` is no longer `str` and
+    # correctly receives no lexical string constraint; `None` and `bool` are
+    # excluded. For a composed nullable/unioned type (e.g. `Union[str, None]`)
+    # we inspect the non-None members rather than requiring a concrete type, so
+    # constraints still attach per-member downstream.
+    if not declared_types:
+        if type_ is str:
+            declared_types = {"string"}
+        elif get_origin(type_) is Union:
+            for member in get_args(type_):
+                if member is str:
+                    declared_types.add("string")
+                elif (
+                    isinstance(member, type)
+                    and issubclass(member, int)
+                    and not issubclass(member, bool)
+                ):
+                    declared_types.add("integer")
+                elif (
+                    isinstance(member, type)
+                    and issubclass(member, float)
+                    and not issubclass(member, int)
+                ):
+                    declared_types.add("number")
+        elif (
+            isinstance(type_, type)
+            and issubclass(type_, (int, float))
+            and not issubclass(type_, bool)
+        ):
+            declared_types = {"integer"}
+
+    num_kwargs: dict[str, Any] = {}
+    if declared_types & {"integer", "number"}:
+        if "minimum" in json_schema:
+            num_kwargs["ge"] = json_schema["minimum"]
+        if "exclusiveMinimum" in json_schema:
+            num_kwargs["gt"] = json_schema["exclusiveMinimum"]
+        if "maximum" in json_schema:
+            num_kwargs["le"] = json_schema["maximum"]
+        if "exclusiveMaximum" in json_schema:
+            num_kwargs["lt"] = json_schema["exclusiveMaximum"]
+        if "multipleOf" in json_schema:
+            num_kwargs["multiple_of"] = json_schema["multipleOf"]
+
+    str_kwargs: dict[str, Any] = {}
+    if declared_types & {"string"}:
         if "minLength" in json_schema:
-            field_params["min_length"] = json_schema["minLength"]
+            str_kwargs["min_length"] = json_schema["minLength"]
         if "maxLength" in json_schema:
-            field_params["max_length"] = json_schema["maxLength"]
+            str_kwargs["max_length"] = json_schema["maxLength"]
         if "pattern" in json_schema:
-            field_params["pattern"] = json_schema["pattern"]
+            str_kwargs["pattern"] = json_schema["pattern"]
+
+    # Attach each constraint only to the matching concrete member. A field-level
+    # constraint on a Union is applied to *every* member, which makes Pydantic
+    # raise a raw `TypeError` (e.g. `ge` on a string value, or `pattern` on a
+    # converted date). So for unions we wrap each member in
+    # `Annotated[member, Field(...)]`: the string member gets the string
+    # constraints, a numeric member gets the numeric ones, and anything else
+    # (None, date/datetime, Url, ...) keeps the old unconstrained behavior.
+    if get_origin(type_) is Union:
+        members = get_args(type_)
+        wrapped: list[Any] = []
+        for member in members:
+            member_kwargs: dict[str, Any] = {}
+            if member is str:
+                member_kwargs.update(str_kwargs)
+            elif (
+                isinstance(member, type)
+                and issubclass(member, (int, float))
+                and not issubclass(member, bool)
+            ):
+                member_kwargs.update(num_kwargs)
+            if member_kwargs:
+                wrapped.append(Annotated[member, Field(**member_kwargs)])
+            else:
+                wrapped.append(member)
+        type_ = Union[tuple(wrapped)]  # noqa: UP007
+    else:
+        if type_ is str:
+            field_params.update(str_kwargs)
+        elif (
+            isinstance(type_, type)
+            and issubclass(type_, (int, float))
+            and not issubclass(type_, bool)
+        ):
+            field_params.update(num_kwargs)
 
     if not is_required:
         type_ = Optional[type_]  # noqa: UP045 - ForwardRef does not support `|`
