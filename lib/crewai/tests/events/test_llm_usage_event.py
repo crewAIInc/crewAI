@@ -423,3 +423,46 @@ class TestFromProviderDictAnthropicCacheTokens:
         assert first.total_tokens == 240
         assert first.cached_prompt_tokens == 30
         assert first.successful_requests == 2
+
+
+class TestFromProviderDictBedrock:
+    def test_bedrock_converse_usage_is_counted(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 50,
+                "outputTokens": 25,
+                "totalTokens": 75,
+                "cacheReadInputTokens": 0,
+                "cacheWriteInputTokens": 0,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 50
+        assert metrics.completion_tokens == 25
+        assert metrics.total_tokens == 75
+
+    @pytest.mark.parametrize(
+        "cache_read_key", ["cacheReadInputTokens", "cacheReadInputTokenCount"]
+    )
+    def test_bedrock_cached_usage_matches_the_bedrock_tracker(self, cache_read_key):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        # inputTokens leaves out cached tokens; totalTokens counts them.
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "inputTokens": 10,
+                "outputTokens": 378,
+                "totalTokens": 1784,
+                cache_read_key: 1396,
+                "cacheWriteInputTokens": 0,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 10
+        assert metrics.completion_tokens == 378
+        assert metrics.total_tokens == 1784
+        assert metrics.cached_prompt_tokens == 1396
