@@ -116,3 +116,94 @@ def test_failed_write_rolls_back_and_closes_connection(
     with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
         opened[0].execute("SELECT 1")
     assert storage.load() == []
+
+
+def test_update_accepts_list_values(tmp_path: Path) -> None:
+    """``update`` must JSON-encode list values, not just dicts.
+
+    ``sqlite3`` cannot bind a Python ``list`` directly, so passing one through
+    unencoded raised ``sqlite3.ProgrammingError: Error binding parameter``.
+    """
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    storage.update(0, output=["first", "second"])
+
+    assert storage.load()[0]["output"] == ["first", "second"]
+
+
+def test_load_handles_null_output_and_inputs(tmp_path: Path) -> None:
+    """``load`` must not crash when ``output``/``inputs`` were set to ``NULL``.
+
+    Setting a field to ``None`` via ``update`` stores SQL ``NULL``. ``load``
+    unconditionally called ``json.loads`` on those columns, raising
+    ``TypeError: the JSON object must be str, bytes or bytearray, not
+    NoneType`` -- uncaught by the surrounding ``except sqlite3.Error``, so it
+    broke ``load()`` for the whole table.
+    """
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    storage.update(0, output=None, inputs=None)
+
+    result = storage.load()[0]
+    assert result["output"] is None
+    assert result["inputs"] is None
+
+
+def test_update_json_encodes_non_dict_non_list_values(tmp_path: Path) -> None:
+    """``update`` must JSON-encode every value written to a JSON column
+    (``output``/``inputs``), not only ``dict``/``list``.
+
+    ``load()`` unconditionally ``json.loads()``s those columns. A plain
+    string like ``"done"`` previously went in unencoded (only dict/list were
+    encoded), so ``json.loads("done")`` raised ``json.JSONDecodeError`` --
+    round-tripping a scalar value through ``update``/``load`` crashed.
+    """
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    storage.update(0, output="just a string", inputs=42)
+
+    result = storage.load()[0]
+    assert result["output"] == "just a string"
+    assert result["inputs"] == 42
+
+
+def test_load_tolerates_legacy_unencoded_json_column(tmp_path: Path) -> None:
+    """``load`` must not crash on a row written by the pre-fix ``update``,
+    which left non-dict/non-list values (e.g. a bare string) unencoded.
+    """
+    import sqlite3
+
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    with sqlite3.connect(storage.db_path) as conn:
+        conn.execute(
+            "UPDATE latest_kickoff_task_outputs SET output = ? WHERE task_index = 0",
+            ("not valid json",),
+        )
+        conn.commit()
+
+    result = storage.load()[0]
+    assert result["output"] == "not valid json"
+
+
+def test_load_tolerates_legacy_non_utf8_blob_column(tmp_path: Path) -> None:
+    """``load`` must not crash on a legacy row whose JSON column holds raw
+    bytes that are not valid UTF-8."""
+    import sqlite3
+
+    storage = KickoffTaskOutputsSQLiteStorage(db_path=str(tmp_path / "outputs.db"))
+    storage.add(_make_task(), {"raw": "done"}, task_index=0, inputs={"topic": "ai"})
+
+    with sqlite3.connect(storage.db_path) as conn:
+        conn.execute(
+            "UPDATE latest_kickoff_task_outputs SET output = ? WHERE task_index = 0",
+            (b"\xff\xfe\x00",),
+        )
+        conn.commit()
+
+    result = storage.load()[0]
+    assert result["output"] == b"\xff\xfe\x00"
