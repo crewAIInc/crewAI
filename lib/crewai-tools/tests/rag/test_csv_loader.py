@@ -76,6 +76,31 @@ class TestCSVLoader:
         assert result.metadata["columns"] == ["col1", "col2"]
         assert result.metadata["rows"] == 2
 
+    def test_load_csv_quoted_header_without_bom(self):
+        raw_csv = '"last, first",age\n"Doe, Jane",30\n'
+        result = CSVLoader().load(SourceContent(raw_csv))
+
+        assert result.metadata["columns"] == ["last, first", "age"]
+        assert "Row 1: last, first: Doe, Jane | age: 30" in result.content
+        assert result.metadata["rows"] == 1
+
+    def test_load_csv_with_utf8_bom_text_input(self):
+        raw_csv = '\ufeff"last, first",age\n"Doe,\ufeff Jane",30\n'
+        result = CSVLoader().load(SourceContent(raw_csv))
+
+        assert result.metadata["columns"] == ["last, first", "age"]
+        assert "Row 1: last, first: Doe,\ufeff Jane | age: 30" in result.content
+        assert result.metadata["rows"] == 1
+
+    def test_load_csv_with_utf8_bom_file(self, tmp_path):
+        path = tmp_path / "bom.csv"
+        path.write_text("\ufeffname,age\nJohn,25", encoding="utf-8")
+        result = CSVLoader().load(SourceContent(str(path)))
+
+        assert result.metadata["columns"] == ["name", "age"]
+        assert "Row 1: name: John | age: 25" in result.content
+        assert result.metadata["rows"] == 1
+
     def test_doc_id_is_deterministic(self, temp_csv_file):
         path = temp_csv_file("name,value\ntest,123")
         loader = CSVLoader()
