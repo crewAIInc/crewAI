@@ -561,13 +561,17 @@ class MCPClient:
             raise
 
     def _clean_tool_arguments(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Clean tool arguments by removing None values and fixing formats.
+        """Clean MCP arguments recursively without discarding explicit empties.
+
+        Removes only ``None`` values, normalizes ``sources`` string items, and
+        retains empty dictionaries/lists because schemas distinguish an empty
+        value from an omitted argument.
 
         Args:
             arguments: Raw tool arguments.
 
         Returns:
-            Cleaned arguments ready for MCP server.
+            Cleaned arguments ready for the MCP server.
         """
         cleaned: dict[str, Any] = {}
 
@@ -585,25 +589,19 @@ class MCPClient:
                         fixed_sources.append(item)
                     else:
                         fixed_sources.append(item)
-                if fixed_sources:
-                    cleaned[key] = fixed_sources
+                cleaned[key] = fixed_sources
                 continue
 
             if isinstance(value, dict):
-                nested_cleaned = self._clean_tool_arguments(value)
-                if nested_cleaned:  # Only add if not empty
-                    cleaned[key] = nested_cleaned
+                cleaned[key] = self._clean_tool_arguments(value)
             elif isinstance(value, list):
                 cleaned_list = []
                 for item in value:
                     if isinstance(item, dict):
-                        cleaned_item = self._clean_tool_arguments(item)
-                        if cleaned_item:
-                            cleaned_list.append(cleaned_item)
+                        cleaned_list.append(self._clean_tool_arguments(item))
                     elif item is not None:
                         cleaned_list.append(item)
-                if cleaned_list:
-                    cleaned[key] = cleaned_list
+                cleaned[key] = cleaned_list
             else:
                 cleaned[key] = value
 
