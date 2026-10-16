@@ -213,7 +213,13 @@ def test_blocks_symlink_escape(tool, temp_env):
     outside_dir = tempfile.mkdtemp()
     outside_file = os.path.join(outside_dir, "target.txt")
     link = os.path.join(temp_env["temp_dir"], "escape")
-    os.symlink(outside_dir, link)
+    try:
+        os.symlink(outside_dir, link)
+    except OSError as exc:
+        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+            shutil.rmtree(outside_dir, ignore_errors=True)
+            pytest.skip("symlink creation requires elevated privileges on Windows")
+        raise
     try:
         result = tool._run(
             filename="escape/target.txt",
