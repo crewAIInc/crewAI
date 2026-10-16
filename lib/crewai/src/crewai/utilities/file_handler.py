@@ -18,11 +18,22 @@ from typing_extensions import Unpack
 
 
 # errno values raised by os.link() on filesystems without hard-link support
-# (FAT/exFAT, some network mounts, restricted containers). Other OSError
-# errnos (notably EACCES) are deliberately excluded: those indicate genuine
-# permission or I/O problems and must propagate rather than trigger the
-# fallback publish path.
-_LINK_UNSUPPORTED_ERRNOS = frozenset({errno.EPERM, errno.EOPNOTSUPP, errno.ENOSYS})
+# (FAT/exFAT, some network mounts, restricted containers). ENOTSUP is listed
+# separately from EOPNOTSUPP: the two are aliases on Linux but distinct values
+# on macOS and some NFS mounts, and os.link() surfaces ENOTSUP there.
+# Other OSError errnos (notably EACCES) are deliberately excluded: those
+# indicate genuine permission or I/O problems and must propagate rather than
+# trigger the fallback publish path.
+_LINK_UNSUPPORTED_ERRNOS = frozenset(
+    errno_value
+    for errno_value in (
+        errno.EPERM,
+        errno.EOPNOTSUPP,
+        errno.ENOSYS,
+        getattr(errno, "ENOTSUP", None),  # absent on Windows
+    )
+    if errno_value is not None
+)
 
 # Bounds for the lockfile-serialized key-creation fallback below. Key creation
 # takes milliseconds; a lock older than _LOCK_STALE_AFTER_SECONDS can only
@@ -307,7 +318,7 @@ class PickleHandler:
                 if e.errno not in _LINK_UNSUPPORTED_ERRNOS:
                     raise
                 # Hard links are unsupported on this filesystem (EPERM /
-                # EOPNOTSUPP / ENOSYS from os.link). Fall back to a
+                # EOPNOTSUPP / ENOSYS / ENOTSUP from os.link). Fall back to a
                 # lockfile-serialized publish; tmp_key is already fully
                 # written and fsynced, so the fallback only changes how it
                 # is published, not what is published.
