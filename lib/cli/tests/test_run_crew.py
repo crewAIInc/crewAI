@@ -1331,3 +1331,60 @@ def test_the_three_names_for_the_eval_token_are_one() -> None:
         == crew_run_tui._AWAITING_EVAL_ENV
         == eval_handshake.AWAITING_ENV
     )
+
+
+def test_execute_uv_script_propagates_child_exit_code(monkeypatch, capsys):
+    """When a child uv script returns non-zero, _execute_uv_script must exit with that code."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+
+    def fake_subprocess_run(command, **kwargs):
+        raise subprocess.CalledProcessError(
+            42, command, output="Script crashed with code 42"
+        )
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 42
+    err_output = capsys.readouterr().err
+    assert "An error occurred while running the crew" in err_output
+    assert "Script crashed with code 42" in err_output
+
+
+def test_execute_uv_script_exits_code_1_on_unexpected_exception(monkeypatch, capsys):
+    """When subprocess invocation fails abruptly (e.g. uv missing), exit with 1."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+
+    def fake_subprocess_run(command, **kwargs):
+        raise FileNotFoundError("uv executable not found")
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+
+    assert exc_info.value.code == 1
+    assert "An unexpected error occurred: uv executable not found" in capsys.readouterr().err
+
+
+def test_execute_uv_script_success_completes_without_exit(monkeypatch):
+    """Successful execution completes cleanly without raising SystemExit."""
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    called = []
+
+    def fake_subprocess_run(command, **kwargs):
+        called.append(command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    run_crew_module._execute_uv_script("run_crew", entity_type="crew")
+    assert called == [["uv", "run", "run_crew"]]
