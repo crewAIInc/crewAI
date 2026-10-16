@@ -148,6 +148,10 @@ oxylabs = [
     # allow it rather than pinning consumers to a single release.
     "oxylabs>=2.0.0,<4",
 ]
+youtube = [
+    "google-api-python-client>=2.100.0",
+    "google-auth>=2.25.0",
+]
 mongodb = [
     # <4.18.1 has GHSA-8fvv-fgr5-f8ch (GridFS delete treats a mapping id as a
     # query). <4.18.2 has GHSA-qx36-8mw2-4r3x, GHSA-v4x9-3549-crwv, and
