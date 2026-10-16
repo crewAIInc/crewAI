@@ -89,6 +89,8 @@ def _assert_same_record(actual: MemoryRecord | None, expected: MemoryRecord) -> 
     assert actual.last_accessed == expected.last_accessed
     assert actual.source == expected.source
     assert actual.private == expected.private
+    # Embeddings are not compared: Qdrant Edge stores them unit-normalized for
+    # cosine distance, and the contract does not promise exact vectors back.
 
 
 class TestEmptyStore:
