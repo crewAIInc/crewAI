@@ -1,0 +1,65 @@
+---
+title: Recall Memory Tools
+description: Give CrewAI agents long-term memory of the people they work for with Recall
+icon: brain
+mode: "wide"
+---
+
+# `RecallSearchTool`, `RecallAskTool`, `RecallRememberTool`
+
+[Recall](https://recallmem.dev) is a memory service for agents. It learns about each person from their conversations
+and answers with what it learned. The `crewai-recall` package gives agents three tools for one person, and
+`recall_context()` puts what Recall knows into a task.
+
+## Installation
+
+```bash
+uv pip install crewai-recall
+```
+
+## Requirements
+
+- A Recall API key from [app.recallmem.dev/keys](https://app.recallmem.dev/keys), set as `RECALL_API_KEY`
+  (or `RECALL_URL` for a Recall server you run yourself)
+- Optionally `RECALL_WORKSPACE_ID` to choose a workspace
+
+## Example
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_recall import recall_context, recall_tools
+
+concierge = Agent(
+    role="Travel concierge",
+    goal="Plan trips the traveller will love",
+    backstory="You remember what each traveller likes.",
+    tools=recall_tools("user-42"),
+)
+plan = Task(
+    description="{request}\n\nWhat you know about the traveller:\n{memory}",
+    expected_output="A day-by-day plan",
+    agent=concierge,
+)
+request = "Plan a weekend in Lisbon."
+Crew(agents=[concierge], tasks=[plan]).kickoff(
+    inputs={"request": request, "memory": recall_context("user-42", query=request)}
+)
+```
+
+## Tools
+
+| Tool | What it does |
+|---|---|
+| `recall_search` | Facts about the person, and messages they wrote, that match a query. No model call. |
+| `recall_ask` | A question answered from earlier conversations (one model call on Recall's side). |
+| `recall_remember` | Saves facts the person stated, searchable at once. |
+
+`recall_tools(user_id)` returns all three for one person. Each tool also works on its own, e.g.
+`RecallSearchTool(user_id="user-42")`. The tools work in blocking and async runs.
+
+## Notes
+
+- Tools are bound to one person; build them per kickoff when a crew serves many people.
+- To have Recall learn from conversations, store the request and the crew's answer with the Recall SDK
+  (`recall-mem`); see the [guide](https://recallmem.dev/guides/crewai).
+- If Recall cannot be reached, the tool returns an error message to the agent instead of failing the crew.
