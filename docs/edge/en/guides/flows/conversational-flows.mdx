@@ -691,7 +691,41 @@ Project relevant job status and outputs through `build_router_context()` and `bu
 
 At session teardown, call `runner.request_close()` on its owning loop before draining foreground execution, then `await runner.aclose()`. This closes admission/publication, signals each worker, releases waiting publishers, and settles owned tasks. Work methods must call `check_open()` at stage boundaries. An in-flight provider operation is not aborted. Subscriber failure closes the runner rather than stranding publishers. Stopping speech alone should not close the runner.
 
-The initial lifecycle is `queued → running → completed/failed`. Pause/resume, replacement, automatic reply delivery, and distributed recovery are not supplied. Records can be serialized with existing state facilities, but restoring them does not recreate live workers or guarantee exactly-once external effects.
+The normal lifecycle remains `queued → running → completed/failed`. Experimental controls add cooperative pause, cancellation, and new execution attempts. Replacement and distributed recovery remain application concerns. Existing state facilities can serialize records, but restoring them does not recreate live workers or guarantee exactly-once external effects.
+
+### Acknowledged job controls
+
+Job controls are independent of input and transport: text, voice, UI buttons, and API clients can use the same contract. Stopping speech affects reply delivery; it does not pause or cancel a job. The application resolves natural-language intent and an unambiguous target, then submits a `JobControl`; the SDK does not interpret utterances or provide HTTP endpoints.
+
+```python
+from crewai.experimental.flow_jobs import JobControl
+
+async def control_job(runner, job, action, request_id):
+    command = JobControl(
+        request_id=request_id,
+        session_id=job.session_id,
+        job_id=job.job_id,
+        revision=job.revision,
+        attempt=job.attempt,
+        action=action,  # "pause", "cancel", or "resume"
+    )
+    # Call outside runner.state_lock; the runner acquires it internally.
+    receipt = await runner.request_job_control(command)
+    return receipt.model_dump(mode="json")
+```
+
+
+`JobControl` requires session/job/revision/attempt identity. Its `request_id` defaults to a UUID; retain it when retrying **the same command**. Accepted commands are stored as `JobControlReceipt` values in `JobState.job_controls`. A retry returns the original acceptance-time receipt without launching work again, including after resume increments the attempt. Reusing an ID for another command, stale versions, foreign sessions, and invalid transitions are rejected. Read current job snapshots for settlement; a receipt reporting `pause_requested` is not evidence that the operation stopped.
+
+* Queued work pauses or cancels immediately. Running work enters `pause_requested` or `cancel_requested` and settles only after the worker reaches a boundary and exits. Cancel overrides a pending pause.
+* An already admitted operation may finish and commit its typed outputs while control is requested. Another `stage_started` or successful `completed` update is rejected. No arbitrary synchronous/threaded provider call is aborted.
+* A failure during pause produces `failed`. A failure during cancellation produces `cancelled` with the operation error retained. Earlier committed outputs remain available.
+* Resume is valid only for `paused` work. It preserves job ID/revision, inputs and committed outputs, increments `attempt`, resets the update sequence, and submits one new worker after the previous worker drains. Older attempt updates are rejected.
+* If successful completion wins the serialized race, pause/cancel preserves `completed` and its outputs but sets `delivery_suppressed`. `ReplyQueue` checks this field before enqueue, preparation, and output handoff. The transport must stop already buffered audio separately. Resume is invalid for completed, cancelled, or failed work.
+
+Workers must call `check_open()` at boundaries, publish `started` before their first operation, and obtain acceptance of `stage_started` before each later operation. On a resumed attempt, use `stage_committed("stage_name")` to skip completed operations and read their outputs from `self.state.job`. Publish `completed` after all required stages. The executor cannot infer which application methods or external effects can safely be skipped.
+
+`JobRunner.request_job_control()` signals its worker, publishes state snapshots, and handles resume with copied admission inputs retained in that live runner. Call it on the runner's owning loop, outside any foreground `state_lock` scope. A long foreground turn holding that lock must drain before a control mutates shared state; keep the transport reading interruption messages while control waits. Subscriber failure closes the runner. The synchronous `request_job_control(state, command)` reducer is for custom serialized executors: it does not signal workers or launch resumed work. Those executors must acknowledge settlement with `control_settled` or `failed` updates after execution exits. Snapshot restoration retains command receipts, not resume inputs or execution handles; restart recovery is a separate contract.
 
 ## Experimental turn and public reply identities
 

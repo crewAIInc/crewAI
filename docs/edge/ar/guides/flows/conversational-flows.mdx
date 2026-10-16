@@ -690,7 +690,41 @@ async def run_job():
 
 عند إغلاق الجلسة، استدعِ `runner.request_close()` على loop المالك قبل انتظار انتهاء التنفيذ في المقدمة، ثم `await runner.aclose()`. يؤدي ذلك إلى إغلاق قبول العمل والنشر وإرسال إشارة إلى كل worker وتحرير publishers المنتظرين وانتظار tasks المملوكة. يجب أن تستدعي طرق العمل `check_open()` عند حدود المراحل. لا تُجهض عملية provider قيد التنفيذ. يغلق فشل subscriber الـ runner بدل ترك publishers معلقين. لا ينبغي أن يؤدي إيقاف الكلام وحده إلى إغلاق runner.
 
-دورة الحياة الأولية هي `queued → running → completed/failed`. لا تتوفر pause/resume أو الاستبدال أو تسليم الردود تلقائيًا أو الاستعادة الموزعة. يمكن تسلسل السجلات باستخدام إمكانات الحالة الموجودة، لكن استعادتها لا تعيد إنشاء workers نشطين ولا تضمن تنفيذ الآثار الخارجية مرة واحدة بالضبط.
+تبقى دورة الحياة المعتادة `queued → running → completed/failed`. تضيف أدوات التحكم التجريبية الإيقاف المؤقت التعاوني والإلغاء ومحاولات تنفيذ جديدة. يبقى الاستبدال والاستعادة الموزعة من مسؤوليات التطبيق. يمكن تسلسل السجلات بإمكانات الحالة الموجودة، لكن استعادتها لا تعيد إنشاء workers نشطين ولا تضمن تنفيذ الآثار الخارجية مرة واحدة بالضبط.
+
+### التحكم في job مع تأكيد القبول
+
+التحكم في job مستقل عن نوع الإدخال والنقل: النص والصوت وأزرار UI وعملاء API يستخدمون العقد نفسه. إيقاف الكلام يؤثر في تسليم الرد ولا يوقف job مؤقتًا أو يلغيه. يحدد التطبيق نية اللغة الطبيعية والهدف دون غموض ثم يرسل `JobControl`؛ لا يفسر SDK العبارات ولا يوفر endpoints HTTP.
+
+```python
+from crewai.experimental.flow_jobs import JobControl
+
+async def control_job(runner, job, action, request_id):
+    command = JobControl(
+        request_id=request_id,
+        session_id=job.session_id,
+        job_id=job.job_id,
+        revision=job.revision,
+        attempt=job.attempt,
+        action=action,  # "pause", "cancel", or "resume"
+    )
+    # Call outside runner.state_lock; the runner acquires it internally.
+    receipt = await runner.request_job_control(command)
+    return receipt.model_dump(mode="json")
+```
+
+
+يتطلب `JobControl` هوية session/job/revision/attempt. القيمة الافتراضية لـ `request_id` هي UUID؛ احتفظ بها عند إعادة إرسال **الأمر نفسه**. تُحفظ الأوامر المقبولة كقيم `JobControlReceipt` في `JobState.job_controls`. تعيد المحاولة تأكيد القبول الأصلي دون تشغيل العمل مجددًا، حتى بعد زيادة attempt عند resume. يُرفض استخدام ID نفسه لأمر آخر، والإصدارات القديمة، والجلسات الأجنبية، والانتقالات غير الصالحة. اقرأ snapshots الحالية لمعرفة استقرار التحكم؛ لا تعني `pause_requested` أن العملية توقفت.
+
+* يتوقف العمل queued مؤقتًا أو يُلغى فورًا. ينتقل العمل running إلى `pause_requested` أو `cancel_requested` ولا يستقر إلا بعد بلوغ worker حدًا وخروجه. يتجاوز Cancel طلب pause المعلق.
+* قد تنتهي عملية سبق قبولها وتثبت نتائجها المكتوبة أثناء طلب التحكم. يُرفض `stage_started` التالي أو update ناجح من نوع `completed`. لا تُجهض استدعاءات المزود المتزامنة أو العاملة في threads بشكل تعسفي.
+* يؤدي الفشل أثناء pause إلى `failed`. وأثناء cancel يؤدي إلى `cancelled` مع حفظ خطأ العملية. تبقى النتائج المثبتة سابقًا متاحة.
+* يُسمح بـ Resume للعمل `paused` فقط. يحفظ job ID/revision والمدخلات والنتائج المثبتة، ويزيد `attempt` ويعيد تسلسل updates إلى البداية، ثم يرسل worker جديدًا واحدًا بعد انتهاء السابق. تُرفض updates من attempts القديمة.
+* إذا سبق الإكمال الناجح التحكم في المسار المتسلسل، يحفظ pause/cancel الحالة `completed` والنتائج ويضبط `delivery_suppressed`. يتحقق `ReplyQueue` من هذا الحقل قبل enqueue وprepare وتسليم output. يجب أن يوقف النقل الصوت المخزن مؤقتًا بشكل منفصل. لا يُسمح بـ Resume للعمل completed أو cancelled أو failed.
+
+يجب أن يستدعي workers الدالة `check_open()` عند الحدود، وأن ينشروا `started` قبل العملية الأولى ويحصلوا على قبول `stage_started` قبل كل عملية لاحقة. في attempt مستأنف، استخدم `stage_committed("stage_name")` لتجاوز العمليات المكتملة واقرأ نتائجها من `self.state.job`. انشر `completed` بعد جميع المراحل المطلوبة. لا يستطيع executor استنتاج methods التطبيق أو الآثار الخارجية التي يمكن تجاوزها بأمان.
+
+ترسل `JobRunner.request_job_control()` إشارة إلى worker وتنشر snapshots وتستأنف العمل بنسخ مدخلات القبول المحفوظة في runner الحي. استدعها على loop المالك وخارج نطاق foreground لـ `state_lock`. يجب أن ينتهي turn طويل يحتفظ بهذا lock قبل أن يعدل التحكم الحالة المشتركة؛ أبقِ النقل يقرأ رسائل المقاطعة أثناء الانتظار. يؤدي فشل subscriber إلى إغلاق runner. الدالة المتزامنة `request_job_control(state, command)` مخصصة لـ executors متسلسلة مخصصة؛ لا ترسل إشارات إلى workers ولا تشغل العمل المستأنف. يجب أن تؤكد هذه executors الاستقرار باستخدام updates من نوع `control_settled` أو `failed` بعد انتهاء التنفيذ. تحفظ استعادة snapshot تأكيدات الأوامر، لا مدخلات الاستئناف ولا handles التنفيذ؛ الاستعادة بعد إعادة التشغيل عقد منفصل.
 
 ## هويات الأدوار والردود العامة التجريبية
 
