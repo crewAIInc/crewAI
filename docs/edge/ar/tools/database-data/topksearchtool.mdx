@@ -1,0 +1,133 @@
+---
+title: أداة البحث TopK
+description: بحث بالكلمات المفتاحية (BM25) وبحث دلالي وهجين لوكلاء CrewAI باستخدام TopK، مع تضمينات على الخادم وفلاتر وأقسام لكل مستخدم.
+icon: magnifying-glass-plus
+mode: "wide"
+---
+
+# `TopKSearchTool`
+
+## الوصف
+
+ابحث في مجموعة [TopK](https://topk.io) من وكيل CrewAI. في كل استدعاء يختار الوكيل `search_mode`:
+
+| `search_mode` | ما يفعله | استخدمه لـ |
+| --- | --- | --- |
+| `keyword` | بحث نصي كامل بـ BM25. يُرجع فقط المستندات التي تحتوي على المصطلحات. | رموز الأخطاء الدقيقة والمعرّفات وأرقام SKU وأسماء المنتجات أو الدوال |
+| `semantic` | بحث حسب المعنى باستخدام تضمينات TopK المدمجة. | الأسئلة المُعاد صياغتها أو المفاهيمية |
+| `hybrid` (الافتراضي) | ترتيب التشابه الدلالي و BM25 معًا في استعلام واحد. | الأسئلة التي تجمع بين المعنى والمصطلحات الدقيقة |
+
+يُنشئ TopK التضمينات على الخادم، لذلك لا تحتاج الأداة إلى مفتاح OpenAI أو أي نموذج تضمين آخر. أنت ترسل النص فقط. يُنشئ `semantic_index()` في TopK تضمين كل مستند عند كتابته وكل استعلام عند البحث، ويبني فهرس BM25 المستخدم في البحث بالكلمات المفتاحية والبحث الهجين، فلا يوجد نموذج تضمين أو عمود متجهات أو خط معالجة للتضمينات لإدارته. يمكن للوكيل أيضًا تمرير `filters` لتضييق النتائج، ويقصر `partition` الأداة على بيانات مستأجر أو مستخدم واحد.
+
+## التثبيت
+
+```bash
+uv add topk-sdk
+```
+
+## متغيرات البيئة
+
+```bash
+TOPK_API_KEY=your_topk_api_key        # https://console.topk.io
+TOPK_REGION=aws-us-east-1-elastica    # https://docs.topk.io/regions
+```
+
+## إنشاء مجموعة
+
+تبحث الأداة في مجموعة موجودة. أضف `semantic_index()` إلى حقل النص وأدرج نصًا عاديًا: يُنشئ TopK تضمين كل مستند عند الكتابة، فلا توجد متجهات عليك حسابها أو تخزينها.
+
+```python
+import os
+from topk_sdk import Client
+from topk_sdk.schema import semantic_index, text
+
+client = Client(api_key=os.environ["TOPK_API_KEY"], region=os.environ["TOPK_REGION"])
+client.collections().create("runbook", schema={"text": text().required().index(semantic_index())})
+
+client.collection("runbook").upsert([
+    {"_id": "e4021", "text": "Error code E-4021 means the payment gateway timed out.", "source": "runbook", "year": 2024},
+    {"_id": "e4012", "text": "Error code E-4012 means the card was declined by the bank.", "source": "runbook", "year": 2024},
+    {"_id": "churn", "text": "Customers cancel subscriptions mostly because onboarding takes too long.", "source": "notes", "year": 2025},
+])
+```
+
+## الاستخدام الأساسي
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import TopKSearchTool
+
+search = TopKSearchTool(collection_name="runbook", return_fields=["text", "source"])
+
+support_agent = Agent(
+    role="Support Engineer",
+    goal="Answer questions about errors and incidents from the runbook",
+    backstory="You always search the runbook before answering.",
+    tools=[search],
+)
+
+task = Task(
+    description="A customer reports error E-4021 at checkout. What does it mean?",
+    expected_output="The meaning of the error and what to do next",
+    agent=support_agent,
+)
+
+Crew(agents=[support_agent], tasks=[task]).kickoff()
+```
+
+لرمز دقيق مثل `E-4021` يمكن للوكيل استدعاء الأداة بـ `search_mode="keyword"`. البحث الدلالي وحده لا يميّز بشكل موثوق بين `E-4021` و `E-4012`.
+
+## الفلاتر
+
+يمرّر الوكيل `filters` ككائن JSON على حقول مجموعتك. استخدم النقاط للحقول المتداخلة:
+
+```python
+search.run(query="payment failures", filters={"source": "runbook", "year": {"$gte": 2024}})
+```
+
+العوامل: `$eq` و `$ne` و `$gt` و `$gte` و `$lt` و `$lte` و `$in` و `$nin` و `$contains`. القيمة المجردة تعني `$eq`.
+
+## بيانات لكل مستخدم باستخدام الأقسام
+
+[الأقسام](https://docs.topk.io/concepts#multi-tenancy) في TopK معزولة تمامًا، لذا يمكنك منح كل مستخدم أو مستأجر قسمًا خاصًا به وإنشاء أداة لكل مستخدم. لا يرى الوكيل الذي يملك تلك الأداة بيانات أي شخص آخر:
+
+```python
+alice_notes = TopKSearchTool(collection_name="notes", partition="user-alice")
+```
+
+اكتب في القسم نفسه باستخدام `client.collection("notes", partition="user-alice").upsert([...])`.
+
+## المعاملات
+
+### مدخلات الوكيل
+
+| المعامل | النوع | الوصف |
+| --- | --- | --- |
+| `query` | `str` | ما الذي تبحث عنه (مطلوب). |
+| `search_mode` | `"hybrid" \| "keyword" \| "semantic"` | الافتراضي `"hybrid"`. |
+| `filters` | `dict` | فلتر اختياري للحقول (انظر أعلاه). |
+
+### إعدادات الأداة
+
+| المعامل | الافتراضي | الوصف |
+| --- | --- | --- |
+| `collection_name` | (مطلوب) | مجموعة TopK المراد البحث فيها. |
+| `text_field` | `"text"` | الحقل الذي يحمل `semantic_index()`. |
+| `return_fields` | `["text"]` | الحقول المُرجعة لكل نتيجة إلى جانب `id` و `score` (اللذين يصفان النتيجة دائمًا). |
+| `partition` | `None` | البحث في هذا القسم فقط. |
+| `limit` | `5` | عدد النتائج لكل بحث (1-100). |
+| `hybrid_alpha` | `0.5` | وزن الدرجة الدلالية في البحث الهجين، ويحصل BM25 على `1 - hybrid_alpha`. كلتاهما درجات خام غير محدودة من TopK تُوزن كما هي، لذا راجع بعض النتائج قبل ضبطه. |
+| `api_key`, `region` | متغيرات البيئة | الافتراضي `TOPK_API_KEY` و `TOPK_REGION`. |
+| `client` | `None` | إعادة استخدام `topk_sdk.Client` موجود. |
+
+## المخرجات
+
+قائمة JSON، تبدأ بأفضل نتيجة:
+
+```json
+[
+  {"id": "e4021", "score": 1.7231, "text": "Error code E-4021 means the payment gateway timed out.", "source": "runbook"}
+]
+```
+
+يُرجع وضع `keyword` القيمة `[]` عندما لا يحتوي أي مستند على المصطلحات، فيعرف الوكيل أن المصطلح غير موجود في أي مكان.
