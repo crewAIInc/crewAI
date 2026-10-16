@@ -142,6 +142,15 @@ def test_valid_action_parsing_with_json_string():
     assert result.tool_input == '{"query": "temperature in SF"}'
 
 
+def test_action_parser_preserves_truncated_string_for_tool_validation():
+    text = 'Thought: search\nAction: search\nAction Input: {"query": "XYZ'
+
+    result = parser.parse(text)
+
+    assert isinstance(result, AgentAction)
+    assert result.tool_input == '{"query": "XYZ'
+
+
 def test_valid_action_parsing_with_unbalanced_quotes():
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: \"what is the temperature in SF?"
     result = parser.parse(text)
