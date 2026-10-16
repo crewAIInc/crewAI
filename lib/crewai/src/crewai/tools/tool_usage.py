@@ -999,9 +999,17 @@ class ToolUsage:
         quote_character = None
         escaped = False
 
-        for character in tool_input:
+        for index, character in enumerate(tool_input):
             if not in_string:
                 if character in {'"', "'"}:
+                    if (
+                        character == "'"
+                        and index > 0
+                        and index + 1 < len(tool_input)
+                        and tool_input[index - 1].isalnum()
+                        and tool_input[index + 1].isalnum()
+                    ):
+                        continue
                     in_string = True
                     quote_character = character
             elif escaped:

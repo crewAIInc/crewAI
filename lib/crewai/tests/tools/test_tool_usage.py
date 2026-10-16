@@ -368,6 +368,20 @@ def test_validate_tool_input_rejects_truncated_single_quoted_string_value():
     )
 
 
+def test_validate_tool_input_preserves_apostrophes_in_unquoted_values():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=None,
+        action=MagicMock(),
+    )
+    tool_usage.action.tool = "test_tool"
+
+    assert tool_usage._validate_tool_input('{"query": don\'t}') == {"query": "don't"}
+
+
 def test_tool_calling_does_not_repair_truncated_json_with_function_calling_llm():
     tool = RandomNumberTool().to_structured_tool()
     action = MagicMock()
