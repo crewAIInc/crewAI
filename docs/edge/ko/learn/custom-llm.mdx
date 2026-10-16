@@ -209,20 +209,16 @@ def supports_stop_words(self) -> bool:
     return True  # Your LLM supports stop sequences
 ```
 
-만약 사용 중인 LLM이 스톱 워드를 기본적으로 지원하지 않는다면:
+만약 사용 중인 LLM이 스톱 워드를 기본적으로 지원하지 않는다면, `BaseLLM._apply_stop_words`로 응답을 자릅니다. 절단 위치는 생성된 텍스트 안에서 가장 먼저 나타나는 스톱 워드입니다. `stop=["LATE", "EARLY"]`와 `stop=["EARLY", "LATE"]`는 모두 `"hello EARLY middle LATE tail"`을 `"hello"`로 만듭니다. `EARLY`가 먼저 나타나고, 남은 앞부분이 `str.strip()`을 거치기 때문입니다. 스톱 워드가 하나도 포함되지 않은 텍스트는 그대로 반환됩니다.
 
 ```python
 def call(self, messages, tools=None, callbacks=None, available_functions=None):
     response = self._make_api_call(messages, tools)
     content = response["choices"][0]["message"]["content"]
-    
-    # Manually truncate at stop words
-    if self.stop:
-        for stop_word in self.stop:
-            if stop_word in content:
-                content = content.split(stop_word)[0]
-                break
-    
+
+    # Earliest stop word in the text wins; the kept prefix is stripped.
+    content = self._apply_stop_words(content)
+
     return content
 
 def supports_stop_words(self) -> bool:
