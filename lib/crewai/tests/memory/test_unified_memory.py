@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 from unittest.mock import MagicMock
@@ -697,6 +697,31 @@ def test_composite_score_custom_config() -> None:
     score, reasons = compute_composite_score(record, 0.73, config)
     assert score == pytest.approx(0.73, rel=1e-5)
     assert "semantic" in reasons
+
+
+def test_composite_score_supports_timezone_aware_created_at() -> None:
+    """Timezone-aware timestamps are normalized to UTC before aging."""
+    config = MemoryConfig()
+    record = MemoryRecord(
+        content="aware timestamp",
+        importance=0.7,
+        created_at=datetime.now(timezone.utc),
+    )
+    score, reasons = compute_composite_score(record, 0.8, config)
+
+    assert 0.82 <= score <= 0.86
+    assert "semantic" in reasons
+    assert "recency" in reasons
+    assert "importance" in reasons
+
+    utc_timestamp = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    offset_timestamp = utc_timestamp.astimezone(timezone(timedelta(hours=3, minutes=30)))
+    utc_record = MemoryRecord(content="same", created_at=utc_timestamp)
+    offset_record = MemoryRecord(content="same", created_at=offset_timestamp)
+
+    utc_score, _ = compute_composite_score(utc_record, 0.8, config)
+    offset_score, _ = compute_composite_score(offset_record, 0.8, config)
+    assert utc_score == offset_score
 
 
 # --- LLM fallback ---
