@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 from crewai_tools.tools.directory_read_tool.directory_read_tool import (
     DirectoryReadTool,
@@ -19,3 +20,18 @@ def test_lists_actual_path_when_descendant_repeats_base_path(
 
     assert result == f"File paths: \n-{target}"
     assert target.exists()
+
+
+def test_lists_files_from_filesystem_root(monkeypatch) -> None:
+    root = Path.cwd().anchor
+    monkeypatch.chdir(root)
+
+    # Keep real path validation but do not traverse the host filesystem.
+    with patch(
+        "crewai_tools.tools.directory_read_tool.directory_read_tool.os.walk",
+        return_value=[(root, [], ["sentinel.txt"])],
+    ) as walk:
+        result = DirectoryReadTool()._run(directory=root)
+
+    walk.assert_called_once_with(root)
+    assert result == f"File paths: \n-{Path(root) / 'sentinel.txt'}"
