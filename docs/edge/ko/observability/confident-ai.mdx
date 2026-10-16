@@ -1,0 +1,154 @@
+---
+title: Confident AI
+description: OpenTelemetry 네이티브 추적 및 평가를 제공하는 CrewAI용 Confident AI 통합
+icon: shield-check
+mode: "wide"
+---
+
+# Confident AI 통합
+
+이 가이드는 `confident-trace`를 사용하여 **Confident AI**를 **CrewAI**와 통합하는 방법을 보여줍니다. 이 가이드를 마치면 모든 crew kickoff가 crew → task → agent → tool의 전체 계층 구조를 가진 트레이스로 표시되어, agent가 무엇을 했는지 확인하고 얼마나 잘 수행했는지 평가할 수 있습니다.
+
+> **Confident AI란 무엇인가요?** [Confident AI](https://www.confident-ai.com/)는 개발 및 프로덕션 환경에서 신뢰할 수 있는 AI 애플리케이션을 구축하는 팀을 위한 LLM 관측 및 평가 플랫폼입니다. [`confident-trace`](https://github.com/confident-ai/confident-trace)는 이 플랫폼의 OpenTelemetry 네이티브 추적 SDK입니다.
+
+## 시작하기
+
+CrewAI를 사용하고 이를 Confident AI와 통합하여 추적 및 평가를 수행하는 간단한 예제를 살펴보겠습니다.
+
+### 1단계: 의존성 설치
+
+```bash
+pip install confident-trace crewai openai
+```
+
+### 2단계: 환경 변수 설정
+
+[Confident AI](https://app.confident-ai.com)에서 프로젝트 API key를 발급받아, crew가 사용하는 모델 제공자 키와 함께 설정하세요:
+
+```bash
+export CONFIDENT_API_KEY="<your-confident-api-key>"
+export OPENAI_API_KEY="<your-openai-key>"
+```
+
+EU 리전 사용자는 OTEL 엔드포인트를 EU 버전으로 설정하세요. 그렇지 않으면 트레이스가 미국 서버로 전송됩니다:
+
+```bash
+export CONFIDENT_OTEL_ENDPOINT="https://eu.otel.confident-ai.com/v1/traces"
+```
+
+### 3단계: CrewAI 애플리케이션 만들기
+
+crew를 kickoff하기 전에, 시작 시점에 `init()`을 한 번만 호출하세요. `Agent`, `Task`, `Crew`는 평소처럼 `crewai`에서 그대로 import하면 됩니다. 설치된 프레임워크가 자동으로 감지되므로 설정해야 할 exporter나 instrumentor가 없습니다.
+
+```python
+from confident_trace import init, shutdown
+from crewai import Agent, Crew, Task
+
+init()
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanations.",
+    backstory="An expert consultant with a keen eye for software trends.",
+    llm="openai/gpt-4o-mini",
+)
+
+task = Task(
+    description="Explain the given topic",
+    expected_output="A clear and concise explanation.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+
+try:
+    result = crew.kickoff({"input": "What are LLMs?"})
+    print(result.raw)
+finally:
+    shutdown()
+```
+
+crew 코드는 전혀 변경되지 않습니다. `confident-trace`가 자동으로 `CrewAI` 통합 라벨을 span에 추가하고 다음 항목을 캡처합니다:
+
+- **Crew, task, flow 실행** — 작업 이름, 소요 시간, 상태, 그리고 각 단계 간의 상위-하위 관계.
+- **Agent 실행** — 각 agent에 전달된 task 프롬프트와 agent의 최종 응답.
+- **모델 호출** — 메시지, 모델 세부 정보, tool 요청, 종료 사유, 그리고 [토큰 사용량](https://www.confident-ai.com/docs/llm-tracing/features/token-usage-cost).
+- **Tool 호출** — tool 이름과 해당 [입력/출력](https://www.confident-ai.com/docs/llm-tracing/features/input-output).
+- **사용자 정의 span** — tool이나 flow 내부에서 생성된 애플리케이션 span은 해당 실행 아래에 중첩된 상태로 유지됩니다.
+
+캡처된 입력, 출력, 메시지는 [콘텐츠 정책](https://www.confident-ai.com/docs/llm-tracing/features/masking)을 따릅니다. Agent 설정, 자격 증명, memory store, checkpoint 상태는 내보내지 않습니다.
+
+CrewAI span은 실행의 *구조*를 설명합니다. 각 task 내부의 OpenAI(또는 Anthropic, Gemini, Bedrock) 호출은 `init()`이 CrewAI와 함께 활성화하는 제공자 통합에 의해 [LLM span](https://www.confident-ai.com/docs/llm-tracing/features/span-types#llm-spans)으로 캡처됩니다. 모델 span은 crew의 LLM이 지원되는 제공자 SDK를 거칠 때만 나타납니다. 해당 SDK를 우회하는 사용자 정의 `LLM` 구현이나 LiteLLM 경로는 crew 구조는 보여주지만 LLM span은 생성하지 않습니다.
+
+`init()`은 CrewAI의 실행 경계를 후킹합니다. `Crew.kickoff`과 그 비동기 변형, task 실행, `Agent.execute_task` / `aexecute_task`, `Flow.kickoff_async` / `resume_async` 및 Flow 메서드, 그리고 tool 실행/호출 메서드가 이에 해당합니다. 비동기 편의 메서드는 이러한 경계에 위임하므로 중복된 span이 생기지 않습니다.
+
+장시간 실행되는 서버에서는 시작 시점에 `init()`을 호출하고, 진행 중인 crew 작업이 끝난 뒤 정상 종료 과정에서 `shutdown()`을 호출하세요. 요청마다 호출해서는 안 됩니다.
+
+### 4단계: 트레이스 확인하기
+
+스크립트를 실행하세요:
+
+```bash
+python main.py
+```
+
+[Confident AI](https://app.confident-ai.com) 프로젝트에서 **Observatory**를 열어 트레이스와 하위 span을 확인하세요.
+
+트레이스가 보이지 않는다면, 거의 대부분 트레이스가 전송되기 전에 프로그램이 종료되었기 때문입니다. 종료 전에 `shutdown()`을 호출하고 있는지 확인하세요.
+
+## Online Evals
+
+수신되는 트레이스에 대해 어떤 처리를 할지 Confident AI의 [workflows 페이지](https://www.confident-ai.com/docs/llm-tracing/workflows)에서 설정할 수 있습니다.
+
+![Confident AI workflows 페이지](https://confident-docs.s3.us-east-1.amazonaws.com/confident-trace-workflows.png)
+
+설정할 수 있는 workflow는 다음과 같습니다:
+
+- **평가 규칙(Evaluation rules)** — 수신되는 트레이스를 [metric collection](https://www.confident-ai.com/docs/metrics/metric-collections)을 기준으로 평가합니다.
+- **분류기(Classifiers)** — 이슈, 감정 또는 직접 정의한 기준으로 트레이스에 라벨을 붙여, 이후에 그룹화하거나 필터링할 수 있습니다.
+- **큐 인제스천(Queue ingestion)** — 프로덕션 트레이스를 annotation queue로 보내 내부 리뷰 팀이 직접 주석을 달도록 합니다.
+- **데이터셋 인제스천(Dataset ingestion)** — 프로덕션 트레이스를 데이터셋에 수집하여 테스트 케이스로 재사용하고, 결과를 반복 개선합니다.
+
+트레이스, span, thread와 같이 서로 다른 데이터 모델별로 필요에 맞게 사용자 정의 workflow를 만들 수 있습니다.
+
+컴포넌트나 트레이스를 수동으로 평가하려면 `update_trace`에 metric collection을 전달하세요. [online evaluations](https://www.confident-ai.com/docs/llm-tracing/online-evals)를 참고하세요.
+
+## 트레이스 속성
+
+kickoff이 시작되기 전에 이미 알고 있는 tags, metadata, user ID를 붙이려면 trace context를 사용하세요. 추가 span을 만들지 않으며, `crew.kickoff()`이 시작한 트레이스가 전달한 값을 그대로 상속합니다:
+
+```python
+from confident_trace import init, trace_context
+
+init()
+
+with trace_context(
+    tags=["support"],
+    metadata={"release": "2026-09"},
+    user_id="user-42",
+):
+    result = crew.kickoff({"input": "What are LLMs?"})
+```
+
+## 트레이스를 Thread로 그룹화하기
+
+`confident-trace`는 두 개의 연속된 CrewAI kickoff을 하나의 turn으로 묶을 수 있는 `turn()` 메서드를 제공합니다. 이후 turn에서도 동일한 thread ID를 재사용하면 하나의 thread로 묶여 Confident AI에서 확인하고 평가할 수 있습니다:
+
+```python
+from confident_trace import init, turn
+
+init()
+
+with turn("support-turn", thread_id="chat-42"):
+    context = crew.kickoff({"input": "Find the relevant account details."})
+    answer = crew.kickoff({"input": f"Summarize these details: {context.raw}"})
+```
+
+## 참고 자료
+
+- [CrewAI 통합 가이드](https://www.confident-ai.com/docs/integrations/third-party/crew-ai) - 전체 설정 및 구성 레퍼런스
+- [Confident AI의 LLM 추적](https://www.confident-ai.com/docs/llm-tracing/introduction) - 트레이스, span, thread의 동작 방식
+- [Online evals](https://www.confident-ai.com/docs/llm-tracing/online-evals) - 수집되는 트레이스를 평가하기
+- [Threads](https://www.confident-ai.com/docs/llm-tracing/features/threads) - kickoff을 대화 단위로 그룹화하기
+- [GitHub의 confident-trace](https://github.com/confident-ai/confident-trace) - 소스 코드 및 이슈
+- **통합에 도움이 필요하신가요?** [담당자와 상담하세요.](https://www.confident-ai.com/book-a-demo)

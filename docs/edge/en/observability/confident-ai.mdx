@@ -1,0 +1,154 @@
+---
+title: Confident AI
+description: Confident AI integration for CrewAI with OpenTelemetry-native tracing and evaluation
+icon: shield-check
+mode: "wide"
+---
+
+# Confident AI Integration
+
+This guide demonstrates how to integrate **Confident AI** with **CrewAI** using `confident-trace`. By the end of this guide, every crew kickoff will show up as a trace with the full crew → task → agent → tool hierarchy, so you can see what your agents did and evaluate how well they did it.
+
+> **What is Confident AI?** [Confident AI](https://www.confident-ai.com/) is an LLM observability and evaluation platform for teams building reliable AI applications in development and production. [`confident-trace`](https://github.com/confident-ai/confident-trace) is its OpenTelemetry-native tracing SDK.
+
+## Get Started
+
+We'll walk through a simple example of using CrewAI and integrating it with Confident AI for tracing and evaluation.
+
+### Step 1: Install Dependencies
+
+```bash
+pip install confident-trace crewai openai
+```
+
+### Step 2: Set Up Environment Variables
+
+Get your project API key from [Confident AI](https://app.confident-ai.com) and set it alongside the model provider key your crew uses:
+
+```bash
+export CONFIDENT_API_KEY="<your-confident-api-key>"
+export OPENAI_API_KEY="<your-openai-key>"
+```
+
+For users in the EU region, set the OTEL endpoint to the EU version, or your traces will be sent to the US servers:
+
+```bash
+export CONFIDENT_OTEL_ENDPOINT="https://eu.otel.confident-ai.com/v1/traces"
+```
+
+### Step 3: Create a CrewAI Application
+
+Call `init()` once at startup, before kicking off any crew. Keep importing `Agent`, `Task`, and `Crew` from `crewai` as usual — the installed framework is detected automatically, so there is no exporter or instrumentor to configure.
+
+```python
+from confident_trace import init, shutdown
+from crewai import Agent, Crew, Task
+
+init()
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanations.",
+    backstory="An expert consultant with a keen eye for software trends.",
+    llm="openai/gpt-4o-mini",
+)
+
+task = Task(
+    description="Explain the given topic",
+    expected_output="A clear and concise explanation.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+
+try:
+    result = crew.kickoff({"input": "What are LLMs?"})
+    print(result.raw)
+finally:
+    shutdown()
+```
+
+Your crew code stays exactly the same. `confident-trace` automatically attaches a `CrewAI` integration label to your spans and captures:
+
+- **Crew, task, and flow execution** — operation names, timing, status, and the parent-child relationships between steps.
+- **Agent execution** — the task prompt sent to each agent and the agent's final answer.
+- **Model calls** — messages, model details, tool requests, finish reasons, and [token usage](https://www.confident-ai.com/docs/llm-tracing/features/token-usage-cost).
+- **Tool calls** — tool names and their [input/output](https://www.confident-ai.com/docs/llm-tracing/features/input-output).
+- **Custom spans** — any custom application spans created inside a tool or flow remain nested under it.
+
+Captured inputs, outputs, and messages follow the [content policy](https://www.confident-ai.com/docs/llm-tracing/features/masking). Agent configuration, credentials, memory stores, and checkpoint state aren't exported.
+
+CrewAI spans describe the *structure* of a run. The OpenAI (or Anthropic, Gemini, Bedrock) call inside each task shows up as an [LLM span](https://www.confident-ai.com/docs/llm-tracing/features/span-types#llm-spans) captured by the provider integration that `init()` turns on alongside CrewAI. Model spans only appear when the crew's LLM goes through a supported provider SDK — custom `LLM` implementations and LiteLLM routes that bypass those SDKs will show the crew structure but no LLM spans.
+
+`init()` hooks CrewAI's execution boundaries — `Crew.kickoff` and its async variants, task execution, `Agent.execute_task` / `aexecute_task`, `Flow.kickoff_async` / `resume_async` and Flow methods, and tool run/invoke methods. Async convenience methods delegate to those boundaries, so you won't see duplicate spans.
+
+In a long-running server, call `init()` at startup and `shutdown()` during graceful shutdown, after active crew work finishes — never per request.
+
+### Step 4: View Your Traces
+
+Run your script:
+
+```bash
+python main.py
+```
+
+Open the **Observatory** in your [Confident AI](https://app.confident-ai.com) project to inspect the trace and its child spans.
+
+If you don't see a trace, it is almost always because the program exited before the traces were posted. Make sure you're calling `shutdown()` before exit.
+
+## Online Evals
+
+You can configure what happens to your incoming traces on Confident AI's [workflows page](https://www.confident-ai.com/docs/llm-tracing/workflows).
+
+![Confident AI workflows page](https://confident-docs.s3.us-east-1.amazonaws.com/confident-trace-workflows.png)
+
+Here are the workflows you can configure:
+
+- **Evaluation rules** — evaluate incoming traces against a [metric collection](https://www.confident-ai.com/docs/metrics/metric-collections).
+- **Classifiers** — label your traces by issue, sentiment, or any dimension you define, which lets you group or filter them later on.
+- **Queue ingestion** — route your production traces into annotation queues for your internal review team to annotate them by hand.
+- **Dataset ingestion** — ingest your production traces into datasets to reuse as test cases and iterate on results to improve over time.
+
+You can create custom workflows for different data models like traces, spans, and threads individually as per your needs.
+
+To evaluate a component or trace manually, pass a metric collection via `update_trace` — see [online evaluations](https://www.confident-ai.com/docs/llm-tracing/online-evals).
+
+## Trace Properties
+
+Use a trace context to attach tags, metadata, and a user ID that you know before the kickoff starts. It creates no extra span — the trace started by `crew.kickoff()` inherits everything you pass:
+
+```python
+from confident_trace import init, trace_context
+
+init()
+
+with trace_context(
+    tags=["support"],
+    metadata={"release": "2026-09"},
+    user_id="user-42",
+):
+    result = crew.kickoff({"input": "What are LLMs?"})
+```
+
+## Group Traces Into Threads
+
+`confident-trace` provides a `turn()` method you can use to group two sequential CrewAI kickoffs into one turn. Reuse the same thread ID on later turns to group them into one thread you can view and evaluate on Confident AI:
+
+```python
+from confident_trace import init, turn
+
+init()
+
+with turn("support-turn", thread_id="chat-42"):
+    context = crew.kickoff({"input": "Find the relevant account details."})
+    answer = crew.kickoff({"input": f"Summarize these details: {context.raw}"})
+```
+
+## Resources
+
+- [CrewAI integration guide](https://www.confident-ai.com/docs/integrations/third-party/crew-ai) - Full setup and configuration reference
+- [LLM tracing on Confident AI](https://www.confident-ai.com/docs/llm-tracing/introduction) - How traces, spans, and threads work
+- [Online evals](https://www.confident-ai.com/docs/llm-tracing/online-evals) - Score traces as they are ingested
+- [Threads](https://www.confident-ai.com/docs/llm-tracing/features/threads) - Group kickoffs into conversations
+- [confident-trace on GitHub](https://github.com/confident-ai/confident-trace) - Source and issues
+- **Need help integrating?** [Talk to a human.](https://www.confident-ai.com/book-a-demo)
