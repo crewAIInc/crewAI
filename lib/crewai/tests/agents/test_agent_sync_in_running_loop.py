@@ -13,11 +13,13 @@ final answer, mirroring the reporter's repro.
 from __future__ import annotations
 
 import asyncio
+import threading
 from typing import Any
 
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.agent.core import _run_awaitable_on_worker_thread
 from crewai.llms.base_llm import BaseLLM
 
 
@@ -102,3 +104,40 @@ def test_concurrent_invocation_guard_still_fires():
                     executor._is_executing = False
 
     asyncio.run(run())
+
+
+def test_reentrant_sync_invoke_runs_on_dedicated_thread():
+    """A sync kickoff issued from a pool worker must not submit to the pool.
+
+    An executor step callback runs on a pool worker thread (inside that
+    worker's event loop); if it calls crew.kickoff() synchronously, the
+    nested invocation must run on a dedicated thread. Submitting back into
+    the bounded pool and blocking would deadlock once every worker is
+    waiting on a queued job. The routing is asserted via thread names so
+    the test is deterministic (no timing involved).
+    """
+    seen: dict[str, str] = {}
+
+    async def _inner() -> str:
+        seen["thread"] = threading.current_thread().name
+        return "inner-ok"
+
+    async def _outer() -> str:
+        # Runs on a pool worker; the nested call must take the dedicated path.
+        return _run_awaitable_on_worker_thread(_inner())
+
+    assert _run_awaitable_on_worker_thread(_outer()) == "inner-ok"
+    assert seen["thread"].startswith("crewai-sync-invoke-reentrant")
+
+
+def test_reentrant_sync_invoke_propagates_exceptions():
+    """Exceptions from a re-entrant nested invocation reach the caller."""
+
+    async def _boom() -> str:
+        raise ValueError("nested failure")
+
+    async def _outer() -> str:
+        return _run_awaitable_on_worker_thread(_boom())
+
+    with pytest.raises(ValueError, match="nested failure"):
+        _run_awaitable_on_worker_thread(_outer())
