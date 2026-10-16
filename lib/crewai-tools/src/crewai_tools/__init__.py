@@ -105,6 +105,10 @@ from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
 from crewai_tools.tools.invoke_crewai_automation_tool.invoke_crewai_automation_tool import (
     InvokeCrewAIAutomationTool,
 )
+from crewai_tools.tools.jev_tool.route_selector import (
+    select_choice_route,
+    select_jev_route,
+)
 from crewai_tools.tools.jina_scrape_website_tool.jina_scrape_website_tool import (
     JinaScrapeWebsiteTool,
 )
@@ -348,6 +352,8 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
+    "select_choice_route",
+    "select_jev_route",
 ]
 
 __version__ = "1.15.28"
