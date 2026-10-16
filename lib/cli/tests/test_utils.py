@@ -24,14 +24,35 @@ def temp_tree():
 
 
 def create_file(path, content):
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
 
 def test_tree_find_and_replace_file_content(temp_tree):
     utils.tree_find_and_replace(temp_tree, "world", "universe")
-    with open(os.path.join(temp_tree, "file1.txt"), "r") as f:
+    with open(os.path.join(temp_tree, "file1.txt"), "r", encoding="utf-8") as f:
         assert f.read() == "Hello, universe!"
+
+
+
+
+def test_copy_template_writes_utf8_for_non_ascii_replacements(tmp_path):
+    src = tmp_path / "template.txt"
+    dst = tmp_path / "out.txt"
+    src.write_text("{{name}} — {{crew_name}}", encoding="utf-8")
+
+    utils.copy_template(src, dst, "Café", "RésuméCrew", "cafe")
+
+    assert dst.read_bytes() == "Café — RésuméCrew".encode("utf-8")
+
+
+def test_tree_find_and_replace_writes_utf8_for_non_ascii_replacements(tmp_path):
+    target = tmp_path / "sample.txt"
+    target.write_text("{{name}} — ready", encoding="utf-8")
+
+    utils.tree_find_and_replace(tmp_path, "{{name}}", "Café")
+
+    assert target.read_bytes() == "Café — ready".encode("utf-8")
 
 
 def test_tree_find_and_replace_file_name(temp_tree):
