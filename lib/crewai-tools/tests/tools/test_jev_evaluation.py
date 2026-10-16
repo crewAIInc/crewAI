@@ -536,7 +536,7 @@ def test_malformed_live_responses_become_failed_records(response, error):
 
 
 @pytest.mark.parametrize(
-    ("record", "answers"),
+    ("record", "answers", "error"),
     [
         (
             guardrail(None),
@@ -545,14 +545,26 @@ def test_malformed_live_responses_become_failed_records(response, error):
                     type="choice", choice="tech", confidence=0.9, probabilities={}
                 )
             },
+            "expected a 'noul' answer for 'guardrail', got 'choice'",
         ),
-        (route(None), {"route": SimpleNamespace(type="noul", noul=0.9)}),
+        (
+            guardrail(None),
+            {"guardrail": SimpleNamespace(type="choice", choice="tech", noul=0.9)},
+            "expected a 'noul' answer for 'guardrail', got 'choice'",
+        ),
+        (
+            route(None),
+            {"route": SimpleNamespace(type="noul", noul=0.9)},
+            "expected a 'choice' answer for 'route', got 'noul'",
+        ),
     ],
 )
-def test_live_answer_of_the_wrong_type_fails(record, answers):
+def test_live_answer_of_the_wrong_type_fails(record, answers, error):
     client = FakeClient(SimpleNamespace(answers=answers))
     [record] = collect_live_decisions([record], client=client, **LIVE_KWARGS)
 
+    assert record.error == error
+    assert record.decision is None
     assert outcome_of(record).outcome == "failed"
 
 

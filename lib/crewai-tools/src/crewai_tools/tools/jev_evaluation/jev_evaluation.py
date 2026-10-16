@@ -396,6 +396,15 @@ def _query(
         return record.model_copy(
             update={"error": f"no answer returned for {name!r}", "metadata": metadata}
         )
+    answer_type = getattr(answer, "type", None)
+    if answer_type is not None and answer_type != question["type"]:
+        return record.model_copy(
+            update={
+                "error": f"expected a {question['type']!r} answer for {name!r},"
+                f" got {answer_type!r}",
+                "metadata": metadata,
+            }
+        )
     if isinstance(record, RouteRecord):
         decision = {
             "choice": getattr(answer, "choice", None),
