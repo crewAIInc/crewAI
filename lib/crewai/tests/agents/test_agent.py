@@ -186,6 +186,38 @@ def test_agent_with_missing_response_template():
     assert agent.backstory == "Test Backstory"
 
 
+def test_agent_response_template_without_placeholder():
+    """Test that a response_template without the placeholder does not crash prompt building."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        response_template="custom with no placeholder",
+    )
+
+    _, stop_words, _ = agent._build_execution_prompt([])
+
+    assert len(stop_words) == 1
+    assert "Observation" in stop_words[0]
+
+
+def test_agent_response_template_with_placeholder():
+    """Test that a response_template with the placeholder still contributes its stop word."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        response_template="prefix {{ .Response }} MYSTOP",
+    )
+
+    _, stop_words, _ = agent._build_execution_prompt([])
+
+    assert len(stop_words) == 2
+    assert stop_words[1] == "MYSTOP"
+
+
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
     assert agent.llm.model == DEFAULT_LLM_MODEL
