@@ -19,6 +19,7 @@ from collections.abc import Callable
 from copy import deepcopy
 import datetime
 import logging
+import types
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -965,6 +966,18 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     return model
 
 
+def _matches_type(t: Any, expected: type | tuple[type, ...]) -> bool:
+    """Check whether a type or all non-null members of a union match expected type(s)."""
+    if isinstance(t, type) and issubclass(t, expected):
+        return True
+    if get_origin(t) in (Union, types.UnionType):
+        non_none = [arg for arg in get_args(t) if arg is not type(None)]
+        return bool(non_none) and all(
+            isinstance(arg, type) and issubclass(arg, expected) for arg in non_none
+        )
+    return False
+
+
 def _json_schema_to_pydantic_field(
     name: str,
     json_schema: dict[str, Any],
@@ -1017,7 +1030,7 @@ def _json_schema_to_pydantic_field(
         else (... if is_required else None)
     )
 
-    if isinstance(type_, type) and issubclass(type_, (int, float)):
+    if _matches_type(type_, (int, float)):
         if "minimum" in json_schema:
             field_params["ge"] = json_schema["minimum"]
         if "exclusiveMinimum" in json_schema:
@@ -1051,7 +1064,7 @@ def _json_schema_to_pydantic_field(
         # non-string alternatives) instead of just narrowing the string one.
         if type_ is str:
             type_ = pydantic_type
-        elif get_origin(type_) is Union:
+        elif get_origin(type_) in (Union, types.UnionType):
             type_ = Union[  # noqa: UP007
                 tuple(
                     pydantic_type if member is str else member
@@ -1059,7 +1072,7 @@ def _json_schema_to_pydantic_field(
                 )
             ]
 
-    if isinstance(type_, type) and issubclass(type_, str):
+    if _matches_type(type_, str):
         if "minLength" in json_schema:
             field_params["min_length"] = json_schema["minLength"]
         if "maxLength" in json_schema:
