@@ -1124,6 +1124,76 @@ class TestConversationalFlow:
 
         assert outputs == ["\nAssistant: raw assistant output"]
 
+    def test_chat_restores_deferral_when_finalization_fails(self) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            pass
+
+        flow = MyChat()
+
+        with patch.object(
+            flow,
+            "finalize_session_traces",
+            side_effect=RuntimeError("finalization failed"),
+        ) as mock_finalize:
+            with pytest.raises(RuntimeError, match="finalization failed"):
+                flow.chat(input_fn=lambda _: "quit", output_fn=lambda _: None)
+
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    @pytest.mark.parametrize("exit_error", [EOFError, KeyboardInterrupt])
+    def test_chat_interrupted_input_finalizes_and_restores_deferral(
+        self, exit_error: type[BaseException]
+    ) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            pass
+
+        flow = MyChat()
+        outputs: list[str] = []
+
+        def input_fn(_: str) -> str:
+            raise exit_error
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(input_fn=input_fn, output_fn=outputs.append)
+
+        assert outputs == [""]
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    @pytest.mark.parametrize(
+        ("initial", "chat_defer", "expected_during_chat"),
+        [(True, True, True), (False, False, False), (True, False, True)],
+        ids=["initially-enabled", "opt-out", "initially-enabled-opt-out"],
+    )
+    def test_chat_deferral_setting_round_trips(
+        self, initial: bool, chat_defer: bool, expected_during_chat: bool
+    ) -> None:
+        @ConversationConfig()
+        class MyChat(ConversationalFlow):
+            pass
+
+        flow = MyChat()
+        flow.defer_trace_finalization = initial
+        seen: list[bool] = []
+
+        def input_fn(_: str) -> str:
+            seen.append(flow.defer_trace_finalization)
+            return "quit"
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(
+                input_fn=input_fn,
+                output_fn=lambda _: None,
+                defer_trace_finalization=chat_defer,
+            )
+
+        assert seen == [expected_during_chat]
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is initial
+
     def test_chat_rejects_non_conversational_flows(self) -> None:
         class PlainFlow(Flow):
             @start()
