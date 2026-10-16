@@ -15,7 +15,7 @@ from crewai.utilities.converter import (
     handle_partial_json,
     validate_model,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 import pytest
 
 
@@ -1015,10 +1015,71 @@ def test_internal_instructor_does_not_double_prefix_qualified_models() -> None:
     mock_llm.provider = "groq"
     mock_llm.base_url = None
     mock_llm.api_key = None
-
     with patch("instructor.from_provider") as mock_from_provider:
         mock_from_provider.return_value = Mock()
 
         InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
 
         mock_from_provider.assert_called_once_with("groq/llama-3.3-70b")
+
+
+def test_coerce_response_to_pydantic_extracts_markdown_json() -> None:
+    """Converter._coerce_response_to_pydantic extracts markdown-wrapped JSON locally."""
+    converter = Converter(
+        text="sample",
+        llm=Mock(),
+        model=SimpleModel,
+        instructions="Convert text",
+    )
+    raw = 'Here is the result:\n```json\n{"name": "Alice", "age": 25}\n```'
+    result = converter._coerce_response_to_pydantic(raw)
+    assert isinstance(result, SimpleModel)
+    assert result.name == "Alice"
+    assert result.age == 25
+
+
+def test_coerce_response_to_pydantic_raises_validation_error_on_invalid_output() -> None:
+    """Converter._coerce_response_to_pydantic raises ValidationError on invalid data without recursion."""
+    converter = Converter(
+        text="sample",
+        llm=Mock(),
+        model=SimpleModel,
+        instructions="Convert text",
+    )
+    with pytest.raises(ValidationError):
+        converter._coerce_response_to_pydantic("invalid non-json output")
+
+
+def test_converter_to_pydantic_bounded_retries_without_recursion() -> None:
+    """Converter.to_pydantic respects max_attempts and does not enter unbounded recursion on invalid output."""
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.call.return_value = "invalid response that is not json"
+
+    converter = Converter(
+        text="sample",
+        llm=mock_llm,
+        model=SimpleModel,
+        instructions="Convert text",
+        max_attempts=3,
+    )
+    with pytest.raises(ConverterError) as exc_info:
+        converter.to_pydantic()
+
+    assert mock_llm.call.call_count == 3
+    assert "Failed to convert text into a Pydantic model due to validation error" in str(exc_info.value)
+
+
+def test_create_converter_attaches_agent(mock_agent: Mock) -> None:
+    """create_converter must attach agent reference to created converter instance."""
+    mock_agent.get_output_converter = Mock(
+        return_value=Converter(
+            text="sample text",
+            llm=Mock(),
+            model=SimpleModel,
+            instructions="instr",
+        )
+    )
+    converter = create_converter(agent=mock_agent, text="sample text", model=SimpleModel, instructions="instr")
+    assert converter.agent is mock_agent
+

@@ -57,29 +57,22 @@ class Converter(OutputConverter):
         """
         if isinstance(response, BaseModel):
             return response
-        try:
-            return self.model.model_validate_json(response)
-        except ValidationError:
-            partial = handle_partial_json(
-                result=response,
-                model=self.model,
-                is_json_output=False,
-                agent=None,
-            )
-            if isinstance(partial, BaseModel):
-                return partial
-            if isinstance(partial, dict):
-                return self.model.model_validate(partial)
-            if isinstance(partial, str):
-                try:
-                    return self.model.model_validate_json(partial)
-                except Exception as parse_err:
-                    raise ConverterError(
-                        f"Failed to convert partial JSON result into Pydantic: {parse_err}"
-                    ) from parse_err
-            raise ConverterError(
-                "handle_partial_json returned an unexpected type."
-            ) from None
+        if isinstance(response, dict):
+            return self.model.model_validate(response)
+        if isinstance(response, str):
+            try:
+                return self.model.model_validate_json(response)
+            except ValidationError as original_exc:
+                match = _JSON_PATTERN.search(response)
+                if match:
+                    try:
+                        parsed = json.loads(match.group(), strict=False)
+                        return self.model.model_validate(parsed)
+                    except (json.JSONDecodeError, ValidationError):
+                        pass
+                raise original_exc
+
+        return self.model.model_validate(response)
 
     def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
         """Convert text to pydantic.
@@ -620,10 +613,18 @@ def create_converter(
     if agent and not converter_cls:
         if hasattr(agent, "get_output_converter"):
             converter = agent.get_output_converter(*args, **kwargs)
+            if hasattr(converter, "agent") and converter.agent is None:
+                converter.agent = agent
         else:
             raise AttributeError("Agent does not have a 'get_output_converter' method")
     elif converter_cls:
         converter = converter_cls(*args, **kwargs)
+        if (
+            hasattr(converter, "agent")
+            and converter.agent is None
+            and agent is not None
+        ):
+            converter.agent = agent
     else:
         raise ValueError("Either agent or converter_cls must be provided")
 
