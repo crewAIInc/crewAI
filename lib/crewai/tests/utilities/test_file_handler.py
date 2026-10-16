@@ -467,6 +467,39 @@ class TestKeyCreationWithoutHardlinkSupport(unittest.TestCase):
     def _unsupported_link(self, *args, **kwargs):
         raise OSError(errno.EPERM, "Operation not permitted")
 
+    def test_enotsup_triggers_hardlink_fallback(self):
+        """os.link raising ENOTSUP must take the lockfile fallback path.
+
+        ENOTSUP and EOPNOTSUPP are aliases on Linux but distinct errnos on
+        macOS and some NFS mounts, where os.link() surfaces ENOTSUP. Without
+        it in the fallback set, key creation would fail instead of falling
+        back to the lockfile-serialized publish.
+        """
+        enotsup = getattr(errno, "ENOTSUP", None)
+        if enotsup is None:  # pragma: no cover - Windows has no ENOTSUP
+            self.skipTest("errno.ENOTSUP not defined on this platform")
+        from crewai.utilities.file_handler import _LINK_UNSUPPORTED_ERRNOS
+
+        self.assertIn(enotsup, _LINK_UNSUPPORTED_ERRNOS)
+
+        def _enotsup_link(*args, **kwargs):
+            raise OSError(enotsup, "Operation not supported")
+
+        fresh_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        try:
+            with (
+                patch("os.path.expanduser", return_value=fresh_home),
+                patch("os.link", side_effect=_enotsup_link),
+            ):
+                handler = PickleHandler("nolink_enotsup.pkl")
+            key_path = os.path.join(fresh_home, ".crewai", ".hmac_key")
+            self.assertEqual(os.path.getsize(key_path), 32)
+            with patch("os.path.expanduser", return_value=fresh_home):
+                handler2 = PickleHandler("nolink_enotsup2.pkl")
+            self.assertEqual(handler2._key, handler._key)
+        finally:
+            shutil.rmtree(fresh_home, ignore_errors=True)
+
     def test_key_creation_falls_back_when_hardlinks_unsupported(self):
         """With os.link raising EPERM, key creation must still succeed and the
         resulting key must be loadable by a later handler."""

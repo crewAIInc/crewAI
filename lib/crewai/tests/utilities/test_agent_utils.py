@@ -1604,6 +1604,73 @@ class TestRepositoryToolParamValidation:
         with pytest.raises(AgentRepositoryError, match="import-resolving"):
             self._load_with_tool(response, OptionalImportStringTool)
 
+    def test_parameterized_import_string_param_rejected(self):
+        """ImportString[Callable] (parameterized form) must be caught too.
+
+        The parameterized form is Annotated[Callable, ImportString()] — an
+        ImportString *instance* in Annotated metadata, which pydantic may
+        keep inside field.annotation or strip into field.metadata depending
+        on the version. Either way a remote string like 'os.system' would
+        become a live callable on this host.
+        """
+        from collections.abc import Callable
+
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class ParameterizedImportStringTool(BaseTool):
+            name: str = "parameterized_import_string_tool"
+            description: str = "Tool with a parameterized import-resolving param."
+            custom_embedding_fn: ImportString[Callable[[str], list[float]]] | None = (
+                None
+            )
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        response = self._repository_response(
+            [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": {"custom_embedding_fn": "os.system"},
+                }
+            ]
+        )
+        with pytest.raises(AgentRepositoryError, match="import-resolving"):
+            self._load_with_tool(response, ParameterizedImportStringTool)
+
+    def test_serializable_callable_param_rejected(self):
+        """A string init_param for a SerializableCallable field is rejected.
+
+        SerializableCallable's BeforeValidator (string_to_callable) resolves
+        a dotted-path string into a live callable at validation time — and
+        BaseTool pre-resolves cache_function strings before that. Without
+        this gate, a repository record could smuggle 'os.system' into
+        cache_function and get arbitrary code execution on this host.
+        """
+        from crewai.types.callback import SerializableCallable
+        from crewai.utilities.errors import AgentRepositoryError
+
+        class SerializableCallableTool(BaseTool):
+            name: str = "serializable_callable_tool"
+            description: str = "Tool with a SerializableCallable init param."
+            cache_function: SerializableCallable | None = None
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        response = self._repository_response(
+            [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": {"cache_function": "os.system"},
+                }
+            ]
+        )
+        with pytest.raises(AgentRepositoryError, match="import-resolving"):
+            self._load_with_tool(response, SerializableCallableTool)
+
     def test_undeclared_param_rejected(self):
         """Records may not smuggle unexpected keyword arguments into the tool
         constructor."""
