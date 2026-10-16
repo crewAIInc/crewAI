@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, model_validator
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
@@ -25,21 +25,18 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     storage: BaseKnowledgeStorage | None = Field(default=None)
     safe_file_paths: list[Path] = Field(default_factory=list)
 
-    @field_validator("file_path", "file_paths", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def validate_file_path(
-        cls, v: Path | list[Path] | str | list[str] | None, info: Any
-    ) -> Path | list[Path] | str | list[str] | None:
-        """Validate that at least one of file_path or file_paths is provided."""
-        if (
-            v is None
-            and info.data.get(
-                "file_path" if info.field_name == "file_paths" else "file_paths"
-            )
-            is None
-        ):
-            raise ValueError("Either file_path or file_paths must be provided")
-        return v
+    def validate_file_path(cls, data: Any) -> Any:
+        """Validate that at least one of file_path or file_paths is provided.
+
+        The pair is checked on the raw input: while ``file_path`` is being
+        validated, ``file_paths`` (declared later) is not visible yet.
+        """
+        if isinstance(data, dict) and ("file_path" in data or "file_paths" in data):
+            if data.get("file_path") is None and data.get("file_paths") is None:
+                raise ValueError("Either file_path or file_paths must be provided")
+        return data
 
     def model_post_init(self, _: Any) -> None:
         """Post-initialization method to load content."""
