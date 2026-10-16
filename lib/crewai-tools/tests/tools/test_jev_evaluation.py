@@ -568,6 +568,23 @@ def test_live_answer_of_the_wrong_type_fails(record, answers, error):
     assert outcome_of(record).outcome == "failed"
 
 
+def test_malformed_probabilities_fail_without_stopping_collection():
+    bad = SimpleNamespace(choice="tech", confidence=0.9, probabilities=42)
+    good = SimpleNamespace(choice="tech", confidence=0.9, probabilities={"tech": 0.9})
+    client = FakeClient(
+        SimpleNamespace(answers={"route": bad}),
+        SimpleNamespace(answers={"route": good}),
+    )
+    records = collect_live_decisions(
+        [route(None, expected="tech"), route(None, expected="tech")],
+        client=client,
+        **LIVE_KWARGS,
+    )
+
+    assert [outcome_of(r).outcome for r in records] == ["failed", "correct"]
+    assert "probabilities" in outcome_of(records[0]).reason
+
+
 def test_live_answer_without_probabilities_or_usage():
     answer = SimpleNamespace(choice="tech", confidence=0.8, probabilities=None)
     client = FakeClient(SimpleNamespace(answers={"route": answer}))
