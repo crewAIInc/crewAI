@@ -1,9 +1,16 @@
+from datetime import datetime
 import os
+import sys
 import tempfile
+from io import BytesIO
+from types import ModuleType
 from unittest.mock import Mock, patch
 
+from openpyxl import Workbook
+
 from crewai_tools.rag.base_loader import LoaderResult
-from crewai_tools.rag.loaders.csv_loader import CSVLoader
+from crewai_tools.rag.data_types import DataType, DataTypes
+from crewai_tools.rag.loaders.csv_loader import _EXCEL_URL_MAX_BYTES, CSVLoader
 from crewai_tools.rag.source_content import SourceContent
 import pytest
 
@@ -26,6 +33,13 @@ def temp_csv_file():
 
 
 class TestCSVLoader:
+    @pytest.mark.parametrize("suffix", [".csv", ".xls", ".xlsx"])
+    def test_detects_tabular_file_extensions(self, tmp_path, suffix):
+        path = tmp_path / f"report{suffix}"
+        path.touch()
+
+        assert DataTypes.from_content(path) is DataType.CSV
+
     def test_load_csv_from_file(self, temp_csv_file):
         path = temp_csv_file("name,age,city\nJohn,25,New York\nJane,30,Chicago")
         loader = CSVLoader()
@@ -128,3 +142,122 @@ class TestCSVLoader:
 
         with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/notfound.csv"))
+
+    def test_load_xlsx_from_file(self, tmp_path):
+        path = tmp_path / "report.xlsx"
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Sales"
+        worksheet.append(["name", "revenue"])
+        worksheet.append(["North", 120])
+        workbook.create_sheet("Empty")
+        workbook.save(path)
+
+        result = CSVLoader().load(SourceContent(path))
+
+        assert "Sheet: Sales" in result.content
+        assert "Headers: name | revenue" in result.content
+        assert "Row 1: name: North | revenue: 120" in result.content
+        assert result.metadata == {
+            "format": "xlsx",
+            "sheets": [
+                {"name": "Sales", "columns": ["name", "revenue"], "rows": 1},
+                {"name": "Empty", "columns": [], "rows": 0},
+            ],
+        }
+
+    def test_load_xlsx_with_hash_in_local_name(self, tmp_path):
+        path = tmp_path / "report#1.xlsx"
+        workbook = Workbook()
+        workbook.active.append(["name"])
+        workbook.active.append(["Hashed"])
+        workbook.save(path)
+
+        result = CSVLoader().load(SourceContent(path))
+
+        assert "Row 1: name: Hashed" in result.content
+        assert result.metadata["format"] == "xlsx"
+
+    def test_load_xls_uses_xlrd(self, monkeypatch):
+        class Cell:
+            def __init__(self, ctype: int, value: object) -> None:
+                self.ctype = ctype
+                self.value = value
+
+        class Worksheet:
+            name = "Legacy"
+            nrows = 2
+
+            @staticmethod
+            def row(index: int) -> list[Cell]:
+                return [
+                    [Cell(1, "name"), Cell(1, "revenue"), Cell(1, "opened")],
+                    [Cell(1, "South"), Cell(2, 80.0), Cell(3, 44927.0)],
+                ][index]
+
+        class Workbook:
+            datemode = 0
+
+            @staticmethod
+            def sheets() -> list[Worksheet]:
+                return [Worksheet()]
+
+        xlrd = ModuleType("xlrd")
+        xlrd.XL_CELL_NUMBER = 2  # type: ignore[attr-defined]
+        xlrd.XL_CELL_DATE = 3  # type: ignore[attr-defined]
+        xlrd.XLDateError = ValueError  # type: ignore[attr-defined]
+        xlrd.xldate_as_datetime = lambda value, datemode: datetime(2023, 1, 15)  # type: ignore[attr-defined]
+        xlrd.open_workbook = lambda *, file_contents: Workbook()  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "xlrd", xlrd)
+
+        sheets = CSVLoader._load_xls(b"legacy workbook")
+        result = CSVLoader._format_excel_sheets(sheets, "report.xls", "xls")
+
+        assert "Sheet: Legacy" in result.content
+        assert "Row 1: name: South | revenue: 80 | opened: 2023-01-15" in result.content
+        assert "80.0" not in result.content
+        assert result.metadata["format"] == "xls"
+
+    def test_xls_time_only_cell_omits_epoch_date(self):
+        import xlrd
+
+        cell = type("Cell", (), {"ctype": xlrd.XL_CELL_DATE, "value": 0.5})()
+
+        assert CSVLoader._xls_cell_value(cell, 0) == "12:00:00"
+
+    def test_xls_out_of_range_date_keeps_raw_value(self):
+        import xlrd
+
+        cell = type("Cell", (), {"ctype": xlrd.XL_CELL_DATE, "value": 1e20})()
+
+        assert CSVLoader._xls_cell_value(cell, 0) == 1e20
+
+    @patch("crewai_tools.security.safe_requests.safe_get_bounded")
+    def test_load_xlsx_from_url(self, mock_get):
+        buffer = BytesIO()
+        workbook = Workbook()
+        workbook.active.append(["name"])
+        workbook.active.append(["Remote"])
+        workbook.save(buffer)
+        mock_get.return_value = (
+            buffer.getvalue(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "https://example.com/report.xlsx",
+        )
+
+        result = CSVLoader().load(
+            SourceContent("https://example.com/report.xlsx?token=1")
+        )
+
+        assert "Row 1: name: Remote" in result.content
+        assert mock_get.call_args.kwargs["max_bytes"] == _EXCEL_URL_MAX_BYTES
+        assert "application/vnd.ms-excel" in mock_get.call_args.kwargs["headers"][
+            "Accept"
+        ]
+
+    @patch("crewai_tools.security.safe_requests.safe_get_bounded")
+    def test_xlsx_url_over_size_limit_is_refused(self, mock_get):
+        mock_get.side_effect = ValueError("exceeds the 5242880 byte limit")
+
+        with pytest.raises(ValueError, match="Error fetching content from URL"):
+            CSVLoader().load(SourceContent("https://example.com/huge.xlsx"))
