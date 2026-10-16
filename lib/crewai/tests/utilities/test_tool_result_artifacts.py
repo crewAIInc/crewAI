@@ -1,5 +1,4 @@
 from pathlib import Path
-from unittest.mock import patch
 
 from crewai.utilities.tool_result_artifacts import ToolResultArtifactStore
 
@@ -17,8 +16,7 @@ def test_store_defaults_to_tmp() -> None:
 def test_store_returns_opaque_identifier_and_preserves_content(tmp_path: Path) -> None:
     store = ToolResultArtifactStore(base_dir=tmp_path)
 
-    with patch("builtins.print") as print_mock:
-        artifact = store.store("first line\nsecond line", estimated_token_count=9)
+    artifact = store.store("first line\nsecond line", estimated_token_count=9)
 
     assert artifact.artifact_id.startswith("tool-result-")
     assert artifact.directory == store.directory
@@ -27,7 +25,6 @@ def test_store_returns_opaque_identifier_and_preserves_content(tmp_path: Path) -
     assert artifact.file_path.read_text(encoding="utf-8") == "first line\nsecond line"
     assert artifact.line_count == 2
     assert artifact.estimated_token_count == 9
-    print_mock.assert_called_once_with(artifact)
 
     store.cleanup()
 

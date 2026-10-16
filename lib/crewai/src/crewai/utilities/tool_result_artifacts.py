@@ -81,7 +81,7 @@ class ToolResultArtifactStore:
         if len(preview) > TOOL_RESULT_PREVIEW_MAX_CHARS:
             preview = preview[:TOOL_RESULT_PREVIEW_MAX_CHARS]
             preview_truncated = True
-        artifact = ToolResultArtifact(
+        return ToolResultArtifact(
             artifact_id=artifact_id,
             directory=self._directory,
             relative_path=path.relative_to(self._directory),
@@ -91,8 +91,6 @@ class ToolResultArtifactStore:
             preview=preview,
             preview_truncated=preview_truncated,
         )
-        print(artifact)  # noqa: T201 - requested diagnostic for artifact creation
-        return artifact
 
     @property
     def directory(self) -> Path:
