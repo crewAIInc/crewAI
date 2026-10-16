@@ -22,14 +22,14 @@ mode: "wide"
 3. شغّل الأمر التالي:
 
 ```shell
-crewai train -n <n_iterations> -f <filename.pkl>
+crewai train -n <n_iterations> -f <filename.json>
 ```
 <Tip>
-  استبدل `<n_iterations>` بعدد تكرارات التدريب المرغوب و`<filename>` باسم الملف المناسب المنتهي بـ `.pkl`.
+  استبدل `<n_iterations>` بعدد تكرارات التدريب المرغوب و`<filename>` باسم الملف المناسب المنتهي بـ `.json`.
 </Tip>
 
 <Note>
-  إذا حذفت `-f`، فإن المخرجات تُحفظ افتراضيًا في `trained_agents_data.pkl` في مجلد العمل الحالي. يمكنك تمرير مسار مطلق للتحكم في مكان كتابة الملف.
+  إذا حذفت `-f`، فإن المخرجات تُحفظ افتراضيًا في `trained_agents_data.json` في مجلد العمل الحالي. يمكنك تمرير مسار مطلق للتحكم في مكان كتابة الملف.
 </Note>
 
 ### تدريب طاقمك برمجيًا
@@ -43,7 +43,7 @@ crewai train -n <n_iterations> -f <filename.pkl>
 ```python Code
 n_iterations = 2
 inputs = {"topic": "CrewAI Training"}
-filename = "your_model.pkl"
+filename = "your_model.json"
 
 try:
     YourCrewName_Crew().crew().train(
@@ -64,13 +64,13 @@ except Exception as e:
 
 ```mermaid
 flowchart TD
-  A["Start training<br/>CLI: crewai train -n -f<br/>or Python: crew.train(...)"] --> B["Setup training mode<br/>- task.human_input = true<br/>- disable delegation<br/>- init training_data.pkl + trained file"]
+  A["Start training<br/>CLI: crewai train -n -f<br/>or Python: crew.train(...)"] --> B["Setup training mode<br/>- task.human_input = true<br/>- disable delegation<br/>- init training_data.json + trained file"]
 
   subgraph "Iterations"
     direction LR
     C["Iteration i<br/>initial_output"] --> D["User human_feedback"]
     D --> E["improved_output"]
-    E --> F["Append to training_data.pkl<br/>by agent_id and iteration"]
+    E --> F["Append to training_data.json<br/>by agent_id and iteration"]
   end
 
   B --> C
@@ -79,10 +79,10 @@ flowchart TD
   G -- "No" --> H["Evaluate per agent<br/>aggregate iterations"]
 
   H --> I["Consolidate<br/>suggestions[] + quality + final_summary"]
-  I --> J["Save by agent role to trained file<br/>(default: trained_agents_data.pkl)"]
+  I --> J["Save by agent role to trained file<br/>(default: trained_agents_data.json)"]
 
   J --> K["Normal (non-training) runs"]
-  K --> L["Auto-load suggestions<br/>from trained_agents_data.pkl"]
+  K --> L["Auto-load suggestions<br/>from trained_agents_data.json"]
   L --> M["Append to prompt<br/>for consistent improvements"]
 ```
 
@@ -92,7 +92,7 @@ flowchart TD
   - `initial_output`: الإجابة الأولى للوكيل
   - `human_feedback`: ملاحظاتك المضمّنة عند الطلب
   - `improved_output`: إجابة المتابعة للوكيل بعد الملاحظات
-- تُخزن هذه البيانات في ملف عمل باسم `training_data.pkl` مفهرس بمعرّف الوكيل الداخلي والتكرار.
+- تُخزن هذه البيانات في ملف JSON للعمل باسم `training_data.json` مفهرس بمعرّف الوكيل الداخلي والتكرار.
 - أثناء نشاط التدريب، يُلحق الوكيل تلقائيًا ملاحظاتك البشرية السابقة بأمره لتطبيق تلك التعليمات في المحاولات اللاحقة ضمن جلسة التدريب.
   التدريب تفاعلي: تُعيّن المهام `human_input = true`، لذا سيتوقف التشغيل في بيئة غير تفاعلية بانتظار مدخلات المستخدم.
 
@@ -102,16 +102,16 @@ flowchart TD
   - `suggestions`: تعليمات واضحة وقابلة للتنفيذ مستخلصة من ملاحظاتك والفرق بين المخرجات الأولية/المحسنة
   - `quality`: درجة من 0-10 تعكس التحسن
   - `final_summary`: مجموعة خطوات عمل تفصيلية للمهام المستقبلية
-- تُحفظ هذه النتائج الموحدة في اسم الملف الذي تمرره إلى `train(...)` (الافتراضي عبر CLI هو `trained_agents_data.pkl`). تُفهرس الإدخالات بدور الوكيل `role` لتطبيقها عبر الجلسات.
+- تُحفظ هذه النتائج الموحدة في اسم الملف الذي تمرره إلى `train(...)` (الافتراضي عبر CLI هو `trained_agents_data.json`). تُفهرس الإدخالات بدور الوكيل `role` لتطبيقها عبر الجلسات.
 - أثناء التنفيذ العادي (غير التدريب)، يحمّل كل وكيل تلقائيًا `suggestions` الموحدة ويلحقها بأمر المهمة كتعليمات إلزامية. يمنحك هذا تحسينات متسقة بدون تغيير تعريفات الوكلاء.
 
 ### ملخص الملفات
 
-- `training_data.pkl` (مؤقت، لكل جلسة):
+- `training_data.json` (مؤقت، لكل جلسة):
   - الهيكل: `agent_id -> { iteration_number: { initial_output, human_feedback, improved_output } }`
   - الغرض: التقاط البيانات الخام والملاحظات البشرية أثناء التدريب
   - الموقع: يُحفظ في مجلد العمل الحالي (CWD)
-- `trained_agents_data.pkl` (أو اسم ملفك المخصص):
+- `trained_agents_data.json` (أو اسم ملفك المخصص):
   - الهيكل: `agent_role -> { suggestions: string[], quality: number, final_summary: string }`
   - الغرض: استمرار التوجيه الموحد للتشغيلات المستقبلية
   - الموقع: يُكتب في CWD افتراضيًا؛ استخدم `-f` لتعيين مسار مخصص (بما في ذلك المطلق)
@@ -184,10 +184,10 @@ flowchart TD
 ### نقاط مهمة يجب ملاحظتها
 
 - **متطلب العدد الصحيح الموجب:** تأكد من أن عدد التكرارات (`n_iterations`) هو عدد صحيح موجب. سيرمي الكود `ValueError` إذا لم يتحقق هذا الشرط.
-- **متطلب اسم الملف:** تأكد من أن اسم الملف ينتهي بـ `.pkl`. سيرمي الكود `ValueError` إذا لم يتحقق هذا الشرط.
+- **متطلب اسم الملف:** تأكد من أن اسم الملف ينتهي بـ `.json`. سيرمي الكود `ValueError` إذا لم يتحقق هذا الشرط.
 - **معالجة الأخطاء:** يتعامل الكود مع أخطاء العمليات الفرعية والاستثناءات غير المتوقعة، ويوفر رسائل خطأ للمستخدم.
 - يُطبق التوجيه المدرّب في وقت الأمر؛ لا يعدّل تهيئة وكيل Python/YAML.
-- يحمّل الوكلاء تلقائيًا الاقتراحات المدربة من ملف باسم `trained_agents_data.pkl` الموجود في مجلد العمل الحالي. إذا درّبت إلى اسم ملف مختلف، أعد تسميته إلى `trained_agents_data.pkl` قبل التشغيل، أو اضبط المحمّل في الكود.
+- يحمّل الوكلاء تلقائيًا الاقتراحات المدربة من ملف باسم `trained_agents_data.json` الموجود في مجلد العمل الحالي. إذا درّبت إلى اسم ملف مختلف، مرر المسار عند تشغيل الطاقم أو اضبط `CREWAI_TRAINED_AGENTS_FILE`.
 - يمكنك تغيير اسم ملف المخرجات عند استدعاء `crewai train` بـ `-f/--filename`. المسارات المطلقة مدعومة إذا أردت الحفظ خارج CWD.
 
 من المهم ملاحظة أن عملية التدريب قد تستغرق بعض الوقت، اعتمادًا على تعقيد وكلائك وستتطلب أيضًا ملاحظاتك في كل تكرار.

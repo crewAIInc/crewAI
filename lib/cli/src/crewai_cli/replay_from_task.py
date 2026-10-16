@@ -11,7 +11,7 @@ def replay_task_command(task_id: str, trained_agents_file: str | None = None) ->
 
     Args:
         task_id: The ID of the task to replay from.
-        trained_agents_file: Optional trained-agents pickle path forwarded to
+        trained_agents_file: Optional trained-agents JSON path forwarded to
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
     command = ["uv", "run", "replay", task_id]
