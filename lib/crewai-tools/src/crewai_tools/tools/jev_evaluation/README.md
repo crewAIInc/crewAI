@@ -29,6 +29,8 @@ A record **fails** if it has a recorded `error`, no `decision`, or a malformed d
 
 Both thresholds are inclusive. Choice confidence and Noul probability are never converted into each other.
 
+These are decision-quality metrics, not a replay of a runtime guardrail. A guardrail that rejects when the answer is missing or the call fails would count those cases as rejections; here they are failed and left out of the false-accept and false-reject rates. Decisions are checked by their fields only: an answer's `type` is not stored, and an answer of the wrong type fails because its fields are missing.
+
 | Metric | Definition |
 |---|---|
 | `routing.accuracy` / `coverage` / `abstention_rate` | correct / decided / abstained ÷ all route records |

@@ -535,6 +535,27 @@ def test_malformed_live_responses_become_failed_records(response, error):
     assert record.metadata.latency_ms is not None
 
 
+@pytest.mark.parametrize(
+    ("record", "answers"),
+    [
+        (
+            guardrail(None),
+            {
+                "guardrail": SimpleNamespace(
+                    type="choice", choice="tech", confidence=0.9, probabilities={}
+                )
+            },
+        ),
+        (route(None), {"route": SimpleNamespace(type="noul", noul=0.9)}),
+    ],
+)
+def test_live_answer_of_the_wrong_type_fails(record, answers):
+    client = FakeClient(SimpleNamespace(answers=answers))
+    [record] = collect_live_decisions([record], client=client, **LIVE_KWARGS)
+
+    assert outcome_of(record).outcome == "failed"
+
+
 def test_live_answer_without_probabilities_or_usage():
     answer = SimpleNamespace(choice="tech", confidence=0.8, probabilities=None)
     client = FakeClient(SimpleNamespace(answers={"route": answer}))
