@@ -968,7 +968,7 @@ class ToolUsage:
         except (JSONDecodeError, ValueError, TypeError):
             pass
 
-        if self._has_unterminated_json_string(tool_input):
+        if self._has_unterminated_string(tool_input):
             error_message = (
                 "Tool input must be a valid dictionary in JSON or Python literal format"
             )
@@ -994,20 +994,23 @@ class ToolUsage:
         raise Exception(error_message)
 
     @staticmethod
-    def _has_unterminated_json_string(tool_input: str) -> bool:
+    def _has_unterminated_string(tool_input: str) -> bool:
         in_string = False
+        quote_character = None
         escaped = False
 
         for character in tool_input:
             if not in_string:
-                if character == '"':
+                if character in {'"', "'"}:
                     in_string = True
+                    quote_character = character
             elif escaped:
                 escaped = False
             elif character == "\\":
                 escaped = True
-            elif character == '"':
+            elif character == quote_character:
                 in_string = False
+                quote_character = None
 
         return in_string
 
