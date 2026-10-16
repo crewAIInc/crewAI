@@ -17,10 +17,10 @@ def runner() -> CliRunner:
 
 @mock.patch("crewai_cli.cli.replay_task_command")
 def test_replay_passes_filename(replay_task_command_mock: mock.Mock, runner: CliRunner) -> None:
-    result = runner.invoke(replay, ["-t", "abc123", "-f", "my_custom.pkl"])
+    result = runner.invoke(replay, ["-t", "abc123", "-f", "my_custom.json"])
 
     replay_task_command_mock.assert_called_once_with(
-        "abc123", trained_agents_file="my_custom.pkl"
+        "abc123", trained_agents_file="my_custom.json"
     )
     assert result.exit_code == 0
 
@@ -42,10 +42,10 @@ def test_replay_task_command_sets_env_var(mock_subprocess_run: mock.Mock) -> Non
     mock_subprocess_run.return_value = subprocess.CompletedProcess(
         args=["uv", "run", "replay", "abc123"], returncode=0
     )
-    replay_from_task.replay_task_command("abc123", trained_agents_file="my_custom.pkl")
+    replay_from_task.replay_task_command("abc123", trained_agents_file="my_custom.json")
 
     _, kwargs = mock_subprocess_run.call_args
-    assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom.pkl"
+    assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom.json"
 
 
 @mock.patch("crewai_cli.replay_from_task.subprocess.run")

@@ -1,7 +1,6 @@
 from datetime import datetime
 import json
 import os
-import pickle
 from typing import Any, TypedDict
 
 from crewai_core.lock_store import lock as store_lock
@@ -116,23 +115,23 @@ class FileHandler:
             raise ValueError(f"Failed to log message: {e!s}") from e
 
 
-class PickleHandler:
-    """Handler for saving and loading data using pickle.
+class JSONHandler:
+    """Handler for saving and loading JSON data.
 
     Attributes:
-        file_path: The path to the pickle file.
+        file_path: The path to the JSON file.
     """
 
     def __init__(self, file_name: str) -> None:
-        """Initialize the PickleHandler with the name of the file where data will be stored.
+        """Initialize the JSONHandler with the name of the file where data will be stored.
 
         The file will be saved in the current directory.
 
         Args:
             file_name: The name of the file for saving and loading data.
         """
-        if not file_name.endswith(".pkl"):
-            file_name += ".pkl"
+        if not file_name.endswith(".json"):
+            raise ValueError("Training data filename must end with .json")
 
         self.file_path = os.path.join(os.getcwd(), file_name)
 
@@ -142,17 +141,17 @@ class PickleHandler:
 
     def save(self, data: Any) -> None:
         """
-        Save the data to the specified file using pickle.
+        Save the data to the specified file as JSON.
 
         Args:
           data: The data to be saved to the file.
         """
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            with open(self.file_path, "wb") as f:
-                pickle.dump(obj=data, file=f)
+            with open(self.file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f)
 
     def load(self) -> Any:
-        """Load the data from the specified file using pickle.
+        """Load the data from the specified JSON file.
 
         Returns:
             The data loaded from the file.
@@ -162,7 +161,7 @@ class PickleHandler:
 
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
             try:
-                with open(self.file_path, "rb") as file:
-                    return pickle.load(file)  # noqa: S301
-            except (FileNotFoundError, EOFError):
+                with open(self.file_path, encoding="utf-8") as file:
+                    return json.load(file)
+            except (FileNotFoundError, json.JSONDecodeError):
                 return {}
