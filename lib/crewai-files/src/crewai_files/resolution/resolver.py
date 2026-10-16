@@ -16,7 +16,7 @@ from crewai_files.core.resolved import (
     ResolvedFile,
     UrlReference,
 )
-from crewai_files.core.sources import FileUrl
+from crewai_files.core.sources import FileStream, FileUrl
 from crewai_files.core.types import FileInput
 from crewai_files.processing.constraints import (
     AudioConstraints,
@@ -88,16 +88,20 @@ class FileResolver:
     _uploaders: dict[str, FileUploader] = field(default_factory=dict)
 
     @staticmethod
-    def _build_file_context(file: FileInput) -> FileContext:
+    def _build_file_context(
+        file: FileInput, content: bytes | None = None
+    ) -> FileContext:
         """Build context by reading file once.
 
         Args:
             file: The file to build context for.
+            content: Already-read content, if available.
 
         Returns:
             FileContext with cached metadata.
         """
-        content = file.read()
+        if content is None:
+            content = file.read()
         return FileContext(
             content=content,
             size=len(content),
@@ -437,7 +441,11 @@ class FileResolver:
         if self._should_resolve_as_url_reference(file, provider, constraints):
             return self._resolve_as_url(file)
 
-        context = self._build_file_context(file)
+        if isinstance(file._file_source, FileStream):
+            content = file.read()
+        else:
+            content = await file.aread()
+        context = self._build_file_context(file, content)
 
         should_upload = self._should_upload(file, provider, constraints, context.size)
 
