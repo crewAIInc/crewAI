@@ -179,7 +179,9 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
-        feedback = self._prompt_input(context.crew)
+        feedback = self._prompt_input(
+            context.crew, self._get_output_string(formatted_answer)
+        )
 
         if context._is_training_mode():
             return self._handle_training_feedback(formatted_answer, feedback, context)
@@ -200,7 +202,9 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
-        feedback = await self._prompt_input_async(context.crew)
+        feedback = await self._prompt_input_async(
+            context.crew, self._get_output_string(formatted_answer)
+        )
 
         if context._is_training_mode():
             return await self._handle_training_feedback_async(
@@ -259,7 +263,9 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = context._invoke_loop()
-                feedback = self._prompt_input(context.crew)
+                feedback = self._prompt_input(
+                    context.crew, self._get_output_string(answer)
+                )
 
         return answer
 
@@ -311,16 +317,19 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = await context._ainvoke_loop()
-                feedback = await self._prompt_input_async(context.crew)
+                feedback = await self._prompt_input_async(
+                    context.crew, self._get_output_string(answer)
+                )
 
         return answer
 
     @staticmethod
-    def _prompt_input(crew: Crew | None) -> str:
+    def _prompt_input(crew: Crew | None, result: str | None = None) -> str:
         """Show rich panel and prompt for input.
 
         Args:
             crew: The crew instance for context.
+            result: The agent output under review, shown regardless of verbose.
 
         Returns:
             User input string from terminal.
@@ -343,7 +352,7 @@ class SyncHumanInputProvider(HumanInputProvider):
                 title = "🎓 Training Feedback Required"
             else:
                 prompt_text = (
-                    "Provide feedback on the Final Result above.\n\n"
+                    "Provide feedback on the Final Result below.\n\n"
                     "• If you are happy with the result, simply hit Enter without typing anything.\n"
                     "• Otherwise, provide specific improvement requests.\n"
                     "• You can provide multiple rounds of feedback until satisfied."
@@ -352,6 +361,9 @@ class SyncHumanInputProvider(HumanInputProvider):
 
             content = Text()
             content.append(prompt_text, style="yellow")
+            if result:
+                preview = result if len(result) <= 2000 else result[:2000] + "…"
+                content.append(f"\n\nFinal Output:\n{preview}", style="white")
 
             prompt_panel = Panel(
                 content,
@@ -369,11 +381,12 @@ class SyncHumanInputProvider(HumanInputProvider):
             formatter.resume_live_updates()
 
     @staticmethod
-    async def _prompt_input_async(crew: Crew | None) -> str:
+    async def _prompt_input_async(crew: Crew | None, result: str | None = None) -> str:
         """Show rich panel and prompt for input without blocking the event loop.
 
         Args:
             crew: The crew instance for context.
+            result: The agent output under review, shown regardless of verbose.
 
         Returns:
             User input string from terminal.
@@ -396,7 +409,7 @@ class SyncHumanInputProvider(HumanInputProvider):
                 title = "🎓 Training Feedback Required"
             else:
                 prompt_text = (
-                    "Provide feedback on the Final Result above.\n\n"
+                    "Provide feedback on the Final Result below.\n\n"
                     "• If you are happy with the result, simply hit Enter without typing anything.\n"
                     "• Otherwise, provide specific improvement requests.\n"
                     "• You can provide multiple rounds of feedback until satisfied."
@@ -405,6 +418,9 @@ class SyncHumanInputProvider(HumanInputProvider):
 
             content = Text()
             content.append(prompt_text, style="yellow")
+            if result:
+                preview = result if len(result) <= 2000 else result[:2000] + "…"
+                content.append(f"\n\nFinal Output:\n{preview}", style="white")
 
             prompt_panel = Panel(
                 content,
