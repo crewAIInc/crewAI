@@ -331,3 +331,65 @@ class TestAgentDefinitions:
 
         assert "391" in str(Crew(agents=[agent], tasks=[task]).kickoff())
         assert all("reasoning_effort" not in p for p in sent)
+
+class TestOpenAIFailureEvents:
+    def test_call_emits_one_failure_for_unrecovered_completion_error(self, monkeypatch):
+        llm = build("gpt-4o")
+        emitted: list[str] = []
+        monkeypatch.setattr(
+            llm,
+            "_emit_call_failed_event",
+            lambda **kwargs: emitted.append(kwargs.get("error", "")),
+        )
+
+        class FakeCompletions:
+            def create(self, **kwargs):
+                raise RuntimeError("boom")
+
+            @property
+            def with_raw_response(self):
+                return self
+
+        monkeypatch.setattr(
+            llm,
+            "_get_sync_client",
+            lambda: SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions())),
+        )
+
+        with pytest.raises(RuntimeError, match="boom"):
+            llm.call(MESSAGES)
+
+        assert len(emitted) == 1
+        assert "boom" in emitted[0]
+
+    @pytest.mark.asyncio
+    async def test_acall_emits_one_failure_for_unrecovered_completion_error(
+        self, monkeypatch
+    ):
+        llm = build("gpt-4o")
+        emitted: list[str] = []
+        monkeypatch.setattr(
+            llm,
+            "_emit_call_failed_event",
+            lambda **kwargs: emitted.append(kwargs.get("error", "")),
+        )
+
+        class FakeCompletions:
+            async def create(self, **kwargs):
+                raise RuntimeError("boom")
+
+            @property
+            def with_raw_response(self):
+                return self
+
+        monkeypatch.setattr(
+            llm,
+            "_get_async_client",
+            lambda: SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions())),
+        )
+
+        with pytest.raises(RuntimeError, match="boom"):
+            await llm.acall(MESSAGES)
+
+        assert len(emitted) == 1
+        assert "boom" in emitted[0]
