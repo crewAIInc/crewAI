@@ -401,6 +401,13 @@ def _has_project_venv(project_root: Path | None = None) -> bool:
     return (root / ".venv").is_dir()
 
 
+def _exit_code_from_process_error(error: subprocess.CalledProcessError) -> int:
+    """Return a POSIX exit code for a process error, mapping negative signal codes to 128 + signum."""
+    if error.returncode < 0:
+        return 128 + abs(error.returncode)
+    return error.returncode
+
+
 def _install_json_crew_dependencies_if_needed() -> None:
     """Prepare JSON crew dependencies without mutating existing lockfiles."""
     project_root = Path.cwd()
@@ -424,7 +431,7 @@ def _install_json_crew_dependencies_if_needed() -> None:
             click.echo("Installing dependencies...")
             install_crew([], raise_on_error=True)
     except subprocess.CalledProcessError as e:
-        raise SystemExit(e.returncode) from e
+        raise SystemExit(_exit_code_from_process_error(e)) from e
     except Exception as e:
         raise SystemExit(1) from e
 
@@ -485,7 +492,7 @@ def _run_json_crew_in_project_env(
             env=env,
         )
     except subprocess.CalledProcessError as e:
-        raise SystemExit(e.returncode) from e
+        raise SystemExit(_exit_code_from_process_error(e)) from e
     except Exception as e:
         click.echo(f"An unexpected error occurred while running the JSON crew: {e}")
         raise SystemExit(1) from e
@@ -847,7 +854,7 @@ def _execute_uv_script(
 
     except subprocess.CalledProcessError as e:
         _handle_run_error(e, entity_type)
-        raise SystemExit(e.returncode) from e
+        raise SystemExit(_exit_code_from_process_error(e)) from e
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
