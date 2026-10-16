@@ -64,6 +64,7 @@ crew = Crew(
 | **Callback** _(opcional)_                 | `callback`              | `Optional[Any]`             | Função/objeto a ser executado após a conclusão da tarefa.                                               |
 | **Guardrail** _(opcional)_                | `guardrail`             | `Optional[Callable]`        | Função para validar a saída da tarefa antes de prosseguir para a próxima tarefa.                        |
 | **Max Tentativas Guardrail** _(opcional)_ | `guardrail_max_retries` | `Optional[int]`             | Número máximo de tentativas quando a validação do guardrail falha. Padrão é 3.                          |
+| **LLM do Guardrail** _(opcional)_ | `guardrail_llm` | `Optional[Union[str, LLM, dict]]` | Substitui o LLM de guardrail do agente para guardrails de texto. |
 
 ## Criando Tarefas
 
@@ -405,6 +406,25 @@ blog_task = Task(
     expected_output="Um post de blog com menos de 200 palavras",
     agent=blog_agent,
     guardrail=validate_blog_content  # Adiciona a função guardrail
+)
+```
+
+### Escolhendo um LLM separado para o guardrail
+
+Por padrão, guardrails de texto usam a mesma instância de LLM do agente. Defina `guardrail_llm` no Agent para escolher outro avaliador, ou na Task para substituir a escolha do Agent. Você pode passar uma instância de LLM, um nome de modelo ou um dicionário de configuração. Guardrails definidos como funções mantêm seu comportamento.
+
+Quando uma tarefa é executada por um agente substituto, os guardrails de texto usam a configuração desse agente. O `guardrail_llm` definido na Task continua tendo prioridade.
+
+```python Code
+from crewai import LLM, Task
+
+judge_llm = LLM(model="gpt-4o-mini", temperature=0)
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail="The blog post must be under 200 words",
+    guardrail_llm=judge_llm,
 )
 ```
 
