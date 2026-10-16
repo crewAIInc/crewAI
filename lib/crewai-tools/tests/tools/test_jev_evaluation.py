@@ -373,6 +373,14 @@ def test_json_and_jsonl_with_bom_and_blank_lines_are_accepted(tmp_path, name):
     assert [r.id for r in load_dataset(tmp_path / name)] == [r["id"] for r in EXAMPLE]
 
 
+def test_jsonl_strings_may_contain_unicode_line_separators(tmp_path):
+    record = {"id": "a", "kind": "route", "state": "a\u2028b\x85c", "expected_route": "b"}
+    path = tmp_path / "data.jsonl"
+    path.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+
+    assert [r.state for r in load_dataset(path)] == ["a\u2028b\x85c"]
+
+
 @pytest.mark.parametrize(
     ("name", "content", "message"),
     [
@@ -502,6 +510,29 @@ def test_live_client_errors_become_failed_records():
     assert records[0].metadata is None
     assert records[1].error == "no answer returned for 'guardrail'"
     assert [o.outcome for o in report.outcomes] == ["failed", "failed"]
+
+
+@pytest.mark.parametrize(
+    ("response", "error"),
+    [
+        (SimpleNamespace(answers=["guardrail"]), "no answer returned for 'guardrail'"),
+        (
+            SimpleNamespace(
+                usage=SimpleNamespace(input_tokens=-1, output_tokens=1),
+                answers={"guardrail": SimpleNamespace(noul=0.9)},
+            ),
+            "invalid usage: input_tokens: Input should be greater than or equal to 0",
+        ),
+    ],
+)
+def test_malformed_live_responses_become_failed_records(response, error):
+    [record] = collect_live_decisions(
+        [guardrail(None)], client=FakeClient(response), **LIVE_KWARGS
+    )
+
+    assert record.error == error
+    assert record.decision is None
+    assert record.metadata.latency_ms is not None
 
 
 def test_live_answer_without_probabilities_or_usage():

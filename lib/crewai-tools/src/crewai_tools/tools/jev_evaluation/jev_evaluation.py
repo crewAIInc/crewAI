@@ -376,12 +376,22 @@ def _query(
     response_model = getattr(response, "model", None)
     metadata = DecisionMetadata(
         model=response_model if isinstance(response_model, str) else None,
-        usage=TokenUsage.model_validate(usage, from_attributes=True)
-        if usage is not None
-        else None,
         latency_ms=latency_ms,
     )
-    answer = (getattr(response, "answers", None) or {}).get(name)
+    if usage is not None:
+        try:
+            metadata.usage = TokenUsage.model_validate(usage, from_attributes=True)
+        except ValidationError as e:
+            first = e.errors()[0]
+            location = ".".join(str(part) for part in first["loc"]) or "usage"
+            return record.model_copy(
+                update={
+                    "error": f"invalid usage: {location}: {first['msg']}",
+                    "metadata": metadata,
+                }
+            )
+    answers = getattr(response, "answers", None)
+    answer = answers.get(name) if isinstance(answers, Mapping) else None
     if answer is None:
         return record.model_copy(
             update={"error": f"no answer returned for {name!r}", "metadata": metadata}
@@ -474,7 +484,7 @@ def _summarize_latency(
 
 def _parse_jsonl(text: str) -> list[tuple[str, Any]]:
     items: list[tuple[str, Any]] = []
-    for number, line in enumerate(text.splitlines(), start=1):
+    for number, line in enumerate(text.split("\n"), start=1):
         if not line.strip():
             continue
         try:
