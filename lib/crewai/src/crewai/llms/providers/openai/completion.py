@@ -330,6 +330,21 @@ class ResponsesAPIResult:
         return bool(self.reasoning_summaries)
 
 
+class OpenAIToolSearchConfig(BaseModel):
+    """Configuration for OpenAI's hosted tool search (Responses API only).
+
+    When enabled, function tools are sent with ``defer_loading=True`` and a
+    ``tool_search`` tool is added, so the model loads function definitions
+    only when it discovers them instead of receiving the full catalog upfront.
+
+    Attributes:
+        execution: Where tool search runs. Only server-side (hosted) search
+            is supported.
+    """
+
+    execution: Literal["server"] = "server"
+
+
 class OpenAICompletion(BaseLLM):
     """OpenAI native completion implementation.
 
@@ -358,6 +373,10 @@ class OpenAICompletion(BaseLLM):
             adds "reasoning.encrypted_content" to include, captures reasoning items
             from responses, and passes them back in subsequent calls to preserve
             chain-of-thought without storing data on OpenAI servers.
+        tool_search: Enable hosted tool search so function tools are deferred
+            and loaded on demand (Responses API only). Pass True for the
+            default configuration. Disabled by default, which keeps eager
+            loading of all function definitions.
     """
 
     llm_type: Literal["openai"] = "openai"
@@ -395,6 +414,7 @@ class OpenAICompletion(BaseLLM):
     previous_response_id: str | None = None
     include: list[str] | None = None
     builtin_tools: list[str] | None = None
+    tool_search: OpenAIToolSearchConfig | None = None
     parse_tool_outputs: bool = False
     auto_chain: bool = False
     auto_chain_reasoning: bool = False
@@ -435,6 +455,11 @@ class OpenAICompletion(BaseLLM):
         model = data.get("model", "gpt-4o")
         data["is_o1_model"] = "o1" in model.lower()
         data["is_gpt4_model"] = "gpt-4" in model.lower()
+        ts = data.get("tool_search")
+        if ts is True:
+            data["tool_search"] = OpenAIToolSearchConfig()
+        elif ts is False:
+            data["tool_search"] = None
         return data
 
     @model_validator(mode="after")
@@ -1112,7 +1137,21 @@ class OpenAICompletion(BaseLLM):
                 all_tools.append({"type": tool_type})
 
         if tools:
-            all_tools.extend(self._convert_tools_for_responses(tools))
+            function_tools = self._convert_tools_for_responses(tools)
+            # OpenAI rejects a deferred function tool unless tool_search is
+            # also present, so an explicit defer_loading=True always needs it.
+            explicitly_deferred = any(
+                t.get("defer_loading") is True for t in function_tools
+            )
+            defer_unspecified = (
+                self.tool_search is not None and len(function_tools) >= 2
+            )
+            if explicitly_deferred or defer_unspecified:
+                all_tools = self._apply_tool_search(
+                    all_tools, function_tools, defer_unspecified=defer_unspecified
+                )
+            else:
+                all_tools.extend(function_tools)
 
         if all_tools:
             params["tools"] = all_tools
@@ -1167,9 +1206,43 @@ class OpenAICompletion(BaseLLM):
                 else:
                     responses_tool["parameters"] = dict(parameters)
 
+            defer_loading = self._get_tool_defer_loading(tool)
+            if defer_loading is not None:
+                responses_tool["defer_loading"] = defer_loading
+
             responses_tools.append(responses_tool)
 
         return responses_tools
+
+    @staticmethod
+    def _get_tool_defer_loading(tool: dict[str, Any]) -> bool | None:
+        """Return an explicit ``defer_loading`` flag set on a tool, if any."""
+        value = tool.get("defer_loading")
+        function = tool.get("function")
+        if value is None and isinstance(function, dict):
+            value = function.get("defer_loading")
+        return value if isinstance(value, bool) else None
+
+    def _apply_tool_search(
+        self,
+        other_tools: list[dict[str, Any]],
+        function_tools: list[dict[str, Any]],
+        defer_unspecified: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Add the hosted tool search tool and defer the function tools.
+
+        Tools that already set ``defer_loading`` keep their value, so a caller
+        can keep selected tools eagerly loaded. With ``defer_unspecified=False``
+        only tools that ask for deferral are deferred.
+        """
+        result = list(other_tools)
+        if not any(t.get("type") == "tool_search" for t in result):
+            result.append({"type": "tool_search"})
+        for tool in function_tools:
+            if defer_unspecified and "defer_loading" not in tool:
+                tool = {**tool, "defer_loading": True}
+            result.append(tool)
+        return result
 
     def _handle_responses(
         self,
