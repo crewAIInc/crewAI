@@ -91,6 +91,13 @@ paths:
         **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
 
         kickoff ID로 실행 상태와 결과를 조회합니다.
+
+        응답의 형태는 항상 같습니다. `state` 필드가 실행 상태를 제공합니다.
+        해당되지 않는 필드는 `null`입니다. 실행 중에는 `progress`와 이벤트 필드가
+        현재 진행 상황을 보여줍니다.
+
+        crewAI 1.15.21 이하 버전을 실행하는 배포는 `progress`와 이벤트 필드에 `null`을
+        반환합니다. 프로젝트의 crewAI 버전을 올린 다음 크루를 다시 배포하세요.
       operationId: getExecutionStatus
       parameters:
         - name: kickoff_id
@@ -105,10 +112,7 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ExecutionRunning'
-                  - $ref: '#/components/schemas/ExecutionCompleted'
-                  - $ref: '#/components/schemas/ExecutionError'
+                $ref: '#/components/schemas/ExecutionStatus'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
@@ -257,62 +261,136 @@ components:
         **📋 참고** - *예시의 토큰은 자리 표시자입니다.* 실제 토큰을 사용하세요.
 
   schemas:
-    ExecutionRunning:
+    ExecutionStatus:
       type: object
       properties:
+        state:
+          type: string
+          enum:
+            ["PENDING", "STARTED", "RUNNING", "SUCCESS", "FAILED", "PAUSED", "REVOKED"]
         status:
           type: string
-          enum: ["running"]
-        current_task:
-          type: string
-        progress:
-          type: object
-          properties:
-            completed_tasks:
-              type: integer
-            total_tasks:
-              type: integer
-
-    ExecutionCompleted:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: ["completed"]
+          nullable: true
         result:
+          type: string
+          nullable: true
+        result_json:
           type: object
-          properties:
-            output:
-              type: string
-            tasks:
-              type: array
-              items:
-                $ref: '#/components/schemas/TaskResult'
-        execution_time:
-          type: number
+          nullable: true
+        usage_metrics:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        progress:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ExecutionProgress'
+        last_event:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ExecutionEvent'
+        events:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/ExecutionEvent'
+        events_count:
+          type: integer
+          nullable: true
+        events_by_type:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        triggered_by:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ExecutionPrincipal'
+        execution_origin:
+          type: string
+          nullable: true
+          enum: ["ui", "schedule", "trigger", "chat", "hitl-resume", "replay", "api"]
+        last_step:
+          type: object
+          nullable: true
+        last_executed_task:
+          type: object
+          nullable: true
+        flow_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+          enum: ["memory", "application"]
 
-    ExecutionError:
+    ExecutionProgress:
       type: object
       properties:
-        status:
+        unit:
           type: string
-          enum: ["error"]
+          enum: ["task", "step"]
+        completed:
+          type: integer
+        total:
+          type: integer
+          nullable: true
+        remaining:
+          type: integer
+          nullable: true
+        current:
+          type: string
+          nullable: true
+        current_agent:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_seconds:
+          type: number
+          nullable: true
+
+    ExecutionEvent:
+      type: object
+      properties:
+        type:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          nullable: true
+        crew_name:
+          type: string
+        flow_name:
+          type: string
+        method_name:
+          type: string
+        task_name:
+          type: string
+        agent_role:
+          type: string
+        tool_name:
+          type: string
+        model:
+          type: string
         error:
           type: string
-        execution_time:
-          type: number
 
-    TaskResult:
+    ExecutionPrincipal:
       type: object
       properties:
-        task_id:
+        type:
           type: string
-        output:
+          enum: ["user", "service_account", "unknown"]
+        id:
           type: string
-        agent:
-          type: string
-        execution_time:
-          type: number
+          nullable: true
 
     Error:
       type: object
