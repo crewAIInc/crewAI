@@ -22,6 +22,7 @@ dev = [
     "pytest-xdist==3.8.0",
     "pytest-split==0.11.0",
     "types-requests~=2.31.0.6",
+    "types-jsonschema==4.26.0.20261006",
     "types-pyyaml==6.0.*",
     "types-regex==2026.1.15.*",
     "types-appdirs==1.4.*",

@@ -16,6 +16,8 @@ dependencies = [
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
     "pymupdf~=1.26.6",
+    "httpx~=0.28.1",
+    "jsonschema>=4.23,<5",
 ]
 
 
