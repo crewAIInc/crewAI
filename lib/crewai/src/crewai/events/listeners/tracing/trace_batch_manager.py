@@ -452,7 +452,18 @@ class TraceBatchManager:
                         not should_auto_collect_first_time_traces()
                         and not is_tui_mode()
                     ):
-                        console.print(panel)
+                        try:
+                            console.print(panel)
+                        except UnicodeEncodeError:
+                            # stdout cannot encode the panel (e.g. a cp1252
+                            # pipe on Windows). The batch is already
+                            # finalized, so log a plain line instead of
+                            # reporting the batch as failed.
+                            logger.info(
+                                "Trace batch %s finalized. View here: %s",
+                                batch_id,
+                                return_link,
+                            )
                     return True
 
                 logger.error(
