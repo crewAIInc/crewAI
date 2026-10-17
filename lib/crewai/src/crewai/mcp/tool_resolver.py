@@ -657,9 +657,10 @@ class MCPToolResolver:
         )
 
     async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict[str, Any]]:
-        """Discover tools from an MCP server (HTTPS / streamable-HTTP path)."""
+        """Discover tools from an MCP server (HTTPS / streamable-HTTP path) with pagination support."""
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
+        from mcp.types import PaginatedRequestParams
 
         from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -669,23 +670,32 @@ class MCPToolResolver:
                     session.initialize(), timeout=MCP_CONNECTION_TIMEOUT
                 )
 
-                tools_result = await asyncio.wait_for(
-                    session.list_tools(),
-                    timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
-                )
+                schemas: dict[str, dict[str, Any]] = {}
+                cursor = None
 
-                schemas = {}
-                for tool in tools_result.tools:
-                    args_schema = None
-                    if hasattr(tool, "inputSchema") and tool.inputSchema:
-                        args_schema = self._json_schema_to_pydantic(
-                            sanitize_tool_name(tool.name), tool.inputSchema
-                        )
+                while True:
+                    params = PaginatedRequestParams(cursor=cursor) if cursor else None
+                    tools_result = await asyncio.wait_for(
+                        session.list_tools(params=params),
+                        timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
+                    )
 
-                    schemas[sanitize_tool_name(tool.name)] = {
-                        "description": getattr(tool, "description", ""),
-                        "args_schema": args_schema,
-                    }
+                    for tool in tools_result.tools:
+                        args_schema = None
+                        if hasattr(tool, "inputSchema") and tool.inputSchema:
+                            args_schema = self._json_schema_to_pydantic(
+                                sanitize_tool_name(tool.name), tool.inputSchema
+                            )
+
+                        schemas[sanitize_tool_name(tool.name)] = {
+                            "description": getattr(tool, "description", ""),
+                            "args_schema": args_schema,
+                        }
+
+                    cursor = getattr(tools_result, "next_cursor", None) or getattr(tools_result, "nextCursor", None)
+                    if not cursor:
+                        break
+
                 return schemas
 
     @staticmethod
