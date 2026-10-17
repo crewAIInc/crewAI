@@ -1,0 +1,112 @@
+name: Vendor pitch triage
+
+# This is a workflow *template*, not an active workflow. To enable it, create a
+# workflow from this template in GitHub (or copy it to .github/workflows/).
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: vendor-pitch-triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  close-vendor-pitch:
+    if: >
+      github.event.label.name == 'vendor-pitch' &&
+      github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close the issue and its associated pull requests
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const { owner, repo } = context.repo;
+            const marker = "<!-- crewai-vendor-pitch-triage -->";
+            const destination = "https://github.com/crewAIInc/awesome-crewai";
+            const issueComment = [
+              marker,
+              "",
+              "Thanks for sharing this with us. This repository is focused on the CrewAI framework itself.",
+              "",
+              `Your project may be a better fit for our [community projects repository](${destination}). Please review its contribution guidelines and submit it there.`,
+              "",
+              "We’re closing this issue so submissions can be reviewed in the right place.",
+            ].join("\n");
+            const pullRequestComment = [
+              marker,
+              "",
+              `This pull request is associated with #${issue.number}, which has been redirected to our [community projects repository](${destination}).`,
+              "",
+              "Please submit the project there instead.",
+            ].join("\n");
+
+            const existingComments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number: issue.number, per_page: 100 },
+            );
+            if (!existingComments.some((comment) => comment.body?.includes(marker))) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: issueComment,
+              });
+            }
+
+            // A PR is considered associated when its title or body references the
+            // issue in this repository. This avoids closing unrelated open PRs.
+            const referencePattern = new RegExp(
+              `(?:^|[^\\w/-])(?:#${issue.number}|${owner}/${repo}#${issue.number}|https://github\\.com/${owner}/${repo}/issues/${issue.number})(?=$|[^\\w-])`,
+              "i",
+            );
+            const pullRequests = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+
+            for (const pullRequest of pullRequests) {
+              const text = `${pullRequest.title}\n${pullRequest.body ?? ""}`;
+              if (!referencePattern.test(text)) {
+                continue;
+              }
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pullRequest.number,
+                per_page: 100,
+              });
+              if (!comments.some((comment) => comment.body?.includes(marker))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pullRequest.number,
+                  body: pullRequestComment,
+                });
+              }
+
+              await github.rest.pulls.update({
+                owner,
+                repo,
+                pull_number: pullRequest.number,
+                state: "closed",
+              });
+            }
+
+            if (issue.state === "open") {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: "closed",
+              });
+            }
