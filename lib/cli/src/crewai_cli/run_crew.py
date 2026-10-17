@@ -21,7 +21,6 @@ from crewai_cli.input_prompt import (
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     get_or_create_project_id,
-    is_dmn_mode_enabled,
 )
 from crewai_cli.version import get_crewai_tools_dependency, get_crewai_version
 
@@ -331,14 +330,17 @@ def _run_json_crew(
 
     provided = parse_inputs_json(inputs)
 
-    if is_dmn_mode_enabled():
+    # The TUI is the interactive default. Without an interactive terminal (a coding
+    # agent, CI, piped input, CREWAI_DMN) the crew runs on plain output and the
+    # command exits when it finishes, as declarative flows do.
+    if not is_interactive():
         return _run_json_crew_without_tui(crew_path, provided)
 
     crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
         _load_json_crew_for_tui(crew_path)
     )
     runtime_inputs = _resolve_crew_inputs(
-        crew, default_inputs, provided, interactive=is_interactive()
+        crew, default_inputs, provided, interactive=True
     )
 
     app = crew_run_app_cls(
