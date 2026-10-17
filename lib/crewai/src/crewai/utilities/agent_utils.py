@@ -196,6 +196,34 @@ def _annotation_resolves_import(
     return any(_walk(item) for item in (metadata or []))
 
 
+def _contains_remote_ref(value: Any) -> bool:
+    """True if a JSON value has a ``$ref`` pointing at a remote resource.
+
+    ``create_model_from_schema`` resolves ``$ref`` with jsonref's default
+    loader, which fetches remote URIs (http/https/file/...) at model-build
+    time. A repository record could therefore make the loader's host issue
+    outbound requests (or read local files via ``file://``) just by passing
+    a schema dict. Local fragment refs (``#/$defs/...``) never touch the
+    network and stay allowed.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "$ref" and isinstance(item, str):
+                if "://" in item.strip().lower():
+                    return True
+            elif _contains_remote_ref(item):
+                return True
+    elif isinstance(value, (list, tuple)):
+        return any(_contains_remote_ref(item) for item in value)
+    return False
+
+
+# Tool fields whose dict values are passed through create_model_from_schema
+# (which resolves $ref via jsonref). Only these fields can turn a schema
+# dict into a network fetch at construction time.
+_SCHEMA_FIELDS_WITH_REF_RESOLUTION = frozenset({"args_schema", "result_schema"})
+
+
 def _is_json_value(value: Any) -> bool:
     """True for values that can round-trip through JSON (defense in depth).
 
@@ -210,8 +238,7 @@ def _is_json_value(value: Any) -> bool:
         return all(_is_json_value(item) for item in value)
     if isinstance(value, dict):
         return all(
-            isinstance(key, str) and _is_json_value(item)
-            for key, item in value.items()
+            isinstance(key, str) and _is_json_value(item) for key, item in value.items()
         )
     return False
 
@@ -264,6 +291,22 @@ def _validate_repository_tool_params(
                 f"Tool {tool_name!r} init parameter {key!r} must be JSON-typed "
                 f"(got {type(value).__name__}); refusing to instantiate."
             )
+        # args_schema/result_schema dicts are passed through
+        # create_model_from_schema, which resolves $ref with jsonref's
+        # default loader: a remote $ref would make the loader's host fetch
+        # a URL (or read a local file via file://) at construction time.
+        # Reject those; plain dicts and local fragment refs stay allowed.
+        if (
+            key in _SCHEMA_FIELDS_WITH_REF_RESOLUTION
+            and isinstance(value, dict)
+            and _contains_remote_ref(value)
+        ):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} contains a "
+                "remote $ref: schema dicts in repository records must "
+                "not point at remote resources."
+            )
+
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -1680,7 +1723,10 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                             )
                         module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
-                        if not (inspect.isclass(tool_class) and issubclass(tool_class, BaseTool)):
+                        if not (
+                            inspect.isclass(tool_class)
+                            and issubclass(tool_class, BaseTool)
+                        ):
                             raise AgentRepositoryError(
                                 f"Tool {tool['name']!r} resolved from module {tool['module']!r} "
                                 f"is not a BaseTool subclass."
