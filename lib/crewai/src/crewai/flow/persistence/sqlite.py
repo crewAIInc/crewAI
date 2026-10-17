@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from datetime import date, datetime, timezone
 import json
 import os
 from pathlib import Path
 import sqlite3
+from time import monotonic, sleep
 from typing import TYPE_CHECKING, Any
 
 from crewai_core.lock_store import lock as store_lock
@@ -19,6 +21,10 @@ from crewai.flow.persistence.base import FlowPersistence
 
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+
+_SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
+_SCHEMA_RETRY_DELAY_SECONDS = 0.05
 
 
 def _json_default(obj: Any) -> Any:
@@ -84,9 +90,22 @@ class SQLiteFlowPersistence(FlowPersistence):
 
     def init_db(self) -> None:
         """Create the necessary tables if they don't exist."""
+        deadline = monotonic() + _SQLITE_BUSY_TIMEOUT_SECONDS
+        while True:
+            try:
+                self._create_schema()
+                return
+            except sqlite3.OperationalError as exc:  # noqa: PERF203
+                if "locked" not in str(exc).lower() or monotonic() >= deadline:
+                    raise
+                sleep(_SCHEMA_RETRY_DELAY_SECONDS)
+
+    def _create_schema(self) -> None:
         with (
-            store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(
+                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn,
+            conn,
         ):
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(
@@ -188,7 +207,10 @@ class SQLiteFlowPersistence(FlowPersistence):
 
         with (
             store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(
+                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn,
+            conn,
         ):
             self._save_state_sql(conn, flow_uuid, method_name, state_dict)
 
@@ -201,7 +223,12 @@ class SQLiteFlowPersistence(FlowPersistence):
         Returns:
             The most recent state as a dictionary, or None if no state exists
         """
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
+        with (
+            closing(
+                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn,
+            conn,
+        ):
             cursor = conn.execute(
                 """
             SELECT state_json
@@ -239,7 +266,10 @@ class SQLiteFlowPersistence(FlowPersistence):
 
         with (
             store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(
+                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn,
+            conn,
         ):
             self._save_state_sql(conn, flow_uuid, context.method_name, state_dict)
 
@@ -276,7 +306,12 @@ class SQLiteFlowPersistence(FlowPersistence):
         # Import here to avoid circular imports
         from crewai.flow.async_feedback.types import PendingFeedbackContext
 
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
+        with (
+            closing(
+                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn,
+            conn,
+        ):
             cursor = conn.execute(
                 """
             SELECT state_json, context_json
@@ -302,7 +337,10 @@ class SQLiteFlowPersistence(FlowPersistence):
         """
         with (
             store_lock(self._lock_name),
-            sqlite3.connect(self.db_path, timeout=30) as conn,
+            closing(
+                sqlite3.connect(self.db_path, timeout=_SQLITE_BUSY_TIMEOUT_SECONDS)
+            ) as conn,
+            conn,
         ):
             conn.execute(
                 """

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
 import json
@@ -335,6 +336,81 @@ class BedrockCompletion(BaseLLM):
         using ``aiobotocore`` inside an exit stack."""
         return self._async_client
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[Any, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Bedrock's CountTokens API.
+
+        The CountTokens request accepts the Converse message, system, tool, and
+        additional-model fields that affect input tokenization. Generation-only
+        settings, such as output limits and sampling, are excluded.
+        """
+        formatted_messages, system_message = self._format_messages_for_converse(
+            messages
+        )
+        converse_input: dict[str, Any] = {"messages": formatted_messages}
+
+        if system_message:
+            converse_input["system"] = [{"text": system_message}]
+
+        if tools:
+            converse_input["toolConfig"] = {
+                "tools": self._format_tools_for_converse(tools)
+            }
+        elif self._messages_contain_tool_content(formatted_messages):
+            tools_from_history = self._extract_tools_from_message_history(
+                formatted_messages
+            )
+            if tools_from_history:
+                converse_input["toolConfig"] = {"tools": tools_from_history}
+
+        if self.additional_model_request_fields:
+            converse_input["additionalModelRequestFields"] = (
+                self.additional_model_request_fields
+            )
+
+        effective_response_model = response_model or self.response_format
+        if effective_response_model:
+            structured_tool: ConverseToolTypeDef = {
+                "toolSpec": {
+                    "name": STRUCTURED_OUTPUT_TOOL_NAME,
+                    "description": (
+                        "Use this tool to provide your final structured response. "
+                        "Call this tool when you have gathered all necessary information "
+                        "and are ready to provide the final answer in the required format."
+                    ),
+                    "inputSchema": {
+                        "json": generate_model_description(effective_response_model)
+                        .get("json_schema", {})
+                        .get("schema", {})
+                    },
+                }
+            }
+            tool_config = converse_input.get("toolConfig")
+            existing_tools = list(tool_config.get("tools", [])) if tool_config else []
+            if not any(
+                tool.get("toolSpec", {}).get("name") == STRUCTURED_OUTPUT_TOOL_NAME
+                for tool in existing_tools
+            ):
+                existing_tools.append(structured_tool)
+                converse_input["toolConfig"] = {"tools": existing_tools}
+                if len(existing_tools) == 1:
+                    converse_input["toolConfig"]["toolChoice"] = {
+                        "tool": {"name": STRUCTURED_OUTPUT_TOOL_NAME}
+                    }
+
+        try:
+            response = self._get_sync_client().count_tokens(
+                modelId=self.model_id,
+                input={"converse": converse_input},
+            )
+        except (BotoCoreError, ClientError):
+            return super().get_input_tokens_count(messages, tools, response_model)
+        return int(response["inputTokens"])
+
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""
         config = super().to_config_dict()
@@ -485,15 +561,25 @@ class BedrockCompletion(BaseLLM):
             Generated text response or structured output.
 
         Raises:
-            NotImplementedError: If aiobotocore is not installed.
             LLMContextLengthExceededError: If context window is exceeded.
         """
         effective_response_model = response_model or self.response_format
 
         if not AIOBOTOCORE_AVAILABLE:
-            raise NotImplementedError(
-                "Async support for AWS Bedrock requires aiobotocore. "
-                'Install with: uv add "crewai[bedrock]"'
+            logging.warning(
+                "aiobotocore is not installed; falling back to synchronous AWS "
+                "Bedrock calls in a worker thread. Install `crewai[bedrock]` "
+                "for native async support."
+            )
+            return await asyncio.to_thread(
+                self.call,
+                messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=effective_response_model,
             )
 
         with llm_call_context():
@@ -2045,7 +2131,7 @@ class BedrockCompletion(BaseLLM):
             config["temperature"] = float(self.temperature)
         if self.top_p is not None:
             config["topP"] = float(self.top_p)
-        if self.stop_sequences:
+        if self.stop_sequences and self.supports_stop_words():
             config["stopSequences"] = self.stop_sequences
 
         if self.is_claude_model and self.top_k is not None:
@@ -2119,43 +2205,31 @@ class BedrockCompletion(BaseLLM):
         return self.supports_tools
 
     def supports_stop_words(self) -> bool:
-        """Check if the model supports stop words."""
-        return True
+        """Check if the model supports stop words.
+
+        OpenAI models on Bedrock (gpt-oss, GPT-5.x, GPT-6) reject
+        ``stopSequences``. Stop words are still applied to their output
+        client-side by ``_apply_stop_words``.
+        """
+        return "openai." not in self.model.lower()
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+        from crewai.llms.context_window import (
+            BEDROCK_CONTEXT_WINDOWS,
+            DEFAULT_CONTEXT_WINDOW_SIZE,
+            resolve_context_window_size,
+        )
 
-        context_windows = {
-            "anthropic.claude-sonnet-4": 200000,
-            "anthropic.claude-opus-4": 200000,
-            "anthropic.claude-haiku-4": 200000,
-            "anthropic.claude-3-5-sonnet": 200000,
-            "anthropic.claude-3-5-haiku": 200000,
-            "anthropic.claude-3-opus": 200000,
-            "anthropic.claude-3-sonnet": 200000,
-            "anthropic.claude-3-haiku": 200000,
-            "anthropic.claude-3-7-sonnet": 200000,
-            "anthropic.claude-v2": 100000,
-            "amazon.titan-text-express": 8000,
-            "ai21.j2-ultra": 8192,
-            "cohere.command-text": 4096,
-            "meta.llama2-13b-chat": 4096,
-            "meta.llama2-70b-chat": 4096,
-            "meta.llama3-70b-instruct": 128000,
-            "deepseek.r1": 32768,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+        return resolve_context_window_size(
+            self.model, BEDROCK_CONTEXT_WINDOWS, default=DEFAULT_CONTEXT_WINDOW_SIZE
+        )
 
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+        Claude 3+, Nova Lite/Pro/Premier and OpenAI GPT-6 (Sol, Luna, Astra)
+        on Bedrock support vision.
 
         Returns:
             True if the model supports images.
@@ -2166,6 +2240,9 @@ class BedrockCompletion(BaseLLM):
             "anthropic.claude-sonnet-4",
             "anthropic.claude-opus-4",
             "anthropic.claude-haiku-4",
+            "openai.gpt-6",
+            "us.openai.gpt-6",
+            "global.openai.gpt-6",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",

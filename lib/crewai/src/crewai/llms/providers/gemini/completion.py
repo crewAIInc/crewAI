@@ -143,6 +143,65 @@ class GeminiCompletion(BaseLLM):
         """Gemini uses a single client for both sync and async calls."""
         return self._get_sync_client()
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Gemini's Count Tokens API."""
+        formatted_content, system_instruction = self._format_messages_for_gemini(
+            messages
+        )
+        generation_config = self._prepare_generation_config(
+            system_instruction, tools, response_model or self.response_format
+        )
+        config_data = generation_config.model_dump(exclude_none=True)
+        client = self._get_sync_client()
+        if not getattr(client, "vertexai", False):
+            unsupported_context = [
+                name
+                for name, value in (
+                    ("system instructions", config_data.get("system_instruction")),
+                    ("tools", config_data.get("tools")),
+                    ("structured output", response_model or self.response_format),
+                )
+                if value is not None
+            ]
+            if unsupported_context:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            try:
+                response = client.models.count_tokens(
+                    model=self.model,
+                    contents=formatted_content,
+                )
+            except Exception:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            return int(response.total_tokens)
+
+        count_config_params: dict[str, Any] = {
+            "system_instruction": config_data.pop("system_instruction", None),
+            "tools": config_data.pop("tools", None),
+        }
+        generation_config_data = {
+            key: value
+            for key, value in config_data.items()
+            if key in types.GenerationConfig.model_fields
+        }
+        count_config_params["generation_config"] = types.GenerationConfig(
+            **generation_config_data
+        )
+        count_config = types.CountTokensConfig(**count_config_params)
+        try:
+            response = client.models.count_tokens(
+                model=self.model,
+                contents=formatted_content,
+                config=count_config,
+            )
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+        return int(response.total_tokens)
+
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Gemini/Vertex-specific fields."""
         config = super().to_config_dict()
@@ -1382,39 +1441,14 @@ class GeminiCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+        from crewai.llms.context_window import (
+            GEMINI_CONTEXT_WINDOWS,
+            resolve_context_window_size,
+        )
 
-        min_context = 1024
-        max_context = 2097152
-
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
-                raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
-                )
-
-        context_windows = {
-            "gemini-3-pro-preview": 1048576,  # 1M tokens
-            "gemini-2.0-flash": 1048576,  # 1M tokens
-            "gemini-2.0-flash-thinking": 32768,
-            "gemini-2.0-flash-lite": 1048576,
-            "gemini-2.5-flash": 1048576,
-            "gemini-2.5-pro": 1048576,
-            "gemini-1.5-pro": 2097152,  # 2M tokens
-            "gemini-1.5-flash": 1048576,
-            "gemini-1.5-flash-8b": 1048576,
-            "gemini-1.0-pro": 32768,
-            "gemma-3-1b": 32000,
-            "gemma-3-4b": 128000,
-            "gemma-3-12b": 128000,
-            "gemma-3-27b": 128000,
-        }
-
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
-
-        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens default
+        return resolve_context_window_size(
+            self.model, GEMINI_CONTEXT_WINDOWS, default=1_048_576
+        )
 
     def _effective_max_tokens(self) -> int | float | None:
         """Gemini caps generation via ``max_output_tokens``."""

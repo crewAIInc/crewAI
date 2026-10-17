@@ -20,27 +20,44 @@ def mock_google_api_key():
         yield
 
 
-def test_gemini_completion_is_used_when_google_provider():
+@pytest.mark.parametrize(
+    "model, expected_model",
+    [
+        ("google/gemini-2.0-flash-001", "gemini-2.0-flash-001"),
+        ("google/gemini-3.8-flash", "gemini-3.8-flash"),
+    ],
+)
+def test_gemini_completion_is_used_when_google_provider(model, expected_model):
     """
-    Test that GeminiCompletion from completion.py is used when LLM uses provider 'google'
+    Test that GeminiCompletion is used when LLM uses provider 'google'
     """
-    llm = LLM(model="google/gemini-2.0-flash-001")
+    llm = LLM(model=model)
 
     assert llm.__class__.__name__ == "GeminiCompletion"
     assert llm.provider == "gemini"
-    assert llm.model == "gemini-2.0-flash-001"
+    assert llm.model == expected_model
 
 
-def test_gemini_completion_is_used_when_gemini_provider():
+
+@pytest.mark.parametrize(
+    "model, expected_model",
+    [
+        ("gemini/gemini-2.0-flash-001", "gemini-2.0-flash-001"),
+        ("gemini/gemini-3.8-flash", "gemini-3.8-flash"),
+    ],
+)
+def test_gemini_completion_is_used_when_gemini_provider(model, expected_model):
     """
     Test that GeminiCompletion is used when provider is 'gemini'
     """
-    llm = LLM(model="gemini/gemini-2.0-flash-001")
-
     from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = LLM(model=model)
+
     assert isinstance(llm, GeminiCompletion)
     assert llm.provider == "gemini"
-    assert llm.model == "gemini-2.0-flash-001"
+    assert llm.model == expected_model
+
 
 def test_gemini_completion_module_is_imported():
     """
@@ -120,6 +137,106 @@ def test_gemini_completion_initialization_parameters():
     assert llm.max_output_tokens == 2000
     assert llm.top_p == 0.9
     assert llm.top_k == 40
+
+
+def test_gemini_input_token_count_forwards_generation_context_for_vertex():
+    """Vertex Count Tokens receives the same prompt context as completion."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = True
+    client.models.count_tokens.return_value = MagicMock(total_tokens=42)
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is CrewAI?"},
+    ]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    count_kwargs = client.models.count_tokens.call_args.kwargs
+    assert count_kwargs["model"] == "gemini-2.0-flash-001"
+    assert count_kwargs["contents"][0].role == "user"
+    assert count_kwargs["config"].system_instruction.parts[0].text == "Be concise."
+    assert count_kwargs["config"].tools[0].function_declarations[0].name == "search_docs"
+
+
+def test_gemini_developer_token_count_uses_character_fallback_for_unrepresentable_context():
+    """Unsupported Developer API context falls back to the character estimate."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = False
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count(
+            [
+                {"role": "system", "content": "Be concise."},
+                {"role": "user", "content": "What is CrewAI?"},
+            ],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_docs",
+                        "description": "Search the documentation.",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                }
+            ],
+        ) == 7
+
+
+def test_gemini_developer_token_count_forwards_supported_content():
+    """Developer API counting succeeds when the prompt has no unsupported context."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001", api_key="test-key")
+    client = MagicMock()
+    client.vertexai = False
+    client.models.count_tokens.return_value = MagicMock(total_tokens=42)
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        assert llm.get_input_tokens_count("What is CrewAI?") == 42
+
+    count_kwargs = client.models.count_tokens.call_args.kwargs
+    assert count_kwargs["model"] == "gemini-2.0-flash-001"
+    assert count_kwargs["contents"][0].role == "user"
+    assert count_kwargs["contents"][0].parts[0].text == "What is CrewAI?"
+
+
+@pytest.mark.vcr()
+def test_gemini_developer_input_token_count(monkeypatch):
+    """Gemini Developer API counts input tokens through its native endpoint."""
+    llm = LLM(model="gemini/gemini-2.5-flash")
+    models = llm._get_sync_client().models
+    native_count_tokens = models.count_tokens
+    calls = []
+    errors = []
+
+    def count_tokens(*args, **kwargs):
+        calls.append((args, kwargs))
+        try:
+            return native_count_tokens(*args, **kwargs)
+        except Exception as error:
+            errors.append(error)
+            raise
+
+    monkeypatch.setattr(models, "count_tokens", count_tokens)
+
+    token_count = llm.get_input_tokens_count(
+        "CrewAI coordinates autonomous AI agents to complete a shared task."
+    )
+
+    assert len(calls) == 1
+    assert not errors
+    assert token_count > 0
 
 
 def test_gemini_started_event_surfaces_max_output_tokens():
@@ -330,7 +447,7 @@ def test_gemini_completion_with_tools():
 
 
 def test_gemini_raises_error_when_model_not_supported():
-    """Test that GeminiCompletion raises ValueError when model not supported"""
+    """Test that GeminiCompletion raises an API error for an unsupported model."""
 
     with patch('crewai.llms.providers.gemini.completion.genai') as mock_genai:
         mock_client = MagicMock()
@@ -342,7 +459,7 @@ def test_gemini_raises_error_when_model_not_supported():
         mock_response.body_segments = [{
             'error': {
                 'code': 404,
-                'message': 'models/model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
+                'message': 'models/gemini-model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
                 'status': 'NOT_FOUND'
             }
         }]
@@ -350,10 +467,12 @@ def test_gemini_raises_error_when_model_not_supported():
 
         mock_client.models.generate_content.side_effect = ClientError(404, mock_response)
 
-        llm = LLM(model="google/model-doesnt-exist")
+        llm = LLM(model="google/gemini-model-doesnt-exist")
 
-        with pytest.raises(Exception):  # Should raise some error for unsupported model
+        with pytest.raises(ClientError, match="404"):
             llm.call("Hello")
+
+        mock_client.models.generate_content.assert_called_once()
 
 
 def test_gemini_vertex_ai_setup():
@@ -440,6 +559,8 @@ def test_gemini_model_detection():
     """
     # Test Gemini model naming patterns that actually work with provider detection
     gemini_test_cases = [
+        "gemini/gemini-3.8-flash",
+        "google/gemini-3.8-flash",
         "google/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-001",
         "google/gemini-1.5-pro",
@@ -464,15 +585,20 @@ def test_gemini_context_window_size():
     """
     Test that Gemini models return correct context window sizes
     """
-    # Test Gemini 2.0 Flash
-    llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
-    context_size_2_0 = llm_2_0.get_context_window_size()
-    assert context_size_2_0 > 500000
+    # Test Gemini 2.5 Flash
+    llm_2_5 = LLM(model="google/gemini-2.5-flash")
+    context_size_2_5 = llm_2_5.get_context_window_size()
+    assert context_size_2_5 > 500000
 
-    # Test Gemini 1.5 Pro
-    llm_1_5 = LLM(model="google/gemini-1.5-pro")
-    context_size_1_5 = llm_1_5.get_context_window_size()
-    assert context_size_1_5 > 1000000
+    # Test Gemini 3.8 Flash
+    llm_3_8 = LLM(model="google/gemini-3.8-flash")
+    context_size_3_8 = llm_3_8.get_context_window_size()
+    assert context_size_3_8 == 891289
+
+    # Test Gemini 2.5 Pro
+    llm_2_5_pro = LLM(model="google/gemini-2.5-pro")
+    context_size_2_5_pro = llm_2_5_pro.get_context_window_size()
+    assert context_size_2_5_pro > 500000
 
 
 def test_gemini_message_formatting():
@@ -796,7 +922,7 @@ def test_gemini_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Gemini API."""
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    # Set stop sequences via the stop attribute (simulating an executor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
     with patch.object(llm._client.models, 'generate_content') as mock_generate:

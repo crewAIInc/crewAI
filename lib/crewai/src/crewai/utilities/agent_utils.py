@@ -9,13 +9,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import inspect
 import json
+import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from crewai_core.printer import PRINTER, ColoredText, Printer
 from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
+from rich.panel import Panel
 
 from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from crewai.agents.parser import (
@@ -24,6 +26,13 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import (
+    ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationFailedEvent,
+    ContextWindowSummarizationStartedEvent,
+)
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
@@ -32,8 +41,10 @@ from crewai.tools.structured_tool import (
     strip_composite_description_prefix,
 )
 from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
     ToolFailure,
     ToolFailureReason,
+    ToolFailureRecord,
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
@@ -53,14 +64,14 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
-    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.agents.agent_executor import AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
 
 _create_plus_client_hook: Callable[[], Any] | None = None
+logger = logging.getLogger(__name__)
 
 
 def resolve_plus_client(default: Callable[[], Any]) -> Any:
@@ -126,16 +137,6 @@ def resolve_plus_response(response: Any) -> Any:
             return pool.submit(ctx.run, asyncio.run, await_response()).result()
 
     return asyncio.run(await_response())
-
-
-class SummaryContent(TypedDict):
-    """Structure for summary content entries.
-
-    Attributes:
-        content: The summarized content.
-    """
-
-    content: str
 
 
 console = Console()
@@ -329,7 +330,7 @@ def extract_task_section(text: str) -> str:
 
 
 def _executor_stop_words(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
 ) -> list[str]:
     """Return the executor's stop words, regardless of which field name it uses."""
     if executor_context is None:
@@ -343,7 +344,7 @@ def _executor_stop_words(
 @contextlib.contextmanager
 def _llm_stop_words_applied(
     llm: LLM | BaseLLM,
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
 ) -> Iterator[None]:
     """Apply the executor's stop words to the LLM for the duration of one call.
 
@@ -479,7 +480,7 @@ def enforce_rpm_limit(
 
 @contextlib.contextmanager
 def _prepare_llm_call(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     messages: list[LLMMessage],
     printer: Printer,
     verbose: bool = True,
@@ -516,7 +517,7 @@ def _prepare_llm_call(
 
 def _validate_and_finalize_llm_response(
     answer: Any,
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     printer: Printer,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
@@ -547,6 +548,119 @@ def _validate_and_finalize_llm_response(
     )
 
 
+def _summarize_context_before_llm_call(
+    llm: LLM | BaseLLM,
+    messages: list[LLMMessage],
+    callbacks: list[TokenCalcHandler],
+    printer: Printer,
+    verbose: bool,
+    from_task: Task | None = None,
+    from_agent: BaseAgent | None = None,
+) -> None:
+    """Compact messages after a preflight context-window check."""
+    non_system_messages = [
+        message for message in messages if message.get("role") != "system"
+    ]
+    if len(non_system_messages) == 1 and non_system_messages[0].get("role") == "user":
+        return
+
+    model = getattr(llm, "model", None)
+    if not isinstance(model, str):
+        model = None
+
+    crewai_event_bus.emit(
+        llm,
+        event=ContextWindowSummarizationStartedEvent(
+            from_task=from_task,
+            from_agent=from_agent,
+            model=model,
+        ),
+    )
+    if verbose:
+        console.print(
+            Panel(
+                "The pending request is nearing the model context limit. "
+                "Compacting the conversation before the next model call.",
+                title="🧠 Context summarization triggered",
+                border_style="yellow",
+                padding=(1, 2),
+            )
+        )
+    try:
+        summarize_messages(
+            messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
+        )
+    except Exception as error:
+        crewai_event_bus.emit(
+            llm,
+            event=ContextWindowSummarizationFailedEvent(
+                from_task=from_task,
+                from_agent=from_agent,
+                model=model,
+                error=str(error),
+            ),
+        )
+        if verbose:
+            console.print(
+                Panel(
+                    "Conversation context could not be compacted. Continuing with the original request.",
+                    title="⚠️ Context summarization failed",
+                    border_style="red",
+                    padding=(1, 2),
+                )
+            )
+        raise
+    crewai_event_bus.emit(
+        llm,
+        event=ContextWindowSummarizationCompletedEvent(
+            from_task=from_task,
+            from_agent=from_agent,
+            model=model,
+        ),
+    )
+    if verbose:
+        console.print(
+            Panel(
+                "Conversation context has been compacted and is ready for the next model call.",
+                title="✅ Context summarization completed",
+                border_style="green",
+                padding=(1, 2),
+            )
+        )
+
+
+def _proactively_summarize_context(
+    llm: LLM | BaseLLM,
+    messages: list[LLMMessage],
+    callbacks: list[TokenCalcHandler],
+    printer: Printer,
+    tools: list[dict[str, Any]] | None,
+    response_model: type[BaseModel] | None,
+    verbose: bool,
+    from_task: Task | None = None,
+    from_agent: BaseAgent | None = None,
+) -> None:
+    """Try to summarize oversized context without blocking a valid LLM call."""
+    try:
+        if llm.is_context_window_overflowing_threshold(messages, tools, response_model):
+            _summarize_context_before_llm_call(
+                llm=llm,
+                messages=messages,
+                callbacks=callbacks,
+                printer=printer,
+                verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+    except (HookAborted, LLMCallBlockedError):
+        raise
+    except Exception:
+        logger.debug(
+            "Proactive context preflight or summarization failed; continuing with the LLM call.",
+            exc_info=True,
+        )
+
+
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
@@ -557,7 +671,7 @@ def get_llm_response(
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
+    executor_context: AgentExecutor | LiteAgent | None = None,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
     """Call the LLM and return the response, handling any invalid responses.
@@ -586,6 +700,18 @@ def get_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
+        if getattr(executor_context, "respect_context_window", False):
+            _proactively_summarize_context(
+                llm=llm,
+                messages=prepared_messages,
+                callbacks=callbacks,
+                printer=printer,
+                tools=tools,
+                response_model=response_model,
+                verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
         answer = llm.call(
             prepared_messages,
             tools=tools,
@@ -611,7 +737,7 @@ async def aget_llm_response(
     from_task: Task | None = None,
     from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | AgentExecutor | None = None,
+    executor_context: AgentExecutor | None = None,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
     """Call the LLM asynchronously and return the response.
@@ -640,6 +766,19 @@ async def aget_llm_response(
     with _prepare_llm_call(
         executor_context, messages, printer, verbose=verbose
     ) as prepared_messages:
+        if getattr(executor_context, "respect_context_window", False):
+            await asyncio.to_thread(
+                _proactively_summarize_context,
+                llm=llm,
+                messages=prepared_messages,
+                callbacks=callbacks,
+                printer=printer,
+                tools=tools,
+                response_model=response_model,
+                verbose=verbose,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
         answer = await llm.acall(
             prepared_messages,
             tools=tools,
@@ -795,9 +934,9 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
+    return LLMContextLengthExceededError(
         str(exception)
-    )
+    )._is_context_length_exceeded_error(exception)
 
 
 def handle_context_length(
@@ -840,18 +979,6 @@ def handle_context_length(
         )
 
 
-def _estimate_token_count(text: str) -> int:
-    """Estimate token count using a conservative cross-provider heuristic.
-
-    Args:
-        text: The text to estimate tokens for.
-
-    Returns:
-        Estimated token count (roughly 1 token per 4 characters).
-    """
-    return len(text) // 4
-
-
 def _content_parts_text(content: list[dict[str, Any]]) -> str:
     """Text carried by a multimodal content-part list.
 
@@ -889,192 +1016,281 @@ def message_content_text(msg: LLMMessage) -> str:
     return str(content)
 
 
-def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
-    """Split text into parts each estimated to fit within max_tokens."""
-    if not text:
-        return []
-    if _estimate_token_count(text) <= max_tokens:
-        return [text]
+class SummarizeMessages:
+    """Compact a message list so it fits the model context window.
 
-    # Inverse of _estimate_token_count (len // 4): each slice is at most max_tokens.
-    max_chars = max(1, max_tokens * 4)
-    return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+    Preserves system messages, splits at message boundaries, formats with
+    role labels, and writes one structured summary back onto ``messages``.
+    Files attached to user messages are merged onto that summary.
+    """
 
+    _CHARS_PER_TOKEN_LEVELS: Final[tuple[float, ...]] = (4.0, 3.0, 2.5)
 
-def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
-    """Split a message whose content alone exceeds max_tokens into sub-messages."""
-    msg_text = message_content_text(msg)
-    if _estimate_token_count(msg_text) <= max_tokens:
-        return [msg]
+    def __init__(self) -> None:
+        self.messages: list[LLMMessage] = []
+        self.llm: LLM | BaseLLM | None = None
+        self.callbacks: list[TokenCalcHandler] = []
+        self.verbose = True
 
-    # Reserve budget for the [Part i/n] prefix added to each sub-message.
-    body_max_tokens = max(1, max_tokens - 5)
-    parts = _split_text_by_token_limit(msg_text, body_max_tokens)
-    total_parts = len(parts)
-    expanded: list[LLMMessage] = []
+    def summarize(
+        self,
+        messages: list[LLMMessage],
+        llm: LLM | BaseLLM,
+        callbacks: list[TokenCalcHandler],
+        verbose: bool = True,
+    ) -> None:
+        """Replace non-system messages with a single summary, in place."""
+        if llm is None:
+            raise RuntimeError("SummarizeMessages.summarize() must set an LLM first.")
 
-    for index, part in enumerate(parts, start=1):
-        part_content = (
-            f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
+        self.llm = llm
+        self.callbacks = callbacks
+        self.verbose = verbose
+        self.messages = messages
+        preserved_files = self._collect_attached_files()
+        system_messages = [m for m in self.messages if m.get("role") == "system"]
+        work_messages = [m for m in self.messages if m.get("role") != "system"]
+        if not work_messages:
+            return
+
+        chunks = self._chunk_messages(
+            work_messages,
+            llm.get_context_window_size(),
+            char_level_index=0,
         )
-        expanded.append({**msg, "content": part_content})
+        summaries = self._get_summaries_for_chunks(chunks, char_level_index=0)
+        self._replace_history_with_summary(system_messages, summaries, preserved_files)
 
-    return expanded
+    def _get_summaries_for_chunks(
+        self, chunks: list[list[LLMMessage]], char_level_index: int
+    ) -> list[str]:
+        total = len(chunks)
+        if self.verbose and total <= 1:
+            for index in range(1, total + 1):
+                PRINTER.print(
+                    content=f"Summarizing {index}/{total}...",
+                    color="yellow",
+                )
+        if self.verbose and total > 1:
+            PRINTER.print(
+                content=f"Summarizing {total} chunks in parallel...",
+                color="yellow",
+            )
+        return self._summarize_all(chunks, char_level_index)
 
+    def _summarize_all(
+        self, chunks: list[list[LLMMessage]], char_level_index: int
+    ) -> list[str]:
+        """Run one coroutine per chunk and return the summaries in order."""
 
-def _normalize_messages_for_chunking(
-    messages: list[LLMMessage], max_tokens: int
-) -> list[LLMMessage]:
-    """Return non-system messages with oversized entries split to fit max_tokens."""
-    normalized: list[LLMMessage] = []
-    for msg in messages:
-        if msg.get("role") == "system":
-            continue
-        normalized.extend(_expand_oversized_message(msg, max_tokens))
-    return normalized
+        async def _summarize_one(chunk: list[LLMMessage], level_index: int) -> str:
+            """Summarize one chunk; only reachable from ``_summarize_all`` or itself."""
+            llm = cast("LLM | BaseLLM", self.llm)
 
-
-def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
-    """Format messages with role labels for summarization.
-
-    Skips system messages. Handles None content, tool_calls, and
-    multimodal content blocks.
-
-    Args:
-        messages: List of messages to format.
-
-    Returns:
-        Role-labeled conversation text.
-    """
-    lines: list[str] = []
-    for msg in messages:
-        role = msg.get("role", "user")
-        if role == "system":
-            continue
-
-        content = msg.get("content")
-        if content is None:
-            tool_calls = msg.get("tool_calls")
-            if tool_calls:
-                tool_names = []
-                for tc in tool_calls:
-                    func = tc.get("function", {})
-                    name = (
-                        func.get("name", "unknown")
-                        if isinstance(func, dict)
-                        else "unknown"
+            try:
+                summary = str(
+                    await llm.acall(
+                        self._build_summary_prompt(chunk), callbacks=self.callbacks
                     )
-                    tool_names.append(name)
-                content = f"[Called tools: {', '.join(tool_names)}]"
+                )
+            except LLMContextLengthExceededError:
+                pass
+            except Exception as error:
+                if not is_context_length_exceeded(error):
+                    raise
             else:
-                content = ""
-        elif isinstance(content, list):
-            content = _content_parts_text(content)
+                match = re.search(r"<summary>(.*?)</summary>", summary, re.DOTALL)
+                if match:
+                    return match.group(1).strip()
+                return summary.strip()
 
-        if role == "assistant":
-            label = "[ASSISTANT]:"
-        elif role == "tool":
-            tool_name = msg.get("name", "unknown")
-            label = f"[TOOL_RESULT ({tool_name})]:"
-        else:
-            label = "[USER]:"
+            if level_index + 1 >= len(self._CHARS_PER_TOKEN_LEVELS):
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk still exceeds the context window after "
+                    f"retries at {self._CHARS_PER_TOKEN_LEVELS} chars-per-token levels."
+                ) from None
 
-        lines.append(f"{label} {content}")
+            next_level = level_index + 1
+            if self.verbose:
+                chars_per_token = self._CHARS_PER_TOKEN_LEVELS[next_level]
+                PRINTER.print(
+                    content=(
+                        "Summarization chunk exceeded context window; retrying with "
+                        f"tighter token estimate (1 token per {chars_per_token} chars)."
+                    ),
+                    color="yellow",
+                )
 
-    return "\n\n".join(lines)
+            sub_chunks = self._chunk_messages(
+                chunk,
+                llm.get_context_window_size(),
+                char_level_index=next_level,
+            )
+            if not sub_chunks:
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk could not be split further."
+                ) from None
 
+            if len(sub_chunks) == 1:
+                return await _summarize_one(sub_chunks[0], next_level)
 
-def _split_messages_into_chunks(
-    messages: list[LLMMessage], max_tokens: int
-) -> list[list[LLMMessage]]:
-    """Split messages into chunks at message boundaries.
+            parts = await asyncio.gather(
+                *[_summarize_one(sub_chunk, next_level) for sub_chunk in sub_chunks]
+            )
+            return "\n\n".join(parts)
 
-    Excludes system messages and expands oversized single messages before
-    chunking. Each chunk stays under max_tokens based on estimated token count.
+        async def _gather() -> list[str]:
+            coroutines = [_summarize_one(chunk, char_level_index) for chunk in chunks]
+            return list(await asyncio.gather(*coroutines))
 
-    Args:
-        messages: List of messages to split.
-        max_tokens: Maximum estimated tokens per chunk.
+        coro = _gather()
+        if is_inside_event_loop():
+            ctx = contextvars.copy_context()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(ctx.run, asyncio.run, coro).result()
+        return asyncio.run(coro)
 
-    Returns:
-        List of message chunks.
-    """
-    normalized = _normalize_messages_for_chunking(messages, max_tokens)
-    if not normalized:
-        return []
-
-    chunks: list[list[LLMMessage]] = []
-    current_chunk: list[LLMMessage] = []
-    current_tokens = 0
-
-    for msg in normalized:
-        msg_tokens = _estimate_token_count(message_content_text(msg))
-
-        if current_chunk and (current_tokens + msg_tokens) > max_tokens:
-            chunks.append(current_chunk)
-            current_chunk = []
-            current_tokens = 0
-
-        current_chunk.append(msg)
-        current_tokens += msg_tokens
-
-    if current_chunk:
-        chunks.append(current_chunk)
-
-    return chunks
-
-
-def _extract_summary_tags(text: str) -> str:
-    """Extract content between <summary></summary> tags.
-
-    Falls back to the full text if no tags are found.
-
-    Args:
-        text: Text potentially containing summary tags.
-
-    Returns:
-        Extracted summary content, or full text if no tags found.
-    """
-    match = re.search(r"<summary>(.*?)</summary>", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return text.strip()
-
-
-async def _asummarize_chunks(
-    chunks: list[list[LLMMessage]],
-    llm: LLM | BaseLLM,
-    callbacks: list[TokenCalcHandler],
-) -> list[SummaryContent]:
-    """Summarize multiple message chunks concurrently using asyncio.
-
-    Args:
-        chunks: List of message chunks to summarize.
-        llm: LLM instance (must support ``acall``).
-        callbacks: List of callbacks for the LLM.
-
-    Returns:
-        Ordered list of summary contents, one per chunk.
-    """
-
-    async def _summarize_one(chunk: list[LLMMessage]) -> SummaryContent:
-        conversation_text = _format_messages_for_summary(chunk)
-        summarization_messages = [
+    def _build_summary_prompt(self, chunk: list[LLMMessage]) -> list[LLMMessage]:
+        conversation = self._conversation_text(chunk)
+        return [
             format_message_for_llm(
                 I18N_DEFAULT.slice("summarizer_system_message"), role="system"
             ),
             format_message_for_llm(
                 I18N_DEFAULT.slice("summarize_instruction").format(
-                    conversation=conversation_text
+                    conversation=conversation
                 ),
             ),
         ]
-        summary = await llm.acall(summarization_messages, callbacks=callbacks)
-        extracted = _extract_summary_tags(str(summary))
-        return {"content": extracted}
 
-    results = await asyncio.gather(*[_summarize_one(chunk) for chunk in chunks])
-    return list(results)
+    def _collect_attached_files(self) -> dict[str, Any]:
+        preserved: dict[str, Any] = {}
+        for msg in self.messages:
+            if msg.get("role") == "user" and msg.get("files"):
+                preserved.update(msg["files"])
+        return preserved
+
+    def _replace_history_with_summary(
+        self,
+        system_messages: list[LLMMessage],
+        summaries: list[str],
+        preserved_files: dict[str, Any],
+    ) -> None:
+        merged = "\n\n".join(summaries)
+        summary_message = format_message_for_llm(
+            I18N_DEFAULT.slice("summary").format(merged_summary=merged)
+        )
+        if preserved_files:
+            summary_message["files"] = preserved_files
+
+        self.messages.clear()
+        self.messages.extend(system_messages)
+        self.messages.append(summary_message)
+
+    def _approx_tokens(self, text: str, chars_per_token: float = 4.0) -> int:
+        """Estimate token count from character length and a chars-per-token heuristic."""
+        if not text:
+            return 0
+        return int(len(text) / chars_per_token)
+
+    def _chars_per_token(self, char_level_index: int) -> float:
+        return self._CHARS_PER_TOKEN_LEVELS[char_level_index]
+
+    def _messages_ready_to_chunk(
+        self,
+        messages: list[LLMMessage],
+        max_tokens: int,
+        char_level_index: int = 0,
+    ) -> list[LLMMessage]:
+        """Drop system messages and split any entry that exceeds max_tokens."""
+        chars_per_token = self._chars_per_token(char_level_index)
+        ready: list[LLMMessage] = []
+        for msg in messages:
+            if msg.get("role") == "system":
+                continue
+
+            text = message_content_text(msg)
+            if not text or self._approx_tokens(text, chars_per_token) <= max_tokens:
+                ready.append(msg)
+                continue
+
+            part_prefix_tokens = 5
+            body_max_tokens = max(1, max_tokens - part_prefix_tokens)
+            max_chars = max(1, int(body_max_tokens * chars_per_token))
+            parts = [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+            total_parts = len(parts)
+            for index, part in enumerate(parts, start=1):
+                ready.append(
+                    {**msg, "content": f"[Part {index}/{total_parts}]\n{part}"}
+                )
+        return ready
+
+    def _conversation_text(self, messages: list[LLMMessage]) -> str:
+        """Format messages with role labels, skipping system messages."""
+        lines: list[str] = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            if role == "system":
+                continue
+
+            if role == "assistant":
+                prefix = "[ASSISTANT]:"
+            elif role == "tool":
+                prefix = f"[TOOL_RESULT ({msg.get('name', 'unknown')})]:"
+            else:
+                prefix = "[USER]:"
+
+            content = msg.get("content")
+            if content is None:
+                tool_calls = msg.get("tool_calls") or []
+                names = []
+                for tool_call in tool_calls:
+                    func = tool_call.get("function", {})
+                    names.append(
+                        func.get("name", "unknown")
+                        if isinstance(func, dict)
+                        else "unknown"
+                    )
+                body = f"[Called tools: {', '.join(names)}]" if names else ""
+            elif isinstance(content, list):
+                body = _content_parts_text(content)
+            else:
+                body = str(content)
+
+            lines.append(f"{prefix} {body}")
+        return "\n\n".join(lines)
+
+    def _chunk_messages(
+        self,
+        messages: list[LLMMessage],
+        max_tokens: int,
+        char_level_index: int = 0,
+    ) -> list[list[LLMMessage]]:
+        """Split messages into chunks that stay under max_tokens."""
+        chars_per_token = self._chars_per_token(char_level_index)
+        normalized = self._messages_ready_to_chunk(
+            messages, max_tokens, char_level_index=char_level_index
+        )
+        if not normalized:
+            return []
+
+        chunks: list[list[LLMMessage]] = []
+        current_chunk: list[LLMMessage] = []
+        current_tokens = 0
+        for msg in normalized:
+            msg_tokens = self._approx_tokens(
+                message_content_text(msg), chars_per_token=chars_per_token
+            )
+            if current_chunk and (current_tokens + msg_tokens) > max_tokens:
+                chunks.append(current_chunk)
+                current_chunk = []
+                current_tokens = 0
+            current_chunk.append(msg)
+            current_tokens += msg_tokens
+
+        if current_chunk:
+            chunks.append(current_chunk)
+        return chunks
 
 
 def summarize_messages(
@@ -1098,69 +1314,9 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         verbose: Whether to print progress.
     """
-    preserved_files: dict[str, Any] = {}
-    for msg in messages:
-        if msg.get("role") == "user" and msg.get("files"):
-            preserved_files.update(msg["files"])
-
-    system_messages = [m for m in messages if m.get("role") == "system"]
-    non_system_messages = [m for m in messages if m.get("role") != "system"]
-
-    if not non_system_messages:
-        return
-
-    max_tokens = llm.get_context_window_size()
-    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
-
-    total_chunks = len(chunks)
-
-    if total_chunks <= 1:
-        summarized_contents: list[SummaryContent] = []
-        for idx, chunk in enumerate(chunks, 1):
-            if verbose:
-                PRINTER.print(
-                    content=f"Summarizing {idx}/{total_chunks}...",
-                    color="yellow",
-                )
-            conversation_text = _format_messages_for_summary(chunk)
-            summarization_messages = [
-                format_message_for_llm(
-                    I18N_DEFAULT.slice("summarizer_system_message"), role="system"
-                ),
-                format_message_for_llm(
-                    I18N_DEFAULT.slice("summarize_instruction").format(
-                        conversation=conversation_text
-                    ),
-                ),
-            ]
-            summary = llm.call(summarization_messages, callbacks=callbacks)
-            extracted = _extract_summary_tags(str(summary))
-            summarized_contents.append({"content": extracted})
-    else:
-        if verbose:
-            PRINTER.print(
-                content=f"Summarizing {total_chunks} chunks in parallel...",
-                color="yellow",
-            )
-        coro = _asummarize_chunks(chunks=chunks, llm=llm, callbacks=callbacks)
-        if is_inside_event_loop():
-            ctx = contextvars.copy_context()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                summarized_contents = pool.submit(ctx.run, asyncio.run, coro).result()
-        else:
-            summarized_contents = asyncio.run(coro)
-
-    merged_summary = "\n\n".join(content["content"] for content in summarized_contents)
-
-    messages.clear()
-    messages.extend(system_messages)
-
-    summary_message = format_message_for_llm(
-        I18N_DEFAULT.slice("summary").format(merged_summary=merged_summary)
+    SummarizeMessages().summarize(
+        messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
     )
-    if preserved_files:
-        summary_message["files"] = preserved_files
-    messages.append(summary_message)
 
 
 def show_agent_logs(
@@ -1730,18 +1886,9 @@ def execute_single_native_tool_call(
     output_tool = original_tool or structured_tool
 
     from_cache = False
-    input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
     raw_tool_result: Any = result
     tool_failure: ToolFailure | None = None
-
-    if tools_handler and tools_handler.cache and output_tool is not None:
-        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
-        if cached_result is not None:
-            raw_tool_result = cached_result
-            result = format_native_tool_output_for_agent(output_tool, cached_result)
-            tool_failure = detect_tool_failure(cached_result)
-            from_cache = True
 
     started_at = datetime.now()
     crewai_event_bus.emit(
@@ -1769,12 +1916,24 @@ def execute_single_native_tool_call(
     )
     hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
+    input_str = json.dumps(args_dict) if args_dict else ""
+    if (
+        not hook_blocked
+        and tools_handler
+        and tools_handler.cache
+        and output_tool is not None
+    ):
+        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
+        if cached_result is not None:
+            raw_tool_result = cached_result
+            result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
+            from_cache = True
+
     error_event_emitted = False
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
         raw_tool_result = result
-        # The blocked message replaces any cached result, so a cached failure
-        # must not be attributed to this call.
         tool_failure = None
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
@@ -1883,13 +2042,6 @@ def execute_single_native_tool_call(
         "content": result,
     }
 
-    if verbose and printer:
-        cache_info = " (from cache)" if from_cache else ""
-        printer.print(
-            content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-            color="green",
-        )
-
     is_result_as_answer = bool(
         original_tool
         and hasattr(original_tool, "result_as_answer")
@@ -1949,7 +2101,7 @@ def parse_tool_call_args(
 
 
 def _setup_before_llm_call_hooks(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     printer: Printer,
     verbose: bool = True,
 ) -> bool:
@@ -2026,7 +2178,7 @@ def _setup_before_llm_call_hooks(
 
 
 def _setup_after_llm_call_hooks(
-    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    executor_context: AgentExecutor | LiteAgent | None,
     answer: str | BaseModel,
     printer: Printer,
     verbose: bool = True,
@@ -2112,3 +2264,55 @@ def _setup_after_llm_call_hooks(
             answer = hook_response
 
     return answer
+
+
+MAX_REPEATED_TOOL_CALLS = 5
+
+
+def check_repeated_tool_call(
+    counts: dict[int, int],
+    *,
+    tool_name: str,
+    tool_args: dict[str, Any] | str | None,
+    result: Any,
+    agent: BaseAgent | LiteAgent | None = None,
+    task: Task | None = None,
+) -> None:
+    """Stop a run that keeps repeating an identical tool call.
+
+    Args:
+        counts: Per-run tally of seen (tool, args, result) keys. Updated in place.
+        tool_name: Name of the tool that was called.
+        tool_args: Arguments the tool was called with.
+        result: What the tool returned.
+        agent: The calling agent, named in the error.
+        task: The task in flight, named in the error.
+
+    Raises:
+        ToolExecutionFailedError: On the MAX_REPEATED_TOOL_CALLS-th identical call.
+    """
+    key = hash(
+        json.dumps([tool_name, tool_args, str(result)], sort_keys=True, default=str)
+    )
+    counts[key] = counts.get(key, 0) + 1
+    if counts[key] < MAX_REPEATED_TOOL_CALLS:
+        return
+
+    role = getattr(agent, "role", None)
+    raise ToolExecutionFailedError(
+        ToolFailureRecord(
+            tool_name=tool_name,
+            failure=ToolFailure(
+                message=(
+                    f"Agent '{role}' called '{tool_name}' with the same "
+                    f"arguments {MAX_REPEATED_TOOL_CALLS} times and got the same "
+                    "result each time. Stopped because it is not making progress."
+                ),
+                reason=ToolFailureReason.REPEATED_CALL,
+            ),
+            tool_args=tool_args,
+            agent_role=role,
+            task_name=(task.name or task.description) if task else None,
+            task_id=str(task.id) if task else None,
+        )
+    )

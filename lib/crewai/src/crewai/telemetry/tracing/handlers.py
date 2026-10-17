@@ -111,7 +111,8 @@ from crewai.events.types.skill_events import (
     SkillLoadedEvent,
     SkillUsedEvent,
 )
-from crewai.telemetry.tracing import semantic_conventions
+from crewai.tasks.output_format import OutputFormat
+from crewai.telemetry.tracing import gen_ai_shapes, semantic_conventions
 from crewai.telemetry.tracing.context import (
     PendingSpanEnd,
     TelemetryExecutionContext,
@@ -569,10 +570,44 @@ def _serialize(value: Any) -> str:
     return json.dumps(to_serializable(value))
 
 
+def _task_output_format(task: Any, output: Any = None) -> str:
+    """The output format ``task`` declared, as the ``OutputFormat`` value string.
+
+    A finished task's ``TaskOutput`` records the format it was produced under,
+    so that is preferred when given. Before completion, and on failure, the
+    format is read off the declaration (``output_json`` / ``output_pydantic``)
+    with the precedence ``Task._get_output_format`` applies.
+    """
+    declared = getattr(output, "output_format", None)
+    if declared is not None:
+        return str(getattr(declared, "value", declared))
+    if getattr(task, "output_json", None) is not None:
+        return OutputFormat.JSON.value
+    if getattr(task, "output_pydantic", None) is not None:
+        return OutputFormat.PYDANTIC.value
+    return OutputFormat.RAW.value
+
+
 def _set_span_attributes(span: Span, attributes: dict[str, Any]) -> None:
+    """Set ``attributes`` on ``span``, no string value over the export bound.
+
+    The ``gen_ai.*`` content attributes arrive already bounded (and marked),
+    message-aware, by ``semantic_conventions``; this catches every other
+    string — a task's ``crewai.task.output``, an MCP tool's ``crewai.mcp.tool_result``, a flow's
+    serialized state — with a plain cut (the head, up to the bound) so one
+    oversized value marks itself instead of making the whole span too large
+    for Wharf to accept, and is never reshaped as if it were a conversation.
+    """
     for key, value in attributes.items():
-        if value is not None:
-            span.set_attribute(key, value)
+        if value is None:
+            continue
+        if isinstance(value, str) and f"{key}.truncated" not in attributes:
+            value, markers = gen_ai_shapes.truncate_plain(value, attr=key)
+            for marker, marker_value in markers.items():
+                span.set_attribute(marker, marker_value)
+            if value is None:
+                continue
+        span.set_attribute(key, value)
 
 
 def _get_parent_context(
@@ -904,6 +939,7 @@ def handle_task_started(
             name=task.name,
             description=task.description,
             expected_output=task.expected_output,
+            output_format=_task_output_format(task),
         ),
         **semantic_conventions.gen_ai(
             operation_name=semantic_conventions.GEN_AI_OP_EXECUTE_TASK,
@@ -936,6 +972,7 @@ def handle_task_completed(
     span = (
         ctx.active_spans.get(event.started_event_id) if event.started_event_id else None
     )
+    output = event.output
 
     attrs: dict[str, Any] = {
         **semantic_conventions.crewai_span(
@@ -948,11 +985,14 @@ def handle_task_completed(
             key=task.key,
             id=str(task.id),
             name=task.name,
-            output=task.output.raw if task.output else None,
+            output=output.raw,
+            output_format=_task_output_format(task, output),
+            # The declaration says what was asked for; these say what the run
+            # actually yielded, so a consumer can tell the two apart.
+            output_pydantic_produced=output.pydantic is not None,
+            output_json_produced=output.json_dict is not None,
         ),
-        **semantic_conventions.gen_ai_io(
-            output_value=task.output.raw if task.output else None
-        ),
+        **semantic_conventions.gen_ai_io(output_value=output.raw),
     }
 
     providers.emit_log(
@@ -989,6 +1029,7 @@ def handle_task_failed(
             name=task.name,
             description=task.description,
             expected_output=task.expected_output,
+            output_format=_task_output_format(task),
         ),
     }
 
@@ -1090,6 +1131,7 @@ def handle_agent_execution_started(
             tool_definitions=agent.tools,
             system_instructions=agent.backstory,
         ),
+        **semantic_conventions.gen_ai_io(input_value=event.task_prompt),
         **semantic_conventions.crewai_span(event_name=event.type, subject=agent.role),
         **semantic_conventions.crewai_agent(role=agent.role),
     }
@@ -1141,6 +1183,7 @@ def handle_agent_execution_completed(
             tool_definitions=agent.tools,
             system_instructions=agent.backstory,
         ),
+        **semantic_conventions.gen_ai_io(output_value=event.output),
         **semantic_conventions.crewai_span(event_name=event.type, subject=agent.role),
         **semantic_conventions.crewai_agent(role=agent.role),
     }
@@ -1398,6 +1441,7 @@ def handle_tool_usage_finished(
             event_name=event.type, subject=event.tool_name
         ),
         **semantic_conventions.crewai_agent(key=event.agent_key, role=event.agent_role),
+        **semantic_conventions.crewai_tool(from_cache=event.from_cache),
         **_tool_failure_attrs(failure),
     }
 

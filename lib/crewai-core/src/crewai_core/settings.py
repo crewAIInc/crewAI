@@ -92,14 +92,26 @@ def get_writable_config_path() -> Path | None:
         try:
             config_path.parent.mkdir(parents=True, exist_ok=True)
             _ensure_dir_mode(config_path.parent)
-            test_file = config_path.parent / ".crewai_write_test"
+            test_file: Path | None = None
+            fd: int | None = None
             try:
-                test_file.write_text("test")
+                fd, test_file_path = tempfile.mkstemp(
+                    dir=config_path.parent,
+                    prefix=".crewai_write_test.",
+                )
+                test_file = Path(test_file_path)
+                os.close(fd)
+                fd = None
                 test_file.unlink()
                 logger.info(f"Using config path: {config_path}")
                 return config_path
             except Exception:  # noqa: S112
                 continue
+            finally:
+                if fd is not None:
+                    os.close(fd)
+                if test_file is not None:
+                    test_file.unlink(missing_ok=True)
 
         except Exception:  # noqa: S112
             continue

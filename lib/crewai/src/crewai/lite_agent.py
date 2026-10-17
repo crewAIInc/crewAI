@@ -69,7 +69,6 @@ from crewai.hooks.types import (
 )
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llm import LLM
-from crewai.llm_overlay import overlay_model_for
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -102,7 +101,7 @@ from crewai.utilities.converter import (
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_llm, overlay_llm_for
 from crewai.utilities.pydantic_schema_utils import (
     generate_model_description,
     serialize_model_class,
@@ -320,7 +319,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def setup_llm(self) -> Self:
         """Set up the LLM and other components after initialization."""
-        self.llm = create_llm(overlay_model_for(self.role) or self.llm)
+        self.llm = overlay_llm_for(self.role, create_llm(self.llm))
         if not isinstance(self.llm, BaseLLM):
             raise ValueError(
                 f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}"

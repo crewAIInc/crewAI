@@ -312,7 +312,9 @@ class MCPToolResolver:
                 args=mcp_config.args,
                 env=mcp_config.env,
             )
-            server_name = f"{mcp_config.command}_{'_'.join(mcp_config.args)}"
+            server_name = MCPToolResolver._ensure_letter_prefix(
+                f"{mcp_config.command}_{'_'.join(mcp_config.args)}"
+            )
         elif isinstance(mcp_config, MCPServerHTTP):
             transport = HTTPTransport(
                 url=mcp_config.url,
@@ -527,9 +529,22 @@ class MCPToolResolver:
     def _extract_server_name(server_url: str) -> str:
         """Extract clean server name from URL for tool prefixing."""
         parsed = urlparse(server_url)
-        domain = parsed.netloc.replace(".", "_")
+        # Drop "user:pass@" so URL credentials stay out of tool names.
+        domain = parsed.netloc.rpartition("@")[2].replace(".", "_")
         path = parsed.path.replace("/", "_").strip("_")
-        return f"{domain}_{path}" if path else domain
+        name = f"{domain}_{path}" if path else domain
+        return MCPToolResolver._ensure_letter_prefix(name)
+
+    @staticmethod
+    def _ensure_letter_prefix(server_name: str) -> str:
+        """Prefix ``mcp_`` when the sanitized server name doesn't start with a letter.
+
+        Provider function names must start with a letter, so a server name such
+        as an IP address would make every tool from that server invalid.
+        """
+        if sanitize_tool_name(server_name)[:1].isalpha():
+            return server_name
+        return f"mcp_{server_name}"
 
     def _get_mcp_tool_schemas(
         self, server_params: dict[str, Any]
