@@ -645,20 +645,30 @@ class MCPClient:
         )
 
     async def _list_prompts_impl(self) -> list[dict[str, Any]]:
-        """Internal implementation of list_prompts."""
-        prompts_result = await asyncio.wait_for(
-            self.session.list_prompts(),
-            timeout=self.discovery_timeout,
-        )
+        """Internal implementation of list_prompts.
 
-        return [
-            {
-                "name": prompt.name,
-                "description": getattr(prompt, "description", ""),
-                "arguments": getattr(prompt, "arguments", []),
-            }
-            for prompt in prompts_result.prompts
-        ]
+        Follows pagination: keeps requesting with the returned ``nextCursor``
+        until the server omits it, so prompts on later pages are included.
+        """
+        prompts: list[dict[str, Any]] = []
+        cursor: str | None = None
+        while True:
+            prompts_result = await asyncio.wait_for(
+                self.session.list_prompts(cursor=cursor),
+                timeout=self.discovery_timeout,
+            )
+            prompts.extend(
+                {
+                    "name": prompt.name,
+                    "description": getattr(prompt, "description", ""),
+                    "arguments": getattr(prompt, "arguments", []),
+                }
+                for prompt in prompts_result.prompts
+            )
+            cursor = getattr(prompts_result, "nextCursor", None)
+            if not cursor:
+                break
+        return prompts
 
     async def get_prompt(
         self, prompt_name: str, arguments: dict[str, Any] | None = None
