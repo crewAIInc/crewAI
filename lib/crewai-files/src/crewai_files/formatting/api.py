@@ -369,6 +369,8 @@ def _format_block(
         return formatter.format_block(file_input, resolved)
     if isinstance(formatter, OpenAIResponsesFormatter):
         return formatter.format_block(resolved, file_input.content_type)
-    if isinstance(formatter, (OpenAIFormatter, GeminiFormatter)):
+    if isinstance(formatter, OpenAIFormatter):
+        return formatter.format_block(resolved, file_input.content_type)
+    if isinstance(formatter, GeminiFormatter):
         return formatter.format_block(resolved)
     raise TypeError(f"Unknown formatter type: {type(formatter).__name__}")
