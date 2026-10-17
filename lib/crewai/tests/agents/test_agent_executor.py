@@ -61,7 +61,7 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._is_feedback_iteration = False
     return executor
 from crewai.agents.planner_observer import PlannerObserver
-from crewai.experimental.agent_executor import (
+from crewai.agents.agent_executor import (
     AgentExecutorState,
     AgentExecutor,
 )
@@ -146,7 +146,7 @@ class TestAgentExecutor:
         provider.post_setup_messages.side_effect = post_setup
 
         with patch(
-            "crewai.experimental.agent_executor.get_provider", return_value=provider
+            "crewai.agents.agent_executor.get_provider", return_value=provider
         ):
             executor._setup_messages(
                 {"input": "draft this", "tool_names": "", "tools": ""}
@@ -175,7 +175,7 @@ class TestAgentExecutor:
         provider.setup_messages.side_effect = setup
 
         with patch(
-            "crewai.experimental.agent_executor.get_provider", return_value=provider
+            "crewai.agents.agent_executor.get_provider", return_value=provider
         ):
             executor._setup_messages(
                 {"input": "draft this", "tool_names": "", "tools": ""}
@@ -349,11 +349,11 @@ class TestAgentExecutor:
 
         with (
             patch(
-                "crewai.experimental.agent_executor.aget_all_files",
+                "crewai.agents.agent_executor.aget_all_files",
                 new=AsyncMock(return_value={"document": stored_file}),
             ) as async_get_files,
             patch(
-                "crewai.experimental.agent_executor.get_all_files",
+                "crewai.agents.agent_executor.get_all_files",
                 side_effect=AssertionError("sync file store should not be called"),
             ),
         ):
@@ -485,13 +485,50 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.agents.agent_executor.get_llm_response",
             return_value="Thought: done\nFinal Answer: complete",
         ) as get_llm_response_mock:
             result = executor.call_llm_and_parse()
 
         assert result == "parsed"
         assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+
+    def test_call_llm_and_parse_summarizes_before_the_model_call(
+        self, mock_dependencies
+    ):
+        executor = _build_executor(**mock_dependencies, callbacks=[])
+        executor.respect_context_window = True
+        executor.task.id = "test-task-id"
+        executor.task.name = "Test task"
+        executor.state.messages = [
+            {"role": "user", "content": "earlier context"},
+            {"role": "assistant", "content": "earlier response"},
+            {"role": "user", "content": "large context"},
+        ]
+        executor.llm.is_context_window_overflowing_threshold.return_value = True
+        executor.llm.call.return_value = "Final Answer: done"
+        events: list[str] = []
+
+        with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+            summarize.side_effect = lambda **_: events.append("summarize")
+            executor.llm.call.side_effect = (
+                lambda *_args, **_kwargs: events.append("call") or "Final Answer: done"
+            )
+            assert executor.call_llm_and_parse() == "parsed"
+
+        assert events == ["summarize", "call"]
+
+    def test_call_llm_and_parse_skips_preflight_when_context_respect_is_disabled(
+        self, mock_dependencies
+    ):
+        executor = _build_executor(**mock_dependencies, callbacks=[])
+        executor.respect_context_window = False
+        executor.state.messages = [{"role": "user", "content": "large context"}]
+        executor.llm.call.return_value = "Final Answer: done"
+
+        assert executor.call_llm_and_parse() == "parsed"
+
+        executor.llm.is_context_window_overflowing_threshold.assert_not_called()
 
     def test_call_llm_native_tools_does_not_pass_response_model_with_tools(
         self, mock_dependencies
@@ -507,7 +544,7 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.agents.agent_executor.get_llm_response",
             return_value="complete",
         ) as get_llm_response_mock:
             result = executor.call_llm_native_tools()
@@ -533,7 +570,7 @@ class TestAgentExecutor:
         executor.tools_description = "lookup: search for information"
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.agents.agent_executor.get_llm_response",
             side_effect=RuntimeError(
                 "Error code: 400 - registry.ollama.ai/library/mariner:latest "
                 "does not support tools"
@@ -721,7 +758,7 @@ class TestAgentExecutor:
         executor = _build_executor(**mock_dependencies)
 
         answer = AgentFinish(thought="thinking", output="test", text="final")
-        with patch("crewai.experimental.agent_executor.asyncio.run") as mock_run:
+        with patch("crewai.agents.agent_executor.asyncio.run") as mock_run:
             executor._invoke_step_callback(answer)
             await asyncio.sleep(0)
 
@@ -1020,7 +1057,7 @@ class TestStepExecutorCriticalFixes:
         assert completed_events[0].result == "Error: no result"
         assert completed_events[0].error == "No result"
 
-    @patch("crewai.experimental.agent_executor.handle_output_parser_exception")
+    @patch("crewai.agents.agent_executor.handle_output_parser_exception")
     def test_recover_from_parser_error(
         self, mock_handle_exception, mock_dependencies
     ):
@@ -1039,7 +1076,7 @@ class TestStepExecutorCriticalFixes:
         assert executor.state.iterations == initial_iterations + 1
         mock_handle_exception.assert_called_once()
 
-    @patch("crewai.experimental.agent_executor.handle_context_length")
+    @patch("crewai.agents.agent_executor.handle_context_length")
     def test_recover_from_context_length(
         self, mock_handle_context, mock_dependencies
     ):
@@ -1109,8 +1146,8 @@ class TestFlowErrorHandling:
             "tools_handler": Mock(),
         }
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
-    @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
+    @patch("crewai.agents.agent_executor.get_llm_response")
+    @patch("crewai.agents.agent_executor.enforce_rpm_limit")
     def test_call_llm_parser_error(
         self, mock_enforce_rpm, mock_get_llm, mock_dependencies
     ):
@@ -1126,9 +1163,9 @@ class TestFlowErrorHandling:
         assert result == "parser_error"
         assert executor._last_parser_error is not None
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
-    @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
-    @patch("crewai.experimental.agent_executor.is_context_length_exceeded")
+    @patch("crewai.agents.agent_executor.get_llm_response")
+    @patch("crewai.agents.agent_executor.enforce_rpm_limit")
+    @patch("crewai.agents.agent_executor.is_context_length_exceeded")
     def test_call_llm_context_error(
         self,
         mock_is_context_exceeded,
@@ -1592,7 +1629,7 @@ class TestAgentExecutorPlanning:
         """Test that executor state contains plan after planning phase."""
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -1635,7 +1672,7 @@ class TestAgentExecutorPlanning:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -1680,7 +1717,7 @@ class TestAgentExecutorPlanning:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -1836,7 +1873,7 @@ class TestReasoningEffort:
     def test_should_observe_steps_respects_config(self):
         """observe_steps and reasoning_effort gate PlannerObserver LLM calls."""
         from crewai.agent.planning_config import PlanningConfig
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor._should_observe_steps = (
@@ -1866,7 +1903,7 @@ class TestReasoningEffort:
     def test_reasoning_effort_low_skips_planner_observer_llm(self):
         """Low effort must not call PlannerObserver.observe (no per-step LLM)."""
         from crewai.agent.planning_config import PlanningConfig
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import TodoItem, TodoList
 
         executor = Mock(spec=AgentExecutor)
@@ -1918,7 +1955,7 @@ class TestReasoningEffort:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -1981,7 +2018,7 @@ class TestReasoningEffort:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -2034,7 +2071,7 @@ class TestReasoningEffort:
         verifying that medium effort routes to replan_now on failure
         but continues on success.
         """
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import (
             StepObservation,
             TodoItem,
@@ -2111,7 +2148,7 @@ class TestReasoningEffort:
 
         Unit test verifying the low handler's behavior directly.
         """
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import TodoItem, TodoList
 
         executor = Mock(spec=AgentExecutor)
@@ -2144,7 +2181,7 @@ class TestReasoningEffort:
 
     def test_reasoning_effort_low_marks_failed_steps_failed_without_replan(self):
         """Low effort records failed heuristic observations without replanning."""
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import (
             StepObservation,
             TodoItem,
@@ -2211,7 +2248,7 @@ class TestReasoningEffort:
 
     def test_get_reasoning_effort_reads_from_config(self):
         """Verify _get_reasoning_effort reads from agent.planning_config."""
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor._get_reasoning_effort = (
@@ -2374,7 +2411,7 @@ class TestMaxIterationsRouting:
     the iteration limit is exceeded, not to a dead-end event."""
 
     def test_exceeded_routes_to_force_final_answer(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=25)
@@ -2384,7 +2421,7 @@ class TestMaxIterationsRouting:
         assert result == "force_final_answer"
 
     def test_under_limit_continues_reasoning(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5)
@@ -2394,7 +2431,7 @@ class TestMaxIterationsRouting:
         assert result == "continue_reasoning"
 
     def test_under_limit_with_native_tools(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
@@ -2412,12 +2449,494 @@ class TestNativeToolCallMaxUsage:
     even when max_usage_reached=True and original_tool is None."""
 
     def test_max_usage_reached_without_original_tool(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         import inspect
         source = inspect.getsource(AgentExecutor._execute_single_native_tool_call)
         assert "elif max_usage_reached:" in source
         assert 'result = f"Tool \'{func_name}\' has reached its maximum usage limit' in source
+
+
+class TestDeferredNativeToolResults:
+    """Oversized native results are stored outside the next LLM request."""
+
+    @pytest.mark.parametrize(
+        "overflow_result",
+        [False, NotImplementedError, RuntimeError],
+        ids=[
+            "within_threshold",
+            "token_estimation_unsupported",
+            "token_estimation_failed",
+        ],
+    )
+    def test_result_stays_inline_when_deferral_is_unavailable(self, overflow_result):
+        llm = Mock()
+        if overflow_result in (NotImplementedError, RuntimeError):
+            llm.is_tool_result_overflowing_threshold.side_effect = overflow_result
+        else:
+            llm.is_tool_result_overflowing_threshold.return_value = (False, 10)
+        executor = _build_executor(llm=llm, original_tools=[])
+        result = "small tool result"
+
+        context_result = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": result,
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        assert context_result == result
+        assert executor._tool_result_artifact_store is None
+        assert executor.original_tools == []
+
+    def test_result_stays_inline_when_better_compaction_is_disabled(self):
+        llm = Mock()
+        executor = _build_executor(
+            llm=llm,
+            original_tools=[],
+            use_better_compaction=False,
+        )
+        result = "oversized tool result"
+
+        context_result = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": result,
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        assert context_result == result
+        assert executor._tool_result_artifact_store is None
+        assert executor.original_tools == []
+        llm.is_tool_result_overflowing_threshold.assert_not_called()
+
+    def test_deferred_reader_result_is_not_deferred_again(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        llm = Mock()
+        reader = DeferredToolResultReader()
+        executor = _build_executor(llm=llm, original_tools=[reader])
+        result = "large deferred tool result"
+
+        context_result = executor._prepare_tool_result_for_context(
+            {
+                "func_name": reader.name,
+                "result": result,
+                "tool_args": {"file_path": "artifact/result.md"},
+                "original_tool": reader,
+                "tool_failure": None,
+            }
+        )
+
+        assert context_result == result
+        assert executor._tool_result_artifact_store is None
+        llm.is_tool_result_overflowing_threshold.assert_not_called()
+
+    def test_overflowed_result_is_referenced_and_readable_through_file_reader(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 48)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(
+            llm=llm,
+            original_tools=[],
+            agent=SimpleNamespace(verbose=True),
+        )
+        executor._console = Mock()
+        executor._tool_result_artifact_store = None
+        tool_output = "".join(f"line {index}\n" for index in range(12))
+
+        reference = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": tool_output,
+                "tool_args": {"query": "[unclosed"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            reader = next(
+                tool
+                for tool in executor.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            )
+            artifact = next(artifact_store.directory.glob("*/result.md"))
+            alias = artifact.relative_to(artifact_store.directory).as_posix()
+
+            assert "search_docs" in reference
+            assert '"query": "[unclosed"' in reference
+            assert "It contains 12 lines and is estimated at 48 tokens" in reference
+            assert "about 4.0 tokens per line" in reference
+            reader_name = next(
+                name
+                for name, tool in executor._tool_name_mapping.items()
+                if tool is reader
+            )
+            assert f"Use `{reader_name}` to read it in bounded sections" in reference
+            assert "roughly 500-token read, request about 12 lines" in reference
+            assert "Preview of the first 10 lines" in reference
+            assert "line 9" in reference
+            assert "line 10" not in reference
+            panel = executor._console.print.call_args.args[0]
+            assert panel.renderable.plain == reference
+            assert str(panel.title) == "📦 Large tool result deferred"
+            assert reader.run(file_path=alias, start_line=11, line_count=2) == (
+                "line 10\nline 11\n"
+            )
+        finally:
+            if executor._tool_result_artifact_store is not None:
+                executor._tool_result_artifact_store.cleanup()
+
+    def test_multiple_overflowed_results_reuse_one_file_reader(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(llm=llm, original_tools=[])
+        executor._tool_result_artifact_store = None
+
+        first_reference = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "first deferred result",
+                "tool_args": {"query": "first"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+        second_reference = executor._prepare_tool_result_for_context(
+            {
+                "func_name": "fetch_page",
+                "result": "second deferred result",
+                "tool_args": {"url": "https://example.com"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            assert len(
+                [
+                    tool
+                    for tool in executor.original_tools
+                    if isinstance(tool, DeferredToolResultReader)
+                ]
+            ) == 1
+            assert len(list(artifact_store.directory.glob("*/result.md"))) == 2
+            assert first_reference != second_reference
+            assert "search_docs" in first_reference
+            assert "fetch_page" in second_reference
+            assert (
+                len(
+                    [
+                        tool
+                        for tool in executor.tools
+                        if isinstance(
+                            getattr(tool, "_original_tool", None),
+                            DeferredToolResultReader,
+                        )
+                    ]
+                )
+                == 1
+            )
+        finally:
+            if executor._tool_result_artifact_store is not None:
+                executor._tool_result_artifact_store.cleanup()
+
+    def test_deferred_reader_stays_callable_after_text_tool_downgrade(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+        from crewai.tools.structured_tool import CrewStructuredTool
+        from crewai.utilities.agent_utils import (
+            get_tool_names,
+            render_text_description_and_args,
+        )
+        from crewai.utilities.string_utils import sanitize_tool_name
+
+        def lookup_notes(query: str) -> str:
+            """Look up notes."""
+            return query
+
+        existing = CrewStructuredTool.from_function(lookup_notes, name="lookup_notes")
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(
+            llm=llm,
+            original_tools=[],
+            tools=[existing],
+            tools_names=get_tool_names([existing]),
+            tools_description=render_text_description_and_args([existing]),
+        )
+        executor._tool_result_artifact_store = None
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+
+        executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "deferred content",
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            artifact = next(artifact_store.directory.glob("*/result.md"))
+            alias = artifact.relative_to(artifact_store.directory).as_posix()
+            reader = next(
+                tool
+                for tool in executor.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            )
+            structured_readers = [
+                tool
+                for tool in executor.tools
+                if getattr(tool, "_original_tool", None) is reader
+            ]
+            reader_name = sanitize_tool_name(reader.name)
+
+            assert executor.tools[0] is existing
+            assert len(structured_readers) == 1
+            assert reader_name in executor.tools_names
+            assert "lookup_notes" in executor.tools_names
+            assert f"Tool Name: {reader_name}" in executor.tools_description
+            assert structured_readers[0].invoke({"file_path": alias}) == (
+                "deferred content"
+            )
+
+            executor._downgrade_to_text_tool_calling()
+
+            fallback = executor.state.messages[-1]["content"]
+            assert isinstance(fallback, str)
+            assert reader_name in fallback
+            assert "lookup_notes" in fallback
+            assert executor.state.use_native_tools is False
+        finally:
+            executor._cleanup_deferred_tool_results()
+
+        assert executor.tools == [existing]
+        assert executor.tools_names == get_tool_names([existing])
+        assert executor.tools_description == render_text_description_and_args(
+            [existing]
+        )
+        assert executor.original_tools == []
+
+    def test_existing_file_reader_keeps_local_access_when_artifact_reader_is_added(
+        self, tmp_path
+    ):
+        from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        local_files = tmp_path / "local-files"
+        local_files.mkdir()
+        (local_files / "notes.md").write_text("local content")
+        reader = FileReadTool(base_dir=str(local_files))
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(llm=llm, original_tools=[reader])
+        executor._tool_result_artifact_store = None
+
+        executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "deferred content",
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+
+        try:
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            artifact = next(artifact_store.directory.glob("*/result.md"))
+            alias = artifact.relative_to(artifact_store.directory).as_posix()
+
+            deferred_reader = next(
+                tool
+                for tool in executor.original_tools
+                if isinstance(tool, DeferredToolResultReader)
+            )
+            assert reader.run(file_path="notes.md") == "local content"
+            assert deferred_reader.run(file_path=alias) == "deferred content"
+        finally:
+            if executor._tool_result_artifact_store is not None:
+                executor._tool_result_artifact_store.cleanup()
+
+    def test_cleanup_removes_artifact_and_revokes_existing_reader_alias(self, tmp_path):
+        from crewai_tools import FileReadTool
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        local_files = tmp_path / "local-files"
+        local_files.mkdir()
+        (local_files / "notes.md").write_text("local content")
+        reader = FileReadTool(base_dir=str(local_files))
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(llm=llm, original_tools=[reader])
+
+        executor._prepare_tool_result_for_context(
+            {
+                "func_name": "search_docs",
+                "result": "deferred content",
+                "tool_args": {"query": "CrewAI"},
+                "original_tool": None,
+                "tool_failure": None,
+            }
+        )
+        artifact_store = executor._tool_result_artifact_store
+        assert artifact_store is not None
+        artifact_directory = artifact_store.directory
+        alias = next(artifact_directory.glob("*/result.md")).relative_to(
+            artifact_directory
+        ).as_posix()
+        deferred_reader = next(
+            tool
+            for tool in executor.original_tools
+            if isinstance(tool, DeferredToolResultReader)
+        )
+
+        executor._cleanup_deferred_tool_results()
+
+        assert not artifact_directory.exists()
+        assert reader.run(file_path="notes.md") == "local content"
+        assert "not available" in deferred_reader.run(file_path=alias)
+        assert executor.original_tools == [reader]
+
+    def test_invoke_cleans_deferred_artifacts_after_completion(self):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False),
+            crew=None,
+            llm=llm,
+            prompt=Mock(),
+            original_tools=[],
+        )
+        executor._setup_messages = Mock()
+        executor._inject_files_from_inputs = Mock()
+        executor._save_to_memory = Mock()
+        artifact_directory = None
+
+        def complete_with_deferred_result() -> None:
+            nonlocal artifact_directory
+            executor._prepare_tool_result_for_context(
+                {
+                    "func_name": "search_docs",
+                    "result": "deferred content",
+                    "tool_args": {"query": "CrewAI"},
+                    "original_tool": None,
+                    "tool_failure": None,
+                }
+            )
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            artifact_directory = artifact_store.directory
+            executor.state.current_answer = AgentFinish(
+                thought="", output="done", text="done"
+            )
+
+        executor.kickoff = complete_with_deferred_result
+
+        assert executor.invoke({"input": "Find CrewAI docs"}) == {"output": "done"}
+        assert artifact_directory is not None
+        assert not artifact_directory.exists()
+        assert not any(
+            isinstance(tool, DeferredToolResultReader) for tool in executor.original_tools
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("should_fail", [False, True], ids=["success", "error"])
+    async def test_invoke_async_cleans_deferred_artifacts(self, should_fail):
+        from crewai.tools.agent_tools.deferred_tool_result_reader import (
+            DeferredToolResultReader,
+        )
+
+        llm = Mock()
+        llm.is_tool_result_overflowing_threshold.return_value = (True, 1_000)
+        llm.get_context_window_size.return_value = 10_000
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False),
+            crew=None,
+            llm=llm,
+            prompt=Mock(),
+            original_tools=[],
+        )
+        executor._setup_messages = Mock()
+        executor._ainject_files_from_inputs = AsyncMock()
+        executor._save_to_memory = Mock()
+        artifact_directory = None
+
+        async def complete_with_deferred_result() -> None:
+            nonlocal artifact_directory
+            executor._prepare_tool_result_for_context(
+                {
+                    "func_name": "search_docs",
+                    "result": "deferred content",
+                    "tool_args": {"query": "CrewAI"},
+                    "original_tool": None,
+                    "tool_failure": None,
+                }
+            )
+            artifact_store = executor._tool_result_artifact_store
+            assert artifact_store is not None
+            artifact_directory = artifact_store.directory
+            if should_fail:
+                raise RuntimeError("tool execution failed")
+            executor.state.current_answer = AgentFinish(
+                thought="", output="done", text="done"
+            )
+
+        executor.kickoff_async = complete_with_deferred_result
+
+        if should_fail:
+            with pytest.raises(RuntimeError, match="tool execution failed"):
+                await executor.invoke_async({"input": "Find CrewAI docs"})
+        else:
+            assert await executor.invoke_async({"input": "Find CrewAI docs"}) == {
+                "output": "done"
+            }
+
+        assert artifact_directory is not None
+        assert not artifact_directory.exists()
+        assert not any(
+            isinstance(tool, DeferredToolResultReader) for tool in executor.original_tools
+        )
 
 
 # Executor State Reset on Re-invoke
@@ -2429,7 +2948,7 @@ class TestExecutorStateReset:
 
     def test_finalize_called_reset_in_invoke(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.invoke)
         finalize_idx = source.index("self._finalize_called = False")
@@ -2440,7 +2959,7 @@ class TestExecutorStateReset:
 
     def test_finalize_called_reset_in_invoke_async(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.invoke_async)
         finalize_idx = source.index("self._finalize_called = False")
@@ -2459,7 +2978,7 @@ class TestPlanGenerationIsolation:
 
     def test_generate_plan_does_not_mutate_task_description(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.generate_plan)
         assert "task.description +=" not in source, (
@@ -2479,7 +2998,7 @@ class TestTodoStatusTracking:
 
     def test_medium_effort_marks_failed_step_as_failed(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.handle_step_observed_medium)
         assert "_mark_todo_failed" in source, (
@@ -2678,3 +3197,53 @@ class TestEnsureForceFinalAnswer:
 
         assert AgentExecutor.ensure_force_final_answer(executor) == "agent_finished"
         llm.call.assert_not_called()
+
+
+def test_crew_agent_executor_cannot_be_selected() -> None:
+    import importlib
+
+    from crewai import Agent
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("crewai.agents.crew_agent_executor")
+
+    with pytest.raises(ValueError, match="CrewAgentExecutor has been removed"):
+        Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            executor_class="CrewAgentExecutor",
+        )
+
+
+def test_stable_package_export_is_the_executor_class() -> None:
+    from crewai.agents import AgentExecutor as ExportedExecutor
+    from crewai.agents.agent_executor import AgentExecutor as ModuleExecutor
+
+    assert ExportedExecutor is ModuleExecutor
+
+
+def test_agent_executor_uses_stable_discriminator() -> None:
+    executor = AgentExecutor.model_validate({})
+
+    assert executor.executor_type == "agent"
+    assert executor.model_dump()["executor_type"] == "agent"
+
+
+def test_legacy_experimental_discriminator_is_rejected() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        AgentExecutor.model_validate({"executor_type": "experimental"})
+
+
+def test_experimental_executor_import_is_removed() -> None:
+    import importlib
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("crewai.experimental.agent_executor")
+
+    experimental = importlib.import_module("crewai.experimental")
+    for name in ("AgentExecutor", "CrewAgentExecutorFlow"):
+        with pytest.raises(AttributeError):
+            getattr(experimental, name)

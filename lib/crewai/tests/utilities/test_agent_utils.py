@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from types import SimpleNamespace
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -17,9 +18,20 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.agents.parser import AgentFinish
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import (
+    ContextWindowSummarizationCompletedEvent,
+    ContextWindowSummarizationFailedEvent,
+    ContextWindowSummarizationStartedEvent,
+)
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import LLMCallBlockedError
 from crewai.tools.base_tool import BaseTool
 from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
+    _summarize_context_before_llm_call,
+    aget_llm_response,
+    get_llm_response,
     message_content_text,
     format_message_for_llm,
     LLMContextLengthExceededError,
@@ -33,6 +45,7 @@ from crewai.utilities.agent_utils import (
     summarize_messages,
     SummarizeMessages,
 )
+from crewai_core.printer import Printer
 from crewai.utilities.i18n import I18N_DEFAULT
 
 _summarizer = SummarizeMessages()
@@ -41,6 +54,389 @@ _conversation_text = _summarizer._conversation_text
 _messages_ready_to_chunk = _summarizer._messages_ready_to_chunk
 _chunk_messages = _summarizer._chunk_messages
 
+
+def test_summarizes_context_before_llm_call() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
+    llm = MagicMock()
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=False,
+        )
+
+    summarize.assert_called_once_with(
+        messages=messages, llm=llm, callbacks=[], verbose=False
+    )
+
+
+def test_context_summarization_shows_triggered_and_completed_panels() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
+    llm = MagicMock()
+
+    with (
+        patch("crewai.utilities.agent_utils.summarize_messages"),
+        patch("crewai.utilities.agent_utils.console.print") as print_panel,
+    ):
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=True,
+        )
+
+    assert print_panel.call_count == 2
+    assert "triggered" in str(print_panel.call_args_list[0].args[0].title).lower()
+    assert "completed" in str(print_panel.call_args_list[1].args[0].title).lower()
+
+
+def test_context_summarization_emits_lifecycle_events_with_llm_agent_and_task() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
+    llm = MagicMock(model="gpt-4o-mini")
+    task = SimpleNamespace(id="task-id", name="Research", description="Research")
+    agent = SimpleNamespace(id="agent-id", role="Researcher")
+
+    with (
+        patch("crewai.utilities.agent_utils.summarize_messages"),
+        patch.object(crewai_event_bus, "emit") as emit,
+    ):
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=False,
+            from_task=task,
+            from_agent=agent,
+        )
+
+    events = [call.kwargs["event"] for call in emit.call_args_list]
+    assert len(events) == 2
+    assert isinstance(events[0], ContextWindowSummarizationStartedEvent)
+    assert isinstance(events[1], ContextWindowSummarizationCompletedEvent)
+    for event in events:
+        assert event.model == "gpt-4o-mini"
+        assert event.agent_id == "agent-id"
+        assert event.agent_role == "Researcher"
+        assert event.task_id == "task-id"
+        assert event.task_name == "Research"
+
+
+def test_context_summarization_emits_failed_event_when_compaction_fails() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
+    llm = MagicMock(model="gpt-4o-mini")
+
+    with (
+        patch(
+            "crewai.utilities.agent_utils.summarize_messages",
+            side_effect=RuntimeError("summarization failed"),
+        ),
+        patch.object(crewai_event_bus, "emit") as emit,
+        pytest.raises(RuntimeError, match="summarization failed"),
+    ):
+        _summarize_context_before_llm_call(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            verbose=False,
+        )
+
+    events = [call.kwargs["event"] for call in emit.call_args_list]
+    assert len(events) == 2
+    assert isinstance(events[0], ContextWindowSummarizationStartedEvent)
+    assert isinstance(events[1], ContextWindowSummarizationFailedEvent)
+    assert events[1].error == "summarization failed"
+
+
+def test_get_llm_response_summarizes_before_the_model_call() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = True
+    llm.call.return_value = "response"
+    events: list[str] = []
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        summarize.side_effect = lambda **_: events.append("summarize")
+        llm.call.side_effect = lambda *_args, **_kwargs: events.append("call") or "response"
+
+        assert (
+            get_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    assert events == ["summarize", "call"]
+
+
+def test_get_llm_response_preserves_a_single_pending_user_request() -> None:
+    messages = [
+        {"role": "system", "content": "You are helpful."},
+        {"role": "user", "content": "large context"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = True
+    llm.call.return_value = "response"
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        assert (
+            get_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    summarize.assert_not_called()
+    assert llm.call.call_args.args[0] == messages
+
+
+@pytest.mark.parametrize(
+    "failure_source",
+    ["preflight", "summarization"],
+)
+def test_get_llm_response_continues_when_proactive_compaction_fails(
+    failure_source: str,
+) -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "pending request"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.call.return_value = "response"
+    if failure_source == "preflight":
+        llm.is_context_window_overflowing_threshold.side_effect = RuntimeError(
+            "token counting failed"
+        )
+        summarize = patch("crewai.utilities.agent_utils.summarize_messages")
+    else:
+        llm.is_context_window_overflowing_threshold.return_value = True
+        summarize = patch(
+            "crewai.utilities.agent_utils.summarize_messages",
+            side_effect=RuntimeError("summarization failed"),
+        )
+
+    with summarize:
+        assert (
+            get_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    llm.call.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "error", [HookAborted("blocked"), LLMCallBlockedError("blocked")])
+def test_get_llm_response_propagates_explicit_proactive_compaction_blocks(
+    error: Exception,
+) -> None:
+    messages = [{"role": "user", "content": "pending request"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.side_effect = error
+
+    with pytest.raises(type(error)):
+        get_llm_response(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            executor_context=executor,
+            verbose=False,
+        )
+
+    llm.call.assert_not_called()
+
+
+def test_get_llm_response_skips_preflight_when_context_respect_is_disabled() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=False,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.call.return_value = "response"
+
+    assert (
+        get_llm_response(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            executor_context=executor,
+            verbose=False,
+        )
+        == "response"
+    )
+
+    llm.is_context_window_overflowing_threshold.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "large context"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = True
+    llm.acall = AsyncMock(return_value="response")
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        assert (
+            await aget_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    summarize.assert_called_once()
+    llm.acall.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_aget_llm_response_offloads_proactive_compaction() -> None:
+    messages = [
+        {"role": "user", "content": "earlier context"},
+        {"role": "assistant", "content": "earlier response"},
+        {"role": "user", "content": "pending request"},
+    ]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=True,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.is_context_window_overflowing_threshold.return_value = False
+    llm.acall = AsyncMock(return_value="response")
+
+    with patch(
+        "crewai.utilities.agent_utils.asyncio.to_thread",
+        wraps=asyncio.to_thread,
+    ) as to_thread:
+        assert (
+            await aget_llm_response(
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=Printer(),
+                executor_context=executor,
+                verbose=False,
+            )
+            == "response"
+        )
+
+    assert to_thread.await_count == 1
+    assert to_thread.call_args.args[0].__name__ == "_proactively_summarize_context"
+    llm.is_context_window_overflowing_threshold.assert_called_once()
+    llm.acall.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_aget_llm_response_skips_preflight_when_context_respect_is_disabled() -> None:
+    messages = [{"role": "user", "content": "large context"}]
+    executor = SimpleNamespace(
+        messages=messages,
+        respect_context_window=False,
+        before_llm_call_hooks=[],
+        after_llm_call_hooks=[],
+    )
+    llm = MagicMock()
+    llm.acall = AsyncMock(return_value="response")
+
+    assert (
+        await aget_llm_response(
+            llm=llm,
+            messages=messages,
+            callbacks=[],
+            printer=Printer(),
+            executor_context=executor,
+            verbose=False,
+        )
+        == "response"
+    )
+
+    llm.is_context_window_overflowing_threshold.assert_not_called()
 
 def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
     """Estimate tokens for the full summarization LLM request for one chunk."""
