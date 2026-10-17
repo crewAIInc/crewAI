@@ -1,12 +1,61 @@
-"""Offline evaluation of Jev routing and guardrail decisions.
+# ruff: noqa: T201
+"""Offline evaluation of Jev routing (Choice) and guardrail (Noul) decisions.
 
-Records hold a labeled expectation plus a recorded (or live-collected) Jev
-answer. Each record is classified as decided, abstained, or failed, and the
-report counts failures explicitly so they are never treated as correct.
+Usage:
+    uv run python scripts/jev_evaluation_runner.py examples.jsonl \\
+        --min-confidence 0.7 --noul-threshold 0.8 [--route billing --route tech]
+
+The dataset is a .jsonl file (one record per line; blank lines are skipped) or
+a .json array, read as UTF-8 with an optional BOM. Malformed JSON, unknown
+fields, and missing or duplicate ids are reported with the line or index:
+
+    {"id": "r1", "kind": "route", "state": "Refund for order 1234", "expected_route": "billing", "decision": {"choice": "billing", "confidence": 0.91, "probabilities": {"billing": 0.95, "tech": 0.05}}}
+    {"id": "g1", "kind": "guardrail", "state": "Paris is the capital of France.", "expected": "accept", "decision": {"noul": 0.97}}
+
+Route records have expected_route; guardrail records have expected ("accept"
+or "reject"). Both can have an error (a recorded failure) and metadata (model,
+usage, latency_ms). The report is printed as JSON.
+
+A record fails if it has a recorded error, no decision, or a malformed decision
+(a missing field, or a value that isn't a finite number in [0, 1]); a route
+also fails if its choice isn't a known route (every expected_route in the
+dataset, or the --route values). Failed records are never counted as correct or
+accepted. Routes with confidence >= min_confidence are decided (correct or
+incorrect), lower ones abstain; guardrails with noul >= noul_threshold are
+accepted, lower ones rejected. Choice confidence and Noul probability are never
+converted into each other.
+
+- routing accuracy / coverage / abstention_rate: correct / decided / abstained
+  over all route records.
+- guardrail false_accept_rate / false_reject_rate: accepted / rejected over
+  decided records expected to be rejected / accepted.
+- usage, latency: token sums and mean latency_ms over only the records that
+  report them.
+
+A rate is null when its denominator is 0. These are decision-quality metrics,
+not a replay of a runtime guardrail: a guardrail that rejects when the answer
+is missing or the call fails would count those cases as rejections, while here
+they are failed and left out of the false-accept and false-reject rates.
+
+Live collection is opt-in and needs your own TypeSafe client, which you close:
+
+    with TypeSafeClient(api_key="...") as client:
+        records = collect_live_decisions(
+            load_dataset("unlabeled.jsonl"),
+            client=client,
+            route_instructions="Which team should handle this ticket?",
+            route_criteria={"billing": "Payments", "tech": "Bugs and outages"},
+            guardrail_instructions="Is this statement true?",
+        )
+
+It times each call, stores client errors on the record (which then fails), and
+fails an answer whose type doesn't match the question. The type is not stored,
+so recorded decisions are checked by their fields only.
 """
 
 from __future__ import annotations
 
+import argparse
 from collections import Counter
 from collections.abc import Collection, Mapping, Sequence
 import json
@@ -519,3 +568,35 @@ def _validate_threshold(name: str, value: float) -> None:
 
 def _rate(numerator: int, denominator: int) -> float | None:
     return numerator / denominator if denominator else None
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Evaluate a dataset file and print the report as JSON."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("dataset", type=Path, help="a .jsonl or .json file")
+    parser.add_argument("--min-confidence", type=float, required=True)
+    parser.add_argument("--noul-threshold", type=float, required=True)
+    parser.add_argument(
+        "--route",
+        action="append",
+        dest="routes",
+        help="a known route; repeat for each (default: every expected_route)",
+    )
+    args = parser.parse_args(argv)
+    try:
+        report = evaluate(
+            load_dataset(args.dataset),
+            min_confidence=args.min_confidence,
+            noul_threshold=args.noul_threshold,
+            routes=args.routes,
+        )
+    except (OSError, ValueError) as e:
+        parser.error(str(e))
+    print(report.model_dump_json(indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

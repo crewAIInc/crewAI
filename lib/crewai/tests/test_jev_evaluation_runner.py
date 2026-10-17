@@ -1,15 +1,29 @@
+"""Offline checks for the Jev routing and guardrail evaluation runner."""
+
+import importlib.util
 import json
+from pathlib import Path
+import sys
 from types import SimpleNamespace
 
-from crewai_tools.tools.jev_evaluation import (
-    GuardrailRecord,
-    RouteRecord,
-    collect_live_decisions,
-    evaluate,
-    load_dataset,
-)
-from crewai_tools.tools.jev_evaluation import jev_evaluation
 import pytest
+
+
+def _load_runner():
+    path = Path(__file__).resolve().parents[3] / "scripts" / "jev_evaluation_runner.py"
+    spec = importlib.util.spec_from_file_location("jev_evaluation_runner", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+runner = _load_runner()
+GuardrailRecord = runner.GuardrailRecord
+RouteRecord = runner.RouteRecord
+collect_live_decisions = runner.collect_live_decisions
+evaluate = runner.evaluate
+load_dataset = runner.load_dataset
 
 
 EXAMPLE = [
@@ -397,6 +411,30 @@ def test_wrong_json_shape_or_extension_raises(tmp_path, name, content, message):
         load_dataset(tmp_path / name)
 
 
+# Command line
+
+CLI_THRESHOLDS = ["--min-confidence", "0.7", "--noul-threshold", "0.8"]
+
+
+def test_main_prints_the_report_as_json(tmp_path, capsys):
+    path = write_jsonl(tmp_path, EXAMPLE)
+
+    assert runner.main([str(path), *CLI_THRESHOLDS]) == 0
+    expected = evaluate(load_dataset(path), min_confidence=0.7, noul_threshold=0.8)
+    assert json.loads(capsys.readouterr().out) == expected.model_dump(mode="json")
+
+
+def test_main_reports_invalid_input_as_a_usage_error(tmp_path, capsys):
+    path = tmp_path / "bad.jsonl"
+    path.write_text("{", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exit_info:
+        runner.main([str(path), *CLI_THRESHOLDS])
+
+    assert exit_info.value.code == 2
+    assert "Invalid JSONL at line 1" in capsys.readouterr().err
+
+
 # Usage and latency
 
 
@@ -449,7 +487,7 @@ LIVE_KWARGS = {
 def test_live_collection_builds_questions_and_records_metadata(monkeypatch):
     ticks = iter([1.0, 1.25, 2.0, 2.5])
     monkeypatch.setattr(
-        jev_evaluation, "time", SimpleNamespace(perf_counter=lambda: next(ticks))
+        runner, "time", SimpleNamespace(perf_counter=lambda: next(ticks))
     )
     choice = SimpleNamespace(
         choice="tech", confidence=0.8, probabilities={"billing": 0.1, "tech": 0.9}
