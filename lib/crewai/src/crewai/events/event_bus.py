@@ -633,8 +633,13 @@ class CrewAIEventsBus:
                 sync_future = self._sync_executor.submit(
                     ctx.run, self._call_handlers, source, event, sync_handlers, state
                 )
+                # Track unconditionally, as ``replay`` does. ``flush`` only waits
+                # on the tracked set, and callers use it to guarantee handlers
+                # finished before teardown. Tracking only in the sync-only branch
+                # left the sync handlers of a mixed event type unwaited-for.
+                self._track_future(sync_future)
                 if not async_handlers:
-                    return self._track_future(sync_future)
+                    return sync_future
 
         if async_handlers:
             return self._track_future(
