@@ -138,12 +138,15 @@ class ExperimentRunner:
         - If expected is a single number and actual is a dict, compare against the average of actual values.
         - If expected is a dict and actual is a single number, actual must be >= all expected values.
         - If both are dicts, actual must have matching keys with values >= expected values.
+        - An empty expected dict has no criterion to assert, so the case does not pass.
         """
 
         if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
             return actual >= expected
 
         if isinstance(expected, dict) and isinstance(actual, (int, float)):
+            if not expected:
+                return False
             return all(actual >= exp_score for exp_score in expected.values())
 
         if isinstance(expected, (int, float)) and isinstance(actual, dict):
@@ -154,7 +157,7 @@ class ExperimentRunner:
 
         if isinstance(expected, dict) and isinstance(actual, dict):
             if not expected:
-                return True
+                return False
             matching_keys = set(expected.keys()) & set(actual.keys())
             if not matching_keys:
                 return False
