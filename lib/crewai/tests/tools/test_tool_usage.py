@@ -341,7 +341,7 @@ def test_validate_tool_input_rejects_truncated_string_value():
     tool_usage.action.tool = "test_tool"
 
     with patch.object(tool_usage, "_emit_validate_input_error") as emit_error:
-        with pytest.raises(Exception, match="Tool input must be a valid dictionary"):
+        with pytest.raises(ToolUsageError, match="Tool input must be a valid dictionary"):
             tool_usage._validate_tool_input('{"query": "XYZ')
 
     emit_error.assert_called_once_with(
@@ -360,7 +360,7 @@ def test_validate_tool_input_rejects_truncated_single_quoted_string_value():
     )
 
     with patch.object(tool_usage, "_emit_validate_input_error") as emit_error:
-        with pytest.raises(Exception, match="Tool input must be a valid dictionary"):
+        with pytest.raises(ToolUsageError, match="Tool input must be a valid dictionary"):
             tool_usage._validate_tool_input("{'query': 'XYZ")
 
     emit_error.assert_called_once_with(
@@ -380,6 +380,11 @@ def test_validate_tool_input_preserves_apostrophes_in_unquoted_values():
     tool_usage.action.tool = "test_tool"
 
     assert tool_usage._validate_tool_input('{"query": don\'t}') == {"query": "don't"}
+
+
+def test_unterminated_string_check_ignores_possessive_apostrophes():
+    assert not ToolUsage._has_unterminated_string('{"query": the dogs\' toys}')
+    assert not ToolUsage._has_unterminated_string('{"query": dont\'}')
 
 
 def test_tool_calling_does_not_repair_truncated_json_with_function_calling_llm():

@@ -916,7 +916,7 @@ class ToolUsage:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
             except ToolUsageError as error:
-                return ToolUsageError(error.message)
+                return error
             except Exception:
                 if self.function_calling_llm:
                     return self._function_calling(tool_string)
@@ -991,7 +991,7 @@ class ToolUsage:
             "Tool input must be a valid dictionary in JSON or Python literal format"
         )
         self._emit_validate_input_error(error_message)
-        raise Exception(error_message)
+        raise ToolUsageError(error_message)
 
     @staticmethod
     def _has_unterminated_string(tool_input: str) -> bool:
@@ -1005,9 +1005,13 @@ class ToolUsage:
                     if (
                         character == "'"
                         and index > 0
-                        and index + 1 < len(tool_input)
                         and tool_input[index - 1].isalnum()
-                        and tool_input[index + 1].isalnum()
+                    ):
+                        continue
+                    if (
+                        character == "'"
+                        and index > 0
+                        and tool_input[index - 1] not in "{[:, \t\r\n"
                     ):
                         continue
                     in_string = True
@@ -1017,6 +1021,14 @@ class ToolUsage:
             elif character == "\\":
                 escaped = True
             elif character == quote_character:
+                if (
+                    character == "'"
+                    and index > 0
+                    and index + 1 < len(tool_input)
+                    and tool_input[index - 1].isalnum()
+                    and tool_input[index + 1].isalnum()
+                ):
+                    continue
                 in_string = False
                 quote_character = None
 
