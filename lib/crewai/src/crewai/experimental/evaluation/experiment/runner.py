@@ -138,7 +138,14 @@ class ExperimentRunner:
         - If expected is a single number and actual is a dict, compare against the average of actual values.
         - If expected is a dict and actual is a single number, actual must be >= all expected values.
         - If both are dicts, actual must have matching keys with values >= expected values.
+        - If expected is an empty dict, a ValueError is raised, since no criteria would be evaluated.
         """
+
+        if isinstance(expected, dict) and not expected:
+            raise ValueError(
+                "expected_score is an empty dict; no criteria to assert against. "
+                "Provide at least one metric threshold for this test case."
+            )
 
         if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
             return actual >= expected
@@ -153,8 +160,6 @@ class ExperimentRunner:
             return avg_score >= expected
 
         if isinstance(expected, dict) and isinstance(actual, dict):
-            if not expected:
-                return True
             matching_keys = set(expected.keys()) & set(actual.keys())
             if not matching_keys:
                 return False
