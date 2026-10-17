@@ -206,6 +206,37 @@ def test_or_listener_fires_once_across_parallel_starts():
     assert fire_count == 1
 
 
+def test_or_listener_does_not_cancel_parallel_producers():
+    """An ``or_`` join must not cancel independently triggered producers."""
+    completed = []
+    join_count = 0
+
+    class ParallelProducerFlow(Flow):
+        @start()
+        def begin(self):
+            return "begin"
+
+        @listen(begin)
+        async def fast_branch(self):
+            await asyncio.sleep(0)
+            completed.append("fast")
+
+        @listen(begin)
+        async def slow_branch(self):
+            await asyncio.sleep(0.05)
+            completed.append("slow")
+
+        @listen(or_(fast_branch, slow_branch))
+        def join(self):
+            nonlocal join_count
+            join_count += 1
+
+    asyncio.run(ParallelProducerFlow().kickoff_async())
+
+    assert set(completed) == {"fast", "slow"}
+    assert join_count == 1
+
+
 def test_or_listener_re_arms_across_router_loop():
     """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
     fire_count = 0
