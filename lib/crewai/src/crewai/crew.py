@@ -1578,8 +1578,10 @@ class Crew(FlowTrackable, BaseModel):
 
         Args:
             tasks (List[Task]): List of tasks to execute
-            manager (Optional[BaseAgent], optional): Manager agent to use for
-                delegation. Defaults to None.
+            start_index (int | None, optional): Index of the first task to
+                execute. Defaults to 0.
+            was_replayed (bool, optional): Whether the execution is a replay.
+                Defaults to False.
 
         Returns:
             CrewOutput: Final output of the crew
