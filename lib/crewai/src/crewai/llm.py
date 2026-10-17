@@ -1292,7 +1292,7 @@ class LLM(BaseLLM):
         try:
             # Attempt to make the completion call, but catch context window errors
             # and convert them to our own exception type for consistent handling
-            # across the codebase. This allows CrewAgentExecutor to handle context
+            # across the codebase. This allows AgentExecutor to handle context
             # length issues appropriately.
             if response_model:
                 params["response_model"] = response_model
@@ -1937,7 +1937,7 @@ class LLM(BaseLLM):
                     return result
                 except LLMContextLengthExceededError:
                     # Re-raise LLMContextLengthExceededError as it should be handled
-                    # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                    # by AgentExecutor, which can then decide
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:
