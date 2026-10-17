@@ -1513,6 +1513,44 @@ def test_tool_search_single_tool_skips_search_and_forces_choice():
     assert "defer_loading" not in params["tools"][0]
 
 
+@pytest.mark.parametrize(
+    "model",
+    [
+        "claude-sonnet-5-5",
+        "claude-opus-5-5",
+        "claude-fable-5-1",
+        "claude-mythos-5-1",
+    ],
+)
+def test_named_tool_choice_is_omitted_for_unsupported_models(model: str):
+    """Expose a single available function without forcing unsupported tool_choice."""
+    llm = LLM(model=f"anthropic/{model}")
+    tools = [
+        {
+            "name": "test_tool",
+            "description": "A test tool",
+            "input_schema": {
+                "type": "object",
+                "properties": {"q": {"type": "string"}},
+                "required": ["q"],
+            },
+        }
+    ]
+    messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+
+    params = llm._prepare_completion_params(
+        messages,
+        system_message,
+        tools,
+        available_functions={"test_tool": lambda q: "result"},
+    )
+
+    assert "tool_choice" not in params
+    assert params["tools"][0]["name"] == "test_tool"
+
+
 def test_tool_search_via_llm_class():
     """Verify tool_search param passes through LLM class correctly."""
     from crewai.llms.providers.anthropic.completion import (
