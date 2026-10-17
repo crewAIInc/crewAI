@@ -1,0 +1,110 @@
+---
+title: "YouTube Download to Cloud Storage — FlashData 연동"
+description: "고객 스토리지로 YouTube 전달 추적"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+## 고객 스토리지로 YouTube 전달 추적
+
+`FlashDataYouTubeDownloadSubmitTool, FlashDataYouTubeDownloadStatusTool, FlashDataYouTubeDownloadResultTool`
+
+운영 Agent가 `job_id`로 저장된 전달 작업을 확인하게 합니다. 제출, 상태, 결과는 별도 도구이며 제출만 유료 스토리지 쓰기를 생성합니다.
+
+[설정, 요청 필드 및 현재 요금](https://flashdata.dev/docs/sources/youtube_download)
+
+## 설치 및 설정
+
+이 통합은 아직 배포된 `crewai-tools` 패키지에 포함되지 않았습니다. Python 3.10–3.13에서 아래의 고정 소스 리비전을 설치하세요. CrewAI 1.15.28을 사용합니다.
+
+```shell
+uv add "crewai-tools @ git+https://github.com/rocosen/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
+```
+
+아래 소스 안내에서 FlashData 계정과 API 키를 만드세요. 환경 또는 비밀 관리 도구에 `FLASHDATA_API_KEY`를 설정하고 프롬프트나 소스 코드에 값을 넣지 마세요. 직접 호출 예제에는 모델이 필요하지 않습니다.
+
+## 도구 직접 호출
+
+저장한 YouTube 다운로드 영수증으로 `FLASHDATA_JOB_ID`를 설정하세요. 조회는 새 작업을 제출하지 않습니다. 상태는 `job`에 필터링한 수명주기 필드를 반환하며 완료 시 결과 도구는 `output`도 반환합니다. 서명된 매니페스트 URL은 관리 API가 알려준 신뢰할 수 있는 HTTPS 원본으로 제한되며 API 키를 전송하지 않습니다. 매니페스트 자체에 서명 URL이 있을 수 있으므로 의도한 수신자에게만 공유하세요.
+
+```python
+import os
+from crewai_tools import FlashDataYouTubeDownloadStatusTool, FlashDataYouTubeDownloadResultTool
+
+job_id = os.environ["FLASHDATA_JOB_ID"]
+status = FlashDataYouTubeDownloadStatusTool().run(job_id=job_id)
+print(status)
+if status["job"]["status"] == "completed":
+    result = FlashDataYouTubeDownloadResultTool().run(job_id=job_id)
+    print(result["output"])
+```
+
+## 입력과 출력
+
+조회에는 `job_id`가 필요합니다. 제출에는 `video_id`가 필요하며 선택 형식, 품질, 클립 필드는 스키마에서 확인합니다. 스토리지는 운영자가 설정합니다.
+
+API 요청 없이 모든 인수 이름, 타입, 범위, 기본값을 확인합니다:
+
+```python
+from crewai_tools import FlashDataYouTubeDownloadSubmitTool
+
+print(FlashDataYouTubeDownloadSubmitTool().args_schema.model_json_schema())
+```
+
+API 키, 스토리지 자격 증명, 소스 선택은 Agent 인수가 아닙니다. 도구 클래스가 소스를 고정합니다. `api_key_env`로 API 키 환경 변수 이름을 지정할 수 있습니다.
+
+## Agent 작업에서 사용
+
+설치된 CrewAI가 지원하는 모델을 `CREWAI_MODEL`에 설정하고 해당 제공자의 인증 정보를 구성하세요. `kickoff()`는 모델을 사용하며 FlashData를 호출할 수 있습니다. Agent가 도구 사용을 판단합니다. `max_usage_count=1`은 해당 CrewAI 도구 인스턴스의 사용을 제한하며 계정 지출 한도는 아닙니다.
+
+```python
+import os
+from crewai import Agent, Crew, Task
+from crewai_tools import FlashDataYouTubeDownloadStatusTool
+
+tool = FlashDataYouTubeDownloadStatusTool(max_usage_count=1)
+agent = Agent(
+    role='Track a YouTube delivery to customer storage',
+    goal="Prepare a concise brief grounded in returned evidence.",
+    backstory="You preserve source identifiers and state missing information clearly.",
+    llm=os.environ["CREWAI_MODEL"],
+    tools=[tool],
+    max_iter=4,
+    allow_delegation=False,
+    verbose=False,
+)
+task = Task(
+    description='Read the saved YouTube delivery job once and report its current status. Do not submit a new job. Job ID: ' + os.environ["FLASHDATA_JOB_ID"],
+    expected_output="A brief with returned facts, source identifiers and unresolved gaps.",
+    agent=agent,
+)
+result = Crew(agents=[agent], tasks=[task], verbose=False).kickoff()
+print(result)
+```
+
+## 새 전달 승인
+
+새 제출은 기본적으로 비활성화되어 있습니다. 소스 안내의 제공자별 JSON으로 `FLASHDATA_DOWNLOAD_STORAGE`를 설정하고 전달 권한이 있는 동영상을 `AUTHORIZED_YOUTUBE_VIDEO_ID`로 지정하세요. 유료 쓰기를 승인한 후에만 `allow_submit=True`를 사용하세요. 작업 조회만 필요한 연구 Agent에는 제출 도구를 제공하지 마세요.
+
+```python
+import os
+from crewai_tools import FlashDataYouTubeDownloadSubmitTool
+
+submit = FlashDataYouTubeDownloadSubmitTool(allow_submit=True)
+receipt = submit.run(
+    video_id=os.environ["AUTHORIZED_YOUTUBE_VIDEO_ID"],
+    download_type="audio",
+    output_format="m4a",
+)
+print(receipt)  # Save receipt["id"] before any later status/result read.
+```
+
+## 비용과 제한
+
+설치는 MIT 라이선스로 무료입니다. **FlashData API 호출은 유료 Credits를 소비합니다.** 모델과 고객 스토리지 요금은 별도입니다. 현재 요금은 [FlashData 요금](https://flashdata.dev/pricing)과 소스 안내를 확인하세요.
+
+제출 영수증과 ID를 보관하세요. 상태 조회를 위해 다시 제출하지 마세요. 결과 JSON은 24시간 후 만료되며 미디어 보존은 스토리지 정책에 따릅니다.
+
+잘못된 입력은 API 요청 전에 실패합니다. 자동 재시도, 페이지 순회, 폴링은 없습니다. 네트워크 타임아웃은 120초이며 연결은 15초, 응답 한도는 20 MiB입니다. 제출 후 타임아웃은 과금 결과가 불명확할 수 있으므로 다시 제출하기 전에 계정의 Jobs를 확인하세요. 오류에는 원본 응답이나 자격 증명을 넣지 않으며 빈 결과는 그대로 유지합니다.
+
+[소스 구현](https://github.com/rocosen/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)
