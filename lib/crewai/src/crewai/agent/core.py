@@ -169,6 +169,8 @@ _sync_invoke_pool = concurrent.futures.ThreadPoolExecutor(
 # step_callback tasks scheduled with asyncio.create_task during the run) after
 # the main coroutine finishes. Without the drain, asyncio.run() cancels those
 # tasks during loop teardown and the final callbacks are silently dropped.
+# The same bound applies independently to the post-cancel wait below, so a
+# callback that swallows CancelledError cannot hang the sync call.
 _CALLBACK_DRAIN_TIMEOUT_S = 30.0
 
 
@@ -181,23 +183,47 @@ async def _await_and_drain_callbacks(
     otherwise be cancelled by asyncio.run() during loop shutdown. They get a
     bounded chance to complete first; anything still running afterwards is
     cancelled so a misbehaving callback cannot hang the sync call.
+
+    The drain runs whether the coroutine succeeds or raises: an executor
+    failure must not silently drop in-flight callbacks either. The
+    coroutine's own result or exception is always preserved — drained task
+    exceptions are only retrieved (to avoid "never retrieved" warnings),
+    never raised.
     """
-    result = await coro
+    try:
+        return await coro
+    finally:
+        await _drain_worker_loop_tasks()
+
+
+async def _drain_worker_loop_tasks() -> None:
+    """Give fire-and-forget tasks on the worker loop a bounded drain.
+
+    Pending tasks get ``_CALLBACK_DRAIN_TIMEOUT_S`` to finish, then are
+    cancelled. The post-cancel wait is bounded independently by the same
+    timeout instead of an unbounded gather: a task that swallows
+    ``CancelledError`` must not hang the sync call. Anything still alive
+    afterwards is left for the worker loop's own teardown (asyncio.run()
+    re-cancels and collects it, as with any task on a closing loop).
+    """
     pending = [
         task for task in asyncio.all_tasks() if task is not asyncio.current_task()
     ]
-    if pending:
-        done, still_pending = await asyncio.wait(
-            pending, timeout=_CALLBACK_DRAIN_TIMEOUT_S
+    if not pending:
+        return
+    done, still_pending = await asyncio.wait(pending, timeout=_CALLBACK_DRAIN_TIMEOUT_S)
+    for task in done:
+        if not task.cancelled():
+            task.exception()  # retrieve to avoid "never retrieved" warnings
+    for task in still_pending:
+        task.cancel()
+    if still_pending:
+        done_after_cancel, _ = await asyncio.wait(
+            still_pending, timeout=_CALLBACK_DRAIN_TIMEOUT_S
         )
-        for task in done:
+        for task in done_after_cancel:
             if not task.cancelled():
-                task.exception()  # retrieve to avoid "never retrieved" warnings
-        for task in still_pending:
-            task.cancel()
-        if still_pending:
-            await asyncio.gather(*still_pending, return_exceptions=True)
-    return result
+                task.exception()
 
 
 def _run_awaitable_on_worker_thread(

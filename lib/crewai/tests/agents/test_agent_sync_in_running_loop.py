@@ -184,3 +184,65 @@ def test_drain_timeout_bounds_misbehaving_callbacks(monkeypatch):
     start = time.monotonic()
     assert _run_awaitable_on_worker_thread(_main()) == "main-ok"
     assert time.monotonic() - start < 10
+
+
+def test_drain_still_runs_when_main_coroutine_raises():
+    """In-flight callbacks must not be dropped when the executor raises.
+
+    The drain exists so fire-and-forget step callbacks survive worker loop
+    teardown; an executor failure must not silently cancel them either, and
+    the executor's own exception must still propagate unchanged.
+    """
+    completed: list[str] = []
+
+    async def _callback() -> None:
+        await asyncio.sleep(0.01)
+        completed.append("callback")
+
+    async def _main() -> str:
+        asyncio.create_task(_callback())
+        await asyncio.sleep(0)  # let the callback task start
+        raise RuntimeError("executor boom")
+
+    with pytest.raises(RuntimeError, match="executor boom"):
+        _run_awaitable_on_worker_thread(_main())
+    assert completed == ["callback"]
+
+
+def test_post_cancel_wait_bounded_for_cancellation_resistant_task(monkeypatch):
+    """A task that swallows CancelledError must not hang the drain.
+
+    After cancellation the drain waits with its own independent bound
+    instead of an unbounded gather, so it returns without waiting for the
+    stubborn task to finish on its own.
+    """
+    import crewai.agent.core as core_module
+    from crewai.agent.core import _drain_worker_loop_tasks
+
+    monkeypatch.setattr(core_module, "_CALLBACK_DRAIN_TIMEOUT_S", 0.05)
+
+    async def _stubborn() -> None:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            pass  # swallow: an unbounded post-cancel gather would hang here
+        await asyncio.sleep(0.5)  # finishes on its own so teardown stays clean
+
+    loop = asyncio.new_event_loop()
+    try:
+        holder: dict[str, asyncio.Task[None]] = {}
+
+        async def _main() -> None:
+            holder["task"] = asyncio.create_task(_stubborn())
+            await asyncio.sleep(0)  # let the task start
+            await _drain_worker_loop_tasks()
+
+        loop.run_until_complete(_main())
+        # The drain returned without waiting for the stubborn task.
+        assert not holder["task"].done()
+        # Let it finish on its own so the loop closes without warnings.
+        loop.run_until_complete(asyncio.wait(holder.values(), timeout=5))
+        assert holder["task"].done()
+    finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
