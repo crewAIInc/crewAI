@@ -868,7 +868,8 @@ class Memory(BaseModel):
         Args:
             record_id: ID of the record to update.
             content: New content; re-embedded if provided.
-            scope: New scope path.
+            scope: New scope path, relative to root_scope when set. If None,
+                the existing scope is preserved.
             categories: New categories.
             metadata: New metadata.
             importance: New importance score.
@@ -892,7 +893,9 @@ class Memory(BaseModel):
             embedding = embed_text(self._embedder, content)
             updates["embedding"] = embedding if embedding else existing.embedding
         if scope is not None:
-            updates["scope"] = scope
+            updates["scope"] = (
+                join_scope_paths(self.root_scope, scope) if self.root_scope else scope
+            )
         if categories is not None:
             updates["categories"] = categories
         if metadata is not None:
