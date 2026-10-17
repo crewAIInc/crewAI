@@ -1,5 +1,6 @@
 import json
 
+from crewai.tools import tool
 from crewai.tools.structured_tool import CrewStructuredTool
 from pydantic import BaseModel, Field, RootModel
 import pytest
@@ -219,6 +220,26 @@ async def test_ainvoke(basic_function):
 
     result = await tool.ainvoke(input={"param1": "test"})
     assert result == "test 0"
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_awaits_coroutine_from_sync_wrapper():
+    """An async ``@tool`` reaches ``ainvoke`` through a sync wrapper; its result is awaited."""
+    calls: list[str] = []
+
+    @tool
+    async def fetch_data(q: str) -> str:
+        """Fetch data for q."""
+        calls.append(q)
+        return f"data:{q}"
+
+    structured = fetch_data.to_structured_tool()
+
+    result = await structured.ainvoke({"q": "x"})
+
+    assert result == "data:x"
+    assert calls == ["x"]
+    assert structured.current_usage_count == 1
 
 
 def test_parse_args_dict(basic_function):
