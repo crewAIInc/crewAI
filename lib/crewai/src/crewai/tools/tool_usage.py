@@ -915,6 +915,8 @@ class ToolUsage:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
+            except ToolUsageError as error:
+                return error
             except Exception:
                 if self.function_calling_llm:
                     return self._function_calling(tool_string)
@@ -966,6 +968,13 @@ class ToolUsage:
         except (JSONDecodeError, ValueError, TypeError):
             pass
 
+        if self._has_unterminated_string(tool_input):
+            error_message = (
+                "Tool input must be a valid dictionary in JSON or Python literal format"
+            )
+            self._emit_validate_input_error(error_message)
+            raise ToolUsageError(error_message)
+
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             if self.agent and self.agent.verbose:
@@ -982,7 +991,48 @@ class ToolUsage:
             "Tool input must be a valid dictionary in JSON or Python literal format"
         )
         self._emit_validate_input_error(error_message)
-        raise Exception(error_message)
+        raise ToolUsageError(error_message)
+
+    @staticmethod
+    def _has_unterminated_string(tool_input: str) -> bool:
+        in_string = False
+        quote_character = None
+        escaped = False
+
+        for index, character in enumerate(tool_input):
+            if not in_string:
+                if character in {'"', "'"}:
+                    if (
+                        character == "'"
+                        and index > 0
+                        and tool_input[index - 1].isalnum()
+                    ):
+                        continue
+                    if (
+                        character == "'"
+                        and index > 0
+                        and tool_input[index - 1] not in "{[:, \t\r\n"
+                    ):
+                        continue
+                    in_string = True
+                    quote_character = character
+            elif escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote_character:
+                if (
+                    character == "'"
+                    and index > 0
+                    and index + 1 < len(tool_input)
+                    and tool_input[index - 1].isalnum()
+                    and tool_input[index + 1].isalnum()
+                ):
+                    continue
+                in_string = False
+                quote_character = None
+
+        return in_string
 
     def _emit_validate_input_error(self, final_error: str) -> None:
         tool_selection_data = {

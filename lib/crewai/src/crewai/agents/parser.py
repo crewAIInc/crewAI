@@ -172,6 +172,12 @@ def _safe_repair_json(tool_input: str) -> str:
 
     tool_input = tool_input.replace('"""', '"')
 
+    # Keep truncated strings intact so ToolUsage can reject the original
+    # malformed input. Repairing here would hide the truncation from its
+    # validation and could silently change the value passed to a tool.
+    if _has_unterminated_string(tool_input):
+        return tool_input
+
     result = repair_json(tool_input)
     if not result or result in UNABLE_TO_REPAIR_JSON_RESULTS:
         return tool_input
@@ -182,3 +188,37 @@ def _safe_repair_json(tool_input: str) -> str:
         return tool_input
 
     return str(result)
+
+
+def _has_unterminated_string(tool_input: str) -> bool:
+    """Return whether input ends inside a quoted string.
+
+    Apostrophes between alphanumeric characters are part of unquoted values,
+    such as ``don't``, rather than the start of a single-quoted string.
+    """
+    in_string = False
+    quote_character = None
+    escaped = False
+
+    for index, character in enumerate(tool_input):
+        if not in_string:
+            if character in {'"', "'"}:
+                if (
+                    character == "'"
+                    and index > 0
+                    and index + 1 < len(tool_input)
+                    and tool_input[index - 1].isalnum()
+                    and tool_input[index + 1].isalnum()
+                ):
+                    continue
+                in_string = True
+                quote_character = character
+        elif escaped:
+            escaped = False
+        elif character == "\\":
+            escaped = True
+        elif character == quote_character:
+            in_string = False
+            quote_character = None
+
+    return in_string
