@@ -141,3 +141,46 @@ def test_reentrant_sync_invoke_propagates_exceptions():
 
     with pytest.raises(ValueError, match="nested failure"):
         _run_awaitable_on_worker_thread(_outer())
+
+
+def test_fire_and_forget_callback_tasks_are_drained_not_dropped():
+    """Fire-and-forget tasks on the worker loop must complete, not be dropped.
+
+    The worker loop is torn down as soon as the main coroutine finishes; a
+    task scheduled via asyncio.create_task during the run (the pattern
+    _invoke_step_callback uses for async callbacks) must be given a chance
+    to finish instead of being cancelled by asyncio.run() — otherwise the
+    final AgentFinish callback would be silently dropped.
+    """
+    completed: list[str] = []
+
+    async def _callback() -> None:
+        await asyncio.sleep(0.01)
+        completed.append("callback")
+
+    async def _main() -> str:
+        asyncio.create_task(_callback())
+        return "main-ok"
+
+    assert _run_awaitable_on_worker_thread(_main()) == "main-ok"
+    assert completed == ["callback"]
+
+
+def test_drain_timeout_bounds_misbehaving_callbacks(monkeypatch):
+    """A callback that never finishes cannot hang the sync call."""
+    import time
+
+    import crewai.agent.core as core_module
+
+    monkeypatch.setattr(core_module, "_CALLBACK_DRAIN_TIMEOUT_S", 0.05)
+
+    async def _stuck() -> None:
+        await asyncio.sleep(30)
+
+    async def _main() -> str:
+        asyncio.create_task(_stuck())
+        return "main-ok"
+
+    start = time.monotonic()
+    assert _run_awaitable_on_worker_thread(_main()) == "main-ok"
+    assert time.monotonic() - start < 10
