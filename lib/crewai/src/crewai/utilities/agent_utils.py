@@ -110,10 +110,11 @@ def _is_allowlisted_tool_module(module_name: str) -> bool:
     try:
         spec = importlib.util.find_spec(module_name)
         package_spec = importlib.util.find_spec("crewai_tools")
-    except Exception:  # noqa: BLE001 - fail closed: any resolution failure rejects the module
+    except Exception:
+        # Fail closed: any resolution failure means "not allowlisted".
         # find_spec imports the parent package, which can raise beyond
-        # ImportError on a broken install; an allowlist must fail closed to
-        # "not allowlisted" rather than crash the agent load.
+        # ImportError on a broken install; the allowlist must return False
+        # rather than crash the agent load.
         return False
     if spec is None or package_spec is None or not spec.origin:
         return False
@@ -197,25 +198,28 @@ def _annotation_resolves_import(
     return any(_walk(item) for item in (metadata or []))
 
 
-def _contains_remote_ref(value: Any) -> bool:
-    """True if a JSON value has a ``$ref`` pointing at a remote resource.
+def _contains_non_local_ref(value: Any) -> bool:
+    """True if a JSON value has a ``$ref`` that is not a pure local fragment.
 
     ``create_model_from_schema`` resolves ``$ref`` with jsonref's default
-    loader, which fetches remote URIs (http/https/file/...) at model-build
-    time. A repository record could therefore make the loader's host issue
-    outbound requests (or read local files via ``file://``) just by passing
-    a schema dict. Local fragment refs (``#/$defs/...``) never touch the
-    network and stay allowed.
+    loader, which follows any non-fragment URI at model-build time. Checking
+    for ``://`` is not enough: jsonref also resolves no-authority forms such
+    as ``file:/etc/hostname`` or ``http:/host/x`` (still URIs — a missing
+    authority does not make them fragments), and relative refs such as
+    ``other.json#/x`` resolve against the process working directory, which is
+    a local-file-read primitive. The only refs that can never touch the
+    network or the filesystem are pure fragments (``#/...``), which resolve
+    inside the schema document itself.
     """
     if isinstance(value, dict):
         for key, item in value.items():
             if key == "$ref" and isinstance(item, str):
-                if "://" in item.strip().lower():
+                if not item.strip().startswith("#"):
                     return True
-            elif _contains_remote_ref(item):
+            elif _contains_non_local_ref(item):
                 return True
     elif isinstance(value, (list, tuple)):
-        return any(_contains_remote_ref(item) for item in value)
+        return any(_contains_non_local_ref(item) for item in value)
     return False
 
 
@@ -294,18 +298,22 @@ def _validate_repository_tool_params(
             )
         # args_schema/result_schema dicts are passed through
         # create_model_from_schema, which resolves $ref with jsonref's
-        # default loader: a remote $ref would make the loader's host fetch
-        # a URL (or read a local file via file://) at construction time.
-        # Reject those; plain dicts and local fragment refs stay allowed.
+        # default loader. Any non-fragment $ref resolves outside the schema
+        # document: absolute URIs (https://..., file://...), no-authority
+        # URI forms (file:/path, http:/host/x), and relative refs
+        # (other.json#/x) which resolve against the process working
+        # directory — a local-file-read or SSRF primitive at construction
+        # time. Reject them; only pure #-fragment refs stay allowed.
         if (
             key in _SCHEMA_FIELDS_WITH_REF_RESOLUTION
             and isinstance(value, dict)
-            and _contains_remote_ref(value)
+            and _contains_non_local_ref(value)
         ):
             raise AgentRepositoryError(
                 f"Tool {tool_name!r} init parameter {key!r} contains a "
-                "remote $ref: schema dicts in repository records must "
-                "not point at remote resources."
+                "non-local $ref: schema dicts in repository records may "
+                "only use #-fragment $refs that resolve inside the schema "
+                "document itself."
             )
 
 

@@ -1739,7 +1739,7 @@ class TestRepositoryToolParamValidation:
         from crewai.utilities.agent_utils import _validate_repository_tool_params
         from crewai.utilities.errors import AgentRepositoryError
 
-        with pytest.raises(AgentRepositoryError, match=r"remote \$ref"):
+        with pytest.raises(AgentRepositoryError, match=r"non-local \$ref"):
             _validate_repository_tool_params(
                 BaseTool,
                 {"args_schema": {"$ref": "https://attacker.example/s.json"}},
@@ -1755,8 +1755,44 @@ class TestRepositoryToolParamValidation:
             "type": "object",
             "properties": {"payload": {"$ref": "file:///etc/hostname"}},
         }
-        with pytest.raises(AgentRepositoryError, match=r"remote \$ref"):
+        with pytest.raises(AgentRepositoryError, match=r"non-local \$ref"):
             _validate_repository_tool_params(BaseTool, {"result_schema": schema})
+
+    def test_no_authority_uri_ref_forms_rejected(self):
+        """No-authority URI forms bypass a naive "://"-based check.
+
+        jsonref's default loader treats ``file:/etc/hostname`` and
+        ``http:/host/x`` as URIs (a missing authority does not turn them
+        into fragments), so both must be rejected.
+        """
+        from crewai.tools import BaseTool
+        from crewai.utilities.agent_utils import _validate_repository_tool_params
+        from crewai.utilities.errors import AgentRepositoryError
+
+        for ref in ("file:/etc/hostname", "http:/attacker.example/x.json"):
+            schema = {
+                "type": "object",
+                "properties": {"payload": {"$ref": ref}},
+            }
+            with pytest.raises(AgentRepositoryError, match=r"non-local \$ref"):
+                _validate_repository_tool_params(BaseTool, {"result_schema": schema})
+
+    def test_relative_ref_rejected(self):
+        """Relative refs resolve against the process CWD via jsonref's loader.
+
+        ``other.json#/x`` never carries a scheme, so a "://"-based check
+        cannot see it — but jsonref resolves it as a local file read.
+        """
+        from crewai.tools import BaseTool
+        from crewai.utilities.agent_utils import _validate_repository_tool_params
+        from crewai.utilities.errors import AgentRepositoryError
+
+        schema = {
+            "type": "object",
+            "properties": {"payload": {"$ref": "other.json#/$defs/x"}},
+        }
+        with pytest.raises(AgentRepositoryError, match=r"non-local \$ref"):
+            _validate_repository_tool_params(BaseTool, {"args_schema": schema})
 
     def test_plain_schema_dict_still_allowed(self):
         """Schema dicts without remote refs (incl. local fragment refs) pass.
