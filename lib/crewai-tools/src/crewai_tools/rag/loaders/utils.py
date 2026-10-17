@@ -1,5 +1,6 @@
 """Utility functions for RAG loaders."""
 
+from codecs import BOM_UTF8
 from typing import Any
 
 
@@ -36,6 +37,9 @@ def load_from_url(
     try:
         response = safe_get(url, headers=headers, timeout=30)
         response.raise_for_status()
+        if response.content.startswith(BOM_UTF8):
+            # Honor the UTF-8 signature over Requests' text/* Latin-1 fallback.
+            response.encoding = "utf-8-sig"
         return response.text
     except Exception as e:
         raise ValueError(f"Error fetching content from URL {url}: {e!s}") from e
