@@ -165,6 +165,40 @@ _sync_invoke_pool = concurrent.futures.ThreadPoolExecutor(
     thread_name_prefix=_SYNC_INVOKE_THREAD_PREFIX,
 )
 
+# Bound on how long a worker loop waits for fire-and-forget tasks (e.g. async
+# step_callback tasks scheduled with asyncio.create_task during the run) after
+# the main coroutine finishes. Without the drain, asyncio.run() cancels those
+# tasks during loop teardown and the final callbacks are silently dropped.
+_CALLBACK_DRAIN_TIMEOUT_S = 30.0
+
+
+async def _await_and_drain_callbacks(
+    coro: Coroutine[Any, Any, dict[str, Any]],
+) -> dict[str, Any]:
+    """Await the main coroutine, then let fire-and-forget tasks finish.
+
+    Tasks still pending on the worker loop when the coroutine completes would
+    otherwise be cancelled by asyncio.run() during loop shutdown. They get a
+    bounded chance to complete first; anything still running afterwards is
+    cancelled so a misbehaving callback cannot hang the sync call.
+    """
+    result = await coro
+    pending = [
+        task for task in asyncio.all_tasks() if task is not asyncio.current_task()
+    ]
+    if pending:
+        done, still_pending = await asyncio.wait(
+            pending, timeout=_CALLBACK_DRAIN_TIMEOUT_S
+        )
+        for task in done:
+            if not task.cancelled():
+                task.exception()  # retrieve to avoid "never retrieved" warnings
+        for task in still_pending:
+            task.cancel()
+        if still_pending:
+            await asyncio.gather(*still_pending, return_exceptions=True)
+    return result
+
 
 def _run_awaitable_on_worker_thread(
     coro: Coroutine[Any, Any, dict[str, Any]],
@@ -177,7 +211,9 @@ def _run_awaitable_on_worker_thread(
     ctx = contextvars.copy_context()
     if threading.current_thread().name.startswith(_SYNC_INVOKE_THREAD_PREFIX):
         return _run_awaitable_on_dedicated_thread(ctx, coro)
-    future = _sync_invoke_pool.submit(ctx.run, asyncio.run, coro)
+    future = _sync_invoke_pool.submit(
+        ctx.run, asyncio.run, _await_and_drain_callbacks(coro)
+    )
     return future.result()
 
 
@@ -194,7 +230,7 @@ def _run_awaitable_on_dedicated_thread(
 
     def _target() -> None:
         try:
-            outcome["result"] = ctx.run(asyncio.run, coro)
+            outcome["result"] = ctx.run(asyncio.run, _await_and_drain_callbacks(coro))
         except BaseException as exc:  # re-raised on the caller below
             outcome["error"] = exc
 
@@ -464,7 +500,7 @@ class Agent(BaseAgent):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
+    def validate_from_repository(cls, v: Any) -> dict[str, Any] | Any | None:
         """Merge repository agent config with provided values before validation."""
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
@@ -1564,7 +1600,6 @@ class Agent(BaseAgent):
             DeprecationWarning,
             stacklevel=2,
         )
-        return
 
     def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
