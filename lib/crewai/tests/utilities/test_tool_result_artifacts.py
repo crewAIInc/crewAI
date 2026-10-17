@@ -63,3 +63,16 @@ def test_cleanup_removes_execution_directory_and_is_idempotent(tmp_path: Path) -
     store.cleanup()
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_store_line_count_preserves_unicode_separators(tmp_path: Path) -> None:
+    store = ToolResultArtifactStore(base_dir=tmp_path)
+    # U+2028 LINE SEPARATOR and U+2029 PARAGRAPH SEPARATOR should not be split as universal newlines
+    content = '\u2028'.join(['part'] * 100) + '\ntail\n'
+    artifact = store.store(content, estimated_token_count=50)
+
+    assert artifact.line_count == 2
+    assert artifact.preview_truncated is False
+    assert '\u2028' in artifact.preview
+
+    store.cleanup()
