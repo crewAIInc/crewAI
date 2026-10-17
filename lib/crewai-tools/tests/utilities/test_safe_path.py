@@ -47,10 +47,10 @@ class TestValidateFilePath:
         result = validate_file_path(str(tmp_path / "ok.txt"), str(tmp_path))
         assert result == str(tmp_path / "ok.txt")
 
-    def test_rejects_symlink_escape(self, tmp_path):
+    def test_rejects_symlink_escape(self, tmp_path, symlink_or_skip):
         """Reject symlinks that point outside base_dir."""
         link = tmp_path / "sneaky_link"
-        os.symlink("/etc/passwd", str(link))
+        symlink_or_skip("/etc/passwd", str(link))
         with pytest.raises(ValueError, match="outside the allowed directory"):
             validate_file_path("sneaky_link", str(tmp_path))
 
