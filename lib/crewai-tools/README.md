@@ -1,6 +1,6 @@
 <div align="center">
 
-![Logo of crewAI, two people rowing on a boat](./assets/crewai_logo.png)
+![Logo of crewAI, two people rowing on a boat](../../docs/images/crewai_logo.png)
 
 <div align="left">
 
