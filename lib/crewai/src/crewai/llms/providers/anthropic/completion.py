@@ -69,6 +69,16 @@ _MAX_OUTPUT_TOKENS_BY_PREFIX: Final[tuple[tuple[str, int], ...]] = (
 _DEFAULT_MODEL_MAX_TOKENS: Final[int] = 32000
 DEFAULT_MODEL: Final[str] = "claude-sonnet-4-6"
 
+# These model families reject Anthropic's named-tool ``tool_choice`` value.
+# Leave the choice automatic so the request remains valid while still exposing
+# the available function to the model.
+_MODELS_WITHOUT_NAMED_TOOL_CHOICE: Final[tuple[str, ...]] = (
+    "claude-sonnet-5-5",
+    "claude-opus-5-5",
+    "claude-fable-5-1",
+    "claude-mythos-5-1",
+)
+
 
 def _default_max_tokens_for_model(model: str) -> int:
     """Return the model's documented Messages API max output tokens."""
@@ -77,6 +87,12 @@ def _default_max_tokens_for_model(model: str) -> int:
         if name.startswith(prefix):
             return limit
     return _DEFAULT_MODEL_MAX_TOKENS
+
+
+def _supports_named_tool_choice(model: str) -> bool:
+    """Return whether the model accepts Anthropic's named-tool choice value."""
+    name = model.rsplit("/", 1)[-1].lower()
+    return not name.startswith(_MODELS_WITHOUT_NAMED_TOOL_CHOICE)
 
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
@@ -664,7 +680,11 @@ class AnthropicCompletion(BaseLLM):
 
             params["tools"] = converted_tools
 
-            if available_functions and len(regular_tools) == 1:
+            if (
+                available_functions
+                and len(regular_tools) == 1
+                and _supports_named_tool_choice(self.model)
+            ):
                 tool_name = regular_tools[0].get("name")
                 if tool_name and tool_name in available_functions:
                     params["tool_choice"] = {"type": "tool", "name": tool_name}
