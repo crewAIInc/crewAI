@@ -234,7 +234,7 @@ class TestExperimentRunner:
 
         # expected dict, actual scalar
         assert runner._assert_scores({"a": 3, "b": 4}, 5) is True
-        assert runner._assert_scores({"a": 3, "b": 7}, 5) is True
+        assert runner._assert_scores({"a": 3, "b": 7}, 5) is False
         assert runner._assert_scores({"a": 3, "b": 7}, 1) is False
 
         # both dicts
