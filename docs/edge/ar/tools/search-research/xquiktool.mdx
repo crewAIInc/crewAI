@@ -1,0 +1,98 @@
+---
+title: أدوات Xquik
+description: ابحث في بيانات X/Twitter العامة وافحصها باستخدام Xquik REST API.
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# أدوات Xquik
+
+## الوصف
+
+تتيح أدوات Xquik لوكلاء CrewAI البحث في بيانات X/Twitter العامة وفحصها عبر Xquik REST API. وهي مفيدة للبحث الاجتماعي، ومراقبة السوق، واكتشاف المصادر، وتحليل الاتجاهات، وجمع سياق الحسابات.
+
+## التثبيت
+
+ثبّت أدوات CrewAI:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+اضبط مفتاح Xquik API:
+
+```shell
+export XQUIK_API_KEY="your-api-key"
+```
+
+## الأدوات المتاحة
+
+- `XquikSearchTweetsTool`: البحث في المنشورات العامة باستخدام عوامل بحث X مثل `from:` و `has:media` و `lang:` و `since:` و `min_faves:`.
+- `XquikGetTweetTool`: جلب منشور واحد باستخدام tweet ID.
+- `XquikGetUserTool`: جلب ملف شخصي باستخدام اسم المستخدم أو user ID.
+- `XquikGetUserTweetsTool`: سرد المنشورات الحديثة لمستخدم واحد مع ترقيم صفحات بال cursor.
+- `XquikGetTrendsTool`: جلب المواضيع الرائجة حسب WOEID المنطقة.
+
+## مثال
+
+```python Code
+from crewai_tools import XquikSearchTweetsTool
+
+tool = XquikSearchTweetsTool()
+
+results = tool.run(
+    search_query="from:crewai AI agents",
+    limit=10,
+    query_type="Latest",
+)
+```
+
+## مثال مع وكيل
+
+```python Code
+from crewai import Agent
+from crewai_tools import XquikGetTrendsTool, XquikSearchTweetsTool
+
+x_search = XquikSearchTweetsTool()
+x_trends = XquikGetTrendsTool()
+
+researcher = Agent(
+    role="Social Research Analyst",
+    goal="Find timely public X/Twitter signals for a research brief.",
+    backstory="You use public social data to identify relevant posts and trends.",
+    tools=[x_search, x_trends],
+)
+```
+
+## المعاملات
+
+### `XquikSearchTweetsTool`
+
+- `search_query`: إلزامي. استعلام بحث X.
+- `limit`: اختياري. الحد الأقصى لعدد tweets المرتجعة، من 1 إلى 200. القيمة الافتراضية هي `20`.
+- `query_type`: اختياري. `Latest` أو `Top`. القيمة الافتراضية هي `Latest`.
+- `cursor`: اختياري. Cursor ترقيم الصفحات من استجابة سابقة.
+- `since_time`: اختياري. Timestamp بتنسيق ISO 8601 للحد الزمني الأدنى.
+- `until_time`: اختياري. Timestamp بتنسيق ISO 8601 للحد الزمني الأعلى.
+
+### `XquikGetTweetTool`
+
+- `tweet_id`: إلزامي. Tweet ID المراد جلبه.
+
+### `XquikGetUserTool`
+
+- `user`: إلزامي. اسم مستخدم X أو `@username` أو user ID.
+
+### `XquikGetUserTweetsTool`
+
+- `user`: إلزامي. اسم مستخدم X أو `@username` أو user ID.
+- `cursor`: اختياري. Cursor ترقيم الصفحات من استجابة سابقة.
+- `include_replies`: اختياري. تضمين الردود. القيمة الافتراضية هي `False`.
+- `include_parent_tweet`: اختياري. تضمين المنشورات الأصلية للردود عند توفرها. القيمة الافتراضية هي `False`.
+
+### `XquikGetTrendsTool`
+
+- `woeid`: اختياري. WOEID المنطقة. استخدم `1` للعالم، و `23424977` للولايات المتحدة، و `23424975` للمملكة المتحدة، و `23424969` لتركيا.
+- `count`: اختياري. عدد الاتجاهات المرتجعة، من 1 إلى 50. القيمة الافتراضية هي `30`.
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
