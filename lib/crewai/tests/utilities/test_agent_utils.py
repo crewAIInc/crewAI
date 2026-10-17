@@ -1737,6 +1737,53 @@ class TestRepositoryToolParamValidation:
         with pytest.raises(AgentRepositoryError, match="must be JSON-typed"):
             _validate_repository_tool_params(ScalarTool, {"top_k": object()})
 
+    def test_remote_ref_in_args_schema_rejected(self):
+        """A remote $ref in a schema dict must not reach the constructor.
+
+        create_model_from_schema resolves $ref with jsonref's default
+        loader, so a remote ref would make the loader's host fetch a URL
+        (or read a local file via file://) at construction time.
+        """
+        from crewai.tools import BaseTool
+        from crewai.utilities.agent_utils import _validate_repository_tool_params
+        from crewai.utilities.errors import AgentRepositoryError
+
+        with pytest.raises(AgentRepositoryError, match=r"remote \$ref"):
+            _validate_repository_tool_params(
+                BaseTool,
+                {"args_schema": {"$ref": "https://attacker.example/s.json"}},
+            )
+
+    def test_nested_remote_ref_in_result_schema_rejected(self):
+        """Remote refs are caught even when nested inside the schema."""
+        from crewai.tools import BaseTool
+        from crewai.utilities.agent_utils import _validate_repository_tool_params
+        from crewai.utilities.errors import AgentRepositoryError
+
+        schema = {
+            "type": "object",
+            "properties": {"payload": {"$ref": "file:///etc/hostname"}},
+        }
+        with pytest.raises(AgentRepositoryError, match=r"remote \$ref"):
+            _validate_repository_tool_params(BaseTool, {"result_schema": schema})
+
+    def test_plain_schema_dict_still_allowed(self):
+        """Schema dicts without remote refs (incl. local fragment refs) pass.
+
+        Legitimate repository records may still customize schemas; only
+        network-capable refs are rejected.
+        """
+        from crewai.tools import BaseTool
+        from crewai.utilities.agent_utils import _validate_repository_tool_params
+
+        schema = {
+            "type": "object",
+            "$defs": {"Name": {"type": "string"}},
+            "properties": {"name": {"$ref": "#/$defs/Name"}},
+        }
+        # Must not raise.
+        _validate_repository_tool_params(BaseTool, {"args_schema": schema})
+
     def test_scalar_params_still_instantiate(self):
         """Legitimate JSON scalar params for declared fields keep working."""
         class ScalarTool(BaseTool):
