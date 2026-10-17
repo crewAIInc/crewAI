@@ -562,7 +562,7 @@ class LanceDBStorage:
             prefix = scope_prefix.rstrip("/")
             if not prefix.startswith("/"):
                 prefix = "/" + prefix
-            q = q.where(f"scope LIKE '{prefix}%'")
+            q = q.where(_scope_prefix_filter(prefix))
         q = q.select(_RECORD_METADATA_COLUMNS)
 
         k = offset + limit
