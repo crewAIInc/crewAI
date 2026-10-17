@@ -40,7 +40,7 @@ This is a uv workspace with six packages under `lib/`:
 | `crewai-cli` | `lib/cli/` | Command-line interface |
 | `crewai-core` | `lib/crewai-core/` | Shared core utilities |
 
-Documentation lives in `docs/` with translations under `docs/{en,ar,ko,pt-BR}/`.
+Documentation lives in `docs/` with translations under `docs/edge/{en,ar,ko,pt-BR}/`.
 
 ## Development Workflow
 
@@ -145,7 +145,7 @@ Docs use [Mintlify](https://mintlify.com/) and live in `docs/`. The site is conf
 Supported languages: English (`en`), Arabic (`ar`), Korean (`ko`), Brazilian Portuguese (`pt-BR`).
 
 When adding or modifying documentation:
-- Edit the English version in `docs/en/` first
+- Edit the English version in `docs/edge/en/` first
 - Update translations in `docs/{ar,ko,pt-BR}/` to maintain parity
 - Keep all MDX/JSX syntax, code blocks, and URLs unchanged in translations
 - Update `docs/docs.json` navigation if adding new pages
@@ -173,4 +173,4 @@ Use the [GitHub issue templates](https://github.com/crewAIInc/crewAI/issues/new/
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+By contributing, you agree that your contributions will be licensed under the [MIT License](../LICENSE).
