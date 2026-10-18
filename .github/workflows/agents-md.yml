@@ -2,8 +2,8 @@ name: AGENTS.md
 
 # The AGENTS.md that `crewai create` ships is tested in lib/cli/tests, which the main
 # test workflow doesn't run. The guards run whenever the file, its tests, or the docs
-# pages it links change. The eval asks coding agents (Claude Code and Codex) what the
-# file teaches, against the base branch's file, and fails on a drop of more than 10%.
+# pages it links change. The eval asks coding agents what the file teaches, against the
+# base branch's file, one job per model, and fails on a drop of more than 10%.
 on:
   pull_request:
     branches: [main]
@@ -80,11 +80,20 @@ jobs:
           uv run pytest lib/devtools/tests/test_agents_md_eval.py -n 0
 
   eval:
-    name: AGENTS.md eval (Claude Code, Codex)
+    name: AGENTS.md eval (${{ matrix.model }})
     needs: changes
     if: needs.changes.outputs.eval == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # Claude Code runs the latest Haiku and Sonnet, Codex the GPT models users pick.
+        model:
+          - claude:claude-haiku-5-5
+          - claude:claude-sonnet-5-5
+          - codex:gpt-5.6-luna
+          - codex:gpt-5.6-sol
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -119,10 +128,11 @@ jobs:
         if: steps.keys.outputs.run == 'true'
         run: npm install -g @anthropic-ai/claude-code@2.1.289 @openai/codex@0.160.0
 
-      - name: Ask both agents, base file against this branch's
+      - name: Ask the model, base file against this branch's
         if: steps.keys.outputs.run == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           BASE_REF: ${{ github.base_ref || 'main' }}
-        run: uv run --package crewai-devtools devtools agents-md-eval --base "origin/$BASE_REF"
+          MODEL: ${{ matrix.model }}
+        run: uv run --package crewai-devtools devtools agents-md-eval --base "origin/$BASE_REF" --model "$MODEL"

@@ -1,10 +1,11 @@
 """Measure what coding agents learn from the AGENTS.md that `crewai create` ships.
 
 Each question in the item bank is asked in a fresh, tool-less coding-agent session
-(Claude Code and Codex) inside a directory holding only the instruction files, once
-with this branch's AGENTS.md and once with the base branch's. Answers are graded
-by the item's answer key. The command fails when either agent's score drops more
-than ``--max-drop`` below the base.
+(Claude Code or Codex, per model) inside a directory holding only the instruction
+files, once with this branch's AGENTS.md and once with the base branch's. Answers
+are graded by the item's answer key. The command fails when any model's score drops
+more than ``--max-drop`` below the base, or when too many sessions give no answer
+for the comparison to mean anything.
 """
 
 from __future__ import annotations
@@ -28,15 +29,26 @@ console = Console()
 
 Grade = Literal["right", "partly", "wrong"]
 Agent = Literal["claude", "codex"]
+# One session: the agent's answer, or "" when the session produced none.
 Ask = Callable[[Path, str], str]
 
 ITEMS_FILE: Final = Path(__file__).parent / "agents_md_items.json"
 TEMPLATES: Final = "lib/cli/src/crewai_cli/templates"
 POINTS: Final[dict[Grade, float]] = {"right": 1.0, "partly": 0.5, "wrong": 0.0}
+MODELS: Final = (
+    "claude:claude-haiku-5-5",
+    "claude:claude-sonnet-5-5",
+    "codex:gpt-5.6-luna",
+    "codex:gpt-5.6-sol",
+)
+SESSION_TIMEOUT: Final = 300
+# Past this share of unanswered sessions, a score says more about the agent's
+# availability than about the file.
+MAX_UNANSWERED: Final = 0.02
 # Every tool disabled, no MCP servers, only the project's settings: answers come
 # from the instruction files and the model.
 CLAUDE_CMD: Final = [
-    "claude", "-p", "--model", "haiku", "--tools", "", "--setting-sources", "project",
+    "claude", "-p", "--tools", "", "--setting-sources", "project",
     "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}', "--no-session-persistence",
 ]  # fmt: skip
 CODEX_EXEC: Final = [
@@ -150,24 +162,28 @@ def write_project(dest: Path, ref: str | None) -> None:
     )
 
 
-def ask_claude(project: Path, question: str) -> str:
-    """One Claude Code session with every tool disabled, so answers come from the files."""
+def claude_asker(model: str) -> Ask:
+    """Claude Code sessions with every tool disabled, so answers come from the files."""
     env = {
         k: v
         for k, v in os.environ.items()
         if not k.startswith("CLAUDE_CODE") and k not in ("CLAUDECODE", "OPENAI_API_KEY")
     }
-    proc = subprocess.run(  # noqa: S603 - fixed argv; the question goes on stdin
-        CLAUDE_CMD,
-        input=question,
-        capture_output=True,
-        text=True,
-        cwd=project,
-        env=env,
-        timeout=300,
-        check=False,
-    )
-    return proc.stdout.strip()
+
+    def ask(project: Path, question: str) -> str:
+        proc = subprocess.run(  # noqa: S603 - fixed argv; the question goes on stdin
+            [*CLAUDE_CMD, "--model", model],
+            input=question,
+            capture_output=True,
+            text=True,
+            cwd=project,
+            env=env,
+            timeout=SESSION_TIMEOUT,
+            check=False,
+        )
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+
+    return ask
 
 
 def codex_answer(events: str) -> str:
@@ -186,11 +202,9 @@ def codex_answer(events: str) -> str:
     return "\n".join(messages)
 
 
-def codex_asker(codex_home: Path) -> Ask:
+def codex_asker(codex_home: Path, model: str) -> Ask:
     """Codex sessions logged in with ``OPENAI_API_KEY``, in a home of their own."""
-    codex_home.mkdir(
-        parents=True, exist_ok=True
-    )  # codex refuses a CODEX_HOME that doesn't exist
+    codex_home.mkdir(parents=True, exist_ok=True)  # codex refuses a missing CODEX_HOME
     subprocess.run(
         ["codex", "login", "--with-api-key"],  # noqa: S607 - CLI from PATH
         input=os.environ["OPENAI_API_KEY"],
@@ -199,42 +213,68 @@ def codex_asker(codex_home: Path) -> Ask:
         check=True,
         env={**os.environ, "CODEX_HOME": str(codex_home)},
     )
-
     env = {k: v for k, v in os.environ.items() if k not in API_KEYS}
     env["CODEX_HOME"] = str(codex_home)
 
     def ask(project: Path, question: str) -> str:
         proc = subprocess.run(  # noqa: S603 - the question is one argv entry, never a shell
-            [*CODEX_EXEC, question + NO_COMMANDS],
+            [*CODEX_EXEC, "-m", model, question + NO_COMMANDS],
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             cwd=project,
-            timeout=300,
+            timeout=SESSION_TIMEOUT,
             check=False,
             env=env,
         )
-        return codex_answer(proc.stdout)
+        return codex_answer(proc.stdout) if proc.returncode == 0 else ""
 
     return ask
 
 
+def answer(ask: Ask, project: Path, question: str) -> str | None:
+    """The session's answer, with one retry; None when neither attempt gave one."""
+    for _ in range(2):
+        try:
+            text = ask(project, question)
+        except subprocess.TimeoutExpired:  # a hung session is retried, then counted
+            continue
+        if text:
+            return text
+    return None
+
+
 def score(
     ask: Ask, project: Path, items: Sequence[Item], reps: int, workers: int
-) -> dict[str, float]:
-    """Average points per item over ``reps`` sessions."""
+) -> tuple[dict[str, float], int]:
+    """Average points per item over ``reps`` sessions, and how many gave no answer.
+
+    A session with no answer scores zero and is counted, so the caller can tell a
+    file that teaches less from an agent that wasn't answering.
+    """
     jobs = [item for item in items for _ in range(reps)]
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        grades = list(pool.map(lambda item: grade(item, ask(project, item["q"])), jobs))
+        answers = list(pool.map(lambda item: answer(ask, project, item["q"]), jobs))
     totals: dict[str, float] = {}
-    for item, result in zip(jobs, grades, strict=True):
-        totals[item["id"]] = totals.get(item["id"], 0.0) + POINTS[result] / reps
-    return totals
+    for item, text in zip(jobs, answers, strict=True):
+        points = POINTS[grade(item, text)] if text is not None else 0.0
+        totals[item["id"]] = totals.get(item["id"], 0.0) + points / reps
+    return totals, sum(text is None for text in answers)
 
 
 def dropped(base: float, head: float, max_drop: float) -> bool:
     """Whether ``head`` is more than ``max_drop`` (a fraction) below ``base``."""
     return head < base * (1 - max_drop)
+
+
+def parse_model(spec: str) -> tuple[Agent, str]:
+    """Split ``claude:<model>`` or ``codex:<model>``."""
+    cli, _, model = spec.partition(":")
+    if cli == "claude" and model:
+        return "claude", model
+    if cli == "codex" and model:
+        return "codex", model
+    raise click.BadParameter(f"{spec!r}: use claude:<model> or codex:<model>")
 
 
 @click.command("agents-md-eval")
@@ -245,12 +285,12 @@ def dropped(base: float, head: float, max_drop: float) -> bool:
     help="Git ref whose AGENTS.md is the baseline.",
 )
 @click.option(
-    "--agent",
-    "agents",
-    type=click.Choice(["claude", "codex"]),
+    "--model",
+    "models",
     multiple=True,
-    default=("claude", "codex"),
+    default=MODELS,
     show_default=True,
+    help="Agent and model to ask, as claude:<model> or codex:<model>. Repeatable.",
 )
 @click.option("--reps", default=1, show_default=True, help="Sessions per question.")
 @click.option("--workers", default=8, show_default=True, help="Sessions at once.")
@@ -261,34 +301,53 @@ def dropped(base: float, head: float, max_drop: float) -> bool:
     help="Largest allowed score drop, as a fraction.",
 )
 def agents_md_eval(
-    base: str, agents: tuple[Agent, ...], reps: int, workers: int, max_drop: float
+    base: str, models: tuple[str, ...], reps: int, workers: int, max_drop: float
 ) -> None:
     """Fail when this branch's AGENTS.md teaches coding agents less than BASE's."""
+    specs = [parse_model(spec) for spec in models]
     items = load_items()
-    failed = False
-    table = Table("Agent", "Base", "This branch", "Change")
+    sessions = len(items) * reps
+    problems: list[str] = []
+    table = Table("Model", "Base", "This branch", "Change", "No answer (base / branch)")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         write_project(root / "base", base)
         write_project(root / "head", None)
-        askers: dict[Agent, Ask] = {"claude": ask_claude}
-        if "codex" in agents:
-            askers["codex"] = codex_asker(root / "codex-home")
-        for agent in agents:
-            before = score(askers[agent], root / "base", items, reps, workers)
-            after = score(askers[agent], root / "head", items, reps, workers)
+        for cli, model in specs:
+            label = f"{cli}:{model}"
+            ask = (
+                claude_asker(model)
+                if cli == "claude"
+                else codex_asker(root / "codex-home", model)
+            )
+            console.print(f"Asking {label}: {sessions} sessions per file")
+            before, base_missing = score(ask, root / "base", items, reps, workers)
+            after, head_missing = score(ask, root / "head", items, reps, workers)
             old, new = sum(before.values()), sum(after.values())
             change = (new - old) / old if old else 0.0
-            failed |= dropped(old, new, max_drop)
-            table.add_row(agent, f"{old:.1f}", f"{new:.1f}", f"{change:+.1%}")
-            lost = [i for i in items if after[i["id"]] < before[i["id"]] - 0.5]
-            for item in lost:
-                console.print(
-                    f"[yellow]{agent} lost {item['id']}:[/yellow] {item['item']}"
+            table.add_row(
+                label,
+                f"{old:.1f}",
+                f"{new:.1f}",
+                f"{change:+.1%}",
+                f"{base_missing} / {head_missing}",
+            )
+            if max(base_missing, head_missing) > sessions * MAX_UNANSWERED:
+                problems.append(
+                    f"{label}: too many sessions gave no answer ({base_missing} / {head_missing} of {sessions})"
+                    ", so the comparison isn't reliable."
                 )
+            elif dropped(old, new, max_drop):
+                problems.append(
+                    f"{label}: scored {change:.1%} against {base}, past the {max_drop:.0%} limit."
+                )
+            for item in items:
+                if after[item["id"]] < before[item["id"]] - 0.5:
+                    console.print(
+                        f"[yellow]{label} lost {item['id']}:[/yellow] {item['item']}"
+                    )
     console.print(table)
-    if failed:
-        console.print(
-            f"[red]A score dropped more than {max_drop:.0%} below {base}.[/red]"
-        )
+    for problem in problems:
+        console.print(f"[red]{problem}[/red]")
+    if problems:
         raise SystemExit(1)

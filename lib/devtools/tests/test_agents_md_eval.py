@@ -126,40 +126,109 @@ def test_write_project_rejects_an_unknown_ref(repo, tmp_path):
         ev.write_project(tmp_path / "base", "no-such-ref")
 
 
-def _run(monkeypatch, answers: dict[str, str]):
-    """Run the command with Claude replaced by canned answers keyed by project dir name."""
-    monkeypatch.setattr(ev, "load_items", lambda: [ITEM, {**ITEM, "id": "X-002"}])
+def _run(monkeypatch, answers: dict[str, str], *args: str):
+    """Run the command with Claude Code replaced by canned answers keyed by project dir."""
+    items = [ITEM] + [{**ITEM, "id": f"X-{n:03d}"} for n in range(2, 101)]
+    monkeypatch.setattr(ev, "load_items", lambda: items)
     monkeypatch.setattr(ev, "write_project", lambda dest, ref: dest.mkdir(parents=True))
     monkeypatch.setattr(
-        ev, "ask_claude", lambda project, question: answers[project.name]
+        ev,
+        "claude_asker",
+        lambda model: lambda project, question: answers[project.name],
     )
-    return CliRunner().invoke(
-        ev.agents_md_eval, ["--agent", "claude", "--workers", "2"]
+    result = CliRunner().invoke(
+        ev.agents_md_eval,
+        ["--model", "claude:claude-haiku-5-5", "--workers", "4", *args],
     )
+    # Rich wraps long lines at the runner's width; compare whitespace-normalized text.
+    return result.exit_code, " ".join(result.output.split())
 
 
 def test_command_fails_when_the_branch_teaches_less(monkeypatch):
-    result = _run(
+    code, output = _run(
         monkeypatch,
         {"base": "uv tool install crewai --upgrade", "head": "pip install -U crewai"},
     )
-    assert result.exit_code == 1
-    assert "dropped more than 10% below origin/main" in result.output
-    assert "claude lost X-001" in result.output
+    assert code == 1
+    assert (
+        "claude:claude-haiku-5-5: scored -100.0% against origin/main, past the 10% limit."
+        in output
+    )
+    assert "claude:claude-haiku-5-5 lost X-001" in output
 
 
 def test_command_passes_when_the_branch_holds_or_improves(monkeypatch):
-    result = _run(
+    code, output = _run(
         monkeypatch, {"base": "use uv tool", "head": "uv tool install crewai --upgrade"}
     )
-    assert result.exit_code == 0, result.output
-    assert "+100.0%" in result.output
+    assert code == 0, output
+    assert "+100.0%" in output
+
+
+def test_command_respects_a_custom_max_drop(monkeypatch):
+    code, output = _run(
+        monkeypatch,
+        {"base": "uv tool install crewai --upgrade", "head": "use uv tool"},
+        "--max-drop",
+        "0.6",
+    )
+    assert code == 0, output
+    assert "-50.0%" in output
+
+
+def test_command_fails_when_sessions_give_no_answer(monkeypatch):
+    code, output = _run(
+        monkeypatch, {"base": "uv tool install crewai --upgrade", "head": ""}
+    )
+    assert code == 1
+    assert "too many sessions gave no answer (0 / 100 of 100)" in output
 
 
 def test_command_without_codex_needs_no_openai_key(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    result = _run(monkeypatch, {"base": "x", "head": "x"})
-    assert result.exit_code == 0, result.output
+    code, output = _run(monkeypatch, {"base": "x", "head": "x"})
+    assert code == 0, output
+
+
+@pytest.mark.parametrize(
+    "spec", ["claude", "codex:", "gemini:gemini-3", ":gpt-5.6-sol"]
+)
+def test_command_rejects_a_malformed_model(spec):
+    result = CliRunner().invoke(ev.agents_md_eval, ["--model", spec])
+    assert result.exit_code == 2
+    assert "use claude:<model> or codex:<model>" in result.output
+
+
+def test_default_models_are_the_four_the_action_runs():
+    assert [ev.parse_model(spec) for spec in ev.MODELS] == [
+        ("claude", "claude-haiku-5-5"),
+        ("claude", "claude-sonnet-5-5"),
+        ("codex", "gpt-5.6-luna"),
+        ("codex", "gpt-5.6-sol"),
+    ]
+
+
+def test_answer_retries_once_then_reports_no_answer():
+    replies = iter([subprocess.TimeoutExpired("claude", 300), "Use and_."])
+
+    def flaky(project, question):
+        reply = next(replies)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+    assert ev.answer(flaky, Path("."), "How?") == "Use and_."
+    assert ev.answer(lambda project, question: "", Path("."), "How?") is None
+
+
+def test_unanswered_sessions_score_zero_and_are_counted(tmp_path):
+    def half(project, question):
+        return "uv tool install crewai --upgrade" if question == "first" else ""
+
+    items = [{**ITEM, "id": "A", "q": "first"}, {**ITEM, "id": "B", "q": "second"}]
+    totals, missing = ev.score(half, tmp_path, items, reps=2, workers=2)
+    assert totals == {"A": 1.0, "B": 0.0}
+    assert missing == 2
 
 
 def test_codex_runs_in_its_own_existing_home_without_api_keys(tmp_path, monkeypatch):
@@ -172,10 +241,29 @@ def test_codex_runs_in_its_own_existing_home_without_api_keys(tmp_path, monkeypa
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     monkeypatch.setattr(ev.subprocess, "run", fake_run)
-    ask = ev.codex_asker(tmp_path / "codex-home")
+    ask = ev.codex_asker(tmp_path / "codex-home", "gpt-5.6-sol")
     ask(tmp_path, "How?")
 
-    (login, login_kwargs, home_existed), (_, exec_kwargs, _) = calls
+    (login, login_kwargs, home_existed), (exec_argv, exec_kwargs, _) = calls
     assert login[:2] == ["codex", "login"] and home_existed
     assert login_kwargs["input"] == "sk-test"
+    assert exec_argv[exec_argv.index("-m") + 1] == "gpt-5.6-sol"
     assert not {"OPENAI_API_KEY", "ANTHROPIC_API_KEY"} & set(exec_kwargs["env"])
+
+
+def test_a_failed_session_is_no_answer(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        ev.subprocess,
+        "run",
+        lambda argv, **kwargs: subprocess.CompletedProcess(
+            argv, 1, stdout="partial", stderr="rate limited"
+        ),
+    )
+    assert ev.claude_asker("claude-haiku-5-5")(tmp_path, "How?") == ""
+
+
+def test_the_workflow_runs_the_default_models():
+    import yaml
+
+    workflow = yaml.safe_load(ev.read_at(None, ".github/workflows/agents-md.yml"))
+    assert workflow["jobs"]["eval"]["strategy"]["matrix"]["model"] == list(ev.MODELS)
