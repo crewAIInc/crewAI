@@ -8,7 +8,7 @@ mode: "wide"
 A integração independente é fornecida pela Ace Data Cloud; não é produto oficial de Seedance ou CrewAI. O código está em revisão, sem alegar lançamento PyPI ou catálogo AMP. Instale a versão imutável abaixo; repositório, prévia ou testes aprovados não equivalem à inclusão oficial.
 
 ```bash
-uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@3b34aef8608a081a7ffd40cd5ab2d0f8091d3503'
+uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@aafee2369346540b2bbf2f73f99079f7ae8ab5e6'
 ```
 
 Cadastre-se/entre em [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_api_key), abra General application e copie o Token de consumo ou use Manage Keys → Create. Confira acesso a Seedance, saldo e [preços dos modelos](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_pricing). Ao restringir APIs, permita `/seedance/videos` e `/seedance/tasks`. Configure o Token bruto em `ACEDATACLOUD_API_KEY`, sem Bearer ou espaços; nunca em prompts ou arquivos versionados.
@@ -28,4 +28,4 @@ Após aprovar modelo e orçamento, adicione `SeedanceGenerateVideoTool()` e `See
 
 Tarefas armazenadas concluídas retornam status=succeeded, success=true, media_urls e o cost original em Credits quando disponível. Falhas aninhadas ou mídia final ausente produzem ToolFailure. HTTP mantém seu significado sem expor corpos privados. Sem repetição automática de HTTP pago, pagamento ou fallback. Uma geração por instância não é teto financeiro nem autorização.
 
-O [guia em inglês/chinês](https://github.com/AceDataCloud/SeedanceCrewAI/tree/3b34aef8608a081a7ffd40cd5ab2d0f8091d3503) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,18 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.
+O [guia em inglês/chinês](https://github.com/AceDataCloud/SeedanceCrewAI/tree/aafee2369346540b2bbf2f73f99079f7ae8ab5e6) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,19 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.

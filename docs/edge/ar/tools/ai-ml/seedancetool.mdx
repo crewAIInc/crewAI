@@ -8,7 +8,7 @@ mode: "wide"
 يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من Seedance أو CrewAI. المصدر قيد المراجعة؛ لا ندّعي نشره على PyPI أو إدراجه في كتالوج AMP. ثبّت نسخة المصدر الثابتة أدناه؛ المستودع أو المعاينة أو نجاح الاختبارات لا يعني الإدراج الرسمي.
 
 ```bash
-uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@3b34aef8608a081a7ffd40cd5ab2d0f8091d3503'
+uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@aafee2369346540b2bbf2f73f99079f7ae8ab5e6'
 ```
 
 سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_api_key) وافتح General application، ثم انسخ Token لاستهلاك API أو أنشئ مفتاحًا مخصصًا عبر Manage Keys → Create. تحقّق من صلاحية Seedance والرصيد و[أسعار النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_pricing). عند تقييد APIs اسمح بـ `/seedance/videos` و`/seedance/tasks`. اضبط Token الخام في `ACEDATACLOUD_API_KEY` دون Bearer أو مسافات، ولا تضعه في prompt أو ملفات مودعة.
@@ -28,4 +28,4 @@ print(result)
 
 تعيد المهمة المخزنة الناجحة status=succeeded وsuccess=true وmedia_urls والتكلفة الأصلية بوحدة Credits إن توفّرت. الحالات الفاشلة المتداخلة أو غياب الوسائط النهائية ينتج ToolFailure. يُحفظ معنى HTTP دون عرض استجابات خاصة. لا توجد إعادة محاولة مدفوعة تلقائية أو معالج دفع أو نموذج بديل. الاستخدام الواحد لكل مثيل ليس حدًا ماليًا أو نظام إذن.
 
-راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SeedanceCrewAI/tree/3b34aef8608a081a7ffd40cd5ab2d0f8091d3503) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و18 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SeedanceCrewAI/tree/aafee2369346540b2bbf2f73f99079f7ae8ab5e6) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و19 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.

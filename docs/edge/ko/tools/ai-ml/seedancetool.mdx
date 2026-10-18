@@ -8,7 +8,7 @@ mode: "wide"
 이 독립 통합은 Ace Data Cloud가 제공하며 Seedance 또는 CrewAI 공식 제품이 아닙니다. 소스는 검토 중이며 PyPI 출시나 AMP 등록을 주장하지 않습니다. 아래의 고정 소스 버전을 설치하세요. 저장소, 미리보기 또는 테스트 통과는 공식 포함을 뜻하지 않습니다.
 
 ```bash
-uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@3b34aef8608a081a7ffd40cd5ab2d0f8091d3503'
+uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@aafee2369346540b2bbf2f73f99079f7ae8ab5e6'
 ```
 
 [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_api_key)에 가입/로그인하고 General application에서 API 소비자 Token을 복사하거나 Manage Keys → Create로 전용 키를 만드세요. Seedance 권한, 잔액 및 [모델 가격](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_pricing)을 확인하세요. API 제한 시 `/seedance/videos`와 `/seedance/tasks`를 허용합니다. 원래 Token을 `ACEDATACLOUD_API_KEY`에 Bearer나 공백 없이 설정하고 prompt나 커밋 파일에 넣지 마세요.
@@ -28,4 +28,4 @@ print(result)
 
 성공한 저장 작업은 status=succeeded, success=true, media_urls와 제공된 원래 Credits cost를 반환합니다. 중첩 실패 상태나 최종 미디어 누락은 ToolFailure입니다. 비공개 응답 본문을 노출하지 않고 HTTP 의미를 유지합니다. 유료 HTTP 자동 재시도, 결제 처리기 또는 모델 fallback은 없습니다. 인스턴스당 1회 생성은 자금 한도나 권한 시스템이 아닙니다.
 
-[영문/중문 단계별 안내](https://github.com/AceDataCloud/SeedanceCrewAI/tree/3b34aef8608a081a7ffd40cd5ab2d0f8091d3503)에서 가려진 Key 이미지, 환경 변수, 실제 필드, 생성/조회, 오류 및 개인정보 처리를 확인하세요. 공식 CrewAI 역사 이미지는 상호작용 참고이며 Ace 실행이나 새 GUI 증거가 아닙니다. Linux Python 3.10/3.12/3.13 전체 설치,18개 무료 테스트 및 깨끗한 wheel 설치가 통과했습니다. 모델 결정은 로컬 fixture이며 유료 모델 검증이 아닙니다.
+[영문/중문 단계별 안내](https://github.com/AceDataCloud/SeedanceCrewAI/tree/aafee2369346540b2bbf2f73f99079f7ae8ab5e6)에서 가려진 Key 이미지, 환경 변수, 실제 필드, 생성/조회, 오류 및 개인정보 처리를 확인하세요. 공식 CrewAI 역사 이미지는 상호작용 참고이며 Ace 실행이나 새 GUI 증거가 아닙니다. Linux Python 3.10/3.12/3.13 전체 설치,19개 무료 테스트 및 깨끗한 wheel 설치가 통과했습니다. 모델 결정은 로컬 fixture이며 유료 모델 검증이 아닙니다.

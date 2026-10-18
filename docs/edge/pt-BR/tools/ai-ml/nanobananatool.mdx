@@ -8,7 +8,7 @@ mode: "wide"
 A integração independente é fornecida pela Ace Data Cloud; não é produto oficial de Nano Banana ou CrewAI. O código está em revisão, sem alegar lançamento PyPI ou catálogo AMP. Instale a versão imutável abaixo; repositório, prévia ou testes aprovados não equivalem à inclusão oficial.
 
 ```bash
-uv add 'crewai-nano-banana @ git+https://github.com/AceDataCloud/NanoBananaCrewAI.git@230029c59a3816be7db4a6ff64d84dd3c570df26'
+uv add 'crewai-nano-banana @ git+https://github.com/AceDataCloud/NanoBananaCrewAI.git@c5dc7a3fc5be552df54b06bb75df975c658103de'
 ```
 
 Cadastre-se/entre em [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_api_key), abra General application e copie o Token de consumo ou use Manage Keys → Create. Confira acesso a Nano Banana, saldo e [preços dos modelos](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_pricing). Ao restringir APIs, permita `/nano-banana/images` e `/nano-banana/tasks`. Configure o Token bruto em `ACEDATACLOUD_API_KEY`, sem Bearer ou espaços; nunca em prompts ou arquivos versionados.
@@ -28,4 +28,4 @@ Após aprovar modelo e orçamento, adicione `NanoBananaGenerateImageTool()` e `N
 
 Tarefas armazenadas concluídas retornam status=succeeded, success=true, media_urls e o cost original em Credits quando disponível. Falhas aninhadas ou mídia final ausente produzem ToolFailure. HTTP mantém seu significado sem expor corpos privados. Sem repetição automática de HTTP pago, pagamento ou fallback. Uma geração por instância não é teto financeiro nem autorização.
 
-O [guia em inglês/chinês](https://github.com/AceDataCloud/NanoBananaCrewAI/tree/230029c59a3816be7db4a6ff64d84dd3c570df26) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,18 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.
+O [guia em inglês/chinês](https://github.com/AceDataCloud/NanoBananaCrewAI/tree/c5dc7a3fc5be552df54b06bb75df975c658103de) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,19 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.
