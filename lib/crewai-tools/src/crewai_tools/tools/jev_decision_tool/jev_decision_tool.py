@@ -28,6 +28,7 @@ class JevDecisionToolSchema(BaseModel):
 
     @model_validator(mode="after")
     def validate_input(self) -> JevDecisionToolSchema:
+        """Reject missing state, blank text or labels, and fewer than two choices."""
         if self.state is None:
             raise ValueError("state cannot be None")
         if not self.question.strip():
@@ -89,12 +90,14 @@ class JevDecisionTool(BaseTool):
         async_client: Any | None = None,
         **kwargs: Any,
     ) -> None:
+        """Configure independent sync and async clients without taking ownership."""
         super().__init__(**kwargs)
         self._client = client
         self._async_client = async_client
         self.model = model
 
     def _build_client(self) -> Any:
+        """Reuse the injected sync client or create one with SDK configuration."""
         if self._client is not None:
             return self._client
         try:
@@ -102,11 +105,12 @@ class JevDecisionTool(BaseTool):
         except ImportError as e:
             raise ImportError(
                 "The 'typesafe-sdk' package is required to use JevDecisionTool. "
-                "Install it with: uv add --optional typesafe-sdk typesafe-sdk"
+                "Install it with: uv add typesafe-sdk"
             ) from e
         return TypeSafeClient(model=self.model)
 
     def _build_async_client(self) -> Any:
+        """Reuse the injected async client or create one with SDK configuration."""
         if self._async_client is not None:
             return self._async_client
         try:
@@ -114,7 +118,7 @@ class JevDecisionTool(BaseTool):
         except ImportError as e:
             raise ImportError(
                 "The 'typesafe-sdk' package is required to use JevDecisionTool. "
-                "Install it with: uv add --optional typesafe-sdk typesafe-sdk"
+                "Install it with: uv add typesafe-sdk"
             ) from e
         return AsyncTypeSafeClient(model=self.model)
 
@@ -122,13 +126,14 @@ class JevDecisionTool(BaseTool):
     def _make_question(
         validated: JevDecisionToolSchema, *, injected_client: bool
     ) -> Any:
+        """Build a Choice request, allowing injected clients to work without the SDK."""
         try:
             from typesafe_sdk import Choice
         except ImportError as e:
             if not injected_client:
                 raise ImportError(
                     "The 'typesafe-sdk' package is required to use JevDecisionTool. "
-                    "Install it with: uv add --optional typesafe-sdk typesafe-sdk"
+                    "Install it with: uv add typesafe-sdk"
                 ) from e
             return {
                 "type": "choice",
@@ -141,6 +146,7 @@ class JevDecisionTool(BaseTool):
     def _format_response(
         response: Any, choices: Mapping[str, Any | None]
     ) -> dict[str, Any]:
+        """Validate the selected label and preserve the SDK decision metadata."""
         answer = getattr(response, "choices", {}).get("decision")
         if answer is None:
             return {
@@ -184,6 +190,7 @@ class JevDecisionTool(BaseTool):
         question: str,
         choices: Mapping[str, Any | None],
     ) -> dict[str, Any]:
+        """Make a synchronous decision and close only clients created by this tool."""
         try:
             validated = JevDecisionToolSchema(
                 state=state, question=question, choices=dict(choices)

@@ -15,17 +15,20 @@ import pytest
 
 class FakeChoice:
     def __init__(self, instructions: str, criteria: dict[str, object | None]) -> None:
+        """Capture the instructions and criteria passed to the SDK Choice constructor."""
         self.instructions = instructions
         self.criteria = criteria
 
 
 def _install_typesafe_stub(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace the SDK module with a credential-free Choice implementation."""
     module = ModuleType("typesafe_sdk")
     module.Choice = FakeChoice
     monkeypatch.setitem(sys.modules, "typesafe_sdk", module)
 
 
 def test_schema_rejects_empty_question() -> None:
+    """Reject questions containing only whitespace."""
     with pytest.raises(ValueError, match="question cannot be empty"):
         JevDecisionToolSchema(
             state="ticket",
@@ -35,6 +38,7 @@ def test_schema_rejects_empty_question() -> None:
 
 
 def test_schema_requires_two_choices() -> None:
+    """Require at least two candidate labels for a decision."""
     with pytest.raises(ValueError, match="at least two labels"):
         JevDecisionToolSchema(
             state="ticket",
@@ -46,6 +50,7 @@ def test_schema_requires_two_choices() -> None:
 def test_run_returns_choice_probabilities_and_confidence(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Forward the request and preserve the SDK answer and metadata."""
     _install_typesafe_stub(monkeypatch)
     client = MagicMock()
     client.system_one.return_value = SimpleNamespace(
@@ -90,6 +95,7 @@ def test_run_returns_choice_probabilities_and_confidence(
 
 
 def test_run_reports_missing_choice_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Report a missing decision answer as a structured failure."""
     _install_typesafe_stub(monkeypatch)
     client = MagicMock()
     client.system_one.return_value = SimpleNamespace(choices={})
@@ -105,6 +111,7 @@ def test_run_reports_missing_choice_answer(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_run_reports_sdk_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Return SDK exceptions as explicit failure results."""
     _install_typesafe_stub(monkeypatch)
     client = MagicMock()
     client.system_one.side_effect = RuntimeError("service unavailable")
@@ -121,6 +128,7 @@ def test_run_reports_sdk_failure(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_missing_dependency_error_is_actionable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Provide a direct SDK installation command when the dependency is absent."""
     monkeypatch.setitem(sys.modules, "typesafe_sdk", None)
     tool = JevDecisionTool()
 
@@ -132,16 +140,18 @@ def test_missing_dependency_error_is_actionable(
 
     assert result["success"] is False
     assert "typesafe-sdk" in result["error"]
-    assert "uv add --optional typesafe-sdk typesafe-sdk" in result["error"]
+    assert "uv add typesafe-sdk" in result["error"]
 
 
 def test_public_import_from_crewai_tools() -> None:
+    """Expose the tool through the public package import."""
     from crewai_tools import JevDecisionTool as PublicJevDecisionTool
 
     assert PublicJevDecisionTool is JevDecisionTool
 
 
 def test_tool_metadata() -> None:
+    """Declare the tool name, optional package, and API-key requirement."""
     tool = JevDecisionTool(client=MagicMock())
 
     assert tool.name == "Jev Decision Tool"
@@ -152,6 +162,7 @@ def test_tool_metadata() -> None:
 
 @pytest.fixture
 def decision_input() -> dict[str, Any]:
+    """Provide one valid request shared by sync and async behavior checks."""
     return {
         "state": {"ticket": "charged twice"},
         "question": "Which team?",
@@ -161,6 +172,7 @@ def decision_input() -> dict[str, Any]:
 
 @pytest.fixture
 def decision_response() -> SimpleNamespace:
+    """Provide an SDK-shaped answer whose confidence differs from its probability."""
     return SimpleNamespace(
         model="jev-test",
         usage=SimpleNamespace(model_dump=lambda: {"input_tokens": 10}),
@@ -176,6 +188,7 @@ def decision_response() -> SimpleNamespace:
 
 @pytest.fixture
 def async_client(decision_response: SimpleNamespace) -> SimpleNamespace:
+    """Provide awaitable request and cleanup methods without network access."""
     return SimpleNamespace(
         system_one=AsyncMock(return_value=decision_response), aclose=AsyncMock()
     )
@@ -188,6 +201,7 @@ async def test_arun_matches_sync_and_awaits_request(
     decision_response: SimpleNamespace,
     decision_input: dict[str, Any],
 ) -> None:
+    """Await only the async client and return the same result as the sync path."""
     _install_typesafe_stub(monkeypatch)
     sync_client = MagicMock()
     sync_client.system_one.return_value = decision_response
@@ -221,6 +235,7 @@ async def test_async_client_lifecycle(
     owned: bool,
     failure: bool,
 ) -> None:
+    """Close owned clients on success or failure while leaving injected clients open."""
     _install_typesafe_stub(monkeypatch)
     factory = MagicMock(return_value=async_client)
     monkeypatch.setattr(
@@ -254,6 +269,7 @@ async def test_cancellation_propagates_and_respects_client_ownership(
     decision_input: dict[str, Any],
     owned: bool,
 ) -> None:
+    """Propagate task cancellation and clean up only the client owned by the tool."""
     _install_typesafe_stub(monkeypatch)
     monkeypatch.setattr(
         sys.modules["typesafe_sdk"],
@@ -265,6 +281,7 @@ async def test_cancellation_propagates_and_respects_client_ownership(
     release = asyncio.Event()
 
     async def pending_request(**kwargs: Any) -> None:
+        """Keep the fake request pending until its task is cancelled."""
         started.set()
         await release.wait()
 

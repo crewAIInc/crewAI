@@ -6,7 +6,7 @@ and return the selected label, probability distribution, and confidence.
 Install the optional dependency before using the tool:
 
 ```bash
-uv add --optional typesafe-sdk typesafe-sdk
+uv add typesafe-sdk
 ```
 
 Set `TYPESAFE_API_KEY`, then opt in from a task or direct tool call:
