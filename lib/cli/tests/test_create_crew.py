@@ -1468,6 +1468,14 @@ def test_agents_md_numbered_lists_have_no_gaps(tmp_path, evaluation):
 # Every capability the file must at least name. Removing one is a deliberate edit
 # here, in the same diff, so a reviewer sees it.
 AGENTS_MD_REFERENCES = {
+    # Core API: models outside the Claude family don't know these without the file.
+    "classic crew class": r"@CrewBase",
+    "task context": r"context=",
+    "crew output": r"CrewOutput",
+    "custom tools": r"BaseTool",
+    "flow decorators": r"@start\(\)",
+    "flow state": r"Flow\[",
+    "flow router": r"@router",
     "workflow: trace and evaluate every change": r"traced run passes `crewai eval`",
     "workflow: ask before deploying": r"Ask before the first `crewai deploy create`",
     "flow memory": r"self\.remember",

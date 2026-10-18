@@ -92,12 +92,19 @@ Detailed guides: the CrewAI skill pack for coding agents (`npx skills add crewai
 - `uv` for packages, never pip (`crewai install` syncs the project). CLI: `uv tool install crewai` (`--upgrade` to update). Commit `uv.lock` and `[tool.crewai] project_id` (`crewai login`, `run` and `deploy` write it; never copy it between projects or into a template).
 - `crewai run`, `crewai flow plot`, `crewai org list`, `crewai org current`, `crewai org switch <uuid>`, `crewai login`, `crewai traces enable|status`, `crewai deploy create|push|status|logs|list|validate`, `crewai deploy remove -u <uuid>`, `crewai triggers list`, `crewai triggers run <app>/<trigger>`, `crewai skill install @<org>/<handle>`, `crewai reset-memories -m` (memory; `-kn` knowledge), `crewai log-tasks-outputs` and `crewai replay -t <task_id>` (rerun from a task), `crewai create crew|flow|tool|skill <name>` (the old `crewai tool create` style still works but warns). `crewai test` and `crewai train` are legacy.
 
+### Core API
+
+- Classic crew: a `@CrewBase` class sets `agents_config = "config/agents.yaml"` and `tasks_config = "config/tasks.yaml"`; `@agent` and `@task` methods are named like the YAML keys and build `Agent(config=self.agents_config["name"])  # type: ignore[index]`; `@crew` returns `Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)`.
+- Tasks need a `description`, an `expected_output` and an `agent`; `context=[other_task]` feeds earlier outputs in, `output_file` writes the result, and `{var}` placeholders are filled from `kickoff(inputs={...})`.
+- `crew.kickoff(inputs={...})` returns a `CrewOutput` (`.raw`, `.pydantic`, `.json_dict`, `.tasks_output`, `.token_usage`). Limits: `max_iter`, `max_execution_time`, `max_rpm`.
+- Tools: subclass `BaseTool` (`name`, `description`, `args_schema`, `_run`) or decorate a function with `@tool("Name")` (`from crewai.tools import tool`; the docstring is the description).
+- Flows: subclass `Flow[MyState]` (a Pydantic model; read and write `self.state.x`); `from crewai.flow import Flow, start, listen, router`. `@start()` marks entry points; `@listen(step)` runs after `step` with its return value; `@router(step)` returns a label (`-> Literal["a", "b"]` or `emit=[...]`) that `@listen("a")` handlers take, and a handler must not be named after its label. In a step, run a crew with `MyCrew().crew().kickoff(inputs={...})`.
+- Classic crews and flows start from `src/<pkg>/main.py`: a crew exposes `run()`, a flow `kickoff()`. Python 3.10 to 3.13.
+
 ### Facts models get wrong
 
 - LLMs: `Agent(llm="openai/gpt-4o")` or `crewai.LLM(model=...)`, never `ChatOpenAI`.
-- Crew classes: `config=self.agents_config["name"]  # type: ignore[index]`; method names match YAML keys; every task needs a `description` and an `expected_output`.
 - Flow inputs are state fields with defaults; `kickoff(inputs={...})` and trigger payloads (the `@start()` method's `crewai_trigger_payload` parameter) override them. Never overwrite inputs in `@start()`. `crewai run` takes no `--inputs` for a Python flow.
-- Router labels: `-> Literal["a", "b"]` or `@router(step, emit=[...])`. An `@listen("x")` handler must not be named `x`.
 - A flow's last step returns its result; a deployed flow that returns nothing has an empty API result.
 - Memory across runs in a flow: `self.remember("text")` and `self.recall("query")` (matches have `.record.content`); AMP shows it on the deployment's Memory tab. No `Memory()` or `Crew(memory=True)` inside a flow; share it with `Crew(memory=self.memory.slice(scopes=[...], read_only=True))`. `@persist` (`from crewai.flow import persist`) saves state per run: continue one with `kickoff(inputs={"id": ...})`, or seed a new run from it with `kickoff(restore_from_state_id=...)`.
 - `tool_failure_policy="raise"` on an agent, task or crew turns a failed tool call into an error.
