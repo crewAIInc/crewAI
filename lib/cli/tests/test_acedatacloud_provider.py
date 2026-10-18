@@ -25,3 +25,17 @@ def test_json_setup_hides_api_key(tmp_path):
         _setup_env(tmp_path, "acedatacloud/gpt-4.1-mini")
     assert prompt.call_args.kwargs["hide_input"] is True
     assert write.call_args.args[1]["ACEDATACLOUD_API_KEY"] == "test-key"
+
+
+def test_default_json_picker_selects_ace_without_manual_input():
+    from crewai_cli.create_json_crew import _PROVIDERS, _default_model_for_provider, _select_model
+
+    provider_index = next(i for i, (key, label) in enumerate(_PROVIDERS) if key == "acedatacloud")
+    assert _PROVIDERS[provider_index][1] == "Ace Data Cloud"
+    assert _default_model_for_provider("acedatacloud") == "acedatacloud/gpt-4.1-mini"
+    with patch("crewai_cli.create_json_crew.pick_one", side_effect=[provider_index, 0]), \
+         patch("crewai_cli.create_json_crew.get_provider_models", return_value=[("gpt-4.1-mini", "GPT-4.1 Mini")]) as catalog, \
+         patch("crewai_cli.create_json_crew.click.prompt") as manual:
+        assert _select_model() == "acedatacloud/gpt-4.1-mini"
+    assert catalog.call_args.args == ("acedatacloud", [("gpt-4.1-mini", "GPT-4.1 Mini")])
+    manual.assert_not_called()

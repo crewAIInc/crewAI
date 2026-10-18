@@ -43,6 +43,7 @@ from crewai_cli.version import get_crewai_tools_dependency
 # ── Provider / model data ───────────────────────────────────────
 
 _PROVIDERS: list[tuple[str, str]] = [
+    ("acedatacloud", "Ace Data Cloud"),
     ("openai", "OpenAI"),
     ("anthropic", "Anthropic"),
     ("gemini", "Google Gemini"),
@@ -63,6 +64,7 @@ _PROVIDERS: list[tuple[str, str]] = [
 # Keep entries to real, current model ids — last verified against each vendor's
 # official model docs on 2026-08-17.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
+    "acedatacloud": [("gpt-4.1-mini", "GPT-4.1 Mini")],
     "openai": [
         ("gpt-5.5", "GPT-5.5"),
         ("gpt-5.5-pro", "GPT-5.5 Pro"),
