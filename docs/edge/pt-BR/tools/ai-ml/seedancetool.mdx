@@ -1,0 +1,31 @@
+---
+title: "Seedance by Ace Data Cloud"
+description: "Ferramentas nativas CrewAI para gerar Seedance e consultar a mesma tarefa assíncrona pela Ace Data Cloud."
+icon: video
+mode: "wide"
+---
+
+A integração independente é fornecida pela Ace Data Cloud; não é produto oficial de Seedance ou CrewAI. O código está em revisão, sem alegar lançamento PyPI ou catálogo AMP. Instale a versão imutável abaixo; repositório, prévia ou testes aprovados não equivalem à inclusão oficial.
+
+```bash
+uv add 'crewai-seedance @ git+https://github.com/AceDataCloud/SeedanceCrewAI.git@3b34aef8608a081a7ffd40cd5ab2d0f8091d3503'
+```
+
+Cadastre-se/entre em [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_api_key), abra General application e copie o Token de consumo ou use Manage Keys → Create. Confira acesso a Seedance, saldo e [preços dos modelos](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=seedancecrewai_docs_pricing). Ao restringir APIs, permita `/seedance/videos` e `/seedance/tasks`. Configure o Token bruto em `ACEDATACLOUD_API_KEY`, sem Bearer ou espaços; nunca em prompts ou arquivos versionados.
+
+A entrada é content estruturado (texto/imagem/áudio/vídeo), não prompt genérico. Use resolution minúscula, ratio e opções de duração/áudio compatíveis. Saída data.video_url ou data.content.video_url.
+
+Na primeira verificação gratuita, consulte uma tarefa já existente da mesma Key. Isso não cria mídia:
+
+```python
+from seedance_crewai import SeedanceRetrieveTaskTool
+
+result = SeedanceRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+Após aprovar modelo e orçamento, adicione `SeedanceGenerateVideoTool()` e `SeedanceRetrieveTaskTool()` à lista tools do Agent. São BaseTool nativas com nomes e schemas do serviço, sem MCP. A geração envia uma solicitação assíncrona paga uma vez; preserve task_id e consulte o mesmo ID. accepted/pending não é sucesso. Não gere novamente para consultar ou após timeout de resultado desconhecido.
+
+Tarefas armazenadas concluídas retornam status=succeeded, success=true, media_urls e o cost original em Credits quando disponível. Falhas aninhadas ou mídia final ausente produzem ToolFailure. HTTP mantém seu significado sem expor corpos privados. Sem repetição automática de HTTP pago, pagamento ou fallback. Uma geração por instância não é teto financeiro nem autorização.
+
+O [guia em inglês/chinês](https://github.com/AceDataCloud/SeedanceCrewAI/tree/3b34aef8608a081a7ffd40cd5ab2d0f8091d3503) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,18 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.

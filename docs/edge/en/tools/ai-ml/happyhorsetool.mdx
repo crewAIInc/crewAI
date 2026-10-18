@@ -1,0 +1,31 @@
+---
+title: "HappyHorse by Ace Data Cloud"
+description: "Native CrewAI tools for HappyHorse generation and same-ID asynchronous retrieval through Ace Data Cloud."
+icon: video
+mode: "wide"
+---
+
+This independent integration is provided by Ace Data Cloud, not an official HappyHorse or CrewAI product. The source is under review: no PyPI release or AMP catalog listing is claimed. Install the exact immutable source version below; a repository, preview or passing test is not official inclusion.
+
+```bash
+uv add 'crewai-happyhorse @ git+https://github.com/AceDataCloud/HappyHorseCrewAI.git@fb9afa391146fa482cd47eca51698e8ad7f427f8'
+```
+
+Register/sign in to [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_api_key), open General application, then copy the API-consumer Token or use Manage Keys → Create for a dedicated key. Check HappyHorse access, current balance and [model pricing](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_pricing). If restricting APIs, allow `/happyhorse/videos` and `/happyhorse/tasks`. Set the raw Token in environment variable `ACEDATACLOUD_API_KEY`, without Bearer or spaces; never put it in prompts or versioned files.
+
+Preserve explicit generate/image_to_video/reference_to_video/video_edit actions and their required image_url/image_urls/video_url. Resolution is uppercase 720P/1080P, duration3..15. Results are a data list of video_url/state.
+
+For the first free check, retrieve a pre-existing task owned by that Key. This creates no media:
+
+```python
+from happyhorse_crewai import HappyHorseRetrieveTaskTool
+
+result = HappyHorseRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+After approving the generation model and budget, add `HappyHorseGenerateVideoTool()` and `HappyHorseRetrieveTaskTool()` to the Agent tools list. They are native BaseTool implementations with visible service names and schemas; no MCP setup is required. Generation submits one billable asynchronous request; preserve task_id and query the same ID. accepted/pending is not success. Do not regenerate to poll or after a timeout with unknown submission outcome.
+
+Successful stored tasks return status=succeeded, success=true, media_urls and original Credits cost when available. Nested failed states or missing terminal media are structured ToolFailure, not success. HTTP meaning is preserved without dumping private response bodies. No automatic paid HTTP retry, payment handler or model fallback is added. One generation use per instance is not a funds cap or permission system.
+
+See the [English / Chinese step-by-step guide](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/fb9afa391146fa482cd47eca51698e8ad7f427f8) for authentic redacted Key screenshots, environment placement, service-specific fields, generation/query examples, errors and privacy. Official historical CrewAI screenshots are interaction references, not proof that Ace ran or that a new GUI exists. Full Linux Python 3.10/3.12/3.13 installation,18 no-bill tests and clean wheel installation passed; model decisions in tests are deterministic local fixtures, not paid model validation.

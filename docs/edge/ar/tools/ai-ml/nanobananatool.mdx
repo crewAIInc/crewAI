@@ -1,0 +1,31 @@
+---
+title: "Nano Banana by Ace Data Cloud"
+description: "أدوات CrewAI أصلية لإنشاء Nano Banana واسترجاع المهمة غير المتزامنة نفسها عبر Ace Data Cloud."
+icon: image
+mode: "wide"
+---
+
+يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من Nano Banana أو CrewAI. المصدر قيد المراجعة؛ لا ندّعي نشره على PyPI أو إدراجه في كتالوج AMP. ثبّت نسخة المصدر الثابتة أدناه؛ المستودع أو المعاينة أو نجاح الاختبارات لا يعني الإدراج الرسمي.
+
+```bash
+uv add 'crewai-nano-banana @ git+https://github.com/AceDataCloud/NanoBananaCrewAI.git@230029c59a3816be7db4a6ff64d84dd3c570df26'
+```
+
+سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_api_key) وافتح General application، ثم انسخ Token لاستهلاك API أو أنشئ مفتاحًا مخصصًا عبر Manage Keys → Create. تحقّق من صلاحية Nano Banana والرصيد و[أسعار النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_pricing). عند تقييد APIs اسمح بـ `/nano-banana/images` و`/nano-banana/tasks`. اضبط Token الخام في `ACEDATACLOUD_API_KEY` دون Bearer أو مسافات، ولا تضعه في prompt أو ملفات مودعة.
+
+يستخدم /nano-banana/images أفعال generate/edit وcount1..4 وaspect_ratio ودقة1K/2K/4K وimage_urls؛ edit يتطلب المراجع. لا يستخدم size/quality/n. النتيجة data[].image_url.
+
+لأول فحص مجاني، استرجع مهمة موجودة تملكها بالمفتاح نفسه. لا ينشئ ذلك وسائط:
+
+```python
+from nano_banana_crewai import NanoBananaRetrieveTaskTool
+
+result = NanoBananaRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+بعد الموافقة على النموذج والميزانية، أضف `NanoBananaGenerateImageTool()` و`NanoBananaRetrieveTaskTool()` إلى أدوات Agent. هما BaseTool أصليتان بأسماء ومخططات واضحة، دون إعداد MCP. يرسل الإنشاء طلبًا غير متزامن مدفوعًا مرة واحدة؛ احفظ task_id واستعلم عن المعرّف نفسه. accepted/pending ليس نجاحًا. لا تُعد الإنشاء للاستعلام أو بعد مهلة مجهولة النتيجة.
+
+تعيد المهمة المخزنة الناجحة status=succeeded وsuccess=true وmedia_urls والتكلفة الأصلية بوحدة Credits إن توفّرت. الحالات الفاشلة المتداخلة أو غياب الوسائط النهائية ينتج ToolFailure. يُحفظ معنى HTTP دون عرض استجابات خاصة. لا توجد إعادة محاولة مدفوعة تلقائية أو معالج دفع أو نموذج بديل. الاستخدام الواحد لكل مثيل ليس حدًا ماليًا أو نظام إذن.
+
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/NanoBananaCrewAI/tree/230029c59a3816be7db4a6ff64d84dd3c570df26) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و18 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.

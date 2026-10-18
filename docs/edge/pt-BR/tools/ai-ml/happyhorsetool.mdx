@@ -1,0 +1,31 @@
+---
+title: "HappyHorse by Ace Data Cloud"
+description: "Ferramentas nativas CrewAI para gerar HappyHorse e consultar a mesma tarefa assíncrona pela Ace Data Cloud."
+icon: video
+mode: "wide"
+---
+
+A integração independente é fornecida pela Ace Data Cloud; não é produto oficial de HappyHorse ou CrewAI. O código está em revisão, sem alegar lançamento PyPI ou catálogo AMP. Instale a versão imutável abaixo; repositório, prévia ou testes aprovados não equivalem à inclusão oficial.
+
+```bash
+uv add 'crewai-happyhorse @ git+https://github.com/AceDataCloud/HappyHorseCrewAI.git@fb9afa391146fa482cd47eca51698e8ad7f427f8'
+```
+
+Cadastre-se/entre em [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_api_key), abra General application e copie o Token de consumo ou use Manage Keys → Create. Confira acesso a HappyHorse, saldo e [preços dos modelos](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_pricing). Ao restringir APIs, permita `/happyhorse/videos` e `/happyhorse/tasks`. Configure o Token bruto em `ACEDATACLOUD_API_KEY`, sem Bearer ou espaços; nunca em prompts ou arquivos versionados.
+
+Preserve ações generate/image_to_video/reference_to_video/video_edit e referências exigidas image_url/image_urls/video_url. Resolução720P/1080P, duração3..15. Saída lista data com video_url/state.
+
+Na primeira verificação gratuita, consulte uma tarefa já existente da mesma Key. Isso não cria mídia:
+
+```python
+from happyhorse_crewai import HappyHorseRetrieveTaskTool
+
+result = HappyHorseRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+Após aprovar modelo e orçamento, adicione `HappyHorseGenerateVideoTool()` e `HappyHorseRetrieveTaskTool()` à lista tools do Agent. São BaseTool nativas com nomes e schemas do serviço, sem MCP. A geração envia uma solicitação assíncrona paga uma vez; preserve task_id e consulte o mesmo ID. accepted/pending não é sucesso. Não gere novamente para consultar ou após timeout de resultado desconhecido.
+
+Tarefas armazenadas concluídas retornam status=succeeded, success=true, media_urls e o cost original em Credits quando disponível. Falhas aninhadas ou mídia final ausente produzem ToolFailure. HTTP mantém seu significado sem expor corpos privados. Sem repetição automática de HTTP pago, pagamento ou fallback. Uma geração por instância não é teto financeiro nem autorização.
+
+O [guia em inglês/chinês](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/fb9afa391146fa482cd47eca51698e8ad7f427f8) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,18 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.

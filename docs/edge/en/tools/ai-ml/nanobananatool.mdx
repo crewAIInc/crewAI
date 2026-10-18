@@ -1,0 +1,31 @@
+---
+title: "Nano Banana by Ace Data Cloud"
+description: "Native CrewAI tools for Nano Banana generation and same-ID asynchronous retrieval through Ace Data Cloud."
+icon: image
+mode: "wide"
+---
+
+This independent integration is provided by Ace Data Cloud, not an official Nano Banana or CrewAI product. The source is under review: no PyPI release or AMP catalog listing is claimed. Install the exact immutable source version below; a repository, preview or passing test is not official inclusion.
+
+```bash
+uv add 'crewai-nano-banana @ git+https://github.com/AceDataCloud/NanoBananaCrewAI.git@230029c59a3816be7db4a6ff64d84dd3c570df26'
+```
+
+Register/sign in to [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_api_key), open General application, then copy the API-consumer Token or use Manage Keys → Create for a dedicated key. Check Nano Banana access, current balance and [model pricing](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=nanobananacrewai_docs_pricing). If restricting APIs, allow `/nano-banana/images` and `/nano-banana/tasks`. Set the raw Token in environment variable `ACEDATACLOUD_API_KEY`, without Bearer or spaces; never put it in prompts or versioned files.
+
+Native /nano-banana/images uses generate/edit, count1..4, aspect_ratio, resolution1K/2K/4K and optional image_urls; edit requires references. It does not use GPT Image size/quality/n. Results are data[].image_url.
+
+For the first free check, retrieve a pre-existing task owned by that Key. This creates no media:
+
+```python
+from nano_banana_crewai import NanoBananaRetrieveTaskTool
+
+result = NanoBananaRetrieveTaskTool().run(task_id="YOUR_EXISTING_TASK_ID", wait_seconds=0)
+print(result)
+```
+
+After approving the generation model and budget, add `NanoBananaGenerateImageTool()` and `NanoBananaRetrieveTaskTool()` to the Agent tools list. They are native BaseTool implementations with visible service names and schemas; no MCP setup is required. Generation submits one billable asynchronous request; preserve task_id and query the same ID. accepted/pending is not success. Do not regenerate to poll or after a timeout with unknown submission outcome.
+
+Successful stored tasks return status=succeeded, success=true, media_urls and original Credits cost when available. Nested failed states or missing terminal media are structured ToolFailure, not success. HTTP meaning is preserved without dumping private response bodies. No automatic paid HTTP retry, payment handler or model fallback is added. One generation use per instance is not a funds cap or permission system.
+
+See the [English / Chinese step-by-step guide](https://github.com/AceDataCloud/NanoBananaCrewAI/tree/230029c59a3816be7db4a6ff64d84dd3c570df26) for authentic redacted Key screenshots, environment placement, service-specific fields, generation/query examples, errors and privacy. Official historical CrewAI screenshots are interaction references, not proof that Ace ran or that a new GUI exists. Full Linux Python 3.10/3.12/3.13 installation,18 no-bill tests and clean wheel installation passed; model decisions in tests are deterministic local fixtures, not paid model validation.
