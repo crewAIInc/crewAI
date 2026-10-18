@@ -1005,6 +1005,7 @@ def _setup_env(folder_path: Path, llm_model: str) -> None:
                     default="",
                     show_default=False,
                     prompt_suffix=click.style(" > ", fg="bright_white"),
+                    hide_input=details.get("hide_input", False),
                 )
                 if api_key_value.strip():
                     env_vars[details["key_name"]] = api_key_value

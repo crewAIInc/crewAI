@@ -8,6 +8,13 @@ CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID = "client_01JYT06R59SP0NXYGD994NFXXX"
 CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN = "login.crewai.com"
 
 ENV_VARS: dict[str, list[dict[str, Any]]] = {
+    "acedatacloud": [
+        {
+            "prompt": "Enter your Ace Data Cloud API key (press Enter to skip)",
+            "key_name": "ACEDATACLOUD_API_KEY",
+            "hide_input": True,
+        }
+    ],
     "openai": [
         {
             "prompt": "Enter your OPENAI API key (press Enter to skip)",
@@ -116,6 +123,7 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
 
 
 PROVIDERS: list[str] = [
+    "acedatacloud",
     "openai",
     "anthropic",
     "gemini",
@@ -131,6 +139,7 @@ PROVIDERS: list[str] = [
 ]
 
 MODELS: dict[str, list[str]] = {
+    "acedatacloud": ["acedatacloud/gpt-4.1-mini"],
     "openai": [
         "gpt-5.6-sol",
         "gpt-5.6-terra",

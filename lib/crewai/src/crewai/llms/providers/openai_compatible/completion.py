@@ -44,6 +44,12 @@ class ProviderConfig:
 
 
 OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
+    "acedatacloud": ProviderConfig(
+        base_url="https://api.acedata.cloud/v1",
+        api_key_env="ACEDATACLOUD_API_KEY",
+        base_url_env="ACEDATACLOUD_BASE_URL",
+        api_key_required=True,
+    ),
     "openrouter": ProviderConfig(
         base_url="https://openrouter.ai/api/v1",
         api_key_env="OPENROUTER_API_KEY",
