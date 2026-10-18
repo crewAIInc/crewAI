@@ -64,7 +64,7 @@ class Converter(OutputConverter):
                 result=response,
                 model=self.model,
                 is_json_output=False,
-                agent=None,
+                agent=self.agent,
             )
             if isinstance(partial, BaseModel):
                 return partial
