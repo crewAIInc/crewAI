@@ -106,3 +106,26 @@ Detailed guides: the CrewAI skill pack for coding agents (`npx skills add crewai
 - Integrations: selectors are `app[/action][@connection]` (`gmail` loads every action, `gmail/send_email` one, which gives better tool choices). Connect the app on AMP's Integrations page; `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` in `.env`; `apps: [slack/send_message]` in YAML or `CrewaiPlatformTools(apps=[...])`. Supported apps are in the installed `crewai_core/platform_apps.py` (`PLATFORM_APPS`); print `[t.name for t in CrewaiPlatformTools(apps=["slack"])]` to see the live actions and copy selectors from those; a selector must load at least one tool.
 - AMP skills: `crewai skill list` shows installed ones only. List the organization's with `uv run python -c "from crewai_cli.skills.main import SkillCommand; [print(s['handle'], s['latest_version'], '-', s['description'][:90]) for s in SkillCommand().plus_api_client.list_skills().json()['data']]"`. Attach under the agent's `skills:` as `"@<org-uuid>/<handle>@<version>"`; load into every prompt with `skills=load_skills([...])` (`from crewai.skills import load_skills`). Skills resolve from `./skills/<handle>/`, then `~/.crewai/skills/`, then a download.
 - `.env`: the LLM key, `MODEL=` for the default model, `CREWAI_TRACING_ENABLED=true`, and `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` for integrations. Never a deployment's URL or token: `.env` is uploaded on deploy. List every new variable in `.env.example`.
+
+### Also available
+
+Not used by default; reach for these when the task calls for them. Each line ends with its docs path under https://docs.crewai.com/en/.
+
+- Guardrails: `Task(guardrail=fn_or_"rule")` or `guardrails=[...]`; `fn(output)` returns `(ok, value_or_feedback)`. `concepts/tasks#task-guardrails`
+- Structured task output: `Task(output_pydantic=Model)` or `output_json=Model`; read `result.pydantic` or `.json_dict`. `concepts/tasks`
+- Knowledge: `knowledge_sources=[StringKnowledgeSource(content=...), PDFKnowledgeSource(file_paths=[...])]` on an agent or crew. `concepts/knowledge`
+- Hierarchical crews: `Crew(process=Process.hierarchical, manager_llm=...)` or `manager_agent=`; delegation is `Agent(allow_delegation=True)`. `learn/hierarchical-process`
+- Planning: `Crew(planning=True)` plans before the tasks run. `concepts/planning`
+- Async and batch: `await crew.akickoff(...)`, `kickoff_for_each(inputs=[...])`, `akickoff_for_each`. `learn/kickoff-async`
+- Streaming: `stream=True` on a crew or flow; iterate what `kickoff()` returns, then read `.result`. `concepts/streaming`
+- Events: subclass `BaseEventListener`, register handlers with `@crewai_event_bus.on(Event)` in `setup_listeners`, instantiate it once. `concepts/event-listener`
+- Kickoff hooks: `@before_kickoff` and `@after_kickoff` in a `@CrewBase` class. `learn/before-and-after-kickoff-hooks`
+- MCP: `Agent(mcps=["https://.../mcp", "<connected-slug>", MCPServerStdio(...)])` (`from crewai.mcp import MCPServerStdio`). `mcp/overview`
+- A2A: `Agent(a2a=A2AClientConfig(endpoint=...))` calls a remote agent; `A2AServerConfig` exposes one (`from crewai.a2a import A2AClientConfig, A2AServerConfig`).
+- Human feedback in flows: `@human_feedback(message=..., emit=["approved", "rejected"], llm=...)` routes a step on the reply. `learn/human-feedback-in-flows`
+- Chat: `crewai chat` talks to a classic crew (its `chat_llm`, else `MODEL`; JSON crews aren't supported yet), and `crewai run` opens chat for a flow with `conversational = True`. Both need a terminal, so the user runs them; test a flow's turns with `flow.handle_turn(msg, session_id=...)` or `stream_turn`. `guides/flows/conversational-flows`
+- Declarative flows: `crewai create flow <name> --declarative` keeps the flow in `flow.yaml`. `concepts/cli`
+- Checkpoints: `Crew(checkpoint=True)`; resume with `kickoff(from_checkpoint=CheckpointConfig(restore_from=path))`. `concepts/checkpointing`
+- Flow conditions: `@listen(or_(a, b))`, `and_(a, b)`; `flow.plot()` draws the graph. `concepts/flows`
+- Tools: `crewai_tools` has 100+ (`SerperDevTool`, `ScrapeWebsiteTool`, `FileReadTool`); check it before writing one. `tools/overview`
+- Files: `kickoff(input_files={"chart": ImageFile(source="chart.png")})` (`from crewai_files import ImageFile`). `concepts/files`

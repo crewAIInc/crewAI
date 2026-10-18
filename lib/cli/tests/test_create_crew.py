@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import builtins
 import keyword
@@ -1458,3 +1459,112 @@ def test_agents_md_numbered_lists_have_no_gaps(tmp_path, evaluation):
             numbers = []
     assert not re.search(r"^### \d", agents_md, re.M)
     assert ("crewai eval" in agents_md) is evaluation
+
+
+# Guards for the AGENTS.md every crew and flow project receives: references nobody
+# meant to delete, a size budget, and code and links that work. Whether an edit makes
+# coding agents better or worse is measured separately, with models in the loop.
+
+# Every capability the file must at least name. Removing one is a deliberate edit
+# here, in the same diff, so a reviewer sees it.
+AGENTS_MD_REFERENCES = {
+    "workflow: trace and evaluate every change": r"traced run passes `crewai eval`",
+    "workflow: ask before deploying": r"Ask before the first `crewai deploy create`",
+    "flow memory": r"self\.remember",
+    "AMP integrations": r"CrewaiPlatformTools",
+    "AMP skills": r"skills:",
+    "tool failure policy": r"tool_failure_policy",
+    "guardrails": r"guardrail",
+    "structured output": r"output_pydantic|response_format",
+    "knowledge sources": r"knowledge_sources",
+    "hierarchical process": r"Process\.hierarchical|manager_llm",
+    "delegation": r"allow_delegation",
+    "planning": r"planning_config",
+    "async and batch kickoff": r"kickoff_async|akickoff|kickoff_for_each",
+    "streaming": r"stream=True",
+    "event listeners": r"BaseEventListener",
+    "lifecycle hooks": r"@before_kickoff|@after_kickoff",
+    "MCP": r"mcps=",
+    "human feedback in flows": r"@human_feedback",
+    "conversational flows": r"conversational",
+    "declarative flows": r"--declarative|declarative flow",
+    "checkpointing": r"checkpoint",
+    "flow conditions": r"or_\(|and_\(",
+    "crewai_tools catalog": r"crewai_tools|crewai-tools",
+    "A2A": r"A2AClientConfig",
+    "file inputs": r"input_files",
+}
+
+# Always-loaded tokens (characters / 4). Raise it on purpose, with the eval's results.
+AGENTS_MD_TOKEN_BUDGET = 4_500
+
+DOCS = Path(__file__).resolve().parents[3] / "docs"
+
+# Text the file once carried that is wrong on main.
+AGENTS_MD_NEVER = (
+    "CREWAI_PLATFORM_INTEGRATION_TOKEN",  # renamed to CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN
+    "from crewai.flow.flow import persist",  # raises ImportError; persist lives in crewai.flow
+    "reasoning=True",  # deprecated for planning_config
+    "multimodal=True",  # deprecated: pass files natively
+    "allow_code_execution=True",  # deprecated: CodeInterpreterTool is gone
+)
+
+
+@pytest.fixture
+def shipped_agents_md(tmp_path) -> str:
+    copy_assistant_instructions(tmp_path, evaluation=True)
+    return (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("feature", sorted(AGENTS_MD_REFERENCES))
+def test_agents_md_references_the_feature(shipped_agents_md, feature):
+    assert re.search(AGENTS_MD_REFERENCES[feature], shipped_agents_md), (
+        f"AGENTS.md no longer references {feature}; if that is intended, "
+        "remove it from AGENTS_MD_REFERENCES in the same change"
+    )
+
+
+def test_agents_md_stays_within_its_token_budget(shipped_agents_md):
+    tokens = len(shipped_agents_md) // 4
+    assert tokens <= AGENTS_MD_TOKEN_BUDGET, (
+        f"AGENTS.md is ~{tokens} tokens, over the {AGENTS_MD_TOKEN_BUDGET} budget"
+    )
+
+
+@pytest.mark.parametrize("text", AGENTS_MD_NEVER)
+def test_agents_md_never_teaches_what_main_removed(shipped_agents_md, text):
+    assert text not in shipped_agents_md, f"AGENTS.md teaches {text!r}, which is wrong on main"
+
+
+def test_agents_md_imports_resolve(shipped_agents_md):
+    imports = re.findall(r"`((?:from|import) crewai[\w.]*(?: import [\w, ]+)?)`", shipped_agents_md)
+    imports += [
+        line
+        for block in re.findall(r"```python\n(.*?)```", shipped_agents_md, re.S)
+        for line in block.splitlines()
+        if re.match(r"(from|import) crewai", line)
+    ]
+    assert imports, "AGENTS.md shows no crewai import to check"
+    for statement in imports:
+        exec(statement, {})  # noqa: S102 - our own template's import lines
+
+
+def test_agents_md_python_examples_compile(shipped_agents_md):
+    for block in re.findall(r"```python\n(.*?)```", shipped_agents_md, re.S):
+        ast.parse(block)
+
+
+def test_agents_md_docs_paths_exist(shipped_agents_md):
+    # Index lines end with a docs path relative to https://docs.crewai.com/en/.
+    links = re.findall(
+        r"`([a-z]+(?:/[a-z0-9-]+)+)(?:#([a-z0-9-]+))?`\s*$", shipped_agents_md, re.M
+    )
+    assert links, "AGENTS.md links no docs pages to check"
+    nav = (DOCS / "docs.json").read_text(encoding="utf-8")
+    for page, anchor in links:
+        assert f'"edge/en/{page}"' in nav, f"{page} is not in the docs nav"
+        if anchor:
+            mdx = (DOCS / "edge/en" / f"{page}.mdx").read_text(encoding="utf-8")
+            headings = re.findall(r"^#+ (.+)$", mdx, re.M)
+            slugs = {re.sub(r"[^a-z0-9]+", "-", h.lower()).strip("-") for h in headings}
+            assert anchor in slugs, f"{page} has no #{anchor} heading"
