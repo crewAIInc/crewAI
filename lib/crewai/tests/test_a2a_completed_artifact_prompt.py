@@ -9,6 +9,7 @@ from crewai.a2a.wrapper import (
 
 
 def test_completed_artifact_is_in_follow_up_prompt():
+    """Verify completed A2A artifact text appears in the follow-up prompt."""
     artifact_text = "turn 1: echo: ping-external-peer"
     endpoint = "https://example.com/a2a"
 
@@ -57,6 +58,7 @@ def test_completed_artifact_is_in_follow_up_prompt():
 
 
 def test_trusted_completed_artifact_returns_directly():
+    """Verify trusted completion returns the result without reinjecting it."""
     artifact_text = "Remote task completed successfully"
 
     result, _, _, remote_notice = _handle_task_completion(
@@ -79,6 +81,7 @@ def test_trusted_completed_artifact_returns_directly():
 
 
 def test_empty_completed_artifact_is_not_injected():
+    """Verify empty completed artifacts do not create a result block."""
     result, _, _, remote_notice = _handle_task_completion(
         a2a_result={
             "status": TaskState.completed,
