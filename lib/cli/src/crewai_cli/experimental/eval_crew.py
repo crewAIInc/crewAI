@@ -48,7 +48,7 @@ import webbrowser
 import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.settings import Settings
-from dotenv import dotenv_values, set_key
+from dotenv import load_dotenv, set_key
 import httpx
 from rich.console import Console
 from rich.table import Table
@@ -540,38 +540,11 @@ def _anonymous(client: PlusAPI) -> PlusAPI:
     return client
 
 
-def _sets_transport(key: str) -> bool:
-    """Whether httpx reads this variable to pick a proxy or a CA bundle."""
-    return key.lower().endswith("_proxy") or key.upper() in {
-        "SSL_CERT_FILE",
-        "SSL_CERT_DIR",
-    }
-
-
 def _load_project_env() -> None:
-    """The project's .env, as `crewai run` loads it — so CREWAI_PLUS_URL here is the one the run used.
-
-    Proxy and CA variables are left out. AMP requests honor them, and a cloned
-    project's .env could otherwise send the saved login through its own proxy
-    and trust its own CA, past the trusted-origin check. The machine's own
-    settings (shell exports, OS proxy) still apply.
-    """
+    """The project's .env, as `crewai run` loads it — so CREWAI_PLUS_URL here is the one the run used."""
     env_file = Path.cwd() / ".env"
-    if not env_file.is_file():
-        return
-    ignored: list[str] = []
-    for key, value in dotenv_values(env_file).items():
-        if value is None:
-            continue
-        if _sets_transport(key):
-            ignored.append(key)
-        else:
-            os.environ[key] = value
-    if ignored:
-        _note(
-            f"Not using {', '.join(ignored)} from this project's .env for AMP requests. "
-            "Export it in your shell to use it."
-        )
+    if env_file.is_file():
+        load_dotenv(env_file, override=True)
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:

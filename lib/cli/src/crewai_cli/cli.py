@@ -6,6 +6,10 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 import click
+
+# Imported first so AMP requests pin the machine's proxy and CA settings before
+# any command loads a project's .env (see crewai_core.plus_api).
+import crewai_core.plus_api  # noqa: F401
 from crewai_core.token_manager import TokenManager
 
 from crewai_cli.config import Settings

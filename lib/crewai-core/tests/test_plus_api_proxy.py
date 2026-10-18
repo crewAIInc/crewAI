@@ -1,8 +1,12 @@
-"""PlusAPI reaches AMP through the proxy the environment names.
+"""PlusAPI reaches AMP through the proxy the machine names.
 
 Corporate networks and coding-agent sandboxes (Claude Code, Codex) only allow
 outbound traffic through a proxy announced in HTTP(S)_PROXY. Two local servers
 stand in for AMP and for that proxy, so the tests show which one a request reached.
+
+The machine's settings are the variables the CLI pinned at startup and the OS
+proxy settings. A variable that appears later, as a project's .env loaded by
+`crewai run` or by `crewai.llm` on import puts it there, does not count.
 """
 
 from __future__ import annotations
@@ -15,11 +19,14 @@ import threading
 from typing import NamedTuple, cast
 import zipfile
 
+from crewai_core import plus_api
 from crewai_core.plus_api import PlusAPI
+from dotenv import load_dotenv
 import pytest
 
 
 PROXY_VARS = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY")
+TRANSPORT_VARS = (*PROXY_VARS, "SSL_CERT_FILE", "SSL_CERT_DIR")
 
 
 class Seen(NamedTuple):
@@ -84,10 +91,20 @@ def amp() -> Iterator[_RecordingServer]:
 
 
 @pytest.fixture(autouse=True)
-def no_proxy_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in PROXY_VARS:
-        monkeypatch.delenv(name, raising=False)
-        monkeypatch.delenv(name.lower(), raising=False)
+def machine(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    """The variables pinned at startup: none, on a machine with no OS proxy.
+
+    The environment starts without transport variables too, and anything a test
+    loads into it is removed afterwards.
+    """
+    pinned: dict[str, str] = {}
+    monkeypatch.setattr(plus_api, "_MACHINE_TRANSPORT_ENV", pinned)
+    monkeypatch.setattr(plus_api, "_os_proxies", dict)
+    for name in TRANSPORT_VARS:
+        for variant in {name, name.lower()}:
+            monkeypatch.setenv(variant, "")  # recorded, so teardown removes it
+            monkeypatch.delenv(variant)
+    return pinned
 
 
 @pytest.fixture
@@ -99,10 +116,10 @@ def project_zip(tmp_path: Path) -> Path:
 
 
 @pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
-def test_requests_go_through_the_proxy_named_in_the_environment(
-    proxy: _RecordingServer, monkeypatch: pytest.MonkeyPatch
+def test_requests_go_through_the_proxy_the_machine_names(
+    proxy: _RecordingServer, machine: dict[str, str]
 ) -> None:
-    monkeypatch.setenv("HTTP_PROXY", proxy.url)
+    machine["HTTP_PROXY"] = proxy.url
 
     response = PlusAPI("amp-token", base_url="http://amp.test").get_agent("researcher")
 
@@ -119,10 +136,10 @@ def test_requests_go_through_the_proxy_named_in_the_environment(
 
 @pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
 def test_hosts_in_no_proxy_are_reached_directly(
-    proxy: _RecordingServer, amp: _RecordingServer, monkeypatch: pytest.MonkeyPatch
+    proxy: _RecordingServer, amp: _RecordingServer, machine: dict[str, str]
 ) -> None:
-    monkeypatch.setenv("HTTP_PROXY", proxy.url)
-    monkeypatch.setenv("NO_PROXY", "127.0.0.1")
+    machine["HTTP_PROXY"] = proxy.url
+    machine["NO_PROXY"] = "127.0.0.1"
 
     response = PlusAPI("amp-token", base_url=amp.url).get_agent("researcher")
 
@@ -134,13 +151,9 @@ def test_hosts_in_no_proxy_are_reached_directly(
 
 
 @pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
-def test_without_proxy_variables_requests_go_directly(
-    proxy: _RecordingServer, amp: _RecordingServer, monkeypatch: pytest.MonkeyPatch
+def test_without_proxy_settings_requests_go_directly(
+    proxy: _RecordingServer, amp: _RecordingServer
 ) -> None:
-    # With no variables set, httpx falls back to the macOS or Windows system proxy
-    # settings (urllib's getproxies); model a machine with none configured.
-    monkeypatch.setattr("httpx._utils.getproxies", dict)
-
     response = PlusAPI("amp-token", base_url=amp.url).get_agent("researcher")
 
     assert response.json() == {"served_by": "amp"}
@@ -149,10 +162,54 @@ def test_without_proxy_variables_requests_go_directly(
 
 
 @pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
-def test_zip_deploy_uploads_go_through_the_proxy(
-    proxy: _RecordingServer, monkeypatch: pytest.MonkeyPatch, project_zip: Path
+def test_with_no_proxy_variable_the_os_proxy_settings_apply(
+    proxy: _RecordingServer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("HTTP_PROXY", proxy.url)
+    monkeypatch.setattr(plus_api, "_os_proxies", lambda: {"http": proxy.url})
+
+    response = PlusAPI("amp-token", base_url="http://amp.test").get_agent("researcher")
+
+    assert response.json() == {"served_by": "proxy"}
+    assert proxy.seen[0].authorization == "Bearer amp-token"
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_a_proxy_a_project_env_sets_after_startup_is_not_used(
+    proxy: _RecordingServer, amp: _RecordingServer, tmp_path: Path
+) -> None:
+    """`crewai run` on a JSON crew or a declarative flow, and `crewai.llm` on
+    import, load the project's .env into the process. A cloned project must not
+    route the saved login through its own proxy or have AMP vouched for by its
+    own CA: a CA file that does not exist would fail the request if it were read."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        f"HTTP_PROXY={proxy.url}\n"
+        f"https_proxy={proxy.url}\n"
+        f"SSL_CERT_FILE={tmp_path / 'project-ca.pem'}\n"
+    )
+    load_dotenv(env_file, override=True)
+
+    response = PlusAPI("amp-token", base_url=amp.url).get_agent("researcher")
+
+    assert response.json() == {"served_by": "amp"}
+    assert amp.seen[0].authorization == "Bearer amp-token"
+    assert proxy.seen == []
+
+
+def test_the_ca_bundle_the_machine_names_is_the_one_trusted(
+    machine: dict[str, str], tmp_path: Path
+) -> None:
+    machine["SSL_CERT_FILE"] = str(tmp_path / "missing-ca.pem")
+
+    with pytest.raises(FileNotFoundError):
+        PlusAPI("amp-token", base_url="https://amp.test").get_agent("researcher")
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_zip_deploy_uploads_go_through_the_proxy(
+    proxy: _RecordingServer, machine: dict[str, str], project_zip: Path
+) -> None:
+    machine["HTTP_PROXY"] = proxy.url
 
     response = PlusAPI("amp-token", base_url="http://amp.test").create_crew_from_zip(
         project_zip, name="demo"

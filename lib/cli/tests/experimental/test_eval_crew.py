@@ -349,72 +349,6 @@ def test_a_project_may_point_at_another_amp_but_never_gets_the_saved_login(proje
     assert "crewai enterprise configure" in out
 
 
-TRANSPORT_VARS = ("HTTPS_PROXY", "http_proxy", "ALL_PROXY", "NO_PROXY", "SSL_CERT_FILE", "SSL_CERT_DIR")
-
-
-@pytest.fixture
-def clean_transport_env(monkeypatch):
-    """Start without proxy or CA variables, and remove any the test's .env loads."""
-    for name in TRANSPORT_VARS:
-        monkeypatch.setenv(name, "")  # records "unset" so teardown removes what eval_crew sets
-        monkeypatch.delenv(name)
-
-
-def test_a_project_env_cannot_choose_how_the_saved_login_travels(project, monkeypatch, capsys, clean_transport_env):
-    """A cloned project's .env could route the login through its own proxy and
-    trust its own CA, which defeats the trusted-origin check. Those variables
-    are left out; everything else in the .env loads as `crewai run` loads it."""
-    directory, _ = project
-    (directory / ".env").write_text(
-        "CREWAI_PLUS_URL=https://amp.test\n"
-        "OPENAI_API_KEY=sk-project\n"
-        "HTTPS_PROXY=http://evil-proxy.example:8080\n"
-        "http_proxy=http://evil-proxy.example:8080\n"
-        "SSL_CERT_FILE=./evil-ca.pem\n"
-        "SSL_CERT_DIR=./certs\n"
-    )
-    record_last_run(directory)
-    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
-
-    eval_module.eval_crew()
-
-    assert amp.api_key == "login-token"  # the login still goes to the trusted AMP
-    for name in ("HTTPS_PROXY", "http_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR"):
-        assert name not in os.environ, name
-    assert os.environ["CREWAI_PLUS_URL"] == "https://amp.test"
-    assert os.environ["OPENAI_API_KEY"] == "sk-project"
-    out = capsys.readouterr().out
-    assert (
-        "Not using HTTPS_PROXY, http_proxy, SSL_CERT_FILE, SSL_CERT_DIR from this project's .env for AMP requests"
-        in out
-    )
-
-
-def test_proxy_settings_exported_in_the_shell_still_apply(project, monkeypatch, capsys, clean_transport_env):
-    """The machine decides how AMP requests travel: a shell export is kept, and
-    a project's .env does not override it."""
-    directory, _ = project
-    monkeypatch.setenv("HTTPS_PROXY", "http://corp-proxy.example:3128")
-    (directory / ".env").write_text("HTTPS_PROXY=http://evil-proxy.example:8080\n")
-    record_last_run(directory)
-    install(monkeypatch, FakeAMP(statuses=[done()]))
-
-    eval_module.eval_crew()
-
-    assert os.environ["HTTPS_PROXY"] == "http://corp-proxy.example:3128"
-
-
-def test_a_project_env_without_transport_settings_loads_silently(project, monkeypatch, capsys, clean_transport_env):
-    directory, _ = project
-    (directory / ".env").write_text("CREWAI_PLUS_URL=https://amp.test\n")
-    record_last_run(directory)
-    install(monkeypatch, FakeAMP(statuses=[done()]))
-
-    eval_module.eval_crew()
-
-    assert "Not using" not in capsys.readouterr().out
-
-
 def test_the_app_never_trusts_an_amp_the_project_env_introduced(project, monkeypatch):
     """`crewai eval` reads CREWAI_PLUS_URL before the project's `.env` is
     loaded, so a shell export is trusted there and a project cannot slip one
@@ -1519,21 +1453,6 @@ def deployed(project, monkeypatch):
     (directory / "pyproject.toml").write_text('[tool.crewai]\nproject_id = "proj-1"\n')
     monkeypatch.setattr(eval_module, "get_or_create_project_id", lambda: "proj-1")
     return directory, opened
-
-
-def test_a_model_comparison_ignores_proxy_settings_from_the_project_env(deployed, monkeypatch, capsys, clean_transport_env):
-    """`--models` always sends the saved login, so the project's .env must not
-    pick its proxy or CA either."""
-    directory, _ = deployed
-    (directory / "eval.jsonc").write_text('{"dataset": []}')
-    (directory / ".env").write_text("HTTPS_PROXY=http://evil-proxy.example:8080\nSSL_CERT_FILE=./evil-ca.pem\n")
-    amp = install(monkeypatch, FakeModelsAMP(statuses=[compared()]))
-
-    eval_module.eval_models(MODELS)
-
-    assert amp.api_key == "login-token"
-    assert "HTTPS_PROXY" not in os.environ and "SSL_CERT_FILE" not in os.environ
-    assert "Not using HTTPS_PROXY, SSL_CERT_FILE from this project's .env for AMP requests" in capsys.readouterr().out
 
 
 def test_models_are_compared_on_the_deployment_and_the_table_printed(deployed, monkeypatch, capsys):
