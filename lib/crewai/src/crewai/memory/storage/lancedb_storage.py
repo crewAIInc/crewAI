@@ -51,14 +51,38 @@ def _id_in_filter(record_ids: list[str]) -> str:
     return f"id IN ({ids_expr})"
 
 
+def _canonical_scope_prefix(scope_prefix: str) -> str:
+    """Return ``scope_prefix`` as a canonical scope path.
+
+    A scope path is anchored at the root (``"/sales"``, not ``"sales"``), the
+    form :func:`crewai.memory.utils.normalize_scope_path` produces.  Scopes are
+    matched with a raw string prefix, so an unanchored prefix
+    (``LIKE 'sales%'``) and an anchored one (``LIKE '/sales%'``) address
+    different rows: every filter site has to anchor the same way, or the same
+    scope resolves differently depending on which call reached it.
+    """
+    prefix = scope_prefix.rstrip("/")
+    if prefix and not prefix.startswith("/"):
+        prefix = "/" + prefix
+    return prefix
+
+
 def _scope_prefix_filter(prefix: str) -> str:
     r"""Build a predicate matching scopes that start with ``prefix``.
+
+    The prefix is anchored as a scope path first, so ``"sales"`` and
+    ``"/sales"`` select the same rows.
 
     ``\``, ``%`` and ``_`` in the prefix are escaped so they match literally;
     only the appended trailing ``%`` acts as a wildcard. Lance supports only
     ``\`` as the ``LIKE`` escape character.
     """
-    pattern = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    pattern = (
+        _canonical_scope_prefix(prefix)
+        .replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
     return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
 
 
@@ -466,10 +490,7 @@ class LanceDBStorage:
                 return before - int(self._table.count_rows())
             conditions = []
             if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
-                if not prefix.startswith("/"):
-                    prefix = "/" + prefix
-                conditions.append(f"{_scope_prefix_filter(prefix)} OR scope = '/'")
+                conditions.append(f"{_scope_prefix_filter(scope_prefix)} OR scope = '/'")
             if older_than is not None:
                 conditions.append(f"created_at < '{older_than.isoformat()}'")
             if not conditions:
@@ -528,10 +549,8 @@ class LanceDBStorage:
         return records[offset : offset + limit]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
-        scope = scope.rstrip("/") or "/"
-        prefix = scope if scope != "/" else ""
-        if prefix and not prefix.startswith("/"):
-            prefix = "/" + prefix
+        prefix = _canonical_scope_prefix(scope)
+        scope = prefix or "/"
         rows = self._scan_rows(
             prefix or None,
             columns=["scope", "categories_str", "created_at"],
@@ -584,7 +603,7 @@ class LanceDBStorage:
         )
 
     def list_scopes(self, parent: str = "/") -> list[str]:
-        parent = parent.rstrip("/") or ""
+        parent = _canonical_scope_prefix(parent)
         prefix = (parent + "/") if parent else "/"
         rows = self._scan_rows(prefix if prefix != "/" else None, columns=["scope"])
         children: set[str] = set()
@@ -627,7 +646,7 @@ class LanceDBStorage:
                 return
             if self._table is None:
                 return
-            prefix = scope_prefix.rstrip("/")
+            prefix = _canonical_scope_prefix(scope_prefix)
             if prefix:
                 literal = _sql_str(prefix)
                 self._do_write(
