@@ -523,6 +523,7 @@ def test_missing_input_names_accepts_hyphenated_placeholders():
 def _patch_tui_run(monkeypatch, status: str):
     """Stub the TUI pieces of _run_json_crew so only exit handling runs."""
     monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)  # the TUI needs a terminal
 
     class FakeApp:
         def __init__(self, **kwargs):
@@ -574,6 +575,7 @@ def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CREWAI_DMN", "True")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
     crew_path = tmp_path / "crew.jsonc"
     crew_path.write_text("{}")
     kickoff_calls = []
@@ -612,6 +614,90 @@ def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys
     captured = capsys.readouterr()
     assert kickoff_calls == [{"topic": "AI"}]
     assert "plain result" in captured.out
+
+
+def _headless_crew(monkeypatch, tmp_path: Path, kickoff_calls: list[dict]) -> None:
+    """A JSON crew whose kickoff records its inputs and returns a plain result."""
+    from types import SimpleNamespace
+
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text("{}")
+
+    class FakeCrew:
+        name = "Demo"
+        agents = [SimpleNamespace(role="Researcher", goal="Research", backstory="")]
+        tasks: list = []
+
+        def kickoff(self, inputs):
+            kickoff_calls.append(inputs)
+            return "plain result"
+
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda: crew_path
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_load_json_crew", lambda _path: (FakeCrew(), {"topic": "AI"})
+    )
+
+
+def test_run_json_crew_without_a_terminal_runs_headless_and_exits(
+    monkeypatch, tmp_path: Path, capsys
+):
+    """A coding agent's shell has no terminal: the TUI would stay open after the
+    crew finished and `crewai run` would never exit."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+    kickoff_calls: list[dict] = []
+    _headless_crew(monkeypatch, tmp_path, kickoff_calls)
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew_for_tui",
+        lambda _path: pytest.fail("without a terminal the TUI must not start"),
+    )
+
+    assert run_crew_module._run_json_crew() == "plain result"
+
+    assert kickoff_calls == [{"topic": "AI"}]
+    assert "plain result" in capsys.readouterr().out
+
+
+def test_run_json_crew_in_a_terminal_opens_the_tui(monkeypatch, tmp_path: Path):
+    from types import SimpleNamespace
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    opened: list[str] = []
+
+    class FakeApp:
+        def __init__(self, **kwargs):
+            self._status = "completed"
+            self._crew_result = "tui result"
+            self._want_deploy = False
+            opened.append(kwargs["crew_name"])
+
+        def run(self):
+            pass
+
+    crew = SimpleNamespace(name="Demo", tasks=[], agents=[])
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda: Path("crew.jsonc")
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew_for_tui",
+        lambda _path: (FakeApp, crew, {}, [], []),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew",
+        lambda _path: pytest.fail("a terminal gets the TUI, not the plain run"),
+    )
+    monkeypatch.setattr(run_crew_module, "_print_post_tui_summary", lambda _app: None)
+
+    assert run_crew_module._run_json_crew() == "tui result"
+    assert opened == ["Demo"]
 
 
 def test_run_json_crew_dmn_mode_exits_on_missing_inputs(
