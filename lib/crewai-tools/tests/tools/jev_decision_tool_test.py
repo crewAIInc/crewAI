@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from types import ModuleType, SimpleNamespace
-from unittest.mock import MagicMock
-
-import pytest
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 from crewai_tools.tools.jev_decision_tool.jev_decision_tool import (
     JevDecisionTool,
     JevDecisionToolSchema,
 )
+import pytest
 
 
 class FakeChoice:
@@ -147,3 +148,138 @@ def test_tool_metadata() -> None:
     assert "typesafe-sdk" in tool.package_dependencies
     env_var_names = {env_var.name for env_var in tool.env_vars}
     assert "TYPESAFE_API_KEY" in env_var_names
+
+
+@pytest.fixture
+def decision_input() -> dict[str, Any]:
+    return {
+        "state": {"ticket": "charged twice"},
+        "question": "Which team?",
+        "choices": {"billing": "Payments", "technical": "Bugs"},
+    }
+
+
+@pytest.fixture
+def decision_response() -> SimpleNamespace:
+    return SimpleNamespace(
+        model="jev-test",
+        usage=SimpleNamespace(model_dump=lambda: {"input_tokens": 10}),
+        choices={
+            "decision": SimpleNamespace(
+                choice="billing",
+                confidence=0.91,
+                probabilities={"billing": 0.87, "technical": 0.13},
+            )
+        },
+    )
+
+
+@pytest.fixture
+def async_client(decision_response: SimpleNamespace) -> SimpleNamespace:
+    return SimpleNamespace(
+        system_one=AsyncMock(return_value=decision_response), aclose=AsyncMock()
+    )
+
+
+@pytest.mark.asyncio
+async def test_arun_matches_sync_and_awaits_request(
+    monkeypatch: pytest.MonkeyPatch,
+    async_client: SimpleNamespace,
+    decision_response: SimpleNamespace,
+    decision_input: dict[str, Any],
+) -> None:
+    _install_typesafe_stub(monkeypatch)
+    sync_client = MagicMock()
+    sync_client.system_one.return_value = decision_response
+    tool = JevDecisionTool(
+        client=sync_client, async_client=async_client, model="jev-test"
+    )
+
+    result = await tool.arun(**decision_input)
+
+    sync_client.system_one.assert_not_called()
+    assert result == tool.run(**decision_input)
+    async_client.system_one.assert_awaited_once()
+    request = async_client.system_one.call_args.kwargs
+    assert request["state"] == decision_input["state"]
+    assert request["model"] == "jev-test"
+    choice = request["questions"]["decision"]
+    assert isinstance(choice, FakeChoice)
+    assert choice.instructions == decision_input["question"]
+    assert choice.criteria == decision_input["choices"]
+    async_client.aclose.assert_not_awaited()
+    sync_client.close.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owned", [True, False])
+@pytest.mark.parametrize("failure", [False, True])
+async def test_async_client_lifecycle(
+    monkeypatch: pytest.MonkeyPatch,
+    async_client: SimpleNamespace,
+    decision_input: dict[str, Any],
+    owned: bool,
+    failure: bool,
+) -> None:
+    _install_typesafe_stub(monkeypatch)
+    factory = MagicMock(return_value=async_client)
+    monkeypatch.setattr(
+        sys.modules["typesafe_sdk"], "AsyncTypeSafeClient", factory, raising=False
+    )
+    if failure:
+        async_client.system_one.side_effect = RuntimeError("service unavailable")
+    tool = JevDecisionTool(
+        async_client=None if owned else async_client, model="jev-test"
+    )
+
+    result = await tool.arun(**decision_input)
+
+    if failure:
+        assert result == {"success": False, "error": "service unavailable"}
+    else:
+        assert result["success"] is True
+    if owned:
+        factory.assert_called_once_with(model="jev-test")
+        async_client.aclose.assert_awaited_once()
+    else:
+        factory.assert_not_called()
+        async_client.aclose.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owned", [True, False])
+async def test_cancellation_propagates_and_respects_client_ownership(
+    monkeypatch: pytest.MonkeyPatch,
+    async_client: SimpleNamespace,
+    decision_input: dict[str, Any],
+    owned: bool,
+) -> None:
+    _install_typesafe_stub(monkeypatch)
+    monkeypatch.setattr(
+        sys.modules["typesafe_sdk"],
+        "AsyncTypeSafeClient",
+        lambda **kwargs: async_client,
+        raising=False,
+    )
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def pending_request(**kwargs: Any) -> None:
+        started.set()
+        await release.wait()
+
+    async_client.system_one.side_effect = pending_request
+    tool = JevDecisionTool(async_client=None if owned else async_client)
+    task = asyncio.create_task(tool.arun(**decision_input))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=2)
+        assert not task.done()
+    finally:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    if owned:
+        async_client.aclose.assert_awaited_once()
+    else:
+        async_client.aclose.assert_not_awaited()
