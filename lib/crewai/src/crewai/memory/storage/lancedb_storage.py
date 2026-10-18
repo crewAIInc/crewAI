@@ -18,6 +18,7 @@ import lancedb  # type: ignore[import-untyped]
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.utils import normalize_scope_path
 
 
 _logger = logging.getLogger(__name__)
@@ -54,17 +55,24 @@ def _id_in_filter(record_ids: list[str]) -> str:
 def _canonical_scope_prefix(scope_prefix: str) -> str:
     """Return ``scope_prefix`` as a canonical scope path.
 
-    A scope path is anchored at the root (``"/sales"``, not ``"sales"``), the
-    form :func:`crewai.memory.utils.normalize_scope_path` produces.  Scopes are
-    matched with a raw string prefix, so an unanchored prefix
-    (``LIKE 'sales%'``) and an anchored one (``LIKE '/sales%'``) address
-    different rows: every filter site has to anchor the same way, or the same
-    scope resolves differently depending on which call reached it.
+    A scope path is anchored at the root (``"/sales"``, not ``"sales"``) and has
+    runs of slashes collapsed, the form
+    :func:`crewai.memory.utils.normalize_scope_path` produces.  Scopes are
+    matched with a raw string prefix, so spelling differences address different
+    rows: an unanchored prefix (``LIKE 'sales%'``) and an anchored one
+    (``LIKE '/sales%'``) select different sets, and a prefix that keeps a
+    doubled slash (``LIKE '//sales%'``) matches nothing at all, because the
+    write path stores ``"//sales"`` as ``"/sales"``.  Every filter site has to
+    canonicalize the same way, or the same scope resolves differently depending
+    on which call reached it.
+
+    An empty or root-only prefix is returned as ``""``, which the callers read
+    as "every scope".
     """
-    prefix = scope_prefix.rstrip("/")
-    if prefix and not prefix.startswith("/"):
-        prefix = "/" + prefix
-    return prefix
+    if not scope_prefix:
+        return scope_prefix
+    normalized = normalize_scope_path(scope_prefix)
+    return "" if normalized == "/" else normalized
 
 
 def _scope_prefix_filter(prefix: str) -> str:
@@ -490,7 +498,9 @@ class LanceDBStorage:
                 return before - int(self._table.count_rows())
             conditions = []
             if scope_prefix is not None and scope_prefix.strip("/"):
-                conditions.append(f"{_scope_prefix_filter(scope_prefix)} OR scope = '/'")
+                conditions.append(
+                    f"{_scope_prefix_filter(scope_prefix)} OR scope = '/'"
+                )
             if older_than is not None:
                 conditions.append(f"created_at < '{older_than.isoformat()}'")
             if not conditions:

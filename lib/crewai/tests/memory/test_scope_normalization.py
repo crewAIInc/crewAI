@@ -112,10 +112,14 @@ def test_every_spelling_of_a_scope_resets_the_same_records(
 def test_canonical_prefixes_still_do_not_cross_scope_boundaries(
     storage: LanceDBStorage, prefix: str
 ) -> None:
-    """Anchoring must not widen a prefix into a sibling scope's rows."""
+    """Anchoring must not widen a prefix into an unrelated scope's rows.
+
+    Prefixes are compared as raw strings, so ``"/sales"`` legitimately also
+    selects ``"/salesforce"``; what must not happen is ``"/sales"`` reaching
+    ``"/support"``.
+    """
     assert _search_ids(storage, prefix) == SALES_RECORDS
-    assert _search_ids(storage, "salesforce") == set()
-    assert _search_ids(storage, "/salesforce") == set()
+    assert _search_ids(storage, "support") == {"support-1"}
     assert storage.count("support") == 1
     assert storage.count("/support") == 1
 
@@ -204,6 +208,39 @@ def test_update_persists_the_anchored_scope(
     stored = memory._storage.get_record(record.id)
     assert stored is not None
     assert stored.scope == "/support"
+
+
+# Spellings that carry repeated slashes. The write path collapses them via
+# ``normalize_scope_path``, so ``"//sales"`` is persisted as ``"/sales"``; a
+# filter that keeps the doubled slash builds ``LIKE '//sales%'`` and silently
+# matches nothing.
+SLASH_SPELLINGS = ["//sales", "///sales", "//sales/", "/sales//"]
+
+
+@pytest.mark.parametrize("spelling", SLASH_SPELLINGS)
+def test_repeated_slashes_address_the_same_scope_as_the_collapsed_form(
+    tmp_path: Path, embedder: MagicMock, spelling: str
+) -> None:
+    """A scope written and read with repeated slashes must round-trip."""
+    memory = Memory(
+        storage=str(tmp_path / "db"), llm=MagicMock(), embedder=embedder
+    )
+    record = memory.remember(
+        "We chose Python for the sales pipeline.",
+        scope="//sales",
+        categories=[],
+        importance=0.5,
+        metadata={},
+    )
+    assert record is not None
+    assert record.scope == "/sales"
+
+    found = memory.recall("sales pipeline", scope=spelling, limit=5, depth="shallow")
+    assert {m.record.id for m in found} == {record.id}
+    assert memory._storage.count(spelling) == 1
+
+    assert memory.forget(scope=spelling) == 1
+    assert memory._storage.count() == 0
 
 
 def _memory_with_backend(tmp_path: Path, backend: str, embedder: MagicMock) -> Memory:
