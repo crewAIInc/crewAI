@@ -9,6 +9,7 @@ from crewai.utilities.logger_utils import suppress_logging
 
 @pytest.fixture
 def logger() -> Iterator[logging.Logger]:
+    """Provide a child logger and restore both loggers' original levels."""
     parent = logging.getLogger("crewai.tests.suppress_logging")
     child = logging.getLogger("crewai.tests.suppress_logging.child")
     parent_level, child_level = parent.level, child.level
@@ -25,6 +26,7 @@ def logger() -> Iterator[logging.Logger]:
 def test_suppress_logging_restores_level(
     logger: logging.Logger, error_type: type[BaseException] | None
 ) -> None:
+    """Restore the configured level after normal, error, and interrupted exits."""
     error = error_type("query interrupted") if error_type else None
     expected = pytest.raises(error_type) if error_type else nullcontext()
 
@@ -44,6 +46,7 @@ def test_suppress_logging_restores_level(
 def test_suppress_logging_preserves_inherited_level(
     logger: logging.Logger, fail: bool
 ) -> None:
+    """Keep NOTSET inheritance so later parent-level changes remain effective."""
     logger.setLevel(logging.NOTSET)
     expected = pytest.raises(ValueError) if fail else nullcontext()
 
