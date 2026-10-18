@@ -85,6 +85,24 @@ def test_llm_call_with_message_list():
     assert "Paris" in result
 
 
+def test_context_window_preflight_triggers_only_above_usable_limit():
+    """The proactive threshold preserves the 15% context-window headroom."""
+    llm = LLM(model="gpt-4o-mini")
+    messages = [{"role": "user", "content": "test"}]
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=850),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is False
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=851),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is True
+
+
 @pytest.mark.vcr()
 def test_llm_call_with_tool_and_string_input():
     llm = LLM(model="gpt-4o-mini")
