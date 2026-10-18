@@ -10,7 +10,7 @@ mode: "wide"
 ثبّت الحزمة المستقلة المراجعة من نسخة المصدر المحددة. تستخدم CrewAI BaseTool مباشرة، دون إعداد MCP أو كتابة غلاف مخصص.
 
 ```bash
-uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@000cb3b7671dceb3ef52f7bd59259700f57f61cf'
+uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2'
 ```
 
 سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key). افتح General application وانسخ Token لاستهلاك API، أو استخدم Manage Keys → Create. عند تقييد APIs اسمح بـ `/suno/audios` و`/suno/tasks`. اضبط `ACEDATACLOUD_API_KEY` في البيئة ولا تضع المفتاح في prompt أو إعدادات مودعة.
@@ -30,7 +30,5 @@ print(result)
 
 يعرض الاسترجاع الناجح status=succeeded وsuccess=true وmedia_urls وcost الأصلي بوحدة Credits إن توفّر. تستخدم المهام الفاشلة ToolFailure. تُحفظ معاني HTTP 401/403/429/5xx، دون إعادة محاولة HTTP مدفوعة تلقائيًا أو نموذج بديل. لا تفعّل الحزمة tracing ولا تضيف GUI.
 
-راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SunoCrewAI/tree/000cb3b7671dceb3ef52f7bd59259700f57f61cf) لصور المفتاح المحجوب وضبط البيئة والنتائج غير المتزامنة واستكشاف الأخطاء. للصور مصدر وتاريخ وليست دليلًا على تشغيل Ace أو نشره.
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SunoCrewAI/tree/e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2) لصور المفتاح المحجوب وضبط البيئة والنتائج غير المتزامنة واستكشاف الأخطاء. للصور مصدر وتاريخ وليست دليلًا على تشغيل Ace أو نشره.
 
-
-[حزمة wheel تجريبية على GitHub، وليست إصدار PyPI أو إدراج AMP](https://github.com/AceDataCloud/SunoCrewAI/releases/tag/v0.1.0-preview.1)
