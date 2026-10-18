@@ -1140,6 +1140,12 @@ def _handle_task_completion(
             )
             return str(result_text), task_id_config, reference_task_ids, remote_notice
 
+        result_text = a2a_result.get("result", "")
+
+        if result_text:
+            remote_notice += (
+                f"\n<REMOTE_AGENT_RESULT>\n{result_text}\n</REMOTE_AGENT_RESULT>\n"
+            )
     return None, task_id_config, reference_task_ids, remote_notice
 
 
