@@ -5,10 +5,14 @@ icon: image
 mode: "wide"
 ---
 
-يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من GPT Image أو CrewAI. المصدر قيد المراجعة؛ لا ندّعي نشره على PyPI أو إدراجه في كتالوج AMP. ثبّت نسخة المصدر الثابتة أدناه؛ المستودع أو المعاينة أو نجاح الاختبارات لا يعني الإدراج الرسمي.
+يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من GPT Image أو CrewAI. دُمج المصدر ويوجد إصدار GitHub ثابت 0.1.0 مع wheel/sdist في مستودع Ace. لا ندّعي نشر PyPI أو الإدراج في AMP. ثبّت المصدر المدمج الثابت أدناه أو استخدم أمر wheel المرتبط بـSHA256 في ملاحظات الإصدار. صفحة التوثيق المقترحة ليست دليل إدراج رسمي.
 
 ```bash
-uv add 'crewai-gpt-image @ git+https://github.com/AceDataCloud/GPTImageCrewAI.git@c39dcdb493a5f96fc53f05f5d4cfa4f081e740f5'
+uv add 'crewai-gpt-image @ git+https://github.com/AceDataCloud/GPTImageCrewAI.git@0eea3c3c57067d82680ba54680db29ddce08eb51'
+```
+
+```bash
+uv add 'crewai-gpt-image @ https://github.com/AceDataCloud/GPTImageCrewAI/releases/download/v0.1.0/crewai_gpt_image-0.1.0-py3-none-any.whl#sha256=6051bd70f833e1c05dc9bae405a23ee6316818efc50deeb38e95a4926b37068e'
 ```
 
 سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_api_key) وافتح General application، ثم انسخ Token لاستهلاك API أو أنشئ مفتاحًا مخصصًا عبر Manage Keys → Create. تحقّق من صلاحية GPT Image والرصيد و[أسعار النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_pricing). عند تقييد APIs اسمح بـ `/openai/images/generations` و`/openai/tasks`. اضبط Token الخام في `ACEDATACLOUD_API_KEY` دون Bearer أو مسافات، ولا تضعه في prompt أو ملفات مودعة.
@@ -28,4 +32,6 @@ print(result)
 
 تعيد المهمة المخزنة الناجحة status=succeeded وsuccess=true وmedia_urls والتكلفة الأصلية بوحدة Credits إن توفّرت. الحالات الفاشلة المتداخلة أو غياب الوسائط النهائية ينتج ToolFailure. يُحفظ معنى HTTP دون عرض استجابات خاصة. لا توجد إعادة محاولة مدفوعة تلقائية أو معالج دفع أو نموذج بديل. الاستخدام الواحد لكل مثيل ليس حدًا ماليًا أو نظام إذن.
 
-راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/GPTImageCrewAI/tree/c39dcdb493a5f96fc53f05f5d4cfa4f081e740f5) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و21 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/GPTImageCrewAI/tree/0eea3c3c57067d82680ba54680db29ddce08eb51) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و21 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.
+
+إصدار Ace الثابت وتثبيت مرتبط بـSHA256: [GPT Image0.1.0](https://github.com/AceDataCloud/GPTImageCrewAI/releases/tag/v0.1.0).

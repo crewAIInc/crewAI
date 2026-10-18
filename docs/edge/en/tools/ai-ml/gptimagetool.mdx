@@ -5,10 +5,14 @@ icon: image
 mode: "wide"
 ---
 
-This independent integration is provided by Ace Data Cloud, not an official GPT Image or CrewAI product. The source is under review: no PyPI release or AMP catalog listing is claimed. Install the exact immutable source version below; a repository, preview or passing test is not official inclusion.
+This independent integration is provided by Ace Data Cloud, not an official GPT Image or CrewAI product. Its source is merged and the Ace repository has a stable GitHub 0.1.0 wheel/sdist release. PyPI publication and AMP catalog inclusion are not claimed. Install the exact merged source below, or use the SHA256-bound wheel command on this page. This proposed documentation page is not proof of official listing.
 
 ```bash
-uv add 'crewai-gpt-image @ git+https://github.com/AceDataCloud/GPTImageCrewAI.git@c39dcdb493a5f96fc53f05f5d4cfa4f081e740f5'
+uv add 'crewai-gpt-image @ git+https://github.com/AceDataCloud/GPTImageCrewAI.git@0eea3c3c57067d82680ba54680db29ddce08eb51'
+```
+
+```bash
+uv add 'crewai-gpt-image @ https://github.com/AceDataCloud/GPTImageCrewAI/releases/download/v0.1.0/crewai_gpt_image-0.1.0-py3-none-any.whl#sha256=6051bd70f833e1c05dc9bae405a23ee6316818efc50deeb38e95a4926b37068e'
 ```
 
 Register/sign in to [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_api_key), open General application, then copy the API-consumer Token or use Manage Keys → Create for a dedicated key. Check GPT Image access, current balance and [model pricing](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=gptimagecrewai_docs_pricing). If restricting APIs, allow `/openai/images/generations` and `/openai/tasks`. Set the raw Token in environment variable `ACEDATACLOUD_API_KEY`, without Bearer or spaces; never put it in prompts or versioned files.
@@ -28,4 +32,6 @@ After approving the generation model and budget, add `GPTImageGenerateImageTool(
 
 Successful stored tasks return status=succeeded, success=true, media_urls and original Credits cost when available. Nested failed states or missing terminal media are structured ToolFailure, not success. HTTP meaning is preserved without dumping private response bodies. No automatic paid HTTP retry, payment handler or model fallback is added. One generation use per instance is not a funds cap or permission system.
 
-See the [English / Chinese step-by-step guide](https://github.com/AceDataCloud/GPTImageCrewAI/tree/c39dcdb493a5f96fc53f05f5d4cfa4f081e740f5) for authentic redacted Key screenshots, environment placement, service-specific fields, generation/query examples, errors and privacy. Official historical CrewAI screenshots are interaction references, not proof that Ace ran or that a new GUI exists. Full Linux Python 3.10/3.12/3.13 installation,21 no-bill tests and clean wheel installation passed; model decisions in tests are deterministic local fixtures, not paid model validation.
+See the [English / Chinese step-by-step guide](https://github.com/AceDataCloud/GPTImageCrewAI/tree/0eea3c3c57067d82680ba54680db29ddce08eb51) for authentic redacted Key screenshots, environment placement, service-specific fields, generation/query examples, errors and privacy. Official historical CrewAI screenshots are interaction references, not proof that Ace ran or that a new GUI exists. Full Linux Python 3.10/3.12/3.13 installation,21 no-bill tests and clean wheel installation passed; model decisions in tests are deterministic local fixtures, not paid model validation.
+
+Stable Ace release and SHA256-bound installation: [GPT Image0.1.0](https://github.com/AceDataCloud/GPTImageCrewAI/releases/tag/v0.1.0).

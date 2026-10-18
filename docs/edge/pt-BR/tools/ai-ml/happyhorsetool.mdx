@@ -5,10 +5,14 @@ icon: video
 mode: "wide"
 ---
 
-A integração independente é fornecida pela Ace Data Cloud; não é produto oficial de HappyHorse ou CrewAI. O código está em revisão, sem alegar lançamento PyPI ou catálogo AMP. Instale a versão imutável abaixo; repositório, prévia ou testes aprovados não equivalem à inclusão oficial.
+Esta integração independente é fornecida pela Ace Data Cloud, não é produto oficial de HappyHorse ou CrewAI. O código foi integrado e o repositório Ace publicou wheel/sdist estáveis 0.1.0 no GitHub. Não há alegação de publicação PyPI ou catálogo AMP. Instale o commit integrado abaixo ou o wheel vinculado a SHA256 nas notas da versão. Esta página proposta não comprova listagem oficial.
 
 ```bash
-uv add 'crewai-happyhorse @ git+https://github.com/AceDataCloud/HappyHorseCrewAI.git@62936c47d3aa1d73787ae884e4e8985fe35c14f9'
+uv add 'crewai-happyhorse @ git+https://github.com/AceDataCloud/HappyHorseCrewAI.git@700945e95b53786329f16e722d61b6af4b3d1c1b'
+```
+
+```bash
+uv add 'crewai-happyhorse @ https://github.com/AceDataCloud/HappyHorseCrewAI/releases/download/v0.1.0/crewai_happyhorse-0.1.0-py3-none-any.whl#sha256=a8f111bcec1be13c8c7cae792c6301cb5c651bc5d11eb00a44241659b3d95c92'
 ```
 
 Cadastre-se/entre em [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_api_key), abra General application e copie o Token de consumo ou use Manage Keys → Create. Confira acesso a HappyHorse, saldo e [preços dos modelos](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_pricing). Ao restringir APIs, permita `/happyhorse/videos` e `/happyhorse/tasks`. Configure o Token bruto em `ACEDATACLOUD_API_KEY`, sem Bearer ou espaços; nunca em prompts ou arquivos versionados.
@@ -28,4 +32,6 @@ Após aprovar modelo e orçamento, adicione `HappyHorseGenerateVideoTool()` e `H
 
 Tarefas armazenadas concluídas retornam status=succeeded, success=true, media_urls e o cost original em Credits quando disponível. Falhas aninhadas ou mídia final ausente produzem ToolFailure. HTTP mantém seu significado sem expor corpos privados. Sem repetição automática de HTTP pago, pagamento ou fallback. Uma geração por instância não é teto financeiro nem autorização.
 
-O [guia em inglês/chinês](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/62936c47d3aa1d73787ae884e4e8985fe35c14f9) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,21 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.
+O [guia em inglês/chinês](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/700945e95b53786329f16e722d61b6af4b3d1c1b) inclui imagens autênticas de Key ocultada, ambiente, campos reais, geração/consulta, erros e privacidade. Capturas históricas oficiais CrewAI são referência de interação, sem comprovar execução Ace ou GUI novo. Instalação Linux completa em Python3.10/3.12/3.13,21 testes gratuitos e wheel em ambiente limpo passaram; decisões do modelo são fixtures locais, não validação paga.
+
+Versão estável Ace e instalação vinculada a SHA256: [HappyHorse0.1.0](https://github.com/AceDataCloud/HappyHorseCrewAI/releases/tag/v0.1.0).

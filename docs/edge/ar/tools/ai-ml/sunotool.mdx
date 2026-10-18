@@ -5,12 +5,16 @@ icon: music
 mode: "wide"
 ---
 
-يوفّر Ace Data Cloud هذا التكامل، وليس منتجًا رسميًا من Suno أو CrewAI. المصدر قيد المراجعة؛ لم يُنشر بعد على PyPI ولم يُدرج في كتالوج AMP.
+يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من Suno أو CrewAI. دُمج المصدر ويوجد إصدار GitHub ثابت 0.1.0 مع wheel/sdist في مستودع Ace. لا ندّعي نشر PyPI أو الإدراج في AMP. ثبّت المصدر المدمج الثابت أدناه أو استخدم أمر wheel المرتبط بـSHA256 في ملاحظات الإصدار. صفحة التوثيق المقترحة ليست دليل إدراج رسمي.
 
 ثبّت الحزمة المستقلة المراجعة من نسخة المصدر المحددة. تستخدم CrewAI BaseTool مباشرة، دون إعداد MCP أو كتابة غلاف مخصص.
 
 ```bash
-uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2'
+uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb'
+```
+
+```bash
+uv add 'crewai-suno @ https://github.com/AceDataCloud/SunoCrewAI/releases/download/v0.1.0/crewai_suno-0.1.0-py3-none-any.whl#sha256=c00d2d011c72f0b1d294ce020b06c20668ef8d4572aaffbc53874341bc707ecf'
 ```
 
 سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key). افتح General application وانسخ Token لاستهلاك API، أو استخدم Manage Keys → Create. عند تقييد APIs اسمح بـ `/suno/audios` و`/suno/tasks`. اضبط `ACEDATACLOUD_API_KEY` في البيئة ولا تضع المفتاح في prompt أو إعدادات مودعة.
@@ -30,4 +34,6 @@ print(result)
 
 يعرض الاسترجاع الناجح status=succeeded وsuccess=true وmedia_urls وcost الأصلي بوحدة Credits إن توفّر. تستخدم المهام الفاشلة ToolFailure. تُحفظ معاني HTTP 401/403/429/5xx، دون إعادة محاولة HTTP مدفوعة تلقائيًا أو نموذج بديل. لا تفعّل الحزمة tracing ولا تضيف GUI.
 
-راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SunoCrewAI/tree/e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2) لصور المفتاح المحجوب وضبط البيئة والنتائج غير المتزامنة واستكشاف الأخطاء. للصور مصدر وتاريخ وليست دليلًا على تشغيل Ace أو نشره.
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/SunoCrewAI/tree/5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb) لصور المفتاح المحجوب وضبط البيئة والنتائج غير المتزامنة واستكشاف الأخطاء. للصور مصدر وتاريخ وليست دليلًا على تشغيل Ace أو نشره.
+
+إصدار Ace الثابت وتثبيت مرتبط بـSHA256: [Suno0.1.0](https://github.com/AceDataCloud/SunoCrewAI/releases/tag/v0.1.0).

@@ -5,12 +5,16 @@ icon: music
 mode: "wide"
 ---
 
-This integration is provided by Ace Data Cloud, not an official Suno or CrewAI product. The source is under review; it is not yet a PyPI release or an AMP catalog listing.
+This independent integration is provided by Ace Data Cloud, not an official Suno or CrewAI product. Its source is merged and the Ace repository has a stable GitHub 0.1.0 wheel/sdist release. PyPI publication and AMP catalog inclusion are not claimed. Install the exact merged source below, or use the SHA256-bound wheel command on this page. This proposed documentation page is not proof of official listing.
 
 Install the reviewed standalone package from its exact source commit. This uses CrewAI BaseTool directly; no MCP setup or custom wrapper is needed.
 
 ```bash
-uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2'
+uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb'
+```
+
+```bash
+uv add 'crewai-suno @ https://github.com/AceDataCloud/SunoCrewAI/releases/download/v0.1.0/crewai_suno-0.1.0-py3-none-any.whl#sha256=c00d2d011c72f0b1d294ce020b06c20668ef8d4572aaffbc53874341bc707ecf'
 ```
 
 Register or sign in to [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key). Open General application and copy an API-consumer Token, or use Manage Keys → Create for a dedicated key. Allow `/suno/audios` and `/suno/tasks` if restricting APIs. Set `ACEDATACLOUD_API_KEY` in your environment; never put the Key in a prompt or committed config.
@@ -30,4 +34,6 @@ After approving a generation budget, pass `SunoGenerateMusicTool()` and `SunoRet
 
 Successful retrieval reports `status=succeeded`, `success=true`, `media_urls` and original Credits `cost` when supplied. Failed tasks use structured ToolFailure. HTTP 401/403/429/5xx retain their meaning; no automatic paid HTTP retry or model fallback is added. The package does not enable tracing or add a GUI.
 
-See the [English and Chinese step-by-step guide](https://github.com/AceDataCloud/SunoCrewAI/tree/e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2), including redacted Key screenshots, precise environment configuration, asynchronous output and troubleshooting. Screenshots carry source/date and are not proof of Ace runtime or release.
+See the [English and Chinese step-by-step guide](https://github.com/AceDataCloud/SunoCrewAI/tree/5b3bc4d597f5fb046b1d6298d5e833ad7f2b29fb), including redacted Key screenshots, precise environment configuration, asynchronous output and troubleshooting. Screenshots carry source/date and are not proof of Ace runtime or release.
+
+Stable Ace release and SHA256-bound installation: [Suno0.1.0](https://github.com/AceDataCloud/SunoCrewAI/releases/tag/v0.1.0).

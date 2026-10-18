@@ -5,10 +5,14 @@ icon: video
 mode: "wide"
 ---
 
-يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من HappyHorse أو CrewAI. المصدر قيد المراجعة؛ لا ندّعي نشره على PyPI أو إدراجه في كتالوج AMP. ثبّت نسخة المصدر الثابتة أدناه؛ المستودع أو المعاينة أو نجاح الاختبارات لا يعني الإدراج الرسمي.
+يوفّر Ace Data Cloud هذا التكامل المستقل، وليس منتجًا رسميًا من HappyHorse أو CrewAI. دُمج المصدر ويوجد إصدار GitHub ثابت 0.1.0 مع wheel/sdist في مستودع Ace. لا ندّعي نشر PyPI أو الإدراج في AMP. ثبّت المصدر المدمج الثابت أدناه أو استخدم أمر wheel المرتبط بـSHA256 في ملاحظات الإصدار. صفحة التوثيق المقترحة ليست دليل إدراج رسمي.
 
 ```bash
-uv add 'crewai-happyhorse @ git+https://github.com/AceDataCloud/HappyHorseCrewAI.git@62936c47d3aa1d73787ae884e4e8985fe35c14f9'
+uv add 'crewai-happyhorse @ git+https://github.com/AceDataCloud/HappyHorseCrewAI.git@700945e95b53786329f16e722d61b6af4b3d1c1b'
+```
+
+```bash
+uv add 'crewai-happyhorse @ https://github.com/AceDataCloud/HappyHorseCrewAI/releases/download/v0.1.0/crewai_happyhorse-0.1.0-py3-none-any.whl#sha256=a8f111bcec1be13c8c7cae792c6301cb5c651bc5d11eb00a44241659b3d95c92'
 ```
 
 سجّل الدخول إلى [تطبيقات Ace](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_api_key) وافتح General application، ثم انسخ Token لاستهلاك API أو أنشئ مفتاحًا مخصصًا عبر Manage Keys → Create. تحقّق من صلاحية HappyHorse والرصيد و[أسعار النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=happyhorsecrewai_docs_pricing). عند تقييد APIs اسمح بـ `/happyhorse/videos` و`/happyhorse/tasks`. اضبط Token الخام في `ACEDATACLOUD_API_KEY` دون Bearer أو مسافات، ولا تضعه في prompt أو ملفات مودعة.
@@ -28,4 +32,6 @@ print(result)
 
 تعيد المهمة المخزنة الناجحة status=succeeded وsuccess=true وmedia_urls والتكلفة الأصلية بوحدة Credits إن توفّرت. الحالات الفاشلة المتداخلة أو غياب الوسائط النهائية ينتج ToolFailure. يُحفظ معنى HTTP دون عرض استجابات خاصة. لا توجد إعادة محاولة مدفوعة تلقائية أو معالج دفع أو نموذج بديل. الاستخدام الواحد لكل مثيل ليس حدًا ماليًا أو نظام إذن.
 
-راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/62936c47d3aa1d73787ae884e4e8985fe35c14f9) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و21 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.
+راجع [الدليل بالإنجليزية والصينية](https://github.com/AceDataCloud/HappyHorseCrewAI/tree/700945e95b53786329f16e722d61b6af4b3d1c1b) لصور المفتاح المحجوب، والبيئة، وحقول الخدمة، والاستعلام، والأخطاء والخصوصية. صور CrewAI التاريخية مرجع للتفاعل وليست دليل تشغيل Ace أو GUI جديد. نجح تثبيت Linux الكامل مع Python 3.10/3.12/3.13 و21 اختبارًا مجانيًا وتثبيت wheel نظيف؛ قرارات النموذج في الاختبارات محلية محددة، لا تحقق مدفوع.
+
+إصدار Ace الثابت وتثبيت مرتبط بـSHA256: [HappyHorse0.1.0](https://github.com/AceDataCloud/HappyHorseCrewAI/releases/tag/v0.1.0).
