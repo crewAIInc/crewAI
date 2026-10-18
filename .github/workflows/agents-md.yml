@@ -1,0 +1,49 @@
+name: AGENTS.md
+
+# The AGENTS.md that `crewai create` ships is tested in lib/cli/tests, which the main
+# test workflow doesn't run. This runs its guards whenever the file, its tests, or the
+# docs pages it links change.
+on:
+  pull_request:
+    paths:
+      - "lib/cli/src/crewai_cli/templates/**"
+      - "lib/cli/src/crewai_cli/utils.py"
+      - "lib/cli/tests/test_create_crew.py"
+      - "docs/docs.json"
+      - "docs/edge/en/**"
+      - ".github/workflows/agents-md.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  guards:
+    name: AGENTS.md guards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Restore global uv cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py3.12-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-main-py3.12-
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.11.3"
+          python-version: "3.12"
+          enable-cache: false
+
+      - name: Install the project
+        run: uv sync --all-groups --all-extras
+
+      - name: Run the AGENTS.md guards
+        run: uv run pytest lib/cli/tests/test_create_crew.py -k agents_md -p no:randomly -n 0
