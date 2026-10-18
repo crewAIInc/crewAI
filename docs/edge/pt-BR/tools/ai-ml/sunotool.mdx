@@ -10,7 +10,7 @@ A integração é fornecida pela Ace Data Cloud; não é um produto oficial da S
 Instale o pacote independente a partir do commit exato revisado. Ele usa CrewAI BaseTool diretamente, sem configurar MCP ou escrever um wrapper.
 
 ```bash
-uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@000cb3b7671dceb3ef52f7bd59259700f57f61cf'
+uv add 'crewai-suno @ git+https://github.com/AceDataCloud/SunoCrewAI.git@e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2'
 ```
 
 Cadastre-se ou entre em [Ace Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=sunocrewai_docs_api_key). Abra General application e copie um Token de consumo da API, ou use Manage Keys → Create. Se restringir APIs, permita `/suno/audios` e `/suno/tasks`. Defina `ACEDATACLOUD_API_KEY` no ambiente; nunca inclua a chave em prompts ou configurações versionadas.
@@ -30,7 +30,4 @@ Após aprovar o orçamento, passe `SunoGenerateMusicTool()` e `SunoRetrieveTaskT
 
 A consulta bem-sucedida retorna status=succeeded, success=true, media_urls e o cost original em Credits, quando fornecido. Falhas usam ToolFailure. HTTP 401/403/429/5xx mantêm seu significado; não há repetição automática de HTTP pago nem fallback de modelo. O pacote não habilita tracing nem adiciona GUI.
 
-Veja o [guia em inglês e chinês](https://github.com/AceDataCloud/SunoCrewAI/tree/000cb3b7671dceb3ef52f7bd59259700f57f61cf), com capturas de Key ocultada, ambiente, saída assíncrona e solução de problemas. As imagens têm origem/data e não comprovam execução ou lançamento Ace.
-
-
-[Wheel de prévia no GitHub — sem lançamento PyPI ou listagem AMP](https://github.com/AceDataCloud/SunoCrewAI/releases/tag/v0.1.0-preview.1)
+Veja o [guia em inglês e chinês](https://github.com/AceDataCloud/SunoCrewAI/tree/e5eeb04661ed7b9a86e1f2f970a9e7943b027ca2), com capturas de Key ocultada, ambiente, saída assíncrona e solução de problemas. As imagens têm origem/data e não comprovam execução ou lançamento Ace.
