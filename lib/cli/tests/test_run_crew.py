@@ -1,5 +1,6 @@
 """Tests for crewai_cli.run_crew JSON crew handling."""
 
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -230,6 +231,51 @@ def test_json_runner_code_loads_current_cli_package_over_project_env(tmp_path: P
     )
 
     assert marker.read_text() == "current:trained.pkl"
+
+
+def test_json_runner_pins_the_machines_proxy_before_the_project_env_loads(
+    tmp_path: Path,
+):
+    """The runner is a fresh interpreter that never imports cli.py. It reads the
+    machine's proxy and CA for AMP before `_run_json_crew` loads the project's
+    .env, so that file cannot choose where the saved login travels."""
+    from crewai_core import plus_api
+
+    current_pkg = tmp_path / "cli" / "crewai_cli"
+    current_pkg.mkdir(parents=True)
+    pinned = tmp_path / "pinned.json"
+    (current_pkg / "__init__.py").write_text("")
+    (current_pkg / "run_crew.py").write_text(
+        "import json\n"
+        "from pathlib import Path\n"
+        "from dotenv import load_dotenv\n"
+        "def _run_json_crew(trained_agents_file=None):\n"
+        "    load_dotenv(Path.cwd() / '.env', override=True)\n"
+        "    from crewai_core import plus_api\n"
+        f"    Path({str(pinned)!r}).write_text(json.dumps(plus_api._MACHINE_TRANSPORT_ENV))\n"
+    )
+    (tmp_path / ".env").write_text(
+        "HTTPS_PROXY=http://project-proxy.test:8080\nSSL_CERT_FILE=/project/ca.pem\n"
+    )
+
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not plus_api._sets_transport(key)
+    }
+    env["HTTPS_PROXY"] = "http://machine-proxy.test:3128"
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(current_pkg)
+
+    subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        check=True,
+        env=env,
+        cwd=tmp_path,
+    )
+
+    assert json.loads(pinned.read_text()) == {
+        "HTTPS_PROXY": "http://machine-proxy.test:3128"
+    }
 
 
 def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path):

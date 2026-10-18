@@ -56,6 +56,14 @@ source_dir = os.environ.get("CREWAI_RUNNER_SOURCE_DIR")
 if source_dir:
     sys.path.insert(0, source_dir)
 
+# This interpreter never imports cli.py, so pin the machine's proxy and CA for
+# AMP requests here, before _run_json_crew loads the project's .env. A
+# crewai-core too old to have plus_api pins nothing and ignores proxies anyway.
+try:
+    import crewai_core.plus_api
+except ImportError:
+    pass
+
 package_dir = Path(os.environ["CREWAI_CLI_RUNNER_PACKAGE_DIR"])
 package_spec = importlib.util.spec_from_file_location(
     "crewai_cli",

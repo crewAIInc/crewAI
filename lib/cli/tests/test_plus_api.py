@@ -551,9 +551,14 @@ def _requests_sent_by(call: Callable[[PlusAPI], object]) -> list[httpx.Request]:
         return httpx.Response(200, json={})
 
     transport = httpx.MockTransport(answer)
-    with patch(
-        "crewai_core.plus_api.httpx.Client",
-        side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+    # A machine or OS proxy would mount a real transport ahead of the mock one.
+    with (
+        patch.dict("crewai_core.plus_api._MACHINE_TRANSPORT_ENV", clear=True),
+        patch("crewai_core.plus_api._os_proxies", dict),
+        patch(
+            "crewai_core.plus_api.httpx.Client",
+            side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+        ),
     ):
         call(PlusAPI("test_api_key"))
     return sent
