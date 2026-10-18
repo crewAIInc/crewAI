@@ -16,7 +16,7 @@ from copy import deepcopy
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -25,6 +25,7 @@ from crewai.utilities.pydantic_schema_utils import (
     ensure_all_properties_required,
     ensure_type_in_schemas,
     force_additional_properties_false,
+    generate_model_description,
     resolve_refs,
     strip_null_from_types,
     strip_unsupported_formats,
@@ -802,6 +803,51 @@ class TestResolveRefs:
         }
         resolved = resolve_refs(schema)
         assert resolved == schema
+
+    def test_sibling_keys_of_ref_are_kept(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "$ref": "#/$defs/Item",
+                    "description": "the item",
+                    "default": None,
+                    "title": "My Item",
+                },
+            },
+            "$defs": {
+                "Item": {
+                    "type": "object",
+                    "description": "Item model docstring.",
+                    "properties": {"id": {"type": "integer"}},
+                },
+            },
+        }
+        resolved = resolve_refs(schema)
+        item = resolved["properties"]["item"]
+        assert "$ref" not in item
+        assert item["type"] == "object"
+        # Siblings survive and win over the definition's same-named keys.
+        assert item["description"] == "the item"
+        assert item["title"] == "My Item"
+        assert item["default"] is None
+        assert item["properties"] == {"id": {"type": "integer"}}
+
+    def test_field_description_survives_generate_model_description(self) -> None:
+        class Leaf(BaseModel):
+            """A leaf model."""
+
+            value: int = Field(description="the value")
+
+        class Holder(BaseModel):
+            """Holder model."""
+
+            nested: Leaf = Field(description="the leaf")
+
+        description = generate_model_description(Holder)
+        nested = description["json_schema"]["schema"]["properties"]["nested"]
+        assert nested["description"] == "the leaf"
+        assert nested["properties"]["value"]["description"] == "the value"
 
 
 class TestForceAdditionalPropertiesFalse:
