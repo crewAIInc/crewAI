@@ -1,8 +1,9 @@
 name: AGENTS.md
 
 # The AGENTS.md that `crewai create` ships is tested in lib/cli/tests, which the main
-# test workflow doesn't run. This runs its guards whenever the file, its tests, or the
-# docs pages it links change.
+# test workflow doesn't run. The guards run whenever the file, its tests, or the docs
+# pages it links change. The eval asks coding agents (Claude Code and Codex) what the
+# file teaches, against the base branch's file, and fails on a drop of more than 10%.
 on:
   pull_request:
     branches: [main]
@@ -10,14 +11,41 @@ on:
       - "lib/cli/src/crewai_cli/templates/**"
       - "lib/cli/src/crewai_cli/utils.py"
       - "lib/cli/tests/test_create_crew.py"
+      - "lib/devtools/src/crewai_devtools/agents_md_eval.py"
+      - "lib/devtools/src/crewai_devtools/agents_md_items.json"
+      - "lib/devtools/tests/test_agents_md_eval.py"
       - "docs/docs.json"
       - "docs/edge/en/**"
       - ".github/workflows/agents-md.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: agents-md-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      eval: ${{ steps.filter.outputs.eval }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
+        id: filter
+        with:
+          filters: |
+            eval:
+              - 'lib/cli/src/crewai_cli/templates/AGENTS.md'
+              - 'lib/cli/src/crewai_cli/templates/CLAUDE.md'
+              - 'lib/cli/src/crewai_cli/utils.py'
+              - 'lib/devtools/src/crewai_devtools/agents_md_eval.py'
+              - 'lib/devtools/src/crewai_devtools/agents_md_items.json'
+              - '.github/workflows/agents-md.yml'
+
   guards:
     name: AGENTS.md guards
     runs-on: ubuntu-latest
@@ -46,5 +74,55 @@ jobs:
       - name: Install the project
         run: uv sync --all-groups --all-extras
 
-      - name: Run the AGENTS.md guards
-        run: uv run pytest lib/cli/tests/test_create_crew.py -k agents_md -p no:randomly -n 0
+      - name: Run the AGENTS.md guards and the eval's own tests
+        run: |
+          uv run pytest lib/cli/tests/test_create_crew.py -k agents_md -p no:randomly -n 0
+          uv run pytest lib/devtools/tests/test_agents_md_eval.py -n 0
+
+  eval:
+    name: AGENTS.md eval (Claude Code, Codex)
+    needs: changes
+    if: needs.changes.outputs.eval == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the API keys
+        id: keys
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ] && [ -n "$OPENAI_API_KEY" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "$FORK" = "true" ]; then
+            echo "::notice::Skipped: secrets aren't available to pull requests from forks."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::ANTHROPIC_API_KEY and OPENAI_API_KEY must be set as repository secrets."
+            exit 1
+          fi
+
+      - name: Install uv
+        if: steps.keys.outputs.run == 'true'
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.11.3"
+          python-version: "3.12"
+
+      - name: Install the coding agents
+        if: steps.keys.outputs.run == 'true'
+        run: npm install -g @anthropic-ai/claude-code@2.1.289 @openai/codex@0.160.0
+
+      - name: Ask both agents, base file against this branch's
+        if: steps.keys.outputs.run == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
+        run: uv run --package crewai-devtools devtools agents-md-eval --base "origin/$BASE_REF"
