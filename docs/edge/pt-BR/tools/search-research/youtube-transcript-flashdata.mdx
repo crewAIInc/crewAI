@@ -18,7 +18,7 @@ Forneça ao Agent a faixa existente em `results[]`, incluindo `segments`, `fullT
 Esta integração ainda não está no pacote `crewai-tools` publicado. Instale a revisão fixa abaixo com Python 3.10–3.13. Ela usa CrewAI 1.15.28.
 
 ```shell
-uv add "crewai-tools @ git+https://github.com/rocosen/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
+uv add "crewai-tools @ git+https://github.com/crewAIInc/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
 ```
 
 Crie uma conta FlashData e uma chave API pelo guia abaixo. Configure `FLASHDATA_API_KEY` no ambiente ou gerenciador de segredos; não inclua seu valor em prompts ou código. O exemplo direto não exige modelo.
@@ -86,4 +86,4 @@ O padrão `auto=True` solicita legendas automáticas. Não há ASR, tradução o
 
 Entradas inválidas falham antes da requisição. Não há repetição, paginação ou consulta periódica automática. O timeout de rede é de 120 segundos, com 15 para conexão, e limite de resposta de 20 MiB. Um timeout após envio pode deixar a cobrança incerta: consulte Jobs na conta antes de reenviar. Erros omitem respostas brutas e credenciais; resultados vazios continuam vazios.
 
-[Implementação da fonte](https://github.com/rocosen/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)
+[Implementação da fonte](https://github.com/crewAIInc/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)

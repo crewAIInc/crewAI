@@ -7,7 +7,7 @@ Seventeen native CrewAI tools cover fifteen Google and YouTube data sources. Eac
 These additions are not in the published `crewai-tools` release. Use Python 3.10–3.13 and the pinned source revision (CrewAI 1.15.28):
 
 ```shell
-uv add "crewai-tools @ git+https://github.com/rocosen/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
+uv add "crewai-tools @ git+https://github.com/crewAIInc/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
 ```
 
 Create an account and API key using the [Google Search source guide](https://flashdata.dev/docs/sources/google_search), then set `FLASHDATA_API_KEY` through your secret manager. Installation is free under MIT; API requests consume paid FlashData Credits. Model and customer cloud-storage charges are separate.

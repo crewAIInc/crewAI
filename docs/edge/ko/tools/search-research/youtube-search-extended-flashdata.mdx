@@ -18,7 +18,7 @@ Agent가 검토할 더 큰 후보 집합을 `results[].results`에 수집합니�
 이 통합은 아직 배포된 `crewai-tools` 패키지에 포함되지 않았습니다. Python 3.10–3.13에서 아래의 고정 소스 리비전을 설치하세요. CrewAI 1.15.28을 사용합니다.
 
 ```shell
-uv add "crewai-tools @ git+https://github.com/rocosen/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
+uv add "crewai-tools @ git+https://github.com/crewAIInc/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
 ```
 
 아래 소스 안내에서 FlashData 계정과 API 키를 만드세요. 환경 또는 비밀 관리 도구에 `FLASHDATA_API_KEY`를 설정하고 프롬프트나 소스 코드에 값을 넣지 마세요. 직접 호출 예제에는 모델이 필요하지 않습니다.
@@ -86,4 +86,4 @@ Extended Search는 일반 검색보다 요금이 높은 별도 소스입니다. 
 
 잘못된 입력은 API 요청 전에 실패합니다. 자동 재시도, 페이지 순회, 폴링은 없습니다. 네트워크 타임아웃은 120초이며 연결은 15초, 응답 한도는 20 MiB입니다. 제출 후 타임아웃은 과금 결과가 불명확할 수 있으므로 다시 제출하기 전에 계정의 Jobs를 확인하세요. 오류에는 원본 응답이나 자격 증명을 넣지 않으며 빈 결과는 그대로 유지합니다.
 
-[소스 구현](https://github.com/rocosen/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)
+[소스 구현](https://github.com/crewAIInc/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)

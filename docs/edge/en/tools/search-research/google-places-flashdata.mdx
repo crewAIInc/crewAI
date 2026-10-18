@@ -18,7 +18,7 @@ Use `results[].places` to prepare a location-specific shortlist with names, addr
 This integration is not yet included in the published `crewai-tools` package. Install the reviewed source revision below with Python 3.10–3.13. It uses CrewAI 1.15.28.
 
 ```shell
-uv add "crewai-tools @ git+https://github.com/rocosen/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
+uv add "crewai-tools @ git+https://github.com/crewAIInc/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
 ```
 
 Create a FlashData account and API key using the source guide below. Set `FLASHDATA_API_KEY` in your environment or secret manager; keep the value out of prompts and source code. The direct example requires no model.
@@ -86,4 +86,4 @@ Missing fields remain missing. Verify current hours and availability with the bu
 
 Invalid input fails before the API request. The client performs no automatic retries, pagination or polling. Network timeout is 120 seconds (15 seconds to connect), with a 20 MiB response limit. A timeout after submission may have an unknown billing outcome: inspect Jobs in your FlashData account before submitting again. Errors omit raw responses and credentials; empty results remain empty.
 
-[Source implementation](https://github.com/rocosen/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)
+[Source implementation](https://github.com/crewAIInc/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)
