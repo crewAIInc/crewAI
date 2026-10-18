@@ -43,7 +43,6 @@ from crewai_cli.version import get_crewai_tools_dependency
 # ── Provider / model data ───────────────────────────────────────
 
 _PROVIDERS: list[tuple[str, str]] = [
-    ("acedatacloud", "Ace Data Cloud"),
     ("openai", "OpenAI"),
     ("anthropic", "Anthropic"),
     ("gemini", "Google Gemini"),
@@ -56,6 +55,7 @@ _PROVIDERS: list[tuple[str, str]] = [
     ("cerebras", "Cerebras"),
     ("sambanova", "SambaNova"),
     ("watson", "IBM watsonx"),
+    ("acedatacloud", "Ace Data Cloud"),
 ]
 
 # Curated offline fallback / label source. The picker prefers models pulled

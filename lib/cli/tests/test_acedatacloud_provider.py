@@ -57,3 +57,12 @@ def test_classic_creation_hides_ace_key(tmp_path):
     assert prompt.call_args.kwargs["hide_input"] is True
     assert write.call_args.args[1]["MODEL"] == "acedatacloud/gpt-4.1-mini"
     assert write.call_args.args[1]["ACEDATACLOUD_API_KEY"] == "test-key"
+
+
+def test_existing_default_provider_is_not_replaced():
+    from crewai_cli.create_json_crew import _PROVIDERS
+
+    assert PROVIDERS[0] == "openai"
+    assert _PROVIDERS[0] == ("openai", "OpenAI")
+    assert PROVIDERS[-1] == "acedatacloud"
+    assert _PROVIDERS[-1] == ("acedatacloud", "Ace Data Cloud")

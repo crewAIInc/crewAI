@@ -123,7 +123,6 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
 
 
 PROVIDERS: list[str] = [
-    "acedatacloud",
     "openai",
     "anthropic",
     "gemini",
@@ -136,6 +135,7 @@ PROVIDERS: list[str] = [
     "azure",
     "cerebras",
     "sambanova",
+    "acedatacloud",
 ]
 
 MODELS: dict[str, list[str]] = {
