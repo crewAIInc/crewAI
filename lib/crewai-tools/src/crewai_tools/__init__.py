@@ -105,10 +105,10 @@ from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
 from crewai_tools.tools.invoke_crewai_automation_tool.invoke_crewai_automation_tool import (
     InvokeCrewAIAutomationTool,
 )
+from crewai_tools.tools.jev_decision_tool.jev_decision_tool import JevDecisionTool
 from crewai_tools.tools.jina_scrape_website_tool.jina_scrape_website_tool import (
     JinaScrapeWebsiteTool,
 )
-from crewai_tools.tools.jev_decision_tool.jev_decision_tool import JevDecisionTool
 from crewai_tools.tools.json_search_tool.json_search_tool import JSONSearchTool
 from crewai_tools.tools.linkup.linkup_search_tool import LinkupSearchTool
 from crewai_tools.tools.llamaindex_tool.llamaindex_tool import LlamaIndexTool
@@ -284,8 +284,8 @@ __all__ = [
     "GithubSearchTool",
     "HyperbrowserLoadTool",
     "InvokeCrewAIAutomationTool",
-    "JevDecisionTool",
     "JSONSearchTool",
+    "JevDecisionTool",
     "JinaScrapeWebsiteTool",
     "LinkupSearchTool",
     "LlamaIndexTool",
