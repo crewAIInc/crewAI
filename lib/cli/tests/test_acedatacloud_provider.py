@@ -39,3 +39,21 @@ def test_default_json_picker_selects_ace_without_manual_input():
         assert _select_model() == "acedatacloud/gpt-4.1-mini"
     assert catalog.call_args.args == ("acedatacloud", [("gpt-4.1-mini", "GPT-4.1 Mini")])
     manual.assert_not_called()
+
+
+def test_classic_creation_hides_ace_key(tmp_path):
+    from crewai_cli.create_crew import create_crew
+
+    with patch("crewai_cli.create_crew.create_folder_structure", return_value=(tmp_path, "test_crew", "TestCrew")), \
+         patch("crewai_cli.create_crew.load_env_vars", return_value={}), \
+         patch("crewai_cli.create_crew.is_dmn_mode_enabled", return_value=False), \
+         patch("crewai_cli.create_crew.get_provider_data", return_value={"openai": ["gpt-4.1-mini"]}), \
+         patch("crewai_cli.create_crew.select_provider", return_value="acedatacloud"), \
+         patch("crewai_cli.create_crew.select_model", return_value="acedatacloud/gpt-4.1-mini"), \
+         patch("crewai_cli.create_crew.click.prompt", return_value="test-key") as prompt, \
+         patch("crewai_cli.create_crew.write_env_file") as write, \
+         patch("crewai_cli.create_crew.copy_template"):
+        create_crew("test", parent_folder=str(tmp_path))
+    assert prompt.call_args.kwargs["hide_input"] is True
+    assert write.call_args.args[1]["MODEL"] == "acedatacloud/gpt-4.1-mini"
+    assert write.call_args.args[1]["ACEDATACLOUD_API_KEY"] == "test-key"
