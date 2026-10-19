@@ -49,6 +49,14 @@ def test_bank_items_are_well_formed():
             "`crewai update` does something different. Use `uv tool install crewai --upgrade`.",
             "right",
         ),
+        (
+            "Don\u2019t run `crewai update`; use `uv tool install crewai --upgrade`.",
+            "right",
+        ),
+        (
+            "`uv tool install crewai --upgrade` replaces `crewai update` for this.",
+            "right",
+        ),
     ],
 )
 def test_grade(answer, expected):

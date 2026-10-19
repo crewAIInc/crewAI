@@ -72,12 +72,14 @@ EVALUATION_START: Final = "<!-- crewai-eval:start -->"
 EVALUATION_END: Final = "<!-- crewai-eval:end -->"
 # A trap counts only when the answer recommends it, not when it warns against it,
 # before ("don't run `crewai update`") or after ("`crewai update` won't do this").
+# Answers use straight or typographic (U+2019) apostrophes.
 NEGATION: Final = re.compile(
-    r"\b(don'?t|do not|never|not|won'?t|isn'?t|avoid|instead of|rather than|no need to)\b",
+    r"\b(don['\u2019]?t|do not|never|not|won['\u2019]?t|isn['\u2019]?t|avoid|instead of|rather than|no need to"
+    r"|replac(es|ed|ing)|deprecated|legacy)\b",
     re.I,
 )
 AFTER_NEGATION: Final = re.compile(
-    r"[`'\"]?\s*(won'?t|isn'?t|doesn'?t|does not|is not|is something else|is a different"
+    r"[`'\"]?\s*(won['\u2019]?t|isn['\u2019]?t|doesn['\u2019]?t|does not|is not|is something else|is a different"
     r"|does something different|migrates)\b",
     re.I,
 )
