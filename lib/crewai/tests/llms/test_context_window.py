@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from crewai.llms.context_window import (
@@ -11,6 +13,7 @@ from crewai.llms.context_window import (
     context_windows_from_catalog,
     _build_summary_prompt,
     _chunk_messages,
+    summarize_messages,
     resolve_context_window_size,
 )
 
@@ -279,3 +282,54 @@ def test_summary_chunking_uses_the_rendered_request_token_estimator() -> None:
         for chunk in chunks
     )
     assert all(len(request) == 2 for request in llm.requests)
+
+
+def _summary_llm(reply: str = "<summary>Summary</summary>") -> MagicMock:
+    llm = MagicMock()
+    llm.get_context_window_size.return_value = 1_000
+    llm.get_input_tokens_count.return_value = 1
+    llm.acall = AsyncMock(return_value=reply)
+    return llm
+
+
+def test_summary_preserves_system_messages_and_merged_files() -> None:
+    first, second = MagicMock(), MagicMock()
+    messages = [
+        {"role": "system", "content": "System"},
+        {"role": "user", "content": "First", "files": {"a.pdf": first}},
+        {"role": "assistant", "content": "Reply"},
+        {"role": "user", "content": "Second", "files": {"b.pdf": second}},
+    ]
+
+    summarize_messages(_summary_llm(), messages, [], verbose=False)
+
+    assert messages[0] == {"role": "system", "content": "System"}
+    assert messages[1]["files"] == {"a.pdf": first, "b.pdf": second}
+
+
+def test_summary_prompt_preserves_tool_and_multimodal_text() -> None:
+    llm = _summary_llm()
+    messages = [
+        {"role": "user", "content": [{"type": "text", "text": "Question"}]},
+        {"role": "tool", "name": "search", "content": "Result"},
+    ]
+
+    summarize_messages(llm, messages, [], verbose=False)
+
+    prompt = llm.acall.call_args.args[0][1]["content"]
+    assert "[USER]: Question" in prompt
+    assert "[TOOL_RESULT (search)]: Result" in prompt
+
+
+def test_summary_extracts_structured_summary_tag() -> None:
+    messages = [{"role": "user", "content": "Question"}]
+
+    summarize_messages(
+        _summary_llm("before <summary>Extracted</summary> after"),
+        messages,
+        [],
+        verbose=False,
+    )
+
+    assert "Extracted" in messages[0]["content"]
+    assert "before" not in messages[0]["content"]

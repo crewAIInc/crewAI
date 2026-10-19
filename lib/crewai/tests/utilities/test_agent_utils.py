@@ -42,7 +42,6 @@ from crewai.utilities.agent_utils import (
     is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
-    summarize_messages,
 )
 from crewai_core.printer import Printer
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -57,7 +56,7 @@ def test_summarizes_context_before_llm_call() -> None:
     ]
     llm = MagicMock()
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+    with patch.object(llm, "summarize_messages") as summarize:
         _summarize_context_before_llm_call(
             llm=llm,
             messages=messages,
@@ -66,9 +65,7 @@ def test_summarizes_context_before_llm_call() -> None:
             verbose=False,
         )
 
-    summarize.assert_called_once_with(
-        messages=messages, llm=llm, callbacks=[], verbose=False
-    )
+    summarize.assert_called_once_with(messages, [], False)
 
 
 def test_context_summarization_shows_triggered_and_completed_panels() -> None:
@@ -80,7 +77,7 @@ def test_context_summarization_shows_triggered_and_completed_panels() -> None:
     llm = MagicMock()
 
     with (
-        patch("crewai.utilities.agent_utils.summarize_messages"),
+        patch.object(llm, "summarize_messages"),
         patch("crewai.utilities.agent_utils.console.print") as print_panel,
     ):
         _summarize_context_before_llm_call(
@@ -107,7 +104,7 @@ def test_context_summarization_emits_lifecycle_events_with_llm_agent_and_task() 
     agent = SimpleNamespace(id="agent-id", role="Researcher")
 
     with (
-        patch("crewai.utilities.agent_utils.summarize_messages"),
+        patch.object(llm, "summarize_messages"),
         patch.object(crewai_event_bus, "emit") as emit,
     ):
         _summarize_context_before_llm_call(
@@ -141,9 +138,8 @@ def test_context_summarization_emits_failed_event_when_compaction_fails() -> Non
     llm = MagicMock(model="gpt-4o-mini")
 
     with (
-        patch(
-            "crewai.utilities.agent_utils.summarize_messages",
-            side_effect=RuntimeError("summarization failed"),
+        patch.object(
+            llm, "summarize_messages", side_effect=RuntimeError("summarization failed")
         ),
         patch.object(crewai_event_bus, "emit") as emit,
         pytest.raises(RuntimeError, match="summarization failed"),
@@ -180,8 +176,8 @@ def test_get_llm_response_summarizes_before_the_model_call() -> None:
     llm.call.return_value = "response"
     events: list[str] = []
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
-        summarize.side_effect = lambda **_: events.append("summarize")
+    with patch.object(llm, "summarize_messages") as summarize:
+        summarize.side_effect = lambda *_args, **_kwargs: events.append("summarize")
         llm.call.side_effect = lambda *_args, **_kwargs: events.append("call") or "response"
 
         assert (
@@ -214,7 +210,7 @@ def test_get_llm_response_preserves_a_single_pending_user_request() -> None:
     llm.is_context_window_overflowing_threshold.return_value = True
     llm.call.return_value = "response"
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+    with patch.object(llm, "summarize_messages") as summarize:
         assert (
             get_llm_response(
                 llm=llm,
@@ -255,12 +251,11 @@ def test_get_llm_response_continues_when_proactive_compaction_fails(
         llm.is_context_window_overflowing_threshold.side_effect = RuntimeError(
             "token counting failed"
         )
-        summarize = patch("crewai.utilities.agent_utils.summarize_messages")
+        summarize = patch.object(llm, "summarize_messages")
     else:
         llm.is_context_window_overflowing_threshold.return_value = True
-        summarize = patch(
-            "crewai.utilities.agent_utils.summarize_messages",
-            side_effect=RuntimeError("summarization failed"),
+        summarize = patch.object(
+            llm, "summarize_messages", side_effect=RuntimeError("summarization failed")
         )
 
     with summarize:
@@ -350,7 +345,7 @@ async def test_aget_llm_response_summarizes_before_the_model_call() -> None:
     llm.is_context_window_overflowing_threshold.return_value = True
     llm.acall = AsyncMock(return_value="response")
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+    with patch.object(llm, "summarize_messages") as summarize:
         assert (
             await aget_llm_response(
                 llm=llm,
