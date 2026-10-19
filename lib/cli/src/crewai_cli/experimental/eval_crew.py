@@ -195,9 +195,9 @@ NOT_SHARED = (
 )
 UNTRUSTED_AMP = (
     "The crew was not run: its trace would go to {url}, an AMP this machine does not "
-    "send its CrewAI login to, and with tracing on this project's crewai would send the "
-    "login there. Log in to that AMP (`crewai enterprise configure {url}`) or remove "
-    "CREWAI_PLUS_URL from the project's .env, then run `crewai eval` again."
+    "send its CrewAI login to, and the project's crewai could send the login there "
+    "with the trace. Log in to that AMP (`crewai enterprise configure {url}`) or "
+    "remove CREWAI_PLUS_URL from the project's .env, then evaluate again."
 )
 
 
@@ -779,8 +779,11 @@ def _project_changed_since(record: dict[str, Any]) -> bool:
 def _machine_credential() -> bool:
     """Does this machine hold a credential a run's tracing would send — the
     saved `crewai login`, or a PAT or integration token in the environment
-    before the project's `.env` is loaded?"""
-    if os.environ.get("CREWAI_USER_PAT") or os.environ.get(
+    before the project's `.env` is loaded? A token the `.env` brought is the
+    project's own, read here even after the run app loaded it."""
+    from crewai_cli.run_crew import environment_before_project
+
+    if environment_before_project("CREWAI_USER_PAT") or environment_before_project(
         "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"
     ):
         return True
@@ -788,6 +791,15 @@ def _machine_credential() -> bool:
         return saved_login() is not None
     except EvaluationStoppedError:
         return False  # unreadable here is unreadable to the run too
+
+
+def untrusted_amp_stop(trusted: set[str], machine_credential: bool) -> str | None:
+    """Why the crew must not run for an evaluation, when a credential of this
+    machine would go with its trace to an AMP this command does not trust;
+    None when it may run."""
+    if not _credential_would_leave(trusted, machine_credential):
+        return None
+    return UNTRUSTED_AMP.format(url=PlusAPI().base_url.rstrip("/"))
 
 
 def _credential_would_leave(trusted: set[str], machine_credential: bool) -> bool:
@@ -934,8 +946,9 @@ def _run_the_crew_to_evaluate(
 ) -> str | None:
     """Run the crew, traced, to have a run to evaluate.
 
-    No question first, with or without a terminal: running `crewai eval` asked
-    for the run to be graded, and the grade is read off its trace. The run app
+    Running `crewai eval` asked for the run to be graded, and the grade is read
+    off its trace; the only question is the first enable of tracing, put to a
+    person at a terminal (`_ask_before_the_first_enable`). The run app
     evaluates what it ran, on its own screen, so this returns None when it did
     — the reader has already seen the link and the verdict. It returns the run
     to grade when no app got to it, and says so itself when nothing was traced.
@@ -950,16 +963,14 @@ def _run_the_crew_to_evaluate(
         )
     # A credential of this machine must never reach an AMP this command does
     # not trust, and a project's crewai older than the handshake sends it to
-    # whatever AMP the project names once tracing is on — the CLI cannot tell
-    # which crewai the project runs. So with tracing on for this run (the
-    # project's .env, a consent given once) the crew is not run at all, and a
-    # project that turned tracing off is not asked to turn it on toward such an
-    # AMP. With tracing unset it is not turned on, and a crewai that knows the
-    # handshake still traces the run, anonymously, there.
-    leaves = _credential_would_leave(trusted or set(), machine_credential)
-    if leaves and (tracing_already_on() or tracing_turned_off()):
+    # whatever AMP the project names whenever the run traces — by the project's
+    # .env, a consent given once, or `tracing=True` in code, which the CLI
+    # cannot see; nor can it tell which crewai the project runs. So the crew
+    # is not run at all, and nobody is asked to turn tracing on toward it.
+    stop = untrusted_amp_stop(trusted or set(), machine_credential)
+    if stop is not None:
         record_stop("untrusted_amp")
-        _fail(UNTRUSTED_AMP.format(url=PlusAPI().base_url.rstrip("/")))
+        _fail(stop)
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
     # Nobody turned tracing on. At a terminal the person is asked first, on
@@ -968,7 +979,7 @@ def _run_the_crew_to_evaluate(
     # for the project — said once, plainly, here and in the run app. From
     # then on the project traces, and nothing more is asked or said.
     turned_on_now = False
-    if not leaves and not tracing_already_on():
+    if not tracing_already_on():
         if _at_a_terminal():
             _ask_before_the_first_enable()
         else:

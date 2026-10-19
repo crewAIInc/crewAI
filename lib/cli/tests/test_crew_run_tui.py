@@ -2570,6 +2570,51 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
         assert stops == ["cli_usage:eval_stopped:declined"]
 
 
+@pytest.mark.parametrize("tracing", ["turned off", "never turned on", "on"])
+def test_evaluate_toward_an_untrusted_amp_asks_nothing_and_writes_nothing(
+    monkeypatch, tmp_path, stops, tracing
+) -> None:
+    """The project's `.env` names an AMP this machine does not send its login
+    to: `crewai eval` would refuse the re-run, so nothing is asked, `.env` is
+    left as it was, and the app says why instead of closing."""
+    from crewai_cli.experimental import eval_crew
+
+    monkeypatch.chdir(tmp_path)
+    env = "CREWAI_PLUS_URL=https://evil.example\n"
+    if tracing == "turned off":
+        env += "CREWAI_TRACING_ENABLED=false\n"
+    if tracing == "on":
+        env += "CREWAI_TRACING_ENABLED=true\n"
+    (tmp_path / ".env").write_text(env)
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://evil.example")  # the run's own load
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    monkeypatch.setattr(eval_crew, "saved_login", lambda: "login-token")
+    monkeypatch.setattr(
+        eval_crew,
+        "Settings",
+        lambda: SimpleNamespace(enterprise_base_url="https://app.crewai.com"),
+    )
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+    app.push_screen = lambda *a, **k: pytest.fail("nothing is asked")  # type: ignore[method-assign]
+    notices: list[str] = []
+    app.notify = lambda message, **k: notices.append(message)  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+
+    assert exits == [] and app._want_traced_rerun is False
+    assert (tmp_path / ".env").read_text() == env
+    assert notices and "its trace would go to https://evil.example" in notices[0]
+    assert stops == ["cli_usage:eval_stopped:untrusted_amp"]
+
+
 def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_nothing_else(
     monkeypatch, stops
 ) -> None:

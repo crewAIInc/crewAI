@@ -3300,15 +3300,19 @@ def test_this_commands_own_project_id_write_is_no_change(project, monkeypatch):
 # ── the saved login and an AMP the project chose ─────────────────────────────
 
 
-def test_a_rerun_from_the_run_app_trusts_only_what_the_app_says(project, monkeypatch):
+@pytest.mark.parametrize("project_amp", ["https://amp.test", "https://other.example"])
+def test_a_rerun_from_the_run_app_trusts_only_what_the_app_says(
+    project, monkeypatch, usage, project_amp
+):
     """The run app's process loaded the project's `.env` already, so its
     CREWAI_PLUS_URL cannot vouch for itself: the app passes this machine's
-    AMPs, and neither the evaluation nor the run trusts anything else."""
+    AMPs, the run is told only those, and a run whose trace would carry this
+    machine's login anywhere else is not run."""
     from crewai_core.eval_handshake import awaited_evaluation
 
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
-    monkeypatch.setenv("CREWAI_PLUS_URL", "https://other.example")  # from the project's .env
+    monkeypatch.setenv("CREWAI_PLUS_URL", project_amp)  # from the project's .env
     told: list[object] = []
 
     def fake_run_crew() -> None:
@@ -3318,10 +3322,60 @@ def test_a_rerun_from_the_run_app_trusts_only_what_the_app_says(project, monkeyp
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
     amp = install(monkeypatch, FakeAMP(statuses=[done()]))
 
-    eval_module.eval_crew(run_again=True, trusted_amp_origins={"https://amp.test"})
+    if project_amp == "https://amp.test":
+        eval_module.eval_crew(run_again=True, trusted_amp_origins={"https://amp.test"})
+        assert told == [["https://amp.test"]]
+    else:
+        with pytest.raises(SystemExit) as exited:
+            eval_module.eval_crew(run_again=True, trusted_amp_origins={"https://amp.test"})
+        assert exited.value.code == 1
+        assert told == [] and amp.calls == []
+        assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
 
-    assert told == [["https://amp.test"]]
-    assert amp.api_key is None  # read anonymously: other.example gets no login
+
+def _put_back_after(monkeypatch, *keys: str) -> None:
+    """`load_project_env` writes `os.environ` itself: the test puts it back."""
+    for key in keys:
+        monkeypatch.setenv(key, "unset-after-the-test")
+        monkeypatch.delenv(key)
+
+
+@pytest.mark.parametrize("machine_pat", [None, "the-machines"])
+def test_a_token_the_projects_env_brought_is_the_projects_own(
+    project, monkeypatch, usage, machine_pat
+):
+    """Evaluate's re-run happens in the process that loaded the project's `.env`
+    for the run the person watched. A CREWAI_USER_PAT that `.env` brought goes
+    where the same `.env` says on every run of the project, so the crew runs; a
+    token this machine had before the `.env` replaced it is still this
+    machine's, and does not go to an AMP it does not trust."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text(
+        "CREWAI_PLUS_URL=https://self-hosted.example\nCREWAI_USER_PAT=the-projects\n"
+    )
+    _put_back_after(monkeypatch, "CREWAI_PLUS_URL", "CREWAI_USER_PAT", "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
+    if machine_pat:
+        monkeypatch.setenv("CREWAI_USER_PAT", machine_pat)
+    run_crew_module.load_project_env(directory / ".env")  # the run app's own load
+    ran: list[str] = []
+
+    def fake_run_crew() -> None:
+        ran.append(os.environ["CREWAI_USER_PAT"])
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    if machine_pat:
+        with pytest.raises(SystemExit):
+            eval_module.eval_crew(run_again=True, trusted_amp_origins=eval_module._machine_amp_origins())
+        assert ran == []
+        assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
+    else:
+        eval_module.eval_crew(run_again=True, trusted_amp_origins=eval_module._machine_amp_origins())
+        assert ran == ["the-projects"]
 
 
 @pytest.mark.parametrize("amp_url", ["https://evil.example", "https://amp.test"])
@@ -3329,9 +3383,8 @@ def test_tracing_is_never_turned_on_toward_an_amp_the_command_does_not_trust(
     project, monkeypatch, capsys, amp_url
 ):
     """A project's crewai older than the handshake sends the saved login to the
-    AMP its `.env` names once tracing is on: toward an untrusted AMP the command
-    leaves tracing as it was, and a crewai that knows the handshake still traces
-    the run, anonymously, there."""
+    AMP its `.env` names whenever the run traces: toward an untrusted AMP the
+    command leaves tracing as it was and does not run the crew."""
     from crewai_core.eval_handshake import awaited_evaluation
 
     directory, _ = project
@@ -3345,34 +3398,44 @@ def test_tracing_is_never_turned_on_toward_an_amp_the_command_does_not_trust(
         record_last_run(directory, "the-new-run", recorded_at=_now())
 
     monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
     install(monkeypatch, FakeAMP(statuses=[done()]))
 
-    eval_module.eval_crew()
-
     trusted = amp_url == "https://amp.test"
-    assert seen == ([("true", True)] if trusted else [(None, False)])
+    if trusted:
+        eval_module.eval_crew()
+    else:
+        with pytest.raises(SystemExit):
+            eval_module.eval_crew()
+
+    assert seen == ([("true", True)] if trusted else [])
     assert ("CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()) is trusted
     assert ("Tracing is now on" in capsys.readouterr().out) is trusted
 
 
 
-@pytest.mark.parametrize("tracing_on_by", ["the project's .env", "a consent given once"])
+@pytest.mark.parametrize("at_a_terminal", [False, True])
+@pytest.mark.parametrize(
+    "tracing_on_by",
+    ["the project's .env", "a consent given once", "nobody, or tracing=True in code"],
+)
 def test_a_crew_whose_trace_would_carry_the_login_to_an_untrusted_amp_is_not_run(
-    project, monkeypatch, capsys, usage, tracing_on_by
+    project, monkeypatch, capsys, usage, consent_screen, tracing_on_by, at_a_terminal
 ):
-    """With tracing already on, a project crewai older than the handshake would
-    send this machine's login to the AMP its `.env` names; the CLI cannot tell
-    which crewai the project runs, so the crew is not run and the sentence says
-    how to go on."""
+    """A project crewai older than the handshake would send this machine's
+    login to the AMP its `.env` names whenever the run traces, `tracing=True`
+    in code included, which the CLI cannot see; nor can it tell which crewai
+    the project runs. So the crew is not run, nobody is asked to turn tracing
+    on, and the sentence says how to go on."""
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     env = "CREWAI_PLUS_URL=https://evil.example\n"
     if tracing_on_by == "the project's .env":
         env += "CREWAI_TRACING_ENABLED=true\n"
-    else:
+    elif tracing_on_by == "a consent given once":
         monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
     (directory / ".env").write_text(env)
-    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: at_a_terminal)
     amp = install(monkeypatch, FakeAMP())
 
     with pytest.raises(SystemExit) as exited:
@@ -3383,7 +3446,8 @@ def test_a_crew_whose_trace_would_carry_the_login_to_an_untrusted_amp_is_not_run
     assert "The crew was not run: its trace would go to https://evil.example" in out
     assert "crewai enterprise configure https://evil.example" in out
     assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
-    assert amp.calls == []
+    assert amp.calls == [] and consent_screen.asked == []
+    assert (directory / ".env").read_text() == env  # nothing turned on
 
 
 def test_with_no_credential_on_this_machine_there_is_nothing_to_protect(project, monkeypatch):

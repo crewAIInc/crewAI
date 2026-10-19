@@ -1457,8 +1457,12 @@ FooterKey .footer-key--key {
             # A project that turned it off, or never turned it on, is asked
             # first; a no runs nothing.
             from crewai_cli.experimental.eval_crew import (
+                _machine_amp_origins,
+                _machine_credential,
+                record_stop,
                 tracing_already_on,
                 tracing_turned_off,
+                untrusted_amp_stop,
             )
 
             if self._tracing_off_in_code():
@@ -1468,6 +1472,16 @@ FooterKey .footer-key--key {
                     title="Evaluate",
                     severity="warning",
                 )
+                return
+            # Before anything is asked or written: a run whose trace would carry
+            # this machine's login to an AMP it does not trust is not run again
+            # (`crewai eval` refuses it too), so a yes here could not be honored.
+            # This process loaded the project's `.env` for the run, so only the
+            # AMPs this machine is configured for are trusted.
+            stop = untrusted_amp_stop(_machine_amp_origins(), _machine_credential())
+            if stop is not None:
+                record_stop("untrusted_amp")
+                self.notify(stop, title="Evaluate", severity="warning")
                 return
             if tracing_turned_off():
                 self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
