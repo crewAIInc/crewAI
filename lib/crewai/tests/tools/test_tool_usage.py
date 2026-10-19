@@ -26,6 +26,7 @@ from crewai.hooks.tool_hooks import (
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
+from crewai.utilities.string_utils import _has_unterminated_string
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -383,14 +384,15 @@ def test_validate_tool_input_preserves_apostrophes_in_unquoted_values():
 
 
 def test_unterminated_string_check_ignores_possessive_apostrophes():
-    assert not ToolUsage._has_unterminated_string('{"query": the dogs\' toys}')
-    assert not ToolUsage._has_unterminated_string('{"query": dont\'}')
+    assert not _has_unterminated_string('{"query": the dogs\' toys}')
+    assert not _has_unterminated_string('{"query": dont\'}')
 
 
-def test_tool_calling_does_not_repair_truncated_json_with_function_calling_llm():
+@pytest.mark.parametrize("available", [True, False])
+def test_tool_calling_does_not_repair_truncated_json_with_function_calling_llm(available):
     tool = RandomNumberTool().to_structured_tool()
     action = MagicMock()
-    action.tool = tool.name
+    action.tool = tool.name if available else "missing_tool"
     action.tool_input = '{"query": "XYZ'
     tool_usage = ToolUsage(
         tools_handler=None,
@@ -982,3 +984,21 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_nontruncated_validation_error_keeps_function_calling_recovery():
+    tool = RandomNumberTool().to_structured_tool()
+    action = AgentAction(thought="", tool=tool.name, tool_input="[]", text="")
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=MagicMock(),
+        agent=None,
+        action=action,
+    )
+    recovered = ToolCalling(tool_name=tool.name, arguments={"min_value": 1, "max_value": 2})
+    with patch.object(tool_usage, "_function_calling", return_value=recovered) as recover:
+        result = tool_usage._tool_calling("Action Input: []")
+    assert result == recovered
+    recover.assert_called_once_with("Action Input: []")

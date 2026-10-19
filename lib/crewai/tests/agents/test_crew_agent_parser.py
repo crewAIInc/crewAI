@@ -377,3 +377,10 @@ def test_integration_valid_and_invalid():
 
 
 # TODO: ADD TEST TO MAKE SURE ** REMOVAL DOESN'T MESS UP ANYTHING
+
+
+def test_truncated_single_quoted_contraction_is_not_repaired():
+    tool_input = "{'query': 'don't"
+    result = parser.parse(f"Thought: Search\nAction: search\nAction Input: {tool_input}")
+    assert isinstance(result, AgentAction)
+    assert result.tool_input == tool_input

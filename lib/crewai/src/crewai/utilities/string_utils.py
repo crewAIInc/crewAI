@@ -148,3 +148,41 @@ def interpolate_only(
             result = result.replace(placeholder, value)
 
     return result
+
+
+def _has_unterminated_string(tool_input: str) -> bool:
+    """Detect truncated quoted values without treating word apostrophes as delimiters."""
+    in_string = False
+    quote_character = None
+    escaped = False
+
+    for index, character in enumerate(tool_input):
+        if not in_string:
+            if character in {'"', "'"}:
+                if character == "'" and index > 0 and tool_input[index - 1].isalnum():
+                    continue
+                if (
+                    character == "'"
+                    and index > 0
+                    and tool_input[index - 1] not in "{[:, \t\r\n"
+                ):
+                    continue
+                in_string = True
+                quote_character = character
+        elif escaped:
+            escaped = False
+        elif character == "\\":
+            escaped = True
+        elif character == quote_character:
+            if (
+                character == "'"
+                and index > 0
+                and index + 1 < len(tool_input)
+                and tool_input[index - 1].isalnum()
+                and tool_input[index + 1].isalnum()
+            ):
+                continue
+            in_string = False
+            quote_character = None
+
+    return in_string
