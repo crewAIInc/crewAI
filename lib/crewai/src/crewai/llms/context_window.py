@@ -9,13 +9,26 @@ call site shares one matching rule.
 
 from __future__ import annotations
 
+import asyncio
 from collections import Counter
 from collections.abc import Mapping, Sequence
+import concurrent.futures
+import contextvars
 from importlib.resources import files
 import json
 import re
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal
 
+from crewai_core.printer import PRINTER
+
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
+from crewai.utilities.i18n import I18N_DEFAULT
+
+
+if TYPE_CHECKING:
+    from crewai.utilities.types import LLMMessage
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
@@ -238,3 +251,171 @@ def resolve_context_window_size(
         if size is not None:
             return int(size * CONTEXT_WINDOW_USAGE_RATIO)
     return int(default * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def summarize_messages(
+    llm: Any,
+    messages: list[LLMMessage],
+    callbacks: list[Any],
+    verbose: bool,
+) -> None:
+    """Compact ``messages`` in place using ``llm``'s context-window contract."""
+    system_messages = [
+        message for message in messages if message.get("role") == "system"
+    ]
+    work_messages = [message for message in messages if message.get("role") != "system"]
+    if not work_messages:
+        return
+
+    preserved_files = _collect_summary_files(messages)
+    chunks = _chunk_messages(llm, work_messages, llm.get_context_window_size())
+    summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
+    summary_message = _message(
+        I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
+    )
+    if preserved_files:
+        summary_message["files"] = preserved_files
+
+    messages.clear()
+    messages.extend(system_messages)
+    messages.append(summary_message)
+
+
+def _collect_summary_files(messages: list[LLMMessage]) -> dict[str, Any]:
+    files: dict[str, Any] = {}
+    for message in messages:
+        if message.get("role") == "user" and message.get("files"):
+            files.update(message["files"])
+    return files
+
+
+def _summarize_chunks(
+    llm: Any,
+    chunks: list[list[LLMMessage]],
+    callbacks: list[Any],
+    verbose: bool,
+) -> list[str]:
+    """Summarize chunks concurrently, preserving their order."""
+    if verbose:
+        if len(chunks) <= 1:
+            PRINTER.print(content=f"Summarizing 1/{len(chunks)}...", color="yellow")
+        else:
+            PRINTER.print(
+                content=f"Summarizing {len(chunks)} chunks in parallel...",
+                color="yellow",
+            )
+
+    async def summarize_chunk(chunk: list[LLMMessage]) -> str:
+        try:
+            response = str(
+                await llm.acall(_build_summary_prompt(chunk), callbacks=callbacks)
+            )
+        except Exception as error:
+            if not LLMContextLengthExceededError(
+                str(error)
+            )._is_context_length_exceeded_error(error):
+                raise
+            sub_chunks = _chunk_messages(
+                llm, chunk, max(1, llm.get_context_window_size() // 2)
+            )
+            if len(sub_chunks) <= 1:
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk could not be split further."
+                ) from None
+            return "\n\n".join(
+                await asyncio.gather(*(summarize_chunk(item) for item in sub_chunks))
+            )
+
+        match = re.search(r"<summary>(.*?)</summary>", response, re.DOTALL)
+        return match.group(1).strip() if match else response.strip()
+
+    async def gather_summaries() -> list[str]:
+        return list(await asyncio.gather(*(summarize_chunk(chunk) for chunk in chunks)))
+
+    coroutine = gather_summaries()
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+
+    context = contextvars.copy_context()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(context.run, asyncio.run, coroutine).result()
+
+
+def _build_summary_prompt(chunk: list[LLMMessage]) -> list[LLMMessage]:
+    return [
+        _message(I18N_DEFAULT.slice("summarizer_system_message"), "system"),
+        _message(
+            I18N_DEFAULT.slice("summarize_instruction").format(
+                conversation=_conversation_text(chunk)
+            )
+        ),
+    ]
+
+
+def _message(
+    content: str, role: Literal["user", "assistant", "system"] = "user"
+) -> LLMMessage:
+    return {"role": role, "content": content.rstrip()}
+
+
+def _message_text(message: LLMMessage) -> str:
+    content = message.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        parts = [
+            part["text"]
+            for part in content
+            if isinstance(part, dict)
+            and part.get("type") == "text"
+            and isinstance(part.get("text"), str)
+        ]
+        return " ".join(parts) if parts else "[multimodal content]"
+    return str(content)
+
+
+def _conversation_text(messages: list[LLMMessage]) -> str:
+    lines: list[str] = []
+    for message in messages:
+        role = message.get("role", "user")
+        if role == "system":
+            continue
+        if role == "assistant":
+            prefix = "[ASSISTANT]:"
+        elif role == "tool":
+            prefix = f"[TOOL_RESULT ({message.get('name', 'unknown')})]:"
+        else:
+            prefix = "[USER]:"
+        body = _message_text(message)
+        if message.get("content") is None:
+            names = [
+                call.get("function", {}).get("name", "unknown")
+                for call in message.get("tool_calls") or []
+                if isinstance(call, dict) and isinstance(call.get("function"), dict)
+            ]
+            body = f"[Called tools: {', '.join(names)}]" if names else ""
+        lines.append(f"{prefix} {body}")
+    return "\n\n".join(lines)
+
+
+def _chunk_messages(
+    llm: Any, messages: list[LLMMessage], max_tokens: int
+) -> list[list[LLMMessage]]:
+    """Split history at message boundaries using the current conservative budget."""
+    chunks: list[list[LLMMessage]] = []
+    current: list[LLMMessage] = []
+    current_tokens = 0
+    for message in messages:
+        if message.get("role") == "system":
+            continue
+        message_tokens = (len(_message_text(message)) + 3) // 4
+        if current and current_tokens + message_tokens > max_tokens:
+            chunks.append(current)
+            current, current_tokens = [], 0
+        current.append(message)
+        current_tokens += message_tokens
+    if current:
+        chunks.append(current)
+    return chunks

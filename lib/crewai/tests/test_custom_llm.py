@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional, Union
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from crewai import Agent, Crew, Process, Task
@@ -149,16 +149,21 @@ def test_base_llm_input_token_count_estimates_text_characters(caplog):
     assert "assuming one token per four characters" in caplog.text
 
 
-def test_base_llm_summarize_messages_delegates_to_current_compactor():
-    """The LLM API is the stable entry point while compaction is relocated."""
+def test_base_llm_summarize_messages_compacts_history():
+    """BaseLLM owns the context-compaction behavior."""
     llm = CustomLLM(model="test-model")
-    messages = [{"role": "user", "content": "Long conversation"}]
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "Long conversation"},
+    ]
     callbacks: list[Any] = []
 
-    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+    with patch.object(llm, "acall", new=AsyncMock(return_value="<summary>Short</summary>")):
         llm.summarize_messages(messages, callbacks, verbose=False)
 
-    summarize.assert_called_once_with(messages, llm, callbacks, False)
+    assert messages[0] == {"role": "system", "content": "Be concise."}
+    assert messages[1]["role"] == "user"
+    assert "Short" in messages[1]["content"]
 
 
 class JWTAuthLLM(BaseLLM):

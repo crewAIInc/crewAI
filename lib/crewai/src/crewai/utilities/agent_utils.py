@@ -1314,6 +1314,12 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         verbose: Whether to print progress.
     """
+    if isinstance(llm, BaseLLM):
+        llm.summarize_messages(messages, callbacks, verbose)
+        return
+
+    # Test doubles that predate BaseLLM.summarize_messages still exercise the
+    # legacy compactor until the tests are migrated to the BaseLLM API.
     SummarizeMessages().summarize(
         messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
     )
