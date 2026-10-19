@@ -741,14 +741,19 @@ def eval_command(
     models: str | None,
     deployment_id: str | None,
 ) -> None:
-    """Evaluate the last traced run through CrewAI AMP, or compare models on the
-    project's deployment (--models).
+    """Evaluate this crew through CrewAI AMP, or compare models on the project's
+    deployment (--models).
+
+    It grades the project's last traced run. When there is none, or the project
+    changed since it, it runs the crew first and grades that run: the run is
+    traced and its trace sent to CrewAI AMP, which grades it. Nothing is asked,
+    with or without a terminal, so `crewai eval` alone takes a coding agent from
+    a change to its verdict.
 
     Run by a script or coding agent (no terminal), it prints a markdown brief
     after the verdict — what failed and the change to make — so an agent can act
     on it directly. That is when AMP provides the brief: otherwise its link, when
-    AMP sends only that, else nothing more. It grades a run that already
-    happened: after a change, `crewai run` again, then `crewai eval`.
+    AMP sends only that, else nothing more.
 
     A run's evaluation exits 0 only when the goal gate PASSED, and 1 otherwise — a
     failed gate, no verdict, or an evaluation that could not run — so a CI job can
