@@ -20703,6 +20703,139 @@
       }
     },
     {
+      "description": "Search a Pixeltable table for rows whose text is similar to a query. The configured text column must have an embedding index. Returns a JSON list of matching rows and similarity scores.",
+      "env_vars": [],
+      "humanized_name": "PixeltableSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Similarity search over a Pixeltable table.\n\nThe configured text column must already have an embedding index. Pixeltable\nembeds the query with that index and returns the closest rows.",
+        "properties": {
+          "column": {
+            "description": "Name of the text column that has an embedding index.",
+            "title": "Column",
+            "type": "string"
+          },
+          "idx": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Embedding index name. Required only when the column has more than one embedding index.",
+            "title": "Idx"
+          },
+          "limit": {
+            "default": 5,
+            "description": "Maximum number of rows to return.",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "select": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Extra column names to return along with the text column and score.",
+            "title": "Select"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {}
+            ],
+            "description": "Pixeltable table to search. Either a table path such as 'dir.docs' or a pixeltable.Table instance.",
+            "title": "Table"
+          }
+        },
+        "required": [
+          "table",
+          "column"
+        ],
+        "title": "PixeltableSearchTool",
+        "type": "object"
+      },
+      "name": "PixeltableSearchTool",
+      "package_dependencies": [
+        "pixeltable"
+      ],
+      "run_params_schema": {
+        "description": "Input for a Pixeltable similarity search.",
+        "properties": {
+          "query": {
+            "description": "Text to compare against the indexed Pixeltable column.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "PixeltableSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Search Qdrant vector DB for relevant documents.",
       "env_vars": [
         {

@@ -14,7 +14,9 @@ dependencies = [
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",
     "tinytag>=2.3.0,<3",
-    "av~=13.0.0",
+    # Pixeltable (>=0.7.8, the crewai-tools extra) requires av>=14.1.
+    # crewai-files only uses av.open and container.duration, which are unchanged.
+    "av>=14.1",
 ]
 
 [tool.uv]

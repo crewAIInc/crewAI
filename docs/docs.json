@@ -290,7 +290,8 @@
                           "edge/en/tools/database-data/weaviatevectorsearchtool",
                           "edge/en/tools/database-data/mongodbvectorsearchtool",
                           "edge/en/tools/database-data/singlestoresearchtool",
-                          "edge/en/tools/database-data/db2searchtool"
+                          "edge/en/tools/database-data/db2searchtool",
+                          "edge/en/tools/database-data/pixeltablesearchtool"
                         ]
                       },
                       {
@@ -18002,7 +18003,8 @@
                           "edge/pt-BR/tools/database-data/snowflakesearchtool",
                           "edge/pt-BR/tools/database-data/nl2sqltool",
                           "edge/pt-BR/tools/database-data/qdrantvectorsearchtool",
-                          "edge/pt-BR/tools/database-data/weaviatevectorsearchtool"
+                          "edge/pt-BR/tools/database-data/weaviatevectorsearchtool",
+                          "edge/pt-BR/tools/database-data/pixeltablesearchtool"
                         ]
                       },
                       {
@@ -34379,7 +34381,8 @@
                           "edge/ko/tools/database-data/qdrantvectorsearchtool",
                           "edge/ko/tools/database-data/weaviatevectorsearchtool",
                           "edge/ko/tools/database-data/mongodbvectorsearchtool",
-                          "edge/ko/tools/database-data/singlestoresearchtool"
+                          "edge/ko/tools/database-data/singlestoresearchtool",
+                          "edge/ko/tools/database-data/pixeltablesearchtool"
                         ]
                       },
                       {
@@ -51296,7 +51299,8 @@
                           "edge/ar/tools/database-data/qdrantvectorsearchtool",
                           "edge/ar/tools/database-data/weaviatevectorsearchtool",
                           "edge/ar/tools/database-data/mongodbvectorsearchtool",
-                          "edge/ar/tools/database-data/singlestoresearchtool"
+                          "edge/ar/tools/database-data/singlestoresearchtool",
+                          "edge/ar/tools/database-data/pixeltablesearchtool"
                         ]
                       },
                       {
