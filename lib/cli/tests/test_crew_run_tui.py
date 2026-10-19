@@ -459,6 +459,38 @@ def test_the_token_this_app_sets_is_the_one_crewais_tracing_reads(
     assert eval_handshake.run_awaited_by_evaluation() is False
 
 
+@pytest.mark.parametrize("for_an_evaluation", [True, False])
+def test_an_app_opened_for_an_evaluation_says_where_the_trace_goes(
+    monkeypatch, for_an_evaluation
+) -> None:
+    """No question: a plain note that the run is evaluated and its trace goes
+    to CrewAI AMP. An ordinary run says nothing new."""
+    notices: list[tuple[str, dict[str, object]]] = []
+
+    def mount() -> None:
+        app = CrewRunApp()
+        app._subscribe = lambda: None  # type: ignore[method-assign]
+        app.set_interval = lambda *a, **k: None  # type: ignore[method-assign]
+        app.notify = lambda message, **kwargs: notices.append((message, kwargs))  # type: ignore[method-assign]
+        app.on_mount()
+
+    if for_an_evaluation:
+        with crew_run_tui.evaluating_after_run():
+            mount()
+    else:
+        mount()
+
+    if for_an_evaluation:
+        assert notices == [
+            (
+                "This run will be evaluated: its trace is sent to CrewAI AMP, which grades it.",
+                {"title": "Evaluate", "timeout": 10},
+            )
+        ]
+    else:
+        assert notices == []
+
+
 def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
     monkeypatch,
 ) -> None:

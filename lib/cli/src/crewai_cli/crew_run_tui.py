@@ -297,6 +297,12 @@ class TraceConsentScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+# What an app opened to run the crew for an evaluation says first.
+EVALUATION_NOTICE = (
+    "This run will be evaluated: its trace is sent to CrewAI AMP, which grades it."
+)
+
+
 class TurnTracingOnScreen(TraceConsentScreen):
     """Evaluate, pressed on a run of a project that turned tracing off: the
     run has to happen again, traced, and only a yes turns tracing on."""
@@ -750,6 +756,13 @@ FooterKey .footer-key--key {
             self._run_crew_worker()
         elif self._crew_json_path:
             self._load_and_run_worker()
+        self._say_this_run_will_be_evaluated()
+
+    def _say_this_run_will_be_evaluated(self) -> None:
+        """Opened to run the crew for an evaluation (`crewai eval`, or Evaluate
+        on a run that was not traced): say where its trace goes, plainly."""
+        if self._auto_eval is not None:
+            self.notify(EVALUATION_NOTICE, title="Evaluate", timeout=10)
 
     # ── Crew execution ──────────────────────────────────────
 

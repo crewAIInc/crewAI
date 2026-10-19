@@ -89,6 +89,21 @@ def otlp_exporter(
     )
 
 
+def _trace_provider(resource: Resource) -> TracerProvider:
+    """crewAI's own provider for a run's trace.
+
+    The OpenTelemetry SDK turns every provider into one that records nothing
+    when `OTEL_SDK_DISABLED` is set. That variable is the telemetry opt-out,
+    which tracing does not answer to — tracing has its own setting,
+    `CREWAI_TRACING_ENABLED` — so this provider records whatever it says.
+    """
+    provider = TracerProvider(resource=resource)
+    if getattr(provider, "_disabled", False):
+        # the SDK's only switch for it, a private attribute: a test pins it
+        provider._disabled = False
+    return provider
+
+
 class TraceSession:
     """Own an event-driven trace and only its own event-bus subscriptions.
 
@@ -114,9 +129,7 @@ class TraceSession:
         self.tracer_provider = (
             providers.tracer_provider
             if providers is not None
-            else TracerProvider(
-                resource=resource or Resource({"service.name": "crewai"})
-            )
+            else _trace_provider(resource or Resource({"service.name": "crewai"}))
         )
         self.execution_attributes = ExecutionAttributes(execution_uuid, attributes)
         self.tracer_provider.add_span_processor(self.execution_attributes)

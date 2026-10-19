@@ -72,7 +72,9 @@ def traces(monkeypatch):
     return buffers, grants, recorders, prompt
 
 
-@pytest.mark.parametrize("disabled", ["flag", "env", "sdk"])
+# `OTEL_SDK_DISABLED` is not among them: it is the telemetry opt-out
+# (test_the_telemetry_opt_out_does_not_turn_tracing_off).
+@pytest.mark.parametrize("disabled", ["flag", "env"])
 @pytest.mark.parametrize("finalize_only", [False, True])
 def test_disabling_deferred_trace_discards_without_consent(
     traces, monkeypatch, disabled, finalize_only
@@ -97,10 +99,8 @@ def test_disabling_deferred_trace_discards_without_consent(
         assert old_lifetime is not None and buffers[0]._spans
         if disabled == "flag":
             flow.tracing = False
-        elif disabled == "env":
-            monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
         else:
-            monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
+            monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
         if not finalize_only:
             assert flow.kickoff() == "private draft"
             assert sessions[1] is None
@@ -263,6 +263,44 @@ def test_a_token_a_dotenv_could_set_approves_nothing(traces, monkeypatch, tmp_pa
     assert crewai_event_bus.flush()
 
     assert not grants and not recorders  # nothing left the machine
+
+
+@pytest.mark.parametrize("anonymous", [True, False])
+def test_the_telemetry_opt_out_does_not_turn_tracing_off(traces, monkeypatch, anonymous):
+    """`OTEL_SDK_DISABLED` is the telemetry opt-out, a separate setting: a run
+    with tracing on is still traced and uploaded, every span recorded."""
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: False)
+    if not anonymous:
+        monkeypatch.setattr(
+            "crewai.telemetry.tracing.grants.resolve_tracing_credential",
+            lambda: ("a-login", "login"),
+        )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "traced"
+
+    assert Conversation(tracing=True).kickoff() == "traced"
+    assert crewai_event_bus.flush()
+
+    assert grants and recorders
+    assert any(recorder.get_finished_spans() for recorder in recorders)
+
+
+def test_crewais_trace_provider_records_with_the_sdk_switched_off(monkeypatch):
+    """Pins the SDK detail the provider relies on (its private `_disabled`)."""
+    from crewai.telemetry.tracing.session import _trace_provider
+    from opentelemetry.sdk.resources import Resource
+
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
+    span = _trace_provider(Resource({"service.name": "crewai"})).get_tracer("t").start_span("s")
+    assert span.is_recording()
+    span.end()
 
 
 def test_enabling_deferred_trace_opens_a_new_flow_root(traces):

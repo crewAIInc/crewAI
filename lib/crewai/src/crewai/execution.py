@@ -122,13 +122,14 @@ def begin_execution(
 
 
 def _tracing_disabled(tracing: bool | None) -> bool:
-    return (
-        os.getenv("OTEL_SDK_DISABLED", "").lower() == "true"
-        or tracing is False
-        or (
-            tracing is None
-            and os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0")
-        )
+    """Tracing turned off for this run: `tracing=False`, or
+    `CREWAI_TRACING_ENABLED` false when the run says nothing.
+
+    `OTEL_SDK_DISABLED` is not one of them: it is the telemetry opt-out, a
+    separate setting, and tracing has its own."""
+    return tracing is False or (
+        tracing is None
+        and os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0")
     )
 
 
