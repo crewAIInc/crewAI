@@ -408,8 +408,12 @@ def test_summary_chunking_splits_a_single_oversized_text_message() -> None:
 
     chunks = _chunk_messages(CountingLLM(), [message], max_tokens=20)
 
-    assert len(chunks) == 3
-    assert "".join(chunk[0]["content"] for chunk in chunks) == message["content"]
+    assert "".join(
+        part["content"] for chunk in chunks for part in chunk
+    ) == message["content"]
+    assert max(
+        len(part["content"]) for chunk in chunks for part in chunk
+    ) == 15
     assert all(
         CountingLLM().get_input_tokens_count(build_summary_prompt(chunk)) <= 20
         for chunk in chunks

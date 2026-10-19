@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 COMPACTION_RETRY_BUDGET_RATIO: Final[float] = 0.75
+MESSAGE_SPLIT_BUDGET_RATIO: Final[float] = 0.75
 _COMPACTION_MAX_RETRIES: Final[int] = 3
 
 _CATALOG_FILENAME: Final[str] = "model_prices_and_context_window.json"
@@ -446,7 +447,7 @@ def _chunk_messages(
 def _split_message_to_fit(
     llm: Any, message: LLMMessage, max_tokens: int
 ) -> list[LLMMessage]:
-    """Split an oversized message using a proportional token estimate."""
+    """Split an oversized message using 75% of the available token budget."""
     message_tokens = _summary_request_tokens(llm, [message])
     if message_tokens <= max_tokens:
         return [message]
@@ -465,27 +466,12 @@ def _split_message_to_fit(
             "Summarization prompt leaves no room for message content."
         )
 
-    part_length = max(1, int(len(text) * available_tokens / content_tokens))
-    parts: list[LLMMessage] = []
-    remainder = text
-    while remainder:
-        length = min(part_length, len(remainder))
-        candidate = cast("LLMMessage", {**message, "content": remainder[:length]})
-        while _summary_request_tokens(llm, [candidate]) > max_tokens:
-            if length == 1:
-                raise LLMContextLengthExceededError(
-                    "Summarization message could not be split to fit the context window."
-                )
-            estimated_content_tokens = max(
-                1, _summary_request_tokens(llm, [candidate]) - base_tokens
-            )
-            length = max(1, int(length * available_tokens / estimated_content_tokens))
-            candidate = cast("LLMMessage", {**message, "content": remainder[:length]})
-
-        parts.append(candidate)
-        remainder = remainder[length:]
-
-    return parts
+    part_budget = max(1, int(available_tokens * MESSAGE_SPLIT_BUDGET_RATIO))
+    part_length = max(1, int(len(text) * part_budget / content_tokens))
+    return [
+        cast("LLMMessage", {**message, "content": text[start : start + part_length]})
+        for start in range(0, len(text), part_length)
+    ]
 
 
 def _summary_request_tokens(llm: Any, messages: list[LLMMessage]) -> int:
