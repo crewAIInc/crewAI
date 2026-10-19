@@ -29,7 +29,6 @@ from crewai.utilities.message_utils import (
     collect_user_message_files,
     format_message_for_llm,
     message_content_text,
-    message_units,
     messages_content_text,
 )
 
@@ -427,7 +426,8 @@ def _chunk_messages(
         )
     chunks: list[list[LLMMessage]] = []
     current: list[LLMMessage] = []
-    for unit in message_units(messages):
+    for message in messages:
+        unit = [message]
         if _summary_request_tokens(llm, [*current, *unit]) > max_tokens:
             if current:
                 chunks.append(current)

@@ -399,26 +399,6 @@ def test_summary_limits_parallel_requests_to_four() -> None:
     assert llm.max_active == 4
 
 
-def test_summary_chunking_keeps_tool_exchanges_together_when_they_fit() -> None:
-    class CountingLLM:
-        def get_input_tokens_count(self, messages) -> int:
-            return messages[-1]["content"].count("§")
-
-    messages = [
-        {
-            "role": "assistant",
-            "content": "§" * 10,
-            "tool_calls": [{"function": {"name": "search"}}],
-        },
-        {"role": "tool", "name": "search", "content": "§" * 10},
-        {"role": "user", "content": "§" * 10},
-    ]
-
-    chunks = _chunk_messages(CountingLLM(), messages, max_tokens=20)
-
-    assert chunks == [[messages[0], messages[1]], [messages[2]]]
-
-
 def test_summary_chunking_splits_a_single_oversized_text_message() -> None:
     class CountingLLM:
         def get_input_tokens_count(self, messages) -> int:

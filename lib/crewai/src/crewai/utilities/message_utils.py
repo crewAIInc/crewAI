@@ -64,25 +64,3 @@ def collect_user_message_files(messages: list[LLMMessage]) -> dict[str, Any]:
         if message.get("role") == "user" and message.get("files"):
             files.update(message["files"])
     return files
-
-
-def message_units(messages: list[LLMMessage]) -> list[list[LLMMessage]]:
-    """Group an assistant tool call with its immediate tool results."""
-    units: list[list[LLMMessage]] = []
-    index = 0
-    while index < len(messages):
-        message = messages[index]
-        if message.get("role") == "system":
-            index += 1
-            continue
-        unit = [message]
-        if message.get("role") == "assistant" and message.get("tool_calls"):
-            index += 1
-            while index < len(messages) and messages[index].get("role") == "tool":
-                unit.append(messages[index])
-                index += 1
-            units.append(unit)
-            continue
-        units.append(unit)
-        index += 1
-    return units
