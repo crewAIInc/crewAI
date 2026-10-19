@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -281,9 +282,6 @@ def test_summary_chunking_uses_the_rendered_request_token_estimator() -> None:
     chunks = _chunk_messages(llm, messages, max_tokens=125)
 
     assert chunks == [[messages[0]], [messages[1]]]
-    # One empty-prompt baseline, one estimate per message, and one exact
-    # validation for each completed chunk.
-    assert len(llm.requests) == 5
     assert all(
         llm.get_input_tokens_count(_build_summary_prompt(chunk)) <= 125
         for chunk in chunks
@@ -371,6 +369,36 @@ def test_summary_retries_with_progressively_smaller_budgets() -> None:
     assert COMPACTION_RETRY_BUDGET_RATIO == 0.75
 
 
+def test_summary_limits_parallel_requests_to_four() -> None:
+    class ConcurrentSummaryLLM:
+        def __init__(self) -> None:
+            self.active = 0
+            self.max_active = 0
+
+        def get_context_window_size(self) -> int:
+            return 25
+
+        def get_input_tokens_count(self, messages) -> int:
+            return messages[-1]["content"].count("§")
+
+        async def acall(self, messages, callbacks):
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            await asyncio.sleep(0)
+            self.active -= 1
+            return "<summary>Summary</summary>"
+
+    llm = ConcurrentSummaryLLM()
+    summarize_messages(
+        llm,
+        [{"role": "user", "content": "§" * 20} for _ in range(5)],
+        [],
+        verbose=False,
+    )
+
+    assert llm.max_active == 4
+
+
 def test_summary_chunking_keeps_tool_exchanges_together_when_they_fit() -> None:
     class CountingLLM:
         def get_input_tokens_count(self, messages) -> int:
@@ -408,7 +436,7 @@ def test_summary_chunking_splits_a_single_oversized_text_message() -> None:
     )
 
 
-def test_summary_chunking_reflows_when_cached_estimates_understate_overhead() -> None:
+def test_summary_chunking_handles_non_additive_prompt_overhead() -> None:
     class NonAdditiveCountingLLM:
         def get_input_tokens_count(self, messages) -> int:
             message_count = messages[-1]["content"].count("[USER]:")
