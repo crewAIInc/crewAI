@@ -491,6 +491,27 @@ def test_an_app_opened_for_an_evaluation_says_where_the_trace_goes(
         assert notices == []
 
 
+@pytest.mark.parametrize(
+    "opted_in", ["the variable", "tracing=True on the crew", "a consent given once"]
+)
+def test_nothing_is_said_where_somebody_turned_tracing_on(monkeypatch, opted_in) -> None:
+    """The note is for a yes inferred from the evaluation request; a project or
+    a person who turned tracing on themselves already knows."""
+    if opted_in == "the variable":
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    if opted_in == "a consent given once":
+        monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
+    notices: list[str] = []
+    with crew_run_tui.evaluating_after_run():
+        app = CrewRunApp()
+        if opted_in == "tracing=True on the crew":
+            app._crew = SimpleNamespace(tracing=True)
+        app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
+        app._say_this_run_will_be_evaluated()
+
+    assert notices == []
+
+
 def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
     monkeypatch,
 ) -> None:

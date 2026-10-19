@@ -28,7 +28,7 @@ into `./crewai-eval-<ID>/`, for a coding agent to dig into.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -754,6 +754,19 @@ def _project_changed_since(record: dict[str, Any]) -> bool:
     return False
 
 
+def _opt_in_inferred() -> bool:
+    """Is the trace sent only because this command asked for it — nobody
+    turned tracing on (`CREWAI_TRACING_ENABLED=true`, or the consent a person
+    gave once)? A crew that sets `tracing=True` in code is not seen here; the
+    run app, which holds the crew, reads that too."""
+    try:
+        from crewai_core.user_data import is_tracing_enabled
+
+        return not is_tracing_enabled()
+    except Exception:
+        return os.environ.get(TRACING_ENV_VAR, "").strip().lower() not in ("true", "1")
+
+
 def _ask_to_turn_tracing_on() -> None:
     """The project turned tracing off: turn it on only on a yes.
 
@@ -771,21 +784,6 @@ def _ask_to_turn_tracing_on() -> None:
         "Tracing is on for this project — its runs are traced to CrewAI AMP.",
         style="green",
     )
-
-
-@contextlib.contextmanager
-def _tracing_for_this_run() -> Iterator[None]:
-    """`CREWAI_TRACING_ENABLED=true` for the run about to start, and only that
-    run: put back after, and never written to the project's `.env`."""
-    before = os.environ.get(TRACING_ENV_VAR)
-    os.environ[TRACING_ENV_VAR] = "true"
-    try:
-        yield
-    finally:
-        if before is None:
-            os.environ.pop(TRACING_ENV_VAR, None)
-        else:
-            os.environ[TRACING_ENV_VAR] = before
 
 
 def _run_the_crew_to_evaluate(why: RunReason) -> str | None:
@@ -806,7 +804,14 @@ def _run_the_crew_to_evaluate(why: RunReason) -> str | None:
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
     _count_usage(f"cli_usage:eval_ran_crew:{why}")
-    console.print(Text(f"{RUNNING_THE_CREW[why]} {TRACE_GOES_TO_AMP}"), style="bold")
+    # Where the trace goes is said only when the yes is inferred from this
+    # command: a project or a person who turned tracing on already knows.
+    said = (
+        f"{RUNNING_THE_CREW[why]} {TRACE_GOES_TO_AMP}"
+        if _opt_in_inferred()
+        else RUNNING_THE_CREW[why]
+    )
+    console.print(Text(said), style="bold")
 
     from crewai_cli.crew_run_tui import evaluating_after_run
     from crewai_cli.run_crew import run_crew
@@ -815,8 +820,10 @@ def _run_the_crew_to_evaluate(why: RunReason) -> str | None:
     # ends. It runs in this process for some projects and in a child for others,
     # so what says a run was traced is either the holder's id or the record the
     # run wrote.
+    # Tracing is on for this run through the handshake alone
+    # (`crewai_core.eval_handshake`): the project's own setting is left as it is.
     began = datetime.now(timezone.utc)
-    with _tracing_for_this_run(), evaluating_after_run() as watched:
+    with evaluating_after_run() as watched:
         run_crew()
 
     # The app says what it did with the run it watched, and its word settles

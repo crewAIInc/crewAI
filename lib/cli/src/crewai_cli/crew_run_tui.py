@@ -760,9 +760,29 @@ FooterKey .footer-key--key {
 
     def _say_this_run_will_be_evaluated(self) -> None:
         """Opened to run the crew for an evaluation (`crewai eval`, or Evaluate
-        on a run that was not traced): say where its trace goes, plainly."""
-        if self._auto_eval is not None:
+        on a run that was not traced), with the yes to sending its trace
+        inferred from that request: say where the trace goes, plainly. Nothing
+        is said to a project or a person who turned tracing on themselves."""
+        if self._auto_eval is not None and not self._tracing_opted_in():
             self.notify(EVALUATION_NOTICE, title="Evaluate", timeout=10)
+
+    def _tracing_opted_in(self) -> bool:
+        """Did somebody turn tracing on — `tracing=True` on the crew or flow,
+        `CREWAI_TRACING_ENABLED=true`, or the consent a person gave once?"""
+        if any(
+            getattr(target, "tracing", None) is True
+            for target in (self._crew, self._flow)
+            if target is not None
+        ):
+            return True
+        try:
+            # crewai-core is imported here, not at the top: this module also runs
+            # inside a project's environment, whose crewai-core may be older.
+            from crewai_core.user_data import is_tracing_enabled
+
+            return is_tracing_enabled()
+        except Exception:
+            return os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1")
 
     # ── Crew execution ──────────────────────────────────────
 
