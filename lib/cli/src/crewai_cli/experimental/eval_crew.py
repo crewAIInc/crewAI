@@ -51,7 +51,7 @@ import webbrowser
 import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.settings import Settings
-from dotenv import dotenv_values, load_dotenv, set_key
+from dotenv import dotenv_values, set_key
 import httpx
 from rich.console import Console
 from rich.table import Table
@@ -265,6 +265,7 @@ def eval_crew(
     *,
     run_again: bool = False,
     run_args: dict[str, Any] | None = None,
+    trusted_amp_origins: set[str] | None = None,
 ) -> None:
     """Evaluate the last traced run of this project, or the run RUN_ID.
 
@@ -273,6 +274,9 @@ def eval_crew(
     record says (the run app's Evaluate, pressed on a run that was not traced),
     with RUN_ARGS — `run_crew`'s own arguments, so the run graded is the one the
     person pressed Evaluate on (its definition, inputs and trained agents).
+    TRUSTED_AMP_ORIGINS: where the saved login may go, from a caller whose
+    process already loaded the project's `.env` (the run app); otherwise read
+    here, before this command loads it.
     """
     # Before anything here writes to the project (the project id), so this
     # command's own writes never read as a change.
@@ -280,7 +284,14 @@ def eval_crew(
     why = None if run_id else _why_run_the_crew(record, run_again=run_again)
     project_id = get_or_create_project_id()
     # Read before the project's .env is loaded, so a project cannot add itself.
-    trusted = _trusted_amp_origins()
+    trusted = (
+        _trusted_amp_origins()
+        if trusted_amp_origins is None
+        else set(trusted_amp_origins)
+    )
+    # Every credential this machine holds that a run could send, as it is
+    # before the project's .env adds its own.
+    machine_credential = _machine_credential()
     _load_project_env()
     execution_id = run_id or record.get("execution_id")
     if why is not None:
@@ -290,7 +301,10 @@ def eval_crew(
         # terminal, or a classic crew), a conversational session, or a flow
         # that took the terminal instead.
         execution_id = _run_the_crew_to_evaluate(
-            why, trusted=trusted, run_args=run_args
+            why,
+            trusted=trusted,
+            run_args=run_args,
+            machine_credential=machine_credential,
         )
         if execution_id is None:
             return
@@ -648,10 +662,13 @@ def _anonymous(client: PlusAPI) -> PlusAPI:
 
 
 def _load_project_env() -> None:
-    """The project's .env, as `crewai run` loads it — so CREWAI_PLUS_URL here is the one the run used."""
+    """The project's .env, as `crewai run` loads it — so CREWAI_PLUS_URL here is
+    the one the run used — with `crewai eval`'s token left as it was."""
     env_file = Path.cwd() / ".env"
     if env_file.is_file():
-        load_dotenv(env_file, override=True)
+        from crewai_cli.run_crew import load_project_env
+
+        load_project_env(env_file)
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:
@@ -746,6 +763,29 @@ def _project_changed_since(record: dict[str, Any]) -> bool:
     since = when.timestamp() + RUN_WRITES_FOR_SECONDS
     files = _project_files()
     return files is not None and any(info.st_mtime > since for info in files.values())
+
+
+def _machine_credential() -> bool:
+    """Does this machine hold a credential a run's tracing would send — the
+    saved `crewai login`, or a PAT or integration token in the environment
+    before the project's `.env` is loaded?"""
+    if os.environ.get("CREWAI_USER_PAT") or os.environ.get(
+        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"
+    ):
+        return True
+    try:
+        return saved_login() is not None
+    except EvaluationStoppedError:
+        return False  # unreadable here is unreadable to the run too
+
+
+def _credential_would_leave(trusted: set[str], machine_credential: bool) -> bool:
+    """Would a credential of this machine go to an AMP this command does not
+    trust — the one the run traces to, read after the project's `.env`?"""
+    if not machine_credential:
+        return False
+    origin = _origin(PlusAPI().base_url)
+    return not (origin in trusted and _encrypted(origin))
 
 
 def tracing_already_on() -> bool:
@@ -864,6 +904,7 @@ def _run_the_crew_to_evaluate(
     *,
     trusted: set[str] | None = None,
     run_args: dict[str, Any] | None = None,
+    machine_credential: bool = False,
 ) -> str | None:
     """Run the crew, traced, to have a run to evaluate.
 
@@ -886,7 +927,13 @@ def _run_the_crew_to_evaluate(
     # Nobody turned tracing on: the yes is inferred from this command, and
     # tracing is turned on for the project — said once, plainly, here and in
     # the run app. From then on the project traces, and nothing more is said.
-    turned_on_now = not tracing_already_on()
+    # Never when a credential of this machine would go to an AMP this command
+    # does not trust: a project's crewai older than the handshake sends it to
+    # whatever AMP the project names once tracing is on. A crewai that knows
+    # the handshake still traces this run — anonymously, there.
+    turned_on_now = not tracing_already_on() and not _credential_would_leave(
+        trusted or set(), machine_credential
+    )
     if turned_on_now:
         turn_tracing_on()
     _count_usage(f"cli_usage:eval_ran_crew:{why}")

@@ -128,5 +128,8 @@ def test_evaluate_on_an_untraced_conversation_runs_it_again_for_its_evaluation(
         lambda **kwargs: evaluated.append(kwargs),
     )
 
-    assert kickoff_flow._run_conversational_flow_tui(SimpleNamespace(name="Chat")) == "result"
-    assert evaluated == [{"run_again": True, "run_args": {}}]
+    chat = SimpleNamespace(name="Chat")
+    assert kickoff_flow._run_conversational_flow_tui(chat) == "result"
+    # named by its definition (`crewai run --definition chat.yaml`): that flow again
+    assert kickoff_flow._run_conversational_flow_tui(chat, definition="chat.yaml") == "result"
+    assert [e["run_args"] for e in evaluated] == [{}, {"definition": "chat.yaml"}]

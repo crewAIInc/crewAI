@@ -548,7 +548,9 @@ def test_evaluate_on_an_untraced_flow_run_runs_it_again_for_its_evaluation(
         SimpleNamespace(name="Flow"), None
     )
 
-    assert evaluated == [{"run_again": True, "run_args": {}}]
+    assert [{k: v for k, v in e.items() if k != "trusted_amp_origins"} for e in evaluated] == [
+        {"run_again": True, "run_args": {}}
+    ]
 
 
 def test_run_declarative_flow_tui_no_deploy_when_not_requested(
@@ -692,7 +694,8 @@ def test_run_declarative_flow_opens_the_conversational_tui(
     launched: list[Any] = []
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
-        "crewai_cli.kickoff_flow._run_conversational_flow_tui", launched.append
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda flow, definition=None: launched.append(flow)
     )
 
     run_declarative_flow_module.run_declarative_flow(str(definition_path))
@@ -710,7 +713,7 @@ def test_conversational_flow_does_not_take_the_steps_tui(
 
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
-        "crewai_cli.kickoff_flow._run_conversational_flow_tui", lambda flow: None
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui", lambda flow, definition=None: None
     )
     monkeypatch.setattr(
         run_declarative_flow_module,
@@ -731,7 +734,7 @@ def test_conversational_flow_rejects_inputs(
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._run_conversational_flow_tui",
-        lambda flow: pytest.fail("should have rejected --inputs before the TUI"),
+        lambda flow, definition=None: pytest.fail("should have rejected --inputs before the TUI"),
     )
 
     with pytest.raises(SystemExit) as exc_info:
@@ -755,7 +758,7 @@ def test_conversational_flow_rejects_an_empty_inputs_object(
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._run_conversational_flow_tui",
-        lambda flow: pytest.fail("an empty --inputs object still passed --inputs"),
+        lambda flow, definition=None: pytest.fail("an empty --inputs object still passed --inputs"),
     )
 
     with pytest.raises(SystemExit) as exc_info:
@@ -777,7 +780,8 @@ def test_conversational_flow_without_inputs_still_opens_the_tui(
     launched: list[Any] = []
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
-        "crewai_cli.kickoff_flow._run_conversational_flow_tui", launched.append
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda flow, definition=None: launched.append(flow)
     )
 
     run_declarative_flow_module.run_declarative_flow(str(definition_path), None)
@@ -806,7 +810,7 @@ def test_conversational_human_feedback_flow_avoids_the_tui(
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._run_conversational_flow_tui",
-        lambda flow: pytest.fail("human-feedback flow reached the Textual TUI"),
+        lambda flow, definition=None: pytest.fail("human-feedback flow reached the Textual TUI"),
     )
     monkeypatch.setattr(
         "crewai.flow.flow.Flow.chat", lambda self, **kw: chatted.append("repl")

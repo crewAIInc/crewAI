@@ -577,6 +577,8 @@ def test_evaluate_on_an_untraced_run_runs_the_crew_again_for_its_evaluation(
     """The app closed because its run was not traced: what follows is
     `crewai eval`'s own path, told to run the crew again whatever the record."""
     monkeypatch.chdir(tmp_path)
+    # what the project's `.env` put in this process, as the run app's process has it
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://other.example")
     _patch_tui_run(monkeypatch, status="completed", want_traced_rerun=True)
     evaluated: list[dict[str, object]] = []
     monkeypatch.setattr(
@@ -585,8 +587,18 @@ def test_evaluate_on_an_untraced_run_runs_the_crew_again_for_its_evaluation(
     )
 
     assert run_crew_module._run_json_crew() == "result"
-    # the same crew, with the inputs this run used (none here)
-    assert evaluated == [{"run_again": True, "run_args": {"inputs": "{}"}}]
+    from crewai_cli.experimental.eval_crew import _machine_amp_origins
+
+    # the same crew, with the inputs this run used (none here), and the saved
+    # login trusted only to this machine's AMPs, never the `.env`'s
+    assert evaluated == [
+        {
+            "run_again": True,
+            "run_args": {"inputs": "{}"},
+            "trusted_amp_origins": _machine_amp_origins(),
+        }
+    ]
+    assert "https://other.example" not in evaluated[0]["trusted_amp_origins"]
 
 
 def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys):
@@ -1165,3 +1177,36 @@ def test_run_crew_runs_configured_declarative_flow_project(
 
     assert capsys.readouterr().out == ""
     assert calls == [(definition_path.resolve(), None)]
+
+
+
+@pytest.mark.parametrize("token_before", ["a" * 32, None])
+def test_a_projects_env_never_sets_or_replaces_crewai_evals_token(
+    monkeypatch, tmp_path: Path, token_before
+):
+    """A `.env` that set CREWAI_EVAL_AWAITING_RUN could unmark a run `crewai
+    eval` started (and its tracing would stop applying the command's rules)."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("CREWAI_EVAL_AWAITING_RUN=" + "f" * 32 + "\nFROM_THE_PROJECT=yes\n")
+    if token_before is None:
+        monkeypatch.delenv("CREWAI_EVAL_AWAITING_RUN", raising=False)
+    else:
+        monkeypatch.setenv("CREWAI_EVAL_AWAITING_RUN", token_before)
+    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ.get("CREWAI_EVAL_AWAITING_RUN") == token_before
+    assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+def test_the_three_names_for_the_eval_token_are_one() -> None:
+    from crewai_core import eval_handshake
+
+    from crewai_cli import crew_run_tui
+
+    assert (
+        run_crew_module.EVAL_TOKEN_ENV
+        == crew_run_tui._AWAITING_EVAL_ENV
+        == eval_handshake.AWAITING_ENV
+    )

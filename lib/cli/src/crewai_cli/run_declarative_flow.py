@@ -67,18 +67,20 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     # Load the project's .env before kickoff, mirroring the JSON-crew path
     # (run_crew._run_json_crew) so flow projects pick up API keys/config the
     # same way regardless of where crewai is installed.
-    from dotenv import load_dotenv
+    from crewai_cli.run_crew import load_project_env
 
     env_file = Path.cwd() / ".env"
     if env_file.exists():
-        load_dotenv(env_file, override=True)
+        load_project_env(env_file)
 
     provided = parse_inputs_json(inputs) or {}
 
     flow = load_declarative_flow(definition)
 
     if _flow_is_conversational(flow):
-        _run_conversational_declarative_flow(flow, inputs is not None)
+        _run_conversational_declarative_flow(
+            flow, inputs is not None, definition=definition
+        )
         return
 
     resolved_inputs = _resolve_flow_inputs(flow, provided)
@@ -106,7 +108,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
 
 
 def _run_conversational_declarative_flow(
-    flow: Flow[Any], inputs_supplied: bool
+    flow: Flow[Any], inputs_supplied: bool, *, definition: str | Path | None = None
 ) -> None:
     """Run a declarative chat flow on the conversational TUI.
 
@@ -158,7 +160,7 @@ def _run_conversational_declarative_flow(
 
     from crewai_cli.kickoff_flow import _run_conversational_flow_tui
 
-    _run_conversational_flow_tui(flow)
+    _run_conversational_flow_tui(flow, definition=definition)
 
 
 def _run_declarative_flow_tui(

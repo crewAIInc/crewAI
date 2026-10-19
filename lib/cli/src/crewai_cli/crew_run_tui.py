@@ -362,11 +362,12 @@ def _awaiting_dir() -> Path:
         import appdirs
 
         return Path(appdirs.user_data_dir("crewai", "CrewAI")) / "eval-awaiting"
-    home = Path.home()
-    with contextlib.suppress(ImportError, KeyError, OSError):
+    try:
         import pwd
 
         home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    except (ImportError, KeyError, OSError):
+        home = Path.home()
     base = (
         home / "Library" / "Application Support"
         if sys.platform == "darwin"

@@ -254,7 +254,7 @@ def test_the_saved_login_goes_only_to_an_amp_crewai_eval_trusted(
     from crewai.telemetry.tracing.grants import TraceGrantClient
     from crewai_core import eval_handshake
 
-    buffers, grants, recorders, prompt = traces
+    # `traces` installs the scripted grants and exporters
     monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     monkeypatch.setenv("CREWAI_PLUS_URL", amp)

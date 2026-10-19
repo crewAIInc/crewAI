@@ -3226,3 +3226,61 @@ def test_this_commands_own_project_id_write_is_no_change(project, monkeypatch):
     eval_module.eval_crew()  # the autouse guard fails the test if the crew runs
 
     assert amp.calls[0] == ("create", "last-traced-run")
+
+
+# ── the saved login and an AMP the project chose ─────────────────────────────
+
+
+def test_a_rerun_from_the_run_app_trusts_only_what_the_app_says(project, monkeypatch):
+    """The run app's process loaded the project's `.env` already, so its
+    CREWAI_PLUS_URL cannot vouch for itself: the app passes this machine's
+    AMPs, and neither the evaluation nor the run trusts anything else."""
+    from crewai_core.eval_handshake import awaited_evaluation
+
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://other.example")  # from the project's .env
+    told: list[object] = []
+
+    def fake_run_crew() -> None:
+        told.append((awaited_evaluation() or {}).get("trusted_amp_origins"))
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew(run_again=True, trusted_amp_origins={"https://amp.test"})
+
+    assert told == [["https://amp.test"]]
+    assert amp.api_key is None  # read anonymously: other.example gets no login
+
+
+@pytest.mark.parametrize("amp_url", ["https://evil.example", "https://amp.test"])
+def test_tracing_is_never_turned_on_toward_an_amp_the_command_does_not_trust(
+    project, monkeypatch, capsys, amp_url
+):
+    """A project's crewai older than the handshake sends the saved login to the
+    AMP its `.env` names once tracing is on: toward an untrusted AMP the command
+    leaves tracing as it was, and a crewai that knows the handshake still traces
+    the run, anonymously, there."""
+    from crewai_core.eval_handshake import awaited_evaluation
+
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text(f"CREWAI_PLUS_URL={amp_url}\n")
+    seen: list[tuple] = []
+
+    def fake_run_crew() -> None:
+        said = awaited_evaluation() or {}
+        seen.append((os.environ.get("CREWAI_TRACING_ENABLED"), said.get("tracing_turned_on")))
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    trusted = amp_url == "https://amp.test"
+    assert seen == ([("true", True)] if trusted else [(None, False)])
+    assert ("CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()) is trusted
+    assert ("Tracing is now on" in capsys.readouterr().out) is trusted

@@ -311,11 +311,9 @@ def _run_json_crew(
     inputs: str | None = None,
 ) -> Any:
     """Load and run a JSON-defined crew."""
-    from dotenv import load_dotenv
-
     env_file = Path.cwd() / ".env"
     if env_file.exists():
-        load_dotenv(env_file, override=True)
+        load_project_env(env_file)
 
     # JSON crews run in-process, so export the trained-agents file directly
     # instead of forwarding it to a subprocess like classic crews do.
@@ -529,6 +527,26 @@ def _record_deploy_button(event: DeployButtonEvent) -> None:
         pass
 
 
+# `crewai eval`'s token for the run it starts (`crew_run_tui._AWAITING_EVAL_ENV`,
+# `crewai_core.eval_handshake.AWAITING_ENV`; a test pins the three).
+EVAL_TOKEN_ENV = "CREWAI_EVAL_AWAITING_RUN"  # noqa: S105 - a variable name, not a secret
+
+
+def load_project_env(env_file: Path) -> None:
+    """The project's `.env` over this process's environment, `crewai eval`'s
+    token excepted: the token this process was started with is kept, and a
+    `.env` never sets one. Otherwise a `.env` could unmark a run `crewai eval`
+    started, and its tracing would no longer apply the command's rules."""
+    from dotenv import load_dotenv
+
+    kept = os.environ.get(EVAL_TOKEN_ENV)
+    load_dotenv(env_file, override=True)
+    if kept is None:
+        os.environ.pop(EVAL_TOKEN_ENV, None)
+    else:
+        os.environ[EVAL_TOKEN_ENV] = kept
+
+
 def _chain_traced_rerun(run_args: dict[str, Any] | None = None) -> None:
     """The run app's Evaluate, pressed on a run that was not traced: the run
     happens again, traced, and that run is evaluated — `crewai eval`'s own
@@ -537,11 +555,15 @@ def _chain_traced_rerun(run_args: dict[str, Any] | None = None) -> None:
     RUN_ARGS are `run_crew`'s arguments for the run the person watched (its
     definition, inputs and trained agents), so the run graded is that one, not
     the project's default."""
-    from crewai_cli.experimental.eval_crew import eval_crew
+    from crewai_cli.experimental.eval_crew import _machine_amp_origins, eval_crew
 
     eval_crew(
         run_again=True,
         run_args={key: value for key, value in (run_args or {}).items() if value},
+        # This process loaded the project's `.env` for the run the person
+        # watched, so the `CREWAI_PLUS_URL` in it cannot be trusted with the
+        # saved login: the AMPs this machine is configured for, only.
+        trusted_amp_origins=_machine_amp_origins(),
     )
 
 
