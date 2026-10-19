@@ -446,3 +446,55 @@ class TestCallMocking:
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert hasattr(completion, "acall")
         assert callable(completion.acall)
+
+
+class TestAIStupidLevel:
+    """AI Stupid Level: an OpenAI-compatible router; the model is a routing mode or a model id."""
+
+    def test_config(self):
+        config = OPENAI_COMPATIBLE_PROVIDERS["aistupidlevel"]
+        assert config.base_url == "https://aistupidlevel.info/v1"
+        assert config.api_key_env == "AISTUPIDLEVEL_API_KEY"
+        assert config.base_url_env == "AISTUPIDLEVEL_BASE_URL"
+        assert config.api_key_required is True
+
+    def test_missing_api_key_names_env_var(self):
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(
+            ValueError, match="AISTUPIDLEVEL_API_KEY"
+        ):
+            OpenAICompatibleCompletion(model="auto-coding", provider="aistupidlevel")
+
+    @pytest.mark.parametrize("model", ["auto-coding", "auto-value", "claude-opus-5-5"])
+    def test_llm_routes_natively(self, model):
+        """Routing modes and pinned model ids both go to OpenAICompatibleCompletion."""
+        with patch.dict(os.environ, {"AISTUPIDLEVEL_API_KEY": "aism-test"}):
+            llm = LLM(model=f"aistupidlevel/{model}")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "aistupidlevel"
+            assert llm.model == model
+            assert llm.base_url == "https://aistupidlevel.info/v1"
+
+    def test_explicit_provider(self):
+        with patch.dict(os.environ, {"AISTUPIDLEVEL_API_KEY": "aism-test"}):
+            llm = LLM(model="auto-reasoning", provider="aistupidlevel")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "aistupidlevel"
+            assert llm.model == "auto-reasoning"
+
+    def test_base_url_env_override(self):
+        with patch.dict(
+            os.environ,
+            {
+                "AISTUPIDLEVEL_API_KEY": "aism-test",
+                "AISTUPIDLEVEL_BASE_URL": "https://proxy.example.com/v1",
+            },
+        ):
+            llm = LLM(model="aistupidlevel/auto-tooling")
+            assert llm.base_url == "https://proxy.example.com/v1"
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [("auto-coding", True), ("gpt-6-sol", True), ("auto", True), ("", False)],
+    )
+    def test_model_pattern(self, model, expected):
+        assert LLM._matches_provider_pattern(model, "aistupidlevel") is expected
