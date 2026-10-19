@@ -28,7 +28,7 @@ into `./crewai-eval-<ID>/`, for a coding agent to dig into.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
