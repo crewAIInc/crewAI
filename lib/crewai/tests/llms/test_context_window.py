@@ -17,6 +17,9 @@ from crewai.llms.context_window import (
     summarize_messages,
     resolve_context_window_size,
 )
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
 
 
 def test_resolver_uses_the_exact_model_id() -> None:
@@ -278,7 +281,9 @@ def test_summary_chunking_uses_the_rendered_request_token_estimator() -> None:
     chunks = _chunk_messages(llm, messages, max_tokens=125)
 
     assert chunks == [[messages[0]], [messages[1]]]
-    assert len(llm.requests) == 3
+    # One empty-prompt baseline, one estimate per message, and one exact
+    # validation for each completed chunk.
+    assert len(llm.requests) == 5
     assert all(
         llm.get_input_tokens_count(_build_summary_prompt(chunk)) <= 125
         for chunk in chunks
@@ -364,3 +369,101 @@ def test_summary_retries_with_progressively_smaller_budgets() -> None:
 
     assert llm.failed_request_sizes == [80, 60, 40]
     assert COMPACTION_RETRY_BUDGET_RATIO == 0.75
+
+
+def test_summary_chunking_keeps_tool_exchanges_together_when_they_fit() -> None:
+    class CountingLLM:
+        def get_input_tokens_count(self, messages) -> int:
+            return messages[-1]["content"].count("§")
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": "§" * 10,
+            "tool_calls": [{"function": {"name": "search"}}],
+        },
+        {"role": "tool", "name": "search", "content": "§" * 10},
+        {"role": "user", "content": "§" * 10},
+    ]
+
+    chunks = _chunk_messages(CountingLLM(), messages, max_tokens=20)
+
+    assert chunks == [[messages[0], messages[1]], [messages[2]]]
+
+
+def test_summary_chunking_splits_a_single_oversized_text_message() -> None:
+    class CountingLLM:
+        def get_input_tokens_count(self, messages) -> int:
+            return messages[-1]["content"].count("§")
+
+    message = {"role": "user", "content": "§" * 50}
+
+    chunks = _chunk_messages(CountingLLM(), [message], max_tokens=20)
+
+    assert len(chunks) == 3
+    assert "".join(chunk[0]["content"] for chunk in chunks) == message["content"]
+    assert all(
+        CountingLLM().get_input_tokens_count(_build_summary_prompt(chunk)) <= 20
+        for chunk in chunks
+    )
+
+
+def test_summary_chunking_reflows_when_cached_estimates_understate_overhead() -> None:
+    class NonAdditiveCountingLLM:
+        def get_input_tokens_count(self, messages) -> int:
+            message_count = messages[-1]["content"].count("[USER]:")
+            return message_count * 10 + (5 if message_count > 1 else 0)
+
+    messages = [
+        {"role": "user", "content": "First"},
+        {"role": "user", "content": "Second"},
+    ]
+
+    chunks = _chunk_messages(NonAdditiveCountingLLM(), messages, max_tokens=20)
+
+    assert chunks == [[messages[0]], [messages[1]]]
+
+
+def test_summary_chunking_rejects_unsplittable_oversized_content() -> None:
+    class CountingLLM:
+        def get_input_tokens_count(self, messages) -> int:
+            return 100 if "[Called tools: huge]" in messages[-1]["content"] else 1
+
+    with pytest.raises(LLMContextLengthExceededError, match="no text"):
+        _chunk_messages(
+            CountingLLM(),
+            [
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{"function": {"name": "huge"}}],
+                }
+            ],
+            max_tokens=10,
+        )
+
+
+def test_summary_compacts_an_oversized_merged_summary() -> None:
+    class LayeredSummaryLLM:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def get_context_window_size(self) -> int:
+            return 10
+
+        def get_input_tokens_count(self, messages) -> int:
+            if len(messages) == 1:
+                return 100 if "long" in messages[0]["content"] else 1
+            return 1
+
+        async def acall(self, messages, callbacks):
+            self.calls += 1
+            return "<summary>long summary</summary>" if self.calls == 1 else "<summary>short</summary>"
+
+    llm = LayeredSummaryLLM()
+    messages = [{"role": "user", "content": "Question"}]
+
+    summarize_messages(llm, messages, [], verbose=False)
+
+    assert llm.calls == 2
+    assert "short" in messages[0]["content"]

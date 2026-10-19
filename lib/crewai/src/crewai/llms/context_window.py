@@ -37,6 +37,7 @@ COMPACTION_RETRY_BUDGET_RATIO: Final[float] = 0.75
 _COMPACTION_MAX_RETRIES: Final[int] = 3
 
 _CATALOG_FILENAME: Final[str] = "model_prices_and_context_window.json"
+_MAX_SUMMARY_LAYERS: Final[int] = 3
 _OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
 _AZURE_PROVIDERS: Final[frozenset[str]] = frozenset({"azure", "azure_ai"})
 _ANTHROPIC_PROVIDERS: Final[frozenset[str]] = frozenset({"anthropic"})
@@ -271,8 +272,10 @@ def summarize_messages(
         return
 
     preserved_files = _collect_summary_files(messages)
-    chunks = _chunk_messages(llm, work_messages, llm.get_context_window_size())
+    max_tokens = llm.get_context_window_size()
+    chunks = _chunk_messages(llm, work_messages, max_tokens)
     summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
+    summaries = _compact_summaries(llm, summaries, callbacks, verbose, max_tokens)
     summary_message = _message(
         I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
     )
@@ -368,6 +371,30 @@ def _summarize_chunks(
         return pool.submit(context.run, asyncio.run, coroutine).result()
 
 
+def _compact_summaries(
+    llm: Any,
+    summaries: list[str],
+    callbacks: list[Any],
+    verbose: bool,
+    max_tokens: int,
+) -> list[str]:
+    """Recursively condense summary layers until the replacement message fits."""
+    for _ in range(_MAX_SUMMARY_LAYERS):
+        replacement = _message(
+            I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
+        )
+        if int(llm.get_input_tokens_count([replacement])) <= max_tokens:
+            return summaries
+
+        summary_messages = [_message(summary) for summary in summaries]
+        chunks = _chunk_messages(llm, summary_messages, max_tokens)
+        summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
+
+    raise LLMContextLengthExceededError(
+        "Summaries could not be compacted to fit the context window."
+    )
+
+
 def _build_summary_prompt(chunk: list[LLMMessage]) -> list[LLMMessage]:
     return [
         _message(I18N_DEFAULT.slice("summarizer_system_message"), "system"),
@@ -412,24 +439,158 @@ def _conversation_text(messages: list[LLMMessage]) -> str:
 def _chunk_messages(
     llm: Any, messages: list[LLMMessage], max_tokens: int
 ) -> list[list[LLMMessage]]:
-    """Split history so each rendered summarization request fits ``max_tokens``."""
+    """Plan and validate summary chunks with one cached estimate per message."""
+    base_tokens = _summary_request_tokens(llm, [])
+    if base_tokens > max_tokens:
+        raise LLMContextLengthExceededError(
+            "Summarization prompt exceeds the context window before conversation history is added."
+        )
+    token_estimates: dict[int, int] = {}
+    chunks = _plan_summary_chunks(
+        llm, messages, max_tokens, base_tokens, token_estimates
+    )
+    return _validate_summary_chunks(
+        llm, chunks, max_tokens, base_tokens, token_estimates
+    )
+
+
+def _plan_summary_chunks(
+    llm: Any,
+    messages: list[LLMMessage],
+    max_tokens: int,
+    base_tokens: int,
+    token_estimates: dict[int, int],
+) -> list[list[LLMMessage]]:
+    """Greedily pack cached message estimates while retaining tool exchanges."""
     chunks: list[list[LLMMessage]] = []
     current: list[LLMMessage] = []
-    for message in messages:
-        if message.get("role") == "system":
-            continue
-        for part in _split_message_to_fit(llm, message, max_tokens):
-            candidate = [*current, part]
-            candidate_tokens = _summary_request_tokens(llm, candidate) if current else 0
-            if current and candidate_tokens > max_tokens:
+    current_tokens = base_tokens
+    for unit in _message_units(messages):
+        unit_tokens = sum(
+            _message_token_estimate(llm, message, base_tokens, token_estimates)
+            for message in unit
+        )
+        if base_tokens + unit_tokens > max_tokens:
+            if current:
                 chunks.append(current)
-                current = [part]
-            else:
-                current = candidate
+                current, current_tokens = [], base_tokens
+            for message in unit:
+                for part in _split_message_to_fit(llm, message, max_tokens):
+                    part_tokens = _message_token_estimate(
+                        llm, part, base_tokens, token_estimates
+                    )
+                    if current and current_tokens + part_tokens > max_tokens:
+                        chunks.append(current)
+                        current, current_tokens = [], base_tokens
+                    current.append(part)
+                    current_tokens += part_tokens
+            continue
+
+        if current and current_tokens + unit_tokens > max_tokens:
+            chunks.append(current)
+            current, current_tokens = [], base_tokens
+        current.extend(unit)
+        current_tokens += unit_tokens
 
     if current:
         chunks.append(current)
     return chunks
+
+
+def _message_units(messages: list[LLMMessage]) -> list[list[LLMMessage]]:
+    """Keep an assistant tool call with its following tool results when possible."""
+    units: list[list[LLMMessage]] = []
+    index = 0
+    while index < len(messages):
+        message = messages[index]
+        if message.get("role") == "system":
+            index += 1
+            continue
+        unit = [message]
+        if message.get("role") == "assistant" and message.get("tool_calls"):
+            index += 1
+            while index < len(messages) and messages[index].get("role") == "tool":
+                unit.append(messages[index])
+                index += 1
+            units.append(unit)
+            continue
+        units.append(unit)
+        index += 1
+    return units
+
+
+def _message_token_estimate(
+    llm: Any,
+    message: LLMMessage,
+    base_tokens: int,
+    token_estimates: dict[int, int],
+) -> int:
+    """Return a cached message contribution to a rendered summary request."""
+    key = id(message)
+    if key not in token_estimates:
+        token_estimates[key] = max(
+            0, _summary_request_tokens(llm, [message]) - base_tokens
+        )
+    return token_estimates[key]
+
+
+def _validate_summary_chunks(
+    llm: Any,
+    chunks: list[list[LLMMessage]],
+    max_tokens: int,
+    base_tokens: int,
+    token_estimates: dict[int, int],
+) -> list[list[LLMMessage]]:
+    """Reflow only planned chunks whose rendered request exceeds the budget."""
+    validated: list[list[LLMMessage]] = []
+    for chunk in chunks:
+        exact_tokens = _summary_request_tokens(llm, chunk)
+        if exact_tokens <= max_tokens:
+            validated.append(chunk)
+            continue
+
+        estimated_tokens = base_tokens + sum(
+            _message_token_estimate(llm, message, base_tokens, token_estimates)
+            for message in chunk
+        )
+        reflow_budget = min(
+            max_tokens - max(1, exact_tokens - max_tokens),
+            estimated_tokens - 1,
+        )
+        if reflow_budget < base_tokens:
+            if len(chunk) != 1:
+                raise LLMContextLengthExceededError(
+                    "Summarization chunk could not be reflowed to fit the context window."
+                )
+            parts = _split_message_to_fit(llm, chunk[0], max_tokens)
+            if len(parts) <= 1:
+                raise LLMContextLengthExceededError(
+                    "Summarization message could not be split to fit the context window."
+                )
+            validated.extend(
+                _validate_summary_chunks(
+                    llm,
+                    [[part] for part in parts],
+                    max_tokens,
+                    base_tokens,
+                    token_estimates,
+                )
+            )
+            continue
+
+        reflowed = _plan_summary_chunks(
+            llm, chunk, reflow_budget, base_tokens, token_estimates
+        )
+        if len(reflowed) <= 1:
+            raise LLMContextLengthExceededError(
+                "Summarization chunk could not be reflowed to fit the context window."
+            )
+        validated.extend(
+            _validate_summary_chunks(
+                llm, reflowed, max_tokens, base_tokens, token_estimates
+            )
+        )
+    return validated
 
 
 def _split_message_to_fit(
@@ -441,7 +602,9 @@ def _split_message_to_fit(
 
     text = message_content_text(message)
     if not text:
-        return [message]
+        raise LLMContextLengthExceededError(
+            "Summarization message has no text that can be split to fit the context window."
+        )
 
     parts: list[LLMMessage] = []
     remainder = text
@@ -449,7 +612,7 @@ def _split_message_to_fit(
         low, high, best = 1, len(remainder), 0
         while low <= high:
             length = (low + high) // 2
-            candidate = cast(LLMMessage, {**message, "content": remainder[:length]})
+            candidate = cast("LLMMessage", {**message, "content": remainder[:length]})
             if _summary_request_tokens(llm, [candidate]) <= max_tokens:
                 best = length
                 low = length + 1
@@ -461,7 +624,7 @@ def _split_message_to_fit(
                 "Summarization message could not be split to fit the context window."
             )
 
-        parts.append(cast(LLMMessage, {**message, "content": remainder[:best]}))
+        parts.append(cast("LLMMessage", {**message, "content": remainder[:best]}))
         remainder = remainder[best:]
 
     return parts
