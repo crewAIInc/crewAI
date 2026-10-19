@@ -27,7 +27,13 @@ import pytest
 
 
 PROXY_VARS = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY")
-TRANSPORT_VARS = (*PROXY_VARS, "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUEST_METHOD")
+TRANSPORT_VARS = (
+    *PROXY_VARS,
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "REQUEST_METHOD",
+    "UV_ENV_FILE",
+)
 
 
 class Seen(NamedTuple):
@@ -287,6 +293,7 @@ def test_restoring_the_machine_transport_undoes_what_a_project_env_set(
         "NO_PROXY": "*",
         "SSL_CERT_FILE": "/project/ca.pem",
         "REQUEST_METHOD": "GET",
+        "UV_ENV_FILE": ".env",
         "OPENAI_API_KEY": "project-key",
     }
 

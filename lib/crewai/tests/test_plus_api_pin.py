@@ -56,12 +56,14 @@ def test_import_crewai_pins_the_machines_proxy_before_the_project_env_loads(
 def test_the_crew_crewai_eval_runs_pins_the_machines_proxy_not_the_project_envs(
     tmp_path: Path, machine: dict[str, str]
 ) -> None:
-    """`crewai eval` loads the project's .env, then starts the crew in a child
-    process that inherits its environment and pins from it."""
+    """`crewai eval` loads the project's .env, then starts the crew with `uv run`
+    in a child process that inherits its environment and pins from it. The .env
+    also names itself as uv's env file, which uv would load before Python starts."""
     (tmp_path / ".env").write_text(
         "HTTPS_PROXY=http://project-proxy.test:8080\n"
         "SSL_CERT_FILE=/project/ca.pem\n"
         "CREWAI_PLUS_URL=https://amp.project.test\n"
+        "UV_ENV_FILE=.env\n"
     )
     env = {key: value for key, value in os.environ.items() if not plus_api._sets_transport(key)}
     env.pop("CREWAI_PLUS_URL", None)
@@ -72,7 +74,8 @@ def test_the_crew_crewai_eval_runs_pins_the_machines_proxy_not_the_project_envs(
         "from crewai_cli.experimental.eval_crew import _load_project_env\n"
         "from crewai_core.tool_credentials import build_env_with_all_tool_credentials\n"
         "_load_project_env()\n"
-        "run = subprocess.run([sys.executable, '-c', 'import json, crewai;"
+        "run = subprocess.run(['uv', 'run', '--no-project', '--python', sys.executable,"
+        " 'python', '-c', 'import json, crewai;"
         " from crewai_core import plus_api; print(json.dumps(plus_api._MACHINE_TRANSPORT_ENV))'],"
         " env=build_env_with_all_tool_credentials(), capture_output=True, text=True, check=True)\n"
         "print(json.dumps({'amp': os.environ.get('CREWAI_PLUS_URL'),"

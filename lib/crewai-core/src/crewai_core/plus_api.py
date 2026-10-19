@@ -151,14 +151,17 @@ class RequestKwargs(TypedDict):
 
 
 def _sets_transport(key: str) -> bool:
-    """Whether httpx reads this variable to pick a proxy or a CA bundle.
+    """Whether this variable decides the proxy or CA bundle of AMP requests.
 
-    REQUEST_METHOD counts: urllib drops an uppercase HTTP_PROXY when it is set.
+    httpx reads the proxy and CA variables. REQUEST_METHOD counts: urllib drops
+    an uppercase HTTP_PROXY when it is set. So does UV_ENV_FILE, for a crewAI
+    process started with `uv run`: uv loads that file into it before Python starts.
     """
     return key.lower().endswith("_proxy") or key.upper() in {
         "SSL_CERT_FILE",
         "SSL_CERT_DIR",
         "REQUEST_METHOD",
+        "UV_ENV_FILE",
     }
 
 
