@@ -76,15 +76,21 @@ def _canonical_scope_prefix(scope_prefix: str) -> str:
 
 
 def _scope_prefix_filter(prefix: str) -> str:
-    r"""Build a predicate matching ``prefix`` and the scopes below it.
+    r"""Build a predicate matching scopes that start with ``prefix``.
 
     The prefix is anchored as a scope path first, so ``"sales"`` and
     ``"/sales"`` select the same rows. Scopes written by releases that did not
     anchor them were stored exactly as the caller typed them, so the unanchored
-    spelling of the same path is matched as well — as the scope itself or a
-    descendant — until a migration rewrites those rows. Matching it as
-    ``LIKE 'sales%'`` would also pull in a sibling such as ``salesforce``, which
-    is why the legacy half is spelled as an equality plus a ``sales/`` prefix.
+    spelling of the same path is matched as well — the scope itself or its
+    ``sales/`` descendants — until a migration rewrites those rows. That legacy
+    half is deliberately not `LIKE 'sales%'`, which would widen the match into
+    siblings such as ``sales-eu`` that were never part of the scope.
+
+    Prefix, not subtree: a scope prefix is a string prefix by contract (see
+    ``test_lancedb_filter_escaping``), so ``/share\`` reaches ``/share\docs``.
+    Every scoped operation — including the destructive ``delete`` and
+    ``reset`` — goes through this one predicate, so they cannot disagree about
+    which rows a scope owns.
 
     ``\``, ``%`` and ``_`` in the prefix are escaped so they match literally;
     only the appended trailing ``%`` acts as a wildcard. Lance supports only
@@ -669,16 +675,12 @@ class LanceDBStorage:
                 return
             prefix = _canonical_scope_prefix(scope_prefix)
             if prefix:
-                literal = _sql_str(prefix)
-                # Rows written before scopes were anchored hold the unanchored
-                # spelling. Both ranges are needed, and a range (rather than
-                # the LIKE filter) keeps a lexicographic sibling out.
-                legacy = _sql_str(prefix.lstrip("/"))
-                self._do_write(
-                    "delete",
-                    f"(scope >= '{literal}' AND scope < '{literal}/\uffff') OR "
-                    f"(scope >= '{legacy}' AND scope < '{legacy}/\uffff')",
-                )
+                # Same predicate every other scoped operation uses: the scope
+                # and its slash-delimited descendants, in both the anchored and
+                # the legacy unanchored spelling. A range would be wider — it
+                # sorts hyphenated and dotted siblings (`/sales-eu`, `/sales.x`)
+                # inside the interval and deletes them too.
+                self._do_write("delete", _scope_prefix_filter(scope_prefix))
 
     def optimize(self) -> None:
         """Compact the table synchronously and refresh the scope index.

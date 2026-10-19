@@ -332,7 +332,9 @@ def test_legacy_unanchored_rows_stay_reachable(tmp_path: Path) -> None:
         _record("legacy-1", "sales"),
         _record("legacy-2", "sales/eu"),
         _record("legacy-3", "salesforce"),
+        _record("legacy-4", "sales-eu"),
     ])
+    siblings = {"legacy-3", "legacy-4"}
     try:
         # Both spellings address the anchored and the legacy rows, exactly and
         # by descendant.
@@ -343,45 +345,45 @@ def test_legacy_unanchored_rows_stay_reachable(tmp_path: Path) -> None:
             }
             assert storage.count(spelling) == 4
 
-        # A sibling that merely shares the leading characters is not a child of
-        # the legacy spelling either.
+        # The legacy half is not `LIKE 'sales%'`: a hyphenated or suffix sibling
+        # in the old spelling is a different scope, and stays out.
         assert storage.count("salesforce") == 1
-        assert _search_ids(storage, "/sales") == SALES_RECORDS | {
-            "legacy-1",
-            "legacy-2",
-        }
+        assert storage.count("sales-eu") == 1
 
         info = storage.get_scope_info("/sales")
         assert info.record_count == 4
         assert info.child_scopes == ["/sales/eu"]
 
-        # Deletion reaches them too: leaving rows behind that no scoped call can
-        # see is the failure this guards.
+        # Deletion reaches the legacy rows and leaves both siblings alone:
+        # deleting rows that no scoped read can see is the failure this guards.
         assert storage.delete(scope_prefix="/sales") == 4
-        assert _all_ids(storage) == {"support-1", "legacy-3"}
+        assert _all_ids(storage) == {"support-1"} | siblings
     finally:
         close = getattr(storage, "close", None)
         if close is not None:
             close()
 
 
-def test_reset_removes_legacy_rows_and_keeps_the_sibling(tmp_path: Path) -> None:
-    """``reset`` must reach the legacy spelling without deleting a sibling.
+def test_reset_matches_the_same_predicate_as_delete(tmp_path: Path) -> None:
+    """``reset`` must own exactly the rows the other scoped calls address.
 
-    `Memory.reset(scope=...)` is the destructive path: leaving unanchored rows
-    behind means `recall` still returns records that `reset` was asked to drop.
+    It used to build a lexicographic range of its own, which both missed the
+    legacy spelling and sorted siblings such as ``sales-eu`` into the interval.
     """
     storage = _new_storage(tmp_path / "mem")
     storage.save([
         _record("legacy-1", "sales"),
         _record("legacy-2", "sales/eu"),
         _record("legacy-3", "salesforce"),
+        _record("legacy-4", "sales-eu"),
     ])
     try:
-        assert storage.count() == 6
+        assert storage.count("/sales") == 4
         storage.reset("/sales")
-        # `salesforce` shares the leading characters and is not a child.
-        assert _all_ids(storage) == {"support-1", "legacy-3"}
+        # What `count` counted is what `reset` removed, and no sibling went with
+        # it.
+        assert storage.count("/sales") == 0
+        assert _all_ids(storage) == {"support-1", "legacy-3", "legacy-4"}
     finally:
         close = getattr(storage, "close", None)
         if close is not None:
