@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 import threading
 from typing import NamedTuple, cast
+import urllib.request
 import zipfile
 
 from crewai_core import plus_api
@@ -26,7 +27,7 @@ import pytest
 
 
 PROXY_VARS = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY")
-TRANSPORT_VARS = (*PROXY_VARS, "SSL_CERT_FILE", "SSL_CERT_DIR")
+TRANSPORT_VARS = (*PROXY_VARS, "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUEST_METHOD")
 
 
 class Seen(NamedTuple):
@@ -132,6 +133,57 @@ def test_requests_go_through_the_proxy_the_machine_names(
             b"",
         )
     ]
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_in_a_cgi_process_an_uppercase_http_proxy_is_ignored(
+    proxy: _RecordingServer, amp: _RecordingServer, machine: dict[str, str]
+) -> None:
+    """A CGI client's Proxy header arrives as HTTP_PROXY ("httpoxy"); the login must not follow it."""
+    machine["HTTP_PROXY"] = proxy.url
+    machine["REQUEST_METHOD"] = "GET"
+
+    response = PlusAPI("amp-token", base_url=amp.url).get_agent("researcher")
+
+    assert response.json() == {"served_by": "amp"}
+    assert proxy.seen == []
+
+
+@pytest.mark.block_network(allowed_hosts=["127.0.0.1"])
+def test_in_a_cgi_process_a_lowercase_http_proxy_still_applies(
+    proxy: _RecordingServer, machine: dict[str, str]
+) -> None:
+    machine["http_proxy"] = proxy.url
+    machine["REQUEST_METHOD"] = "GET"
+
+    response = PlusAPI("amp-token", base_url="http://amp.test").get_agent("researcher")
+
+    assert response.json() == {"served_by": "proxy"}
+    assert proxy.seen[0].authorization == "Bearer amp-token"
+
+
+@pytest.mark.parametrize(
+    "variables",
+    [
+        {"HTTP_PROXY": "http://upper.test:1"},
+        {"HTTP_PROXY": "http://upper.test:1", "REQUEST_METHOD": "GET"},
+        {
+            "HTTP_PROXY": "http://upper.test:1",
+            "http_proxy": "http://lower.test:1",
+            "REQUEST_METHOD": "POST",
+        },
+        {"HTTPS_PROXY": "http://secure.test:1", "REQUEST_METHOD": "GET"},
+        {"HTTP_PROXY": "http://upper.test:1", "http_proxy": ""},
+    ],
+)
+def test_proxies_are_read_as_urllib_reads_them(
+    variables: dict[str, str], machine: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name, value in variables.items():
+        machine[name] = value
+        monkeypatch.setenv(name, value)
+
+    assert plus_api._machine_proxies() == urllib.request.getproxies_environment()
 
 
 @pytest.mark.block_network(allowed_hosts=["127.0.0.1"])

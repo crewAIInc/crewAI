@@ -150,10 +150,14 @@ class RequestKwargs(TypedDict):
 
 
 def _sets_transport(key: str) -> bool:
-    """Whether httpx reads this variable to pick a proxy or a CA bundle."""
+    """Whether httpx reads this variable to pick a proxy or a CA bundle.
+
+    REQUEST_METHOD counts: urllib drops an uppercase HTTP_PROXY when it is set.
+    """
     return key.lower().endswith("_proxy") or key.upper() in {
         "SSL_CERT_FILE",
         "SSL_CERT_DIR",
+        "REQUEST_METHOD",
     }
 
 
@@ -183,6 +187,10 @@ def _machine_proxies() -> dict[str, str]:
     for name, value in _MACHINE_TRANSPORT_ENV.items():
         if value and name.lower().endswith("_proxy"):
             proxies[name[:-6].lower()] = value
+    # As urllib does (CVE-2016-1000110, "httpoxy"): in a CGI process a client's
+    # Proxy header arrives as HTTP_PROXY, so only a lowercase http_proxy counts.
+    if "REQUEST_METHOD" in _MACHINE_TRANSPORT_ENV:
+        proxies.pop("http", None)
     for name, value in _MACHINE_TRANSPORT_ENV.items():
         if name.endswith("_proxy"):
             if value:

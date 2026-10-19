@@ -278,6 +278,34 @@ def test_json_runner_pins_the_machines_proxy_before_the_project_env_loads(
     }
 
 
+def test_json_runner_stops_when_plus_api_fails_to_import(tmp_path: Path):
+    """Only a crewai-core without plus_api is skipped; a plus_api that fails to
+    import stops the runner with its own error instead of running unpinned."""
+    broken = tmp_path / "broken_env" / "crewai_core"
+    broken.mkdir(parents=True)
+    (broken / "__init__.py").write_text("")
+    (broken / "plus_api.py").write_text("raise ImportError('plus_api needs httpx 0.28')\n")
+    current_pkg = tmp_path / "cli" / "crewai_cli"
+    current_pkg.mkdir(parents=True)
+    (current_pkg / "__init__.py").write_text("")
+    (current_pkg / "run_crew.py").write_text("def _run_json_crew(trained_agents_file=None):\n    pass\n")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(broken.parent)
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(current_pkg)
+
+    result = subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        env=env,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "ImportError: plus_api needs httpx 0.28" in result.stderr
+
+
 def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path):
     old_parent = tmp_path / "old_env"
     old_crewai_core = old_parent / "crewai_core"

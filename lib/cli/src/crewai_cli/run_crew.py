@@ -58,11 +58,13 @@ if source_dir:
 
 # This interpreter never imports cli.py, so pin the machine's proxy and CA for
 # AMP requests here, before _run_json_crew loads the project's .env. A
-# crewai-core too old to have plus_api pins nothing and ignores proxies anyway.
+# crewai-core too old to have plus_api pins nothing and ignores proxies anyway;
+# any other import failure is real and must surface here.
 try:
     import crewai_core.plus_api
-except ImportError:
-    pass
+except ModuleNotFoundError as error:
+    if error.name != "crewai_core.plus_api":
+        raise
 
 package_dir = Path(os.environ["CREWAI_CLI_RUNNER_PACKAGE_DIR"])
 package_spec = importlib.util.spec_from_file_location(
