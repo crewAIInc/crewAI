@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.types import LLMMessage
 
 
@@ -55,6 +56,20 @@ def messages_content_text(messages: list[LLMMessage]) -> str:
             body = f"[Called tools: {', '.join(names)}]" if names else ""
         lines.append(f"{prefix} {body}")
     return "\n\n".join(lines)
+
+
+def build_summary_prompt(chunk: list[LLMMessage]) -> list[LLMMessage]:
+    """Build the LLM request used to summarize a conversation chunk."""
+    return [
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarizer_system_message"), "system"
+        ),
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarize_instruction").format(
+                conversation=messages_content_text(chunk)
+            )
+        ),
+    ]
 
 
 def collect_user_message_files(messages: list[LLMMessage]) -> dict[str, Any]:

@@ -13,11 +13,11 @@ from crewai.llms.context_window import (
     LLM_CONTEXT_WINDOW_SIZES,
     bare_context_windows,
     context_windows_from_catalog,
-    _build_summary_prompt,
     _chunk_messages,
     summarize_messages,
     resolve_context_window_size,
 )
+from crewai.utilities.message_utils import build_summary_prompt
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -283,7 +283,7 @@ def test_summary_chunking_uses_the_rendered_request_token_estimator() -> None:
 
     assert chunks == [[messages[0]], [messages[1]]]
     assert all(
-        llm.get_input_tokens_count(_build_summary_prompt(chunk)) <= 125
+        llm.get_input_tokens_count(build_summary_prompt(chunk)) <= 125
         for chunk in chunks
     )
     assert all(len(request) == 2 for request in llm.requests)
@@ -411,7 +411,7 @@ def test_summary_chunking_splits_a_single_oversized_text_message() -> None:
     assert len(chunks) == 3
     assert "".join(chunk[0]["content"] for chunk in chunks) == message["content"]
     assert all(
-        CountingLLM().get_input_tokens_count(_build_summary_prompt(chunk)) <= 20
+        CountingLLM().get_input_tokens_count(build_summary_prompt(chunk)) <= 20
         for chunk in chunks
     )
 

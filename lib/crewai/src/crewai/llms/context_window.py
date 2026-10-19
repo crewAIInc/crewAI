@@ -26,10 +26,10 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.message_utils import (
+    build_summary_prompt,
     collect_user_message_files,
     format_message_for_llm,
     message_content_text,
-    messages_content_text,
 )
 
 
@@ -316,7 +316,7 @@ def _summarize_chunks(
         try:
             async with semaphore:
                 response = str(
-                    await llm.acall(_build_summary_prompt(chunk), callbacks=callbacks)
+                    await llm.acall(build_summary_prompt(chunk), callbacks=callbacks)
                 )
         except Exception as error:
             if not LLMContextLengthExceededError(
@@ -401,19 +401,6 @@ def _compact_summaries(
     raise LLMContextLengthExceededError(
         "Summaries could not be compacted to fit the context window."
     )
-
-
-def _build_summary_prompt(chunk: list[LLMMessage]) -> list[LLMMessage]:
-    return [
-        format_message_for_llm(
-            I18N_DEFAULT.slice("summarizer_system_message"), "system"
-        ),
-        format_message_for_llm(
-            I18N_DEFAULT.slice("summarize_instruction").format(
-                conversation=messages_content_text(chunk)
-            )
-        ),
-    ]
 
 
 def _chunk_messages(
@@ -501,4 +488,4 @@ def _split_message_to_fit(
 
 def _summary_request_tokens(llm: Any, messages: list[LLMMessage]) -> int:
     """Count the exact request used for a summary call through the active LLM."""
-    return int(llm.get_input_tokens_count(_build_summary_prompt(messages)))
+    return int(llm.get_input_tokens_count(build_summary_prompt(messages)))
