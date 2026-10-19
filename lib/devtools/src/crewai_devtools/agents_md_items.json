@@ -598,7 +598,7 @@
   "q": "I only need one agent answering one prompt. Do I have to build a Crew and a Task for that?",
   "key": [
    "\\.kickoff\\(",
-   "no crew|without (a )?crew|(do|does)n'?t need (a )?crew|not need (a )?crew|no need for (a )?crew|skip (the )?crew"
+   "no crew|without (a )?crew|(do|does)n'?t need (a )?crew|not need (a )?crew|no need for (a )?crew|skip (the )?crew|call (the |an )?agent directly"
   ],
   "partial": [
    "\\.kickoff\\("

@@ -77,7 +77,8 @@ NEGATION: Final = re.compile(
     re.I,
 )
 AFTER_NEGATION: Final = re.compile(
-    r"[`'\"]?\s*(won'?t|isn'?t|doesn'?t|does not|is not|is something else|migrates)\b",
+    r"[`'\"]?\s*(won'?t|isn'?t|doesn'?t|does not|is not|is something else|is a different"
+    r"|does something different|migrates)\b",
     re.I,
 )
 
