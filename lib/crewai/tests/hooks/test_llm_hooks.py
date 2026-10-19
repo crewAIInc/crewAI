@@ -799,6 +799,50 @@ class TestNativeProviderAfterHooksAsync:
         with pytest.raises(HookAborted, match="response blocked"):
             await llm.acall(messages)
 
+    @pytest.mark.asyncio
+    async def test_after_hook_abort_propagates_after_bedrock_tool_call(self, monkeypatch):
+        from unittest.mock import AsyncMock
+
+        from crewai.hooks import register_after_llm_call_hook
+        from crewai.hooks.dispatch import HookAborted
+
+        def deny(context: LLMCallHookContext) -> str | None:
+            raise HookAborted("response blocked")
+
+        register_after_llm_call_hook(deny)
+        llm = self._bedrock_llm(monkeypatch)
+        sync_client = llm._get_sync_client()
+        async_client = await llm._ensure_async_client()
+        tool_use = {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "toolUse": {
+                                "toolUseId": "t1",
+                                "name": "lookup",
+                                "input": {"q": "x"},
+                            }
+                        }
+                    ],
+                }
+            },
+            "usage": {"inputTokens": 1, "outputTokens": 1, "totalTokens": 2},
+        }
+        final = sync_client.converse.return_value
+        sync_client.converse.side_effect = [tool_use, final]
+        async_client.converse = AsyncMock(side_effect=[tool_use, final])
+        tools = {"lookup": lambda q: "found"}
+        messages = [{"role": "user", "content": "hi"}]
+
+        with pytest.raises(HookAborted, match="response blocked"):
+            llm.call(messages, available_functions=tools)
+        with pytest.raises(HookAborted, match="response blocked"):
+            await llm.acall(messages, available_functions=tools)
+        assert sync_client.converse.call_count == 2
+        assert async_client.converse.await_count == 2
+
     def test_global_after_hook_runs_on_bedrock_sync_streaming(self, monkeypatch):
         from crewai.hooks import register_after_llm_call_hook
 

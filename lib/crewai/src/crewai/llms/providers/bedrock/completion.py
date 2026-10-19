@@ -956,6 +956,9 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+        except HookAborted:
+            # Raised by the after-hooks of a recursive call after tool execution.
+            raise
         except Exception as e:
             error_msg = f"Unexpected error in Bedrock converse call: {e}"
             logging.error(error_msg)
@@ -1573,6 +1576,9 @@ class BedrockCompletion(BaseLLM):
             error_msg = f"Bedrock connection error: {e}"
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
+        except HookAborted:
+            # Raised by the after-hooks of a recursive call after tool execution.
+            raise
         except Exception as e:
             error_msg = f"Unexpected error in Bedrock converse call: {e}"
             logging.error(error_msg)
