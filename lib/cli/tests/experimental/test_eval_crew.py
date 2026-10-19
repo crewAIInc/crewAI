@@ -3284,3 +3284,75 @@ def test_tracing_is_never_turned_on_toward_an_amp_the_command_does_not_trust(
     assert seen == ([("true", True)] if trusted else [(None, False)])
     assert ("CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()) is trusted
     assert ("Tracing is now on" in capsys.readouterr().out) is trusted
+
+
+
+@pytest.mark.parametrize("tracing_on_by", ["the project's .env", "a consent given once"])
+def test_a_crew_whose_trace_would_carry_the_login_to_an_untrusted_amp_is_not_run(
+    project, monkeypatch, capsys, usage, tracing_on_by
+):
+    """With tracing already on, a project crewai older than the handshake would
+    send this machine's login to the AMP its `.env` names; the CLI cannot tell
+    which crewai the project runs, so the crew is not run and the sentence says
+    how to go on."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    env = "CREWAI_PLUS_URL=https://evil.example\n"
+    if tracing_on_by == "the project's .env":
+        env += "CREWAI_TRACING_ENABLED=true\n"
+    else:
+        monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
+    (directory / ".env").write_text(env)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()  # the autouse guard fails the test if the crew runs
+
+    assert exited.value.code == 1
+    out = " ".join(capsys.readouterr().out.split())
+    assert "The crew was not run: its trace would go to https://evil.example" in out
+    assert "crewai enterprise configure https://evil.example" in out
+    assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
+    assert amp.calls == []
+
+
+def test_with_no_credential_on_this_machine_there_is_nothing_to_protect(project, monkeypatch):
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\nCREWAI_TRACING_ENABLED=true\n")
+    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
+    monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    ran: list[str] = []
+
+    def fake_run_crew() -> None:
+        ran.append("run")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert ran == ["run"]
+
+
+
+def test_a_project_that_turned_tracing_off_is_not_asked_to_trace_toward_an_untrusted_amp(
+    project, monkeypatch, capsys, usage
+):
+    """A yes there could only end in the crew not being run: no question."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\nCREWAI_TRACING_ENABLED=false\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module.click, "confirm", lambda *a, **k: pytest.fail("no question"))
+    install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
+    assert "CREWAI_TRACING_ENABLED=false" in (directory / ".env").read_text()

@@ -125,6 +125,7 @@ def _record_usage(*, logged_in: bool) -> None:
 
 StopReason = Literal[
     "untraced_after_run",
+    "untrusted_amp",
     "tracing_off",
     "declined",
     "no_project",
@@ -188,6 +189,12 @@ TRACING_OFF_UNATTENDED = (
     "on, then run `crewai eval` again."
 )
 TRACING_STAYS_OFF = "Nothing was run: tracing stays off for this project."
+UNTRUSTED_AMP = (
+    "The crew was not run: its trace would go to {url}, an AMP this machine does not "
+    "send its CrewAI login to, and with tracing on this project's crewai would send the "
+    "login there. Log in to that AMP (`crewai enterprise configure {url}`) or remove "
+    "CREWAI_PLUS_URL from the project's .env, then run `crewai eval` again."
+)
 
 
 def tracing_turned_off() -> bool:
@@ -922,18 +929,24 @@ def _run_the_crew_to_evaluate(
             "No crewAI project here (no pyproject.toml). Run `crewai eval` from the project's "
             "directory, or name a run: `crewai eval --run EXECUTION_ID`."
         )
+    # A credential of this machine must never reach an AMP this command does
+    # not trust, and a project's crewai older than the handshake sends it to
+    # whatever AMP the project names once tracing is on — the CLI cannot tell
+    # which crewai the project runs. So with tracing on for this run (the
+    # project's .env, a consent given once) the crew is not run at all, and a
+    # project that turned tracing off is not asked to turn it on toward such an
+    # AMP. With tracing unset it is not turned on, and a crewai that knows the
+    # handshake still traces the run, anonymously, there.
+    leaves = _credential_would_leave(trusted or set(), machine_credential)
+    if leaves and (tracing_already_on() or tracing_turned_off()):
+        record_stop("untrusted_amp")
+        _fail(UNTRUSTED_AMP.format(url=PlusAPI().base_url.rstrip("/")))
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
     # Nobody turned tracing on: the yes is inferred from this command, and
     # tracing is turned on for the project — said once, plainly, here and in
     # the run app. From then on the project traces, and nothing more is said.
-    # Never when a credential of this machine would go to an AMP this command
-    # does not trust: a project's crewai older than the handshake sends it to
-    # whatever AMP the project names once tracing is on. A crewai that knows
-    # the handshake still traces this run — anonymously, there.
-    turned_on_now = not tracing_already_on() and not _credential_would_leave(
-        trusted or set(), machine_credential
-    )
+    turned_on_now = not leaves and not tracing_already_on()
     if turned_on_now:
         turn_tracing_on()
     _count_usage(f"cli_usage:eval_ran_crew:{why}")
