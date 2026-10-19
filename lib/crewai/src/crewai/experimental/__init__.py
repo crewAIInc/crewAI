@@ -18,8 +18,6 @@ from crewai.flow.conversational import (
 )
 
 
-_LAZY_FROM_AGENT_EXECUTOR = {"AgentExecutor", "CrewAgentExecutorFlow"}
-
 _LAZY_FROM_EVALUATION = {
     "AgentEvaluationResult",
     "AgentEvaluator",
@@ -45,19 +43,7 @@ def __getattr__(name: str) -> Any:
     """Lazily resolve symbols whose modules import ``Flow`` or ``Task``.
 
     Eager re-exports would deadlock when ``Flow`` or ``Task`` is still loading.
-    Callers like ``from crewai.experimental import AgentExecutor`` still work —
-    the real import just runs lazily, after the original loader finishes.
     """
-    if name in _LAZY_FROM_AGENT_EXECUTOR:
-        from crewai.experimental.agent_executor import (
-            AgentExecutor,
-            CrewAgentExecutorFlow,
-        )
-
-        globals()["AgentExecutor"] = AgentExecutor
-        globals()["CrewAgentExecutorFlow"] = CrewAgentExecutorFlow
-        return globals()[name]
-
     if name in _LAZY_FROM_EVALUATION:
         from crewai.experimental import evaluation as _evaluation_mod
 
@@ -71,14 +57,12 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "AgentEvaluationResult",
     "AgentEvaluator",
-    "AgentExecutor",
     "AgentMessage",
     "BaseEvaluator",
     "ConversationConfig",
     "ConversationEvent",
     "ConversationMessage",
     "ConversationState",
-    "CrewAgentExecutorFlow",  # Deprecated alias for AgentExecutor
     "EvaluationScore",
     "EvaluationTraceCallback",
     "ExperimentResult",

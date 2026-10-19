@@ -320,7 +320,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     )
     learn: bool = Field(
         default=False,
-        description="Whether feedback should be recorded for later learning workflows.",
+        description="Whether to distill lessons from feedback into memory and apply past lessons to the output before it is reviewed.",
         examples=[True],
     )
     learn_source: str = Field(
@@ -330,7 +330,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     )
     learn_strict: bool = Field(
         default=False,
-        description="Whether learning should enforce strict validation of feedback data.",
+        description="Whether a failed pre-review or lesson distillation raises instead of falling back to the unreviewed output and storing nothing. Lessons are written to memory in the background, so a storage failure after that is not raised.",
         examples=[False],
     )
 

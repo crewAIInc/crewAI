@@ -1,8 +1,14 @@
+from collections.abc import Callable
 import os
 import unittest
 from unittest.mock import ANY, MagicMock, patch
 
 from crewai_cli.plus_api import PlusAPI
+import httpx
+import pytest
+
+
+_RealHttpxClient = httpx.Client
 
 
 class TestPlusAPI(unittest.TestCase):
@@ -95,7 +101,24 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.get_evaluation("ev-1")
 
         mock_make_request.assert_called_once_with(
-            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
+            "GET",
+            "/crewai_plus/api/v1/tracing/evaluations/ev-1",
+            params={"can_export": "1"},
+            timeout=30.0,
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_export_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.export_evaluation("ev-1")
+
+        mock_make_request.assert_called_once_with(
+            "GET",
+            "/crewai_plus/api/v1/tracing/evaluations/ev-1/export",
+            timeout=httpx.Timeout(30.0, read=120.0),
         )
         self.assertEqual(response, mock_response)
 
@@ -307,6 +330,23 @@ class TestPlusAPI(unittest.TestCase):
         )
 
     @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_a_forced_push_says_so_and_an_unforced_one_sends_what_it_always_did(self, mock_make_request):
+        self.api.deploy_by_uuid("test_uuid", force=True)
+        mock_make_request.assert_called_with(
+            "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy", json={"force": True}
+        )
+        self.api.deploy_by_name("test_project", project_id="proj-1", force=True)
+        mock_make_request.assert_called_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/by-name/test_project/deploy",
+            json={"project_id": "proj-1", "force": True},
+        )
+        self.api.deploy_by_uuid("test_uuid", force=False)
+        mock_make_request.assert_called_with(
+            "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy"
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_deploy_sends_the_project_id_when_there_is_one(self, mock_make_request):
         self.api.deploy_by_name("test_project", project_id="proj-1")
         mock_make_request.assert_called_with(
@@ -436,6 +476,8 @@ class TestPlusAPI(unittest.TestCase):
             data={"env[ENV_VAR]": "value"},
             timeout=300,
         )
+        self.api.update_crew_from_zip("test_uuid", "/tmp/test.zip", force=True)
+        assert mock_make_multipart_request.call_args.kwargs["data"] == {"force": "true"}
 
     @patch("crewai_core.plus_api.Settings")
     @patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
@@ -494,3 +536,78 @@ def test_get_agent_with_org_uuid(mock_settings_class, mock_make_request):
     assert "X-Crewai-Organization-Id" in api.headers
     assert api.headers["X-Crewai-Organization-Id"] == org_uuid
     assert response == mock_response
+
+
+def _requests_sent_by(call: Callable[[PlusAPI], object]) -> list[httpx.Request]:
+    """Run ``call`` against a PlusAPI whose HTTP client answers locally."""
+    sent: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        return httpx.Response(200, json={})
+
+    transport = httpx.MockTransport(answer)
+    with patch(
+        "crewai_core.plus_api.httpx.Client",
+        side_effect=lambda **kwargs: _RealHttpxClient(transport=transport, **kwargs),
+    ):
+        call(PlusAPI("test_api_key"))
+    return sent
+
+
+@pytest.mark.parametrize(
+    ("call", "path"),
+    [
+        (
+            lambda api: api.get_triggers(),
+            "/crewai_plus/api/v1/integrations/apps",
+        ),
+        (
+            lambda api: api.get_trigger_payload("hubspot", "contact_created"),
+            "/crewai_plus/api/v1/integrations/hubspot/contact_created/payload",
+        ),
+    ],
+    ids=["get_triggers", "get_trigger_payload"],
+)
+def test_trigger_requests_wait_60_seconds_only_for_the_response(call, path):
+    (request,) = _requests_sent_by(call)
+
+    assert request.url.path == path
+    assert request.extensions["timeout"] == {
+        "connect": 5.0,
+        "read": 60.0,
+        "write": 5.0,
+        "pool": 5.0,
+    }
+
+
+def test_requests_without_their_own_timeout_keep_the_httpx_default():
+    (request,) = _requests_sent_by(lambda api: api.get_agent("an_agent"))
+
+    assert request.url.path == "/crewai_plus/api/v1/agents/an_agent"
+    assert request.extensions["timeout"]["read"] == 5.0
+
+
+def test_an_export_waits_two_minutes_for_its_large_answer():
+    """The export carries every setup's outputs and traces, tens of MB: the
+    httpx default of 5 s would cut it off."""
+    (request,) = _requests_sent_by(lambda api: api.export_evaluation("ev-1"))
+
+    assert request.method == "GET"
+    assert request.url.path == "/crewai_plus/api/v1/tracing/evaluations/ev-1/export"
+    assert request.extensions["timeout"] == {
+        "connect": 30.0,
+        "read": 120.0,
+        "write": 30.0,
+        "pool": 30.0,
+    }
+
+
+def test_reading_an_evaluation_says_this_cli_can_export_it():
+    """`can_export=1` lets the brief name `crewai eval export`: an AMP that does
+    not know the parameter drops it, and the brief stays silent about it."""
+    (request,) = _requests_sent_by(lambda api: api.get_evaluation("ev-1"))
+
+    assert request.method == "GET"
+    assert request.url.path == "/crewai_plus/api/v1/tracing/evaluations/ev-1"
+    assert dict(request.url.params) == {"can_export": "1"}

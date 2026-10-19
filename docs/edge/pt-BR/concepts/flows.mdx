@@ -608,6 +608,8 @@ Você pode especificar diferentes rotas conforme a saída do método, permitindo
 
 ```python Code
 import random
+from typing import Literal
+
 from crewai.flow.flow import Flow, listen, router, start
 from pydantic import BaseModel
 
@@ -623,7 +625,7 @@ class RouterFlow(Flow[ExampleState]):
         self.state.success_flag = random_boolean
 
     @router(start_method)
-    def second_method(self):
+    def second_method(self) -> Literal["success", "failed"]:
         if self.state.success_flag:
             return "success"
         else:
@@ -658,6 +660,8 @@ Se o valor for `True`, retorna `"success"`, senão retorna `"failed"`.
 Os métodos `third_method` e `fourth_method` escutam a saída do `second_method` e executam com base no valor retornado.
 
 Ao executar esse Flow, a saída será diferente dependendo do valor booleano aleatório gerado pelo `start_method`.
+
+Declare os rótulos do router para que as ferramentas vejam seus ramos: anote o tipo de retorno com `Literal[...]`, como o `second_method` faz, ou passe-os explicitamente com `@router(start_method, emit=["success", "failed"])`. `flow.plot()` e `crewai flow plot` leem os rótulos daí; sem eles, o gráfico não consegue desenhar os ramos do router.
 
 ### Human in the Loop (feedback humano)
 

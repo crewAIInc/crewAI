@@ -48,7 +48,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.27"
+__version__ = "1.15.28"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
@@ -71,8 +71,8 @@ try:
     from crewai.agents.agent_builder.base_agent_executor import (
         BaseAgentExecutor as _BaseAgentExecutor,
     )
+    from crewai.agents.agent_executor import AgentExecutor as _AgentExecutor
     from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
-    from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
     from crewai.hooks.llm_hooks import LLMCallHookContext as _LLMCallHookContext
     from crewai.tools.tool_types import ToolResult as _ToolResult
     from crewai.utilities.prompts import (
@@ -138,22 +138,17 @@ try:
         Crew.__module__,
         Flow.__module__,
         Task.__module__,
-        "crewai.agents.crew_agent_executor",
         _runtime_state_mod.__name__,
         _AgentExecutor.__module__,
     ):
         sys.modules[_mod_name].__dict__.update(_resolve_namespace)
 
-    from crewai.agents.crew_agent_executor import (
-        CrewAgentExecutor as _CrewAgentExecutor,
-    )
     from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
 
     _BaseAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
     Task.model_rebuild(force=True, _types_namespace=_full_namespace)
     _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
-    _CrewAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
     Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)

@@ -520,15 +520,17 @@ def test_missing_input_names_accepts_hyphenated_placeholders():
     ]
 
 
-def _patch_tui_run(monkeypatch, status: str):
+def _patch_tui_run(monkeypatch, status: str, want_traced_rerun: bool = False):
     """Stub the TUI pieces of _run_json_crew so only exit handling runs."""
     monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)  # the TUI needs a terminal
 
     class FakeApp:
         def __init__(self, **kwargs):
             self._status = status
             self._crew_result = "result" if status == "completed" else None
             self._want_deploy = False
+            self._want_traced_rerun = want_traced_rerun
 
         def run(self):
             pass
@@ -569,11 +571,42 @@ def test_run_json_crew_completed_status_returns_result(monkeypatch, tmp_path: Pa
     assert run_crew_module._run_json_crew() == "result"
 
 
+def test_evaluate_on_an_untraced_run_runs_the_crew_again_for_its_evaluation(
+    monkeypatch, tmp_path: Path
+):
+    """The app closed because its run was not traced: what follows is
+    `crewai eval`'s own path, told to run the crew again whatever the record."""
+    monkeypatch.chdir(tmp_path)
+    # what the project's `.env` put in this process, as the run app's process has it
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://other.example")
+    _patch_tui_run(monkeypatch, status="completed", want_traced_rerun=True)
+    evaluated: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.eval_crew",
+        lambda **kwargs: evaluated.append(kwargs),
+    )
+
+    assert run_crew_module._run_json_crew() == "result"
+    from crewai_cli.experimental.eval_crew import _machine_amp_origins
+
+    # the same crew, with the inputs this run used (none here), and the saved
+    # login trusted only to this machine's AMPs, never the `.env`'s
+    assert evaluated == [
+        {
+            "run_again": True,
+            "run_args": {"inputs": "{}"},
+            "trusted_amp_origins": _machine_amp_origins(),
+        }
+    ]
+    assert "https://other.example" not in evaluated[0]["trusted_amp_origins"]
+
+
 def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys):
     from types import SimpleNamespace
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CREWAI_DMN", "True")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
     crew_path = tmp_path / "crew.jsonc"
     crew_path.write_text("{}")
     kickoff_calls = []
@@ -612,6 +645,90 @@ def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys
     captured = capsys.readouterr()
     assert kickoff_calls == [{"topic": "AI"}]
     assert "plain result" in captured.out
+
+
+def _headless_crew(monkeypatch, tmp_path: Path, kickoff_calls: list[dict]) -> None:
+    """A JSON crew whose kickoff records its inputs and returns a plain result."""
+    from types import SimpleNamespace
+
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text("{}")
+
+    class FakeCrew:
+        name = "Demo"
+        agents = [SimpleNamespace(role="Researcher", goal="Research", backstory="")]
+        tasks: list = []
+
+        def kickoff(self, inputs):
+            kickoff_calls.append(inputs)
+            return "plain result"
+
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda: crew_path
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_load_json_crew", lambda _path: (FakeCrew(), {"topic": "AI"})
+    )
+
+
+def test_run_json_crew_without_a_terminal_runs_headless_and_exits(
+    monkeypatch, tmp_path: Path, capsys
+):
+    """A coding agent's shell has no terminal: the TUI would stay open after the
+    crew finished and `crewai run` would never exit."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+    kickoff_calls: list[dict] = []
+    _headless_crew(monkeypatch, tmp_path, kickoff_calls)
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew_for_tui",
+        lambda _path: pytest.fail("without a terminal the TUI must not start"),
+    )
+
+    assert run_crew_module._run_json_crew() == "plain result"
+
+    assert kickoff_calls == [{"topic": "AI"}]
+    assert "plain result" in capsys.readouterr().out
+
+
+def test_run_json_crew_in_a_terminal_opens_the_tui(monkeypatch, tmp_path: Path):
+    from types import SimpleNamespace
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    opened: list[str] = []
+
+    class FakeApp:
+        def __init__(self, **kwargs):
+            self._status = "completed"
+            self._crew_result = "tui result"
+            self._want_deploy = False
+            opened.append(kwargs["crew_name"])
+
+        def run(self):
+            pass
+
+    crew = SimpleNamespace(name="Demo", tasks=[], agents=[])
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda: Path("crew.jsonc")
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew_for_tui",
+        lambda _path: (FakeApp, crew, {}, [], []),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew",
+        lambda _path: pytest.fail("a terminal gets the TUI, not the plain run"),
+    )
+    monkeypatch.setattr(run_crew_module, "_print_post_tui_summary", lambda _app: None)
+
+    assert run_crew_module._run_json_crew() == "tui result"
+    assert opened == ["Demo"]
 
 
 def test_run_json_crew_dmn_mode_exits_on_missing_inputs(
@@ -1060,3 +1177,36 @@ def test_run_crew_runs_configured_declarative_flow_project(
 
     assert capsys.readouterr().out == ""
     assert calls == [(definition_path.resolve(), None)]
+
+
+
+@pytest.mark.parametrize("token_before", ["a" * 32, None])
+def test_a_projects_env_never_sets_or_replaces_crewai_evals_token(
+    monkeypatch, tmp_path: Path, token_before
+):
+    """A `.env` that set CREWAI_EVAL_AWAITING_RUN could unmark a run `crewai
+    eval` started (and its tracing would stop applying the command's rules)."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("CREWAI_EVAL_AWAITING_RUN=" + "f" * 32 + "\nFROM_THE_PROJECT=yes\n")
+    if token_before is None:
+        monkeypatch.delenv("CREWAI_EVAL_AWAITING_RUN", raising=False)
+    else:
+        monkeypatch.setenv("CREWAI_EVAL_AWAITING_RUN", token_before)
+    monkeypatch.delenv("FROM_THE_PROJECT", raising=False)
+
+    run_crew_module.load_project_env(env_file)
+
+    assert os.environ.get("CREWAI_EVAL_AWAITING_RUN") == token_before
+    assert os.environ["FROM_THE_PROJECT"] == "yes"
+
+
+def test_the_three_names_for_the_eval_token_are_one() -> None:
+    from crewai_core import eval_handshake
+
+    from crewai_cli import crew_run_tui
+
+    assert (
+        run_crew_module.EVAL_TOKEN_ENV
+        == crew_run_tui._AWAITING_EVAL_ENV
+        == eval_handshake.AWAITING_ENV
+    )

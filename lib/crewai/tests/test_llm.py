@@ -85,6 +85,24 @@ def test_llm_call_with_message_list():
     assert "Paris" in result
 
 
+def test_context_window_preflight_triggers_only_above_usable_limit():
+    """The proactive threshold preserves the 15% context-window headroom."""
+    llm = LLM(model="gpt-4o-mini")
+    messages = [{"role": "user", "content": "test"}]
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=850),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is False
+
+    with (
+        patch.object(llm, "get_context_window_size", return_value=850),
+        patch.object(llm, "get_input_tokens_count", return_value=851),
+    ):
+        assert llm.is_context_window_overflowing_threshold(messages) is True
+
+
 @pytest.mark.vcr()
 def test_llm_call_with_tool_and_string_input():
     llm = LLM(model="gpt-4o-mini")
@@ -808,6 +826,67 @@ def test_litellm_non_gpt5_sends_stop_in_params():
     assert params.get("stop") == ["Observation:"], (
         "Non-GPT-5 models should have 'stop' in API params"
     )
+
+
+def test_litellm_input_token_count_uses_formatted_messages_and_tools():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_docs",
+                "description": "Search the documentation.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
+    ]
+
+    with patch("crewai.llm.litellm.token_counter", return_value=42) as token_counter:
+        assert llm.get_input_tokens_count("What is CrewAI?", tools=tools) == 42
+
+    token_counter.assert_called_once_with(
+        model="openai/gpt-4o-mini",
+        messages=[{"role": "user", "content": "What is CrewAI?"}],
+        tools=tools,
+        tool_choice=None,
+    )
+
+
+def test_litellm_input_token_count_includes_structured_output_tool():
+    class Answer(BaseModel):
+        value: str
+
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+
+    with patch("crewai.llm.litellm.token_counter", return_value=42) as token_counter:
+        assert llm.get_input_tokens_count("What is CrewAI?", response_model=Answer) == 42
+
+    count_kwargs = token_counter.call_args.kwargs
+    assert count_kwargs["tools"] == [
+        {
+            "type": "function",
+            "function": {
+                "name": "Answer",
+                "description": "Correctly extracted `Answer` with all the required parameters with correct types",
+                "parameters": {
+                    "properties": {"value": {"title": "Value", "type": "string"}},
+                    "required": ["value"],
+                    "type": "object",
+                },
+            },
+        }
+    ]
+    assert count_kwargs["tool_choice"] == {
+        "type": "function",
+        "function": {"name": "Answer"},
+    }
+
+
+def test_litellm_input_token_count_uses_character_fallback():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True)
+
+    with patch("crewai.llm.litellm.token_counter", side_effect=RuntimeError):
+        assert llm.get_input_tokens_count("12345") == 2
 
 
 def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):

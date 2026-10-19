@@ -1498,6 +1498,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # The serialized context carries the full LLM config (a dict, or a
             # legacy model string) — the single source for cross- and
             # same-process resume.
+            previous_feedback = self.last_human_feedback
             result = await self._finalize_human_feedback(
                 method_name=context.method_name,
                 method_output=context.method_output,
@@ -1513,6 +1514,27 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if emit and isinstance(result, HumanFeedbackResult)
                 else result
             )
+
+            feedback_definition = self._definition.methods[
+                context.method_name
+            ].human_feedback
+            if feedback_definition is not None:
+                # A reply that resumes a paused flow (e.g. email review on AMP)
+                # teaches the same lessons as one that arrives during the run.
+                try:
+                    await self._store_feedback_lessons(
+                        feedback_definition,
+                        context.method_name,
+                        context.method_output,
+                        feedback,
+                        context.llm,
+                    )
+                except Exception:
+                    # learn_strict re-raised and the review stays pending: undo the
+                    # recorded reply so a retry on this instance records it once.
+                    self.human_feedback_history.pop()
+                    self.last_human_feedback = previous_feedback
+                    raise
 
             self._completed_methods.add(FlowMethodName(context.method_name))
 
@@ -3671,17 +3693,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             metadata=metadata or {},
         )
 
-        if learn and raw_feedback.strip():
-            await asyncio.to_thread(
-                _distill_and_store_lessons,
-                self,
-                method_name,
-                method_output,
-                raw_feedback,
-                llm=llm_instance,
-                learn_source=feedback_definition.learn_source,
-                learn_strict=feedback_definition.learn_strict,
-            )
+        await self._store_feedback_lessons(
+            feedback_definition, method_name, method_output, raw_feedback, llm_instance
+        )
 
         if emit:
             # Stash the feedback result: the collapsed outcome routes listeners,
@@ -3690,6 +3704,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._human_feedback_method_outputs[method_name] = result
             return result.outcome
         return result
+
+    async def _store_feedback_lessons(
+        self,
+        feedback_definition: FlowHumanFeedbackDefinition,
+        method_name: str,
+        method_output: Any,
+        raw_feedback: str,
+        llm: Any,
+    ) -> None:
+        if not (
+            feedback_definition.learn
+            and self.memory is not None
+            and raw_feedback.strip()
+        ):
+            return
+        await asyncio.to_thread(
+            _distill_and_store_lessons,
+            self,
+            method_name,
+            method_output,
+            raw_feedback,
+            llm=llm,
+            learn_source=feedback_definition.learn_source,
+            learn_strict=feedback_definition.learn_strict,
+        )
 
     async def _finalize_human_feedback(
         self,
