@@ -552,6 +552,7 @@ def _summarize_context_before_llm_call(
     if not isinstance(model, str):
         model = None
 
+    tokens_before = llm.get_input_tokens_count(messages) if verbose else 0
     crewai_event_bus.emit(
         llm,
         event=ContextWindowSummarizationStartedEvent(
@@ -564,7 +565,8 @@ def _summarize_context_before_llm_call(
         console.print(
             Panel(
                 "The pending request is nearing the model context limit. "
-                "Compacting the conversation before the next model call.",
+                "Compacting the conversation before the next model call.\n\n"
+                f"Context: {tokens_before:,} tokens before compaction.",
                 title="🧠 Context summarization triggered",
                 border_style="yellow",
                 padding=(1, 2),
@@ -601,9 +603,17 @@ def _summarize_context_before_llm_call(
         ),
     )
     if verbose:
+        tokens_after = llm.get_input_tokens_count(messages)
+        reduction = (
+            ((tokens_before - tokens_after) / tokens_before * 100)
+            if tokens_before
+            else 0
+        )
         console.print(
             Panel(
-                "Conversation context has been compacted and is ready for the next model call.",
+                "Conversation context has been compacted and is ready for the next model call.\n\n"
+                f"Context: {tokens_before:,} → {tokens_after:,} tokens "
+                f"({reduction:.1f}% reduction).",
                 title="✅ Context summarization completed",
                 border_style="green",
                 padding=(1, 2),

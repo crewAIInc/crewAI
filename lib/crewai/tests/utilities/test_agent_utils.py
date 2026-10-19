@@ -74,6 +74,7 @@ def test_context_summarization_shows_triggered_and_completed_panels() -> None:
         {"role": "user", "content": "large context"},
     ]
     llm = MagicMock()
+    llm.get_input_tokens_count.side_effect = [1_000, 250]
 
     with (
         patch.object(llm, "summarize_messages"),
@@ -90,6 +91,12 @@ def test_context_summarization_shows_triggered_and_completed_panels() -> None:
     assert print_panel.call_count == 2
     assert "triggered" in str(print_panel.call_args_list[0].args[0].title).lower()
     assert "completed" in str(print_panel.call_args_list[1].args[0].title).lower()
+    assert "1,000 tokens before compaction" in str(
+        print_panel.call_args_list[0].args[0].renderable
+    )
+    assert "1,000 → 250 tokens (75.0% reduction)" in str(
+        print_panel.call_args_list[1].args[0].renderable
+    )
 
 
 def test_context_summarization_emits_lifecycle_events_with_llm_agent_and_task() -> None:
