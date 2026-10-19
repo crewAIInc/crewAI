@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
+COMPACTION_RETRY_BUDGET_RATIO: Final[float] = 0.75
+_COMPACTION_MAX_RETRIES: Final[int] = 3
 
 _CATALOG_FILENAME: Final[str] = "model_prices_and_context_window.json"
 _OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
@@ -306,7 +308,9 @@ def _summarize_chunks(
                 color="yellow",
             )
 
-    async def summarize_chunk(chunk: list[LLMMessage]) -> str:
+    async def summarize_chunk(
+        chunk: list[LLMMessage], max_tokens: int, retries: int = 0
+    ) -> str:
         try:
             response = str(
                 await llm.acall(_build_summary_prompt(chunk), callbacks=callbacks)
@@ -316,22 +320,42 @@ def _summarize_chunks(
                 str(error)
             )._is_context_length_exceeded_error(error):
                 raise
-            sub_chunks = _chunk_messages(
-                llm, chunk, max(1, llm.get_context_window_size() // 2)
-            )
-            if len(sub_chunks) <= 1:
+            if retries >= _COMPACTION_MAX_RETRIES:
                 raise LLMContextLengthExceededError(
-                    "Summarization chunk could not be split further."
+                    "Summarization failed after exhausting context-length retries."
                 ) from None
-            return "\n\n".join(
-                await asyncio.gather(*(summarize_chunk(item) for item in sub_chunks))
-            )
+
+            retry_budget = max(1, int(max_tokens * COMPACTION_RETRY_BUDGET_RATIO))
+            while retry_budget < max_tokens:
+                sub_chunks = _chunk_messages(llm, chunk, retry_budget)
+                if len(sub_chunks) > 1:
+                    return "\n\n".join(
+                        await asyncio.gather(
+                            *(
+                                summarize_chunk(item, retry_budget, retries + 1)
+                                for item in sub_chunks
+                            )
+                        )
+                    )
+                max_tokens, retry_budget = (
+                    retry_budget,
+                    max(1, int(retry_budget * COMPACTION_RETRY_BUDGET_RATIO)),
+                )
+
+            raise LLMContextLengthExceededError(
+                "Summarization chunk could not be split further."
+            ) from None
 
         match = re.search(r"<summary>(.*?)</summary>", response, re.DOTALL)
         return match.group(1).strip() if match else response.strip()
 
     async def gather_summaries() -> list[str]:
-        return list(await asyncio.gather(*(summarize_chunk(chunk) for chunk in chunks)))
+        max_tokens = llm.get_context_window_size()
+        return list(
+            await asyncio.gather(
+                *(summarize_chunk(chunk, max_tokens) for chunk in chunks)
+            )
+        )
 
     coroutine = gather_summaries()
     try:

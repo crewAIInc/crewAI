@@ -6,6 +6,7 @@ from crewai.llms.context_window import (
     ANTHROPIC_CONTEXT_WINDOWS,
     BEDROCK_CONTEXT_WINDOWS,
     GEMINI_CONTEXT_WINDOWS,
+    COMPACTION_RETRY_BUDGET_RATIO,
     CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
     LLM_CONTEXT_WINDOW_SIZES,
@@ -334,3 +335,32 @@ def test_summary_extracts_structured_summary_tag() -> None:
 
     assert "Extracted" in messages[0]["content"]
     assert "before" not in messages[0]["content"]
+
+
+def test_summary_retries_with_progressively_smaller_budgets() -> None:
+    marker = "§"
+
+    class ContextLimitedLLM:
+        def __init__(self) -> None:
+            self.failed_request_sizes: list[int] = []
+
+        def get_context_window_size(self) -> int:
+            return 100
+
+        def get_input_tokens_count(self, messages) -> int:
+            return messages[-1]["content"].count(marker)
+
+        async def acall(self, messages, callbacks):
+            request_size = self.get_input_tokens_count(messages)
+            if request_size > 20:
+                self.failed_request_sizes.append(request_size)
+                raise Exception("context length exceeded")
+            return "<summary>Summary</summary>"
+
+    llm = ContextLimitedLLM()
+    messages = [{"role": "user", "content": marker * 20} for _ in range(4)]
+
+    summarize_messages(llm, messages, [], verbose=False)
+
+    assert llm.failed_request_sizes == [80, 60, 40]
+    assert COMPACTION_RETRY_BUDGET_RATIO == 0.75
