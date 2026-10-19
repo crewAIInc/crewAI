@@ -43,6 +43,9 @@ class JSONLoader(BaseLoader):
             else:
                 text = json.dumps(data, indent=0, ensure_ascii=False)
 
+            # Keep lone surrogates escaped without replacing readable Unicode.
+            text = text.encode("utf-8", errors="backslashreplace").decode("utf-8")
+
             metadata = {
                 "format": "json",
                 "type": type(data).__name__,
