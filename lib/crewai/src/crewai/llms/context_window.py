@@ -417,27 +417,26 @@ def _chunk_messages(
     chunks: list[list[LLMMessage]] = []
     current: list[LLMMessage] = []
     for message in messages:
-        unit = [message]
-        if _summary_request_tokens(llm, [*current, *unit]) > max_tokens:
-            if current:
-                chunks.append(current)
-                current = []
-            if _summary_request_tokens(llm, unit) <= max_tokens:
-                current.extend(unit)
-                continue
-            for message in unit:
-                for part in _split_message_to_fit(llm, message, max_tokens):
-                    if _summary_request_tokens(llm, [*current, part]) > max_tokens:
-                        if not current:
-                            raise LLMContextLengthExceededError(
-                                "Summarization message could not be split to fit the context window."
-                            )
-                        chunks.append(current)
-                        current = []
-                    current.append(part)
+        if _summary_request_tokens(llm, [*current, message]) <= max_tokens:
+            current.append(message)
             continue
 
-        current.extend(unit)
+        if current:
+            chunks.append(current)
+            current = []
+        if _summary_request_tokens(llm, [message]) <= max_tokens:
+            current.append(message)
+            continue
+
+        for part in _split_message_to_fit(llm, message, max_tokens):
+            if _summary_request_tokens(llm, [*current, part]) > max_tokens:
+                if not current:
+                    raise LLMContextLengthExceededError(
+                        "Summarization message could not be split to fit the context window."
+                    )
+                chunks.append(current)
+                current = []
+            current.append(part)
 
     if current:
         chunks.append(current)
