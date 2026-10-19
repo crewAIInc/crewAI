@@ -58,6 +58,23 @@ source_dir = os.environ.get("CREWAI_RUNNER_SOURCE_DIR")
 if source_dir:
     sys.path.insert(0, source_dir)
 
+# This interpreter never imports cli.py, so pin the machine's proxy and CA for
+# AMP requests here, before _run_json_crew loads the project's .env. A
+# crewai-core too old to have plus_api pins nothing and ignores proxies anyway;
+# any other import failure is real and must surface here. `python -c` puts the
+# project folder first on sys.path, so the pin is imported with it off the path:
+# a project folder named crewai_core must not decide where the saved login
+# travels. The path is restored after, so project code still imports its own.
+search_path = sys.path[:]
+sys.path[:] = [entry for entry in sys.path if entry not in ("", os.getcwd())]
+try:
+    import crewai_core.plus_api
+except ModuleNotFoundError as error:
+    if error.name != "crewai_core.plus_api":
+        raise
+finally:
+    sys.path[:] = search_path
+
 package_dir = Path(os.environ["CREWAI_CLI_RUNNER_PACKAGE_DIR"])
 package_spec = importlib.util.spec_from_file_location(
     "crewai_cli",

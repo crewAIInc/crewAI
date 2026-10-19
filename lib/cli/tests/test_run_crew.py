@@ -1,5 +1,6 @@
 """Tests for crewai_cli.run_crew JSON crew handling."""
 
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -230,6 +231,126 @@ def test_json_runner_code_loads_current_cli_package_over_project_env(tmp_path: P
     )
 
     assert marker.read_text() == "current:trained.pkl"
+
+
+def test_json_runner_pins_the_machines_proxy_before_the_project_env_loads(
+    tmp_path: Path,
+):
+    """The runner is a fresh interpreter that never imports cli.py. It reads the
+    machine's proxy and CA for AMP before `_run_json_crew` loads the project's
+    .env, so that file cannot choose where the saved login travels."""
+    from crewai_core import plus_api
+
+    current_pkg = tmp_path / "cli" / "crewai_cli"
+    current_pkg.mkdir(parents=True)
+    pinned = tmp_path / "pinned.json"
+    (current_pkg / "__init__.py").write_text("")
+    (current_pkg / "run_crew.py").write_text(
+        "import json\n"
+        "from pathlib import Path\n"
+        "from dotenv import load_dotenv\n"
+        "def _run_json_crew(trained_agents_file=None):\n"
+        "    load_dotenv(Path.cwd() / '.env', override=True)\n"
+        "    from crewai_core import plus_api\n"
+        f"    Path({str(pinned)!r}).write_text(json.dumps(plus_api._MACHINE_TRANSPORT_ENV))\n"
+    )
+    (tmp_path / ".env").write_text(
+        "HTTPS_PROXY=http://project-proxy.test:8080\nSSL_CERT_FILE=/project/ca.pem\n"
+    )
+
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not plus_api._sets_transport(key)
+    }
+    env["HTTPS_PROXY"] = "http://machine-proxy.test:3128"
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(current_pkg)
+
+    subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        check=True,
+        env=env,
+        cwd=tmp_path,
+    )
+
+    assert json.loads(pinned.read_text()) == {
+        "HTTPS_PROXY": "http://machine-proxy.test:3128"
+    }
+
+
+def test_json_runner_ignores_crewai_modules_planted_in_the_project(tmp_path: Path):
+    """The runner starts in the project folder; a crewai_core package there must
+    not be the module that pins where the saved login travels, while the
+    project's own modules stay importable for its code."""
+    planted = tmp_path / "crewai_core"
+    planted.mkdir()
+    (planted / "__init__.py").write_text("")
+    (planted / "plus_api.py").write_text(
+        "_MACHINE_TRANSPORT_ENV = {'HTTPS_PROXY': 'http://attacker.test:8080'}\n"
+    )
+    current_pkg = tmp_path / "cli" / "crewai_cli"
+    current_pkg.mkdir(parents=True)
+    pinned = tmp_path / "pinned.json"
+    (current_pkg / "__init__.py").write_text("")
+    (tmp_path / "project_helpers.py").write_text("VALUE = 'project code still imports'\n")
+    (current_pkg / "run_crew.py").write_text(
+        "import json\n"
+        "from pathlib import Path\n"
+        "def _run_json_crew(trained_agents_file=None):\n"
+        "    from crewai_core import plus_api\n"
+        "    import project_helpers\n"
+        f"    Path({str(pinned)!r}).write_text(json.dumps("
+        "{'file': plus_api.__file__, 'env': plus_api._MACHINE_TRANSPORT_ENV, "
+        "'project': project_helpers.VALUE}))\n"
+    )
+    from crewai_core import plus_api
+
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not plus_api._sets_transport(key)
+    }
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(current_pkg)
+
+    subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        check=True,
+        env=env,
+        cwd=tmp_path,
+    )
+
+    loaded = json.loads(pinned.read_text())
+    assert loaded["file"] == plus_api.__file__
+    assert loaded["env"] == {}
+    assert loaded["project"] == "project code still imports"
+
+
+def test_json_runner_stops_when_plus_api_fails_to_import(tmp_path: Path):
+    """Only a crewai-core without plus_api is skipped; a plus_api that fails to
+    import stops the runner with its own error instead of running unpinned."""
+    broken = tmp_path / "broken_env" / "crewai_core"
+    broken.mkdir(parents=True)
+    (broken / "__init__.py").write_text("")
+    (broken / "plus_api.py").write_text("raise ImportError('plus_api needs httpx 0.28')\n")
+    current_pkg = tmp_path / "cli" / "crewai_cli"
+    current_pkg.mkdir(parents=True)
+    (current_pkg / "__init__.py").write_text("")
+    (current_pkg / "run_crew.py").write_text("def _run_json_crew(trained_agents_file=None):\n    pass\n")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(broken.parent)
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(current_pkg)
+
+    result = subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        env=env,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "ImportError: plus_api needs httpx 0.28" in result.stderr
 
 
 def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path):
