@@ -19,6 +19,7 @@ import pytest
 
 @pytest.fixture
 def tool(monkeypatch):
+    """Provide an isolated tool with mocked database and embedding clients."""
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
     with (
@@ -44,6 +45,7 @@ def tool(monkeypatch):
 
 
 def test_public_schema_and_default_configuration():
+    """Verify query validation and the default search result limit."""
     assert AzureDocumentDBToolSchema(query="hello").query == "hello"
     assert AzureDocumentDBVectorSearchConfig().limit == 4
     with pytest.raises(ValidationError):
@@ -53,6 +55,7 @@ def test_public_schema_and_default_configuration():
 
 
 def test_tool_is_discoverable_without_instantiation():
+    """Verify public exports and tool metadata without opening connections."""
     from crewai_tools import tools
 
     assert tools.AzureDocumentDBVectorSearchTool is AzureDocumentDBVectorSearchTool
@@ -69,6 +72,7 @@ def test_tool_is_discoverable_without_instantiation():
 
 
 def test_connection_from_environment_and_no_secret_in_serialization(monkeypatch):
+    """Verify environment configuration and connection-string redaction."""
     uri = "mongodb://username:private-password@localhost"
     monkeypatch.setenv("AZURE_DOCUMENTDB_CONNECTION_STRING", uri)
     with patch("pymongo.MongoClient") as mongo:
@@ -83,9 +87,11 @@ def test_connection_from_environment_and_no_secret_in_serialization(monkeypatch)
 
 
 def test_missing_optional_dependency_has_actionable_error(monkeypatch):
+    """Verify a missing database driver produces installation guidance."""
     original_import = builtins.__import__
 
     def without_pymongo(name, *args, **kwargs):
+        """Simulate an unavailable PyMongo package without blocking other imports."""
         if name == "pymongo":
             raise ImportError("missing pymongo")
         return original_import(name, *args, **kwargs)
@@ -100,6 +106,7 @@ def test_missing_optional_dependency_has_actionable_error(monkeypatch):
 
 
 def test_native_ivf_index(tool):
+    """Verify the index helper sends DocumentDB's native IVF definition."""
     tool.create_vector_search_index(num_lists=10, similarity="IP")
     tool._coll.database.command.assert_called_once_with(
         {
@@ -122,12 +129,14 @@ def test_native_ivf_index(tool):
 
 @pytest.mark.parametrize("kwargs", [{"num_lists": 0}, {"similarity": "cosine"}])
 def test_invalid_index_options_do_not_reach_database(tool, kwargs):
+    """Verify invalid index settings fail before database access."""
     with pytest.raises(ValueError):
         tool.create_vector_search_index(**kwargs)
     tool._coll.database.command.assert_not_called()
 
 
 def test_ingest_generator_batches_preserves_ids_and_metadata(tool):
+    """Verify batched generator ingestion preserves IDs and nested metadata."""
     metadata = [{"text": "cannot overwrite"}, {"category": "two"}, {}]
     ids = tool.add_texts(
         (text for text in ["one", "two", "three"]),
@@ -154,6 +163,7 @@ def test_ingest_generator_batches_preserves_ids_and_metadata(tool):
 
 
 def test_generated_ids_and_empty_input(tool):
+    """Verify generated IDs are unique and empty input performs no writes."""
     ids = tool.add_texts(["one", "two"])
     assert len(ids) == len(set(ids)) == 2
     assert all(isinstance(value, str) for value in ids)
@@ -175,6 +185,7 @@ def test_generated_ids_and_empty_input(tool):
     ],
 )
 def test_invalid_ingestion_has_no_side_effects(tool, texts, kwargs):
+    """Verify invalid documents and batch options fail before external calls."""
     with pytest.raises(ValueError):
         tool.add_texts(texts, **kwargs)
     tool._coll.insert_many.assert_not_called()
@@ -182,6 +193,7 @@ def test_invalid_ingestion_has_no_side_effects(tool, texts, kwargs):
 
 
 def test_query_uses_documentdb_not_atlas_and_returns_extended_json(tool):
+    """Verify native search stages and JSON serialization of BSON values."""
     object_id = ObjectId()
     tool._coll.aggregate.return_value = [
         {
@@ -214,6 +226,7 @@ def test_query_uses_documentdb_not_atlas_and_returns_extended_json(tool):
 
 
 def test_query_options(tool):
+    """Verify filters, limits, and field options shape the search pipeline."""
     tool.query_config = AzureDocumentDBVectorSearchConfig(
         limit=2,
         pre_filter={"metadata.category": "one"},
@@ -240,12 +253,14 @@ def test_query_options(tool):
 
 
 def test_blank_query_is_rejected(tool):
+    """Verify whitespace-only queries never reach the database."""
     with pytest.raises(ValueError, match="blank"):
         tool._run("  ")
     tool._coll.aggregate.assert_not_called()
 
 
 def test_database_errors_propagate(tool):
+    """Verify search, ingestion, and indexing errors reach the caller."""
     tool._coll.aggregate.side_effect = OperationFailure("index missing")
     with pytest.raises(OperationFailure, match="index missing"):
         tool._run("one")
@@ -258,6 +273,7 @@ def test_database_errors_propagate(tool):
 
 
 def test_missing_embedding_credentials(tool, monkeypatch):
+    """Verify missing embedding credentials fail before document insertion."""
     monkeypatch.delenv("OPENAI_API_KEY")
     with pytest.raises(ValueError, match="OPENAI_API_KEY"):
         tool.add_texts(["one"])
@@ -265,6 +281,7 @@ def test_missing_embedding_credentials(tool, monkeypatch):
 
 
 def test_azure_openai_uses_deployment_and_dimensions(tool, monkeypatch):
+    """Verify Azure embeddings use the configured deployment and dimensions."""
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com")
     tool.embedding_model = "my-embedding-deployment"
     with patch.object(vector_search, "AzureOpenAI") as azure:
@@ -282,6 +299,7 @@ def test_azure_openai_uses_deployment_and_dimensions(tool, monkeypatch):
     "vectors", [[], [[1.0]], [[float("nan"), 0, 0]], [[float("inf"), 0, 0]]]
 )
 def test_invalid_embedding_response_prevents_write(tool, vectors):
+    """Verify missing, malformed, or non-finite vectors prevent insertion."""
     with patch.object(vector_search, "OpenAI") as openai:
         openai.return_value.embeddings.create.return_value = SimpleNamespace(
             data=[
@@ -295,6 +313,7 @@ def test_invalid_embedding_response_prevents_write(tool, vectors):
 
 
 def test_embeddings_are_ordered_by_response_index(tool):
+    """Verify out-of-order embedding responses stay paired with their texts."""
     with patch.object(vector_search, "OpenAI") as openai:
         openai.return_value.embeddings.create.return_value = SimpleNamespace(
             data=[
@@ -309,6 +328,7 @@ def test_embeddings_are_ordered_by_response_index(tool):
 
 
 def test_close_releases_both_clients(tool):
+    """Verify closing the tool releases database and embedding connections."""
     tool.add_texts(["one"])
     tool.close()
     tool._client.close.assert_called_once()
@@ -316,6 +336,7 @@ def test_close_releases_both_clients(tool):
 
 
 def test_oidc_connection_uses_injected_credential_and_refreshable_callback():
+    """Verify OIDC token renewal and caller ownership of injected credentials."""
     from azure.core.credentials import AccessToken
     from pymongo.auth_oidc import OIDCCallbackContext
 
@@ -355,6 +376,7 @@ def test_oidc_connection_uses_injected_credential_and_refreshable_callback():
 
 
 def test_default_identity_is_closed_by_tool():
+    """Verify the tool closes credentials it creates for OIDC authentication."""
     with (
         patch("pymongo.MongoClient"),
         patch("azure.identity.DefaultAzureCredential") as default_credential,
@@ -370,6 +392,7 @@ def test_default_identity_is_closed_by_tool():
 
 
 def test_entra_openai_uses_renewable_token_provider(tool, monkeypatch):
+    """Verify Azure OpenAI receives a renewable bearer-token provider."""
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com")
     credential = MagicMock()
     tool._azure_credential = credential
@@ -390,6 +413,7 @@ def test_entra_openai_uses_renewable_token_provider(tool, monkeypatch):
 
 
 def test_entra_embedding_requires_azure_endpoint(tool):
+    """Verify keyless Azure embeddings require an Azure OpenAI endpoint."""
     tool.use_azure_identity = True
     with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT"):
         tool.add_texts(["one"])
@@ -399,6 +423,7 @@ def test_entra_embedding_requires_azure_endpoint(tool):
 def test_entra_embedding_without_oidc_database_uses_default_credential(
     tool, monkeypatch
 ):
+    """Verify keyless embeddings work independently of database authentication."""
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com")
     tool.use_azure_identity = True
     with (
@@ -416,6 +441,7 @@ def test_entra_embedding_without_oidc_database_uses_default_credential(
 
 
 def test_oidc_token_acquisition_failure_is_not_hidden():
+    """Verify OIDC credential failures propagate without authentication fallback."""
     from azure.core.exceptions import ClientAuthenticationError
     from crewai_tools.tools.azure_documentdb_vector_search_tool.auth import (
         DocumentDBOIDCCallback,

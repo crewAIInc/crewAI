@@ -29,6 +29,7 @@ def documentdb_tool(monkeypatch):
 
     class EmbeddingsHandler(BaseHTTPRequestHandler):
         def do_POST(self):
+            """Validate an embedding request and return deterministic vectors."""
             request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             requests.append(request)
             assert self.path == "/v1/embeddings"
@@ -56,7 +57,7 @@ def documentdb_tool(monkeypatch):
             self.wfile.write(payload)
 
         def log_message(self, *args):
-            pass
+            """Keep the local embedding server's request logs out of test output."""
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), EmbeddingsHandler)
     thread = Thread(target=server.serve_forever, daemon=True)
@@ -89,6 +90,7 @@ def documentdb_tool(monkeypatch):
 
 
 def test_real_documentdb_ingestion_index_and_ranked_search(documentdb_tool):
+    """Verify ingestion, IVF indexing, ranking, and optional result fields."""
     tool, requests = documentdb_tool
     assert tool.add_texts(
         (text for text in ["apple", "pear", "truck"]),
@@ -124,6 +126,7 @@ def test_real_documentdb_ingestion_index_and_ranked_search(documentdb_tool):
 
 
 def test_real_documentdb_prefilter_and_duplicate_id_error(documentdb_tool):
+    """Verify native metadata filtering and duplicate-ID write failures."""
     tool, _ = documentdb_tool
     tool.add_texts(
         ["apple", "pear", "truck"],

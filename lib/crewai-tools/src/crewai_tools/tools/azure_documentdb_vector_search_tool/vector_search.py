@@ -158,6 +158,7 @@ class AzureDocumentDBVectorSearchTool(BaseTool):
         self._coll = self._client[self.database_name][self.collection_name]
 
     def _get_azure_credential(self) -> TokenCredential:
+        """Reuse the injected credential or create an internally owned default."""
         if self._azure_credential is None:
             try:
                 from azure.identity import DefaultAzureCredential
@@ -171,6 +172,7 @@ class AzureDocumentDBVectorSearchTool(BaseTool):
         return self._azure_credential
 
     def _embed_texts(self, texts: list[str]) -> list[list[float]]:
+        """Generate ordered, finite embeddings matching the configured dimensions."""
         if self._openai_client is None:
             if os.environ.get("AZURE_OPENAI_ENDPOINT"):
                 if self.use_azure_identity or self._azure_credential is not None:
@@ -291,6 +293,7 @@ class AzureDocumentDBVectorSearchTool(BaseTool):
         return list(result_ids)
 
     def _run(self, query: str) -> str:
+        """Search DocumentDB and serialize matching documents as Extended JSON."""
         from bson import json_util
 
         if not query.strip():
