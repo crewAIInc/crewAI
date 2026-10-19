@@ -305,7 +305,8 @@ def test_first_time_uses_local_session_even_with_saved_login(
     assert get_trace_session() is None and get_execution_uuid() is None
 
 
-@pytest.mark.parametrize("disabled", ["flag", "env", "sdk"])
+# `OTEL_SDK_DISABLED` is not a tracing setting: it is the telemetry opt-out.
+@pytest.mark.parametrize("disabled", ["flag", "env"])
 def test_explicit_disable_prevents_first_time_collection(monkeypatch, disabled):
     monkeypatch.setattr(
         "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
@@ -316,8 +317,6 @@ def test_explicit_disable_prevents_first_time_collection(monkeypatch, disabled):
     monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
     if disabled == "env":
         monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
-    if disabled == "sdk":
-        monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
     flow = ExampleFlow(tracing=False if disabled == "flag" else None)
     assert flow.kickoff() == "hello world"
     grant.assert_not_called()
