@@ -1472,7 +1472,7 @@
   "item": "`crewai eval --models` only when the user asks to compare models, never as a fix for failing evals; it needs a deployment running current code and runs it once per model (costs money).",
   "q": "The evaluations keep failing. Would comparing several models on the deployment be a good next step?",
   "key": [
-   "(only|when) .*(ask|request|want)|not (as )?a fix|cost"
+   "(only|when) .*(ask|request|want)|not (as )?a fix|cost|never (as )?a fix|isn'?t a fix"
   ]
  },
  {
