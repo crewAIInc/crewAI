@@ -132,10 +132,16 @@ class PlusAPI(_CorePlusAPI):
             request_kwargs["data"] = data
         if timeout is not None:
             request_kwargs["timeout"] = timeout
+        # An older crewai-core has no _http_client; its clients ignore proxies.
+        http_client = getattr(self, "_http_client", None)
 
         with (
             path.open("rb") as file_handle,
-            httpx.Client(trust_env=False, verify=verify) as client,
+            (
+                http_client(verify)
+                if http_client
+                else httpx.Client(verify=verify, trust_env=False)
+            ) as client,
         ):
             files = {
                 "zip_file": (path.name, file_handle, "application/zip"),
