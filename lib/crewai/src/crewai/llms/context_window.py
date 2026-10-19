@@ -17,7 +17,7 @@ import contextvars
 from importlib.resources import files
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from crewai_core.printer import PRINTER
 
@@ -25,7 +25,11 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.message_utils import message_content_text
+from crewai.utilities.message_utils import (
+    format_message_for_llm,
+    message_content_text,
+    messages_to_text,
+)
 
 
 if TYPE_CHECKING:
@@ -278,7 +282,7 @@ def summarize_messages(
     summaries = _compact_summaries(
         llm, system_messages, summaries, callbacks, verbose, max_tokens
     )
-    summary_message = _message(
+    summary_message = format_message_for_llm(
         I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
     )
     if preserved_files:
@@ -386,7 +390,7 @@ def _compact_summaries(
 ) -> list[str]:
     """Condense summaries once more when the replacement history does not fit."""
     for layer in range(_MAX_SUMMARY_LAYERS + 1):
-        replacement = _message(
+        replacement = format_message_for_llm(
             I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
         )
         if (
@@ -397,7 +401,7 @@ def _compact_summaries(
         if layer == _MAX_SUMMARY_LAYERS:
             break
 
-        summary_messages = [_message(summary) for summary in summaries]
+        summary_messages = [format_message_for_llm(summary) for summary in summaries]
         chunks = _chunk_messages(llm, summary_messages, max_tokens)
         summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
 
@@ -408,43 +412,15 @@ def _compact_summaries(
 
 def _build_summary_prompt(chunk: list[LLMMessage]) -> list[LLMMessage]:
     return [
-        _message(I18N_DEFAULT.slice("summarizer_system_message"), "system"),
-        _message(
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarizer_system_message"), "system"
+        ),
+        format_message_for_llm(
             I18N_DEFAULT.slice("summarize_instruction").format(
-                conversation=_conversation_text(chunk)
+                conversation=messages_to_text(chunk)
             )
         ),
     ]
-
-
-def _message(
-    content: str, role: Literal["user", "assistant", "system"] = "user"
-) -> LLMMessage:
-    return {"role": role, "content": content.rstrip()}
-
-
-def _conversation_text(messages: list[LLMMessage]) -> str:
-    lines: list[str] = []
-    for message in messages:
-        role = message.get("role", "user")
-        if role == "system":
-            continue
-        if role == "assistant":
-            prefix = "[ASSISTANT]:"
-        elif role == "tool":
-            prefix = f"[TOOL_RESULT ({message.get('name', 'unknown')})]:"
-        else:
-            prefix = "[USER]:"
-        body = message_content_text(message)
-        if message.get("content") is None:
-            names = [
-                call.get("function", {}).get("name", "unknown")
-                for call in message.get("tool_calls") or []
-                if isinstance(call, dict) and isinstance(call.get("function"), dict)
-            ]
-            body = f"[Called tools: {', '.join(names)}]" if names else ""
-        lines.append(f"{prefix} {body}")
-    return "\n\n".join(lines)
 
 
 def _chunk_messages(

@@ -11,7 +11,7 @@ import inspect
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final
 
 from crewai_core.printer import ColoredText, Printer
 from crewai_core.settings import Settings
@@ -56,9 +56,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.message_utils import (
-    message_content_text as message_content_text,
-)
+from crewai.utilities.message_utils import format_message_for_llm
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -431,23 +429,6 @@ def handle_max_iterations_exceeded(
         output=formatted.text,
         text=formatted.text,
     )
-
-
-def format_message_for_llm(
-    prompt: str, role: Literal["user", "assistant", "system"] = "user"
-) -> LLMMessage:
-    """Format a message for the LLM.
-
-    Args:
-        prompt:  The message content.
-        role:  The role of the message sender, either 'user' or 'assistant'.
-
-    Returns:
-        A dictionary with 'role' and 'content' keys.
-
-    """
-    prompt = prompt.rstrip()
-    return {"role": role, "content": prompt}
 
 
 def format_answer(answer: str) -> AgentAction | AgentFinish:

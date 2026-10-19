@@ -392,7 +392,7 @@ class BaseLLM(BaseModel, ABC):
             "token per four characters because a native token count is unavailable.",
             self.model,
         )
-        from crewai.utilities.agent_utils import message_content_text
+        from crewai.utilities.message_utils import message_content_text
 
         if isinstance(messages, str):
             character_count = len(messages)

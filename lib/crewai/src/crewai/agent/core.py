@@ -99,7 +99,6 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
     load_agent_from_repository,
-    message_content_text,
     parse_tools,
     render_text_description_and_args,
 )
@@ -114,6 +113,7 @@ from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_fo
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm, overlay_llm_for
+from crewai.utilities.message_utils import message_content_text
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name

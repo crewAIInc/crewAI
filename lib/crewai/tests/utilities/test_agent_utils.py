@@ -32,8 +32,6 @@ from crewai.utilities.agent_utils import (
     _summarize_context_before_llm_call,
     aget_llm_response,
     get_llm_response,
-    message_content_text,
-    format_message_for_llm,
     LLMContextLengthExceededError,
     convert_tools_to_openai_schema,
     handle_max_iterations_exceeded,
@@ -43,6 +41,7 @@ from crewai.utilities.agent_utils import (
     NativeToolCallResult,
     parse_tool_call_args,
 )
+from crewai.utilities.message_utils import format_message_for_llm, message_content_text
 from crewai_core.printer import Printer
 from crewai.utilities.i18n import I18N_DEFAULT
 
