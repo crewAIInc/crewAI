@@ -1483,6 +1483,11 @@ AGENTS_MD_REFERENCES = {
     "human review of a task": r"human_input",
     "LiteLLM for other providers": r"crewai\[litellm\]",
     "test targets before writes": r"test (channel|target)",
+    # The features telemetry counts most, named the way telemetry counts them.
+    "interception hooks": r"InterceptionPoint",
+    "agent planning": r"PlanningConfig",
+    "OpenAI Responses API": r'api="responses"',
+    "answering human feedback through AMP": r"human_feedback_requests",
     "workflow: trace and evaluate every change": r"traced run passes `crewai eval`",
     "workflow: ask before deploying": r"Ask before the first `crewai deploy create`",
     "flow memory": r"self\.remember",
@@ -1511,17 +1516,18 @@ AGENTS_MD_REFERENCES = {
 }
 
 # Always-loaded tokens (characters / 4). Raise it on purpose, with the eval's results.
-AGENTS_MD_TOKEN_BUDGET = 4_800
+AGENTS_MD_TOKEN_BUDGET = 5_000
 
 DOCS = Path(__file__).resolve().parents[3] / "docs"
 
-# Text the file once carried that is wrong on main.
+# Patterns for text the file once carried that is wrong on main. Naming a
+# deprecated option to say what replaces it is allowed.
 AGENTS_MD_NEVER = (
-    "CREWAI_PLATFORM_INTEGRATION_TOKEN",  # renamed to CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN
-    "from crewai.flow.flow import persist",  # raises ImportError; persist lives in crewai.flow
-    "reasoning=True",  # deprecated for planning_config
-    "multimodal=True",  # deprecated: pass files natively
-    "allow_code_execution=True",  # deprecated: CodeInterpreterTool is gone
+    r"CREWAI_PLATFORM_INTEGRATION_TOKEN",  # renamed to CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN
+    r"from crewai\.flow\.flow import persist",  # raises ImportError; persist lives in crewai.flow
+    r"(?<!replaces `)reasoning=True",  # deprecated for planning_config
+    r"multimodal=True",  # deprecated: pass files natively
+    r"allow_code_execution=True",  # deprecated: CodeInterpreterTool is gone
 )
 
 
@@ -1548,7 +1554,13 @@ def test_agents_md_stays_within_its_token_budget(shipped_agents_md):
 
 @pytest.mark.parametrize("text", AGENTS_MD_NEVER)
 def test_agents_md_never_teaches_what_main_removed(shipped_agents_md, text):
-    assert text not in shipped_agents_md, f"AGENTS.md teaches {text!r}, which is wrong on main"
+    match = re.search(text, shipped_agents_md)
+    assert match is None, f"AGENTS.md teaches {match.group(0)!r}, which is wrong on main"
+
+
+def test_agents_md_never_list_still_catches_advice():
+    assert re.search(AGENTS_MD_NEVER[2], "Agent(role=..., reasoning=True)")
+    assert not re.search(AGENTS_MD_NEVER[2], "it replaces `reasoning=True`")
 
 
 def test_agents_md_imports_resolve(shipped_agents_md):

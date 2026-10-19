@@ -59,7 +59,7 @@ When the work has to run on a schedule, from a trigger, behind an API or for tea
 4. **Prove it works:** `crewai deploy status` until it's online, and `crewai deploy logs` when it isn't. Then run it through its API: `POST /kickoff {"inputs": {...}}` returns a `kickoff_id`; poll `GET /status/{kickoff_id}` until `SUCCESS` or `FAILED`. The bearer token is on the deployment's Status tab in AMP and belongs to that deployment, so keep it out of `.env` and the code. Read the result, and read any side effects back. To prove the deployment runs your current code, compare `GET /inspect`'s flow definition with `YourFlow.flow_definition()` locally.
 5. **Schedules** are set in AMP on the deployment page's **Scheduling** tab; there's no CLI for them yet. Give the user the steps with the time and timezone they asked for.
 6. Deploy commands can exit 0 after a failed request; confirm with `crewai deploy status` or `crewai deploy list`. Remove a deployment with `crewai deploy remove -u <uuid>`.
-7. From CI, redeploy with `POST https://app.crewai.com/crewai_plus/api/v1/crews/<deployment-uuid>/deploy` and a Personal Access Token (AMP Settings → Account) as the bearer. A deployed flow paused on `@human_feedback` shows `PAUSED` on `/status`; the request is answered from AMP's review dashboard.
+7. From CI, redeploy with `POST https://app.crewai.com/crewai_plus/api/v1/crews/<deployment-uuid>/deploy` and a Personal Access Token (AMP Settings → Account) as the bearer. A deployed flow paused on `@human_feedback` shows `PAUSED` on `/status`; answer it in AMP's review dashboard or with `POST https://app.crewai.com/crewai_plus/api/v1/human_feedback_requests/<id>/respond` and `{"feedback": "..."}`, not the deployment's raw `/resume_feedback`, which leaves AMP's request open.
 
 ### What only the user can do
 
@@ -103,9 +103,10 @@ Detailed guides: the CrewAI skill pack for coding agents (`npx skills add crewai
 
 ### Facts models get wrong
 
-- LLMs: `Agent(llm="openai/gpt-4o")` or `crewai.LLM(model=...)`, never `ChatOpenAI`. Providers outside the native set (OpenAI, Anthropic, Azure, Gemini, Bedrock, OpenRouter, DeepSeek, Ollama and more), such as `groq/...`, need LiteLLM: `uv add 'crewai[litellm]'`.
+- LLMs: `Agent(llm="openai/gpt-4o")` or `crewai.LLM(model=...)`, never `ChatOpenAI`. Providers outside the native set (OpenAI, Anthropic, Azure, Gemini, Bedrock, OpenRouter, DeepSeek, Ollama and more), such as `groq/...`, need LiteLLM: `uv add 'crewai[litellm]'`. OpenAI's Responses API: `LLM(model="openai/...", api="responses")`.
 - Flow inputs are state fields with defaults; `kickoff(inputs={...})` and trigger payloads (the `@start()` method's `crewai_trigger_payload` parameter) override them. Never overwrite inputs in `@start()`. `crewai run` takes no `--inputs` for a Python flow.
 - A flow's last step returns its result; a deployed flow that returns nothing has an empty API result.
+- Agents judge, code computes: have agents return per-criterion judgments with evidence (`output_pydantic`), and compute scores and branch on them in the flow.
 - Memory across runs in a flow: `self.remember("text")` and `self.recall("query")` (matches have `.record.content`); AMP shows it on the deployment's Memory tab. No `Memory()` or `Crew(memory=True)` inside a flow; share it with `Crew(memory=self.memory.slice(scopes=[...], read_only=True))`. Memory is rooted at the flow's class name, so renaming the class starts a new root. `@persist` (`from crewai.flow import persist`) saves state per run: continue one with `kickoff(inputs={"id": ...})`, or seed a new run from it with `kickoff(restore_from_state_id=...)`.
 - `tool_failure_policy="raise"` on an agent, task or crew turns a failed tool call into an error. A write can still fail silently, so have the task return the IDs it wrote and raise in the flow when one is missing.
 - One agent and one prompt don't need a crew: `Agent(...).kickoff("...", response_format=MyModel)` returns `.raw` and `.pydantic` (`kickoff_async` in async code, such as a flow step).
@@ -122,11 +123,11 @@ Not used by default; reach for these when the task calls for them. Each line end
 - Structured task output: `Task(output_pydantic=Model)` or `output_json=Model`; read `result.pydantic` or `.json_dict`. `concepts/tasks`
 - Knowledge: `knowledge_sources=[StringKnowledgeSource(content=...), PDFKnowledgeSource(file_paths=[...])]` on an agent or crew. `concepts/knowledge`
 - Hierarchical crews: `Crew(process=Process.hierarchical, manager_llm=...)` or `manager_agent=`; delegation is `Agent(allow_delegation=True)`. `learn/hierarchical-process`
-- Planning: `Crew(planning=True)` plans before the tasks run. `concepts/planning`
+- Planning: `Agent(planning_config=PlanningConfig(...))` makes an agent plan its approach before acting and replan as it goes (`from crewai import PlanningConfig`; it replaces `reasoning=True`); `Crew(planning=True)` plans the crew's tasks up front. `concepts/planning`
 - Async and batch: `await crew.akickoff(...)`, `kickoff_for_each(inputs=[...])`, `akickoff_for_each`. `learn/kickoff-async`
 - Streaming: `stream=True` on a crew or flow; iterate what `kickoff()` returns, then read `.result`. `concepts/streaming`
 - Events: subclass `BaseEventListener`, register handlers with `@crewai_event_bus.on(Event)` in `setup_listeners`, instantiate it once. `concepts/event-listener`
-- Kickoff hooks: `@before_kickoff` and `@after_kickoff` in a `@CrewBase` class. `learn/before-and-after-kickoff-hooks`
+- Hooks: `@on(InterceptionPoint.PRE_TOOL_CALL)` (also `POST_TOOL_CALL`, `PRE_MODEL_CALL`, `POST_MODEL_CALL`; `from crewai.hooks import on, InterceptionPoint, HookAborted`) runs on every tool or LLM call without changing the agents: edit `ctx.tool_input`, return a string to replace a result, raise `HookAborted` to block. Kickoff hooks: `@before_kickoff` and `@after_kickoff` in a `@CrewBase` class. `learn/execution-hooks`
 - MCP: `Agent(mcps=["https://.../mcp", "<connected-slug>", MCPServerStdio(...)])` (`from crewai.mcp import MCPServerStdio`). `mcp/overview`
 - A2A: `Agent(a2a=A2AClientConfig(endpoint=...))` calls a remote agent; `A2AServerConfig` exposes one (`from crewai.a2a import A2AClientConfig, A2AServerConfig`).
 - Human feedback in flows: `@human_feedback(message=..., emit=["approved", "rejected"], llm=...)` routes a step on the reply. `learn/human-feedback-in-flows`
