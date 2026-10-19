@@ -1262,7 +1262,7 @@
    "uv tool install crewai.*--upgrade|uv tool upgrade crewai"
   ],
   "trap": [
-   "crewai update"
+   "(run|use|try|with)\\s+`?crewai update"
   ]
  },
  {
