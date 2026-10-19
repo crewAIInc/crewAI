@@ -101,7 +101,24 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.get_evaluation("ev-1")
 
         mock_make_request.assert_called_once_with(
-            "GET", "/crewai_plus/api/v1/tracing/evaluations/ev-1", timeout=30.0
+            "GET",
+            "/crewai_plus/api/v1/tracing/evaluations/ev-1",
+            params={"can_export": "1"},
+            timeout=30.0,
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
+    def test_export_evaluation(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.export_evaluation("ev-1")
+
+        mock_make_request.assert_called_once_with(
+            "GET",
+            "/crewai_plus/api/v1/tracing/evaluations/ev-1/export",
+            timeout=httpx.Timeout(30.0, read=120.0),
         )
         self.assertEqual(response, mock_response)
 
@@ -569,3 +586,28 @@ def test_requests_without_their_own_timeout_keep_the_httpx_default():
 
     assert request.url.path == "/crewai_plus/api/v1/agents/an_agent"
     assert request.extensions["timeout"]["read"] == 5.0
+
+
+def test_an_export_waits_two_minutes_for_its_large_answer():
+    """The export carries every setup's outputs and traces, tens of MB: the
+    httpx default of 5 s would cut it off."""
+    (request,) = _requests_sent_by(lambda api: api.export_evaluation("ev-1"))
+
+    assert request.method == "GET"
+    assert request.url.path == "/crewai_plus/api/v1/tracing/evaluations/ev-1/export"
+    assert request.extensions["timeout"] == {
+        "connect": 30.0,
+        "read": 120.0,
+        "write": 30.0,
+        "pool": 30.0,
+    }
+
+
+def test_reading_an_evaluation_says_this_cli_can_export_it():
+    """`can_export=1` lets the brief name `crewai eval export`: an AMP that does
+    not know the parameter drops it, and the brief stays silent about it."""
+    (request,) = _requests_sent_by(lambda api: api.get_evaluation("ev-1"))
+
+    assert request.method == "GET"
+    assert request.url.path == "/crewai_plus/api/v1/tracing/evaluations/ev-1"
+    assert dict(request.url.params) == {"can_export": "1"}
