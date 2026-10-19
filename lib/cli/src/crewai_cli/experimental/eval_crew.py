@@ -3,8 +3,11 @@
 crewAI records a traced run in `.crewai/last_run.json` when the run's spans
 reach Wharf. This command reads that record (or takes `--run EXECUTION_ID`),
 asks AMP to evaluate the run, prints and opens the URL AMP answers with,
-waits for the verdict and prints it. With no traced run recorded it offers
-to turn tracing on for the project and run the crew now.
+waits for the verdict and prints it. With no traced run recorded, or when the
+project changed since it, it runs the crew first and evaluates that run: the
+run is traced and its trace sent to AMP without asking (running `crewai eval`
+is the request to have it graded — `crewai_core.eval_handshake`), so a coding
+agent with no terminal gets a verdict from this one command.
 
 Who may evaluate what is AMP's decision: an anonymous run once without an
 account, then it needs one; a run traced while logged in for that
@@ -45,10 +48,9 @@ from urllib.parse import urlparse
 import uuid
 import webbrowser
 
-import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.settings import Settings
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
 import httpx
 from rich.console import Console
 from rich.table import Table
@@ -121,8 +123,7 @@ def _record_usage(*, logged_in: bool) -> None:
 
 
 StopReason = Literal[
-    "untraced",
-    "declined",
+    "untraced_after_run",
     "no_project",
     "login_unreadable",
     "network_error",
@@ -145,21 +146,58 @@ def record_stop(reason: StopReason) -> None:
     The reason is a word from a closed list and never the message, which can
     carry AMP's own words or a local path.
     """
+    _count_usage(f"cli_usage:eval_stopped:{reason}")
+
+
+NOT_TRACED = (
+    "The crew ran, but its trace did not reach CrewAI AMP, so there is nothing to evaluate: "
+    "the run may have failed (its output is above), or this project's crewai is older than "
+    f"the version that records runs for evaluation ({LAST_RUN_FILE})."
+)
+
+# Why `crewai eval` ran the crew before evaluating, a word from a closed list:
+# nothing traced yet, the project changed since its last traced run, or the run
+# app's Evaluate pressed on a run that was not traced.
+RunReason = Literal["no_traced_run", "project_changed", "run_again"]
+RUNNING_THE_CREW: dict[RunReason, str] = {
+    "no_traced_run": "No traced run of this crew yet: running it now to evaluate it.",
+    "project_changed": (
+        "The project changed since its last traced run: running the crew again "
+        "to evaluate what it does now."
+    ),
+    "run_again": "That run was not traced: running the crew again to evaluate it.",
+}
+TRACE_GOES_TO_AMP = "Its trace is sent to CrewAI AMP, which grades it."
+
+
+def _count_usage(feature: str) -> None:
+    """One usage count, never more: a word from a closed list, nothing that
+    names the run, the account or its content."""
     try:
         from crewai_core.telemetry import Telemetry
 
         telemetry = Telemetry()
         telemetry.set_tracer()
-        telemetry.feature_usage_span(f"cli_usage:eval_stopped:{reason}")
+        telemetry.feature_usage_span(feature)
     except Exception:  # noqa: S110 - telemetry must never break a command
         pass
 
 
-NOT_TRACED = (
-    "The run finished but no trace was recorded: the run may have failed, sharing the "
-    "trace was declined, or this project's crewai is older than the version that records "
-    f"the last run ({LAST_RUN_FILE}). Run the crew again and accept when asked, then `crewai eval`."
-)
+GATE_WORDS = frozenset({"passed", "failed", "inconclusive"})
+
+
+def record_finished(finished: dict[str, Any]) -> None:
+    """Count an evaluation that reached a verdict, by the gate's word.
+
+    `cli_usage:eval` counts the evaluations that started and `eval_stopped:*`
+    the ones that did not get there; this is the third end, so "reached a
+    result" is counted rather than read off a missing stop.
+    """
+    if finished.get("status") != "done":
+        return
+    verdict = finished.get("verdict")
+    gate = str(verdict.get("gate") if isinstance(verdict, dict) else "").lower()
+    _count_usage(f"cli_usage:eval_finished:{gate if gate in GATE_WORDS else 'unknown'}")
 
 
 class EvaluationStoppedError(RuntimeError):
@@ -180,23 +218,36 @@ def _note(text: str, style: str = "dim") -> None:
     console.print(Text(text), style=style)
 
 
-def eval_crew(run_id: str | None = None) -> None:
-    """Evaluate the last traced run of this project, or the run RUN_ID."""
+def eval_crew(run_id: str | None = None, *, run_again: bool = False) -> None:
+    """Evaluate the last traced run of this project, or the run RUN_ID.
+
+    With no traced run, or when the project changed since its last one, the
+    crew runs first and that run is evaluated; RUN_AGAIN runs it whatever the
+    record says (the run app's Evaluate, pressed on a run that was not traced).
+    """
+    # Before anything here writes to the project (the project id), so this
+    # command's own writes never read as a change.
+    record = read_last_run() or {}
+    why = None if run_id else _why_run_the_crew(record, run_again=run_again)
     project_id = get_or_create_project_id()
     # Read before the project's .env is loaded, so a project cannot add itself.
     trusted = _trusted_amp_origins()
     _load_project_env()
-    record = read_last_run() or {}
     execution_id = run_id or record.get("execution_id")
-    if execution_id is None:
-        # Nothing traced here: the crew runs first, and the app that runs it
-        # carries the evaluation on its own screen — link, progress, verdict.
-        # It comes back with the run to grade when the app did NOT get to it: a
-        # conversational session, or a flow that took the terminal instead.
-        execution_id = _run_and_let_the_app_evaluate()
+    if why is not None:
+        # The crew runs first, and the app that runs it carries the evaluation
+        # on its own screen — link, progress, verdict. It comes back with the
+        # run to grade when no app got to it: a crew run without one (no
+        # terminal, or a classic crew), a conversational session, or a flow
+        # that took the terminal instead.
+        execution_id = _run_the_crew_to_evaluate(why)
         if execution_id is None:
             return
         record = read_last_run() or {}
+    if not execution_id:
+        # Unreachable: no run named and none recorded is a reason to run the crew.
+        return
+    execution_id = str(execution_id)
 
     try:
         client = _amp_client(trusted)
@@ -244,6 +295,7 @@ def eval_crew(run_id: str | None = None) -> None:
         raise SystemExit(130) from None
     if finished.get("status") == "failed":
         record_stop("evaluation_failed")
+    record_finished(finished)
     _print_verdict(finished, url)
     _print_brief(finished)
     _say_where_the_criteria_live(write_eval_config(finished))
@@ -428,6 +480,7 @@ def evaluate_run(
     finished = _wait(client, started["id"], started.get("url"), on_status=on_status)
     if finished.get("status") == "failed":
         record_stop("evaluation_failed")
+    record_finished(finished)
     written = write_eval_config(finished)
     if written is not None:
         finished = {**finished, "wrote_eval_config": written.name}
@@ -584,13 +637,108 @@ def saved_login() -> str | None:
         ) from error
 
 
-def _run_and_let_the_app_evaluate() -> str | None:
-    """No traced run recorded here: offer to turn tracing on and run the crew.
+def _why_run_the_crew(
+    record: dict[str, Any], *, run_again: bool = False
+) -> RunReason | None:
+    """Why the crew has to run before there is a run to grade, or None."""
+    if run_again:
+        return "run_again"
+    if not record.get("execution_id"):
+        return "no_traced_run"
+    if _project_changed_since(record):
+        return "project_changed"
+    return None
 
-    The run app evaluates what it ran, on its own screen, so this returns None
-    when it did — the reader has already seen the link and the verdict. It
-    returns the run to grade when no app got to it (a conversational session, a
-    flow that took the terminal), and says so itself when nothing was traced.
+
+# What "the project" is when asking whether it changed since its last traced
+# run: its own files, not what tools and runs leave around them. Hidden folders
+# (.venv, .git, .crewai, caches) are skipped, and the `.env` is the one hidden
+# file that counts — it holds the keys and models a run uses.
+_NOT_THE_PROJECT_DIRS = frozenset(
+    {"__pycache__", "node_modules", "venv", "env", "build", "dist", "site-packages"}
+)
+_NOT_THE_PROJECT_SUFFIXES = (".pyc", ".log", ".egg-info")
+# Files a run writes once its crew has finished — a main.py that saves the result
+# after kickoff — land a moment after the record. Within this, a file is the
+# run's own; an edit after an evaluation (which takes minutes) is well past it.
+RUN_WRITES_FOR_SECONDS = 60.0
+# A project folder with more than this many entries is not walked to the end:
+# past it, the last traced run is taken as current.
+MAX_FILES_LOOKED_AT = 20_000
+
+
+def _project_changed_since(record: dict[str, Any]) -> bool:
+    """Did any of the project's own files change after RECORD's run was recorded?
+
+    A record without a readable time is taken as current: there is nothing to
+    compare against, and grading the run beats running the crew for nothing.
+    """
+    stamp = str(record.get("recorded_at") or record.get("finished_at") or "")
+    try:
+        when = datetime.fromisoformat(stamp)
+    except ValueError:
+        return False
+    if when.tzinfo is None:
+        return False
+    since = when.timestamp() + RUN_WRITES_FOR_SECONDS
+    looked = 0
+    folders = [Path.cwd()]
+    while folders:
+        try:
+            entries = list(os.scandir(folders.pop()))
+        except OSError:
+            continue
+        for entry in entries:
+            looked += 1
+            if looked > MAX_FILES_LOOKED_AT:
+                return False
+            name = entry.name
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    # hidden, or a `crewai eval export` folder
+                    if not (
+                        name.startswith((".", "crewai-eval-"))
+                        or name in _NOT_THE_PROJECT_DIRS
+                        or name.endswith(_NOT_THE_PROJECT_SUFFIXES)
+                    ):
+                        folders.append(Path(entry.path))
+                    continue
+                if (
+                    name.startswith(".") and name != ".env"
+                ) or name == EVAL_CONFIG_FILE:
+                    continue  # eval.jsonc is the evaluation's own writing
+                if name.endswith(_NOT_THE_PROJECT_SUFFIXES):
+                    continue
+                if entry.stat(follow_symlinks=False).st_mtime > since:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
+@contextlib.contextmanager
+def _tracing_for_this_run() -> Iterator[None]:
+    """`CREWAI_TRACING_ENABLED=true` for the run about to start, and only that
+    run: put back after, and never written to the project's `.env`."""
+    before = os.environ.get(TRACING_ENV_VAR)
+    os.environ[TRACING_ENV_VAR] = "true"
+    try:
+        yield
+    finally:
+        if before is None:
+            os.environ.pop(TRACING_ENV_VAR, None)
+        else:
+            os.environ[TRACING_ENV_VAR] = before
+
+
+def _run_the_crew_to_evaluate(why: RunReason) -> str | None:
+    """Run the crew, traced, to have a run to evaluate.
+
+    No question first, with or without a terminal: running `crewai eval` asked
+    for the run to be graded, and the grade is read off its trace. The run app
+    evaluates what it ran, on its own screen, so this returns None when it did
+    — the reader has already seen the link and the verdict. It returns the run
+    to grade when no app got to it, and says so itself when nothing was traced.
     """
     if not Path("pyproject.toml").is_file():
         record_stop("no_project")
@@ -598,28 +746,9 @@ def _run_and_let_the_app_evaluate() -> str | None:
             "No crewAI project here (no pyproject.toml). Run `crewai eval` from the project's "
             "directory, or name a run: `crewai eval --run EXECUTION_ID`."
         )
-    steps = (
-        "No traced run is recorded in this project. Turn tracing on — its runs are then "
-        "traced to CrewAI AMP — and run the crew, then come back:\n"
-        f"  1. add {TRACING_ENV_VAR}=true to .env\n  2. crewai run\n  3. crewai eval"
-    )
-    if is_dmn_mode_enabled() or not sys.stdin.isatty():
-        # `Text`, never markup: the reason may be an OS error's own words, and
-        # its `[Errno 13]` would be read as a style tag.
-        reason, message = _nothing_traced_unattended() or ("untraced", steps)
-        record_stop(reason)
-        console.print(Text(message), style="yellow")
-        raise SystemExit(1)
-    if not click.confirm(
-        "No traced run is recorded in this project. Turn tracing on and run the crew now? "
-        "The run's trace is sent to CrewAI AMP.",
-        default=True,  # João, 2026-09-20: y/n with Y as the default — the prompt says what Enter does
-    ):
-        record_stop("declined")
-        console.print(steps, style="yellow")
-        raise SystemExit(0)
+    _count_usage(f"cli_usage:eval_ran_crew:{why}")
+    console.print(Text(f"{RUNNING_THE_CREW[why]} {TRACE_GOES_TO_AMP}"), style="bold")
 
-    _enable_tracing()
     from crewai_cli.crew_run_tui import evaluating_after_run
     from crewai_cli.run_crew import run_crew
 
@@ -628,19 +757,18 @@ def _run_and_let_the_app_evaluate() -> str | None:
     # so what says a run was traced is either the holder's id or the record the
     # run wrote.
     began = datetime.now(timezone.utc)
-    with evaluating_after_run() as watched:
+    with _tracing_for_this_run(), evaluating_after_run() as watched:
         run_crew()
 
     # The app says what it did with the run it watched, and its word settles
     # this: it evaluated it (nothing left to do), or it had nothing to evaluate
     # (say so once, in the terminal the screen has left). Only when no app got
-    # here at all — a conversational session, a flow that took the terminal —
-    # is there a run for this command to grade.
+    # here at all is there a run for this command to grade.
     marker = evaluation_marker(after=began)
     if marker is not None:
         if marker.get("execution_id"):
             return None
-        record_stop("untraced")
+        record_stop("untraced_after_run")
         console.print(NOT_TRACED, style="bold red")
         raise SystemExit(1)
 
@@ -654,7 +782,7 @@ def _run_and_let_the_app_evaluate() -> str | None:
     if traced:
         return str(traced)
 
-    record_stop("untraced")
+    record_stop("untraced_after_run")
     console.print(NOT_TRACED, style="bold red")
     raise SystemExit(1)
 
@@ -670,44 +798,6 @@ def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
     if when.tzinfo is None:
         return False
     return when >= began - timedelta(seconds=1)
-
-
-def _nothing_traced_unattended() -> tuple[StopReason, str] | None:
-    """Why a run with tracing on left nothing to evaluate, when nobody was there.
-
-    An anonymous run asks before its trace leaves the machine, and a process with
-    no terminal has nobody to ask — so its trace is kept local, tracing on or
-    not. Telling that user to turn tracing on sends them round the same loop;
-    logging in is what makes an unattended run traced. None when tracing is off
-    or there is a login: the ordinary steps are the right ones then. A login
-    that cannot be read says so instead, and is counted as that.
-    """
-    if os.environ.get(TRACING_ENV_VAR, "").strip().lower() not in ("true", "1"):
-        return None
-    try:
-        if saved_login() is not None:
-            return None
-    except EvaluationStoppedError as unreadable:
-        # A login that exists and cannot be read is the reason, and its
-        # sentence says what to do about it.
-        return unreadable.reason, str(unreadable)
-    return "untraced", (
-        "No traced run is recorded in this project. Tracing is on, but a run nobody is "
-        "watching is only traced when you are logged in: run `crewai login`, then "
-        "`crewai run` and `crewai eval` again."
-    )
-
-
-def _enable_tracing() -> None:
-    """`CREWAI_TRACING_ENABLED=true` in the project's .env, and in this process for the run about to start."""
-    env_file = Path.cwd() / ".env"
-    env_file.touch(exist_ok=True)
-    set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
-    os.environ[TRACING_ENV_VAR] = "true"
-    console.print(
-        "Tracing is on for this project — its runs are traced to CrewAI AMP.",
-        style="green",
-    )
 
 
 def _start_evaluation(

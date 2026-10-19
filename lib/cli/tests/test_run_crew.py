@@ -520,7 +520,7 @@ def test_missing_input_names_accepts_hyphenated_placeholders():
     ]
 
 
-def _patch_tui_run(monkeypatch, status: str):
+def _patch_tui_run(monkeypatch, status: str, want_traced_rerun: bool = False):
     """Stub the TUI pieces of _run_json_crew so only exit handling runs."""
     monkeypatch.delenv("CREWAI_DMN", raising=False)
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True)  # the TUI needs a terminal
@@ -530,6 +530,7 @@ def _patch_tui_run(monkeypatch, status: str):
             self._status = status
             self._crew_result = "result" if status == "completed" else None
             self._want_deploy = False
+            self._want_traced_rerun = want_traced_rerun
 
         def run(self):
             pass
@@ -568,6 +569,23 @@ def test_run_json_crew_completed_status_returns_result(monkeypatch, tmp_path: Pa
     _patch_tui_run(monkeypatch, status="completed")
 
     assert run_crew_module._run_json_crew() == "result"
+
+
+def test_evaluate_on_an_untraced_run_runs_the_crew_again_for_its_evaluation(
+    monkeypatch, tmp_path: Path
+):
+    """The app closed because its run was not traced: what follows is
+    `crewai eval`'s own path, told to run the crew again whatever the record."""
+    monkeypatch.chdir(tmp_path)
+    _patch_tui_run(monkeypatch, status="completed", want_traced_rerun=True)
+    evaluated: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.eval_crew",
+        lambda **kwargs: evaluated.append(kwargs),
+    )
+
+    assert run_crew_module._run_json_crew() == "result"
+    assert evaluated == [{"run_again": True}]
 
 
 def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys):

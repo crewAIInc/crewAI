@@ -217,6 +217,10 @@ def _run_declarative_flow_tui(
         from crewai_cli.run_crew import _chain_deploy
 
         _chain_deploy()
+    if getattr(app, "_want_traced_rerun", False):
+        from crewai_cli.run_crew import _chain_traced_rerun
+
+        _chain_traced_rerun()
 
     return app._crew_result
 

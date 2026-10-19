@@ -178,6 +178,66 @@ def test_where_the_prompt_could_not_be_shown_nothing_is_uploaded(
     assert not grants and not recorders  # nothing left the machine
 
 
+@pytest.mark.parametrize(
+    "closed", ["no terminal", "under test", "messages suppressed"]
+)
+def test_a_run_crewai_eval_started_is_uploaded_with_nobody_to_ask(
+    traces, monkeypatch, tmp_path, closed
+):
+    """`crewai eval` ran the crew to grade it, and the grade is read off the
+    trace: running the command was the yes. A coding agent with no terminal
+    gets its run uploaded, even where the project's `.env` turned tracing off."""
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: closed != "no terminal")
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: closed == "under test")
+    monkeypatch.setattr(
+        f"{utils}.should_suppress_tracing_messages",
+        lambda: closed == "messages suppressed",
+    )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "graded"
+
+    with eval_handshake.awaiting_evaluation() as told:
+        assert told
+        assert Conversation().kickoff() == "graded"
+        assert crewai_event_bus.flush()
+
+    prompt.assert_not_called()
+    assert grants and recorders  # the trace reached AMP
+
+
+def test_a_token_a_dotenv_could_set_approves_nothing(traces, monkeypatch, tmp_path):
+    """The variable alone is what a project's `.env` could carry; without the
+    file `crewai eval` writes, it counts for nothing."""
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.setenv(eval_handshake.AWAITING_ENV, "0" * 32)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
+    prompt.return_value = False
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "in a container"
+
+    assert Conversation(tracing=True).kickoff() == "in a container"
+    assert crewai_event_bus.flush()
+
+    assert not grants and not recorders  # nothing left the machine
+
+
 def test_enabling_deferred_trace_opens_a_new_flow_root(traces):
     buffers, grants, recorders, prompt = traces
     sessions = []

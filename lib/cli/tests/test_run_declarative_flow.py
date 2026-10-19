@@ -418,7 +418,9 @@ def test_id_restore_still_drops_unknown_keys(
 # ── TUI vs terminal (headless/deploy) routing ──────────────────────
 
 
-def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False, evaluation=None):
+def _install_fake_flow_app(
+    monkeypatch, *, status, want_deploy=False, evaluation=None, want_traced_rerun=False
+):
     """Replace CrewRunApp/EventListener/summary so _run_declarative_flow_tui is
     driven by a controllable fake app."""
 
@@ -430,6 +432,7 @@ def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False, evaluation
             self._crew_name = crew_name
             self._status = status
             self._want_deploy = want_deploy
+            self._want_traced_rerun = want_traced_rerun
             self._evaluation = evaluation
             self._crew_result = "result"
 
@@ -524,6 +527,25 @@ def test_run_declarative_flow_tui_chains_deploy(
     )
 
     assert deploy_calls == [True]
+
+
+def test_evaluate_on_an_untraced_flow_run_runs_it_again_for_its_evaluation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The app closed because its run was not traced: what follows is
+    `crewai eval`'s own path, told to run the flow again whatever the record."""
+    _install_fake_flow_app(monkeypatch, status="completed", want_traced_rerun=True)
+    evaluated: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.eval_crew",
+        lambda **kwargs: evaluated.append(kwargs),
+    )
+
+    run_declarative_flow_module._run_declarative_flow_tui(
+        SimpleNamespace(name="Flow"), None
+    )
+
+    assert evaluated == [{"run_again": True}]
 
 
 def test_run_declarative_flow_tui_no_deploy_when_not_requested(

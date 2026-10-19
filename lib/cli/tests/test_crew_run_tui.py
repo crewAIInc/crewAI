@@ -396,23 +396,65 @@ def test_an_evaluation_that_stopped_says_so_where_it_was_running() -> None:
 
 
 @pytest.mark.parametrize("why", ["not traced at all", "another run replaced the record"])
-def test_evaluate_says_so_when_this_run_was_not_traced(monkeypatch, why) -> None:
+def test_evaluate_on_a_run_that_was_not_traced_runs_it_again_traced(monkeypatch, why) -> None:
     """A run with no session of its own, or whose trace never reached AMP, has
     nothing to grade — and a record naming a DIFFERENT run is not evidence that
-    this one was traced."""
+    this one was traced. Nothing is asked: the app closes and the run happens
+    again, traced, and is evaluated (`run_crew._chain_traced_rerun`)."""
     app = CrewRunApp()
     app._status = "completed"
+    app._crew_result = object()
     app._telemetry = Mock()
     app._execution_uuid = None if why == "not traced at all" else "run-this-app"
-    notices: list[str] = []
-    app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
-    app.exit = lambda result=None: pytest.fail("the TUI must not leave for nothing")  # type: ignore[method-assign]
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    app.notify = lambda *a, **k: pytest.fail("no notice: it just runs again")  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
 
     app.action_evaluate_crew()
 
+    assert app._want_traced_rerun is True
+    assert exits == [app._crew_result]
     assert app._evaluation is None
-    assert "not traced" in notices[0]
+
+
+def test_a_run_crewai_eval_started_is_traced_with_nobody_at_the_screen(
+    monkeypatch, tmp_path
+) -> None:
+    """The run `crewai eval` started to grade: running the command was the yes,
+    whatever the terminal, the suite or the project's `.env` say."""
+    utils = "crewai.events.listeners.tracing.utils"
+    monkeypatch.setattr(f"{utils}._is_test_environment", lambda: True)
+    monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: False)
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    app = CrewRunApp()
+
+    assert app._tracing_was_asked_for() is False
+    with crew_run_tui.evaluating_after_run():
+        assert app._tracing_was_asked_for() is True
+    assert app._tracing_was_asked_for() is False
+
+
+def test_the_token_this_app_sets_is_the_one_crewais_tracing_reads(
+    monkeypatch, tmp_path
+) -> None:
+    """The run app keeps its own copy of the handshake (it also runs against a
+    project's older crewai-core), so the two are pinned to one variable and one
+    folder: a run `crewai eval` started is approved for upload in the child."""
+    from crewai_core import eval_handshake
+
+    monkeypatch.undo()  # the real folders, not the per-test ones
+    assert crew_run_tui._AWAITING_EVAL_ENV == eval_handshake.AWAITING_ENV
+    assert crew_run_tui._awaiting_dir() == eval_handshake.awaiting_dir()
+
+    folder = tmp_path / "eval-awaiting"
+    monkeypatch.setattr(crew_run_tui, "_awaiting_dir", lambda: folder)
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: folder)
+    assert eval_handshake.run_awaited_by_evaluation() is False
+    with crew_run_tui.evaluating_after_run():
+        assert eval_handshake.run_awaited_by_evaluation() is True
+    assert eval_handshake.run_awaited_by_evaluation() is False
 
 
 def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(
@@ -2373,20 +2415,23 @@ def stops(monkeypatch) -> list[str]:
     return features
 
 
-def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_why_it_stopped(
+def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_nothing_else(
     monkeypatch, stops
 ) -> None:
+    """It is not a stop: the run happens again, and `crewai eval` counts why it
+    ran the crew (`eval_ran_crew:run_again`) and how that ended."""
     app = CrewRunApp()
     app._status = "completed"
     app._telemetry = Mock()
     app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    app.exit = lambda result=None: None  # type: ignore[method-assign]
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
-    monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
 
     app.action_evaluate_crew()
 
     app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:evaluate")
-    assert stops == ["cli_usage:eval_stopped:untraced"]
+    assert stops == []
 
 
 def test_a_run_started_by_crewai_eval_leaves_the_untraced_count_to_the_command(

@@ -371,6 +371,8 @@ def _run_json_crew(
 
     if getattr(app, "_want_deploy", False):
         _chain_deploy()
+    if getattr(app, "_want_traced_rerun", False):
+        _chain_traced_rerun()
 
     return app._crew_result
 
@@ -517,6 +519,15 @@ def _record_deploy_button(event: DeployButtonEvent) -> None:
         telemetry.feature_usage_span(f"cli_usage:{event}")
     except Exception:  # noqa: S110 - telemetry must never break a command
         pass
+
+
+def _chain_traced_rerun() -> None:
+    """The run app's Evaluate, pressed on a run that was not traced: the run
+    happens again, traced, and that run is evaluated — `crewai eval`'s own
+    path, so the run app it opens shows the evaluation as it would there."""
+    from crewai_cli.experimental.eval_crew import eval_crew
+
+    eval_crew(run_again=True)
 
 
 def _chain_deploy() -> None:

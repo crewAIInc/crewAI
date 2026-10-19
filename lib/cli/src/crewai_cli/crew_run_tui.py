@@ -313,6 +313,11 @@ _AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
 # random token, and it counts only while the file of that name exists in this
 # user's crewAI data directory: the command writes it before the run and removes
 # it after, and a `.env` cannot create a file.
+#
+# crewAI's tracing reads the same token to send the run's trace without asking
+# (`crewai_core.eval_handshake`, which must name the same variable and folder).
+# It is not imported here: this module also runs inside a project's environment
+# (the JSON crew runner), whose crewai-core may be older than this CLI.
 _AWAITING_EVAL_ENV = "CREWAI_EVAL_AWAITING_RUN"
 _AWAITING_TOKEN = re.compile(r"[0-9a-f]{32}")
 
@@ -656,6 +661,8 @@ FooterKey .footer-key--key {
         self._current_method: str | None = None
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
+        # Evaluate was pressed on a run that was not traced (action_evaluate_crew).
+        self._want_traced_rerun: bool = False
         # This app's own execution, captured from the run while it runs. The
         # project-wide record is the last run to FINISH anywhere, which another
         # run in the same project can replace between this one ending and its
@@ -1283,6 +1290,10 @@ FooterKey .footer-key--key {
             _is_test_environment,
         )
 
+        # `crewai eval` started this run to grade it, and the grade is read off
+        # the trace: running the command was the yes.
+        if _an_evaluation_is_waiting() is not None:
+            return True
         if _is_test_environment() or not _is_interactive_terminal():
             return False
 
@@ -1355,15 +1366,12 @@ FooterKey .footer-key--key {
         self._record_tui_button_click("evaluate")
         traced = self._traced_execution_id()
         if traced is None:
-            from crewai_cli.experimental.eval_crew import record_stop
-
-            record_stop("untraced")
-            self.notify(
-                "This run was not traced, so there is nothing to evaluate. "
-                "Turn tracing on and run it again.",
-                title="Evaluate",
-                severity="warning",
-            )
+            # Nothing of this run reached AMP, so there is nothing to grade: the
+            # app closes and the run happens again, traced, and is evaluated —
+            # what `crewai eval` does (`run_crew._chain_traced_rerun`).
+            self._want_traced_rerun = True
+            self._unsubscribe()
+            self.exit(self._crew_result)
             return
 
         self._start_evaluation(traced)
