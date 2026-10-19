@@ -312,10 +312,11 @@ def test_an_evaluation_that_stopped_can_be_tried_again(monkeypatch) -> None:
     assert started == ["run-this-app"]
 
 
-def test_a_login_that_cannot_be_read_is_shown_on_screen(monkeypatch) -> None:
+def test_a_login_that_cannot_be_read_is_shown_on_screen(monkeypatch, tmp_path) -> None:
     """A credential that exists but cannot be read stops the evaluation, and
     the sentence has to reach the screen: printing it would land under the
     layout, and exiting would take it away."""
+    monkeypatch.chdir(tmp_path)  # a stopped evaluation is noted in .crewai/
     from crewai_cli.experimental import eval_crew
 
     app = CrewRunApp()
@@ -336,9 +337,10 @@ def test_a_login_that_cannot_be_read_is_shown_on_screen(monkeypatch) -> None:
     assert "crewai login" in app._evaluation["error"]
 
 
-def test_an_exit_with_no_reason_says_that_rather_than_its_code(monkeypatch) -> None:
+def test_an_exit_with_no_reason_says_that_rather_than_its_code(monkeypatch, tmp_path) -> None:
     """Nothing on this path should exit any more, but an exit carries a code
     and `1` on screen is not an answer."""
+    monkeypatch.chdir(tmp_path)  # a stopped evaluation is noted in .crewai/
     app = CrewRunApp()
     app._evaluation = {"state": "starting"}
     monkeypatch.setattr(
