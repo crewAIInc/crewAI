@@ -201,7 +201,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
     _skip_auto_memory: bool = True
 
-    executor_type: Literal["experimental"] = "experimental"
+    executor_type: Literal["agent"] = "agent"
     suppress_flow_events: bool = True  # always suppress for executor
     is_crewai_internal: ClassVar[bool] = True
     llm: BaseLLM | None = Field(default=None, exclude=True)
@@ -3539,7 +3539,3 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         return format_message_for_llm(
             I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
         )
-
-
-# Backward compatibility alias (deprecated)
-CrewAgentExecutorFlow = AgentExecutor

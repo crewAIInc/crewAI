@@ -61,7 +61,7 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._is_feedback_iteration = False
     return executor
 from crewai.agents.planner_observer import PlannerObserver
-from crewai.experimental.agent_executor import (
+from crewai.agents.agent_executor import (
     AgentExecutorState,
     AgentExecutor,
 )
@@ -146,7 +146,7 @@ class TestAgentExecutor:
         provider.post_setup_messages.side_effect = post_setup
 
         with patch(
-            "crewai.experimental.agent_executor.get_provider", return_value=provider
+            "crewai.agents.agent_executor.get_provider", return_value=provider
         ):
             executor._setup_messages(
                 {"input": "draft this", "tool_names": "", "tools": ""}
@@ -175,7 +175,7 @@ class TestAgentExecutor:
         provider.setup_messages.side_effect = setup
 
         with patch(
-            "crewai.experimental.agent_executor.get_provider", return_value=provider
+            "crewai.agents.agent_executor.get_provider", return_value=provider
         ):
             executor._setup_messages(
                 {"input": "draft this", "tool_names": "", "tools": ""}
@@ -349,11 +349,11 @@ class TestAgentExecutor:
 
         with (
             patch(
-                "crewai.experimental.agent_executor.aget_all_files",
+                "crewai.agents.agent_executor.aget_all_files",
                 new=AsyncMock(return_value={"document": stored_file}),
             ) as async_get_files,
             patch(
-                "crewai.experimental.agent_executor.get_all_files",
+                "crewai.agents.agent_executor.get_all_files",
                 side_effect=AssertionError("sync file store should not be called"),
             ),
         ):
@@ -485,7 +485,7 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.agents.agent_executor.get_llm_response",
             return_value="Thought: done\nFinal Answer: complete",
         ) as get_llm_response_mock:
             result = executor.call_llm_and_parse()
@@ -544,7 +544,7 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.agents.agent_executor.get_llm_response",
             return_value="complete",
         ) as get_llm_response_mock:
             result = executor.call_llm_native_tools()
@@ -570,7 +570,7 @@ class TestAgentExecutor:
         executor.tools_description = "lookup: search for information"
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.agents.agent_executor.get_llm_response",
             side_effect=RuntimeError(
                 "Error code: 400 - registry.ollama.ai/library/mariner:latest "
                 "does not support tools"
@@ -758,7 +758,7 @@ class TestAgentExecutor:
         executor = _build_executor(**mock_dependencies)
 
         answer = AgentFinish(thought="thinking", output="test", text="final")
-        with patch("crewai.experimental.agent_executor.asyncio.run") as mock_run:
+        with patch("crewai.agents.agent_executor.asyncio.run") as mock_run:
             executor._invoke_step_callback(answer)
             await asyncio.sleep(0)
 
@@ -1057,7 +1057,7 @@ class TestStepExecutorCriticalFixes:
         assert completed_events[0].result == "Error: no result"
         assert completed_events[0].error == "No result"
 
-    @patch("crewai.experimental.agent_executor.handle_output_parser_exception")
+    @patch("crewai.agents.agent_executor.handle_output_parser_exception")
     def test_recover_from_parser_error(
         self, mock_handle_exception, mock_dependencies
     ):
@@ -1076,7 +1076,7 @@ class TestStepExecutorCriticalFixes:
         assert executor.state.iterations == initial_iterations + 1
         mock_handle_exception.assert_called_once()
 
-    @patch("crewai.experimental.agent_executor.handle_context_length")
+    @patch("crewai.agents.agent_executor.handle_context_length")
     def test_recover_from_context_length(
         self, mock_handle_context, mock_dependencies
     ):
@@ -1146,8 +1146,8 @@ class TestFlowErrorHandling:
             "tools_handler": Mock(),
         }
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
-    @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
+    @patch("crewai.agents.agent_executor.get_llm_response")
+    @patch("crewai.agents.agent_executor.enforce_rpm_limit")
     def test_call_llm_parser_error(
         self, mock_enforce_rpm, mock_get_llm, mock_dependencies
     ):
@@ -1163,9 +1163,9 @@ class TestFlowErrorHandling:
         assert result == "parser_error"
         assert executor._last_parser_error is not None
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
-    @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
-    @patch("crewai.experimental.agent_executor.is_context_length_exceeded")
+    @patch("crewai.agents.agent_executor.get_llm_response")
+    @patch("crewai.agents.agent_executor.enforce_rpm_limit")
+    @patch("crewai.agents.agent_executor.is_context_length_exceeded")
     def test_call_llm_context_error(
         self,
         mock_is_context_exceeded,
@@ -1629,7 +1629,7 @@ class TestAgentExecutorPlanning:
         """Test that executor state contains plan after planning phase."""
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -1672,7 +1672,7 @@ class TestAgentExecutorPlanning:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -1717,7 +1717,7 @@ class TestAgentExecutorPlanning:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -1873,7 +1873,7 @@ class TestReasoningEffort:
     def test_should_observe_steps_respects_config(self):
         """observe_steps and reasoning_effort gate PlannerObserver LLM calls."""
         from crewai.agent.planning_config import PlanningConfig
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor._should_observe_steps = (
@@ -1903,7 +1903,7 @@ class TestReasoningEffort:
     def test_reasoning_effort_low_skips_planner_observer_llm(self):
         """Low effort must not call PlannerObserver.observe (no per-step LLM)."""
         from crewai.agent.planning_config import PlanningConfig
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import TodoItem, TodoList
 
         executor = Mock(spec=AgentExecutor)
@@ -1955,7 +1955,7 @@ class TestReasoningEffort:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -2018,7 +2018,7 @@ class TestReasoningEffort:
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         llm = LLM("gpt-4o-mini")
 
@@ -2071,7 +2071,7 @@ class TestReasoningEffort:
         verifying that medium effort routes to replan_now on failure
         but continues on success.
         """
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import (
             StepObservation,
             TodoItem,
@@ -2148,7 +2148,7 @@ class TestReasoningEffort:
 
         Unit test verifying the low handler's behavior directly.
         """
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import TodoItem, TodoList
 
         executor = Mock(spec=AgentExecutor)
@@ -2181,7 +2181,7 @@ class TestReasoningEffort:
 
     def test_reasoning_effort_low_marks_failed_steps_failed_without_replan(self):
         """Low effort records failed heuristic observations without replanning."""
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
         from crewai.utilities.planning_types import (
             StepObservation,
             TodoItem,
@@ -2248,7 +2248,7 @@ class TestReasoningEffort:
 
     def test_get_reasoning_effort_reads_from_config(self):
         """Verify _get_reasoning_effort reads from agent.planning_config."""
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor._get_reasoning_effort = (
@@ -2411,7 +2411,7 @@ class TestMaxIterationsRouting:
     the iteration limit is exceeded, not to a dead-end event."""
 
     def test_exceeded_routes_to_force_final_answer(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=25)
@@ -2421,7 +2421,7 @@ class TestMaxIterationsRouting:
         assert result == "force_final_answer"
 
     def test_under_limit_continues_reasoning(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5)
@@ -2431,7 +2431,7 @@ class TestMaxIterationsRouting:
         assert result == "continue_reasoning"
 
     def test_under_limit_with_native_tools(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         executor = Mock(spec=AgentExecutor)
         executor.state = AgentExecutorState(iterations=5, use_native_tools=True)
@@ -2449,7 +2449,7 @@ class TestNativeToolCallMaxUsage:
     even when max_usage_reached=True and original_tool is None."""
 
     def test_max_usage_reached_without_original_tool(self):
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         import inspect
         source = inspect.getsource(AgentExecutor._execute_single_native_tool_call)
@@ -2948,7 +2948,7 @@ class TestExecutorStateReset:
 
     def test_finalize_called_reset_in_invoke(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.invoke)
         finalize_idx = source.index("self._finalize_called = False")
@@ -2959,7 +2959,7 @@ class TestExecutorStateReset:
 
     def test_finalize_called_reset_in_invoke_async(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.invoke_async)
         finalize_idx = source.index("self._finalize_called = False")
@@ -2978,7 +2978,7 @@ class TestPlanGenerationIsolation:
 
     def test_generate_plan_does_not_mutate_task_description(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.generate_plan)
         assert "task.description +=" not in source, (
@@ -2998,7 +2998,7 @@ class TestTodoStatusTracking:
 
     def test_medium_effort_marks_failed_step_as_failed(self):
         import inspect
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.handle_step_observed_medium)
         assert "_mark_todo_failed" in source, (
@@ -3197,3 +3197,53 @@ class TestEnsureForceFinalAnswer:
 
         assert AgentExecutor.ensure_force_final_answer(executor) == "agent_finished"
         llm.call.assert_not_called()
+
+
+def test_crew_agent_executor_cannot_be_selected() -> None:
+    import importlib
+
+    from crewai import Agent
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("crewai.agents.crew_agent_executor")
+
+    with pytest.raises(ValueError, match="CrewAgentExecutor has been removed"):
+        Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            executor_class="CrewAgentExecutor",
+        )
+
+
+def test_stable_package_export_is_the_executor_class() -> None:
+    from crewai.agents import AgentExecutor as ExportedExecutor
+    from crewai.agents.agent_executor import AgentExecutor as ModuleExecutor
+
+    assert ExportedExecutor is ModuleExecutor
+
+
+def test_agent_executor_uses_stable_discriminator() -> None:
+    executor = AgentExecutor.model_validate({})
+
+    assert executor.executor_type == "agent"
+    assert executor.model_dump()["executor_type"] == "agent"
+
+
+def test_legacy_experimental_discriminator_is_rejected() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        AgentExecutor.model_validate({"executor_type": "experimental"})
+
+
+def test_experimental_executor_import_is_removed() -> None:
+    import importlib
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("crewai.experimental.agent_executor")
+
+    experimental = importlib.import_module("crewai.experimental")
+    for name in ("AgentExecutor", "CrewAgentExecutorFlow"):
+        with pytest.raises(AttributeError):
+            getattr(experimental, name)
