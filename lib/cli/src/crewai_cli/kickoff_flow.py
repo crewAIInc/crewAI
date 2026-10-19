@@ -64,7 +64,9 @@ def _load_conversational_flow_from_kickoff_script() -> Any | None:
     return None
 
 
-def _run_conversational_flow_tui(flow: Any) -> Any:
+def _run_conversational_flow_tui(
+    flow: Any, definition: str | Path | None = None
+) -> Any:
     from crewai.events.event_listener import EventListener
 
     from crewai_cli.crew_run_tui import CrewRunApp
@@ -77,6 +79,13 @@ def _run_conversational_flow_tui(flow: Any) -> Any:
     )
     app._flow = flow
     app.run()
+
+    if getattr(app, "_want_traced_rerun", False):
+        # This conversational flow again (by its definition, when it was named
+        # by one), traced, then evaluated.
+        from crewai_cli.run_crew import _chain_traced_rerun
+
+        _chain_traced_rerun({"definition": str(definition) if definition else None})
 
     if app._status == "failed":
         raise SystemExit(1)
