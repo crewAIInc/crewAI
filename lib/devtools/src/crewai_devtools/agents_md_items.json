@@ -2178,7 +2178,6 @@
   "item": "crewai_tools catalog: 100+ tools (SerperDevTool, ScrapeWebsiteTool); check before writing one.",
   "q": "My agent needs to search the web and scrape pages. Should I write those tools myself?",
   "key": [
-   "crewai_tools|crewai-tools",
    "SerperDevTool|ScrapeWebsiteTool|WebsiteSearchTool|FirecrawlScrapeWebsiteTool|EXASearchTool|BraveSearchTool|TavilySearchTool"
   ],
   "partial": [
@@ -2197,6 +2196,39 @@
   ],
   "trap": [
    "multimodal\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "D-020",
+  "item": "Tool-call hooks: @on(InterceptionPoint.PRE_TOOL_CALL) from crewai.hooks runs before every tool call; raise HookAborted to block it.",
+  "q": "I want to block any tool call whose input contains a password, for every agent, without editing each tool. What does CrewAI give me for that?",
+  "key": [
+   "PRE_TOOL_CALL|before_tool_call"
+  ],
+  "partial": [
+   "crewai\\.hooks|HookAborted|InterceptionPoint"
+  ]
+ },
+ {
+  "id": "D-021",
+  "item": "LLM-call hooks: PRE_MODEL_CALL / POST_MODEL_CALL (or before_llm_call / after_llm_call) run on every LLM call.",
+  "q": "How can I log every LLM call my agents make, with the agent and how many messages it sent, without changing the agents or tasks?",
+  "key": [
+   "PRE_MODEL_CALL|POST_MODEL_CALL|before_llm_call|after_llm_call"
+  ],
+  "partial": [
+   "BaseEventListener|LLMCall\\w*Event|crewai\\.hooks"
+  ]
+ },
+ {
+  "id": "D-022",
+  "item": "Agent planning: Agent(planning_config=PlanningConfig(...)) makes the agent plan before acting; it replaces reasoning=True.",
+  "q": "How do I make one agent plan its steps before it starts working on a task?",
+  "key": [
+   "planning_config|PlanningConfig"
+  ],
+  "trap": [
+   "reasoning\\s*=\\s*True"
   ]
  }
 ]
