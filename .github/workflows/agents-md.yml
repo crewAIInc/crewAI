@@ -5,6 +5,7 @@ name: AGENTS.md
 # docs pages it links change.
 on:
   pull_request:
+    branches: [main]
     paths:
       - "lib/cli/src/crewai_cli/templates/**"
       - "lib/cli/src/crewai_cli/utils.py"
