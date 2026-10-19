@@ -18,8 +18,99 @@ class PlusAPI(_CorePlusAPI):
 
     The ZIP deployment methods live here as well as in newer crewai-core
     versions so editable CLI installs still work when an older crewai-core is
-    present in the runtime environment.
+    present in the runtime environment. The evaluation methods live here
+    because only the CLI calls them.
     """
+
+    EVALUATIONS_RESOURCE = f"{_CorePlusAPI.TRACING_RESOURCE}/evaluations"
+    # AMP reads the run's spans from Wharf inside the POST; a large run takes a while.
+    EVALUATION_START_TIMEOUT = 120.0
+    EVALUATION_POLL_TIMEOUT = 30.0
+    # The export carries every setup's outputs, checks and traces — tens of MB
+    # for a large comparison — and AMP gathers them before it answers.
+    EVALUATION_EXPORT_TIMEOUT = httpx.Timeout(EVALUATION_POLL_TIMEOUT, read=120.0)
+
+    def create_evaluation(
+        self,
+        execution_id: str,
+        *,
+        eval_config: str | None = None,
+        project_id: str | None = None,
+    ) -> httpx.Response:
+        """Ask AMP to evaluate the traced run EXECUTION_ID (crewai eval).
+
+        EVAL_CONFIG is the project's own `eval.jsonc` when it has one: what
+        good means for this crew, in its own words. Sent as it was written,
+        comments and all, and read by the grader rather than here. PROJECT_ID
+        is `[tool.crewai].project_id`, so the evaluation is filed under the
+        project it is about.
+        """
+        body: dict[str, str] = {"execution_id": execution_id}
+        if eval_config:
+            body["eval_config"] = eval_config
+        if project_id:
+            body["project_id"] = project_id
+        return self._make_request(
+            "POST",
+            self.EVALUATIONS_RESOURCE,
+            json=body,
+            timeout=self.EVALUATION_START_TIMEOUT,
+        )
+
+    def create_models_evaluation(
+        self,
+        models: list[str],
+        *,
+        project_id: str,
+        eval_config: str | None = None,
+        deployment_id: str | None = None,
+    ) -> httpx.Response:
+        """Ask AMP to run the project's deployment once per model and compare them.
+
+        AMP finds the deployment by PROJECT_ID (`[tool.crewai].project_id`)
+        unless DEPLOYMENT_ID names one. MODELS are `provider/model` strings;
+        the deployment's own models are the baseline, so they are not sent.
+        EVAL_CONFIG is the project's `eval.jsonc`, as `create_evaluation` sends it.
+        """
+        body: dict[str, Any] = {
+            "kind": "models",
+            "project_id": project_id,
+            "models": list(models),
+        }
+        if eval_config:
+            body["eval_config"] = eval_config
+        if deployment_id:
+            body["deployment_id"] = deployment_id
+        return self._make_request(
+            "POST",
+            self.EVALUATIONS_RESOURCE,
+            json=body,
+            timeout=self.EVALUATION_START_TIMEOUT,
+        )
+
+    def get_evaluation(self, evaluation_id: str) -> httpx.Response:
+        """The evaluation's status and, once done, its verdict.
+
+        `can_export=1` says this CLI has `crewai eval export`, so the brief may
+        point at it. AMP passes it on to the evaluation service; an AMP from
+        before exports drops it, so the brief names the command only when the
+        CLI, AMP and the service all serve it.
+        """
+        return self._make_request(
+            "GET",
+            f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}",
+            params={"can_export": "1"},
+            timeout=self.EVALUATION_POLL_TIMEOUT,
+        )
+
+    def export_evaluation(self, evaluation_id: str) -> httpx.Response:
+        """The evaluation's full data as files (crewai eval export):
+        `{"id", "kind", "files": {relative path: text}}`."""
+        return self._make_request(
+            "GET",
+            f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}/export",
+            timeout=self.EVALUATION_EXPORT_TIMEOUT,
+        )
 
     def _make_multipart_request(
         self,
@@ -57,11 +148,18 @@ class PlusAPI(_CorePlusAPI):
         *,
         name: str | None = None,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
     ) -> httpx.Response:
-        """Create a crew deployment from a local project ZIP archive."""
+        """Create a crew deployment from a local project ZIP archive.
+
+        PROJECT_ID is `[tool.crewai].project_id`, so AMP knows which project the
+        deployment runs; sent only when the project has one.
+        """
         data: dict[str, str] = {}
         if name:
             data["name"] = name
+        if project_id:
+            data["project_id"] = project_id
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(
@@ -78,9 +176,20 @@ class PlusAPI(_CorePlusAPI):
         zip_file_path: str | Path,
         *,
         env: dict[str, str] | None = None,
+        project_id: str | None = None,
+        force: bool = False,
     ) -> httpx.Response:
-        """Update an existing crew deployment from a local project ZIP archive."""
+        """Update an existing crew deployment from a local project ZIP archive.
+
+        PROJECT_ID as for `create_crew_from_zip`; FORCE redeploys even while a
+        models comparison runs on the deployment (AMP answers 409
+        ``comparison_running`` otherwise; an older AMP ignores it).
+        """
         data: dict[str, str] = {}
+        if project_id:
+            data["project_id"] = project_id
+        if force:
+            data["force"] = "true"
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(

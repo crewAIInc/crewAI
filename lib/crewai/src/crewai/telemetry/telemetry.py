@@ -18,7 +18,7 @@ import os
 import platform
 import signal
 import threading
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from crewai_core.telemetry import (
     CommonAttributesSpanProcessor,
@@ -1285,13 +1285,34 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
-    def feature_usage_span(self, feature: str) -> None:
+    # What a caller may add to a feature span, per feature. Anything else is
+    # dropped: the span counts a use, and a key nobody agreed on is how run
+    # content — a prompt, an output, a path — or an identifier reaches stats
+    # that promise to hold neither. The dimensions every span already carries
+    # are never on a list: a caller that could overwrite `feature` could file
+    # its use under somebody else's name.
+    FEATURE_ATTRIBUTES: ClassVar[dict[str, frozenset[str]]] = {
+        "cli_usage:eval": frozenset({"authenticated"}),
+        # The models compared: a model in crewAI's own catalog by name (anyone
+        # can read it off a price list), any other — a fine-tune, a deployment
+        # name, a self-hosted model — as `<provider>/other`; the CLI decides
+        # (`telemetry_model_name`). Never a run, an output or an organization.
+        "cli_usage:eval_models": frozenset({"authenticated", "models", "models_count"}),
+    }
+
+    def feature_usage_span(
+        self, feature: str, attributes: dict[str, str] | None = None
+    ) -> None:
         """Records that a feature was used. One span = one count.
 
         Args:
             feature: Feature identifier, e.g. "planning:creation",
                      "mcp:connection", "a2a:delegation",
                      "hooks:pre_tool_call", "hooks:aborted".
+            attributes: What a caller knows about THIS use that the common
+                attributes cannot know. Only the keys ``FEATURE_ATTRIBUTES`` lists
+                for this feature are kept; anything else is dropped, including
+                the dimensions every span already carries.
         """
 
         def _operation() -> None:
@@ -1299,6 +1320,10 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "feature", feature)
+            allowed = self.FEATURE_ATTRIBUTES.get(feature, frozenset())
+            for key, value in (attributes or {}).items():
+                if key in allowed:
+                    self._add_attribute(span, key, str(value))
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
