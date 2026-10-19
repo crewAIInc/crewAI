@@ -9,6 +9,8 @@ from crewai.llms.context_window import (
     LLM_CONTEXT_WINDOW_SIZES,
     bare_context_windows,
     context_windows_from_catalog,
+    _build_summary_prompt,
+    _chunk_messages,
     resolve_context_window_size,
 )
 
@@ -250,3 +252,30 @@ def test_bare_context_windows_uses_the_smaller_limit_when_votes_tie() -> None:
     )
 
     assert windows["claude-sonnet-4-5"] == 200_000
+
+
+def test_summary_chunking_uses_the_rendered_request_token_estimator() -> None:
+    """Prompt overhead affects the chunk boundary, just as it does at call time."""
+
+    class SummaryCountingLLM:
+        def __init__(self) -> None:
+            self.requests = []
+
+        def get_input_tokens_count(self, messages):
+            self.requests.append(messages)
+            return 100 + messages[-1]["content"].count("x")
+
+    llm = SummaryCountingLLM()
+    messages = [
+        {"role": "user", "content": "x" * 20},
+        {"role": "user", "content": "x" * 20},
+    ]
+
+    chunks = _chunk_messages(llm, messages, max_tokens=125)
+
+    assert chunks == [[messages[0]], [messages[1]]]
+    assert all(
+        llm.get_input_tokens_count(_build_summary_prompt(chunk)) <= 125
+        for chunk in chunks
+    )
+    assert all(len(request) == 2 for request in llm.requests)

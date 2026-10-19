@@ -17,7 +17,7 @@ import contextvars
 from importlib.resources import files
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from crewai_core.printer import PRINTER
 
@@ -403,19 +403,65 @@ def _conversation_text(messages: list[LLMMessage]) -> str:
 def _chunk_messages(
     llm: Any, messages: list[LLMMessage], max_tokens: int
 ) -> list[list[LLMMessage]]:
-    """Split history at message boundaries using the current conservative budget."""
+    """Split history so each rendered summarization request fits ``max_tokens``."""
     chunks: list[list[LLMMessage]] = []
     current: list[LLMMessage] = []
-    current_tokens = 0
     for message in messages:
         if message.get("role") == "system":
             continue
-        message_tokens = (len(_message_text(message)) + 3) // 4
-        if current and current_tokens + message_tokens > max_tokens:
-            chunks.append(current)
-            current, current_tokens = [], 0
-        current.append(message)
-        current_tokens += message_tokens
+        for part in _split_message_to_fit(llm, message, max_tokens):
+            candidate = [*current, part]
+            if current and _summary_request_tokens(llm, candidate) > max_tokens:
+                chunks.append(current)
+                current = [part]
+            else:
+                current = candidate
+
+            if _summary_request_tokens(llm, current) > max_tokens:
+                raise LLMContextLengthExceededError(
+                    "Summarization prompt overhead exceeds the available context window."
+                )
+
     if current:
         chunks.append(current)
     return chunks
+
+
+def _split_message_to_fit(
+    llm: Any, message: LLMMessage, max_tokens: int
+) -> list[LLMMessage]:
+    """Split an oversized message using the LLM's request-token estimator."""
+    if _summary_request_tokens(llm, [message]) <= max_tokens:
+        return [message]
+
+    text = _message_text(message)
+    if not text:
+        return [message]
+
+    parts: list[LLMMessage] = []
+    remainder = text
+    while remainder:
+        low, high, best = 1, len(remainder), 0
+        while low <= high:
+            length = (low + high) // 2
+            candidate = cast(LLMMessage, {**message, "content": remainder[:length]})
+            if _summary_request_tokens(llm, [candidate]) <= max_tokens:
+                best = length
+                low = length + 1
+            else:
+                high = length - 1
+
+        if best == 0:
+            raise LLMContextLengthExceededError(
+                "Summarization message could not be split to fit the context window."
+            )
+
+        parts.append(cast(LLMMessage, {**message, "content": remainder[:best]}))
+        remainder = remainder[best:]
+
+    return parts
+
+
+def _summary_request_tokens(llm: Any, messages: list[LLMMessage]) -> int:
+    """Count the exact request used for a summary call through the active LLM."""
+    return int(llm.get_input_tokens_count(_build_summary_prompt(messages)))
