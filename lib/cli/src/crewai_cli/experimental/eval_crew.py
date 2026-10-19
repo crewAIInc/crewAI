@@ -50,6 +50,7 @@ import webbrowser
 
 import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai_core.plus_api import restore_machine_transport
 from crewai_core.settings import Settings
 from dotenv import dotenv_values, set_key
 import httpx
@@ -670,12 +671,16 @@ def _anonymous(client: PlusAPI) -> PlusAPI:
 
 def _load_project_env() -> None:
     """The project's .env, as `crewai run` loads it — so CREWAI_PLUS_URL here is
-    the one the run used — with `crewai eval`'s token left as it was."""
+    the one the run used — with `crewai eval`'s token left as it was, and the
+    machine's proxy and CA: the crew this command runs inherits this
+    environment and pins them from it, for AMP requests that carry the saved
+    login."""
     env_file = Path.cwd() / ".env"
     if env_file.is_file():
         from crewai_cli.run_crew import load_project_env
 
         load_project_env(env_file)
+        restore_machine_transport(os.environ)
 
 
 def read_last_run(directory: Path | None = None) -> dict[str, Any] | None:

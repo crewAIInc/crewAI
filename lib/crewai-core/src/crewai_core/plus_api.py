@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 import ipaddress
 import os
 from pathlib import Path
@@ -170,6 +171,17 @@ def _sets_transport(key: str) -> bool:
 _MACHINE_TRANSPORT_ENV: dict[str, str] = {
     key: value for key, value in os.environ.items() if _sets_transport(key)
 }
+
+
+def restore_machine_transport(environ: MutableMapping[str, str]) -> None:
+    """Put the pinned proxy and CA variables back in ``environ``, dropping any set since.
+
+    For a process that loads a project's .env and then starts another crewAI
+    process: the child pins the variables it inherits as the machine's.
+    """
+    for key in [key for key in environ if _sets_transport(key)]:
+        del environ[key]
+    environ.update(_MACHINE_TRANSPORT_ENV)
 
 
 def _os_proxies() -> dict[str, str]:

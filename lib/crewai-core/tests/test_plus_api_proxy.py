@@ -275,3 +275,24 @@ def test_zip_deploy_uploads_go_through_the_proxy(
     )
     assert b'filename="project.zip"' in seen.body
     assert seen.authorization == "Bearer amp-token"
+
+
+def test_restoring_the_machine_transport_undoes_what_a_project_env_set(
+    machine: dict[str, str],
+) -> None:
+    machine["HTTPS_PROXY"] = "http://machine-proxy.test:3128"
+    environ = {
+        "HTTPS_PROXY": "http://project-proxy.test:8080",
+        "all_proxy": "socks5://project-proxy.test:1080",
+        "NO_PROXY": "*",
+        "SSL_CERT_FILE": "/project/ca.pem",
+        "REQUEST_METHOD": "GET",
+        "OPENAI_API_KEY": "project-key",
+    }
+
+    plus_api.restore_machine_transport(environ)
+
+    assert environ == {
+        "HTTPS_PROXY": "http://machine-proxy.test:3128",
+        "OPENAI_API_KEY": "project-key",
+    }
