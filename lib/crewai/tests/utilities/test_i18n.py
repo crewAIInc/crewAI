@@ -41,3 +41,15 @@ def test_prompt_file():
     i18n.load_prompts()
     assert isinstance(i18n.retrieve("slices", "role_playing"), str)
     assert i18n.retrieve("slices", "role_playing") == "Lorem ipsum dolor sit amet"
+
+
+def test_prompt_file_utf8_with_bom(tmp_path):
+    import json
+
+    file_path = tmp_path / "prompts_bom.json"
+    content = json.dumps({"slices": {"role_playing": "Research assistant"}})
+    file_path.write_text(content, encoding="utf-8-sig")
+
+    i18n = I18N(prompt_file=str(file_path))
+    assert i18n.slice("role_playing") == "Research assistant"
+
