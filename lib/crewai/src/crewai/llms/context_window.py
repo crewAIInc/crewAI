@@ -26,9 +26,11 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.message_utils import (
+    collect_user_message_files,
     format_message_for_llm,
     message_content_text,
-    messages_to_text,
+    message_units,
+    messages_content_text,
 )
 
 
@@ -275,7 +277,7 @@ def summarize_messages(
     if not work_messages:
         return
 
-    preserved_files = _collect_summary_files(messages)
+    preserved_files = collect_user_message_files(messages)
     max_tokens = llm.get_context_window_size()
     chunks = _chunk_messages(llm, work_messages, max_tokens)
     summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
@@ -291,14 +293,6 @@ def summarize_messages(
     messages.clear()
     messages.extend(system_messages)
     messages.append(summary_message)
-
-
-def _collect_summary_files(messages: list[LLMMessage]) -> dict[str, Any]:
-    files: dict[str, Any] = {}
-    for message in messages:
-        if message.get("role") == "user" and message.get("files"):
-            files.update(message["files"])
-    return files
 
 
 def _summarize_chunks(
@@ -417,7 +411,7 @@ def _build_summary_prompt(chunk: list[LLMMessage]) -> list[LLMMessage]:
         ),
         format_message_for_llm(
             I18N_DEFAULT.slice("summarize_instruction").format(
-                conversation=messages_to_text(chunk)
+                conversation=messages_content_text(chunk)
             )
         ),
     ]
@@ -433,7 +427,7 @@ def _chunk_messages(
         )
     chunks: list[list[LLMMessage]] = []
     current: list[LLMMessage] = []
-    for unit in _message_units(messages):
+    for unit in message_units(messages):
         if _summary_request_tokens(llm, [*current, *unit]) > max_tokens:
             if current:
                 chunks.append(current)
@@ -458,28 +452,6 @@ def _chunk_messages(
     if current:
         chunks.append(current)
     return chunks
-
-
-def _message_units(messages: list[LLMMessage]) -> list[list[LLMMessage]]:
-    """Keep an assistant tool call with its following tool results when possible."""
-    units: list[list[LLMMessage]] = []
-    index = 0
-    while index < len(messages):
-        message = messages[index]
-        if message.get("role") == "system":
-            index += 1
-            continue
-        unit = [message]
-        if message.get("role") == "assistant" and message.get("tool_calls"):
-            index += 1
-            while index < len(messages) and messages[index].get("role") == "tool":
-                unit.append(messages[index])
-                index += 1
-            units.append(unit)
-            continue
-        units.append(unit)
-        index += 1
-    return units
 
 
 def _split_message_to_fit(
