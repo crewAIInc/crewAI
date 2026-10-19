@@ -585,7 +585,8 @@ def test_evaluate_on_an_untraced_run_runs_the_crew_again_for_its_evaluation(
     )
 
     assert run_crew_module._run_json_crew() == "result"
-    assert evaluated == [{"run_again": True}]
+    # the same crew, with the inputs this run used (none here)
+    assert evaluated == [{"run_again": True, "run_args": {"inputs": "{}"}}]
 
 
 def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys):

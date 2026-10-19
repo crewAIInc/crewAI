@@ -78,6 +78,12 @@ def _run_conversational_flow_tui(flow: Any) -> Any:
     app._flow = flow
     app.run()
 
+    if getattr(app, "_want_traced_rerun", False):
+        # The project's conversational flow again, traced, then evaluated.
+        from crewai_cli.run_crew import _chain_traced_rerun
+
+        _chain_traced_rerun()
+
     if app._status == "failed":
         raise SystemExit(1)
 

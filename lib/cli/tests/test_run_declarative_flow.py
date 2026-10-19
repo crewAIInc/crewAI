@@ -474,7 +474,9 @@ def test_run_declarative_flow_interactive_uses_tui(
     monkeypatch.setattr(
         run_declarative_flow_module,
         "_run_declarative_flow_tui",
-        lambda flow, resolved: captured.update(flow=flow, inputs=resolved),
+        lambda flow, resolved, definition=None: captured.update(
+            flow=flow, inputs=resolved, definition=definition
+        ),
     )
     path = _write(tmp_path, REQUIRED_FLOW_YAML)
 
@@ -484,6 +486,7 @@ def test_run_declarative_flow_interactive_uses_tui(
 
     assert captured["inputs"] == {"prospect_email": "a@b.com"}
     assert captured["flow"] is not None
+    assert captured["definition"] == str(path)  # what a traced re-run runs again
 
 
 def test_run_declarative_flow_tui_failed_exits_nonzero(
@@ -545,7 +548,7 @@ def test_evaluate_on_an_untraced_flow_run_runs_it_again_for_its_evaluation(
         SimpleNamespace(name="Flow"), None
     )
 
-    assert evaluated == [{"run_again": True}]
+    assert evaluated == [{"run_again": True, "run_args": {}}]
 
 
 def test_run_declarative_flow_tui_no_deploy_when_not_requested(

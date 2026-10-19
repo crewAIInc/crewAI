@@ -449,22 +449,34 @@ def test_the_token_this_app_sets_is_the_one_crewais_tracing_reads(
     monkeypatch.undo()  # the real folders, not the per-test ones
     assert crew_run_tui._AWAITING_EVAL_ENV == eval_handshake.AWAITING_ENV
     assert crew_run_tui._awaiting_dir() == eval_handshake.awaiting_dir()
+    # both pinned to the account's home: a `.env` moving HOME moves neither
+    monkeypatch.setenv("HOME", str(tmp_path / "planted-home"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "planted-data"))
+    assert crew_run_tui._awaiting_dir() == eval_handshake.awaiting_dir()
+    assert not str(eval_handshake.awaiting_dir()).startswith(str(tmp_path))
 
     folder = tmp_path / "eval-awaiting"
     monkeypatch.setattr(crew_run_tui, "_awaiting_dir", lambda: folder)
     monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: folder)
     assert eval_handshake.run_awaited_by_evaluation() is False
-    with crew_run_tui.evaluating_after_run():
-        assert eval_handshake.run_awaited_by_evaluation() is True
+    with crew_run_tui.evaluating_after_run(
+        trusted_amp_origins=["https://app.crewai.com"], tracing_turned_on=True
+    ):
+        assert eval_handshake.awaited_evaluation() == {
+            "trusted_amp_origins": ["https://app.crewai.com"],
+            "tracing_turned_on": True,
+        }
     assert eval_handshake.run_awaited_by_evaluation() is False
 
 
-@pytest.mark.parametrize("for_an_evaluation", [True, False])
-def test_an_app_opened_for_an_evaluation_says_where_the_trace_goes(
-    monkeypatch, for_an_evaluation
+@pytest.mark.parametrize(
+    "opened_for", ["an evaluation that turned tracing on", "an evaluation", "nothing"]
+)
+def test_the_app_says_where_the_trace_goes_only_when_its_evaluation_turned_tracing_on(
+    monkeypatch, opened_for
 ) -> None:
-    """No question: a plain note that the run is evaluated and its trace goes
-    to CrewAI AMP. An ordinary run says nothing new."""
+    """Said once, plainly, the time the yes is inferred and tracing turned on
+    for the project; after that the project traces and nothing more is said."""
     notices: list[tuple[str, dict[str, object]]] = []
 
     def mount() -> None:
@@ -474,16 +486,19 @@ def test_an_app_opened_for_an_evaluation_says_where_the_trace_goes(
         app.notify = lambda message, **kwargs: notices.append((message, kwargs))  # type: ignore[method-assign]
         app.on_mount()
 
-    if for_an_evaluation:
-        with crew_run_tui.evaluating_after_run():
-            mount()
-    else:
+    if opened_for == "nothing":
         mount()
+    else:
+        with crew_run_tui.evaluating_after_run(
+            tracing_turned_on=opened_for == "an evaluation that turned tracing on"
+        ):
+            mount()
 
-    if for_an_evaluation:
+    if opened_for == "an evaluation that turned tracing on":
         assert notices == [
             (
-                "This run will be evaluated: its trace is sent to CrewAI AMP, which grades it.",
+                "Tracing is now on for this project, so this run can be evaluated: "
+                "its trace is sent to CrewAI AMP, which grades it.",
                 {"title": "Evaluate", "timeout": 10},
             )
         ]
@@ -491,25 +506,55 @@ def test_an_app_opened_for_an_evaluation_says_where_the_trace_goes(
         assert notices == []
 
 
-@pytest.mark.parametrize(
-    "opted_in", ["the variable", "tracing=True on the crew", "a consent given once"]
-)
-def test_nothing_is_said_where_somebody_turned_tracing_on(monkeypatch, opted_in) -> None:
-    """The note is for a yes inferred from the evaluation request; a project or
-    a person who turned tracing on themselves already knows."""
-    if opted_in == "the variable":
-        monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
-    if opted_in == "a consent given once":
-        monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
+def test_a_child_app_reads_the_note_off_the_token_file(monkeypatch) -> None:
+    """In a child process there is no holder: the file the command wrote says it."""
     notices: list[str] = []
-    with crew_run_tui.evaluating_after_run():
+    with crew_run_tui.evaluating_after_run(tracing_turned_on=True):
+        token = crew_run_tui._AUTO_EVAL.set(None)  # as a child process sees it
+        try:
+            app = CrewRunApp()
+            app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
+            app._say_this_run_will_be_evaluated()
+        finally:
+            crew_run_tui._AUTO_EVAL.reset(token)
+
+    assert notices == [crew_run_tui.EVALUATION_NOTICE]
+
+
+def test_a_crew_that_sets_tracing_false_is_never_told_its_trace_is_sent() -> None:
+    notices: list[str] = []
+    with crew_run_tui.evaluating_after_run(tracing_turned_on=True):
         app = CrewRunApp()
-        if opted_in == "tracing=True on the crew":
-            app._crew = SimpleNamespace(tracing=True)
+        app._crew = SimpleNamespace(tracing=False)
         app.notify = lambda message, **kwargs: notices.append(message)  # type: ignore[method-assign]
         app._say_this_run_will_be_evaluated()
 
     assert notices == []
+
+
+@pytest.mark.parametrize("what", ["crew", "flow"])
+def test_evaluate_on_a_run_that_sets_tracing_false_says_why_and_runs_nothing(
+    monkeypatch, what
+) -> None:
+    """Running it again could not make a trace: nothing to pay for."""
+    app = CrewRunApp()
+    app._status = "completed"
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    if what == "crew":
+        app._crew = SimpleNamespace(tracing=False)
+    else:
+        app._flow = SimpleNamespace(tracing=False)
+    app.exit = lambda result=None: pytest.fail("nothing to run again")  # type: ignore[method-assign]
+    notices: list[tuple[str, dict[str, object]]] = []
+    app.notify = lambda message, **kwargs: notices.append((message, kwargs))  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+
+    message, kwargs = notices[0]
+    assert "sets tracing=False, so its runs are not traced and cannot be evaluated" in message
+    assert kwargs["severity"] == "warning" and app._want_traced_rerun is False
 
 
 def test_tracing_asked_for_reads_the_declaration_but_keeps_the_other_guards(

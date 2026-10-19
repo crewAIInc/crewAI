@@ -241,6 +241,53 @@ def test_a_project_that_turned_tracing_off_is_not_traced_even_for_crewai_eval(
     assert not buffers and not grants and not recorders  # never even traced
 
 
+@pytest.mark.parametrize(
+    ("amp", "tier"),
+    [("https://app.crewai.com", "authenticated"), ("https://evil.example", "ephemeral")],
+)
+def test_the_saved_login_goes_only_to_an_amp_crewai_eval_trusted(
+    traces, monkeypatch, tmp_path, amp, tier
+):
+    """`crewai eval` decides which AMP may receive the saved login before the
+    project's `.env` is loaded; an AMP that `.env` chose gets an anonymous
+    grant for the run the command started, never the login."""
+    from crewai.telemetry.tracing.grants import TraceGrantClient
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    monkeypatch.setenv("CREWAI_PLUS_URL", amp)
+    monkeypatch.setattr(
+        "crewai.telemetry.tracing.grants.resolve_tracing_credential",
+        lambda: ("login", "the-saved-login"),
+    )
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: False
+    )
+    tiers: list[str] = []
+    real_create = TraceGrantClient.create
+    monkeypatch.setattr(
+        TraceGrantClient,
+        "create",
+        lambda client, execution_uuid: tiers.append(client._tier)
+        or real_create(client, execution_uuid),
+    )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "graded"
+
+    with eval_handshake.awaiting_evaluation(
+        trusted_amp_origins=["https://app.crewai.com"]
+    ):
+        assert Conversation().kickoff() == "graded"
+        assert crewai_event_bus.flush()
+
+    assert tiers == [tier]
+
+
 def test_a_token_a_dotenv_could_set_approves_nothing(traces, monkeypatch, tmp_path):
     """The variable alone is what a project's `.env` could carry; without the
     file `crewai eval` writes, it counts for nothing."""

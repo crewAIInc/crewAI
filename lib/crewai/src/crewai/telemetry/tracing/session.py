@@ -99,8 +99,18 @@ def _trace_provider(resource: Resource) -> TracerProvider:
     """
     provider = TracerProvider(resource=resource)
     if getattr(provider, "_disabled", False):
-        # the SDK's only switch for it, a private attribute: a test pins it
+        # The SDK reads the variable once, in __init__, and offers no public way
+        # to say otherwise; this private attribute is its only switch. A test
+        # pins it, and a provider that still records nothing is said out loud.
         provider._disabled = False
+        probe = provider.get_tracer(__name__).start_span("crewai.trace.probe")
+        if not probe.is_recording():
+            logger.warning(
+                "OTEL_SDK_DISABLED is set and this OpenTelemetry SDK version "
+                "ignores crewAI's override, so this run's trace records nothing. "
+                "Unset OTEL_SDK_DISABLED to trace it."
+            )
+        probe.end()
     return provider
 
 

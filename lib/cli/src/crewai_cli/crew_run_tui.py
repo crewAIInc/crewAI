@@ -5,7 +5,7 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 """
 
 import asyncio
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 import contextlib
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import sys
 import threading
 import time
 from typing import Any, ClassVar
@@ -297,9 +298,14 @@ class TraceConsentScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-# What an app opened to run the crew for an evaluation says first.
+# What an app says when the evaluation it was opened for turned tracing on.
 EVALUATION_NOTICE = (
-    "This run will be evaluated: its trace is sent to CrewAI AMP, which grades it."
+    "Tracing is now on for this project, so this run can be evaluated: "
+    "its trace is sent to CrewAI AMP, which grades it."
+)
+TRACING_OFF_IN_CODE = (
+    "This {noun} sets tracing=False, so its runs are not traced and cannot be "
+    "evaluated. Remove tracing=False to evaluate it."
 )
 
 
@@ -349,26 +355,49 @@ _AWAITING_TOKEN = re.compile(r"[0-9a-f]{32}")
 
 
 def _awaiting_dir() -> Path:
-    import appdirs
+    """This user's crewAI data directory, found from the account's home in the
+    account database, never from `HOME` or `XDG_DATA_HOME`: a project's `.env`
+    can set those, and a token file it planted there must not count."""
+    if os.name == "nt":
+        import appdirs
 
-    return Path(appdirs.user_data_dir("crewai", "CrewAI")) / "eval-awaiting"
+        return Path(appdirs.user_data_dir("crewai", "CrewAI")) / "eval-awaiting"
+    home = Path.home()
+    with contextlib.suppress(ImportError, KeyError, OSError):
+        import pwd
+
+        home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    base = (
+        home / "Library" / "Application Support"
+        if sys.platform == "darwin"
+        else home / ".local" / "share"
+    )
+    return base / "crewai" / "eval-awaiting"
 
 
 @contextmanager
-def evaluating_after_run() -> Iterator[dict[str, str | None]]:
+def evaluating_after_run(
+    *, trusted_amp_origins: Iterable[str] = (), tracing_turned_on: bool = False
+) -> Iterator[dict[str, str | None]]:
     """Run the crew for an evaluation that is already under way.
 
-    `crewai eval` with nothing traced offers to run the crew first. The app it
-    opens would otherwise sit there until somebody quits it, with the command
-    waiting behind — so inside this block the app closes itself when the run
-    ends and leaves its execution id in the holder. It does NOT chain into an
-    evaluation of its own: the command that opened it is the one evaluating.
+    `crewai eval` with nothing traced runs the crew first. The app it opens
+    would otherwise sit there until somebody quits it, with the command waiting
+    behind — so inside this block the app evaluates what it ran and then
+    leaves its execution id in the holder.
 
     A run in the same process leaves its id here; a run in a child process
     leaves it in the project's last-run record, which the caller reads when the
-    holder comes back empty.
+    holder comes back empty. The token file carries what the command decided
+    before the project's `.env` was loaded: which AMP origins may receive the
+    saved login (TRUSTED_AMP_ORIGINS), and whether it just turned tracing on for
+    the project (TRACING_TURNED_ON) — the one case its app says where the trace
+    goes.
     """
-    holder: dict[str, str | None] = {"execution_id": None}
+    holder: dict[str, str | None] = {
+        "execution_id": None,
+        "tracing_turned_on": "true" if tracing_turned_on else None,
+    }
     token = _AUTO_EVAL.set(holder)
     before = os.environ.get(_AWAITING_EVAL_ENV)
     # Without the file a child app cannot be told, and the command grades the
@@ -377,8 +406,16 @@ def evaluating_after_run() -> Iterator[dict[str, str | None]]:
     with contextlib.suppress(OSError):
         nonce = secrets.token_hex(16)
         _awaiting_dir().mkdir(parents=True, exist_ok=True)
-        (_awaiting_dir() / nonce).touch(exist_ok=False)
-        marker = _awaiting_dir() / nonce
+        path = _awaiting_dir() / nonce
+        with path.open("x", encoding="utf-8") as out:
+            _json.dump(
+                {
+                    "trusted_amp_origins": sorted(set(trusted_amp_origins)),
+                    "tracing_turned_on": tracing_turned_on,
+                },
+                out,
+            )
+        marker = path
         os.environ[_AWAITING_EVAL_ENV] = nonce
     try:
         yield holder
@@ -397,9 +434,9 @@ def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
     """The evaluation this run was started for, if there is one.
 
     In this process the holder itself; in a child process the environment says
-    an evaluation is waiting and the holder is a local one — the id travels
-    back through the project's last-run record instead, which the child writes
-    when its trace is exported.
+    an evaluation is waiting and the holder is a local one, built from the
+    token file — the id travels back through the project's last-run record
+    instead, which the child writes when its trace is exported.
     """
     holder = _AUTO_EVAL.get()
     if holder is not None:
@@ -409,10 +446,14 @@ def _an_evaluation_is_waiting() -> dict[str, str | None] | None:
     if not _AWAITING_TOKEN.fullmatch(value):
         return None
     try:
-        waiting = (_awaiting_dir() / value).is_file()
+        text = (_awaiting_dir() / value).read_text(encoding="utf-8")
     except OSError:
         return None
-    return {"execution_id": None} if waiting else None
+    said: Any = {}
+    with contextlib.suppress(ValueError):
+        said = _json.loads(text)
+    turned_on = isinstance(said, dict) and said.get("tracing_turned_on") is True
+    return {"execution_id": None, "tracing_turned_on": "true" if turned_on else None}
 
 
 def _recorded_run(execution_uuid: str) -> dict[str, Any] | None:
@@ -759,30 +800,21 @@ FooterKey .footer-key--key {
         self._say_this_run_will_be_evaluated()
 
     def _say_this_run_will_be_evaluated(self) -> None:
-        """Opened to run the crew for an evaluation (`crewai eval`, or Evaluate
-        on a run that was not traced), with the yes to sending its trace
-        inferred from that request: say where the trace goes, plainly. Nothing
-        is said to a project or a person who turned tracing on themselves."""
-        if self._auto_eval is not None and not self._tracing_opted_in():
+        """Opened to run the crew for an evaluation that just turned tracing on
+        for the project (the yes inferred from `crewai eval`, the first time):
+        say so, plainly, once. A run that cannot be traced says nothing."""
+        waiting = self._auto_eval or {}
+        if waiting.get("tracing_turned_on") and not self._tracing_off_in_code():
             self.notify(EVALUATION_NOTICE, title="Evaluate", timeout=10)
 
-    def _tracing_opted_in(self) -> bool:
-        """Did somebody turn tracing on — `tracing=True` on the crew or flow,
-        `CREWAI_TRACING_ENABLED=true`, or the consent a person gave once?"""
-        if any(
-            getattr(target, "tracing", None) is True
+    def _tracing_off_in_code(self) -> bool:
+        """Does the crew or flow set `tracing=False`? Then no run of it is
+        traced, and none can be evaluated."""
+        return any(
+            getattr(target, "tracing", None) is False
             for target in (self._crew, self._flow)
             if target is not None
-        ):
-            return True
-        try:
-            # crewai-core is imported here, not at the top: this module also runs
-            # inside a project's environment, whose crewai-core may be older.
-            from crewai_core.user_data import is_tracing_enabled
-
-            return is_tracing_enabled()
-        except Exception:
-            return os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("true", "1")
+        )
 
     # ── Crew execution ──────────────────────────────────────
 
@@ -1424,6 +1456,14 @@ FooterKey .footer-key--key {
             # tracing off is asked first; its no runs nothing.
             from crewai_cli.experimental.eval_crew import tracing_turned_off
 
+            if self._tracing_off_in_code():
+                # Running it again could not make a trace: nothing to pay for.
+                self.notify(
+                    TRACING_OFF_IN_CODE.format(noun=self._run_noun),
+                    title="Evaluate",
+                    severity="warning",
+                )
+                return
             if tracing_turned_off():
                 self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
                 return

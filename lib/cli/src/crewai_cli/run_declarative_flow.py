@@ -91,7 +91,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     # returns a pending marker rather than completing), neither of which the
     # Textual TUI can handle correctly.
     if is_interactive() and not _flow_uses_human_feedback(flow):
-        _run_declarative_flow_tui(flow, resolved_inputs or None)
+        _run_declarative_flow_tui(flow, resolved_inputs or None, definition=definition)
         return
 
     try:
@@ -162,7 +162,10 @@ def _run_conversational_declarative_flow(
 
 
 def _run_declarative_flow_tui(
-    flow: Flow[Any], resolved_inputs: dict[str, Any] | None
+    flow: Flow[Any],
+    resolved_inputs: dict[str, Any] | None,
+    *,
+    definition: str | Path | None = None,
 ) -> Any:
     """Run a declarative flow on the CrewAI TUI (the interactive default).
 
@@ -220,7 +223,15 @@ def _run_declarative_flow_tui(
     if getattr(app, "_want_traced_rerun", False):
         from crewai_cli.run_crew import _chain_traced_rerun
 
-        _chain_traced_rerun()
+        # This flow, by its definition, with the inputs this run used.
+        _chain_traced_rerun(
+            {
+                "definition": str(definition) if definition else None,
+                "inputs": json.dumps(resolved_inputs, default=str)
+                if resolved_inputs
+                else None,
+            }
+        )
 
     return app._crew_result
 

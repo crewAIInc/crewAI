@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import AbstractContextManager, nullcontext
+import json
 import os
 from pathlib import Path
 import re
@@ -48,6 +49,7 @@ The quotes are required in zsh so `crewai[tools]` is not treated as a glob.
 """
 _JSON_CREW_RUNNER_CODE = """
 import importlib.util
+import json
 import os
 from pathlib import Path
 import sys
@@ -372,7 +374,13 @@ def _run_json_crew(
     if getattr(app, "_want_deploy", False):
         _chain_deploy()
     if getattr(app, "_want_traced_rerun", False):
-        _chain_traced_rerun()
+        # The same crew with the inputs this run used, prompted ones included.
+        _chain_traced_rerun(
+            {
+                "trained_agents_file": trained_agents_file,
+                "inputs": json.dumps(runtime_inputs, default=str),
+            }
+        )
 
     return app._crew_result
 
@@ -521,13 +529,20 @@ def _record_deploy_button(event: DeployButtonEvent) -> None:
         pass
 
 
-def _chain_traced_rerun() -> None:
+def _chain_traced_rerun(run_args: dict[str, Any] | None = None) -> None:
     """The run app's Evaluate, pressed on a run that was not traced: the run
     happens again, traced, and that run is evaluated — `crewai eval`'s own
-    path, so the run app it opens shows the evaluation as it would there."""
+    path, so the run app it opens shows the evaluation as it would there.
+
+    RUN_ARGS are `run_crew`'s arguments for the run the person watched (its
+    definition, inputs and trained agents), so the run graded is that one, not
+    the project's default."""
     from crewai_cli.experimental.eval_crew import eval_crew
 
-    eval_crew(run_again=True)
+    eval_crew(
+        run_again=True,
+        run_args={key: value for key, value in (run_args or {}).items() if value},
+    )
 
 
 def _chain_deploy() -> None:
