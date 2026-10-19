@@ -131,11 +131,13 @@ def _run(monkeypatch, answers: dict[str, str], *args: str):
     items = [ITEM] + [{**ITEM, "id": f"X-{n:03d}"} for n in range(2, 101)]
     monkeypatch.setattr(ev, "load_items", lambda: items)
     monkeypatch.setattr(ev, "write_project", lambda dest, ref: dest.mkdir(parents=True))
-    monkeypatch.setattr(
-        ev,
-        "claude_asker",
-        lambda model: lambda project, question: answers[project.name],
-    )
+
+    def fake(project, question):
+        if not answers[project.name]:
+            raise ev.NoAnswer("empty answer")
+        return answers[project.name]
+
+    monkeypatch.setattr(ev, "claude_asker", lambda model: fake)
     result = CliRunner().invoke(
         ev.agents_md_eval,
         ["--model", "claude:claude-haiku-5-5", "--workers", "4", *args],
@@ -182,6 +184,7 @@ def test_command_fails_when_sessions_give_no_answer(monkeypatch):
     )
     assert code == 1
     assert "too many sessions gave no answer (0 / 100 of 100)" in output
+    assert "gave no answer with the branch file: empty answer (100)" in output
 
 
 def test_command_without_codex_needs_no_openai_key(monkeypatch):
@@ -208,7 +211,7 @@ def test_default_models_are_the_four_the_action_runs():
     ]
 
 
-def test_answer_retries_once_then_reports_no_answer():
+def test_answer_retries_once_then_reports_why_there_was_none():
     replies = iter([subprocess.TimeoutExpired("claude", 300), "Use and_."])
 
     def flaky(project, question):
@@ -217,18 +220,23 @@ def test_answer_retries_once_then_reports_no_answer():
             raise reply
         return reply
 
-    assert ev.answer(flaky, Path("."), "How?") == "Use and_."
-    assert ev.answer(lambda project, question: "", Path("."), "How?") is None
+    def silent(project, question):
+        raise ev.NoAnswer("exit 1: overloaded")
+
+    assert ev.answer(flaky, Path("."), "How?") == ("Use and_.", "")
+    assert ev.answer(silent, Path("."), "How?") == (None, "exit 1: overloaded")
 
 
-def test_unanswered_sessions_score_zero_and_are_counted(tmp_path):
+def test_unanswered_sessions_score_zero_and_are_counted_by_reason(tmp_path):
     def half(project, question):
-        return "uv tool install crewai --upgrade" if question == "first" else ""
+        if question == "second":
+            raise ev.NoAnswer("empty answer")
+        return "uv tool install crewai --upgrade"
 
     items = [{**ITEM, "id": "A", "q": "first"}, {**ITEM, "id": "B", "q": "second"}]
     totals, missing = ev.score(half, tmp_path, items, reps=2, workers=2)
     assert totals == {"A": 1.0, "B": 0.0}
-    assert missing == 2
+    assert missing == {"empty answer": 2}
 
 
 def test_codex_runs_in_its_own_existing_home_without_api_keys(tmp_path, monkeypatch):
@@ -236,13 +244,14 @@ def test_codex_runs_in_its_own_existing_home_without_api_keys(tmp_path, monkeypa
 
     def fake_run(argv, **kwargs):
         calls.append((argv, kwargs, Path(kwargs["env"]["CODEX_HOME"]).is_dir()))
-        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+        message = '{"type": "item.completed", "item": {"type": "agent_message", "text": "Use and_."}}'
+        return subprocess.CompletedProcess(argv, 0, stdout=message, stderr="")
 
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     monkeypatch.setattr(ev.subprocess, "run", fake_run)
     ask = ev.codex_asker(tmp_path / "codex-home", "gpt-5.6-sol")
-    ask(tmp_path, "How?")
+    assert ask(tmp_path, "How?") == "Use and_."
 
     (login, login_kwargs, home_existed), (exec_argv, exec_kwargs, _) = calls
     assert login[:2] == ["codex", "login"] and home_existed
@@ -251,15 +260,32 @@ def test_codex_runs_in_its_own_existing_home_without_api_keys(tmp_path, monkeypa
     assert not {"OPENAI_API_KEY", "ANTHROPIC_API_KEY"} & set(exec_kwargs["env"])
 
 
-def test_a_failed_session_is_no_answer(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    ("returncode", "stdout", "stderr", "reason"),
+    [
+        (
+            1,
+            "partial",
+            "Reading input...\nAPI Error: 529 overloaded\n",
+            "exit 1: API Error: 529 overloaded",
+        ),
+        (2, "", "", "exit 2: no error output"),
+        (0, "  ", "", "empty answer"),
+        (1, "", "Invalid API key sk-ant-abc123XYZ\n", "exit 1: Invalid API key sk-***"),
+    ],
+)
+def test_a_session_without_an_answer_says_why(
+    tmp_path, monkeypatch, returncode, stdout, stderr, reason
+):
     monkeypatch.setattr(
         ev.subprocess,
         "run",
         lambda argv, **kwargs: subprocess.CompletedProcess(
-            argv, 1, stdout="partial", stderr="rate limited"
+            argv, returncode, stdout=stdout, stderr=stderr
         ),
     )
-    assert ev.claude_asker("claude-haiku-5-5")(tmp_path, "How?") == ""
+    with pytest.raises(ev.NoAnswer, match=re.escape(reason)):
+        ev.claude_asker("claude-haiku-5-5")(tmp_path, "How?")
 
 
 def test_the_workflow_runs_the_default_models():

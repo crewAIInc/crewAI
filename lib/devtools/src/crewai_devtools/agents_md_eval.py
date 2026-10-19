@@ -10,6 +10,7 @@ for the comparison to mean anything.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -29,7 +30,7 @@ console = Console()
 
 Grade = Literal["right", "partly", "wrong"]
 Agent = Literal["claude", "codex"]
-# One session: the agent's answer, or "" when the session produced none.
+# One session: the agent's answer; raises NoAnswer (or TimeoutExpired) when there is none.
 Ask = Callable[[Path, str], str]
 
 ITEMS_FILE: Final = Path(__file__).parent / "agents_md_items.json"
@@ -162,6 +163,27 @@ def write_project(dest: Path, ref: str | None) -> None:
     )
 
 
+class NoAnswer(Exception):  # noqa: N818 - a reason, not an error the caller handles as one
+    """A session that ended without an answer; the message says why."""
+
+
+SECRET: Final = re.compile(r"sk-[A-Za-z0-9_-]+")
+
+
+def session_answer(proc: subprocess.CompletedProcess[str], text: str) -> str:
+    """The session's answer, or NoAnswer naming its exit code and last error line."""
+    if proc.returncode != 0:
+        lines = [line for line in proc.stderr.splitlines() if line.strip()] or [
+            "no error output"
+        ]
+        raise NoAnswer(
+            SECRET.sub("sk-***", f"exit {proc.returncode}: {lines[-1].strip()[:160]}")
+        )
+    if not text:
+        raise NoAnswer("empty answer")
+    return text
+
+
 def claude_asker(model: str) -> Ask:
     """Claude Code sessions with every tool disabled, so answers come from the files."""
     env = {
@@ -181,7 +203,7 @@ def claude_asker(model: str) -> Ask:
             timeout=SESSION_TIMEOUT,
             check=False,
         )
-        return proc.stdout.strip() if proc.returncode == 0 else ""
+        return session_answer(proc, proc.stdout.strip())
 
     return ask
 
@@ -227,39 +249,46 @@ def codex_asker(codex_home: Path, model: str) -> Ask:
             check=False,
             env=env,
         )
-        return codex_answer(proc.stdout) if proc.returncode == 0 else ""
+        return session_answer(proc, codex_answer(proc.stdout))
 
     return ask
 
 
-def answer(ask: Ask, project: Path, question: str) -> str | None:
-    """The session's answer, with one retry; None when neither attempt gave one."""
-    for _ in range(2):
-        try:
-            text = ask(project, question)
-        except subprocess.TimeoutExpired:  # a hung session is retried, then counted
-            continue
-        if text:
-            return text
-    return None
+def attempt(ask: Ask, project: Path, question: str) -> tuple[str | None, str]:
+    """One session: its answer, or None and why there was none."""
+    try:
+        return ask(project, question), ""
+    except subprocess.TimeoutExpired:
+        return None, f"timed out after {SESSION_TIMEOUT}s"
+    except NoAnswer as e:
+        return None, str(e)
+
+
+def answer(ask: Ask, project: Path, question: str) -> tuple[str | None, str]:
+    """The session's answer with one retry, or None and why the last attempt gave none."""
+    text, reason = attempt(ask, project, question)
+    return (text, reason) if text is not None else attempt(ask, project, question)
 
 
 def score(
     ask: Ask, project: Path, items: Sequence[Item], reps: int, workers: int
-) -> tuple[dict[str, float], int]:
-    """Average points per item over ``reps`` sessions, and how many gave no answer.
+) -> tuple[dict[str, float], Counter[str]]:
+    """Average points per item over ``reps`` sessions, and why sessions gave no answer.
 
-    A session with no answer scores zero and is counted, so the caller can tell a
-    file that teaches less from an agent that wasn't answering.
+    A session with no answer scores zero and is counted by reason, so the caller can
+    tell a file that teaches less from an agent that wasn't answering.
     """
     jobs = [item for item in items for _ in range(reps)]
     with ThreadPoolExecutor(max_workers=workers) as pool:
         answers = list(pool.map(lambda item: answer(ask, project, item["q"]), jobs))
     totals: dict[str, float] = {}
-    for item, text in zip(jobs, answers, strict=True):
+    missing: Counter[str] = Counter()
+    for item, (text, reason) in zip(jobs, answers, strict=True):
+        if text is None:
+            missing[reason] += 1
         points = POINTS[grade(item, text)] if text is not None else 0.0
         totals[item["id"]] = totals.get(item["id"], 0.0) + points / reps
-    return totals, sum(text is None for text in answers)
+    return totals, missing
 
 
 def dropped(base: float, head: float, max_drop: float) -> bool:
@@ -325,16 +354,25 @@ def agents_md_eval(
             after, head_missing = score(ask, root / "head", items, reps, workers)
             old, new = sum(before.values()), sum(after.values())
             change = (new - old) / old if old else 0.0
+            base_n, head_n = base_missing.total(), head_missing.total()
             table.add_row(
                 label,
                 f"{old:.1f}",
                 f"{new:.1f}",
                 f"{change:+.1%}",
-                f"{base_missing} / {head_missing}",
+                f"{base_n} / {head_n}",
             )
-            if max(base_missing, head_missing) > sessions * MAX_UNANSWERED:
+            for file, reasons in (("base", base_missing), ("branch", head_missing)):
+                if reasons:
+                    why = "; ".join(
+                        f"{reason} ({n})" for reason, n in reasons.most_common(3)
+                    )
+                    console.print(
+                        f"[yellow]{label} gave no answer with the {file} file: {why}[/yellow]"
+                    )
+            if max(base_n, head_n) > sessions * MAX_UNANSWERED:
                 problems.append(
-                    f"{label}: too many sessions gave no answer ({base_missing} / {head_missing} of {sessions})"
+                    f"{label}: too many sessions gave no answer ({base_n} / {head_n} of {sessions})"
                     ", so the comparison isn't reliable."
                 )
             elif dropped(old, new, max_drop):
