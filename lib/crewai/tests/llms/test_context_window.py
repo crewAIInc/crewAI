@@ -277,6 +277,7 @@ def test_summary_chunking_uses_the_rendered_request_token_estimator() -> None:
     chunks = _chunk_messages(llm, messages, max_tokens=125)
 
     assert chunks == [[messages[0]], [messages[1]]]
+    assert len(llm.requests) == 3
     assert all(
         llm.get_input_tokens_count(_build_summary_prompt(chunk)) <= 125
         for chunk in chunks

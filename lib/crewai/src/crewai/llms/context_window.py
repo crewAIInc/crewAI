@@ -25,6 +25,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.message_utils import message_content_text
 
 
 if TYPE_CHECKING:
@@ -360,22 +361,6 @@ def _message(
     return {"role": role, "content": content.rstrip()}
 
 
-def _message_text(message: LLMMessage) -> str:
-    content = message.get("content")
-    if content is None:
-        return ""
-    if isinstance(content, list):
-        parts = [
-            part["text"]
-            for part in content
-            if isinstance(part, dict)
-            and part.get("type") == "text"
-            and isinstance(part.get("text"), str)
-        ]
-        return " ".join(parts) if parts else "[multimodal content]"
-    return str(content)
-
-
 def _conversation_text(messages: list[LLMMessage]) -> str:
     lines: list[str] = []
     for message in messages:
@@ -388,7 +373,7 @@ def _conversation_text(messages: list[LLMMessage]) -> str:
             prefix = f"[TOOL_RESULT ({message.get('name', 'unknown')})]:"
         else:
             prefix = "[USER]:"
-        body = _message_text(message)
+        body = message_content_text(message)
         if message.get("content") is None:
             names = [
                 call.get("function", {}).get("name", "unknown")
@@ -411,16 +396,12 @@ def _chunk_messages(
             continue
         for part in _split_message_to_fit(llm, message, max_tokens):
             candidate = [*current, part]
-            if current and _summary_request_tokens(llm, candidate) > max_tokens:
+            candidate_tokens = _summary_request_tokens(llm, candidate) if current else 0
+            if current and candidate_tokens > max_tokens:
                 chunks.append(current)
                 current = [part]
             else:
                 current = candidate
-
-            if _summary_request_tokens(llm, current) > max_tokens:
-                raise LLMContextLengthExceededError(
-                    "Summarization prompt overhead exceeds the available context window."
-                )
 
     if current:
         chunks.append(current)
@@ -434,7 +415,7 @@ def _split_message_to_fit(
     if _summary_request_tokens(llm, [message]) <= max_tokens:
         return [message]
 
-    text = _message_text(message)
+    text = message_content_text(message)
     if not text:
         return [message]
 
