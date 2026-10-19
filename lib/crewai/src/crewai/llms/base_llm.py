@@ -448,6 +448,28 @@ class BaseLLM(BaseModel, ABC):
         input_tokens = self.get_input_tokens_count(messages, tools, response_model)
         return input_tokens > self.get_context_window_size()
 
+    def summarize_messages(
+        self,
+        messages: list[LLMMessage],
+        callbacks: list[Any],
+        verbose: bool = True,
+    ) -> None:
+        """Compact a mutable conversation history to fit this model's context window.
+
+        Context compaction is an LLM concern because the model owns both the
+        context limit and input-token estimation.  The temporary local import
+        keeps this public entry point available while the implementation moves
+        from the agent execution utilities into ``BaseLLM``.
+
+        Args:
+            messages: Conversation history to compact in place.
+            callbacks: Callbacks for the internal summarization calls.
+            verbose: Whether to show summarization progress.
+        """
+        from crewai.utilities.agent_utils import summarize_messages
+
+        summarize_messages(messages, self, callbacks, verbose)
+
     @abstractmethod
     def call(
         self,

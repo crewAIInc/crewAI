@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional, Union
+from unittest.mock import patch
 
 import pytest
 from crewai import Agent, Crew, Process, Task
@@ -146,6 +147,18 @@ def test_base_llm_input_token_count_estimates_text_characters(caplog):
 
     assert custom_llm.get_input_tokens_count("12345") == 2
     assert "assuming one token per four characters" in caplog.text
+
+
+def test_base_llm_summarize_messages_delegates_to_current_compactor():
+    """The LLM API is the stable entry point while compaction is relocated."""
+    llm = CustomLLM(model="test-model")
+    messages = [{"role": "user", "content": "Long conversation"}]
+    callbacks: list[Any] = []
+
+    with patch("crewai.utilities.agent_utils.summarize_messages") as summarize:
+        llm.summarize_messages(messages, callbacks, verbose=False)
+
+    summarize.assert_called_once_with(messages, llm, callbacks, False)
 
 
 class JWTAuthLLM(BaseLLM):
