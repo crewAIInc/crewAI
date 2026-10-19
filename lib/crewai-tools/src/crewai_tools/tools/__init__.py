@@ -94,6 +94,7 @@ from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
 from crewai_tools.tools.invoke_crewai_automation_tool.invoke_crewai_automation_tool import (
     InvokeCrewAIAutomationTool,
 )
+from crewai_tools.tools.jev_decision_tool.jev_decision_tool import JevDecisionTool
 from crewai_tools.tools.jina_scrape_website_tool.jina_scrape_website_tool import (
     JinaScrapeWebsiteTool,
 )
@@ -268,6 +269,7 @@ __all__ = [
     "HyperbrowserLoadTool",
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
+    "JevDecisionTool",
     "JinaScrapeWebsiteTool",
     "LinkupSearchTool",
     "LlamaIndexTool",
