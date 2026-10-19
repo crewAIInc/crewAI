@@ -1835,6 +1835,9 @@ singlestore = [
     { name = "singlestoredb" },
     { name = "sqlalchemy" },
 ]
+smol = [
+    { name = "smolmachines" },
+]
 snowflake = [
     { name = "cryptography" },
     { name = "snowflake-connector-python" },
@@ -1910,6 +1913,7 @@ requires-dist = [
     { name = "selenium", marker = "extra == 'selenium'", specifier = ">=4.27.1" },
     { name = "serpapi", marker = "extra == 'serpapi'", specifier = ">=0.1.5" },
     { name = "singlestoredb", marker = "extra == 'singlestore'", specifier = ">=1.12.4" },
+    { name = "smolmachines", marker = "extra == 'smol'", specifier = ">=1.22.2,<2" },
     { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=4.7.3,<5" },
     { name = "snowflake-sqlalchemy", marker = "extra == 'snowflake'", specifier = ">=1.11.0" },
     { name = "spider-client", marker = "extra == 'spider-client'", specifier = ">=0.1.25" },
@@ -1923,7 +1927,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oracledb", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oracledb", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "smol", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -8887,6 +8891,16 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/1f/ea/49c993d6dfdd7338c9b1000a0f36817ed7ec84577ae2e52f890d1a4ff909/smmap-5.0.3.tar.gz", hash = "sha256:4d9debb8b99007ae47165abc08670bd74cb74b5227dda7f643eccc4e9eb5642c", size = 22506, upload-time = "2026-03-09T03:43:26.1Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/d4/59e74daffcb57a07668852eeeb6035af9f32cbfd7a1d2511f17d2fe6a738/smmap-5.0.3-py3-none-any.whl", hash = "sha256:c106e05d5a61449cf6ba9a1e650227ecfb141590d2a98412103ff35d89fc7b2f", size = 24390, upload-time = "2026-03-09T03:43:24.361Z" },
+]
+
+[[package]]
+name = "smolmachines"
+version = "1.22.2"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/d6/b50862dfa8118ba15ad01c43f4b9677165a128f2f75dfcdfe828e1df6a3a/smolmachines-1.22.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:0a1ed133663e54d9e8e12470d1de400ee5e022a499283e032d3353ed153294ab", size = 50899795, upload-time = "2026-10-02T17:55:01.866Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/21/468bacb86b7045bc32ffe4770b03c976f656ef2476c078067b197f195a70/smolmachines-1.22.2-cp39-abi3-manylinux_2_34_aarch64.whl", hash = "sha256:484529199752a71bf53a7b554ce26a0656f121c990c3efc3271458479fb81e0e", size = 62054058, upload-time = "2026-10-02T17:55:06.28Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/66/a81a18d62620388f359f08a87ba879532e7c2f406efd6820710c55c82d63/smolmachines-1.22.2-cp39-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:74b91b61101f2d470e4e1b837d269a6a47b5afe217d5be490354ca91bc004b02", size = 63715792, upload-time = "2026-10-02T17:55:10.379Z" },
 ]
 
 [[package]]

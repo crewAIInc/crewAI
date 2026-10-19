@@ -1,0 +1,52 @@
+---
+title: Smol Machines 샌드박스 도구
+description: 격리된 로컬 또는 클라우드 microVM에서 셸 명령, Python 코드, 파일 작업을 실행합니다.
+icon: box
+mode: "wide"
+---
+
+# Smol Machines 샌드박스 도구
+
+`SmolExecTool`, `SmolPythonTool`, `SmolFileTool`로 Agent에 격리된 컴퓨터를 제공할 수 있습니다. 기본적으로 로컬 microVM에서 실행하며, Smol Machines Cloud를 사용하려면 `target="cloud"`를 지정합니다. 세 도구가 같은 VM API를 사용하므로 로컬 개발과 호스팅 실행을 전환할 수 있습니다.
+
+## 설치
+
+```shell
+uv add "crewai-tools[smol]"
+```
+
+로컬 실행에는 `/dev/kvm`이 있는 Linux 또는 Apple Silicon Mac이 필요합니다. 클라우드 실행에는 worker에 `SMOL_CLOUD_TOKEN`이 필요합니다.
+
+## 기본 사용법
+
+```python
+from crewai import Agent
+from crewai_tools import SmolExecTool
+
+agent = Agent(
+    role="Developer",
+    goal="Implement and test a feature",
+    backstory="Build and verify changes in an isolated computer.",
+    tools=[SmolExecTool()],
+)
+```
+
+기본적으로 도구 호출마다 VM을 만들고 삭제합니다. 호출 간 상태를 유지하려면 `persistent=True`를 설정하고, 작업이 끝나면 VM을 닫습니다.
+
+```python
+from crewai_tools import SmolExecTool, SmolFileTool
+
+shell = SmolExecTool(target="cloud", persistent=True)
+try:
+    shell.run(command="echo hello > /workspace/message.txt")
+    files = SmolFileTool(target="cloud", machine_id=shell.active_machine_id)
+    print(files.run(action="read", path="/workspace/message.txt"))
+finally:
+    shell.close()
+```
+
+연결된 파일 도구는 `shell`이 소유한 VM을 삭제하지 않습니다. `SmolPythonTool`은 `code`와 선택적인 `argv`, `env`, `timeout`을 받습니다. 파일 도구는 `read`와 `write`를 지원하며, base64 데이터에는 `binary=True`를 사용합니다.
+
+패키지 설치처럼 네트워크가 필요한 작업을 위해 VM 네트워크는 기본적으로 활성화됩니다. 게스트의 외부 접속을 차단하려면 `network=False`를 설정하세요. 캐시된 레지스트리 이미지는 게스트 네트워크 없이도 부팅할 수 있습니다. 로컬 VM에서는 SmolVM 1.23.0부터 캐시되지 않은 이미지도 호스트에서 가져옵니다. Cloud 자격 증명이 있어도 기본 대상은 로컬입니다. 수명 주기 사용 예시는 도구 패키지 README를 참고하세요.
+
+이전 버전의 로컬 SmolVM에서 캐시되지 않은 레지스트리 이미지를 가져오려면 게스트 네트워크를 활성화하거나 `image`에 로컬 루트 파일 시스템 디렉터리 또는 `docker save` 아카이브를 지정하세요.
