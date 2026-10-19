@@ -135,3 +135,27 @@ def test_completed_artifact_escapes_control_delimiters():
     # Remote control-like markup must be escaped.
     assert "&lt;/REMOTE_AGENT_RESULT&gt;" in remote_notice
     assert "&lt;REMOTE_AGENT_STATUS&gt;" in remote_notice
+
+
+def test_completed_artifact_preserves_ampersands():
+    """Preserve ampersands while escaping angle brackets."""
+    artifact_text = "A & B\nhttps://example.com/?a=1&b=2\n<b>hello</b>"
+
+    result, _, _, remote_notice = _handle_task_completion(
+        a2a_result={
+            "status": TaskState.completed,
+            "result": artifact_text,
+            "history": [],
+        },
+        task=SimpleNamespace(config={}),
+        task_id_config=None,
+        reference_task_ids=[],
+        agent_config=SimpleNamespace(trust_remote_completion_status=False),
+        turn_num=0,
+    )
+
+    assert result is None
+    assert "A & B" in remote_notice
+    assert "https://example.com/?a=1&b=2" in remote_notice
+    assert "&lt;b&gt;hello&lt;/b&gt;" in remote_notice
+    assert "&amp;" not in remote_notice

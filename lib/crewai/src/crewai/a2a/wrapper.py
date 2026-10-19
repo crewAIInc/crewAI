@@ -10,7 +10,6 @@ from collections.abc import Callable, Coroutine, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
 from functools import wraps
-from html import escape
 import json
 from types import MethodType
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -1145,7 +1144,7 @@ def _handle_task_completion(
 
         if result_text:
             # Escape untrusted remote content to prevent A2A delimiter spoofing.
-            safe_result = escape(result_text, quote=False)
+            safe_result = result_text.replace("<", "&lt;").replace(">", "&gt;")
             remote_notice += (
                 f"\n<REMOTE_AGENT_RESULT>\n{safe_result}\n</REMOTE_AGENT_RESULT>\n"
             )
