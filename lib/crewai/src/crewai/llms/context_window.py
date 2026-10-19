@@ -457,8 +457,9 @@ def _chunk_messages(
 def _split_message_to_fit(
     llm: Any, message: LLMMessage, max_tokens: int
 ) -> list[LLMMessage]:
-    """Split an oversized message using the LLM's request-token estimator."""
-    if _summary_request_tokens(llm, [message]) <= max_tokens:
+    """Split an oversized message using a proportional token estimate."""
+    message_tokens = _summary_request_tokens(llm, [message])
+    if message_tokens <= max_tokens:
         return [message]
 
     text = message_content_text(message)
@@ -467,26 +468,33 @@ def _split_message_to_fit(
             "Summarization message has no text that can be split to fit the context window."
         )
 
+    base_tokens = _summary_request_tokens(llm, [])
+    available_tokens = max_tokens - base_tokens
+    content_tokens = message_tokens - base_tokens
+    if available_tokens <= 0 or content_tokens <= 0:
+        raise LLMContextLengthExceededError(
+            "Summarization prompt leaves no room for message content."
+        )
+
+    part_length = max(1, int(len(text) * available_tokens / content_tokens))
     parts: list[LLMMessage] = []
     remainder = text
     while remainder:
-        low, high, best = 1, len(remainder), 0
-        while low <= high:
-            length = (low + high) // 2
-            candidate = cast("LLMMessage", {**message, "content": remainder[:length]})
-            if _summary_request_tokens(llm, [candidate]) <= max_tokens:
-                best = length
-                low = length + 1
-            else:
-                high = length - 1
-
-        if best == 0:
-            raise LLMContextLengthExceededError(
-                "Summarization message could not be split to fit the context window."
+        length = min(part_length, len(remainder))
+        candidate = cast("LLMMessage", {**message, "content": remainder[:length]})
+        while _summary_request_tokens(llm, [candidate]) > max_tokens:
+            if length == 1:
+                raise LLMContextLengthExceededError(
+                    "Summarization message could not be split to fit the context window."
+                )
+            estimated_content_tokens = max(
+                1, _summary_request_tokens(llm, [candidate]) - base_tokens
             )
+            length = max(1, int(length * available_tokens / estimated_content_tokens))
+            candidate = cast("LLMMessage", {**message, "content": remainder[:length]})
 
-        parts.append(cast("LLMMessage", {**message, "content": remainder[:best]}))
-        remainder = remainder[best:]
+        parts.append(candidate)
+        remainder = remainder[length:]
 
     return parts
 
