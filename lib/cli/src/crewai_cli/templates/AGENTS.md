@@ -38,13 +38,13 @@ A change to an agent, task, tool, model, prompt or flow step is done when a trac
 
 1. `crewai run` with `CREWAI_TRACING_ENABLED=true` in `.env`. It prints a trace link: the timeline of every agent decision, tool call and LLM call. In an interactive terminal the run screen also has a **View Traces** button (`t`).
 2. `crewai eval` grades that run: a goal gate, a 1–5 grade per area and a report link. Without a terminal it also prints a markdown brief of what failed and the change to make. It exits 0 only when the goal gate passed.
-3. Make the brief's changes, then `crewai run` and `crewai eval` again. If a few rounds don't move the grades, stop and report the latest brief.
+3. Make the brief's changes, then `crewai run` and `crewai eval` again. If a few rounds don't move the grades, change structure first (move decided writes and arithmetic into code, turn criteria the run can't prove into disqualifiers); suggest a stronger model to the user rather than switching it yourself, then stop and report the latest brief.
 
-- The first `crewai eval` writes `eval.jsonc`. Rewrite its criteria to say what good means for this project. A flow's goal gate is judged against every named task's `expected_output`, so add `criteria` about the flow's result and `assertions` (`contains`, `regex`) proving promised side effects. Never loosen criteria to make a run pass.
+- The first `crewai eval` writes `eval.jsonc`. Rewrite its criteria to say what good means for this project. A flow's goal gate is judged against every named task's `expected_output`, so add `criteria` about the flow's result and `assertions` (`contains`, `regex`) proving promised side effects. Never loosen criteria to make a run pass. A criterion the evidence can't settle works as a disqualifier that applies only when a quoted fact shows it.
 - When the judge calls a fact unsupported, check the source (the trace's tool output) before changing anything.
 - Read the trace before editing when the cause is unclear, and to confirm agents called the tools they were given.
 - Your own measurements are welcome on top. Report the `crewai eval` result next to them.
-- No account is needed for a trace: logged out, a run started in a terminal gets a link that lasts 24 hours (anyone with an anonymous link can read it, so check it carries no secrets before sharing); logged in, traces persist on AMP.
+- No account is needed for a trace: logged out, a run started in a terminal gets a link that lasts 24 hours (anyone with an anonymous link can read it, so check it carries no secrets before sharing); logged in, traces persist on AMP and only the organization's members can open them.
 - A run started without a terminal, like yours, is traced only when the user is logged in. Logged out, log in (see "At the start of a session"), or ask the user to run `crewai run` once in their own terminal and accept the trace prompt; `crewai eval` then works without an account.
 - `crewai eval --models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"` compares models on the deployed project. It needs a login and a deployment and can take an hour. Run it only when the user asks to compare models, never as a fix for failing evals.
 <!-- crewai-eval:end -->
@@ -55,7 +55,7 @@ When the work has to run on a schedule, from a trigger, behind an API or for tea
 
 1. **Ask before the first `crewai deploy create`.** It creates a hosted service in the active organization and uploads `.env` as its environment variables. After that, ship changes with `crewai deploy push` and tell the user.
 2. **Before deploying:** it runs locally; a flow's last step returns the result (the API returns what `kickoff()` returns, so a flow that only writes a file returns nothing); `uv.lock` is committed; `crewai deploy validate` passes.
-3. **Deploy:** `crewai deploy create -y` once approved (without `-y` it waits on prompts). With no git `origin` it uploads a ZIP. With an `origin`, AMP builds from GitHub: use an HTTPS URL, and AMP's GitHub integration needs access to the repo.
+3. **Deploy:** `crewai deploy create -y` once approved (without `-y` it waits on prompts). With no git `origin` it uploads a ZIP. With an `origin`, AMP builds from GitHub: use an HTTPS URL, and AMP's GitHub integration needs access to the repo. There's no flag to upload a ZIP when an `origin` exists; deploy from a copy without one.
 4. **Prove it works:** `crewai deploy status` until it's online, and `crewai deploy logs` when it isn't. Then run it through its API: `POST /kickoff {"inputs": {...}}` returns a `kickoff_id`; poll `GET /status/{kickoff_id}` until `SUCCESS` or `FAILED`. The bearer token is on the deployment's Status tab in AMP and belongs to that deployment, so keep it out of `.env` and the code. Read the result, and read any side effects back. To prove the deployment runs your current code, compare `GET /inspect`'s flow definition with `YourFlow.flow_definition()` locally.
 5. **Schedules** are set in AMP on the deployment page's **Scheduling** tab; there's no CLI for them yet. Give the user the steps with the time and timezone they asked for.
 6. Deploy commands can exit 0 after a failed request; confirm with `crewai deploy status` or `crewai deploy list`. Remove a deployment with `crewai deploy remove -u <uuid>`.
@@ -68,7 +68,7 @@ When the work has to run on a schedule, from a trigger, behind an API or for tea
 - Paste tokens into `.env`.
 - Approve a deployment, writes to real systems, and publishing to the organization.
 
-Never turn off tracing or telemetry to silence errors, speed things up or tidy the setup; that's the user's decision. Export errors usually mean the network blocks the host, so check DNS and proxy settings. A sandboxed coding agent needs `app.crewai.com`, `login.crewai.com` (login), `oss-wharf.crewai.com` (traces), `crewai-production.s3.us-west-2.amazonaws.com` (skill downloads) and `docs-platform.crewai.com` reachable.
+Never turn off tracing or telemetry to silence errors, speed things up or tidy the setup. Export errors usually mean the network blocks the host: check DNS and proxy settings, and tell the user that before they decide to turn anything off; it's their decision. A sandboxed coding agent needs `app.crewai.com`, `login.crewai.com` (login), `oss-wharf.crewai.com` (traces), `crewai-production.s3.us-west-2.amazonaws.com` (skill downloads) and `docs-platform.crewai.com` reachable.
 
 ### Definition of done
 
@@ -95,22 +95,22 @@ Detailed guides: the CrewAI skill pack for coding agents (`npx skills add crewai
 ### Core API
 
 - Classic crew: a `@CrewBase` class sets `agents_config = "config/agents.yaml"` and `tasks_config = "config/tasks.yaml"`; `@agent` and `@task` methods are named like the YAML keys and build `Agent(config=self.agents_config["name"])  # type: ignore[index]`; `@crew` returns `Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)`.
-- Tasks need a `description`, an `expected_output` and an `agent`; `context=[other_task]` feeds earlier outputs in, `output_file` writes the result, and `{var}` placeholders are filled from `kickoff(inputs={...})`.
-- `crew.kickoff(inputs={...})` returns a `CrewOutput` (`.raw`, `.pydantic`, `.json_dict`, `.tasks_output`, `.token_usage`). Limits: `max_iter`, `max_execution_time`, `max_rpm`.
+- Tasks need a `description`, an `expected_output` and an `agent`; `context=[other_task]` feeds earlier outputs in, `output_file` writes the result (creating folders: `create_directory=True` by default), `human_input=True` has a person review the result before the crew moves on, and `{var}` placeholders are filled from `kickoff(inputs={...})`.
+- `crew.kickoff(inputs={...})` returns a `CrewOutput` (`.raw`, `.pydantic`, `.json_dict`, `.tasks_output`, `.token_usage`). Agent limits: `max_iter`, `max_execution_time`, `max_rpm`; `respect_context_window=True` (the default) summarizes history when it nears the model's context limit; `inject_date=True` puts today's date in the agent's prompt.
 - Tools: subclass `BaseTool` (`name`, `description`, `args_schema`, `_run`) or decorate a function with `@tool("Name")` (`from crewai.tools import tool`; the docstring is the description).
 - Flows: subclass `Flow[MyState]` (a Pydantic model; read and write `self.state.x`); `from crewai.flow import Flow, start, listen, router`. `@start()` marks entry points; `@listen(step)` runs after `step` with its return value; `@router(step)` returns a label (`-> Literal["a", "b"]` or `emit=[...]`) that `@listen("a")` handlers take, and a handler must not be named after its label. In a step, run a crew with `MyCrew().crew().kickoff(inputs={...})`.
-- Classic crews and flows start from `src/<pkg>/main.py`: a crew exposes `run()`, a flow `kickoff()`. Python 3.10 to 3.13.
+- Classic crews and flows start from `src/<pkg>/main.py`, which `crewai run` and AMP look for: a crew exposes `run()`, a flow `kickoff()`. Python 3.10 to 3.13.
 
 ### Facts models get wrong
 
-- LLMs: `Agent(llm="openai/gpt-4o")` or `crewai.LLM(model=...)`, never `ChatOpenAI`.
+- LLMs: `Agent(llm="openai/gpt-4o")` or `crewai.LLM(model=...)`, never `ChatOpenAI`. Providers outside the native set (OpenAI, Anthropic, Azure, Gemini, Bedrock, OpenRouter, DeepSeek, Ollama and more), such as `groq/...`, need LiteLLM: `uv add 'crewai[litellm]'`.
 - Flow inputs are state fields with defaults; `kickoff(inputs={...})` and trigger payloads (the `@start()` method's `crewai_trigger_payload` parameter) override them. Never overwrite inputs in `@start()`. `crewai run` takes no `--inputs` for a Python flow.
 - A flow's last step returns its result; a deployed flow that returns nothing has an empty API result.
-- Memory across runs in a flow: `self.remember("text")` and `self.recall("query")` (matches have `.record.content`); AMP shows it on the deployment's Memory tab. No `Memory()` or `Crew(memory=True)` inside a flow; share it with `Crew(memory=self.memory.slice(scopes=[...], read_only=True))`. `@persist` (`from crewai.flow import persist`) saves state per run: continue one with `kickoff(inputs={"id": ...})`, or seed a new run from it with `kickoff(restore_from_state_id=...)`.
-- `tool_failure_policy="raise"` on an agent, task or crew turns a failed tool call into an error.
+- Memory across runs in a flow: `self.remember("text")` and `self.recall("query")` (matches have `.record.content`); AMP shows it on the deployment's Memory tab. No `Memory()` or `Crew(memory=True)` inside a flow; share it with `Crew(memory=self.memory.slice(scopes=[...], read_only=True))`. Memory is rooted at the flow's class name, so renaming the class starts a new root. `@persist` (`from crewai.flow import persist`) saves state per run: continue one with `kickoff(inputs={"id": ...})`, or seed a new run from it with `kickoff(restore_from_state_id=...)`.
+- `tool_failure_policy="raise"` on an agent, task or crew turns a failed tool call into an error. A write can still fail silently, so have the task return the IDs it wrote and raise in the flow when one is missing.
 - One agent and one prompt don't need a crew: `Agent(...).kickoff("...", response_format=MyModel)` returns `.raw` and `.pydantic` (`kickoff_async` in async code, such as a flow step).
 - Deprecated agent options, don't add them: `reasoning` (use `planning_config`), `multimodal` (pass files natively), `allow_code_execution` (use a sandbox tool), `function_calling_llm` (set `llm`). Tool-result caching is opt-in: `Crew(cache=True)`.
-- Integrations: selectors are `app[/action][@connection]` (`gmail` loads every action, `gmail/send_email` one, which gives better tool choices). Connect the app on AMP's Integrations page; `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` in `.env`; `apps: [slack/send_message]` in YAML or `CrewaiPlatformTools(apps=[...])`. Supported apps are in the installed `crewai_core/platform_apps.py` (`PLATFORM_APPS`); print `[t.name for t in CrewaiPlatformTools(apps=["slack"])]` to see the live actions and copy selectors from those; a selector must load at least one tool.
+- Integrations: selectors are `app[/action][@connection]` (`gmail` loads every action, `gmail/send_email` one, which gives better tool choices). Connect the app on AMP's Integrations page; `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` in `.env`; `apps: [slack/send_message]` in YAML or `CrewaiPlatformTools(apps=[...])`. Supported apps are in the installed `crewai_core/platform_apps.py` (`PLATFORM_APPS`); print `[t.name for t in CrewaiPlatformTools(apps=["slack"])]` to see the live actions and copy selectors from those; a selector must load at least one tool (CrewAI warns only when none of an agent's selectors load anything, so check each). Before the first write to a real system, run a read-only action and agree a test target (a test channel or record) with the user.
 - AMP skills: `crewai skill list` shows installed ones only. List the organization's with `uv run python -c "from crewai_cli.skills.main import SkillCommand; [print(s['handle'], s['latest_version'], '-', s['description'][:90]) for s in SkillCommand().plus_api_client.list_skills().json()['data']]"`. Attach under the agent's `skills:` as `"@<org-uuid>/<handle>@<version>"`; load into every prompt with `skills=load_skills([...])` (`from crewai.skills import load_skills`). Skills resolve from `./skills/<handle>/`, then `~/.crewai/skills/`, then a download.
 - `.env`: the LLM key, `MODEL=` for the default model, `CREWAI_TRACING_ENABLED=true`, and `CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` for integrations. Never a deployment's URL or token: `.env` is uploaded on deploy. List every new variable in `.env.example`.
 
@@ -118,7 +118,7 @@ Detailed guides: the CrewAI skill pack for coding agents (`npx skills add crewai
 
 Not used by default; reach for these when the task calls for them. Each line ends with its docs path under https://docs.crewai.com/en/.
 
-- Guardrails: `Task(guardrail=fn_or_"rule")` or `guardrails=[...]`; `fn(output)` returns `(ok, value_or_feedback)`. `concepts/tasks#task-guardrails`
+- Guardrails: `Task(guardrail=fn_or_"rule")` or `guardrails=[...]`; `fn(output)` gets the `TaskOutput` and returns `(True, value)` to accept or `(False, feedback)` to make the agent retry. `concepts/tasks#task-guardrails`
 - Structured task output: `Task(output_pydantic=Model)` or `output_json=Model`; read `result.pydantic` or `.json_dict`. `concepts/tasks`
 - Knowledge: `knowledge_sources=[StringKnowledgeSource(content=...), PDFKnowledgeSource(file_paths=[...])]` on an agent or crew. `concepts/knowledge`
 - Hierarchical crews: `Crew(process=Process.hierarchical, manager_llm=...)` or `manager_agent=`; delegation is `Agent(allow_delegation=True)`. `learn/hierarchical-process`

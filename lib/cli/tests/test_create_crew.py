@@ -1297,7 +1297,8 @@ def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
         if line.startswith("Never turn off tracing or telemetry")
     ]
     assert "to silence errors, speed things up or tidy the setup" in keep_on
-    assert "that's the user's decision" in keep_on
+    assert "check DNS and proxy settings" in keep_on
+    assert "it's their decision" in keep_on
     assert "free" not in agents_md.lower()
     assert "pricing" not in agents_md.lower()
 
@@ -1476,6 +1477,12 @@ AGENTS_MD_REFERENCES = {
     "flow decorators": r"@start\(\)",
     "flow state": r"Flow\[",
     "flow router": r"@router",
+    # Facts V6 lost to today's file until they were put back.
+    "context window": r"respect_context_window",
+    "current date": r"inject_date",
+    "human review of a task": r"human_input",
+    "LiteLLM for other providers": r"crewai\[litellm\]",
+    "test targets before writes": r"test (channel|target)",
     "workflow: trace and evaluate every change": r"traced run passes `crewai eval`",
     "workflow: ask before deploying": r"Ask before the first `crewai deploy create`",
     "flow memory": r"self\.remember",
@@ -1504,7 +1511,7 @@ AGENTS_MD_REFERENCES = {
 }
 
 # Always-loaded tokens (characters / 4). Raise it on purpose, with the eval's results.
-AGENTS_MD_TOKEN_BUDGET = 4_500
+AGENTS_MD_TOKEN_BUDGET = 4_800
 
 DOCS = Path(__file__).resolve().parents[3] / "docs"
 
