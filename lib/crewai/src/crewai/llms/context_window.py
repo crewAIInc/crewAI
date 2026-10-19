@@ -43,7 +43,6 @@ MESSAGE_SPLIT_BUDGET_RATIO: Final[float] = 0.75
 _COMPACTION_MAX_RETRIES: Final[int] = 3
 
 _CATALOG_FILENAME: Final[str] = "model_prices_and_context_window.json"
-_MAX_SUMMARY_LAYERS: Final[int] = 1
 _OPENAI_PROVIDERS: Final[frozenset[str]] = frozenset({"openai"})
 _AZURE_PROVIDERS: Final[frozenset[str]] = frozenset({"azure", "azure_ai"})
 _ANTHROPIC_PROVIDERS: Final[frozenset[str]] = frozenset({"anthropic"})
@@ -284,9 +283,6 @@ def summarize_messages(
     max_tokens = llm.get_context_window_size()
     chunks = _chunk_messages(llm, work_messages, max_tokens)
     summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
-    summaries = _compact_summaries(
-        llm, system_messages, summaries, callbacks, verbose, max_tokens
-    )
     summary_message = format_message_for_llm(
         I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
     )
@@ -375,36 +371,6 @@ def _summarize_chunks(
     context = contextvars.copy_context()
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
         return pool.submit(context.run, asyncio.run, coroutine).result()
-
-
-def _compact_summaries(
-    llm: Any,
-    system_messages: list[LLMMessage],
-    summaries: list[str],
-    callbacks: list[Any],
-    verbose: bool,
-    max_tokens: int,
-) -> list[str]:
-    """Condense summaries once more when the replacement history does not fit."""
-    for layer in range(_MAX_SUMMARY_LAYERS + 1):
-        replacement = format_message_for_llm(
-            I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
-        )
-        if (
-            int(llm.get_input_tokens_count([*system_messages, replacement]))
-            <= max_tokens
-        ):
-            return summaries
-        if layer == _MAX_SUMMARY_LAYERS:
-            break
-
-        summary_messages = [format_message_for_llm(summary) for summary in summaries]
-        chunks = _chunk_messages(llm, summary_messages, max_tokens)
-        summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
-
-    raise LLMContextLengthExceededError(
-        "Summaries could not be compacted to fit the context window."
-    )
 
 
 def _chunk_messages(

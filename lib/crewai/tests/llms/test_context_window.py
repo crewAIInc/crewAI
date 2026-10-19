@@ -453,29 +453,3 @@ def test_summary_chunking_rejects_unsplittable_oversized_content() -> None:
             ],
             max_tokens=10,
         )
-
-
-def test_summary_compacts_an_oversized_merged_summary() -> None:
-    class LayeredSummaryLLM:
-        def __init__(self) -> None:
-            self.calls = 0
-
-        def get_context_window_size(self) -> int:
-            return 10
-
-        def get_input_tokens_count(self, messages) -> int:
-            if len(messages) == 1:
-                return 100 if "long" in messages[0]["content"] else 1
-            return 1
-
-        async def acall(self, messages, callbacks):
-            self.calls += 1
-            return "<summary>long summary</summary>" if self.calls == 1 else "<summary>short</summary>"
-
-    llm = LayeredSummaryLLM()
-    messages = [{"role": "user", "content": "Question"}]
-
-    summarize_messages(llm, messages, [], verbose=False)
-
-    assert llm.calls == 2
-    assert "short" in messages[0]["content"]
