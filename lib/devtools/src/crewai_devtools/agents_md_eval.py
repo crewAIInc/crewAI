@@ -174,9 +174,10 @@ SECRET: Final = re.compile(r"sk-[A-Za-z0-9_-]+")
 def session_answer(proc: subprocess.CompletedProcess[str], text: str) -> str:
     """The session's answer, or NoAnswer naming its exit code and last error line."""
     if proc.returncode != 0:
-        lines = [line for line in proc.stderr.splitlines() if line.strip()] or [
-            "no error output"
-        ]
+        # Claude Code prints some failures ("Not logged in") on stdout, not stderr.
+        lines = [
+            line for line in (proc.stderr or proc.stdout).splitlines() if line.strip()
+        ] or ["no error output"]
         raise NoAnswer(
             SECRET.sub("sk-***", f"exit {proc.returncode}: {lines[-1].strip()[:160]}")
         )

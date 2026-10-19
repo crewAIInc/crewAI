@@ -278,6 +278,12 @@ def test_codex_runs_in_its_own_existing_home_without_api_keys(tmp_path, monkeypa
             "exit 1: API Error: 529 overloaded",
         ),
         (2, "", "", "exit 2: no error output"),
+        (
+            1,
+            "Not logged in · Please run /login\n",
+            "",
+            "exit 1: Not logged in · Please run /login",
+        ),
         (0, "  ", "", "empty answer"),
         (1, "", "Invalid API key sk-ant-abc123XYZ\n", "exit 1: Invalid API key sk-***"),
     ],
