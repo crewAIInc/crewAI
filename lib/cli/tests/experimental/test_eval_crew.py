@@ -37,6 +37,24 @@ def _tracing_setting_put_back(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def consent_screen(monkeypatch):
+    """At a terminal, `crewai eval` asks on crewAI's trace consent screen
+    before it first turns tracing on; the person here says yes unless a test
+    says otherwise. Each question is recorded with how it was asked."""
+    asked: list[dict] = []
+    answer = {"yes": True}
+
+    def prompt(timeout_seconds=20, **kwargs):
+        asked.append(kwargs)
+        return answer["yes"]
+
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils.prompt_user_for_trace_viewing", prompt
+    )
+    return SimpleNamespace(asked=asked, answer=answer)
+
+
+@pytest.fixture(autouse=True)
 def _no_crew_runs_unless_a_test_says_so(monkeypatch):
     """`crewai eval` runs the crew when there is nothing current to grade; a
     test that gets there without meaning to would start `uv run`."""
@@ -3034,13 +3052,15 @@ def test_run_again_runs_the_crew_whatever_the_record_says(project, monkeypatch, 
     "opted_in", ["nobody", "the project's .env", "a consent given once"]
 )
 def test_tracing_is_turned_on_and_said_once_only_when_nobody_had(
-    project, monkeypatch, capsys, opted_in
+    project, monkeypatch, capsys, consent_screen, opted_in
 ):
-    """The first evaluation that infers the yes turns tracing on for the
-    project and says so; from then on the project traces, and nothing more is
-    said. A project or a person who turned it on already hears nothing new."""
+    """With nobody at the terminal (a coding agent), the first evaluation
+    infers the yes, turns tracing on for the project and says so; from then on
+    the project traces, and nothing more is said. A project or a person who
+    turned it on already hears nothing new."""
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
     if opted_in == "the project's .env":
         (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
     if opted_in == "a consent given once":
@@ -3066,8 +3086,57 @@ def test_tracing_is_turned_on_and_said_once_only_when_nobody_had(
     assert ("Tracing is now on for this project" in first) is turned_on
     assert "Tracing is now on for this project" not in second
     assert told == [turned_on, False]
+    assert consent_screen.asked == []  # nobody there to ask
     if opted_in != "a consent given once":
         assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
+
+
+@pytest.mark.parametrize("answer", ["yes", "no", "already on"])
+def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
+    project, monkeypatch, capsys, usage, consent_screen, answer
+):
+    """A person at the terminal is asked first, on the screen crewAI shows to
+    share a run's trace; a yes turns tracing on for the project and runs the
+    crew, a no (or no answer before it times out) runs nothing. A project that
+    traces already is not asked."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    if answer == "already on":
+        (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    consent_screen.answer["yes"] = answer != "no"
+    ran: list[tuple[str, object]] = []
+
+    def fake_run_crew() -> None:
+        from crewai_core.eval_handshake import awaited_evaluation
+
+        said = awaited_evaluation() or {}
+        ran.append((os.environ.get("CREWAI_TRACING_ENABLED", ""), said.get("tracing_turned_on")))
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    amp = install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    if answer == "no":
+        with pytest.raises(SystemExit) as exited:
+            eval_module.eval_crew()
+        assert exited.value.code == 0
+    else:
+        eval_module.eval_crew()
+    out = " ".join(capsys.readouterr().out.split())
+
+    assert consent_screen.asked == ([] if answer == "already on" else [{"sharing": True}])
+    assert "Tracing is now on" not in out  # nothing inferred: they were asked, or had said
+    if answer == "no":
+        assert ran == [] and amp.calls == []
+        assert not (directory / ".env").exists()
+        assert "Nothing was run: evaluating a run needs its trace, and no trace was shared." in out
+        assert usage == ["cli_usage:eval_stopped:declined"]
+    else:
+        assert ran == [("true", False)]
+        assert "CREWAI_TRACING_ENABLED=true" in (directory / ".env").read_text()
+        assert ("Tracing is on for this project" in out) is (answer == "yes")
+        assert usage[0] == "cli_usage:eval_ran_crew:no_traced_run"
 
 
 # ── a project that turned tracing off is asked, never overruled ─────────────

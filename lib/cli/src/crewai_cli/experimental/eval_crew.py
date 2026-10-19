@@ -189,6 +189,10 @@ TRACING_OFF_UNATTENDED = (
     "on, then run `crewai eval` again."
 )
 TRACING_STAYS_OFF = "Nothing was run: tracing stays off for this project."
+TRACING_IS_ON = "Tracing is on for this project — its runs are traced to CrewAI AMP."
+NOT_SHARED = (
+    "Nothing was run: evaluating a run needs its trace, and no trace was shared."
+)
 UNTRUSTED_AMP = (
     "The crew was not run: its trace would go to {url}, an AMP this machine does not "
     "send its CrewAI login to, and with tracing on this project's crewai would send the "
@@ -887,6 +891,24 @@ def _remembered_project_state(execution_id: Any) -> dict[str, list[int]] | None:
     return None
 
 
+def _at_a_terminal() -> bool:
+    return not is_dmn_mode_enabled() and sys.stdin.isatty()
+
+
+def _ask_before_the_first_enable() -> None:
+    """Nobody turned tracing on yet, and a person is here: ask on crewAI's
+    trace consent screen before turning it on. A no, or no answer before it
+    times out, runs nothing."""
+    from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
+
+    if not prompt_user_for_trace_viewing(sharing=True):
+        record_stop("declined")
+        console.print(NOT_SHARED, style="yellow")
+        raise SystemExit(0)
+    turn_tracing_on()
+    console.print(TRACING_IS_ON, style="green")
+
+
 def _ask_to_turn_tracing_on() -> None:
     """The project turned tracing off: turn it on only on a yes.
 
@@ -900,10 +922,7 @@ def _ask_to_turn_tracing_on() -> None:
         console.print(TRACING_STAYS_OFF, style="yellow")
         raise SystemExit(0)
     turn_tracing_on()
-    console.print(
-        "Tracing is on for this project — its runs are traced to CrewAI AMP.",
-        style="green",
-    )
+    console.print(TRACING_IS_ON, style="green")
 
 
 def _run_the_crew_to_evaluate(
@@ -943,12 +962,18 @@ def _run_the_crew_to_evaluate(
         _fail(UNTRUSTED_AMP.format(url=PlusAPI().base_url.rstrip("/")))
     if tracing_turned_off():
         _ask_to_turn_tracing_on()
-    # Nobody turned tracing on: the yes is inferred from this command, and
-    # tracing is turned on for the project — said once, plainly, here and in
-    # the run app. From then on the project traces, and nothing more is said.
-    turned_on_now = not leaves and not tracing_already_on()
-    if turned_on_now:
-        turn_tracing_on()
+    # Nobody turned tracing on. At a terminal the person is asked first, on
+    # crewAI's own consent screen; with nobody there (a coding agent, a
+    # script) the yes is inferred from this command and tracing is turned on
+    # for the project — said once, plainly, here and in the run app. From
+    # then on the project traces, and nothing more is asked or said.
+    turned_on_now = False
+    if not leaves and not tracing_already_on():
+        if _at_a_terminal():
+            _ask_before_the_first_enable()
+        else:
+            turn_tracing_on()
+            turned_on_now = True
     _count_usage(f"cli_usage:eval_ran_crew:{why}")
     said = (
         f"{RUNNING_THE_CREW[why]} {TRACING_NOW_ON}"

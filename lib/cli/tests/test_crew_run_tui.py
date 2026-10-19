@@ -399,10 +399,12 @@ def test_an_evaluation_that_stopped_says_so_where_it_was_running() -> None:
 def test_evaluate_on_a_run_that_was_not_traced_runs_it_again_traced(monkeypatch, why) -> None:
     """A run with no session of its own, or whose trace never reached AMP, has
     nothing to grade — and a record naming a DIFFERENT run is not evidence that
-    this one was traced. Nothing is asked: the app closes and the run happens
-    again, traced, and is evaluated (`run_crew._chain_traced_rerun`)."""
-    # tracing not turned off (the suite's `.env.test` turns it off)
+    this one was traced. Tracing is on for the project, so nothing is asked:
+    the app closes and the run happens again, traced, and is evaluated
+    (`run_crew._chain_traced_rerun`)."""
+    # tracing not turned off (the suite's `.env.test` turns it off), and on
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
     app = CrewRunApp()
     app._status = "completed"
     app._crew_result = object()
@@ -2516,14 +2518,28 @@ def stops(monkeypatch) -> list[str]:
 
 
 @pytest.mark.parametrize("answer", [True, False])
-def test_evaluate_on_an_untraced_run_of_a_project_that_turned_tracing_off_asks_first(
-    monkeypatch, tmp_path, stops, answer
+@pytest.mark.parametrize(
+    ("tracing", "asked_on"),
+    [
+        ("turned off", crew_run_tui.TurnTracingOnScreen),
+        ("never turned on", crew_run_tui.TraceConsentScreen),
+    ],
+)
+def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
+    monkeypatch, tmp_path, stops, answer, tracing, asked_on
 ) -> None:
-    """The project said no to tracing: only a yes turns it on (in its .env) and
-    runs the crew again; a no leaves everything as it was."""
+    """The project said no to tracing, or nobody ever turned it on: only a yes
+    turns it on (in its .env) and runs the crew again; a no leaves everything
+    as it was. A project that never turned it on is asked on the screen a
+    run's trace is shared from."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
+    if tracing == "turned off":
+        (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    monkeypatch.setattr(
+        "crewai_core.user_data.is_tracing_enabled",
+        lambda: os.environ.get("CREWAI_TRACING_ENABLED") == "true",
+    )
     app = CrewRunApp()
     app._status = "completed"
     app._crew_result = object()
@@ -2539,15 +2555,15 @@ def test_evaluate_on_an_untraced_run_of_a_project_that_turned_tracing_off_asks_f
     app.action_evaluate_crew()
 
     screen, answered = pushed[0]
-    assert isinstance(screen, crew_run_tui.TurnTracingOnScreen) and exits == []
+    assert type(screen) is asked_on and exits == []
     answered(answer)
-    env = (tmp_path / ".env").read_text()
+    env = (tmp_path / ".env").read_text() if (tmp_path / ".env").exists() else ""
     if answer:
         assert "CREWAI_TRACING_ENABLED=true" in env
         assert app._want_traced_rerun is True and exits == [app._crew_result]
         assert stops == []
     else:
-        assert "CREWAI_TRACING_ENABLED=false" in env
+        assert env == ("CREWAI_TRACING_ENABLED=false\n" if tracing == "turned off" else "")
         assert app._want_traced_rerun is False and exits == []
         assert stops == ["cli_usage:eval_stopped:declined"]
 

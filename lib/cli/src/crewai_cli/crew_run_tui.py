@@ -1453,9 +1453,13 @@ FooterKey .footer-key--key {
         traced = self._traced_execution_id()
         if traced is None:
             # Nothing of this run reached AMP, so there is nothing to grade: the
-            # run happens again, traced, and is evaluated. A project that turned
-            # tracing off is asked first; its no runs nothing.
-            from crewai_cli.experimental.eval_crew import tracing_turned_off
+            # run happens again, traced, and is evaluated — once tracing is on.
+            # A project that turned it off, or never turned it on, is asked
+            # first; a no runs nothing.
+            from crewai_cli.experimental.eval_crew import (
+                tracing_already_on,
+                tracing_turned_off,
+            )
 
             if self._tracing_off_in_code():
                 # Running it again could not make a trace: nothing to pay for.
@@ -1467,6 +1471,11 @@ FooterKey .footer-key--key {
                 return
             if tracing_turned_off():
                 self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
+                return
+            if not tracing_already_on():
+                # Never turned on: asked first, on the same consent screen a
+                # run's trace is shared from.
+                self.push_screen(TraceConsentScreen(), self._tracing_on_answered)
                 return
             self._run_again_traced()
             return
