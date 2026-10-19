@@ -587,9 +587,7 @@ def _summarize_context_before_llm_call(
             )
         )
     try:
-        summarize_messages(
-            messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
-        )
+        llm.summarize_messages(messages, callbacks, verbose)
     except Exception as error:
         crewai_event_bus.emit(
             llm,
@@ -965,9 +963,7 @@ def handle_context_length(
                 content="Context length exceeded. Summarizing content to fit the model context window. Might take a while...",
                 color="yellow",
             )
-        summarize_messages(
-            messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
-        )
+        llm.summarize_messages(messages, callbacks, verbose)
     else:
         if verbose:
             printer.print(
@@ -1014,16 +1010,6 @@ def message_content_text(msg: LLMMessage) -> str:
     if isinstance(content, list):
         return _content_parts_text(content)
     return str(content)
-
-
-def summarize_messages(
-    messages: list[LLMMessage],
-    llm: LLM | BaseLLM,
-    callbacks: list[TokenCalcHandler],
-    verbose: bool = True,
-) -> None:
-    """Deprecated compatibility wrapper for :meth:`BaseLLM.summarize_messages`."""
-    llm.summarize_messages(messages, callbacks, verbose)
 
 
 def show_agent_logs(
