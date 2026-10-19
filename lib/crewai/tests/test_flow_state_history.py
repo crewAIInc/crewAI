@@ -200,6 +200,49 @@ def test_reader_raises_instead_of_truncating_when_wal_is_unreadable(
         ro_dir.chmod(dir_mode)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+    reason="POSIX file permissions are not enforced",
+)
+def test_reader_raises_instead_of_returning_uncommitted_rows_from_hot_journal(
+    tmp_path: Path,
+) -> None:
+    src = tmp_path / "src" / "flows.db"
+    src.parent.mkdir()
+    conn = sqlite3.connect(src, isolation_level=None)
+    conn.execute("PRAGMA journal_mode=DELETE")
+    conn.execute("PRAGMA cache_size=1")  # spill dirty pages to the main file
+    conn.execute(
+        "CREATE TABLE flow_states (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " flow_uuid TEXT NOT NULL, method_name TEXT NOT NULL,"
+        " timestamp DATETIME NOT NULL, state_json TEXT NOT NULL)"
+    )
+    conn.execute(
+        "INSERT INTO flow_states (flow_uuid, method_name, timestamp, state_json)"
+        " VALUES ('flow', 'committed', '2026-01-01T00:00:00+00:00', '{}')"
+    )
+    conn.execute("BEGIN")
+    conn.executemany(
+        "INSERT INTO flow_states (flow_uuid, method_name, timestamp, state_json)"
+        " VALUES ('flow', 'UNCOMMITTED', '2026-01-01T00:00:00+00:00', ?)",
+        [("x" * 2000,)] * 2000,
+    )
+    # Copy db + hot rollback journal mid-transaction to simulate a crash.
+    ro_dir = tmp_path / "ro"
+    ro_dir.mkdir()
+    shutil.copy(src, ro_dir / "flows.db")
+    shutil.copy(src.with_suffix(".db-journal"), ro_dir / "flows.db-journal")
+    conn.rollback()
+    conn.close()
+    dir_mode = ro_dir.stat().st_mode
+    ro_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            read_flow_state_history(ro_dir / "flows.db", "flow")
+    finally:
+        ro_dir.chmod(dir_mode)
+
+
 def test_history_does_not_read_state_payloads(
     persistence: SQLiteFlowPersistence,
     db_path: str,
@@ -233,6 +276,7 @@ def test_history_does_not_read_state_payloads(
         (10, -1),
         (10, False),
         (10, "0"),
+        (10, 2**63),
     ],
 )
 def test_invalid_pagination_is_rejected(
@@ -250,6 +294,12 @@ def test_max_limit_is_accepted(persistence: SQLiteFlowPersistence) -> None:
     )
 
     assert len(history) == 1
+
+
+def test_max_offset_is_accepted(persistence: SQLiteFlowPersistence) -> None:
+    persistence.save_state("flow", "step", {})
+
+    assert persistence.list_state_history("flow", offset=2**63 - 1) == []
 
 
 def test_reader_does_not_initialize_or_modify_database(tmp_path: Path) -> None:

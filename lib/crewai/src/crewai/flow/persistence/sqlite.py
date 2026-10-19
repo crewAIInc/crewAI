@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 _SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
 _SCHEMA_RETRY_DELAY_SECONDS = 0.05
+_SQLITE_MAX_INTEGER = 2**63 - 1
 
 
 def _json_default(obj: Any) -> Any:
@@ -56,8 +57,15 @@ def _validate_page(limit: int, offset: int) -> None:
         raise ValueError(
             f"limit must be an integer between 1 and {MAX_HISTORY_LIMIT}, got {limit!r}"
         )
-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
-        raise ValueError(f"offset must be a non-negative integer, got {offset!r}")
+    if (
+        not isinstance(offset, int)
+        or isinstance(offset, bool)
+        or not 0 <= offset <= _SQLITE_MAX_INTEGER
+    ):
+        raise ValueError(
+            f"offset must be an integer between 0 and {_SQLITE_MAX_INTEGER}, "
+            f"got {offset!r}"
+        )
 
 
 _HISTORY_QUERY = """
@@ -116,10 +124,12 @@ def read_flow_state_history(
 
     Opening a WAL-mode database read-only may create ``-wal``/``-shm`` sidecar
     files next to it. If that fails (for example because the directory is not
-    writable) and no ``-wal`` file exists, the main file holds every committed
-    row and is read as immutable instead. If a ``-wal`` file does exist, or the
-    failure is a lock contention, the error is raised rather than returning a
-    history that may be incomplete.
+    writable) and no ``-wal`` or ``-journal`` file exists, the main file holds
+    every committed row and is read as immutable instead. If either sidecar
+    exists (committed rows may still be in the WAL, or a hot journal still
+    needs rolling back), or the failure is a lock contention, the error is
+    raised rather than returning a history that may be incomplete or include
+    uncommitted rows.
 
     Args:
         db_path: Path to a ``SQLiteFlowPersistence`` database file.
@@ -151,6 +161,7 @@ def read_flow_state_history(
                 "no such table" in message
                 or "locked" in message
                 or Path(f"{resolved}-wal").exists()
+                or Path(f"{resolved}-journal").exists()
             ):
                 raise
             return _fetch_history_uri(
