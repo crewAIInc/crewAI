@@ -47,9 +47,10 @@ def test_prompt_file_utf8_with_bom(tmp_path):
     import json
 
     file_path = tmp_path / "prompts_bom.json"
-    content = json.dumps({"slices": {"role_playing": "Research assistant"}})
+    prompt = "Research\ufeffassistant"
+    content = json.dumps({"slices": {"role_playing": prompt}})
     file_path.write_text(content, encoding="utf-8-sig")
 
     i18n = I18N(prompt_file=str(file_path))
-    assert i18n.slice("role_playing") == "Research assistant"
+    assert i18n.slice("role_playing") == prompt
 
