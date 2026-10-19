@@ -365,6 +365,29 @@ def test_legacy_unanchored_rows_stay_reachable(tmp_path: Path) -> None:
             close()
 
 
+def test_reset_removes_legacy_rows_and_keeps_the_sibling(tmp_path: Path) -> None:
+    """``reset`` must reach the legacy spelling without deleting a sibling.
+
+    `Memory.reset(scope=...)` is the destructive path: leaving unanchored rows
+    behind means `recall` still returns records that `reset` was asked to drop.
+    """
+    storage = _new_storage(tmp_path / "mem")
+    storage.save([
+        _record("legacy-1", "sales"),
+        _record("legacy-2", "sales/eu"),
+        _record("legacy-3", "salesforce"),
+    ])
+    try:
+        assert storage.count() == 6
+        storage.reset("/sales")
+        # `salesforce` shares the leading characters and is not a child.
+        assert _all_ids(storage) == {"support-1", "legacy-3"}
+    finally:
+        close = getattr(storage, "close", None)
+        if close is not None:
+            close()
+
+
 def test_qdrant_legacy_payload_scope_is_still_a_child(tmp_path: Path) -> None:
     """A legacy ``sales/eu`` payload must compare as a child of ``/sales``."""
     if find_spec("qdrant_edge") is None:

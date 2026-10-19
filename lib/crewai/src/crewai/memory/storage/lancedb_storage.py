@@ -670,8 +670,14 @@ class LanceDBStorage:
             prefix = _canonical_scope_prefix(scope_prefix)
             if prefix:
                 literal = _sql_str(prefix)
+                # Rows written before scopes were anchored hold the unanchored
+                # spelling. Both ranges are needed, and a range (rather than
+                # the LIKE filter) keeps a lexicographic sibling out.
+                legacy = _sql_str(prefix.lstrip("/"))
                 self._do_write(
-                    "delete", f"scope >= '{literal}' AND scope < '{literal}/\uffff'"
+                    "delete",
+                    f"(scope >= '{literal}' AND scope < '{literal}/\uffff') OR "
+                    f"(scope >= '{legacy}' AND scope < '{legacy}/\uffff')",
                 )
 
     def optimize(self) -> None:
