@@ -38,6 +38,7 @@ from qdrant_edge import (
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.utils import normalize_scope_path
 
 
 _logger = logging.getLogger(__name__)
@@ -565,7 +566,7 @@ class QdrantEdgeStorage:
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         """Get information about a scope."""
-        scope = scope.rstrip("/") or "/"
+        scope = normalize_scope_path(scope)
         prefix = scope if scope != "/" else None
         filt = self._build_scope_filter(prefix)
 
@@ -631,8 +632,8 @@ class QdrantEdgeStorage:
 
     def list_scopes(self, parent: str = "/") -> list[str]:
         """List immediate child scopes under a parent path."""
-        parent = parent.rstrip("/") or ""
-        prefix = (parent + "/") if parent else "/"
+        parent = normalize_scope_path(parent)
+        prefix = "/" if parent == "/" else parent + "/"
 
         all_scopes: set[str] = set()
         filt = self._build_scope_filter(prefix if prefix != "/" else None)

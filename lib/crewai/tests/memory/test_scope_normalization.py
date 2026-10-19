@@ -280,3 +280,29 @@ def test_built_in_backends_agree_on_a_bare_scope(
         close = getattr(memory._storage, "close", None)
         if close is not None:
             close()
+
+
+@pytest.mark.parametrize("backend", ["lancedb", "qdrant-edge"])
+@pytest.mark.parametrize("spelling", SCOPE_SPELLINGS)
+def test_child_scopes_are_listed_under_every_spelling(
+    tmp_path: Path, embedder: MagicMock, backend: str, spelling: str
+) -> None:
+    """``list_scopes``/``child_scopes`` must anchor the parent like the filters do."""
+    if backend == "qdrant-edge" and find_spec("qdrant_edge") is None:
+        pytest.skip("qdrant-edge-py not installed")
+
+    memory = _memory_with_backend(tmp_path, backend, embedder)
+    try:
+        memory.remember("Parent", scope="/sales", categories=[], importance=0.5)
+        memory.remember("Child", scope="/sales/eu", categories=[], importance=0.5)
+
+        storage = memory._storage
+        assert storage.list_scopes(spelling) == ["/sales/eu"]
+        info = storage.get_scope_info(spelling)
+        assert info.path == "/sales"
+        assert info.record_count == 2
+        assert info.child_scopes == ["/sales/eu"]
+    finally:
+        close = getattr(memory._storage, "close", None)
+        if close is not None:
+            close()
