@@ -129,7 +129,10 @@ def read_flow_state_history(
     exists (committed rows may still be in the WAL, or a hot journal still
     needs rolling back), or the failure is a lock contention, the error is
     raised rather than returning a history that may be incomplete or include
-    uncommitted rows.
+    uncommitted rows. An immutable read disables locking and change
+    detection, so the database must not change from the sidecar check until
+    the read completes; this implementation does not synchronise the two and
+    offers no protection against a concurrent writer in that window.
 
     Args:
         db_path: Path to a ``SQLiteFlowPersistence`` database file.

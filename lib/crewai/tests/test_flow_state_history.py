@@ -129,10 +129,10 @@ def test_equal_timestamps_are_ordered_by_row_id(
         def now(cls, tz: Any = None) -> datetime:  # type: ignore[override]
             return frozen.replace(tzinfo=tz)
 
-    monkeypatch.setattr(sqlite_module, "datetime", FrozenDatetime)
-    for name in ("x", "y", "z"):
-        persistence.save_state("flow", name, {})
-    monkeypatch.undo()
+    with monkeypatch.context() as m:
+        m.setattr(sqlite_module, "datetime", FrozenDatetime)
+        for name in ("x", "y", "z"):
+            persistence.save_state("flow", name, {})
 
     history = persistence.list_state_history("flow")
 
