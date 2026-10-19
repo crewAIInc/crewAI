@@ -60,6 +60,12 @@ def eval_models(*args: Any, **kwargs: Any) -> Any:
     return _eval_models(*args, **kwargs)
 
 
+def eval_export(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.experimental.eval_crew import export_evaluation as _export
+
+    return _export(*args, **kwargs)
+
+
 if TYPE_CHECKING:
     # mypy sees the real classes; at runtime the shims below defer the
     # heavy imports until a command actually instantiates them.
@@ -690,7 +696,7 @@ def run(
     )
 
 
-@crewai.command(name="eval")
+@crewai.group(name="eval", invoke_without_command=True)
 @click.option(
     "--run",
     "run_id",
@@ -728,23 +734,44 @@ def run(
         "project id."
     ),
 )
+@click.pass_context
 def eval_command(
-    run_id: str | None, models: str | None, deployment_id: str | None
+    ctx: click.Context,
+    run_id: str | None,
+    models: str | None,
+    deployment_id: str | None,
 ) -> None:
-    """Evaluate the last traced run through CrewAI AMP, or compare models on the
-    project's deployment (--models).
+    """Evaluate this crew through CrewAI AMP, or compare models on the project's
+    deployment (--models).
+
+    It grades the project's last traced run. When there is none, or the project
+    changed since it, it runs the crew first and grades that run: the run is
+    traced and its trace sent to CrewAI AMP, which grades it. Nothing is asked,
+    with or without a terminal, so `crewai eval` alone takes a coding agent from
+    a change to its verdict.
 
     Run by a script or coding agent (no terminal), it prints a markdown brief
     after the verdict — what failed and the change to make — so an agent can act
     on it directly. That is when AMP provides the brief: otherwise its link, when
-    AMP sends only that, else nothing more. It grades a run that already
-    happened: after a change, `crewai run` again, then `crewai eval`.
+    AMP sends only that, else nothing more.
 
     A run's evaluation exits 0 only when the goal gate PASSED, and 1 otherwise — a
     failed gate, no verdict, or an evaluation that could not run — so a CI job can
     gate on it. A comparison exits 0 when it finished, 1 when it failed or could
     not start.
+
+    `crewai eval export ID` downloads an evaluation's full data as files, for a
+    coding agent to dig into.
     """
+    if ctx.invoked_subcommand is not None:
+        # The subcommand does the work; an option meant for this body would
+        # otherwise be dropped without a word.
+        if run_id is not None or models is not None or deployment_id is not None:
+            raise click.UsageError(
+                f"`crewai eval {ctx.invoked_subcommand}` takes no --run, --models "
+                "or --deployment; give those to `crewai eval` alone."
+            )
+        return
     if models is not None:
         if run_id is not None:
             raise click.UsageError(
@@ -758,6 +785,23 @@ def eval_command(
             "--deployment names the deployment --models runs; add --models LIST."
         )
     eval_crew(run_id=run_id)
+
+
+@eval_command.command(name="export")
+@click.argument("evaluation_id", metavar="ID")
+def eval_export_command(evaluation_id: str) -> None:
+    """Download evaluation ID's full data into ./crewai-eval-ID/.
+
+    The report, every setup's outputs, every check with the judge's words, and
+    the traces, as files for a coding agent to dig into: start with report.md.
+    The folder gets a .gitignore of `*`, so the data is never committed by
+    accident; exporting again overwrites the files.
+
+    ID is the evaluation's UUID. It is read with your `crewai login` when there
+    is one; a run's evaluation can be exported without one. Exits 0 when the
+    files were written, 1 otherwise.
+    """
+    eval_export(evaluation_id)
 
 
 @crewai.command()
