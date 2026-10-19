@@ -1,0 +1,68 @@
+---
+title: أداة بحث Pixeltable
+description: تشغّل `PixeltableSearchTool` بحث التشابه على جدول Pixeltable يملك فهرس تضمين مسبقاً.
+icon: database
+mode: "wide"
+---
+
+# `PixeltableSearchTool`
+
+## الوصف
+
+ابحث في صفوف جدول [Pixeltable](https://docs.pixeltable.com) باستخدام تشابه التضمينات. يجب أن يملك عمود النص فهرس تضمين مسبقاً. يحسب Pixeltable تضمين الاستعلام بذلك الفهرس ويعيد أقرب الصفوف مع درجة التشابه.
+
+## التثبيت
+
+يتطلب Pixeltable الإصدار 3.11 من Python أو أحدث.
+
+```shell
+uv add 'crewai-tools[pixeltable]'
+```
+
+## مثال
+
+```python
+from crewai import Agent
+from crewai_tools import PixeltableSearchTool
+
+tool = PixeltableSearchTool(
+    table="dir.docs",  # or a pixeltable.Table
+    column="text",
+    limit=5,
+    select=["title"],
+)
+
+agent = Agent(
+    role="Researcher",
+    goal="Find documents similar to a question",
+    tools=[tool],
+)
+```
+
+أنشئ فهرس التضمين في Pixeltable قبل تشغيل الأداة:
+
+```python
+import pixeltable as pxt
+from pixeltable.functions.huggingface import sentence_transformer
+
+docs = pxt.get_table("dir.docs")
+docs.add_embedding_index(
+    "text",
+    idx_name="minilm_idx",
+    embedding=sentence_transformer.using(
+        model_id="sentence-transformers/all-MiniLM-L12-v2"
+    ),
+)
+```
+
+مرّر `idx="minilm_idx"` عندما يملك العمود أكثر من فهرس تضمين واحد.
+
+## الوسائط
+
+- `table`: مسار جدول Pixeltable، مثل `dir.docs`، أو كائن `pixeltable.Table`. مطلوب.
+- `column`: اسم عمود النص الذي يملك فهرس تضمين. مطلوب.
+- `limit`: عدد الصفوف المعادة. القيمة الافتراضية `5`.
+- `select`: أسماء أعمدة إضافية تُعاد مع النص والدرجة. اختياري.
+- `idx`: اسم فهرس التضمين. اختياري إلا إذا كان للعمود أكثر من فهرس واحد.
+
+مدخل الأداة هو سلسلة `query`. المخرجات قائمة JSON من الصفوف، وتتضمن `score` لكل صف.

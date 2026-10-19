@@ -1,0 +1,68 @@
+---
+title: Pixeltable 검색 도구
+description: "`PixeltableSearchTool`은 임베딩 인덱스가 있는 Pixeltable 테이블에서 유사도 검색을 실행합니다."
+icon: database
+mode: "wide"
+---
+
+# `PixeltableSearchTool`
+
+## 설명
+
+[Pixeltable](https://docs.pixeltable.com) 테이블의 행을 임베딩 유사도로 검색합니다. 텍스트 열에는 이미 임베딩 인덱스가 있어야 합니다. Pixeltable은 그 인덱스로 쿼리를 임베딩하고 가장 가까운 행과 유사도 점수를 반환합니다.
+
+## 설치
+
+Pixeltable은 Python 3.11 이상이 필요합니다.
+
+```shell
+uv add 'crewai-tools[pixeltable]'
+```
+
+## 예제
+
+```python
+from crewai import Agent
+from crewai_tools import PixeltableSearchTool
+
+tool = PixeltableSearchTool(
+    table="dir.docs",  # or a pixeltable.Table
+    column="text",
+    limit=5,
+    select=["title"],
+)
+
+agent = Agent(
+    role="Researcher",
+    goal="Find documents similar to a question",
+    tools=[tool],
+)
+```
+
+도구를 실행하기 전에 Pixeltable에서 임베딩 인덱스를 만듭니다.
+
+```python
+import pixeltable as pxt
+from pixeltable.functions.huggingface import sentence_transformer
+
+docs = pxt.get_table("dir.docs")
+docs.add_embedding_index(
+    "text",
+    idx_name="minilm_idx",
+    embedding=sentence_transformer.using(
+        model_id="sentence-transformers/all-MiniLM-L12-v2"
+    ),
+)
+```
+
+열에 임베딩 인덱스가 둘 이상이면 `idx="minilm_idx"`를 전달합니다.
+
+## 인수
+
+- `table`: `dir.docs` 같은 Pixeltable 테이블 경로 또는 `pixeltable.Table`. 필수.
+- `column`: 임베딩 인덱스가 있는 텍스트 열 이름. 필수.
+- `limit`: 반환할 행 수. 기본값은 `5`입니다.
+- `select`: 텍스트와 점수와 함께 포함할 추가 열 이름. 선택.
+- `idx`: 임베딩 인덱스 이름. 열에 인덱스가 둘 이상일 때만 필요합니다.
+
+도구 입력은 `query` 문자열입니다. 출력은 각 행의 `score`를 포함한 JSON 행 목록입니다.

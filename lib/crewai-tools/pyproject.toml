@@ -164,6 +164,11 @@ mysql = [
 postgresql = [
     "psycopg2-binary>=2.9.10"
 ]
+pixeltable = [
+    # Pixeltable requires Python >=3.11. crewai-tools still supports 3.10,
+    # so this extra is empty there.
+    "pixeltable>=0.7.8; python_version >= '3.11'",
+]
 bedrock = [
     "beautifulsoup4>=4.13.4",
     "bedrock-agentcore>=1.18.1,<2.0.0",

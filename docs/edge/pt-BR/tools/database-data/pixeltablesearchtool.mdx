@@ -1,0 +1,68 @@
+---
+title: Ferramenta de Busca Pixeltable
+description: A `PixeltableSearchTool` executa busca por similaridade em uma tabela Pixeltable que já tem um índice de embedding.
+icon: database
+mode: "wide"
+---
+
+# `PixeltableSearchTool`
+
+## Descrição
+
+Pesquise linhas de uma tabela [Pixeltable](https://docs.pixeltable.com) por similaridade de embedding. A coluna de texto já precisa ter um índice de embedding. O Pixeltable gera o embedding da consulta com esse índice e devolve as linhas mais próximas com uma pontuação de similaridade.
+
+## Instalação
+
+O Pixeltable requer Python 3.11 ou mais recente.
+
+```shell
+uv add 'crewai-tools[pixeltable]'
+```
+
+## Exemplo
+
+```python
+from crewai import Agent
+from crewai_tools import PixeltableSearchTool
+
+tool = PixeltableSearchTool(
+    table="dir.docs",  # or a pixeltable.Table
+    column="text",
+    limit=5,
+    select=["title"],
+)
+
+agent = Agent(
+    role="Researcher",
+    goal="Find documents similar to a question",
+    tools=[tool],
+)
+```
+
+Crie o índice de embedding no Pixeltable antes de executar a ferramenta:
+
+```python
+import pixeltable as pxt
+from pixeltable.functions.huggingface import sentence_transformer
+
+docs = pxt.get_table("dir.docs")
+docs.add_embedding_index(
+    "text",
+    idx_name="minilm_idx",
+    embedding=sentence_transformer.using(
+        model_id="sentence-transformers/all-MiniLM-L12-v2"
+    ),
+)
+```
+
+Informe `idx="minilm_idx"` quando a coluna tiver mais de um índice de embedding.
+
+## Argumentos
+
+- `table`: caminho da tabela Pixeltable, como `dir.docs`, ou um `pixeltable.Table`. Obrigatório.
+- `column`: nome da coluna de texto que tem um índice de embedding. Obrigatório.
+- `limit`: número de linhas a devolver. O padrão é `5`.
+- `select`: nomes de colunas extras a incluir junto com o texto e a pontuação. Opcional.
+- `idx`: nome do índice de embedding. Opcional, exceto quando a coluna tem mais de um índice.
+
+A entrada da ferramenta é uma string `query`. A saída é uma lista JSON de linhas, com um `score` em cada linha.
