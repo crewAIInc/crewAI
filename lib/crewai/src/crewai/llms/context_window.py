@@ -19,8 +19,6 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, Final, cast
 
-from crewai_core.printer import PRINTER
-
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -280,7 +278,7 @@ def summarize_messages(
     preserved_files = collect_user_message_files(messages)
     max_tokens = llm.get_context_window_size()
     chunks = _chunk_messages(llm, work_messages, max_tokens)
-    summaries = _summarize_chunks(llm, chunks, callbacks, verbose)
+    summaries = _summarize_chunks(llm, chunks, callbacks)
     summary_message = format_message_for_llm(
         I18N_DEFAULT.slice("summary").format(merged_summary="\n\n".join(summaries))
     )
@@ -296,17 +294,8 @@ def _summarize_chunks(
     llm: Any,
     chunks: list[list[LLMMessage]],
     callbacks: list[Any],
-    verbose: bool,
 ) -> list[str]:
     """Summarize chunks concurrently, preserving their order."""
-    if verbose:
-        if len(chunks) <= 1:
-            PRINTER.print(content=f"Summarizing 1/{len(chunks)}...", color="yellow")
-        else:
-            PRINTER.print(
-                content=f"Summarizing {len(chunks)} chunks in parallel...",
-                color="yellow",
-            )
 
     async def summarize_chunk(chunk: list[LLMMessage]) -> str:
         async with semaphore:
