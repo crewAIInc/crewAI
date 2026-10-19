@@ -7,13 +7,15 @@ mode: "wide"
 
 ## Overview
 
-Conversational apps treat each user line as a **new flow run** with the **same session id**. CrewAI adds helpers for message history, optional intent routing, deferred tracing, structured turn streaming, and a local `flow.chat()` REPL.
+Conversational apps treat each user line as a **new flow run** with the **same session id**. CrewAI adds helpers for message history, optional intent routing, automatic per-turn tracing, structured turn streaming, and a local `flow.chat()` REPL.
+
+The examples below opt into `ConversationConfig(trace_scope="turn")`. Existing callers that omit `trace_scope` keep their current tracing lifecycle and `finalize_session_traces()` behavior.
 
 | Concept | Implementation |
 |---------|----------------|
 | Session id | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
 | User line | `handle_turn(message)` appends to `state.messages` before the graph runs |
-| Turn complete | `conversation_turn_completed`; with default trace deferral, `FlowFinished` waits for `finalize_session_traces()` |
+| Turn complete | With `trace_scope="turn"`: `conversation_turn_completed` and `FlowFinished` per successful turn; `FlowFailed` on failure |
 | Full-session trace | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
 ## Turn APIs
@@ -46,7 +48,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context):
         message = (self.state.current_user_message or "").lower()
@@ -78,11 +80,8 @@ class SupportFlow(Flow[ConversationState]):
 session_id = str(uuid4())
 flow = SupportFlow()
 
-try:
-    flow.handle_turn("Where is my order?", session_id=session_id)
-    flow.handle_turn("What about returns?", session_id=session_id)
-finally:
-    flow.finalize_session_traces()  # one trace link for the whole chat
+flow.handle_turn("Where is my order?", session_id=session_id)
+flow.handle_turn("What about returns?", session_id=session_id)
 ```
 
 ## Streaming a turn
@@ -223,7 +222,7 @@ Use **`@listen("RESEARCH")`** (or similar) for steps that run `Agent.kickoff()` 
 
 ## When the flow finishes but the user keeps chatting
 
-Each `handle_turn()` completes one graph run, and the conversation continues with another `handle_turn()` using the same `session_id`. With the default deferred trace lifecycle, that run emits `conversation_turn_completed`, while `FlowFinished` is emitted once when `finalize_session_traces()` closes the session. `@persist` restores `messages`, flags, and context.
+With `trace_scope="turn"`, each `handle_turn()` completes one graph run and finishes its trace. Continue the conversation with the same `session_id`; `@persist` restores messages, flags, and context. A finished trace does not end the conversation.
 
 **Persist pattern:** prefer `@persist` on a **single terminal step** (for example `finalize`) rather than on the whole `Flow` class. Class-level persist saves after every method; `load_state` uses the latest row, which may be a mid-run snapshot (for example right after `bootstrap`) and miss handler updates from the same turn.
 
@@ -231,7 +230,7 @@ Do **not** use `@human_feedback` for follow-up chat lines unless a human must ap
 
 ## Conversational `Flow`
 
-Opt into the conversational chat graph by setting `conversational = True` on a `Flow` subclass or applying `@ConversationConfig(...)`. The base `Flow` then supplies `route_conversation` as the built-in start/router plus the `converse_turn` and `end_conversation` listeners. The deprecated `answer_from_history_turn` listener remains available for compatibility. The framework manages `state.messages`, can drive a router LLM, and keeps the trace batch open across turns. You write the **custom routes**; the framework owns the rest.
+Opt into the conversational chat graph by setting `conversational = True` on a `Flow` subclass or applying `@ConversationConfig(...)`. The base `Flow` then supplies `route_conversation` as the built-in start/router plus the `converse_turn` and `end_conversation` listeners. The deprecated `answer_from_history_turn` listener remains available for compatibility. The framework manages `state.messages`, can drive a router LLM, and can finish each turn’s trace automatically with `trace_scope="turn"`. You write the **custom routes**; the framework owns the rest.
 
 Use this when you want a multi-turn chat with a router and per-route handlers without wiring the lifecycle yourself. Use `Flow[ChatState]` (the lower-level pattern above) when you need full control.
 
@@ -246,7 +245,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context: dict) -> str | None:
         message = (self.state.current_user_message or "").lower()
@@ -272,12 +271,9 @@ class SupportFlow(Flow[ConversationState]):
 
 
 flow = SupportFlow()
-try:
-    flow.handle_turn("What can you do?")              # routes to converse
-    flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
-    flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("What can you do?")              # routes to converse
+flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
+flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
 ```
 
 For a local terminal chat, use `chat()`:
@@ -287,7 +283,7 @@ def kickoff() -> None:
     SupportFlow().chat()
 ```
 
-`chat()` wraps `handle_turn()` in a REPL, exits on `exit` / `quit`, skips blank lines by default, and calls `finalize_session_traces()` when the session ends.
+`chat()` wraps `handle_turn()` in a REPL, exits on `exit` / `quit`, and skips blank lines by default. With `trace_scope="turn"`, each turn finishes its trace automatically. Without a scope, the existing session-wide lifecycle and automatic cleanup at REPL exit are unchanged.
 
 ### `ConversationConfig`
 
@@ -303,7 +299,8 @@ Class decorator that attaches per-class chat defaults.
 | `intent_llm` | `None` | LLM for legacy `intents=`/`default_intents` pre-classification. |
 | `default_intents` | `None` | Outcome labels for legacy pre-classification. |
 | `visible_agent_outputs` | `None` | `"all"`, or a list of agent names whose `append_agent_result()` calls should be promoted to public assistant messages. |
-| `defer_trace_finalization` | `True` | Keep one trace batch open across `handle_turn()` calls. |
+| `defer_trace_finalization` | `True` | Existing session-wide lifecycle, unchanged when `trace_scope` is omitted. |
+| `trace_scope` | `None` | Opt into `"turn"` for automatic per-turn tracing or choose `"session"`; an explicit scope overrides the legacy flag. |
 
 <Warning>
   `answer_from_history_prompt`, `answer_from_history_llm`, and the
@@ -494,6 +491,7 @@ schema: crewai.flow/v1
 name: SupportFlow
 
 conversational:
+  trace_scope: turn
   system_prompt: You are a terse support assistant.
   llm: gpt-4o-mini
   router:
@@ -522,7 +520,7 @@ Three things are supplied for you:
 | Conversation state | `ConversationState` is used when there is no `state` block. A Pydantic `ref` or `json_schema` state is automatically composed with the conversational fields; it does not need to extend `ConversationState`. |
 | The route catalog | Inferred from non-router methods with `listen` labels, excluding internal routes. Descriptions follow the precedence above, and explicit `router.routes` can limit the choices. |
 
-Declarative `llm`, `router.llm`, and `intent_llm` fields accept either a model id or a configuration mapping such as `{model: openai/gpt-4o-mini, max_tokens: 512}`. The `conversational` block also supports `default_intents`, `visible_agent_outputs`, `defer_trace_finalization`, and the `RouterConfig` fields shown above. Deprecated `answer_from_history_prompt` / `answer_from_history_llm` declarations remain accepted for compatibility.
+Declarative `llm`, `router.llm`, and `intent_llm` fields accept either a model id or a configuration mapping such as `{model: openai/gpt-4o-mini, max_tokens: 512}`. The `conversational` block also supports `default_intents`, `visible_agent_outputs`, `trace_scope`, `defer_trace_finalization`, and the `RouterConfig` fields shown above. Deprecated `answer_from_history_prompt` / `answer_from_history_llm` declarations remain accepted for compatibility.
 
 Run it from Python with the same turn APIs as a class-based conversational Flow:
 
@@ -531,10 +529,7 @@ from crewai.flow import Flow
 
 flow = Flow.from_declaration(path="flow.yaml")
 
-try:
-    flow.handle_turn("Where is my order?", session_id="session-1")
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("Where is my order?", session_id="session-1")
 ```
 
 ### Naming routes
@@ -554,26 +549,60 @@ Route labels and method names share one trigger namespace, so a handler must not
 
 ## Tracing across turns
 
-With `defer_trace_finalization=True` (default in `ConversationConfig`):
-
-- **One trace batch** for the whole chat session.
-- **`flow_started`** on the first turn only; **`flow_finished`** once in `finalize_session_traces()`.
-- **Per-turn** `kickoff` does not print “Trace batch finalized”.
-- **Nested work** (`Agent.kickoff()`, crews, Exa tools) appends to the **parent** batch; inner `AgentExecutor` flows do not close the session batch early.
+Opt into `ConversationConfig(trace_scope="turn")` to give each `handle_turn()` or `stream_turn()` a complete trace. Successful turns emit `flow_finished`; failed turns emit `flow_failed`. In this mode you do not need a finalization call to continue chatting.
 
 ```python
-flow.chat(session_id=session_id)
+flow.handle_turn("Remember blue", session_id=session_id)
+flow.handle_turn("What color?", session_id=session_id)
 ```
 
-`flow.chat()` calls `finalize_session_traces()` for you. When you own the loop
-with `handle_turn()`, call `finalize_session_traces()` when
-the session ends.
+Both turns carry the same `gen_ai.conversation.id`, with separate execution UUIDs and OpenTelemetry trace IDs. With persistence configured, a fresh Flow instance can restore the same conversation and add another turn. Conversation state persists independently of trace lifetime. Trace viewers need conversation grouping support to display those executions together.
 
-`suppress_flow_events=True` hides Rich console panels and suppresses method execution events. Flow start/finish events still emit, so the outer Flow lifecycle remains traceable, but individual method spans are omitted.
+Hosts such as Enterprise can supply a durable public conversation id through `telemetry_session(..., attributes={"gen_ai.conversation.id": conversation_id})`. That id takes precedence over the runtime Flow id and the LLM task/agent fallbacks.
 
-### Conversational `Flow` trace lifecycle
+### When a turn is over and when traces export
 
-The [conversational `Flow`](#conversational-flow) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Deferred turns also suppress per-turn `flow_failed`; on a turn error or session abort, finalize the session explicitly. This closes the batch with the session-level `FlowFinished` event rather than a per-turn `FlowFailed` event. Always wrap your REPL/loop in `try/finally` and call `flow.finalize_session_traces()` on exit. Without it, the trace batch stays open and the final conversation may never export.
+A **turn** is one submitted message and the Flow graph run that handles it. Its boundary is the graph completing its awaited work or raising an exception. A **conversation** can contain many turns and remain resumable while no work is running. The SDK does not infer that a conversation has ended from silence, an idle interval, or the absence of a next message.
+
+| Entry point | With `trace_scope="turn"` | With the existing session-wide lifecycle |
+|-------------|---------------------------|------------------------------------------|
+| TUI (`crewai run`) | The worker runs `handle_turn()` for each submitted message. That turn finalizes when its graph finishes; the TUI then accepts another message. You can leave the TUI open between turns. | A normal quit while idle calls `finalize_session_traces()` for you. |
+| Direct `handle_turn()` | Each underlying kickoff completes or fails, closes its trace, and cleans up before returning or raising. The caller needs no session-finalization call. | Your application decides when the session is over and calls `finalize_session_traces()` in `finally`. |
+| Direct `stream_turn()` | Returning the stream object does not mean the turn is finished. Consume the stream in its context manager; the underlying worker completes and finalizes the turn independently of the next user message. Read `stream.result` after completion. | Consume each turn's stream, then explicitly finalize when the application ends the whole session. |
+| Terminal `flow.chat()` REPL | The explicit scope wins over the REPL's legacy deferral flag, so each turn finalizes automatically. | The REPL calls `finalize_session_traces()` when the loop exits, including EOF or an exception. |
+
+In turn scope, the runtime emits `flow_started` and executes the graph. Success emits `flow_finished`; failure emits `flow_failed`. Cleanup drains tracked memory writes and queued event handlers. For an SDK-owned execution, trace cleanup flushes completed spans before control returns to the caller. The next turn starts a new execution and trace with the same `gen_ai.conversation.id`; it does not reopen the previous root span.
+
+Events and finished child spans can be emitted during execution. An authenticated batch exporter may upload those spans before the turn finishes; finalization closes the root and flushes the remainder. Export still follows tracing configuration and consent, and a successful return is not proof of collector persistence. If a host supplies an outer `telemetry_session`, that host owns flushing and shutting down its tracing context.
+
+For anonymous traces, the TUI applies its existing upload-consent flow at the export boundary. Explicitly enabling tracing counts as consent; otherwise a consent prompt may appear. Turn scope changes the export boundary, not the consent policy.
+
+Quitting the TUI while a turn or consent prompt is in progress uses its abort/discard path instead of claiming successful completion. It can discard locally buffered pending traces; it cannot retract spans already uploaded. A slow tool is still part of the current turn until it finishes, fails, or is cancelled by the application—there is no inactivity timer that marks it complete.
+
+### Compatibility: session-wide tracing
+
+Earlier examples used `defer_trace_finalization=True` and required `finalize_session_traces()` to finish a session-wide trace. That API is still supported; it has not been removed or deprecated. After opting into `trace_scope="turn"`, manual finalization is no longer necessary because each turn owns its cleanup. Existing calls can stay in place safely. Without the opt-in, keep the existing finalization lifecycle.
+
+Existing callers do not need to change: omitting `trace_scope` preserves the current `defer_trace_finalization=True` default and one live session-wide trace. Keep calling `finalize_session_traces()` as before. This tracing context stays in memory; persisting Flow state does not restore it after a process restart.
+
+```python
+@ConversationConfig()
+class SessionTraceFlow(SupportFlow):
+    pass
+
+flow = SessionTraceFlow()
+try:
+    flow.handle_turn("First message", session_id=session_id)
+    flow.handle_turn("Another message", session_id=session_id)
+finally:
+    flow.finalize_session_traces()
+```
+
+This is an additive option, not a default switch or a deprecation. `ConversationConfig`, declarative conversations, and `chat()` retain their existing defaults. Explicit `defer_trace_finalization=True` and `False` remain supported when no scope is provided. Existing LLM task/agent correlation values are unchanged without a scope.
+
+An explicit `trace_scope` takes precedence over the old flag: `"turn"` closes each turn; `"session"` defers until finalization. You can leave existing `finalize_session_traces()` cleanup in place after opting into turn scope; it is a safe no-op and does not emit another completion event. `chat()` continues to manage cleanup automatically.
+
+`suppress_flow_events=True` suppresses console panels and method events; it does not disable tracing the outer Flow lifecycle.
 
 ## Streaming
 

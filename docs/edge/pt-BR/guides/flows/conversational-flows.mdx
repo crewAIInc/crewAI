@@ -7,13 +7,15 @@ mode: "wide"
 
 ## Visão geral
 
-Apps conversacionais tratam cada linha do usuário como uma **nova execução do flow** com o **mesmo id de sessão**. A CrewAI oferece helpers para histórico de mensagens, roteamento opcional de intenção, tracing adiado, streaming estruturado de turnos e um REPL local `flow.chat()`.
+Apps conversacionais tratam cada linha do usuário como uma **nova execução do flow** com o **mesmo id de sessão**. A CrewAI oferece helpers para histórico de mensagens, roteamento opcional de intenção, tracing automático por turno, streaming estruturado de turnos e um REPL local `flow.chat()`.
+
+Os exemplos abaixo optam explicitamente por `ConversationConfig(trace_scope="turn")`. Chamadores existentes que omitem `trace_scope` mantêm o ciclo de tracing e o comportamento de `finalize_session_traces()` atuais.
 
 | Conceito | Implementação |
 |---------|----------------|
 | Id de sessão | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
 | Linha do usuário | `handle_turn(message)` acrescenta em `state.messages` antes do grafo rodar |
-| Turno concluído | `conversation_turn_completed`; com o adiamento padrão de traces, `FlowFinished` aguarda `finalize_session_traces()` |
+| Turno concluído | Com `trace_scope="turn"`: `conversation_turn_completed` e `FlowFinished` por turno bem-sucedido; `FlowFailed` em caso de falha |
 | Trace da sessão inteira | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
 ## APIs de turno
@@ -46,7 +48,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context):
         message = (self.state.current_user_message or "").lower()
@@ -78,11 +80,8 @@ class SupportFlow(Flow[ConversationState]):
 session_id = str(uuid4())
 flow = SupportFlow()
 
-try:
-    flow.handle_turn("Where is my order?", session_id=session_id)
-    flow.handle_turn("What about returns?", session_id=session_id)
-finally:
-    flow.finalize_session_traces()  # one trace link for the whole chat
+flow.handle_turn("Where is my order?", session_id=session_id)
+flow.handle_turn("What about returns?", session_id=session_id)
 ```
 
 ## Streaming de um turno
@@ -223,7 +222,7 @@ Use **`@listen("RESEARCH")`** (ou similar) para passos com `Agent.kickoff()` e f
 
 ## Quando o flow termina mas o usuário continua conversando
 
-Cada `handle_turn()` conclui uma execução do grafo, e a conversa continua com outro `handle_turn()` usando o mesmo `session_id`. Com o ciclo de vida de trace adiado padrão, essa execução emite `conversation_turn_completed`, enquanto `FlowFinished` é emitido uma vez quando `finalize_session_traces()` encerra a sessão. `@persist` restaura `messages`, flags e contexto.
+Com `trace_scope="turn"`, cada `handle_turn()` conclui uma execução do grafo e finaliza seu trace. Continue a conversa com o mesmo `session_id`; `@persist` restaura mensagens, flags e contexto. Finalizar um trace não encerra a conversa.
 
 **Padrão de persistência:** prefira `@persist` em um **único passo terminal** (por exemplo `finalize`) em vez de na classe `Flow` inteira. Persist em nível de classe salva após cada método; `load_state` usa a linha mais recente, que pode ser snapshot no meio da execução e perder atualizações dos handlers no mesmo turno.
 
@@ -231,7 +230,7 @@ Não use `@human_feedback` para linhas de chat de follow-up, a menos que um huma
 
 ## `Flow` conversacional
 
-Habilite o grafo de chat conversacional definindo `conversational = True` em uma subclasse de `Flow` ou aplicando `@ConversationConfig(...)`. O `Flow` base passa a fornecer `route_conversation` como start/router embutido, além dos listeners `converse_turn` e `end_conversation`. O listener descontinuado `answer_from_history_turn` permanece disponível para compatibilidade. O framework gerencia `state.messages`, pode acionar um LLM de roteamento e mantém o batch de trace aberto entre turnos. Você escreve as **rotas customizadas**; o framework cuida do resto.
+Habilite o grafo de chat conversacional definindo `conversational = True` em uma subclasse de `Flow` ou aplicando `@ConversationConfig(...)`. O `Flow` base passa a fornecer `route_conversation` como start/router embutido, além dos listeners `converse_turn` e `end_conversation`. O listener descontinuado `answer_from_history_turn` permanece disponível para compatibilidade. O framework gerencia `state.messages`, pode acionar um LLM de roteamento e pode finalizar o trace de cada turno automaticamente com `trace_scope="turn"`. Você escreve as **rotas customizadas**; o framework cuida do resto.
 
 Use isto quando quiser um chat multi-turno com router e handlers por rota sem cablar o ciclo de vida na mão. Use `Flow[ChatState]` (o padrão de mais baixo nível acima) quando precisar de controle total.
 
@@ -246,7 +245,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context: dict) -> str | None:
         message = (self.state.current_user_message or "").lower()
@@ -272,12 +271,9 @@ class SupportFlow(Flow[ConversationState]):
 
 
 flow = SupportFlow()
-try:
-    flow.handle_turn("What can you do?")              # routes to converse
-    flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
-    flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("What can you do?")              # routes to converse
+flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
+flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
 ```
 
 Para um chat local no terminal, use `chat()`:
@@ -287,7 +283,7 @@ def kickoff() -> None:
     SupportFlow().chat()
 ```
 
-`chat()` envolve `handle_turn()` em um REPL, sai com `exit` / `quit`, ignora linhas em branco por padrão e chama `finalize_session_traces()` quando a sessão termina.
+`chat()` envolve `handle_turn()` em um REPL, sai com `exit` / `quit` e ignora linhas em branco por padrão. Com `trace_scope="turn"`, cada turno finaliza seu trace automaticamente. Sem escopo explícito, o ciclo da sessão inteira e a limpeza automática ao sair do REPL permanecem inalterados.
 
 ### `ConversationConfig`
 
@@ -303,7 +299,8 @@ Decorador de classe que anexa os defaults de chat por classe.
 | `intent_llm` | `None` | LLM para o caminho legado `intents=`/`default_intents`. |
 | `default_intents` | `None` | Labels de outcome para pré-classificação legada. |
 | `visible_agent_outputs` | `None` | `"all"` ou lista de nomes de agentes cujos `append_agent_result()` devem virar mensagens públicas. |
-| `defer_trace_finalization` | `True` | Mantém um único batch de trace aberto entre chamadas de `handle_turn()`. |
+| `defer_trace_finalization` | `True` | Ciclo atual da sessão inteira, inalterado quando `trace_scope` é omitido. |
+| `trace_scope` | `None` | Opte por `"turn"` para tracing automático por turno ou escolha `"session"`; o escopo explícito prevalece sobre a flag antiga. |
 
 <Warning>
   `answer_from_history_prompt`, `answer_from_history_llm` e a rota
@@ -496,6 +493,7 @@ schema: crewai.flow/v1
 name: SupportFlow
 
 conversational:
+  trace_scope: turn
   system_prompt: You are a terse support assistant.
   llm: gpt-4o-mini
   router:
@@ -524,7 +522,7 @@ Três coisas são fornecidas para você:
 | Estado da conversa | `ConversationState` é usado quando não há bloco `state`. Um estado Pydantic definido por `ref` ou `json_schema` é composto automaticamente com os campos conversacionais; ele não precisa estender `ConversationState`. |
 | O catálogo de rotas | Inferido de métodos que não são routers e têm rótulos `listen`, excluindo rotas internas. As descrições seguem a precedência acima, e `router.routes` explícito pode limitar as opções. |
 
-Os campos declarativos `llm`, `router.llm` e `intent_llm` aceitam um id de modelo ou um mapping de configuração, como `{model: openai/gpt-4o-mini, max_tokens: 512}`. O bloco `conversational` também aceita `default_intents`, `visible_agent_outputs`, `defer_trace_finalization` e os campos de `RouterConfig` mostrados acima. As declarações descontinuadas `answer_from_history_prompt` / `answer_from_history_llm` continuam sendo aceitas para compatibilidade.
+Os campos declarativos `llm`, `router.llm` e `intent_llm` aceitam um id de modelo ou um mapping de configuração, como `{model: openai/gpt-4o-mini, max_tokens: 512}`. O bloco `conversational` também aceita `default_intents`, `visible_agent_outputs`, `trace_scope`, `defer_trace_finalization` e os campos de `RouterConfig` mostrados acima. As declarações descontinuadas `answer_from_history_prompt` / `answer_from_history_llm` continuam sendo aceitas para compatibilidade.
 
 Execute a partir do Python com as mesmas APIs de turno de um Flow conversacional baseado em classe:
 
@@ -533,10 +531,7 @@ from crewai.flow import Flow
 
 flow = Flow.from_declaration(path="flow.yaml")
 
-try:
-    flow.handle_turn("Where is my order?", session_id="session-1")
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("Where is my order?", session_id="session-1")
 ```
 
 ### Nomeando rotas
@@ -556,24 +551,60 @@ O `crewai run` abre a TUI de chat para um flow conversacional declarativo — a 
 
 ## Tracing entre turnos
 
-Com `defer_trace_finalization=True` (padrão em `ConversationConfig`):
-
-- **Um batch de trace** para toda a sessão de chat.
-- **`flow_started`** só no primeiro turno; **`flow_finished`** uma vez em `finalize_session_traces()`.
-- **`kickoff` por turno** não exibe “Trace batch finalized”.
-- **Trabalho aninhado** (`Agent.kickoff()`, crews, tools Exa) acrescenta ao batch **pai**; flows internos de `AgentExecutor` não fecham o batch da sessão cedo.
+Opte por `ConversationConfig(trace_scope="turn")` para que cada `handle_turn()` ou `stream_turn()` tenha um trace completo. Turnos bem-sucedidos emitem `flow_finished`; turnos com falha emitem `flow_failed`. Nesse modo, você não precisa de uma chamada de finalização para continuar conversando.
 
 ```python
-flow.chat(session_id=session_id)
+flow.handle_turn("Remember blue", session_id=session_id)
+flow.handle_turn("What color?", session_id=session_id)
 ```
 
-`flow.chat()` chama `finalize_session_traces()` para você. Quando você controla o loop com `handle_turn()`, chame `finalize_session_traces()` quando a sessão terminar.
+Os dois turnos carregam o mesmo `gen_ai.conversation.id`, com UUIDs de execução e IDs de trace OpenTelemetry separados. Com persistência configurada, uma nova instância de Flow pode restaurar a mesma conversa e adicionar outro turno. O estado da conversa persiste independentemente da duração do trace. O visualizador precisa oferecer agrupamento por conversa para exibir essas execuções juntas.
 
-`suppress_flow_events=True` oculta painéis Rich no console e suprime eventos de execução de métodos. Os eventos de início/fim do Flow continuam sendo emitidos, portanto o ciclo de vida externo do Flow permanece rastreável, mas os spans de métodos individuais são omitidos.
+Hosts como Enterprise podem fornecer um id público e durável da conversa via `telemetry_session(..., attributes={"gen_ai.conversation.id": conversation_id})`. Esse id tem precedência sobre o id do Flow em runtime e os fallbacks de task/agent do LLM.
 
-### Ciclo de vida de trace do `Flow` conversacional
+### Quando um turno termina e quando os traces são exportados
 
-O [`Flow` conversacional](#flow-conversacional) usa o mesmo ciclo de vida de tracing: `defer_trace_finalization` é `True` por padrão, então cada `handle_turn()` mantém o trace da sessão aberto. Turnos adiados também suprimem `flow_failed` por turno; em caso de erro em um turno ou encerramento antecipado da sessão, finalize a sessão explicitamente. Isso fecha o batch com o evento `FlowFinished` no nível da sessão, em vez de um evento `FlowFailed` por turno. Sempre envolva seu REPL/loop em `try/finally` e chame `flow.finalize_session_traces()` na saída. Sem isso, o batch fica aberto e a conversa final pode nunca ser exportada.
+Um **turno** é uma mensagem enviada e a execução do grafo do Flow que a processa. Seu limite é o grafo concluir o trabalho aguardado ou lançar uma exceção. Uma **conversa** pode conter vários turnos e continuar disponível para retomada sem trabalho em andamento. O SDK não deduz que a conversa terminou a partir de silêncio, tempo ocioso ou ausência de uma próxima mensagem.
+
+| Ponto de entrada | Com `trace_scope="turn"` | Com o ciclo existente da sessão inteira |
+|------------------|-------------------------|----------------------------------------|
+| TUI (`crewai run`) | O worker executa `handle_turn()` para cada mensagem. O turno finaliza quando o grafo termina; depois a TUI aceita outra mensagem. Você pode deixá-la aberta entre turnos. | Sair normalmente enquanto está ociosa chama `finalize_session_traces()` automaticamente. |
+| `handle_turn()` direto | Cada kickoff interno conclui ou falha, fecha seu trace e limpa recursos antes de retornar ou propagar a exceção. O chamador não precisa finalizar a sessão. | A aplicação decide quando a sessão acabou e chama `finalize_session_traces()` em `finally`. |
+| `stream_turn()` direto | Retornar o objeto stream não significa que o turno terminou. Consuma o stream em seu context manager; o worker conclui e finaliza o turno independentemente da próxima mensagem. Leia `stream.result` depois da conclusão. | Consuma o stream de cada turno e finalize explicitamente quando a aplicação encerrar a sessão inteira. |
+| REPL de terminal `flow.chat()` | O escopo explícito prevalece sobre a flag antiga do REPL, então cada turno finaliza automaticamente. | O REPL chama `finalize_session_traces()` ao sair do loop, inclusive por EOF ou exceção. |
+
+No escopo de turno, o runtime emite `flow_started` e executa o grafo. O sucesso emite `flow_finished`; a falha emite `flow_failed`. A limpeza drena as gravações de memória rastreadas e os handlers de eventos pendentes. Quando o SDK controla a execução, a limpeza faz flush dos spans concluídos antes de devolver o controle ao chamador. O próximo turno inicia outra execução e outro trace com o mesmo `gen_ai.conversation.id`; ele não reabre o root span anterior.
+
+Eventos e spans filhos concluídos podem ser emitidos durante a execução. Um batch exporter autenticado pode enviá-los antes de o turno terminar; a finalização fecha o root e faz flush do restante. A exportação continua respeitando configuração e consentimento, e um retorno bem-sucedido não prova persistência no collector. Se um host fornecer uma `telemetry_session` externa, ele controla o flush e o encerramento desse contexto de tracing.
+
+Para traces anônimos, a TUI aplica o fluxo existente de consentimento de upload no limite de exportação. Habilitar tracing explicitamente conta como consentimento; caso contrário, um pedido pode aparecer. O escopo de turno muda o limite de exportação, não a política de consentimento.
+
+Sair da TUI durante um turno ou pedido de consentimento usa o caminho de abortar/descartar em vez de declarar sucesso. Isso pode descartar traces pendentes em buffers locais, mas não retirar spans já enviados. Uma ferramenta lenta continua fazendo parte do turno até concluir, falhar ou ser cancelada pela aplicação; não há timer de inatividade que a marque como concluída.
+
+### Compatibilidade: tracing da sessão inteira
+
+Os exemplos anteriores usavam `defer_trace_finalization=True` e exigiam `finalize_session_traces()` para encerrar o trace da sessão inteira. Essa API continua suportada; ela não foi removida nem descontinuada. Ao optar por `trace_scope="turn"`, a finalização manual deixa de ser necessária porque cada turno controla sua limpeza. Chamadas existentes podem continuar com segurança. Sem a opção, mantenha o ciclo de finalização atual.
+
+Chamadores existentes não precisam mudar: omitir `trace_scope` preserva o padrão atual `defer_trace_finalization=True` e um trace para toda a sessão ativa. Continue chamando `finalize_session_traces()` como antes. Esse contexto fica na memória; persistir o estado do Flow não o restaura após reiniciar o processo.
+
+```python
+@ConversationConfig()
+class SessionTraceFlow(SupportFlow):
+    pass
+
+flow = SessionTraceFlow()
+try:
+    flow.handle_turn("First message", session_id=session_id)
+    flow.handle_turn("Another message", session_id=session_id)
+finally:
+    flow.finalize_session_traces()
+```
+
+Esta é uma opção adicional, não uma mudança de padrão nem uma descontinuação. `ConversationConfig`, conversas declarativas e `chat()` mantêm seus padrões atuais. Os valores explícitos `defer_trace_finalization=True` e `False` continuam aceitos sem um escopo. Os valores existentes de correlação LLM task/agent também permanecem iguais sem escopo.
+
+Um `trace_scope` explícito prevalece sobre a flag antiga: `"turn"` fecha cada turno; `"session"` adia até a finalização. Você pode manter chamadas existentes a `finalize_session_traces()` depois de optar pelo escopo de turno; elas se tornam operações seguras sem efeito e não emitem outro evento de conclusão. `chat()` continua gerenciando a limpeza automaticamente.
+
+`suppress_flow_events=True` suprime painéis do console e eventos de métodos, mas não desativa o tracing do ciclo de vida do Flow externo.
 
 ## Streaming
 

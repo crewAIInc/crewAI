@@ -156,6 +156,7 @@ def _config_from_definition(
         answer_from_history_llm=definition.answer_from_history_llm,
         visible_agent_outputs=definition.visible_agent_outputs,
         defer_trace_finalization=definition.defer_trace_finalization,
+        trace_scope=definition.trace_scope,
     )
 
 
@@ -444,6 +445,11 @@ class _ConversationalMixin:
         an assistant message when the handler didn't.
         If that fallback appends, state is snapshotted again so ``@persist``
         restores the assistant reply on a fresh Flow instance.
+
+        With ``ConversationConfig(trace_scope="turn")``, turns finish their
+        traces automatically. Reuse ``session_id`` with persistence to resume
+        the conversation; no tracing cleanup is required in turn scope. The
+        default keeps the existing deferred session lifecycle unchanged.
 
         Raises:
             ValueError: If the flow is not conversational. Without this the
@@ -1120,27 +1126,21 @@ class _ConversationalMixin:
         return ordered_starts, True
 
     def _should_defer_trace_finalization(self) -> bool:
-        """Whether per-turn ``FlowFinished`` + ``finalize_batch`` should be skipped.
+        """Resolve an explicit trace scope before the legacy deferral flags.
 
-        True when either:
-          - ``flow.defer_trace_finalization`` is set on the instance, OR
-          - the resolved conversational configuration enables it.
-
-        Either source enables the deferred-session pattern. The caller
-        eventually invokes ``finalize_session_traces()`` to close the batch.
-
-        Read through ``_conversation_config`` rather than the definition so
-        deferral follows the same precedence as every other behavior knob. A
-        class config and a declaration can disagree on the hybrid
-        ``ClassWithConfig.from_declaration(...)`` path, and deferral must not
-        be the one setting that follows the other source.
+        Omitting the scope preserves existing class, declaration and instance
+        behavior, including callers that finalize a whole session manually.
+        Scope follows the same class/definition precedence as other chat config.
         """
-        if getattr(self, "defer_trace_finalization", False):
-            return True
-        if not self._is_conversational_enabled():
-            return False
-        config = self._conversation_config
-        return bool(config and config.defer_trace_finalization)
+        config = (
+            self._conversation_config if self._is_conversational_enabled() else None
+        )
+        if config is not None and config.trace_scope is not None:
+            return config.trace_scope == "session"
+        return bool(
+            getattr(self, "defer_trace_finalization", False)
+            or (config and config.defer_trace_finalization)
+        )
 
     def _reset_turn_execution_state(self) -> None:
         """Clear per-execution tracking so the next turn re-runs the graph."""

@@ -7,13 +7,15 @@ mode: "wide"
 
 ## 개요
 
-대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 라우팅, 지연 트레이싱, 구조화된 턴 스트리밍, 로컬 `flow.chat()` REPL을 위한 헬퍼를 제공합니다.
+대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 라우팅, 자동 턴별 트레이싱, 구조화된 턴 스트리밍, 로컬 `flow.chat()` REPL을 위한 헬퍼를 제공합니다.
+
+아래 예제는 `ConversationConfig(trace_scope="turn")`을 명시적으로 선택합니다. `trace_scope`를 생략하는 기존 호출자는 현재 tracing 수명 주기와 `finalize_session_traces()` 동작을 그대로 유지합니다.
 
 | 개념 | 구현 |
 |------|------|
 | 세션 id | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
 | 사용자 입력 | `handle_turn(message)`가 그래프 실행 전 `state.messages`에 추가 |
-| 턴 완료 | `conversation_turn_completed`; 기본 trace 지연을 사용하면 `FlowFinished`는 `finalize_session_traces()`까지 대기 |
+| 턴 완료 | `trace_scope="turn"`일 때 성공한 턴마다 `conversation_turn_completed`와 `FlowFinished`; 실패하면 `FlowFailed` |
 | 세션 전체 트레이스 | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
 ## 턴 API
@@ -46,7 +48,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context):
         message = self.state.current_user_message or ""
@@ -78,11 +80,8 @@ class SupportFlow(Flow[ConversationState]):
 session_id = str(uuid4())
 flow = SupportFlow()
 
-try:
-    flow.handle_turn("주문 어디까지 왔나요?", session_id=session_id)
-    flow.handle_turn("반품은 어떻게 하나요?", session_id=session_id)
-finally:
-    flow.finalize_session_traces()  # 전체 대화에 대한 단일 trace 링크
+flow.handle_turn("주문 어디까지 왔나요?", session_id=session_id)
+flow.handle_turn("반품은 어떻게 하나요?", session_id=session_id)
 ```
 
 ## 턴 스트리밍
@@ -223,7 +222,7 @@ def route_turn(self, context):
 
 ## flow가 끝났지만 사용자는 계속 대화할 때
 
-각 `handle_turn()`은 하나의 그래프 실행을 완료하며, 같은 `session_id`로 다음 `handle_turn()`을 호출해 대화를 이어갑니다. 기본 지연 trace 수명 주기에서는 해당 실행이 `conversation_turn_completed`를 발생시키고, `finalize_session_traces()`가 세션을 닫을 때 `FlowFinished`가 한 번 발생합니다. `@persist`는 `messages`, 플래그, 컨텍스트를 복원합니다.
+`trace_scope="turn"`이면 각 `handle_turn()`이 그래프 실행 하나를 완료하고 trace를 종료합니다. 같은 `session_id`로 대화를 이어가세요. `@persist`는 메시지, 플래그, 컨텍스트를 복원합니다. trace 종료가 대화 종료를 뜻하지는 않습니다.
 
 **Persist 패턴:** 전체 `Flow` 클래스보다 **단일 종료 스텝**(예: `finalize`)에 `@persist`를 두는 것이 좋습니다. 클래스 수준 persist는 매 메서드 후 저장하며, `load_state`는 최신 행을 사용해 같은 턴의 핸들러 업데이트를 놓칠 수 있습니다.
 
@@ -231,7 +230,7 @@ def route_turn(self, context):
 
 ## 대화형 `Flow`
 
-`Flow` 서브클래스에 `conversational = True`를 지정하거나 `@ConversationConfig(...)`를 적용하면 대화형 채팅 그래프가 활성화됩니다. 베이스 `Flow`는 내장 start/router인 `route_conversation`과 `converse_turn`, `end_conversation` 리스너를 제공합니다. 사용 중단된 `answer_from_history_turn` 리스너는 호환성을 위해 계속 제공됩니다. 또한 `state.messages`를 관리하고 router LLM을 구동할 수 있으며 턴 간 trace batch를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**를 작성하고 나머지는 프레임워크에 맡기면 됩니다.
+`Flow` 서브클래스에 `conversational = True`를 지정하거나 `@ConversationConfig(...)`를 적용하면 대화형 채팅 그래프가 활성화됩니다. 베이스 `Flow`는 내장 start/router인 `route_conversation`과 `converse_turn`, `end_conversation` 리스너를 제공합니다. 사용 중단된 `answer_from_history_turn` 리스너는 호환성을 위해 계속 제공됩니다. 또한 `state.messages`를 관리하고 router LLM을 구동할 수 있으며 `trace_scope="turn"`으로 각 턴의 trace를 자동으로 종료할 수 있습니다. 여러분은 **커스텀 라우트**를 작성하고 나머지는 프레임워크에 맡기면 됩니다.
 
 LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶지만 라이프사이클을 직접 배선하고 싶지 않을 때 사용하세요. 완전한 제어가 필요하면 위의 `Flow[ChatState]`로 내려가세요.
 
@@ -246,7 +245,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context: dict) -> str | None:
         message = (self.state.current_user_message or "").lower()
@@ -272,12 +271,9 @@ class SupportFlow(Flow[ConversationState]):
 
 
 flow = SupportFlow()
-try:
-    flow.handle_turn("What can you do?")              # routes to converse
-    flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
-    flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("What can you do?")              # routes to converse
+flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
+flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
 ```
 
 로컬 터미널 채팅에는 `chat()`을 사용하세요:
@@ -287,7 +283,7 @@ def kickoff() -> None:
     SupportFlow().chat()
 ```
 
-`chat()`은 `handle_turn()`을 REPL로 감싸고, `exit` / `quit`에서 종료하며, 기본적으로 빈 줄을 건너뛰고, 세션이 끝날 때 `finalize_session_traces()`를 호출합니다.
+`chat()`은 `handle_turn()`을 REPL로 감싸고 `exit` / `quit`에서 종료하며 기본적으로 빈 줄을 건너뜁니다. `trace_scope="turn"`이면 각 턴의 trace가 자동으로 종료됩니다. 범위를 지정하지 않으면 기존 세션 전체 수명 주기와 REPL 종료 시 자동 정리 동작은 바뀌지 않습니다.
 
 ### `ConversationConfig`
 
@@ -303,7 +299,8 @@ def kickoff() -> None:
 | `intent_llm` | `None` | 레거시 `intents=`/`default_intents` 사전 분류용 LLM. |
 | `default_intents` | `None` | 레거시 사전 분류용 outcome 레이블. |
 | `visible_agent_outputs` | `None` | `"all"` 또는 `append_agent_result()` 결과를 사용자에게 공개로 승격할 에이전트 이름 목록. |
-| `defer_trace_finalization` | `True` | `handle_turn()` 호출들 사이에서 하나의 trace 배치를 열어 둡니다. |
+| `defer_trace_finalization` | `True` | `trace_scope`를 생략하면 기존 세션 전체 수명 주기를 유지합니다. |
+| `trace_scope` | `None` | 자동 턴별 tracing은 `"turn"`, 세션 전체는 `"session"`. 명시적 범위가 기존 플래그보다 우선합니다. |
 
 <Warning>
   `answer_from_history_prompt`, `answer_from_history_llm`, `answer_from_history`
@@ -491,6 +488,7 @@ schema: crewai.flow/v1
 name: SupportFlow
 
 conversational:
+  trace_scope: turn
   system_prompt: You are a terse support assistant.
   llm: gpt-4o-mini
   router:
@@ -519,7 +517,7 @@ methods:
 | 대화 상태 | `state` 블록이 없으면 `ConversationState`가 사용됩니다. Pydantic `ref` 또는 `json_schema` state는 대화형 필드와 자동으로 합성되며 `ConversationState`를 상속할 필요가 없습니다. |
 | 라우트 카탈로그 | 내부 라우트를 제외하고 `listen` 레이블이 있는 비-router 메서드에서 추론됩니다. 설명에는 위 우선순위가 적용되며 명시적인 `router.routes`로 선택지를 제한할 수 있습니다. |
 
-선언적 `llm`, `router.llm`, `intent_llm` 필드는 모델 id 또는 `{model: openai/gpt-4o-mini, max_tokens: 512}` 같은 설정 mapping을 받습니다. `conversational` 블록은 `default_intents`, `visible_agent_outputs`, `defer_trace_finalization`과 위에 나온 `RouterConfig` 필드도 지원합니다. 사용 중단된 `answer_from_history_prompt` / `answer_from_history_llm` 선언은 호환성을 위해 계속 허용됩니다.
+선언적 `llm`, `router.llm`, `intent_llm` 필드는 모델 id 또는 `{model: openai/gpt-4o-mini, max_tokens: 512}` 같은 설정 mapping을 받습니다. `conversational` 블록은 `default_intents`, `visible_agent_outputs`, `trace_scope`, `defer_trace_finalization`과 위에 나온 `RouterConfig` 필드도 지원합니다. 사용 중단된 `answer_from_history_prompt` / `answer_from_history_llm` 선언은 호환성을 위해 계속 허용됩니다.
 
 클래스 기반 대화형 플로우와 동일한 턴 API로 Python에서 실행합니다:
 
@@ -528,10 +526,7 @@ from crewai.flow import Flow
 
 flow = Flow.from_declaration(path="flow.yaml")
 
-try:
-    flow.handle_turn("Where is my order?", session_id="session-1")
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("Where is my order?", session_id="session-1")
 ```
 
 ### 라우트 이름 짓기
@@ -551,24 +546,60 @@ finally:
 
 ## 턴 간 트레이싱
 
-`defer_trace_finalization=True` (`ConversationConfig` 기본값):
-
-- 채팅 세션 전체에 **하나의 trace batch**.
-- 첫 턴에만 **`flow_started`**; `finalize_session_traces()`에서 **`flow_finished`** 한 번.
-- 턴별 `kickoff`는 “Trace batch finalized”를 출력하지 않음.
-- **중첩 작업** (`Agent.kickoff()`, crew, Exa tool)은 **부모** batch에 추가; 내부 `AgentExecutor` flow가 세션 batch를 조기 종료하지 않음.
+각 `handle_turn()` 또는 `stream_turn()`에 완결된 trace를 만들려면 `ConversationConfig(trace_scope="turn")`을 선택하세요. 성공한 턴은 `flow_finished`, 실패한 턴은 `flow_failed`를 발생시킵니다. 이 모드에서는 대화를 계속하기 위한 종료 호출이 필요하지 않습니다.
 
 ```python
-flow.chat(session_id=session_id)
+flow.handle_turn("Remember blue", session_id=session_id)
+flow.handle_turn("What color?", session_id=session_id)
 ```
 
-`flow.chat()`이 `finalize_session_traces()`를 대신 호출합니다. `handle_turn()`으로 직접 루프를 소유하는 경우 세션이 끝날 때 `finalize_session_traces()`를 호출하세요.
+두 턴은 같은 `gen_ai.conversation.id`를 가지며 실행 UUID와 OpenTelemetry trace ID는 각각 다릅니다. persistence를 설정하면 새 Flow 인스턴스가 같은 대화를 복원하고 턴을 추가할 수 있습니다. 대화 상태는 trace 수명과 별개로 유지됩니다. trace 뷰어가 실행들을 함께 표시하려면 대화별 그룹화 지원이 필요합니다.
 
-`suppress_flow_events=True`는 Rich 콘솔 패널을 숨기고 메서드 실행 이벤트를 억제합니다. Flow start/finish 이벤트는 계속 발생하므로 바깥쪽 Flow 수명 주기는 추적할 수 있지만 개별 메서드 span은 생략됩니다.
+Enterprise 같은 호스트는 `telemetry_session(..., attributes={"gen_ai.conversation.id": conversation_id})`로 영구적인 공개 대화 id를 전달할 수 있습니다. 이 id는 런타임 Flow id 및 LLM task/agent 대체값보다 우선합니다.
 
-### 대화형 `Flow` trace 수명 주기
+### 턴의 종료와 trace 내보내기 시점
 
-[대화형 `Flow`](#대화형-flow)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`은 세션 trace를 열린 상태로 유지합니다. 지연된 턴은 턴별 `flow_failed`도 억제합니다. 턴 오류나 세션 중단이 발생하면 세션을 명시적으로 finalize하세요. 그러면 턴별 `FlowFailed` 이벤트 대신 세션 수준 `FlowFinished` 이벤트로 batch가 닫힙니다. REPL/루프는 항상 `try/finally`로 감싸고 종료 시 `flow.finalize_session_traces()`를 호출하세요. 호출하지 않으면 trace batch가 열린 채 남아 최종 대화가 export되지 않을 수 있습니다.
+**턴**은 제출된 메시지 하나와 이를 처리하는 Flow 그래프 실행입니다. 그래프가 기다리는 작업을 모두 완료하거나 예외를 발생시키면 턴 경계에 도달합니다. **대화**는 여러 턴을 포함하며 작업 중이 아닐 때도 재개할 수 있습니다. SDK는 침묵, 유휴 시간, 다음 메시지가 오지 않는 상황을 대화 종료로 추측하지 않습니다.
+
+| 진입점 | `trace_scope="turn"` 사용 시 | 기존 세션 전체 수명 주기 |
+|--------|-----------------------------|--------------------------|
+| TUI (`crewai run`) | 워커가 제출된 메시지마다 `handle_turn()`을 실행합니다. 그래프가 끝나면 턴을 종료하고 TUI가 다음 메시지를 받습니다. 턴 사이에 TUI를 열어 두어도 됩니다. | 유휴 상태에서 정상 종료하면 `finalize_session_traces()`를 자동으로 호출합니다. |
+| 직접 `handle_turn()` 호출 | 내부 kickoff가 완료되거나 실패하면 반환 또는 예외 전달 전에 trace를 닫고 정리합니다. 호출자는 세션 종료 메서드를 호출할 필요가 없습니다. | 애플리케이션이 세션 종료 시점을 결정하고 `finally`에서 `finalize_session_traces()`를 호출합니다. |
+| 직접 `stream_turn()` 호출 | stream 객체 반환은 턴 완료를 뜻하지 않습니다. 컨텍스트 관리자 안에서 stream을 소비하세요. 워커는 다음 메시지와 관계없이 턴을 완료하고 종료합니다. 완료 뒤 `stream.result`를 읽으세요. | 각 턴의 stream을 소비한 뒤 전체 세션을 끝낼 때 명시적으로 종료합니다. |
+| 터미널 `flow.chat()` REPL | 명시적 범위가 REPL의 기존 지연 플래그보다 우선하므로 각 턴이 자동으로 종료됩니다. | EOF나 예외를 포함해 루프가 끝나면 REPL이 `finalize_session_traces()`를 호출합니다. |
+
+턴 범위에서 런타임은 `flow_started`를 발생시키고 그래프를 실행합니다. 성공하면 `flow_finished`, 실패하면 `flow_failed`를 발생시킵니다. 정리 과정에서 추적 중인 메모리 저장과 대기 중인 이벤트 핸들러를 처리합니다. SDK가 실행을 소유하면 호출자에게 제어권을 돌려주기 전에 완료된 span을 flush합니다. 다음 턴은 같은 `gen_ai.conversation.id`로 새 실행과 trace를 시작하며 이전 root span을 다시 열지 않습니다.
+
+이벤트와 완료된 자식 span은 실행 중에도 발생할 수 있습니다. 인증된 batch exporter는 턴 종료 전에 이 span들을 업로드할 수 있으며 finalization은 root를 닫고 나머지를 flush합니다. 내보내기는 tracing 설정과 동의 정책을 따릅니다. 정상 반환만으로 collector 저장을 증명할 수는 없습니다. 호스트가 외부 `telemetry_session`을 제공하면 해당 호스트가 tracing 컨텍스트의 flush와 종료를 소유합니다.
+
+익명 trace에는 내보내기 경계에서 TUI의 기존 업로드 동의 절차가 적용됩니다. tracing을 명시적으로 켜면 동의한 것으로 처리하며, 그렇지 않으면 동의 창이 표시될 수 있습니다. 턴 범위는 내보내기 경계를 바꾸지만 동의 정책은 바꾸지 않습니다.
+
+턴이나 동의 창이 진행 중일 때 TUI를 종료하면 성공 완료로 표시하는 대신 중단/폐기 경로를 사용합니다. 로컬 버퍼에 남은 trace는 폐기할 수 있지만 이미 업로드한 span은 되돌릴 수 없습니다. 느린 도구도 완료, 실패 또는 애플리케이션의 취소 전까지 현재 턴의 일부입니다. 유휴 타이머가 작업을 완료로 간주하지 않습니다.
+
+### 호환성: 세션 전체 트레이싱
+
+이전 예제는 `defer_trace_finalization=True`를 사용하고 세션 전체 trace를 끝내기 위해 `finalize_session_traces()`를 요구했습니다. 이 API는 계속 지원되며 제거되거나 사용 중단되지 않았습니다. `trace_scope="turn"`을 선택하면 각 턴이 정리를 소유하므로 수동 종료가 더 이상 필요하지 않습니다. 기존 호출을 그대로 두어도 안전합니다. 옵션을 선택하지 않으면 기존 종료 수명 주기를 유지하세요.
+
+기존 호출자는 변경할 필요가 없습니다. `trace_scope`를 생략하면 현재 기본값인 `defer_trace_finalization=True`와 활성 세션 전체 trace 하나를 유지합니다. 이전처럼 `finalize_session_traces()`를 호출하세요. tracing 컨텍스트는 메모리에 남으며 Flow 상태를 저장해도 프로세스 재시작 후 복원되지 않습니다.
+
+```python
+@ConversationConfig()
+class SessionTraceFlow(SupportFlow):
+    pass
+
+flow = SessionTraceFlow()
+try:
+    flow.handle_turn("First message", session_id=session_id)
+    flow.handle_turn("Another message", session_id=session_id)
+finally:
+    flow.finalize_session_traces()
+```
+
+기본값 변경이나 지원 중단이 아닌 추가 옵션입니다. `ConversationConfig`, 선언적 대화, `chat()`은 기존 기본값을 유지합니다. 범위를 지정하지 않으면 명시적 `defer_trace_finalization=True`와 `False`도 계속 지원합니다. 범위를 생략하면 기존 LLM task/agent 연관 값도 바뀌지 않습니다.
+
+명시적 `trace_scope`가 기존 플래그보다 우선합니다. `"turn"`은 각 턴을 종료하고 `"session"`은 명시적으로 종료할 때까지 지연합니다. 턴 범위를 선택한 뒤에도 기존 `finalize_session_traces()` 호출을 남겨 둘 수 있습니다. 안전하게 아무 동작도 하지 않으며 추가 완료 이벤트를 발생시키지 않습니다. `chat()`은 계속 정리를 자동으로 관리합니다.
+
+`suppress_flow_events=True`는 콘솔 패널과 메서드 이벤트를 숨기지만 외부 Flow 수명 주기의 tracing을 비활성화하지는 않습니다.
 
 ## 스트리밍
 

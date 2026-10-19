@@ -7,13 +7,15 @@ mode: "wide"
 
 ## نظرة عامة
 
-تعامل التطبيقات المحادثية مع كل سطر من المستخدم كـ **تشغيل flow جديد** بنفس **معرّف الجلسة**. توفر CrewAI مساعدات لسجل الرسائل، وتوجيه النية الاختياري، وتأجيل التتبع، والبث المنظّم للجولات، إضافة إلى REPL محلي عبر `flow.chat()`.
+تعامل التطبيقات المحادثية مع كل سطر من المستخدم كـ **تشغيل flow جديد** بنفس **معرّف الجلسة**. توفر CrewAI مساعدات لسجل الرسائل، وتوجيه النية الاختياري، والتتبع التلقائي لكل جولة، والبث المنظّم للجولات، إضافة إلى REPL محلي عبر `flow.chat()`.
+
+تختار الأمثلة أدناه `ConversationConfig(trace_scope="turn")` صراحةً. يحتفظ المستدعون الحاليون الذين يحذفون `trace_scope` بدورة حياة التتبع الحالية وسلوك `finalize_session_traces()`.
 
 | المفهوم | التنفيذ |
 |---------|---------|
 | معرّف الجلسة | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
 | سطر المستخدم | `handle_turn(message)` يضيف الرسالة إلى `state.messages` قبل تشغيل الرسم |
-| اكتمال الجولة | `conversation_turn_completed`؛ ومع تأجيل التتبع الافتراضي ينتظر `FlowFinished` استدعاء `finalize_session_traces()` |
+| اكتمال الجولة | مع `trace_scope="turn"`: ‏`conversation_turn_completed` و`FlowFinished` لكل جولة ناجحة؛ و`FlowFailed` عند الفشل |
 | تتبع الجلسة الكامل | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
 ## واجهات الجولات
@@ -46,7 +48,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context):
         message = (self.state.current_user_message or "").lower()
@@ -78,11 +80,8 @@ class SupportFlow(Flow[ConversationState]):
 session_id = str(uuid4())
 flow = SupportFlow()
 
-try:
-    flow.handle_turn("Where is my order?", session_id=session_id)
-    flow.handle_turn("What about returns?", session_id=session_id)
-finally:
-    flow.finalize_session_traces()  # one trace link for the whole chat
+flow.handle_turn("Where is my order?", session_id=session_id)
+flow.handle_turn("What about returns?", session_id=session_id)
 ```
 
 ## بث جولة
@@ -223,7 +222,7 @@ def route_turn(self, context):
 
 ## عندما ينتهي الـ flow ويستمر المستخدم
 
-يُكمل كل `handle_turn()` تشغيل رسم واحد، وتستمر المحادثة عبر `handle_turn()` آخر يستخدم `session_id` نفسه. مع دورة حياة التتبع المؤجلة افتراضياً، يصدر ذلك التشغيل `conversation_turn_completed`، بينما يصدر `FlowFinished` مرة واحدة عندما تغلق `finalize_session_traces()` الجلسة. ويستعيد `@persist` الرسائل والأعلام والسياق.
+مع `trace_scope="turn"`، يُكمل كل `handle_turn()` تشغيل رسم واحد وينهي trace الخاص به. تابع المحادثة باستخدام `session_id` نفسه؛ يستعيد `@persist` الرسائل والأعلام والسياق. انتهاء trace لا ينهي المحادثة.
 
 **نمط الحفظ:** يُفضّل `@persist` على **خطوة نهائية واحدة** (مثل `finalize`) وليس على صنف `Flow` بالكامل. يحفظ الاستمرار على مستوى الصنف بعد كل طريقة؛ وتستخدم `load_state` أحدث صف، وقد يكون لقطة في منتصف التشغيل (مثلاً بعد `bootstrap` مباشرة) لا تتضمن تحديثات المعالج من الجولة نفسها.
 
@@ -231,7 +230,7 @@ def route_turn(self, context):
 
 ## `Flow` المحادثاتي
 
-اشترك في رسم الدردشة المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow` أو بتطبيق `@ConversationConfig(...)`. يوفر `Flow` الأساسي عندئذٍ `route_conversation` كنقطة البدء/الموجّه المدمجة، إضافة إلى مستمعي `converse_turn` و`end_conversation`. يظل المستمع المهمل `answer_from_history_turn` متاحاً للتوافق. يدير الإطار `state.messages`، ويمكنه تشغيل LLM للموجّه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة**؛ والإطار يتولى الباقي.
+اشترك في رسم الدردشة المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow` أو بتطبيق `@ConversationConfig(...)`. يوفر `Flow` الأساسي عندئذٍ `route_conversation` كنقطة البدء/الموجّه المدمجة، إضافة إلى مستمعي `converse_turn` و`end_conversation`. يظل المستمع المهمل `answer_from_history_turn` متاحاً للتوافق. يدير الإطار `state.messages`، ويمكنه تشغيل LLM للموجّه، ويمكنه إنهاء trace كل جولة تلقائياً باستخدام `trace_scope="turn"`. أنت تكتب **المسارات المخصصة**؛ والإطار يتولى الباقي.
 
 استخدمه عندما تريد دردشة متعددة الجولات مع موجّه قائم على LLM ومعالجات لكل مسار دون توصيل دورة الحياة يدوياً. استخدم `Flow[ChatState]` (النمط الأدنى مستوى في الأعلى) عندما تحتاج تحكماً كاملاً.
 
@@ -246,7 +245,7 @@ from crewai.flow import (
 )
 
 
-@ConversationConfig(defer_trace_finalization=True)
+@ConversationConfig(trace_scope="turn")
 class SupportFlow(Flow[ConversationState]):
     def route_turn(self, context: dict) -> str | None:
         message = (self.state.current_user_message or "").lower()
@@ -272,12 +271,9 @@ class SupportFlow(Flow[ConversationState]):
 
 
 flow = SupportFlow()
-try:
-    flow.handle_turn("What can you do?")              # routes to converse
-    flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
-    flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("What can you do?")              # routes to converse
+flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
+flow.handle_turn("Check the CrewAI docs.")         # routes to CREWAI_DOCS
 ```
 
 للدردشة المحلية في الطرفية، استخدم `chat()`:
@@ -287,7 +283,7 @@ def kickoff() -> None:
     SupportFlow().chat()
 ```
 
-يلف `chat()` استدعاءات `handle_turn()` داخل REPL، ويخرج عند `exit` / `quit`، ويتجاهل الأسطر الفارغة افتراضياً، ويستدعي `finalize_session_traces()` عند انتهاء الجلسة.
+يلف `chat()` استدعاءات `handle_turn()` داخل REPL، ويخرج عند `exit` / `quit`، ويتجاهل الأسطر الفارغة افتراضياً. مع `trace_scope="turn"` تنهي كل جولة trace الخاص بها تلقائياً. دون نطاق صريح، تبقى دورة حياة الجلسة والإنهاء التلقائي عند الخروج من REPL دون تغيير.
 
 ### `ConversationConfig`
 
@@ -303,7 +299,8 @@ def kickoff() -> None:
 | `intent_llm` | `None` | LLM لمسار التصنيف المسبق القديم `intents=`/`default_intents`. |
 | `default_intents` | `None` | تسميات النتائج للتصنيف المسبق القديم. |
 | `visible_agent_outputs` | `None` | `"all"` أو قائمة بأسماء الـ agents الذين تُرفع مخرجاتهم من `append_agent_result()` إلى رسائل عامة. |
-| `defer_trace_finalization` | `True` | يبقي دفعة trace واحدة مفتوحة عبر استدعاءات `handle_turn()`. |
+| `defer_trace_finalization` | `True` | دورة حياة الجلسة الحالية، دون تغيير عند حذف `trace_scope`. |
+| `trace_scope` | `None` | اختر `"turn"` للتتبع التلقائي لكل جولة أو `"session"`؛ للنطاق الصريح أولوية على العلم القديم. |
 
 <Warning>
   تم إهمال `answer_from_history_prompt` و`answer_from_history_llm` ومسار
@@ -495,6 +492,7 @@ schema: crewai.flow/v1
 name: SupportFlow
 
 conversational:
+  trace_scope: turn
   system_prompt: You are a terse support assistant.
   llm: gpt-4o-mini
   router:
@@ -532,10 +530,7 @@ from crewai.flow import Flow
 
 flow = Flow.from_declaration(path="flow.yaml")
 
-try:
-    flow.handle_turn("Where is my order?", session_id="session-1")
-finally:
-    flow.finalize_session_traces()
+flow.handle_turn("Where is my order?", session_id="session-1")
 ```
 
 ### تسمية المسارات
@@ -555,24 +550,60 @@ finally:
 
 ## التتبع عبر الجولات
 
-مع `defer_trace_finalization=True` (افتراضي في `ConversationConfig`):
-
-- **دفعة trace واحدة** لجلسة الدردشة.
-- **`flow_started`** في الجولة الأولى فقط؛ **`flow_finished`** مرة في `finalize_session_traces()`.
-- **`kickoff` لكل جولة** لا يطبع "Trace batch finalized".
-- **العمل المتداخل** (`Agent.kickoff()`, crews, Exa) يُلحق بدفعة **الأب**؛ flow داخلي من `AgentExecutor` لا يغلق دفعة الجلسة مبكراً.
+اختر `ConversationConfig(trace_scope="turn")` ليحصل كل `handle_turn()` أو `stream_turn()` على trace كامل. تصدر الجولات الناجحة `flow_finished` والفاشلة `flow_failed`. لا تحتاج في هذا الوضع إلى استدعاء للإنهاء لمتابعة المحادثة.
 
 ```python
-flow.chat(session_id=session_id)
+flow.handle_turn("Remember blue", session_id=session_id)
+flow.handle_turn("What color?", session_id=session_id)
 ```
 
-`flow.chat()` يستدعي `finalize_session_traces()` نيابةً عنك. عندما تملك الحلقة عبر `handle_turn()`، استدعِ `finalize_session_traces()` عند انتهاء الجلسة.
+تحمل الجولتان `gen_ai.conversation.id` نفسه، مع UUID تنفيذ ومعرّف OpenTelemetry trace منفصلين. عند إعداد persistence، يستطيع مثيل Flow جديد استعادة المحادثة نفسها وإضافة جولة. تستمر حالة المحادثة بشكل مستقل عن دورة حياة trace. يحتاج عارض التتبع إلى دعم تجميع المحادثات لعرض هذه التنفيذات معاً.
 
-يخفي `suppress_flow_events=True` لوحات Rich ويمنع أحداث تنفيذ الطرق. وتظل أحداث بدء/انتهاء Flow تصدر، فيبقى بالإمكان تتبع دورة حياة Flow الخارجية، بينما تُحذف spans الطرق الفردية.
+يمكن للمضيف مثل Enterprise تمرير معرّف محادثة عام ودائم عبر `telemetry_session(..., attributes={"gen_ai.conversation.id": conversation_id})`. وله أولوية على معرّف Flow التشغيلي ومعرّفات task/agent الاحتياطية لـ LLM.
 
-### دورة حياة trace لـ `Flow` المحادثاتي
+### متى تنتهي الجولة ومتى تُصدَّر traces
 
-يستخدم [`Flow` المحادثاتي](#flow-المحادثاتي) دورة حياة التتبع نفسها: القيمة الافتراضية لـ `defer_trace_finalization` هي `True`، ولذلك يبقي كل `handle_turn()` trace الجلسة مفتوحاً. تمنع الجولات المؤجلة أيضاً إصدار `flow_failed` لكل جولة؛ وعند حدوث خطأ في جولة أو إلغاء الجلسة، أنهِ الجلسة صراحةً. يغلق ذلك الدفعة بحدث `FlowFinished` على مستوى الجلسة بدلاً من حدث `FlowFailed` لكل جولة. لُف REPL/الحلقة دائماً بـ `try/finally` واستدعِ `flow.finalize_session_traces()` عند الخروج. بدون ذلك، تبقى دفعة trace مفتوحة وقد لا تُصدَّر المحادثة النهائية أبداً.
+**الجولة** هي رسالة مرسلة واحدة وتشغيل رسم Flow الذي يعالجها. تنتهي عندما يُكمل الرسم العمل الذي ينتظره أو يثير استثناءً. وقد تضم **المحادثة** جولات كثيرة وتبقى قابلة للاستئناف دون وجود عمل جارٍ. لا يستنتج SDK انتهاء المحادثة من الصمت أو الخمول أو عدم وصول رسالة تالية.
+
+| نقطة الدخول | مع `trace_scope="turn"` | مع دورة حياة الجلسة الحالية |
+|-------------|-------------------------|------------------------------|
+| TUI (`crewai run`) | يشغّل العامل `handle_turn()` لكل رسالة. تنتهي الجولة عند انتهاء الرسم، ثم تقبل TUI رسالة أخرى. يمكنك ترك الواجهة مفتوحة بين الجولات. | يستدعي الخروج العادي أثناء الخمول `finalize_session_traces()` تلقائياً. |
+| `handle_turn()` مباشرةً | يُكمل kickoff الداخلي عمله أو يفشل، ويغلق trace وينظّف موارده قبل العودة أو إثارة الاستثناء. لا يحتاج المستدعي إلى إنهاء الجلسة يدوياً. | يحدد التطبيق نهاية الجلسة ويستدعي `finalize_session_traces()` داخل `finally`. |
+| `stream_turn()` مباشرةً | إرجاع كائن stream لا يعني انتهاء الجولة. استهلك stream داخل مدير السياق؛ يُكمل العامل الجولة وينهي تتبعها دون انتظار رسالة تالية. اقرأ `stream.result` بعد الاكتمال. | استهلك stream كل جولة، ثم أنهِ التتبع صراحةً عند إنهاء الجلسة كاملة. |
+| REPL الطرفي `flow.chat()` | يتقدم النطاق الصريح على علم التأجيل القديم في REPL، فتنتهي كل جولة تلقائياً. | يستدعي REPL ‏`finalize_session_traces()` عند خروج الحلقة، بما يشمل EOF أو الاستثناء. |
+
+في نطاق الجولة، يصدر runtime ‏`flow_started` وينفّذ الرسم. يصدر النجاح `flow_finished`، ويصدر الفشل `flow_failed`. ينتظر التنظيف عمليات حفظ الذاكرة المتتبعة ومعالجات الأحداث المعلقة. عندما يملك SDK التنفيذ، يدفع التنظيف spans المكتملة قبل إعادة التحكم إلى المستدعي. تبدأ الجولة التالية تنفيذاً وtrace جديدين مع `gen_ai.conversation.id` نفسه؛ ولا تعيد فتح root span السابق.
+
+قد تصدر الأحداث وspans الأبناء المكتملة أثناء التنفيذ. وقد يرفع batch exporter الموثّق تلك spans قبل اكتمال الجولة؛ يغلق الإنهاء root ويدفع الباقي. يظل التصدير خاضعاً لإعدادات التتبع والموافقة، ولا تثبت العودة الناجحة حفظ البيانات في collector. إذا وفر المضيف `telemetry_session` خارجياً، فإنه يملك دفع بيانات سياق التتبع وإغلاقه.
+
+بالنسبة إلى traces غير الموثّقة، تطبق TUI مسار الموافقة الحالي على الرفع عند حد التصدير. يعد تفعيل التتبع صراحةً موافقة؛ وإلا فقد تظهر مطالبة بالموافقة. يغيّر نطاق الجولة حد التصدير، لا سياسة الموافقة.
+
+الخروج من TUI أثناء جولة أو طلب موافقة يستخدم مسار الإلغاء/التجاهل بدلاً من إعلان اكتمال ناجح. يمكن تجاهل traces المعلقة المخزّنة محلياً، لكن لا يمكن سحب spans رُفعت بالفعل. تظل الأداة البطيئة جزءاً من الجولة حتى تنتهي أو تفشل أو يلغيها التطبيق؛ لا يوجد مؤقت خمول يعتبرها مكتملة.
+
+### التوافق: تتبع الجلسة كاملة
+
+استخدمت الأمثلة السابقة `defer_trace_finalization=True` وتطلبت `finalize_session_traces()` لإنهاء trace الجلسة كاملة. تظل الواجهة مدعومة؛ ولم تُحذف أو تُهمَل. بعد اختيار `trace_scope="turn"`، لا يعود الإنهاء اليدوي ضرورياً لأن كل جولة تدير تنظيفها. يمكنك إبقاء الاستدعاءات الحالية بأمان. دون هذا الخيار، واصل دورة الإنهاء الحالية.
+
+لا يحتاج المستدعون الحاليون إلى تغيير: يحافظ حذف `trace_scope` على القيمة الافتراضية الحالية `defer_trace_finalization=True` وعلى trace واحد لجلسة حية كاملة. واصل استدعاء `finalize_session_traces()` كالسابق. يبقى سياق التتبع في الذاكرة؛ ولا يعيده حفظ حالة Flow بعد إعادة تشغيل العملية.
+
+```python
+@ConversationConfig()
+class SessionTraceFlow(SupportFlow):
+    pass
+
+flow = SessionTraceFlow()
+try:
+    flow.handle_turn("First message", session_id=session_id)
+    flow.handle_turn("Another message", session_id=session_id)
+finally:
+    flow.finalize_session_traces()
+```
+
+هذا خيار إضافي، وليس تغييراً للقيم الافتراضية أو إهمالاً لواجهة قديمة. تحتفظ `ConversationConfig` والمحادثات التعريفية و`chat()` بقيمها الافتراضية الحالية. تظل القيمتان الصريحتان `defer_trace_finalization=True` و`False` مدعومتين دون نطاق. لا تتغير قيم ربط LLM task/agent الحالية عند حذف النطاق.
+
+لـ `trace_scope` الصريح أولوية على العلم القديم: يغلق `"turn"` كل جولة، ويؤجل `"session"` الإنهاء حتى استدعاء finalization. يمكنك إبقاء استدعاءات `finalize_session_traces()` الحالية بعد اختيار نطاق الجولة؛ تصبح عملية آمنة بلا تأثير ولا تصدر حدث اكتمال آخر. يواصل `chat()` إدارة الإنهاء تلقائياً.
+
+يمنع `suppress_flow_events=True` لوحات الطرفية وأحداث الطرق، لكنه لا يعطّل تتبع دورة حياة Flow الخارجي.
 
 ## البث
 
