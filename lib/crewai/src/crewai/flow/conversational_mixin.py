@@ -488,6 +488,8 @@ class _ConversationalMixin:
             object.__setattr__(self, "_assistant_reply_appended", False)
             object.__setattr__(self, "_turn_recorded_results", [])
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+            if isinstance(result, HumanFeedbackPending):
+                return result
             self._append_public_turn_result_and_persist(result)
         except Exception as exc:
             failed_event = ConversationTurnFailedEvent(
@@ -573,6 +575,8 @@ class _ConversationalMixin:
                     object.__setattr__(
                         self, "_streaming_conversation_turn", original_streaming_turn
                     )
+                if isinstance(result, HumanFeedbackPending):
+                    return result
                 self._append_public_turn_result_and_persist(result)
             except HumanFeedbackPending as exc:
                 return exc

@@ -568,6 +568,8 @@ Enterprise 같은 호스트는 `telemetry_session(..., attributes={"gen_ai.conve
 | 직접 `stream_turn()` 호출 | stream 객체 반환은 턴 완료를 뜻하지 않습니다. 컨텍스트 관리자 안에서 stream을 소비하세요. 워커는 다음 메시지와 관계없이 턴을 완료하고 종료합니다. 완료 뒤 `stream.result`를 읽으세요. | 각 턴의 stream을 소비한 뒤 전체 세션을 끝낼 때 명시적으로 종료합니다. |
 | 터미널 `flow.chat()` REPL | 명시적 범위가 REPL의 기존 지연 플래그보다 우선하므로 각 턴이 자동으로 종료됩니다. | EOF나 예외를 포함해 루프가 끝나면 REPL이 `finalize_session_traces()`를 호출합니다. |
 
+사람의 피드백을 기다리는 일시 중지는 반환 시 완료된다는 규칙의 예외입니다. 검토를 기다리는 동안 `handle_turn()`이나 `stream_turn()`은 `HumanFeedbackPending`을 반환할 수 있습니다. 이때 `flow_paused`를 발생시키며 `flow_finished`나 `conversation_turn_completed`는 발생시키지 않습니다. 피드백이 도착하면 `Flow.from_pending(...)`으로 Flow를 복원하고 `resume()` 또는 `resume_async()`를 호출하세요. 기존 HITL 수명 주기는 일시 중지된 trace 구간을 닫고 재개된 구간을 `follows_from`으로 연결하며 실행 UUID와 대화 id를 유지합니다. 따라서 하나의 논리적 턴이 연결된 여러 OpenTelemetry trace에 걸칠 수 있습니다. 일시 중지는 사용자 메시지 처리가 끝났다는 뜻이 아닙니다.
+
 턴 범위에서 런타임은 `flow_started`를 발생시키고 그래프를 실행합니다. 성공하면 `flow_finished`, 실패하면 `flow_failed`를 발생시킵니다. 정리 과정에서 추적 중인 메모리 저장과 대기 중인 이벤트 핸들러를 처리합니다. SDK가 실행을 소유하면 호출자에게 제어권을 돌려주기 전에 완료된 span을 flush합니다. 다음 턴은 같은 `gen_ai.conversation.id`로 새 실행과 trace를 시작하며 이전 root span을 다시 열지 않습니다.
 
 이벤트와 완료된 자식 span은 실행 중에도 발생할 수 있습니다. 인증된 batch exporter는 턴 종료 전에 이 span들을 업로드할 수 있으며 finalization은 root를 닫고 나머지를 flush합니다. 내보내기는 tracing 설정과 동의 정책을 따릅니다. 정상 반환만으로 collector 저장을 증명할 수는 없습니다. 호스트가 외부 `telemetry_session`을 제공하면 해당 호스트가 tracing 컨텍스트의 flush와 종료를 소유합니다.

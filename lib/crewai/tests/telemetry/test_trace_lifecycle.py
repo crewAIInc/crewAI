@@ -504,6 +504,103 @@ def test_conversation_turns_finish_and_resume_with_stable_identity(
 
 
 @pytest.mark.parametrize("streamed", [False, True])
+@pytest.mark.parametrize("authenticated", [False, True])
+def test_conversation_hitl_pause_is_not_a_completed_turn(
+    in_memory_grant_collectors, monkeypatch, tmp_path, streamed, authenticated
+):
+    from crewai.events.types.flow_events import (
+        ConversationTurnCompletedEvent,
+        ConversationTurnFailedEvent,
+        FlowFinishedEvent,
+        FlowPausedEvent,
+    )
+    from crewai.flow import human_feedback
+    from crewai.flow.async_feedback import HumanFeedbackPending
+    from crewai.flow.conversational import ConversationConfig, ConversationState
+    from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+    issued, recorders = in_memory_grant_collectors
+    if authenticated:
+        monkeypatch.setenv("CREWAI_USER_PAT", "synthetic-pat")
+
+    class PausingProvider:
+        def request_feedback(self, context, flow):
+            raise HumanFeedbackPending(context)
+
+    @ConversationConfig(trace_scope="turn")
+    class Conversation(Flow[ConversationState]):
+        def route_turn(self, context):
+            return "review"
+
+        @listen("review")
+        @human_feedback(message="Approve draft?", provider=PausingProvider())
+        def draft(self):
+            return "draft"
+
+        @listen(draft)
+        def finish(self, feedback):
+            return feedback.feedback
+
+    events = []
+    flow = Conversation(
+        tracing=True,
+        persistence=SQLiteFlowPersistence(str(tmp_path / "pending.db")),
+    )
+    with crewai_event_bus.scoped_handlers(), trace_consent(lambda: True):
+        for event_type in (
+            ConversationTurnCompletedEvent,
+            ConversationTurnFailedEvent,
+            FlowFinishedEvent,
+            FlowPausedEvent,
+        ):
+            crewai_event_bus.on(event_type)(
+                lambda source, event: events.append(event.type)
+            )
+        if streamed:
+            stream = flow.stream_turn("Write a draft")
+            list(stream.events)
+            pending = stream.result
+        else:
+            pending = flow.handle_turn("Write a draft")
+        crewai_event_bus.flush()
+        assert isinstance(pending, HumanFeedbackPending)
+        assert events == ["flow_paused"]
+        execution_uuid = pending.context.execution_uuid
+        paused_spans = recorders[execution_uuid].get_finished_spans()
+        paused_root = next(span for span in paused_spans if span.parent is None)
+        assert paused_root.attributes["crewai.event_name"] == "flow_paused"
+        assert flow._pending_user_message is None
+        assert get_execution_uuid() is None and get_trace_session() is None
+
+        # Resume from persisted feedback, as a different worker/process would.
+        resumed = Conversation.from_pending(
+            flow.flow_id, persistence=flow.persistence, tracing=True
+        )
+        assert resumed.resume("Approved") == "Approved"
+        crewai_event_bus.flush()
+
+    assert events == ["flow_paused", "flow_finished"]
+    assert [grant.execution_uuid for grant in issued] == [execution_uuid] * 2
+    resumed_spans = recorders[execution_uuid].get_finished_spans()
+    resumed_root = next(span for span in resumed_spans if span.parent is None)
+    assert resumed_root.attributes["crewai.event_name"] == "flow_finished"
+    (link,) = resumed_root.links
+    assert link.context.trace_id == paused_root.context.trace_id
+    assert link.context.span_id == paused_root.context.span_id
+    assert link.attributes["crewai.link.type"] == "follows_from"
+    for spans in (paused_spans, resumed_spans):
+        span_ids = {span.context.span_id for span in spans}
+        assert all(
+            span.parent is None or span.parent.span_id in span_ids for span in spans
+        )
+        assert all(span.status.status_code == trace.StatusCode.OK for span in spans)
+        assert all(
+            span.attributes["gen_ai.conversation.id"] == flow.flow_id for span in spans
+        )
+    assert get_execution_uuid() is None and get_trace_session() is None
+
+
+@pytest.mark.parametrize("streamed", [False, True])
 def test_failed_conversation_turn_closes_without_poisoning_next_turn(
     in_memory_grant_collectors, monkeypatch, streamed
 ):
