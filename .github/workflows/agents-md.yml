@@ -17,13 +17,12 @@ on:
       - "docs/docs.json"
       - "docs/edge/en/**"
       - ".github/workflows/agents-md.yml"
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: agents-md-${{ github.event.pull_request.number || github.ref }}
+  group: agents-md-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -82,7 +81,7 @@ jobs:
   eval:
     name: AGENTS.md eval (${{ matrix.model }})
     needs: changes
-    if: needs.changes.outputs.eval == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.eval == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -133,6 +132,6 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          BASE_REF: ${{ github.base_ref || 'main' }}
+          BASE_REF: ${{ github.base_ref }}
           MODEL: ${{ matrix.model }}
         run: uv run --package crewai-devtools devtools agents-md-eval --base "origin/$BASE_REF" --model "$MODEL"

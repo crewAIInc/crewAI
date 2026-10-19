@@ -267,3 +267,12 @@ def test_the_workflow_runs_the_default_models():
 
     workflow = yaml.safe_load(ev.read_at(None, ".github/workflows/agents-md.yml"))
     assert workflow["jobs"]["eval"]["strategy"]["matrix"]["model"] == list(ev.MODELS)
+
+
+def test_the_workflow_runs_only_on_pull_requests_against_main():
+    import yaml
+
+    workflow = yaml.safe_load(ev.read_at(None, ".github/workflows/agents-md.yml"))
+    triggers = workflow[True]  # PyYAML reads the key `on` as the boolean true
+    assert list(triggers) == ["pull_request"]
+    assert triggers["pull_request"]["branches"] == ["main"]
