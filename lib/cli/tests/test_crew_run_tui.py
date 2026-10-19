@@ -2590,10 +2590,11 @@ def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_nothing_else(
 
 
 def test_a_run_started_by_crewai_eval_leaves_the_untraced_count_to_the_command(
-    monkeypatch, stops
+    monkeypatch, tmp_path, stops
 ) -> None:
     """The command waiting behind this screen says "not traced" and counts it;
     counting it here as well would count one stop twice."""
+    monkeypatch.chdir(tmp_path)  # the app leaves its word in the project's .crewai/
     monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
     monkeypatch.setattr(CrewRunApp, "notify", lambda self, *a, **k: None)
     with crew_run_tui.evaluating_after_run():
