@@ -1458,7 +1458,6 @@ FooterKey .footer-key--key {
             # first; a no runs nothing.
             from crewai_cli.experimental.eval_crew import (
                 _machine_amp_origins,
-                _machine_credential,
                 record_stop,
                 tracing_already_on,
                 tracing_turned_off,
@@ -1473,12 +1472,12 @@ FooterKey .footer-key--key {
                     severity="warning",
                 )
                 return
-            # Before anything is asked or written: a run whose trace would carry
-            # this machine's login to an AMP it does not trust is not run again
+            # Before anything is asked or written: a run whose trace would go to
+            # an AMP this machine does not trust with its login is not run again
             # (`crewai eval` refuses it too), so a yes here could not be honored.
             # This process loaded the project's `.env` for the run, so only the
             # AMPs this machine is configured for are trusted.
-            stop = untrusted_amp_stop(_machine_amp_origins(), _machine_credential())
+            stop = untrusted_amp_stop(_machine_amp_origins())
             if stop is not None:
                 record_stop("untrusted_amp")
                 self.notify(stop, title="Evaluate", severity="warning")

@@ -532,29 +532,13 @@ def _record_deploy_button(event: DeployButtonEvent) -> None:
 EVAL_TOKEN_ENV = "CREWAI_EVAL_AWAITING_RUN"  # noqa: S105 - a variable name, not a secret
 
 
-# What each project `.env` loaded into this process replaced: the value the
-# process had before (None: unset). The first load is the one kept.
-_ENV_BEFORE_PROJECT: dict[str, str | None] = {}
-
-
-def environment_before_project(key: str) -> str | None:
-    """KEY as this process had it before any project's `.env` was loaded over
-    it: what belongs to this machine, not to the project."""
-    if key in _ENV_BEFORE_PROJECT:
-        return _ENV_BEFORE_PROJECT[key]
-    return os.environ.get(key)
-
-
 def load_project_env(env_file: Path) -> None:
     """The project's `.env` over this process's environment, `crewai eval`'s
     token excepted: the token this process was started with is kept, and a
     `.env` never sets one. Otherwise a `.env` could unmark a run `crewai eval`
-    started, and its tracing would no longer apply the command's rules. What
-    it replaced stays readable (`environment_before_project`)."""
-    from dotenv import dotenv_values, load_dotenv
+    started, and its tracing would no longer apply the command's rules."""
+    from dotenv import load_dotenv
 
-    for key in dotenv_values(env_file):
-        _ENV_BEFORE_PROJECT.setdefault(key, os.environ.get(key))
     kept = os.environ.get(EVAL_TOKEN_ENV)
     load_dotenv(env_file, override=True)
     if kept is None:

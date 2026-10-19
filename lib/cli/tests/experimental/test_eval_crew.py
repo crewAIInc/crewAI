@@ -3333,51 +3333,6 @@ def test_a_rerun_from_the_run_app_trusts_only_what_the_app_says(
         assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
 
 
-def _put_back_after(monkeypatch, *keys: str) -> None:
-    """`load_project_env` writes `os.environ` itself: the test puts it back."""
-    for key in keys:
-        monkeypatch.setenv(key, "unset-after-the-test")
-        monkeypatch.delenv(key)
-
-
-@pytest.mark.parametrize("machine_pat", [None, "the-machines"])
-def test_a_token_the_projects_env_brought_is_the_projects_own(
-    project, monkeypatch, usage, machine_pat
-):
-    """Evaluate's re-run happens in the process that loaded the project's `.env`
-    for the run the person watched. A CREWAI_USER_PAT that `.env` brought goes
-    where the same `.env` says on every run of the project, so the crew runs; a
-    token this machine had before the `.env` replaced it is still this
-    machine's, and does not go to an AMP it does not trust."""
-    directory, _ = project
-    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
-    (directory / ".env").write_text(
-        "CREWAI_PLUS_URL=https://self-hosted.example\nCREWAI_USER_PAT=the-projects\n"
-    )
-    _put_back_after(monkeypatch, "CREWAI_PLUS_URL", "CREWAI_USER_PAT", "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN")
-    monkeypatch.setattr(eval_module, "saved_login", lambda: None)
-    if machine_pat:
-        monkeypatch.setenv("CREWAI_USER_PAT", machine_pat)
-    run_crew_module.load_project_env(directory / ".env")  # the run app's own load
-    ran: list[str] = []
-
-    def fake_run_crew() -> None:
-        ran.append(os.environ["CREWAI_USER_PAT"])
-        record_last_run(directory, "the-new-run", recorded_at=_now())
-
-    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
-    install(monkeypatch, FakeAMP(statuses=[done()]))
-
-    if machine_pat:
-        with pytest.raises(SystemExit):
-            eval_module.eval_crew(run_again=True, trusted_amp_origins=eval_module._machine_amp_origins())
-        assert ran == []
-        assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
-    else:
-        eval_module.eval_crew(run_again=True, trusted_amp_origins=eval_module._machine_amp_origins())
-        assert ran == ["the-projects"]
-
-
 @pytest.mark.parametrize("amp_url", ["https://evil.example", "https://amp.test"])
 def test_tracing_is_never_turned_on_toward_an_amp_the_command_does_not_trust(
     project, monkeypatch, capsys, amp_url
@@ -3450,25 +3405,30 @@ def test_a_crew_whose_trace_would_carry_the_login_to_an_untrusted_amp_is_not_run
     assert (directory / ".env").read_text() == env  # nothing turned on
 
 
-def test_with_no_credential_on_this_machine_there_is_nothing_to_protect(project, monkeypatch):
+@pytest.mark.parametrize("at_a_terminal", [False, True])
+def test_with_no_login_on_this_machine_yet_tracing_is_still_not_turned_on_toward_it(
+    project, monkeypatch, usage, consent_screen, at_a_terminal
+):
+    """No login to protect today is no reason to write CREWAI_TRACING_ENABLED=true
+    toward an AMP the project chose: the first run after `crewai login` would
+    carry the login there. Nothing is run, asked or written."""
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
-    (directory / ".env").write_text("CREWAI_PLUS_URL=https://evil.example\nCREWAI_TRACING_ENABLED=true\n")
+    env = "CREWAI_PLUS_URL=https://evil.example\n"
+    (directory / ".env").write_text(env)
     monkeypatch.setattr(eval_module, "saved_login", lambda: None)
     monkeypatch.delenv("CREWAI_USER_PAT", raising=False)
     monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
-    ran: list[str] = []
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: at_a_terminal)
+    amp = install(monkeypatch, FakeAMP())
 
-    def fake_run_crew() -> None:
-        ran.append("run")
-        record_last_run(directory, "the-new-run", recorded_at=_now())
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()  # the autouse guard fails the test if the crew runs
 
-    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
-    install(monkeypatch, FakeAMP(statuses=[done()]))
-
-    eval_module.eval_crew()
-
-    assert ran == ["run"]
+    assert exited.value.code == 1
+    assert (directory / ".env").read_text() == env
+    assert consent_screen.asked == [] and amp.calls == []
+    assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
 
 
 

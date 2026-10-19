@@ -406,6 +406,8 @@ def test_evaluate_on_a_run_that_was_not_traced_runs_it_again_traced(monkeypatch,
     (`run_crew._chain_traced_rerun`)."""
     # tracing not turned off (the suite's `.env.test` turns it off), and on
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    # the run traces to this machine's own AMP (`.env.test` names a fake one)
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
     monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
     app = CrewRunApp()
     app._status = "completed"
@@ -2538,6 +2540,8 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
     if tracing == "turned off":
         (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    # the run traces to this machine's own AMP (`.env.test` names a fake one)
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
     monkeypatch.setattr(
         "crewai_core.user_data.is_tracing_enabled",
         lambda: os.environ.get("CREWAI_TRACING_ENABLED") == "true",
@@ -2574,9 +2578,10 @@ def test_evaluate_on_an_untraced_run_asks_before_tracing_is_turned_on(
 def test_evaluate_toward_an_untrusted_amp_asks_nothing_and_writes_nothing(
     monkeypatch, tmp_path, stops, tracing
 ) -> None:
-    """The project's `.env` names an AMP this machine does not send its login
-    to: `crewai eval` would refuse the re-run, so nothing is asked, `.env` is
-    left as it was, and the app says why instead of closing."""
+    """The project's `.env` names an AMP this machine does not trust with its
+    login, logged in or not yet: `crewai eval` would refuse the re-run, so
+    nothing is asked, `.env` is left as it was, and the app says why instead
+    of closing."""
     from crewai_cli.experimental import eval_crew
 
     monkeypatch.chdir(tmp_path)
@@ -2588,7 +2593,6 @@ def test_evaluate_toward_an_untrusted_amp_asks_nothing_and_writes_nothing(
     (tmp_path / ".env").write_text(env)
     monkeypatch.setenv("CREWAI_PLUS_URL", "https://evil.example")  # the run's own load
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
-    monkeypatch.setattr(eval_crew, "saved_login", lambda: "login-token")
     monkeypatch.setattr(
         eval_crew,
         "Settings",
@@ -2622,6 +2626,8 @@ def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_nothing_else(
     ran the crew (`eval_ran_crew:run_again`) and how that ended."""
     # tracing not turned off (the suite's `.env.test` turns it off)
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    # the run traces to this machine's own AMP (`.env.test` names a fake one)
+    monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
     app = CrewRunApp()
     app._status = "completed"
     app._telemetry = Mock()

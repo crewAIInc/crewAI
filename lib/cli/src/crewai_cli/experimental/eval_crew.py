@@ -194,10 +194,10 @@ NOT_SHARED = (
     "Nothing was run: evaluating a run needs its trace, and no trace was shared."
 )
 UNTRUSTED_AMP = (
-    "The crew was not run: its trace would go to {url}, an AMP this machine does not "
-    "send its CrewAI login to, and the project's crewai could send the login there "
-    "with the trace. Log in to that AMP (`crewai enterprise configure {url}`) or "
-    "remove CREWAI_PLUS_URL from the project's .env, then evaluate again."
+    "The crew was not run: its trace would go to {url}, an AMP this machine is not "
+    "set up to trust with its CrewAI login. Set that AMP up (`crewai enterprise "
+    "configure {url}`) or remove CREWAI_PLUS_URL from the project's .env, then "
+    "evaluate again."
 )
 
 
@@ -300,9 +300,6 @@ def eval_crew(
         if trusted_amp_origins is None
         else set(trusted_amp_origins)
     )
-    # Every credential this machine holds that a run could send, as it is
-    # before the project's .env adds its own.
-    machine_credential = _machine_credential()
     _load_project_env()
     execution_id = run_id or record.get("execution_id")
     if why is not None:
@@ -315,7 +312,6 @@ def eval_crew(
             why,
             trusted=trusted,
             run_args=run_args,
-            machine_credential=machine_credential,
         )
         if execution_id is None:
             return
@@ -776,39 +772,17 @@ def _project_changed_since(record: dict[str, Any]) -> bool:
     return files is not None and any(info.st_mtime > since for info in files.values())
 
 
-def _machine_credential() -> bool:
-    """Does this machine hold a credential a run's tracing would send — the
-    saved `crewai login`, or a PAT or integration token in the environment
-    before the project's `.env` is loaded? A token the `.env` brought is the
-    project's own, read here even after the run app loaded it."""
-    from crewai_cli.run_crew import environment_before_project
+def untrusted_amp_stop(trusted: set[str]) -> str | None:
+    """Why the crew must not run for an evaluation: its trace would go to an
+    AMP this command does not trust — the one the run traces to, read after
+    the project's `.env`. None when it may run.
 
-    if environment_before_project("CREWAI_USER_PAT") or environment_before_project(
-        "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"
-    ):
-        return True
-    try:
-        return saved_login() is not None
-    except EvaluationStoppedError:
-        return False  # unreadable here is unreadable to the run too
-
-
-def untrusted_amp_stop(trusted: set[str], machine_credential: bool) -> str | None:
-    """Why the crew must not run for an evaluation, when a credential of this
-    machine would go with its trace to an AMP this command does not trust;
-    None when it may run."""
-    if not _credential_would_leave(trusted, machine_credential):
+    Whether this machine holds a login right now does not matter: tracing
+    turned on toward that AMP would carry one there as soon as there is one."""
+    origin = _origin(PlusAPI().base_url)
+    if origin in trusted and _encrypted(origin):
         return None
     return UNTRUSTED_AMP.format(url=PlusAPI().base_url.rstrip("/"))
-
-
-def _credential_would_leave(trusted: set[str], machine_credential: bool) -> bool:
-    """Would a credential of this machine go to an AMP this command does not
-    trust — the one the run traces to, read after the project's `.env`?"""
-    if not machine_credential:
-        return False
-    origin = _origin(PlusAPI().base_url)
-    return not (origin in trusted and _encrypted(origin))
 
 
 def tracing_already_on() -> bool:
@@ -942,7 +916,6 @@ def _run_the_crew_to_evaluate(
     *,
     trusted: set[str] | None = None,
     run_args: dict[str, Any] | None = None,
-    machine_credential: bool = False,
 ) -> str | None:
     """Run the crew, traced, to have a run to evaluate.
 
@@ -961,13 +934,15 @@ def _run_the_crew_to_evaluate(
             "No crewAI project here (no pyproject.toml). Run `crewai eval` from the project's "
             "directory, or name a run: `crewai eval --run EXECUTION_ID`."
         )
-    # A credential of this machine must never reach an AMP this command does
-    # not trust, and a project's crewai older than the handshake sends it to
-    # whatever AMP the project names whenever the run traces — by the project's
-    # .env, a consent given once, or `tracing=True` in code, which the CLI
-    # cannot see; nor can it tell which crewai the project runs. So the crew
-    # is not run at all, and nobody is asked to turn tracing on toward it.
-    stop = untrusted_amp_stop(trusted or set(), machine_credential)
+    # This machine's login must never reach an AMP this command does not
+    # trust, and a project's crewai older than the handshake sends it to
+    # whatever AMP the project names whenever the run traces — by the
+    # project's .env, a consent given once, or `tracing=True` in code, which
+    # the CLI cannot see; nor can it tell which crewai the project runs. Nor
+    # may tracing be turned on toward it while there is no login yet: the next
+    # run after `crewai login` would carry it there. So toward such an AMP the
+    # crew is not run, nobody is asked, and nothing is written.
+    stop = untrusted_amp_stop(trusted or set())
     if stop is not None:
         record_stop("untrusted_amp")
         _fail(stop)
