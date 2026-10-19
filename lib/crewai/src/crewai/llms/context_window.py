@@ -269,10 +269,13 @@ def summarize_messages(
     verbose: bool,
 ) -> None:
     """Compact ``messages`` in place using ``llm``'s context-window contract."""
-    system_messages = [
-        message for message in messages if message.get("role") == "system"
-    ]
-    work_messages = [message for message in messages if message.get("role") != "system"]
+    system_messages: list[LLMMessage] = []
+    work_messages: list[LLMMessage] = []
+    for message in messages:
+        if message.get("role") == "system":
+            system_messages.append(message)
+        else:
+            work_messages.append(message)
     if not work_messages:
         return
 
