@@ -408,6 +408,9 @@ def test_evaluate_on_a_run_that_was_not_traced_runs_it_again_traced(monkeypatch,
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     # the run traces to this machine's own AMP (`.env.test` names a fake one)
     monkeypatch.delenv("CREWAI_PLUS_URL", raising=False)
+    # A token the project's `.env` brought (a conversational flow loads it with
+    # `load_dotenv`) does not decide anything: only the AMP the run traces to.
+    monkeypatch.setenv("CREWAI_USER_PAT", "the-projects-own")
     monkeypatch.setattr("crewai_core.user_data.is_tracing_enabled", lambda: True)
     app = CrewRunApp()
     app._status = "completed"
