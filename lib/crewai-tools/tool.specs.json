@@ -2887,6 +2887,136 @@
       }
     },
     {
+      "description": "Give a browser agent a task in plain language. It opens a cloud browser, navigates websites, clicks, fills forms and extracts data, then returns its final answer and a session_id for follow-up tasks.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Browser Use Cloud",
+          "name": "BROWSER_USE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Browser Use",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Run a browser task with the Browser Use Cloud agent.\n\nEach call starts a run on Browser Use Cloud (API v4), waits for it to\nfinish and returns the agent's final answer. A run that does not finish\nwithin ``timeout`` seconds is cancelled so it stops using credits.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "API key for Browser Use Cloud",
+            "required": false,
+            "title": "Api Key"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Browser Use agent model. None uses the API default.",
+            "title": "Model"
+          },
+          "timeout": {
+            "default": 900,
+            "description": "Seconds to wait for a run before cancelling it.",
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "BrowserUseTool",
+        "type": "object"
+      },
+      "name": "BrowserUseTool",
+      "package_dependencies": [
+        "browser-use-sdk"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional session_id from a previous Browser Use result. Pass it to continue in the same browser and conversation.",
+            "title": "Session Id"
+          },
+          "task": {
+            "description": "What to do in the browser, in plain language. Name the website and the exact information or action you need.",
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "BrowserUseToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Load webpages url in a headless browser using Browserbase and return the contents",
       "env_vars": [
         {

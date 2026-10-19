@@ -29,6 +29,7 @@ from crewai_tools.tools.brightdata_tool.brightdata_serp import BrightDataSearchT
 from crewai_tools.tools.brightdata_tool.brightdata_unlocker import (
     BrightDataWebUnlockerTool,
 )
+from crewai_tools.tools.browser_use_tool.browser_use_tool import BrowserUseTool
 from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
     BrowserbaseLoadTool,
 )
@@ -247,6 +248,7 @@ __all__ = [
     "BrightDataDatasetTool",
     "BrightDataSearchTool",
     "BrightDataWebUnlockerTool",
+    "BrowserUseTool",
     "BrowserbaseLoadTool",
     "CSVSearchTool",
     "CodeDocsSearchTool",

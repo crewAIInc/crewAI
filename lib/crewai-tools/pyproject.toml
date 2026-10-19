@@ -44,6 +44,9 @@ composio-core = [
 browserbase = [
     "browserbase>=1.0.5",
 ]
+browser-use = [
+    "browser-use-sdk>=3.10.0",
+]
 weaviate-client = [
     "weaviate-client>=4.10.2",
 ]
