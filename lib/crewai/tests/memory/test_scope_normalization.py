@@ -282,6 +282,17 @@ def test_built_in_backends_agree_on_a_bare_scope(
             close()
 
 
+@pytest.fixture(autouse=True)
+def isolated_storage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the spec-based backends out of the developer's data directory.
+
+    ``Memory(storage="qdrant-edge")`` resolves to the platform data directory,
+    so without this the parametrized cases share one store between runs and read
+    (and write) whatever the developer has stored for real.
+    """
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", str(tmp_path / "storage"))
+
+
 @pytest.mark.parametrize("backend", ["lancedb", "qdrant-edge"])
 @pytest.mark.parametrize("spelling", SCOPE_SPELLINGS)
 def test_child_scopes_are_listed_under_every_spelling(
@@ -306,3 +317,78 @@ def test_child_scopes_are_listed_under_every_spelling(
         close = getattr(memory._storage, "close", None)
         if close is not None:
             close()
+
+
+def test_legacy_unanchored_rows_stay_reachable(tmp_path: Path) -> None:
+    """Rows stored before scopes were anchored stay addressable, not orphaned.
+
+    Releases before this change persisted ``scope="sales"`` exactly as typed, so
+    an existing database can hold both spellings. Canonicalizing the query must
+    not make those rows disappear from scoped reads while unscoped reads still
+    return them.
+    """
+    storage = _new_storage(tmp_path / "mem")
+    storage.save([
+        _record("legacy-1", "sales"),
+        _record("legacy-2", "sales/eu"),
+        _record("legacy-3", "salesforce"),
+    ])
+    try:
+        # Both spellings address the anchored and the legacy rows, exactly and
+        # by descendant.
+        for spelling in SCOPE_SPELLINGS:
+            assert _search_ids(storage, spelling) == SALES_RECORDS | {
+                "legacy-1",
+                "legacy-2",
+            }
+            assert storage.count(spelling) == 4
+
+        # A sibling that merely shares the leading characters is not a child of
+        # the legacy spelling either.
+        assert storage.count("salesforce") == 1
+        assert _search_ids(storage, "/sales") == SALES_RECORDS | {
+            "legacy-1",
+            "legacy-2",
+        }
+
+        info = storage.get_scope_info("/sales")
+        assert info.record_count == 4
+        assert info.child_scopes == ["/sales/eu"]
+
+        # Deletion reaches them too: leaving rows behind that no scoped call can
+        # see is the failure this guards.
+        assert storage.delete(scope_prefix="/sales") == 4
+        assert _all_ids(storage) == {"support-1", "legacy-3"}
+    finally:
+        close = getattr(storage, "close", None)
+        if close is not None:
+            close()
+
+
+def test_qdrant_legacy_payload_scope_is_still_a_child(tmp_path: Path) -> None:
+    """A legacy ``sales/eu`` payload must compare as a child of ``/sales``."""
+    if find_spec("qdrant_edge") is None:
+        pytest.skip("qdrant-edge-py not installed")
+
+    memory = _memory_with_backend(tmp_path, "qdrant-edge", MagicMock())
+    try:
+        storage = memory._storage
+        storage.save([_record("legacy-eu", "sales/eu")])
+
+        for spelling in SCOPE_SPELLINGS:
+            # The ancestor filter already resolves the legacy scope; the
+            # comparison used to look at the raw payload and drop it.
+            assert storage.list_scopes(spelling) == ["/sales/eu"]
+            info = storage.get_scope_info(spelling)
+            assert info.record_count == 1
+            assert info.child_scopes == ["/sales/eu"]
+            assert storage.count(spelling) == 1
+
+        # `_build_scope_filter` gets the same canonicalization, so a doubled
+        # slash queries `/sales` instead of the literal `//sales`.
+        assert storage.count("//sales") == 1
+    finally:
+        close = getattr(memory._storage, "close", None)
+        if close is not None:
+            close()
+

@@ -246,9 +246,11 @@ class QdrantEdgeStorage:
         """Build a Qdrant Filter for scope prefix matching."""
         if scope_prefix is None or not scope_prefix.strip("/"):
             return None
-        prefix = scope_prefix.rstrip("/")
-        if not prefix.startswith("/"):
-            prefix = "/" + prefix
+        # Same canonicalization the write path and `get_scope_info()` use, so
+        # `"//sales"`, `"sales/"` and `"/sales"` query one ancestor value.
+        prefix = normalize_scope_path(scope_prefix)
+        if prefix == "/":
+            return None
         return Filter(
             must=[FieldCondition(key="scope_ancestors", match=MatchValue(value=prefix))]
         )
@@ -605,7 +607,9 @@ class QdrantEdgeStorage:
 
         for pt in seen.values():
             payload = pt.payload
-            sc = str(payload.get("scope", ""))
+            # A legacy payload can hold an unanchored scope ("sales/eu"), which
+            # passes the ancestor filter but would not compare as a child.
+            sc = normalize_scope_path(str(payload.get("scope", "")))
             if child_prefix and sc.startswith(child_prefix):
                 rest = sc[len(child_prefix) :]
                 first_component = rest.split("/", 1)[0]
@@ -645,7 +649,7 @@ class QdrantEdgeStorage:
                 points = self._scroll_all(shard, filt=filt)
                 shard.close()
                 for pt in points:
-                    sc = str(pt.payload.get("scope", ""))
+                    sc = normalize_scope_path(str(pt.payload.get("scope", "")))
                     if sc.startswith(prefix) and sc != (prefix.rstrip("/") or "/"):
                         rest = sc[len(prefix) :]
                         first_component = rest.split("/", 1)[0]

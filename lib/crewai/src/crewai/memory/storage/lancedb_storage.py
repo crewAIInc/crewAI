@@ -76,22 +76,31 @@ def _canonical_scope_prefix(scope_prefix: str) -> str:
 
 
 def _scope_prefix_filter(prefix: str) -> str:
-    r"""Build a predicate matching scopes that start with ``prefix``.
+    r"""Build a predicate matching ``prefix`` and the scopes below it.
 
     The prefix is anchored as a scope path first, so ``"sales"`` and
-    ``"/sales"`` select the same rows.
+    ``"/sales"`` select the same rows. Scopes written by releases that did not
+    anchor them were stored exactly as the caller typed them, so the unanchored
+    spelling of the same path is matched as well — as the scope itself or a
+    descendant — until a migration rewrites those rows. Matching it as
+    ``LIKE 'sales%'`` would also pull in a sibling such as ``salesforce``, which
+    is why the legacy half is spelled as an equality plus a ``sales/`` prefix.
 
     ``\``, ``%`` and ``_`` in the prefix are escaped so they match literally;
     only the appended trailing ``%`` acts as a wildcard. Lance supports only
     ``\`` as the ``LIKE`` escape character.
     """
-    pattern = (
-        _canonical_scope_prefix(prefix)
-        .replace("\\", "\\\\")
-        .replace("%", "\\%")
-        .replace("_", "\\_")
-    )
-    return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
+    canonical = _canonical_scope_prefix(prefix)
+
+    def escaped(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    clauses = [f"scope LIKE '{_sql_str(escaped(canonical))}%' ESCAPE '\\'"]
+    legacy = canonical.lstrip("/")
+    if legacy:
+        clauses.append(f"scope = '{_sql_str(legacy)}'")
+        clauses.append(f"scope LIKE '{_sql_str(escaped(legacy))}/%' ESCAPE '\\'")
+    return f"({' OR '.join(clauses)})"
 
 
 class LanceDBStorage:
@@ -580,7 +589,9 @@ class LanceDBStorage:
         child_prefix = (prefix + "/") if prefix else "/"
         children: set[str] = set()
         for row in rows:
-            sc = str(row.get("scope", ""))
+            # Legacy rows can hold an unanchored scope ("sales/eu"); compare
+            # the canonical form so they still report as children.
+            sc = normalize_scope_path(str(row.get("scope", "")))
             if child_prefix and sc.startswith(child_prefix):
                 rest = sc[len(child_prefix) :]
                 first_component = rest.split("/", 1)[0]
@@ -618,7 +629,7 @@ class LanceDBStorage:
         rows = self._scan_rows(prefix if prefix != "/" else None, columns=["scope"])
         children: set[str] = set()
         for row in rows:
-            sc = str(row.get("scope", ""))
+            sc = normalize_scope_path(str(row.get("scope", "")))
             if sc.startswith(prefix) and sc != (prefix.rstrip("/") or "/"):
                 rest = sc[len(prefix) :]
                 first_component = rest.split("/", 1)[0]
