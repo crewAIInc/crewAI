@@ -186,12 +186,12 @@ def test_a_run_crewai_eval_started_is_uploaded_with_nobody_to_ask(
 ):
     """`crewai eval` ran the crew to grade it, and the grade is read off the
     trace: running the command was the yes. A coding agent with no terminal
-    gets its run uploaded, even where the project's `.env` turned tracing off."""
+    gets its run uploaded."""
     from crewai_core import eval_handshake
 
     buffers, grants, recorders, prompt = traces
     monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
-    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     utils = "crewai.events.listeners.tracing.utils"
     monkeypatch.setattr(f"{utils}._is_interactive_terminal", lambda: closed != "no terminal")
     monkeypatch.setattr(f"{utils}._is_test_environment", lambda: closed == "under test")
@@ -212,6 +212,33 @@ def test_a_run_crewai_eval_started_is_uploaded_with_nobody_to_ask(
 
     prompt.assert_not_called()
     assert grants and recorders  # the trace reached AMP
+
+
+@pytest.mark.parametrize("off", ["false", "0"])
+def test_a_project_that_turned_tracing_off_is_not_traced_even_for_crewai_eval(
+    traces, monkeypatch, tmp_path, off
+):
+    """An explicit no is the project's; `crewai eval` asks to turn tracing on
+    before it runs anything, and nothing here overrules it."""
+    from crewai_core import eval_handshake
+
+    buffers, grants, recorders, prompt = traces
+    monkeypatch.setattr(eval_handshake, "awaiting_dir", lambda: tmp_path / "eval-awaiting")
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", off)
+    monkeypatch.setattr(
+        "crewai.events.listeners.tracing.utils._is_interactive_terminal", lambda: False
+    )
+
+    class Conversation(Flow):
+        @start()
+        def turn(self):
+            return "kept here"
+
+    with eval_handshake.awaiting_evaluation():
+        assert Conversation().kickoff() == "kept here"
+        assert crewai_event_bus.flush()
+
+    assert not buffers and not grants and not recorders  # never even traced
 
 
 def test_a_token_a_dotenv_could_set_approves_nothing(traces, monkeypatch, tmp_path):

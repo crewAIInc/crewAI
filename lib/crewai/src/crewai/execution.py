@@ -122,17 +122,12 @@ def begin_execution(
 
 
 def _tracing_disabled(tracing: bool | None) -> bool:
-    from crewai_core.eval_handshake import run_awaited_by_evaluation
-
     return (
         os.getenv("OTEL_SDK_DISABLED", "").lower() == "true"
         or tracing is False
         or (
             tracing is None
             and os.getenv("CREWAI_TRACING_ENABLED", "").lower() in ("false", "0")
-            # `crewai eval` ran this crew to grade it, and the grade is read
-            # off the trace: that run is traced whatever the project's `.env`.
-            and not run_awaited_by_evaluation()
         )
     )
 

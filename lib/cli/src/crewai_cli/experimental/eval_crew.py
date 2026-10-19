@@ -48,9 +48,10 @@ from urllib.parse import urlparse
 import uuid
 import webbrowser
 
+import click
 from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.settings import Settings
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv, set_key
 import httpx
 from rich.console import Console
 from rich.table import Table
@@ -124,6 +125,8 @@ def _record_usage(*, logged_in: bool) -> None:
 
 StopReason = Literal[
     "untraced_after_run",
+    "tracing_off",
+    "declined",
     "no_project",
     "login_unreadable",
     "network_error",
@@ -168,6 +171,41 @@ RUNNING_THE_CREW: dict[RunReason, str] = {
     "run_again": "That run was not traced: running the crew again to evaluate it.",
 }
 TRACE_GOES_TO_AMP = "Its trace is sent to CrewAI AMP, which grades it."
+# A project that turned tracing off said no, and nothing here overrules it: at a
+# terminal the person is asked, and without one the command says how to turn it
+# on (a coding agent that does so has made that choice itself).
+TRACING_OFF_QUESTION = (
+    "Tracing is turned off for this project, and evaluating a run needs its trace. "
+    "Turn tracing on and run the crew now? Its trace is sent to CrewAI AMP."
+)
+TRACING_OFF_UNATTENDED = (
+    f"Tracing is turned off for this project ({TRACING_ENV_VAR}=false), and evaluating "
+    f"a run needs its trace. Set {TRACING_ENV_VAR}=true in the project's .env to turn it "
+    "on, then run `crewai eval` again."
+)
+TRACING_STAYS_OFF = "Nothing was run: tracing stays off for this project."
+
+
+def tracing_turned_off() -> bool:
+    """Has this project said no to tracing — `CREWAI_TRACING_ENABLED` false or
+    0, in its `.env` (which wins, as the run loads it) or else the environment?"""
+    value: str | None = None
+    with contextlib.suppress(Exception):
+        env_file = Path.cwd() / ".env"
+        if env_file.is_file():
+            value = dotenv_values(env_file).get(TRACING_ENV_VAR)
+    if value is None:
+        value = os.environ.get(TRACING_ENV_VAR)
+    return str(value or "").strip().lower() in ("false", "0")
+
+
+def turn_tracing_on() -> None:
+    """`CREWAI_TRACING_ENABLED=true` in the project's .env, and in this process:
+    what somebody asked whether to turn tracing on said yes to."""
+    env_file = Path.cwd() / ".env"
+    env_file.touch(exist_ok=True)
+    set_key(str(env_file), TRACING_ENV_VAR, "true", quote_mode="never")
+    os.environ[TRACING_ENV_VAR] = "true"
 
 
 def _count_usage(feature: str) -> None:
@@ -716,6 +754,25 @@ def _project_changed_since(record: dict[str, Any]) -> bool:
     return False
 
 
+def _ask_to_turn_tracing_on() -> None:
+    """The project turned tracing off: turn it on only on a yes.
+
+    With nobody to ask, the command stops and says how; a no runs nothing.
+    """
+    if is_dmn_mode_enabled() or not sys.stdin.isatty():
+        record_stop("tracing_off")
+        _fail(TRACING_OFF_UNATTENDED)
+    if not click.confirm(TRACING_OFF_QUESTION, default=True):
+        record_stop("declined")
+        console.print(TRACING_STAYS_OFF, style="yellow")
+        raise SystemExit(0)
+    turn_tracing_on()
+    console.print(
+        "Tracing is on for this project — its runs are traced to CrewAI AMP.",
+        style="green",
+    )
+
+
 @contextlib.contextmanager
 def _tracing_for_this_run() -> Iterator[None]:
     """`CREWAI_TRACING_ENABLED=true` for the run about to start, and only that
@@ -746,6 +803,8 @@ def _run_the_crew_to_evaluate(why: RunReason) -> str | None:
             "No crewAI project here (no pyproject.toml). Run `crewai eval` from the project's "
             "directory, or name a run: `crewai eval --run EXECUTION_ID`."
         )
+    if tracing_turned_off():
+        _ask_to_turn_tracing_on()
     _count_usage(f"cli_usage:eval_ran_crew:{why}")
     console.print(Text(f"{RUNNING_THE_CREW[why]} {TRACE_GOES_TO_AMP}"), style="bold")
 

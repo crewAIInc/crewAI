@@ -263,13 +263,14 @@ class TraceConsentScreen(ModalScreen[bool]):
         Binding("n", "consent_no", "No", show=False),
         Binding("escape", "consent_no", "Cancel", show=False),
     ]
+    YES_LABEL = "Share Trace"
 
     def compose(self) -> ComposeResult:
         with Vertical(id="consent-dialog"):
             yield Static(self._build_content(), id="consent-text")
             with Horizontal(id="consent-buttons"):
                 yield Button(
-                    "Share Trace",
+                    self.YES_LABEL,
                     id="btn-consent-yes",
                     classes="consent-btn",
                 )
@@ -294,6 +295,25 @@ class TraceConsentScreen(ModalScreen[bool]):
 
     def action_consent_no(self) -> None:
         self.dismiss(False)
+
+
+class TurnTracingOnScreen(TraceConsentScreen):
+    """Evaluate, pressed on a run of a project that turned tracing off: the
+    run has to happen again, traced, and only a yes turns tracing on."""
+
+    YES_LABEL = "Turn On & Evaluate"
+
+    def _build_content(self) -> Text:
+        t = Text()
+        t.append(
+            "  Tracing is turned off for this project.\n\n", style=f"bold {_C_TEXT}"
+        )
+        t.append("  Evaluating a run needs its trace. Turn tracing\n", style=_C_DIM)
+        t.append("  on and run it again?\n\n", style=_C_DIM)
+        t.append(
+            "  The trace is sent to CrewAI AMP, which grades it.\n", style=_C_MUTED
+        )
+        return t
 
 
 _AUTO_EVAL: ContextVar[dict[str, str | None] | None] = ContextVar(
@@ -1367,14 +1387,33 @@ FooterKey .footer-key--key {
         traced = self._traced_execution_id()
         if traced is None:
             # Nothing of this run reached AMP, so there is nothing to grade: the
-            # app closes and the run happens again, traced, and is evaluated —
-            # what `crewai eval` does (`run_crew._chain_traced_rerun`).
-            self._want_traced_rerun = True
-            self._unsubscribe()
-            self.exit(self._crew_result)
+            # run happens again, traced, and is evaluated. A project that turned
+            # tracing off is asked first; its no runs nothing.
+            from crewai_cli.experimental.eval_crew import tracing_turned_off
+
+            if tracing_turned_off():
+                self.push_screen(TurnTracingOnScreen(), self._tracing_on_answered)
+                return
+            self._run_again_traced()
             return
 
         self._start_evaluation(traced)
+
+    def _tracing_on_answered(self, yes: bool | None) -> None:
+        from crewai_cli.experimental.eval_crew import record_stop, turn_tracing_on
+
+        if yes is not True:
+            record_stop("declined")
+            return
+        turn_tracing_on()
+        self._run_again_traced()
+
+    def _run_again_traced(self) -> None:
+        """Close, and run the crew again traced through `crewai eval`'s own path
+        (`run_crew._chain_traced_rerun`)."""
+        self._want_traced_rerun = True
+        self._unsubscribe()
+        self.exit(self._crew_result)
 
     def _start_evaluation(self, execution_id: str) -> None:
         self._evaluation = {"state": "starting", "execution_id": execution_id}

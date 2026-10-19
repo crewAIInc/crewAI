@@ -401,6 +401,8 @@ def test_evaluate_on_a_run_that_was_not_traced_runs_it_again_traced(monkeypatch,
     nothing to grade — and a record naming a DIFFERENT run is not evidence that
     this one was traced. Nothing is asked: the app closes and the run happens
     again, traced, and is evaluated (`run_crew._chain_traced_rerun`)."""
+    # tracing not turned off (the suite's `.env.test` turns it off)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     app = CrewRunApp()
     app._status = "completed"
     app._crew_result = object()
@@ -2415,11 +2417,50 @@ def stops(monkeypatch) -> list[str]:
     return features
 
 
+@pytest.mark.parametrize("answer", [True, False])
+def test_evaluate_on_an_untraced_run_of_a_project_that_turned_tracing_off_asks_first(
+    monkeypatch, tmp_path, stops, answer
+) -> None:
+    """The project said no to tracing: only a yes turns it on (in its .env) and
+    runs the crew again; a no leaves everything as it was."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._execution_uuid = "run-this-app"
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result=None: exits.append(result)  # type: ignore[method-assign]
+    pushed: list[tuple[object, object]] = []
+    app.push_screen = lambda screen, callback=None: pushed.append((screen, callback))  # type: ignore[method-assign]
+    monkeypatch.setattr(crew_run_tui, "_trace_was_recorded", lambda uuid: False)
+
+    app.action_evaluate_crew()
+
+    screen, answered = pushed[0]
+    assert isinstance(screen, crew_run_tui.TurnTracingOnScreen) and exits == []
+    answered(answer)
+    env = (tmp_path / ".env").read_text()
+    if answer:
+        assert "CREWAI_TRACING_ENABLED=true" in env
+        assert app._want_traced_rerun is True and exits == [app._crew_result]
+        assert stops == []
+    else:
+        assert "CREWAI_TRACING_ENABLED=false" in env
+        assert app._want_traced_rerun is False and exits == []
+        assert stops == ["cli_usage:eval_stopped:declined"]
+
+
 def test_pressing_evaluate_on_an_untraced_run_counts_the_press_and_nothing_else(
     monkeypatch, stops
 ) -> None:
     """It is not a stop: the run happens again, and `crewai eval` counts why it
     ran the crew (`eval_ran_crew:run_again`) and how that ended."""
+    # tracing not turned off (the suite's `.env.test` turns it off)
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     app = CrewRunApp()
     app._status = "completed"
     app._telemetry = Mock()

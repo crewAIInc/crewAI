@@ -147,9 +147,12 @@ def should_enable_tracing(*, override: bool | None = None) -> bool:
     This is the single source of truth for tracing enablement.
     Priority order:
     1. Explicit override (e.g., Crew.tracing=True/False)
-    2. A run `crewai eval` started to evaluate (its grade is read off the trace)
-    3. Environment variable CREWAI_TRACING_ENABLED
-    4. User consent from user_data
+    2. CREWAI_TRACING_ENABLED set to false: an explicit no, which even a run
+       `crewai eval` started respects (the command asks to turn tracing on
+       first)
+    3. A run `crewai eval` started to evaluate (its grade is read off the trace)
+    4. CREWAI_TRACING_ENABLED set to true
+    5. User consent from user_data
 
     Args:
         override: Explicit override for tracing (True=always enable, False=always disable, None=check other settings)
@@ -161,14 +164,14 @@ def should_enable_tracing(*, override: bool | None = None) -> bool:
         return True
     if override is False:
         return False
-    if run_awaited_by_evaluation():
-        return True
 
     env_value = os.getenv("CREWAI_TRACING_ENABLED", "").lower()
-    if env_value in ("true", "1"):
-        return True
     if env_value in ("false", "0"):
         return False
+    if run_awaited_by_evaluation():
+        return True
+    if env_value in ("true", "1"):
+        return True
 
     data = _load_user_data()
 

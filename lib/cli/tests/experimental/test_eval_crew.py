@@ -30,6 +30,13 @@ def _awaiting_files_stay_in_tmp(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _tracing_setting_put_back(monkeypatch):
+    """`crewai eval` loads the project's `.env` into this process; a test that
+    writes `CREWAI_TRACING_ENABLED` there must not leave it to the next."""
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _no_crew_runs_unless_a_test_says_so(monkeypatch):
     """`crewai eval` runs the crew when there is nothing current to grade; a
     test that gets there without meaning to would start `uv run`."""
@@ -3015,7 +3022,7 @@ def test_run_again_runs_the_crew_whatever_the_record_says(project, monkeypatch, 
 def test_tracing_is_on_for_the_run_it_starts_and_put_back_after(project, monkeypatch):
     directory, _ = project
     (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
-    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     seen: list[str | None] = []
 
     def fake_run_crew() -> None:
@@ -3028,5 +3035,97 @@ def test_tracing_is_on_for_the_run_it_starts_and_put_back_after(project, monkeyp
     eval_module.eval_crew()
 
     assert seen == ["true"]
-    assert os.environ["CREWAI_TRACING_ENABLED"] == "false"
+    assert "CREWAI_TRACING_ENABLED" not in os.environ
     assert not (directory / ".env").exists()
+
+
+# ── a project that turned tracing off is asked, never overruled ─────────────
+
+
+@pytest.mark.parametrize("answer", [True, False])
+def test_a_project_that_turned_tracing_off_is_asked_first_at_a_terminal(
+    project, monkeypatch, capsys, usage, answer
+):
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=false\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    asked: list[tuple[str, dict]] = []
+    monkeypatch.setattr(
+        eval_module.click, "confirm", lambda text, **kwargs: asked.append((text, kwargs)) or answer
+    )
+    ran: list[str] = []
+
+    def fake_run_crew() -> None:
+        ran.append(os.environ.get("CREWAI_TRACING_ENABLED", ""))
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    if answer:
+        eval_module.eval_crew()
+    else:
+        with pytest.raises(SystemExit) as exited:
+            eval_module.eval_crew()
+        assert exited.value.code == 0
+
+    text, kwargs = asked[0]
+    assert "Tracing is turned off for this project" in text and kwargs == {"default": True}
+    assert "sent to CrewAI AMP" in text and "CREWAI_TRACING_ENABLED" not in text
+    env = (directory / ".env").read_text()
+    if answer:
+        assert ran == ["true"]
+        assert "CREWAI_TRACING_ENABLED=true" in env  # turned on, as asked
+        assert usage[0] == "cli_usage:eval_ran_crew:no_traced_run"
+    else:
+        assert ran == []
+        assert "CREWAI_TRACING_ENABLED=false" in env
+        assert "tracing stays off for this project" in capsys.readouterr().out
+        assert usage == ["cli_usage:eval_stopped:declined"]
+
+
+def test_with_tracing_turned_off_and_nobody_to_ask_it_says_how_to_turn_it_on(
+    project, monkeypatch, capsys, usage
+):
+    """A coding agent cannot answer a question; it can turn tracing on itself,
+    and the sentence says how."""
+    directory, _ = project
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=0\n")
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()  # the autouse guard fails the test if the crew runs
+
+    assert exited.value.code == 1
+    out = " ".join(capsys.readouterr().out.split())
+    assert "Tracing is turned off for this project" in out
+    assert "Set CREWAI_TRACING_ENABLED=true in the project's .env" in out
+    assert usage == ["cli_usage:eval_stopped:tracing_off"]
+    assert amp.calls == []
+
+
+@pytest.mark.parametrize(
+    "dotenv, environment, off",
+    [
+        ("false", None, True),
+        ("0", "true", True),  # the run loads the project's .env over the environment
+        ("true", "false", False),
+        (None, "false", True),
+        (None, "0", True),
+        (None, None, False),
+        (None, "true", False),
+    ],
+)
+def test_what_counts_as_tracing_turned_off(project, monkeypatch, dotenv, environment, off):
+    directory, _ = project
+    if dotenv is not None:
+        (directory / ".env").write_text(f"CREWAI_TRACING_ENABLED={dotenv}\n")
+    if environment is None:
+        monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
+    else:
+        monkeypatch.setenv("CREWAI_TRACING_ENABLED", environment)
+
+    assert eval_module.tracing_turned_off() is off
