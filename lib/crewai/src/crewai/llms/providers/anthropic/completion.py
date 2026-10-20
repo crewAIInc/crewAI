@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -277,6 +278,18 @@ class AnthropicCompletion(BaseLLM):
     # formatter only replays the blocks on the matching turn.
     _previous_thinking_tool_ids: frozenset[str] = PrivateAttr(default_factory=frozenset)
     _previous_thinking_text: str = PrivateAttr(default="")
+    # The request whose response produced `_previous_thinking_blocks`, as
+    # formatted for that call. The formatter recognizes the conversation
+    # that continues this request, so a different conversation sharing the
+    # instance never receives foreign thinking blocks — even when its last
+    # assistant text happens to match the fingerprint.
+    _previous_thinking_request: tuple[LLMMessage, ...] | None = PrivateAttr(
+        default=None
+    )
+    # Snapshot of the request the most recent formatting pass produced,
+    # captured before cache_control stamping; the response handler pairs it
+    # with the cached thinking blocks.
+    _last_formatted_request: tuple[LLMMessage, ...] | None = PrivateAttr(default=None)
 
     @model_validator(mode="before")
     @classmethod
@@ -836,6 +849,11 @@ class AnthropicCompletion(BaseLLM):
         this LLM instance never receives foreign thinking blocks. The cache
         is assigned unconditionally: a response without thinking must drop
         stale blocks, or they would be replayed on a later assistant turn.
+
+        The request that produced the response (snapshotted by the most
+        recent formatting pass) is remembered too, so the formatter can
+        also require the conversation being formatted to continue that
+        very request.
         """
         thinking_blocks: list[ThinkingBlock] = []
         tool_ids: list[str] = []
@@ -853,6 +871,7 @@ class AnthropicCompletion(BaseLLM):
         self._previous_thinking_blocks = thinking_blocks
         self._previous_thinking_tool_ids = frozenset(tool_ids)
         self._previous_thinking_text = text
+        self._previous_thinking_request = self._last_formatted_request
 
     def _matches_cached_thinking_text(self, persisted_text: str) -> bool:
         """Whether a history turn's text is the turn that cached thinking.
@@ -860,16 +879,40 @@ class AnthropicCompletion(BaseLLM):
         The fingerprint is the raw response text, while the persisted turn
         holds the provider's return value: truncated at a stop word (a
         prefix of the raw text) and possibly extended by after-call hooks.
-        Accept an exact match or either prefix direction when both sides
-        are non-empty; an empty fingerprint matches only an empty turn.
+        ``_apply_stop_words`` strips the truncated value, and raw response
+        text commonly opens with the whitespace that follows a thinking
+        block, so compare stripped values: accept an exact match or either
+        prefix direction when both sides are non-empty; an empty fingerprint
+        matches only an empty turn.
         """
         raw_text = self._previous_thinking_text
         if persisted_text == raw_text:
             return True
-        if not persisted_text or not raw_text:
+        persisted = persisted_text.strip()
+        raw = raw_text.strip()
+        if not persisted or not raw:
             return False
-        return raw_text.startswith(persisted_text) or persisted_text.startswith(
-            raw_text
+        return raw.startswith(persisted) or persisted.startswith(raw)
+
+    def _cached_thinking_request_matches(
+        self, formatted_prefix: list[LLMMessage]
+    ) -> bool:
+        """Whether the history being formatted continues the conversation
+        that cached the thinking blocks.
+
+        The cached blocks answer one specific request; the executor appends
+        that response as a new assistant turn, so every later request in the
+        same conversation starts with exactly the messages of the producing
+        request. A different conversation sharing this LLM instance does
+        not share that prefix, so its turns never receive foreign thinking
+        blocks — even when their text happens to match the fingerprint.
+        """
+        request = self._previous_thinking_request
+        if request is None:
+            return False
+        return len(formatted_prefix) >= len(request) and all(
+            message == cached
+            for message, cached in zip(formatted_prefix, request, strict=False)
         )
 
     @staticmethod
@@ -994,6 +1037,11 @@ class AnthropicCompletion(BaseLLM):
         formatted_messages: list[LLMMessage] = []
         system_message: str | None = None
         pending_tool_results: list[dict[str, Any]] = []
+        # The assistant turn this pass replayed cached thinking onto, kept by
+        # reference so the request snapshot can store it in its plain-text
+        # form (see below).
+        injected_message: LLMMessage | None = None
+        injected_plain_text: str = ""
 
         for index, message in enumerate(base_formatted):
             role = message.get("role")
@@ -1072,6 +1120,7 @@ class AnthropicCompletion(BaseLLM):
                     and self.thinking
                     and self._previous_thinking_blocks
                     and not self._previous_thinking_tool_ids
+                    and self._cached_thinking_request_matches(formatted_messages)
                     and self._matches_cached_thinking_text(content if content else "")
                 ):
                     structured_content = cast(
@@ -1081,9 +1130,11 @@ class AnthropicCompletion(BaseLLM):
                             {"type": "text", "text": content if content else ""},
                         ],
                     )
-                    formatted_messages.append(
-                        LLMMessage(role="assistant", content=structured_content)
+                    injected_message = LLMMessage(
+                        role="assistant", content=structured_content
                     )
+                    injected_plain_text = content if content is not None else ""
+                    formatted_messages.append(injected_message)
                 else:
                     content_str = content if content is not None else ""
                     formatted_messages.append(
@@ -1118,6 +1169,22 @@ class AnthropicCompletion(BaseLLM):
             formatted_messages.append({"role": "user", "content": "Hello"})
         elif formatted_messages[0]["role"] != "user":
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
+
+        # Snapshot the request before cache_control stamping (and before
+        # hooks can touch the messages) so the response handler can pair
+        # thinking blocks with exactly the conversation that produced them.
+        # A turn this pass replayed thinking onto is stored in its
+        # plain-text form: on later requests that historical turn is no
+        # longer the last assistant turn, so the formatter emits it without
+        # thinking blocks, and the snapshot must compare equal to that
+        # shape or every other text turn would silently lose its replay.
+        if self.thinking:
+            snapshot: list[LLMMessage] = []
+            for message in formatted_messages:
+                if message is injected_message:
+                    message = {"role": "assistant", "content": injected_plain_text}
+                snapshot.append(copy.deepcopy(message))
+            self._last_formatted_request = tuple(snapshot)
 
         # Stamp cache_control on the message(s) whose original content was
         # marked. We scan formatted_messages in order and stamp the first
