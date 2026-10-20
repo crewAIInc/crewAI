@@ -3662,3 +3662,197 @@ def test_a_link_on_the_way_keeps_the_data_out_of_wherever_it_leads(
     said = " ".join(capsys.readouterr().out.split())
     assert "Its full data was not saved:" in said and "is a link" in said
     assert "Goal gate: PASSED" in said
+
+
+# ── with no terminal, the run's own output goes to a log, not the agent ────
+
+
+def _a_tracing_project(directory: Path) -> None:
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+
+
+def test_with_no_terminal_the_runs_own_output_goes_to_a_log_not_the_agent(
+    project, monkeypatch, capfd
+):
+    """A coding agent reads every line `crewai eval` prints, and pays for it:
+    the crew's panels, its final answer and its tool calls go to
+    `.crewai/last_run.log`, and the agent gets one line saying so, then the
+    verdict."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+
+    def fake_run_crew() -> None:
+        # what the run's child processes print: straight to the descriptors
+        os.write(1, b"Crew Execution Started panel\n")
+        os.write(2, b"a warning on stderr\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out, err = capfd.readouterr()
+    log = (directory / ".crewai" / "last_run.log").read_text()
+    assert "Crew Execution Started panel" in log and "a warning on stderr" in log
+    assert "Crew Execution Started panel" not in out + err
+    assert "a warning on stderr" not in out + err
+    said = " ".join(out.split())
+    assert "The crew's output goes to .crewai/last_run.log while it runs." in said
+    assert "its output is in .crewai/last_run.log." in said
+    assert "Goal gate: PASSED" in said
+
+
+def test_with_no_terminal_a_run_that_left_no_trace_shows_its_last_lines(
+    project, monkeypatch, capfd, usage
+):
+    """The error a failed run printed is what the agent needs to fix it: its
+    last lines are shown, and the sentence says where the rest is."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+
+    def fake_run_crew() -> None:
+        os.write(1, b"".join(f"line {n}\n".encode() for n in range(100)))
+        os.write(2, b"KeyError: 'topic'\n")  # and no trace recorded
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    said = " ".join(capfd.readouterr().out.split())
+    assert "its last 40 lines:" in said
+    assert "KeyError: 'topic'" in said and "line 99" in said
+    assert "line 50 " not in said  # only the tail
+    assert "(its last lines are above)" in said
+    assert amp.calls == [] and usage[-1] == "cli_usage:eval_stopped:untraced_after_run"
+
+
+def test_at_a_terminal_the_run_prints_where_it_always_did(project, monkeypatch, capfd):
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: False)  # a person reads stdout
+
+    def fake_run_crew() -> None:
+        os.write(1, b"Crew Execution Started panel\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out, _ = capfd.readouterr()
+    assert "Crew Execution Started panel" in out
+    assert "last_run.log" not in out
+    assert not (directory / ".crewai" / "last_run.log").exists()
+
+
+def test_what_decides_is_whether_anyone_reads_stdout_not_stdin(project, monkeypatch, capfd):
+    """A coding agent can hand the command a terminal for stdin and still read
+    a captured stdout: the transcript stays out of what it reads."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+
+    def fake_run_crew() -> None:
+        os.write(1, b"Crew Execution Started panel\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert "Crew Execution Started panel" not in capfd.readouterr().out
+    assert "Crew Execution Started panel" in (directory / ".crewai" / "last_run.log").read_text()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_the_run_log_is_the_owners_alone_even_one_left_by_an_earlier_run(tmp_path):
+    log = tmp_path / "last_run.log"
+    log.write_text("an earlier run\n")
+    log.chmod(0o644)
+
+    with eval_module._run_output_to(log) as where:
+        assert where == log
+        os.write(1, b"this run\n")
+
+    assert log.read_text() == "this run\n"  # emptied, then written
+    assert log.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symbolic links need privileges on Windows")
+def test_a_link_at_the_logs_place_leaves_the_output_on_screen(tmp_path, capfd):
+    elsewhere = tmp_path / "elsewhere.txt"
+    elsewhere.write_text("")
+    log = tmp_path / "last_run.log"
+    log.symlink_to(elsewhere)
+
+    with eval_module._run_output_to(log) as where:
+        assert where is None
+        os.write(1, b"on screen\n")
+
+    assert "on screen" in capfd.readouterr().out
+    assert elsewhere.read_text() == ""
+
+
+def test_a_move_that_fails_halfway_puts_back_what_it_moved(tmp_path, monkeypatch, capfd):
+    """Descriptor 1 moved, 2 refused: 1 comes back before the block runs, so
+    the verdict printed after it still reaches the screen."""
+    real_dup2 = os.dup2
+    targets: list[int] = []
+
+    def dup2(src: int, dst: int, inheritable: bool = True) -> int:
+        targets.append(dst)
+        if dst == 2 and len(targets) == 2:
+            raise OSError("no room for stderr")
+        return real_dup2(src, dst, inheritable)
+
+    with monkeypatch.context() as patched:
+        patched.setattr(eval_module.os, "dup2", dup2)
+        with eval_module._run_output_to(tmp_path / "last_run.log") as where:
+            assert where is None
+    os.write(1, b"the verdict\n")
+
+    assert "the verdict" in capfd.readouterr().out
+    assert (tmp_path / "last_run.log").read_text() == ""
+
+
+def test_putting_back_goes_on_past_a_failure_and_keeps_the_runs_own_error(tmp_path, monkeypatch, capfd):
+    """Putting stdout back fails; stderr is put back anyway, every saved copy
+    is closed, and the error the run raised is the one that surfaces."""
+    real_dup2 = os.dup2
+    stdout_copy = os.dup(1)
+    calls: list[int] = []
+
+    def dup2(src: int, dst: int, inheritable: bool = True) -> int:
+        calls.append(dst)
+        if len(calls) == 3:  # the first put-back: stdout
+            raise OSError("cannot put stdout back")
+        return real_dup2(src, dst, inheritable)
+
+    def the_run() -> None:
+        raise ValueError("the run's own error")
+
+    try:
+        with monkeypatch.context() as patched:
+            patched.setattr(eval_module.os, "dup2", dup2)
+            with pytest.raises(ValueError, match="the run's own error"):
+                with eval_module._run_output_to(tmp_path / "last_run.log"):
+                    the_run()
+        assert calls == [1, 2, 1, 2]  # stderr was put back after stdout failed
+        os.write(2, b"stderr is back\n")
+        assert "stderr is back" in capfd.readouterr().err
+    finally:
+        real_dup2(stdout_copy, 1)  # the test puts stdout back itself
+        os.close(stdout_copy)

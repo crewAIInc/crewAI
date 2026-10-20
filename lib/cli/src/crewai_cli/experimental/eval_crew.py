@@ -44,7 +44,7 @@ import shutil
 import stat
 import sys
 import time
-from typing import Any, Literal, NoReturn, cast
+from typing import Any, BinaryIO, Literal, NoReturn, cast
 from urllib.parse import urlparse
 import uuid
 import webbrowser
@@ -161,6 +161,13 @@ NOT_TRACED = (
     "or this project's crewai is older than the version that records runs for evaluation "
     f"({LAST_RUN_FILE})."
 )
+
+# With no terminal, what the crew prints while it runs (its panels, the final
+# answer, every tool call) goes to this file in the project's `.crewai/`, not to
+# the coding agent's screen: in one measured run it was 341 of 378 lines, all
+# before the verdict, and an agent pays for every line or has the end cut off.
+RUN_LOG_FILE = "last_run.log"
+RUN_LOG_TAIL_LINES = 40
 
 # Why `crewai eval` ran the crew before evaluating, a word from a closed list:
 # nothing traced yet, the project changed since its last traced run, or the run
@@ -1004,11 +1011,23 @@ def _run_the_crew_to_evaluate(
     # The handshake (`crewai_core.eval_handshake`) carries what this command
     # decided before the project's `.env` was loaded: the AMP origins its saved
     # login may go to, and whether it just turned tracing on.
+    # Whoever reads the output decides, as for the brief: stdout, not stdin.
+    run_log = _run_log_path() if nobody_watching() else None
+    if run_log is not None:
+        console.print(
+            f"The crew's output goes to {_shown_path(run_log)} while it runs.",
+            style="dim",
+        )
     began = datetime.now(timezone.utc)
-    with evaluating_after_run(
-        trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
-    ) as watched:
+    started = time.monotonic()
+    with (
+        evaluating_after_run(
+            trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
+        ) as watched,
+        _run_output_to(run_log) as run_log,
+    ):
         run_crew(**run_args)
+    seconds = time.monotonic() - started
 
     # The app says what it did with the run it watched, and its word settles
     # this: it evaluated it (nothing left to do), or it had nothing to evaluate
@@ -1020,7 +1039,8 @@ def _run_the_crew_to_evaluate(
             remember_project_state(str(marker["execution_id"]))
             return None
         record_stop("untraced_after_run")
-        console.print(NOT_TRACED, style="bold red")
+        _say_what_the_run_left(run_log, seconds, traced=False)
+        console.print(_not_traced(run_log), style="bold red")
         raise SystemExit(1)
 
     # The project's record, only when it was written after this run began: a
@@ -1031,11 +1051,155 @@ def _run_the_crew_to_evaluate(
         record.get("execution_id") if _recorded_since(record, began) else None
     )
     if traced:
+        _say_what_the_run_left(run_log, seconds, traced=True)
         return str(traced)
 
     record_stop("untraced_after_run")
-    console.print(NOT_TRACED, style="bold red")
+    _say_what_the_run_left(run_log, seconds, traced=False)
+    console.print(_not_traced(run_log), style="bold red")
     raise SystemExit(1)
+
+
+def _not_traced(run_log: Path | None) -> str:
+    """NOT_TRACED, pointing at where the run's output went."""
+    if run_log is None:
+        return NOT_TRACED
+    return NOT_TRACED.replace("(its output is above)", "(its last lines are above)")
+
+
+def _run_log_path() -> Path | None:
+    """Where a run with no terminal sends its output, or None when the
+    project's `.crewai/` cannot be written (the output then stays on screen)."""
+    from crewai.telemetry.tracing.last_run import LAST_RUN_DIR, project_dir
+
+    try:
+        path = project_dir() / LAST_RUN_DIR / RUN_LOG_FILE
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    return path
+
+
+@contextlib.contextmanager
+def _run_output_to(path: Path | None) -> Iterator[Path | None]:
+    """Send everything printed inside the block to PATH, and yield it; with no
+    PATH, yield None and change nothing.
+
+    It moves this process's own stdout and stderr (file descriptors 1 and 2),
+    which every child the run starts inherits, so each way a project runs —
+    `uv run`, the JSON crew runner, a declarative flow — is covered without
+    touching any of them. Anything that keeps them from moving leaves the
+    output where it was: a quiet log is a nicety, never a failed run. Both are
+    always put back after, one by one, whatever failed: a stream left on the
+    log would swallow the verdict, and the run's own error is never hidden by
+    a failure to put them back."""
+    log = _open_run_log(path) if path is not None else None
+    if log is None:
+        yield None
+        return
+    with log:
+        _flush_std_streams()
+        saved: dict[int, int] = {}
+        moved: list[int] = []
+        try:
+            for fd in (1, 2):
+                saved[fd] = os.dup(fd)
+            for fd in (1, 2):
+                os.dup2(log.fileno(), fd)
+                moved.append(fd)
+        except OSError:
+            _put_back(saved, moved)
+            yield None
+            return
+        _point_windows_std_handles_at(1, 2)
+        try:
+            yield path
+        finally:
+            _flush_std_streams()
+            _put_back(saved, moved)
+            _point_windows_std_handles_at(1, 2)
+
+
+def _open_run_log(path: Path) -> BinaryIO | None:
+    """The run log, opened for writing owner-only and never through a link:
+    it holds final answers, tool output and tracebacks that can carry a
+    credential. A log an earlier run left is emptied and its mode tightened.
+    None when it cannot be opened that way."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        if path.is_symlink():
+            return None  # a link someone planted does not choose where it goes
+        fd = os.open(path, flags, 0o600)
+    except OSError:
+        return None
+    with contextlib.suppress(OSError, AttributeError):
+        os.fchmod(fd, 0o600)
+    return os.fdopen(fd, "wb")
+
+
+def _flush_std_streams() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        with contextlib.suppress(Exception):
+            stream.flush()
+
+
+def _put_back(saved: dict[int, int], moved: list[int]) -> None:
+    """Point every MOVED descriptor at its SAVED original again, and close
+    every saved copy: each on its own, so one failure stops none of the rest."""
+    for fd in moved:
+        with contextlib.suppress(OSError):
+            os.dup2(saved[fd], fd)
+    for copy in saved.values():
+        _close_quietly(copy)
+
+
+def _close_quietly(fd: int) -> None:
+    with contextlib.suppress(OSError):
+        os.close(fd)
+
+
+def _point_windows_std_handles_at(out_fd: int, err_fd: int) -> None:
+    """On Windows a child takes the process's standard handles, not its file
+    descriptors: point them where descriptors 1 and 2 now go."""
+    if os.name != "nt":
+        return
+    with contextlib.suppress(Exception):
+        import ctypes
+        import msvcrt
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle_of = msvcrt.get_osfhandle  # type: ignore[attr-defined]
+        kernel32.SetStdHandle(-11, handle_of(out_fd))  # STD_OUTPUT_HANDLE
+        kernel32.SetStdHandle(-12, handle_of(err_fd))  # STD_ERROR_HANDLE
+
+
+def _say_what_the_run_left(log: Path | None, seconds: float, traced: bool) -> None:
+    """After a quiet run: where its output is, and — when it left nothing to
+    evaluate — its last lines, which usually hold the error."""
+    if log is None:
+        return
+    where = _shown_path(log)
+    if traced:
+        console.print(
+            f"The crew ran in {seconds:.0f}s; its output is in {where}.", style="dim"
+        )
+        return
+    with contextlib.suppress(OSError):
+        lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        tail = lines[-RUN_LOG_TAIL_LINES:]
+        if tail:
+            console.print(
+                f"The crew's output is in {where}; its last {len(tail)} lines:",
+                style="bold",
+            )
+            console.print(Text("\n".join(tail)))
+
+
+def _shown_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError:
+        return str(path)
 
 
 def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
