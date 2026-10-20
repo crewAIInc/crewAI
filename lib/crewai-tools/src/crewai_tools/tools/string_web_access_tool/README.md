@@ -74,7 +74,7 @@ Crew(agents=[researcher], tasks=[task]).kickoff(
 | `engine` | `google` | `google`, `duckduckgo`, `brave` or `mojeek`. |
 | `country` | `US` | ISO 3166-1 alpha-2 country code used to localize results. |
 | `language` | `None` | Language tag such as `"en"` or `"pt-br"`. |
-| `max_results` | `10` | Maximum number of organic results to return. |
+| `max_results` | `None` | Maximum number of organic results to return, 1 to 300. Unset returns one results page. When set, Google is paged until that many are collected, and each page is billed as one search. |
 
 ### Constructor arguments
 

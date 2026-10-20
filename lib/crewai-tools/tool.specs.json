@@ -26247,15 +26247,16 @@
           "max_results": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0,
+                "maximum": 300,
+                "minimum": 1,
                 "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "default": 10,
-            "description": "Maximum number of organic results to return",
+            "default": null,
+            "description": "Maximum number of organic results to return, 1 to 300. Leave unset for one results page",
             "title": "Max Results"
           },
           "query": {

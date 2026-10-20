@@ -158,7 +158,19 @@ def test_search_honours_engine_language_and_max_results(mock_post):
         "engine": "brave",
         "country": "GB",
         "language": "en",
+        "searchCount": 2,
     }
+
+
+def test_search_clamps_search_count_to_the_api_range():
+    with patch(
+        "crewai_tools.tools.string_web_access_tool.string_web_access_tool.requests.post",
+        return_value=_mock_response(json_body={"results": []}),
+    ) as mock_post:
+        StringWebAccessSearchTool()._run(query="anything", max_results=500)
+
+    _, kwargs = mock_post.call_args
+    assert kwargs["json"]["searchCount"] == 300
 
 
 @patch("crewai_tools.tools.string_web_access_tool.string_web_access_tool.requests.post")

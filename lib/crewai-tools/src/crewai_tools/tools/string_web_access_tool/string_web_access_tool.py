@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 STRING_API_BASE_URL = "https://request.usestring.ai/v1"
 _DEFAULT_TIMEOUT = 120
+_MAX_SEARCH_COUNT = 300
 
 
 def _api_key(api_key: str | None) -> str:
@@ -131,7 +132,11 @@ class StringWebAccessSearchToolSchema(BaseModel):
         description="Language tag for the results, such as 'en' or 'pt-br'",
     )
     max_results: int | None = Field(
-        default=10, gt=0, description="Maximum number of organic results to return"
+        default=None,
+        ge=1,
+        le=_MAX_SEARCH_COUNT,
+        description="Maximum number of organic results to return, 1 to 300. Leave unset "
+        "for one results page",
     )
 
 
@@ -164,11 +169,13 @@ class StringWebAccessSearchTool(BaseTool):
         engine: str = "google",
         country: str = "US",
         language: str | None = None,
-        max_results: int = 10,
+        max_results: int | None = None,
     ) -> str | None:
         payload: dict[str, Any] = {"query": query, "engine": engine, "country": country}
         if language is not None:
             payload["language"] = language
+        if max_results is not None:
+            payload["searchCount"] = min(max(max_results, 1), _MAX_SEARCH_COUNT)
 
         try:
             response = _post("/search", payload, _api_key(self.api_key), self.timeout)
