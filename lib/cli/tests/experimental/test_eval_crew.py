@@ -3637,12 +3637,15 @@ def test_putting_back_goes_on_past_a_failure_and_keeps_the_runs_own_error(tmp_pa
             raise OSError("cannot put stdout back")
         return real_dup2(src, dst, inheritable)
 
+    def the_run() -> None:
+        raise ValueError("the run's own error")
+
     try:
         with monkeypatch.context() as patched:
             patched.setattr(eval_module.os, "dup2", dup2)
             with pytest.raises(ValueError, match="the run's own error"):
                 with eval_module._run_output_to(tmp_path / "last_run.log"):
-                    raise ValueError("the run's own error")
+                    the_run()
         assert calls == [1, 2, 1, 2]  # stderr was put back after stdout failed
         os.write(2, b"stderr is back\n")
         assert "stderr is back" in capfd.readouterr().err

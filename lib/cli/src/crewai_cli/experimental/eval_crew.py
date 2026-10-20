@@ -43,7 +43,7 @@ import re
 import stat
 import sys
 import time
-from typing import Any, Literal, NoReturn, cast
+from typing import Any, BinaryIO, Literal, NoReturn, cast
 from urllib.parse import urlparse
 import uuid
 import webbrowser
@@ -1095,31 +1095,30 @@ def _run_output_to(path: Path | None) -> Iterator[Path | None]:
     if log is None:
         yield None
         return
-    _flush_std_streams()
-    saved: dict[int, int] = {}
-    moved: list[int] = []
-    try:
-        for fd in (1, 2):
-            saved[fd] = os.dup(fd)
-        for fd in (1, 2):
-            os.dup2(log, fd)
-            moved.append(fd)
-    except OSError:
-        _put_back(saved, moved)
-        _close_quietly(log)
-        yield None
-        return
-    _point_windows_std_handles_at(1, 2)
-    try:
-        yield path
-    finally:
+    with log:
         _flush_std_streams()
-        _put_back(saved, moved)
+        saved: dict[int, int] = {}
+        moved: list[int] = []
+        try:
+            for fd in (1, 2):
+                saved[fd] = os.dup(fd)
+            for fd in (1, 2):
+                os.dup2(log.fileno(), fd)
+                moved.append(fd)
+        except OSError:
+            _put_back(saved, moved)
+            yield None
+            return
         _point_windows_std_handles_at(1, 2)
-        _close_quietly(log)
+        try:
+            yield path
+        finally:
+            _flush_std_streams()
+            _put_back(saved, moved)
+            _point_windows_std_handles_at(1, 2)
 
 
-def _open_run_log(path: Path) -> int | None:
+def _open_run_log(path: Path) -> BinaryIO | None:
     """The run log, opened for writing owner-only and never through a link:
     it holds final answers, tool output and tracebacks that can carry a
     credential. A log an earlier run left is emptied and its mode tightened.
@@ -1133,7 +1132,7 @@ def _open_run_log(path: Path) -> int | None:
         return None
     with contextlib.suppress(OSError, AttributeError):
         os.fchmod(fd, 0o600)
-    return fd
+    return os.fdopen(fd, "wb")
 
 
 def _flush_std_streams() -> None:
