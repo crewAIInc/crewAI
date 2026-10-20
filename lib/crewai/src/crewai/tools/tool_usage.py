@@ -487,7 +487,8 @@ class ToolUsage:
                 result = self._format_result(result=formatted_result)
 
                 if (
-                    hasattr(available_tool, "result_as_answer")
+                    available_tool is not None
+                    and hasattr(available_tool, "result_as_answer")
                     and available_tool.result_as_answer
                     # A failed tool must not become the final answer;
                     # process_tool_results() reads this back independently.
@@ -767,7 +768,8 @@ class ToolUsage:
                 result = self._format_result(result=formatted_result)
 
                 if (
-                    hasattr(available_tool, "result_as_answer")
+                    available_tool is not None
+                    and hasattr(available_tool, "result_as_answer")
                     and available_tool.result_as_answer
                     # A failed tool must not become the final answer;
                     # process_tool_results() reads this back independently.
