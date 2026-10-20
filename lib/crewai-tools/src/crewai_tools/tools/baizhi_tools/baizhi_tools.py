@@ -26,6 +26,12 @@ from typing_extensions import Self
 _ACTIVE_KEY: ContextVar[str | None] = ContextVar("crewai_baizhi_key", default=None)
 
 
+async def _reject_redirect_response(response: httpx.Response) -> None:
+    """Reject redirects before the MCP SDK can follow them or repeat a call."""
+    if response.is_redirect:
+        raise RuntimeError("Baizhi Cloud MCP redirects are disabled.")
+
+
 class _SDKLogFilter(logging.Filter):
     """Sanitize SDK diagnostics only in the current Baizhi call context."""
 
@@ -240,6 +246,7 @@ class _BaizhiTool(BaseTool):
                     timeout=self.timeout,
                     follow_redirects=False,
                     trust_env=False,
+                    event_hooks={"response": [_reject_redirect_response]},
                 ) as client:
                     async with streamable_http_client(
                         "https://agent-toolkit.app.baizhi.cloud/mcp", http_client=client

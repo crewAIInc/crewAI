@@ -48,6 +48,8 @@ def server(monkeypatch):
     state = {
         "calls": [],
         "requests": [],
+        "request_methods": [],
+        "rpc_methods": [],
         "closed": False,
         "started": asyncio.Event(),
         "status": 200,
@@ -63,6 +65,7 @@ def server(monkeypatch):
     async def handler(request):
         """Emulate MCP sessions and record calls without contacting the service."""
         state["requests"].append(str(request.url))
+        state["request_methods"].append(request.method)
         assert str(request.url) == "https://agent-toolkit.app.baizhi.cloud/mcp"
         assert request.headers["authorization"] == f"Bearer {KEY}"
         if request.method == "DELETE":
@@ -72,11 +75,16 @@ def server(monkeypatch):
             return httpx.Response(405)
         message = json.loads(request.content)
         method = message["method"]
+        state["rpc_methods"].append(method)
         if method == "initialize":
             if state.get("malformed"):
-                return httpx.Response(200, json={"jsonrpc": "2.0", "id": [KEY], "result": {"echo": KEY}})
+                return httpx.Response(
+                    200, json={"jsonrpc": "2.0", "id": [KEY], "result": {"echo": KEY}}
+                )
             if state["status"] != 200:
-                return httpx.Response(state["status"], headers=state.get("headers", {}), text=KEY)
+                return httpx.Response(
+                    state["status"], headers=state.get("headers", {}), text=KEY
+                )
             return httpx.Response(
                 200,
                 headers={"mcp-session-id": "test-session"},
@@ -108,6 +116,12 @@ def server(monkeypatch):
             )
         assert method == "tools/call"
         state["calls"].append(message["params"])
+        if state.get("redirect_call"):
+            return httpx.Response(
+                state["redirect_call_status"],
+                headers={"Location": state["redirect_call_location"]},
+                text=KEY,
+            )
         state["started"].set()
         if state["delay"]:
             await asyncio.Event().wait()
@@ -289,7 +303,10 @@ def test_public_exports_are_discoverable_in_tool_specs(server):
         assert "api_key" not in spec["init_params_schema"]["properties"]
 
 
-@pytest.mark.parametrize("value", ["https://example.com/path", "example.com/path", "localhost", "user@example.com"])
+@pytest.mark.parametrize(
+    "value",
+    ["https://example.com/path", "example.com/path", "localhost", "user@example.com"],
+)
 def test_domain_filter_rejects_non_domains(server, value):
     """Domain filters reject URLs, paths, local hostnames, and embedded userinfo."""
     with pytest.raises(ValueError):
@@ -398,10 +415,80 @@ def test_sdk_logging_outside_call_is_unchanged(server, caplog):
     assert caplog.records[-1].args == ("diagnostic",)
 
 
-@pytest.mark.parametrize("location", ["https://example.com/redirect", "https://agent-toolkit.app.baizhi.cloud/other"])
+@pytest.mark.parametrize(
+    "location",
+    ["https://example.com/redirect", "https://agent-toolkit.app.baizhi.cloud/other"],
+)
 def test_redirects_never_follow_credentials(server, location):
     """Neither same-origin nor cross-origin redirects receive a follow-up request."""
     server.update(status=307, headers={"Location": location})
     with pytest.raises(RuntimeError):
         BaizhiSearchTool(api_key=KEY).run(query="test")
     assert server["requests"] == ["https://agent-toolkit.app.baizhi.cloud/mcp"]
+
+
+_REDIRECT_LOCATIONS = [
+    pytest.param("https://agent-toolkit.app.baizhi.cloud/mcp", id="same_endpoint"),
+    pytest.param("./mcp", id="relative_same"),
+    pytest.param("/other", id="relative_path"),
+    pytest.param(f"/mcp?token={KEY}", id="query"),
+    pytest.param("https://agent-toolkit.app.baizhi.cloud:8443/mcp", id="port"),
+    pytest.param(f"https://example.com/{KEY}", id="cross_origin"),
+    pytest.param("http://agent-toolkit.app.baizhi.cloud/mcp", id="downgrade"),
+    pytest.param(
+        f"https://synthetic-user:{KEY}@agent-toolkit.app.baizhi.cloud/mcp",
+        id="userinfo",
+    ),
+    pytest.param("/mcp/", id="trailing_slash"),
+    pytest.param(f"#redirect-{KEY}", id="fragment"),
+]
+
+
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+@pytest.mark.parametrize("location", _REDIRECT_LOCATIONS)
+def test_redirect_guard_blocks_additional_requests(server, status, location, caplog):
+    """Redirected initialization never sends another request, even to the same URL."""
+    server.update(status=status, headers={"Location": location})
+    with pytest.raises(RuntimeError) as error:
+        BaizhiSearchTool(api_key=KEY).run(query="test")
+    assert server["requests"] == ["https://agent-toolkit.app.baizhi.cloud/mcp"]
+    assert not server["calls"]
+    assert KEY not in str(error.value)
+    assert KEY not in caplog.text
+
+
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+@pytest.mark.parametrize(
+    "location",
+    [
+        "https://agent-toolkit.app.baizhi.cloud/mcp",
+        f"/mcp?token={KEY}",
+        f"https://example.com/{KEY}",
+    ],
+)
+def test_tool_call_redirect_is_not_retried(server, status, location, caplog):
+    """A redirected billable call is attempted once and the initialized session closes."""
+    server.update(
+        redirect_call=True, redirect_call_status=status, redirect_call_location=location
+    )
+    with pytest.raises(RuntimeError) as error:
+        BaizhiSearchTool(api_key=KEY).run(query="test")
+    assert server["rpc_methods"].count("initialize") == 1
+    assert server["rpc_methods"].count("tools/call") == 1
+    assert len(server["calls"]) == 1
+    assert all(
+        url == "https://agent-toolkit.app.baizhi.cloud/mcp"
+        for url in server["requests"]
+    )
+    assert server["closed"]
+    assert KEY not in str(error.value)
+    assert KEY not in caplog.text
+
+
+def test_redirect_guard_keeps_normal_session_methods(server):
+    """Successful MCP POST calls, the GET stream probe and DELETE cleanup still run."""
+    output = BaizhiSearchTool(api_key=KEY).run(query="test")
+    assert json.loads(output) == {"items": ["result"]}
+    assert {"POST", "GET", "DELETE"}.issubset(server["request_methods"])
+    assert server["rpc_methods"].count("tools/call") == 1
+    assert server["closed"]

@@ -55,7 +55,7 @@ is outside this integration's scope, even though the hosted service supports it.
 
 Results are JSON strings when the server returns MCP `structuredContent`, or
 joined text blocks otherwise. MCP tool errors and transport failures raise
-sanitized exceptions; non-text blocks without structured data produce an error. Literal key echoes in successful results are redacted. SDK diagnostics inside a Baizhi call remove key echoes and raw exception tracebacks; unrelated SDK logging is unchanged. Avoid HTTP debug logging when using secrets. Redirects and proxy environment variables are disabled. Page URLs with embedded credentials and malformed domain filters are rejected, but URL validation is not a network-level guarantee that a page is public. Do not submit private or signed URLs.
+sanitized exceptions; non-text blocks without structured data produce an error. Literal key echoes in successful results are redacted. SDK diagnostics inside a Baizhi call remove key echoes and raw exception tracebacks; unrelated SDK logging is unchanged. Avoid HTTP debug logging when using secrets. This tool's HTTP client rejects redirect responses before the MCP SDK can follow them, including redirects back to the same endpoint. Proxy environment variables are disabled. Page URLs with embedded credentials and malformed domain filters are rejected, but URL validation is not a network-level guarantee that a page is public. Do not submit private or signed URLs.
 
 Rendered input validation errors omit rejected input values, including credentials
 embedded in URLs.
