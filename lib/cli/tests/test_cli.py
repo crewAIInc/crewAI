@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from unittest import mock
 
@@ -348,6 +349,26 @@ def test_create_requires_name_in_dmn_mode(runner):
 
     assert result.exit_code == 2
     assert "NAME is required when CREWAI_DMN is set" in result.output
+
+
+@pytest.mark.parametrize(
+    "doc_path",
+    ["index.mdx"]
+    + [
+        f"edge/{locale}/{page}.mdx"
+        for locale in ("en", "ar", "ko", "pt-BR")
+        for page in ("index", "installation")
+    ],
+)
+def test_coding_agent_prompts_use_valid_dmn_create_command(doc_path: str) -> None:
+    """Keep the DMN setup command valid in every supported locale."""
+    prompt_doc = Path(__file__).parents[3] / "docs" / doc_path
+    doc_text = prompt_doc.read_text()
+
+    match = re.search(r"CREWAI_DMN=true crewai create(?P<args>[^\n`]*)", doc_text)
+
+    assert match is not None, doc_path
+    assert match.group("args").strip().split() == ["crew", "<project_name>"], doc_path
 
 
 @mock.patch("crewai_cli.cli.AuthenticationCommand")
