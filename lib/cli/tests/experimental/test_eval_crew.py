@@ -2548,6 +2548,8 @@ def test_exporting_again_overwrites_the_files(project, monkeypatch, capsys):
         ".Git./config",
         ".gitignore",  # the folder's own
         ".GITIGNORE",
+        ".crewai-eval-saved",  # the saved evaluation's marker, never AMP's to send
+        ".CREWAI-EVAL-SAVED.",
         # names Windows keeps for its devices, with any extension
         "NUL.md",
         "nul",
@@ -3856,3 +3858,23 @@ def test_putting_back_goes_on_past_a_failure_and_keeps_the_runs_own_error(tmp_pa
     finally:
         real_dup2(stdout_copy, 1)  # the test puts stdout back itself
         os.close(stdout_copy)
+
+
+def test_a_marker_in_the_payload_never_marks_a_save_that_was_not_whole(project, monkeypatch, capsys):
+    """AMP cannot send the marker: with one file skipped, a forged marker would
+    have made a partial save read as whole, never tried again and kept over a
+    complete one."""
+    directory, _ = project
+    files = {**EXPORT_FILES, eval_module.SAVED_MARKER: "forged\n", "../outside.md": "no"}
+    amp = _graded(monkeypatch, directory, answer=exported(files=files, kind="trace"))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    saved = directory / SAVED / EVALUATION_ID
+    assert not (saved / eval_module.SAVED_MARKER).exists()
+    said = " ".join(capsys.readouterr().out.split())
+    assert "Part of its data was saved" in said and "2 files skipped" in said
+
+    amp.statuses = [_verdict_of(EVALUATION_ID)]
+    eval_module.eval_crew(run_id="named-run")
+    assert amp.calls.count(("export", EVALUATION_ID)) == 2  # tried again

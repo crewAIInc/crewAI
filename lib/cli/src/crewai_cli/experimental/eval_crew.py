@@ -2489,7 +2489,9 @@ def _export_target(name: str) -> list[str] | None:
     every segment a plain name (`[A-Za-z0-9._-]+`, never `.` or `..`). A `.git`
     segment is refused too: a `.git/config` there could name a command for the
     next `git status` in the folder to run, and a shell prompt runs one. The
-    top `.gitignore` is this command's own. So is a name Windows keeps for a
+    top `.gitignore` is this command's own, and so is the top SAVED_MARKER: a
+    marker AMP sent would say a save was whole when it was not. So is a name
+    Windows keeps for a
     device (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9`, `LPT0`-`LPT9`, with any
     extension), on every platform, since the folder may be opened on Windows
     later or sit on a drive it shares: there `NUL.md` is the null device, and
@@ -2508,9 +2510,14 @@ def _export_target(name: str) -> list[str] | None:
             or seen.split(".", 1)[0] in _WINDOWS_DEVICE_NAMES
         ):
             return None
-    if len(segments) == 1 and _as_a_filesystem_sees_it(segments[0]) == ".gitignore":
+    if len(segments) == 1 and _as_a_filesystem_sees_it(segments[0]) in _RESERVED_TOP:
         return None
     return segments
+
+
+# The folder's own files, which no exported file may be: `.gitignore` keeps the
+# data out of a commit, the marker says the save was whole.
+_RESERVED_TOP = frozenset({".gitignore", SAVED_MARKER})
 
 
 def _as_a_filesystem_sees_it(segment: str) -> str:
