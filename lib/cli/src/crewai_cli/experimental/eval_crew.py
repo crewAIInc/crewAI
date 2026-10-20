@@ -40,6 +40,7 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 import sys
 import time
@@ -389,6 +390,7 @@ def eval_crew(
     record_finished(finished)
     _print_verdict(finished, url)
     _print_brief(finished)
+    save_evaluation(client, finished)
     _say_where_the_criteria_live(write_eval_config(finished))
     # The exit code is what a CI job reads, so it is the gate's: 0 only for a
     # run that PASSED. A failed gate, one without a verdict, and an evaluation
@@ -2081,6 +2083,92 @@ _FOLDER_FLAGS = (
 _NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
 
 
+# Every evaluation `crewai eval` reads keeps its full data in the project. The
+# report opens for one five-minute sitting after it is first read, and the
+# verdict this command waits for is that read: a coding agent that wants a
+# check's quotes or the trace an hour later, after its edits, would find it
+# closed. The newest few are kept; older ones are removed.
+SAVED_EVALUATIONS_DIR = "evaluations"
+SAVED_EVALUATIONS_KEPT = 10
+
+
+def save_evaluation(client: PlusAPI, finished: dict[str, Any]) -> None:
+    """Save evaluation FINISHED's full data (the export) into
+    `.crewai/evaluations/<id>/`, and say where.
+
+    Only inside a project, and never at the cost of the evaluation: a service
+    that does not export yet says nothing, and any other failure is one line.
+    """
+    try:
+        canonical = str(uuid.UUID(str(finished.get("id"))))
+    except ValueError:
+        return
+    if not Path("pyproject.toml").is_file():
+        return  # `crewai eval --run ID` from anywhere: no project to keep it in
+    from crewai.telemetry.tracing.last_run import LAST_RUN_DIR
+
+    folder = Path(LAST_RUN_DIR) / SAVED_EVALUATIONS_DIR / canonical
+    if (folder / EXPORT_START_HERE).is_file():
+        # Graded again with nothing changed: the same evaluation, saved when it
+        # was first read — and its sitting may have closed since.
+        console.print(
+            Text(
+                f"Its full data is saved in {folder}/ — start with {EXPORT_START_HERE}."
+            ),
+            soft_wrap=True,
+        )
+        return
+    try:
+        response = client.export_evaluation(canonical)
+    except Exception as error:
+        console.print(Text(f"Its full data was not saved: {error}"), style="dim")
+        return
+    if response.status_code == 404:
+        return  # an evaluation service that does not export yet
+    payload = _payload(response) or {}
+    files = payload.get("files")
+    if response.status_code != 200 or not isinstance(files, dict):
+        said = payload.get("message")
+        why = (
+            said
+            if isinstance(said, str) and said.strip()
+            else (f"AMP answered {response.status_code}.")
+        )
+        console.print(Text(f"Its full data was not saved: {why}"), style="dim")
+        return
+    try:
+        written, _ = _write_export(folder, files)
+    except ExportWriteError as error:
+        console.print(Text(f"Its full data was not saved: {error}"), style="dim")
+        return
+    _keep_newest_saved_evaluations(folder.parent)
+    line = f"Its full data is saved in {folder}/"
+    if EXPORT_START_HERE in written:
+        line += f" — start with {EXPORT_START_HERE}"
+    console.print(Text(line + "."), soft_wrap=True)
+
+
+def _keep_newest_saved_evaluations(folder: Path) -> None:
+    """Remove all but the SAVED_EVALUATIONS_KEPT newest saved evaluations:
+    only folders named by an evaluation id, never a link."""
+    with contextlib.suppress(OSError):
+        saved = []
+        for entry in folder.iterdir():
+            try:
+                uuid.UUID(entry.name)
+            except ValueError:
+                continue
+            if entry.is_dir() and not entry.is_symlink():
+                saved.append((entry.stat().st_mtime, entry))
+        saved.sort(reverse=True)
+        for _, old in saved[SAVED_EVALUATIONS_KEPT:]:
+            shutil.rmtree(old, ignore_errors=True)
+
+
+class ExportWriteError(Exception):
+    """An export could not be written where it was going; the message says why."""
+
+
 def export_evaluation(evaluation_id: str) -> None:
     """Write evaluation EVALUATION_ID's full data into `./crewai-eval-<id>/`.
 
@@ -2121,7 +2209,10 @@ def export_evaluation(evaluation_id: str) -> None:
         )
 
     folder = Path(f"{EXPORT_DIR_PREFIX}{canonical}")
-    written, skipped = _write_export(folder, files)
+    try:
+        written, skipped = _write_export(folder, files)
+    except ExportWriteError as error:
+        _fail(str(error))
     line = f"Wrote {len(written)} file{'' if len(written) == 1 else 's'} to {folder}/"
     if EXPORT_START_HERE in written:
         line += f" — start with {EXPORT_START_HERE}"
@@ -2240,10 +2331,12 @@ def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
         try:
             ignored = put([".gitignore"], b"*\n")
         except OSError as error:
-            _fail(f"Could not write the export into {folder}/: {error}")
+            raise ExportWriteError(
+                f"Could not write the export into {folder}/: {error}"
+            ) from error
         if not ignored:
             # The data never goes into the folder without it.
-            _fail(
+            raise ExportWriteError(
                 f"{folder}/.gitignore is a folder, not this command's file: remove it "
                 "and export again, so the data is never committed by accident."
             )
@@ -2260,7 +2353,9 @@ def _write_export(folder: Path, files: dict[str, Any]) -> tuple[list[str], int]:
             try:
                 put_there = put(segments, data)
             except OSError as error:
-                _fail(f"Could not write {folder}/{name}: {error}")
+                raise ExportWriteError(
+                    f"Could not write {folder}/{name}: {error}"
+                ) from error
             if put_there:
                 written.append(name)
             else:
@@ -2290,24 +2385,38 @@ def _export_folder(folder: Path) -> Iterator[Callable[[list[str], bytes], bool]]
 
 def _export_root_is_a_link(folder: Path) -> NoReturn:
     """Stop: whoever made FOLDER a link chose where it leads, not this command."""
-    _fail(f"{folder} is a link; the export writes only into a folder of its own.")
+    raise ExportWriteError(
+        f"{folder} is a link; the export writes only into a folder of its own."
+    )
 
 
 def _export_root_handle(folder: Path) -> int:
-    """A handle on FOLDER, made when missing, opened inside the current
-    directory and never through a link."""
+    """A handle on FOLDER, a path relative to the current directory: each of
+    its folders made when missing and opened inside the one before it, never
+    through a link."""
     try:
-        here = os.open(".", _FOLDER_FLAGS)
-        try:
-            with contextlib.suppress(FileExistsError):
-                os.mkdir(folder.name, dir_fd=here)
-            return os.open(folder.name, _FOLDER_FLAGS, dir_fd=here)
-        finally:
-            os.close(here)
+        handle = os.open(".", _FOLDER_FLAGS)
     except OSError as error:
-        if folder.is_symlink():
+        raise ExportWriteError(
+            f"Could not write the export into {folder}/: {error}"
+        ) from error
+    try:
+        for part in folder.parts:
+            with contextlib.suppress(FileExistsError):
+                os.mkdir(part, dir_fd=handle)
+            inner = os.open(part, _FOLDER_FLAGS, dir_fd=handle)
+            os.close(handle)
+            handle = inner
+    except OSError as error:
+        os.close(handle)
+        if any(
+            Path(*folder.parts[: n + 1]).is_symlink() for n in range(len(folder.parts))
+        ):
             _export_root_is_a_link(folder)
-        _fail(f"Could not write the export into {folder}/: {error}")
+        raise ExportWriteError(
+            f"Could not write the export into {folder}/: {error}"
+        ) from error
+    return handle
 
 
 def _put_through_handles(root: int, segments: list[str], data: bytes) -> bool:
@@ -2367,11 +2476,13 @@ def _export_root_by_path(folder: Path) -> Path:
     if folder.is_symlink():
         _export_root_is_a_link(folder)
     try:
-        folder.mkdir(exist_ok=True)
+        folder.mkdir(parents=True, exist_ok=True)
         root = folder.resolve()
     except OSError as error:
-        _fail(f"Could not write the export into {folder}/: {error}")
-    if os.path.normcase(root) != os.path.normcase(Path.cwd().resolve() / folder.name):
+        raise ExportWriteError(
+            f"Could not write the export into {folder}/: {error}"
+        ) from error
+    if os.path.normcase(root) != os.path.normcase(Path.cwd().resolve() / folder):
         _export_root_is_a_link(folder)
     return root
 

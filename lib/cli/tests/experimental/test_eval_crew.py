@@ -6,6 +6,7 @@ import contextlib
 from datetime import datetime, timedelta, timezone
 import json
 import os
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -3458,3 +3459,119 @@ def test_a_project_that_turned_tracing_off_is_not_asked_to_trace_toward_an_untru
     assert exited.value.code == 1
     assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
     assert "CREWAI_TRACING_ENABLED=false" in (directory / ".env").read_text()
+
+
+# ── every evaluation keeps its full data in the project ─────────────────────
+
+SAVED = Path(".crewai") / "evaluations"
+
+
+def _verdict_of(evaluation_id: str, gate: str = "passed") -> httpx.Response:
+    payload = done(gate=gate).json()
+    return httpx.Response(200, json={**payload, "id": evaluation_id})
+
+
+def _graded(monkeypatch, directory: Path, answer=None, evaluation_id: str = EVALUATION_ID, gate: str = "passed"):
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    amp = FakeExportAMP(answer=answer if answer is not None else exported(kind="trace"))
+    amp.statuses = [_verdict_of(evaluation_id, gate)]
+    return install(monkeypatch, amp)
+
+
+def test_the_verdict_leaves_the_evaluations_full_data_in_the_project(project, monkeypatch, capsys):
+    """The report opens for one five-minute sitting, and waiting for the verdict
+    is that read: an agent that wants a check's quotes or the trace after its
+    edits finds them here instead."""
+    directory, _ = project
+    amp = _graded(monkeypatch, directory)
+
+    eval_module.eval_crew(run_id="named-run")
+
+    saved = directory / SAVED / EVALUATION_ID
+    assert files_in(saved) == {".gitignore": "*\n", **EXPORT_FILES}
+    assert ("export", EVALUATION_ID) in amp.calls
+    said = " ".join(capsys.readouterr().out.split())
+    assert f"Its full data is saved in {SAVED / EVALUATION_ID}/ — start with report.md." in said
+
+
+def test_a_service_that_does_not_export_yet_costs_nothing_and_says_nothing(project, monkeypatch, capsys):
+    directory, _ = project
+    _graded(monkeypatch, directory, answer=httpx.Response(404, json={"error": "not_found"}))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert not (directory / SAVED).exists()
+    assert "full data" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [httpx.ConnectError("no route"), httpx.Response(500, json={"error": "boom"})],
+)
+def test_a_save_that_fails_is_one_line_and_never_the_verdicts(project, monkeypatch, capsys, answer):
+    """The exit code stays the gate's: a failed gate is still 1, a passed one 0."""
+    directory, _ = project
+    _graded(monkeypatch, directory, answer=answer, gate="failed")
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew(run_id="named-run")
+
+    assert exited.value.code == 1  # the failed gate, not the save
+    said = " ".join(capsys.readouterr().out.split())
+    assert said.count("Its full data was not saved:") == 1
+    assert "Goal gate: FAILED" in said
+
+
+def test_only_the_newest_saved_evaluations_are_kept(project, monkeypatch):
+    directory, _ = project
+    older = [str(uuid.UUID(int=n)) for n in range(1, 13)]
+    for n, name in enumerate(older):
+        folder = directory / SAVED / name
+        folder.mkdir(parents=True)
+        (folder / "report.md").write_text("old")
+        os.utime(folder, (1_000_000 + n, 1_000_000 + n))
+    (directory / SAVED / "notes").mkdir()  # not an evaluation: never removed
+    _graded(monkeypatch, directory)
+
+    eval_module.eval_crew(run_id="named-run")
+
+    kept = sorted(p.name for p in (directory / SAVED).iterdir())
+    assert EVALUATION_ID in kept and "notes" in kept
+    assert len([name for name in kept if name != "notes"]) == eval_module.SAVED_EVALUATIONS_KEPT
+    assert older[0] not in kept and older[-1] in kept  # the oldest went first
+
+
+def test_outside_a_project_nothing_is_saved(project, monkeypatch):
+    directory, _ = project
+    amp = _graded(monkeypatch, directory)
+    (directory / "pyproject.toml").unlink()
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert not (directory / ".crewai" / "evaluations").exists()
+    assert ("export", EVALUATION_ID) not in amp.calls
+
+
+def test_graded_again_unchanged_it_points_at_what_it_saved_and_asks_nothing(project, monkeypatch, capsys):
+    """The same evaluation, read again after its sitting closed: what was saved
+    the first time is where the data is, and AMP is not asked a second time."""
+    directory, _ = project
+    saved = directory / SAVED / EVALUATION_ID
+    saved.mkdir(parents=True)
+    (saved / "report.md").write_text("# Report\n")
+    amp = _graded(monkeypatch, directory, answer=httpx.Response(410, json={"error": "report_closed", "message": "read already"}))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert ("export", EVALUATION_ID) not in amp.calls
+    assert "Its full data is saved in" in " ".join(capsys.readouterr().out.split())
+
+
+def test_a_refused_save_says_amps_own_words(project, monkeypatch, capsys):
+    directory, _ = project
+    message = f"Evaluation {EVALUATION_ID} has been read already. Evaluate the run again for a fresh report."
+    _graded(monkeypatch, directory, answer=httpx.Response(410, json={"error": "report_closed", "message": message}))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert f"Its full data was not saved: {message}" in " ".join(capsys.readouterr().out.split())
