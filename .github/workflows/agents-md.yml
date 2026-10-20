@@ -1,11 +1,8 @@
 name: AGENTS.md
 
 # The AGENTS.md that `crewai create` ships is tested in lib/cli/tests, which the main
-# test workflow doesn't run. The guards run whenever the file, its tests, or the docs
-# pages it links change. The eval asks coding agents what the file teaches, against the
-# base branch's file, one job per model, and fails on a drop of more than 10%. It runs the
-# base commit's code only: the pull request's files are read as data, never run, so a
-# change to the eval itself takes effect on the pull requests after it merges.
+# test workflow doesn't run. The guards run whenever the file, its tests, the eval, or the
+# docs pages it links change. The eval itself is agents-md-eval.yml.
 on:
   pull_request:
     branches: [main]
@@ -19,6 +16,7 @@ on:
       - "docs/docs.json"
       - "docs/edge/en/**"
       - ".github/workflows/agents-md.yml"
+      - ".github/workflows/agents-md-eval.yml"
 
 permissions:
   contents: read
@@ -28,31 +26,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
-    name: Detect changes
-    runs-on: ubuntu-latest
-    outputs:
-      eval: ${{ steps.filter.outputs.eval }}
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
-        id: filter
-        with:
-          filters: |
-            eval:
-              - 'lib/cli/src/crewai_cli/templates/AGENTS.md'
-              - 'lib/cli/src/crewai_cli/templates/CLAUDE.md'
-              - 'lib/cli/src/crewai_cli/utils.py'
-              - 'lib/devtools/src/crewai_devtools/agents_md_eval.py'
-              - 'lib/devtools/src/crewai_devtools/agents_md_items.json'
-              - '.github/workflows/agents-md.yml'
-
   guards:
     name: AGENTS.md guards
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Restore global uv cache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -79,75 +60,3 @@ jobs:
         run: |
           uv run pytest lib/cli/tests/test_create_crew.py -k agents_md -p no:randomly -n 0
           uv run pytest lib/devtools/tests/test_agents_md_eval.py -n 0
-
-  eval:
-    name: AGENTS.md eval (${{ matrix.model }})
-    needs: changes
-    if: needs.changes.outputs.eval == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    # The API keys belong to this environment, where a maintainer can require approval of
-    # each run: a pull request that edits this workflow can't reach them without it.
-    environment:
-      name: agents-md-eval
-    strategy:
-      fail-fast: false
-      matrix:
-        # Claude Code runs the latest Haiku and Sonnet, Codex the GPT models users pick.
-        model:
-          - claude:claude-haiku-5-5
-          - claude:claude-sonnet-5-5
-          - codex:gpt-5.6-luna
-          - codex:gpt-5.6-sol
-    steps:
-      - name: Checkout the base commit
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-          persist-credentials: false
-
-      - name: Fetch this pull request's commit, for its files only
-        env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: git fetch --no-tags --depth=1 origin "$HEAD_SHA"
-
-      - name: Check the eval and the API keys
-        id: keys
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
-        run: |
-          if [ ! -f lib/devtools/src/crewai_devtools/agents_md_eval.py ]; then
-            echo "::notice::Skipped: the base branch doesn't have the eval yet. It runs once this is merged."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          elif [ -n "$ANTHROPIC_API_KEY" ] && [ -n "$OPENAI_API_KEY" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [ "$FORK" = "true" ]; then
-            echo "::notice::Skipped: secrets aren't available to pull requests from forks."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::Set ANTHROPIC_API_KEY and OPENAI_API_KEY in the agents-md-eval environment."
-            exit 1
-          fi
-
-      - name: Install uv
-        if: steps.keys.outputs.run == 'true'
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-        with:
-          version: "0.11.3"
-          python-version: "3.12"
-
-      - name: Install the coding agents
-        if: steps.keys.outputs.run == 'true'
-        run: npm install -g @anthropic-ai/claude-code@2.1.289 @openai/codex@0.160.0
-
-      - name: Ask the model, base file against the pull request's
-        if: steps.keys.outputs.run == 'true'
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          MODEL: ${{ matrix.model }}
-        run: uv run --package crewai-devtools devtools agents-md-eval --base "$BASE_SHA" --head "$HEAD_SHA" --model "$MODEL"

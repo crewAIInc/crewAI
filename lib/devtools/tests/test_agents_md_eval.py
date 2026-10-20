@@ -371,38 +371,55 @@ def test_a_session_without_an_answer_says_why(
         ev.claude_asker("claude-haiku-5-5")(tmp_path, "How?")
 
 
+EVAL_WORKFLOW = ".github/workflows/agents-md-eval.yml"
+
+
+def _eval_workflow():
+    import yaml
+
+    return yaml.safe_load(ev.read_at(None, EVAL_WORKFLOW))
+
+
 def test_the_workflow_runs_the_default_models():
-    import yaml
-
-    workflow = yaml.safe_load(ev.read_at(None, ".github/workflows/agents-md.yml"))
-    assert workflow["jobs"]["eval"]["strategy"]["matrix"]["model"] == list(ev.MODELS)
+    job = _eval_workflow()["jobs"]["eval"]
+    assert job["strategy"]["matrix"]["model"] == list(ev.MODELS)
 
 
-def test_the_workflow_runs_only_on_pull_requests_against_main():
-    import yaml
-
-    workflow = yaml.safe_load(ev.read_at(None, ".github/workflows/agents-md.yml"))
+def test_the_eval_runs_on_pull_requests_against_main_from_this_repository_only():
+    workflow = _eval_workflow()
     triggers = workflow[True]  # PyYAML reads the key `on` as the boolean true
-    assert list(triggers) == ["pull_request"]
-    assert triggers["pull_request"]["branches"] == ["main"]
+    assert list(triggers) == ["pull_request_target"]
+    assert triggers["pull_request_target"]["branches"] == ["main"]
+    assert triggers["pull_request_target"]["paths"] == [
+        "lib/cli/src/crewai_cli/templates/AGENTS.md",
+        "lib/cli/src/crewai_cli/templates/CLAUDE.md",
+    ]
+    assert (
+        workflow["jobs"]["eval"]["if"]
+        == "github.event.pull_request.head.repo.full_name == github.repository"
+    )
 
 
 def test_the_eval_runs_only_the_base_branchs_code_with_the_keys():
     """The keys reach only code from the base commit; the PR's commit is fetched as data."""
-    import yaml
-
-    workflow = yaml.safe_load(ev.read_at(None, ".github/workflows/agents-md.yml"))
-    job = workflow["jobs"]["eval"]
+    job = _eval_workflow()["jobs"]["eval"]
+    steps = job["steps"]
     checkout = next(
-        step for step in job["steps"] if "actions/checkout" in step.get("uses", "")
+        step for step in steps if "actions/checkout" in step.get("uses", "")
     )
     assert checkout["with"]["ref"] == "${{ github.event.pull_request.base.sha }}"
     assert checkout["with"]["persist-credentials"] is False
     run = next(
-        step
-        for step in job["steps"]
-        if "devtools agents-md-eval" in step.get("run", "")
+        step for step in steps if "devtools agents-md-eval" in step.get("run", "")
     )
     assert '--base "$BASE_SHA" --head "$HEAD_SHA"' in run["run"]
     assert run["env"]["HEAD_SHA"] == "${{ github.event.pull_request.head.sha }}"
     assert job["environment"]["name"] == "agents-md-eval"
+
+
+def test_the_eval_fetches_the_pull_request_only_when_it_runs():
+    steps = _eval_workflow()["jobs"]["eval"]["steps"]
+    names = [step["name"] for step in steps]
+    fetch = next(step for step in steps if "git fetch" in step.get("run", ""))
+    assert names.index(fetch["name"]) > names.index("Check the eval and the API keys")
+    assert fetch["if"] == "steps.keys.outputs.run == 'true'"
