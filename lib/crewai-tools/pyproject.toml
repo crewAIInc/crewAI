@@ -45,7 +45,7 @@ browserbase = [
     "browserbase>=1.0.5",
 ]
 weaviate-client = [
-    "weaviate-client>=4.10.2",
+    "weaviate-client>=4.23.1",
 ]
 patronus = [
     "patronus>=0.0.16",
