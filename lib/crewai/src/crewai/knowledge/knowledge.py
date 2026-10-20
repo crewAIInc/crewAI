@@ -1,7 +1,14 @@
 import os
 from typing import Annotated, Any
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    SerializeAsAny,
+)
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
@@ -14,7 +21,11 @@ from crewai.knowledge.source.text_file_knowledge_source import (
     TextFileKnowledgeSource,
 )
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.knowledge.storage.knowledge_storage import (
+    KnowledgeStorage,
+    KnowledgeStorageField,
+    _resolve_knowledge_storage,
+)
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
@@ -95,11 +106,11 @@ class Knowledge(BaseModel):
     """
 
     sources: Annotated[
-        list[BaseKnowledgeSource],
+        list[SerializeAsAny[BaseKnowledgeSource]],
         BeforeValidator(_resolve_knowledge_sources),
     ] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: BaseKnowledgeStorage | None = Field(default=None)
+    storage: KnowledgeStorageField = Field(default=None)
     embedder: Annotated[
         EmbedderConfig | None,
         PlainSerializer(
@@ -118,7 +129,8 @@ class Knowledge(BaseModel):
     ) -> None:
         super().__init__(**data)
         if storage is not None:
-            self.storage = storage
+            # Validation passes a checkpointed storage here as a dict.
+            self.storage = _resolve_knowledge_storage(storage)
         else:
             from crewai.knowledge.storage.factory import resolve_knowledge_storage
 
