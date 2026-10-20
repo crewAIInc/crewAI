@@ -23,6 +23,7 @@ from typing import Final, Literal, NotRequired, TypedDict
 
 import click
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 
@@ -172,18 +173,25 @@ class NoAnswer(Exception):  # noqa: N818 - a reason, not an error the caller han
 
 
 SECRET: Final = re.compile(r"sk-[A-Za-z0-9_-]+")
+# Claude Code can end its output with a JSON log line ({"model": ..., "query_source": ...})
+# after the message that says what went wrong.
+LOG_LINE: Final = re.compile(r"^\{.*\}$")
+
+
+def _lines(output: str) -> list[str]:
+    return [line.strip() for line in output.splitlines() if line.strip()]
 
 
 def session_answer(proc: subprocess.CompletedProcess[str], text: str) -> str:
     """The session's answer, or NoAnswer naming its exit code and last error line."""
     if proc.returncode != 0:
-        # Claude Code prints some failures ("Not logged in") on stdout, not stderr.
-        lines = [
-            line for line in (proc.stderr or proc.stdout).splitlines() if line.strip()
-        ] or ["no error output"]
-        raise NoAnswer(
-            SECRET.sub("sk-***", f"exit {proc.returncode}: {lines[-1].strip()[:160]}")
-        )
+        # Claude Code prints some failures ("Not logged in", "Invalid API key") on stdout.
+        stderr, stdout = _lines(proc.stderr), _lines(proc.stdout)
+        messages = [line for line in stderr if not LOG_LINE.match(line)] or [
+            line for line in stdout if not LOG_LINE.match(line)
+        ]
+        line = (messages or stderr or stdout or ["no error output"])[-1]
+        raise NoAnswer(SECRET.sub("sk-***", f"exit {proc.returncode}: {line[:160]}"))
     if not text:
         raise NoAnswer("empty answer")
     return text
@@ -319,6 +327,11 @@ def parse_model(spec: str) -> tuple[Agent, str]:
     help="Git ref whose AGENTS.md is the baseline.",
 )
 @click.option(
+    "--head",
+    default=None,
+    help="Git ref whose AGENTS.md is evaluated. Default: the working tree.",
+)
+@click.option(
     "--model",
     "models",
     multiple=True,
@@ -335,7 +348,12 @@ def parse_model(spec: str) -> tuple[Agent, str]:
     help="Largest allowed score drop, as a fraction.",
 )
 def agents_md_eval(
-    base: str, models: tuple[str, ...], reps: int, workers: int, max_drop: float
+    base: str,
+    head: str | None,
+    models: tuple[str, ...],
+    reps: int,
+    workers: int,
+    max_drop: float,
 ) -> None:
     """Fail when this branch's AGENTS.md teaches coding agents less than BASE's."""
     specs = [parse_model(spec) for spec in models]
@@ -346,7 +364,7 @@ def agents_md_eval(
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         write_project(root / "base", base)
-        write_project(root / "head", None)
+        write_project(root / "head", head)
         for cli, model in specs:
             label = f"{cli}:{model}"
             ask = (
@@ -372,8 +390,9 @@ def agents_md_eval(
                     why = "; ".join(
                         f"{reason} ({n})" for reason, n in reasons.most_common(3)
                     )
+                    # Reasons and items are data: `[Errno 8]` and `[tool.crewai]` aren't markup.
                     console.print(
-                        f"[yellow]{label} gave no answer with the {file} file: {why}[/yellow]"
+                        f"[yellow]{label} gave no answer with the {file} file: {escape(why)}[/yellow]"
                     )
             if max(base_n, head_n) > sessions * MAX_UNANSWERED:
                 problems.append(
@@ -387,10 +406,10 @@ def agents_md_eval(
             for item in items:
                 if after[item["id"]] < before[item["id"]] - 0.5:
                     console.print(
-                        f"[yellow]{label} lost {item['id']}:[/yellow] {item['item']}"
+                        f"[yellow]{label} lost {item['id']}:[/yellow] {escape(item['item'])}"
                     )
     console.print(table)
     for problem in problems:
-        console.print(f"[red]{problem}[/red]")
+        console.print(f"[red]{escape(problem)}[/red]")
     if problems:
         raise SystemExit(1)

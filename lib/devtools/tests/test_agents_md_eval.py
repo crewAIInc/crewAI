@@ -214,6 +214,50 @@ def test_command_fails_when_sessions_give_no_answer(monkeypatch):
     assert "gave no answer with the branch file: empty answer (100)" in output
 
 
+def test_command_prints_brackets_in_items_and_reasons_as_text(monkeypatch):
+    items = [
+        {**ITEM, "id": f"X-{n:03d}", "item": "Set `[tool.crewai]` in pyproject.toml."}
+        for n in range(1, 101)
+    ]
+    monkeypatch.setattr(ev, "load_items", lambda: items)
+    monkeypatch.setattr(ev, "write_project", lambda dest, ref: dest.mkdir(parents=True))
+
+    def fake(project, question):
+        if project.name == "head":
+            raise ev.NoAnswer("exit 1: [Errno 8] nodename nor servname provided")
+        return "uv tool install crewai --upgrade"
+
+    monkeypatch.setattr(ev, "claude_asker", lambda model: fake)
+    result = CliRunner().invoke(
+        ev.agents_md_eval, ["--model", "claude:claude-haiku-5-5"]
+    )
+    output = " ".join(result.output.split())
+
+    assert result.exit_code == 1
+    assert "[Errno 8] nodename nor servname provided (100)" in output
+    assert "lost X-001: Set `[tool.crewai]` in pyproject.toml." in output
+
+
+def test_command_reads_the_head_file_at_the_ref_it_is_given(monkeypatch):
+    refs: dict[str, str | None] = {}
+
+    def write_project(dest, ref):
+        refs[dest.name] = ref
+        dest.mkdir(parents=True)
+
+    monkeypatch.setattr(ev, "write_project", write_project)
+    monkeypatch.setattr(ev, "load_items", lambda: [ITEM])
+    monkeypatch.setattr(
+        ev, "claude_asker", lambda model: lambda project, question: "uv tool"
+    )
+    CliRunner().invoke(
+        ev.agents_md_eval,
+        ["--model", "claude:claude-haiku-5-5", "--base", "abc123", "--head", "def456"],
+    )
+
+    assert refs == {"base": "abc123", "head": "def456"}
+
+
 def test_command_without_codex_needs_no_openai_key(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     code, output = _run(monkeypatch, {"base": "x", "head": "x"})
@@ -305,6 +349,12 @@ def test_codex_runs_in_its_own_existing_home_without_api_keys(tmp_path, monkeypa
         ),
         (0, "  ", "", "empty answer"),
         (1, "", "Invalid API key sk-ant-abc123XYZ\n", "exit 1: Invalid API key sk-***"),
+        (
+            1,
+            "Invalid API key · Fix external API key\n",
+            '{"model":"claude-haiku-5-5","query_source":"sdk"}\n',
+            "exit 1: Invalid API key · Fix external API key",
+        ),
     ],
 )
 def test_a_session_without_an_answer_says_why(
@@ -335,3 +385,24 @@ def test_the_workflow_runs_only_on_pull_requests_against_main():
     triggers = workflow[True]  # PyYAML reads the key `on` as the boolean true
     assert list(triggers) == ["pull_request"]
     assert triggers["pull_request"]["branches"] == ["main"]
+
+
+def test_the_eval_runs_only_the_base_branchs_code_with_the_keys():
+    """The keys reach only code from the base commit; the PR's commit is fetched as data."""
+    import yaml
+
+    workflow = yaml.safe_load(ev.read_at(None, ".github/workflows/agents-md.yml"))
+    job = workflow["jobs"]["eval"]
+    checkout = next(
+        step for step in job["steps"] if "actions/checkout" in step.get("uses", "")
+    )
+    assert checkout["with"]["ref"] == "${{ github.event.pull_request.base.sha }}"
+    assert checkout["with"]["persist-credentials"] is False
+    run = next(
+        step
+        for step in job["steps"]
+        if "devtools agents-md-eval" in step.get("run", "")
+    )
+    assert '--base "$BASE_SHA" --head "$HEAD_SHA"' in run["run"]
+    assert run["env"]["HEAD_SHA"] == "${{ github.event.pull_request.head.sha }}"
+    assert job["environment"]["name"] == "agents-md-eval"
