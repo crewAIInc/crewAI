@@ -120,6 +120,34 @@ class TestFindCheckpoint:
 
 
 class TestPrune:
+    @pytest.mark.parametrize(
+        ("directory", "branch"),
+        [("checkpoints[1]", "main"), ("checkpoints", "run[1]"), ("checkpoints", "fork/run[1]")],
+    )
+    @pytest.mark.parametrize("max_keep", [0, 1])
+    def test_prune_treats_directory_and_branch_as_literal_paths(
+        self, tmp_path: Path, directory: str, branch: str, max_keep: int
+    ) -> None:
+        provider = JsonProvider()
+        location = str(tmp_path / directory)
+        paths = []
+        for i in range(2):
+            path = Path(provider.checkpoint("{}", location, branch=branch))
+            os.utime(path, (i + 1, i + 1))
+            paths.append(path)
+        # As a glob pattern, "[1]" matches "1", so this path must not be pruned
+        other_path = Path(
+            provider.checkpoint(
+                "{}",
+                str(tmp_path / directory.replace("[1]", "1")),
+                branch=branch.replace("[1]", "1"),
+            )
+        )
+
+        assert provider.prune(location, max_keep=max_keep, branch=branch) == 2 - max_keep
+        assert [path for path in paths if path.exists()] == (paths[-1:] if max_keep else [])
+        assert other_path.exists()
+
     def test_prune_keeps_newest(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             branch_dir = os.path.join(d, "main")
