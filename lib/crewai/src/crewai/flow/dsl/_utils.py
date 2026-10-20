@@ -397,6 +397,7 @@ def _build_conversational_definition(
         defer_trace_finalization=bool(
             getattr(config, "defer_trace_finalization", True)
         ),
+        trace_scope=getattr(config, "trace_scope", None),
         builtin_routes=[str(route) for route in builtin_routes],
         internal_routes=[str(route) for route in internal_routes],
     )

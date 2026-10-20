@@ -4,6 +4,43 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 10월 14일">
+  ## v1.15.28
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.28)
+
+  ## 변경 사항
+
+  ### 기능
+  - 중단된 모델이 어디에서 오류가 발생했는지 보고하기 위해 crewai eval 명령 추가.
+  - 컨텍스트 창을 위해 LiteLLM 카탈로그 사용.
+
+  ### 버그 수정
+  - 재개된 인간 피드백으로부터 학습하고 검토된 출력 유형을 보존하는 흐름 수정.
+  - 비어 있지 않은 앱이 0 플랫폼 도구로 해결될 때 경고.
+  - pyproject에서 패키지를 올바르게 찾도록 add-crew 흐름 수정.
+  - 배포 실패 사유 표시 및 배포 제거 및 lockfile 검사를 수정.
+  - 트리거 목록 및 페이로드 요청의 타임아웃을 60초로 수정.
+  - ZIP 배포가 새 코드를 사용하도록 배포 푸시 중 AMP의 source_type 읽기.
+  - rag에서 UTF-8 BOM으로 로컬 JSON 파일 디코딩.
+  - OpenAI GPT-6 Sol/Luna/Astra에 대한 이미지 input_files 허용.
+  - 스트리밍된 인류 도구 호출에 대한 호출 완료 이벤트 발생.
+  - JSON-schema 모델이 BaseModel 그림자 필드에 대해 경고하지 않도록 중지.
+  - 네이티브 도구 중단 및 후속 후크 캐시 ID 보존.
+  - 버전 증가 PR 병합 후 LiteLLM 카탈로그 새로 고침.
+  - 손상된 평가자 회귀 테스트 복구.
+
+  ### 문서
+  - MongoDB 문서의 개선 사항 통합.
+  - AGENTS.md에서 배포 및 플랫폼 도구 안내 수정.
+  - RagTool 및 XMLSearchTool에 대한 README 가져오기 수정.
+
+  ## 기여자
+
+  @SIDDARTHAREDDY8, @Vidit-Ostwal, @joaomdmoura, @kimnamu, @lorenzejay, @norareidy, @shaikn6, @zouyonghe
+
+</Update>
+
 <Update label="2026년 10월 9일">
   ## v1.15.27
 
