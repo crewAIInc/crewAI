@@ -33,6 +33,7 @@ from crewai.agents.parser import (
 from crewai.core.providers.human_input import (
     AsyncExecutorContext,
     ExecutorContext,
+    HumanInputProvider,
     get_provider,
 )
 from crewai.events.event_bus import crewai_event_bus
@@ -3357,13 +3358,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if human_feedback is not None:
             # Save initial output and human feedback
             agent_training_data[iteration_key] = {
-                "initial_output": result.output,
+                "initial_output": HumanInputProvider._get_output_string(result),
                 "human_feedback": human_feedback,
             }
         else:
             # Save improved output
             if iteration_key in agent_training_data:
-                agent_training_data[iteration_key]["improved_output"] = result.output
+                agent_training_data[iteration_key]["improved_output"] = (
+                    HumanInputProvider._get_output_string(result)
+                )
             else:
                 train_error = Text()
                 train_error.append("❌ ", style="red bold")

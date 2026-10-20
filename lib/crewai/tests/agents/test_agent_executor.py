@@ -3291,3 +3291,42 @@ def test_training_output_updates_json_iteration_key() -> None:
 
     assert training_data[agent_id]["0"]["improved_output"] == "improved"
     handler.save.assert_called_once_with(training_data)
+
+
+def test_training_output_serializes_pydantic_output() -> None:
+    class StructuredOutput(BaseModel):
+        answer: str
+
+    agent_id = "agent-id"
+    training_data: dict[str, Any] = {agent_id: {}}
+    executor = _build_executor(
+        agent=SimpleNamespace(id=agent_id),
+        crew=SimpleNamespace(_train_iteration=0),
+    )
+    handler = Mock()
+    handler.load.return_value = training_data
+
+    with patch(
+        "crewai.agents.agent_executor.CrewTrainingHandler", return_value=handler
+    ):
+        executor._handle_crew_training_output(
+            AgentFinish(
+                thought="",
+                output=StructuredOutput(answer="initial"),
+                text="initial",
+            ),
+            human_feedback="improve it",
+        )
+        executor._handle_crew_training_output(
+            AgentFinish(
+                thought="",
+                output=StructuredOutput(answer="improved"),
+                text="improved",
+            )
+        )
+
+    assert training_data[agent_id]["0"] == {
+        "initial_output": '{"answer":"initial"}',
+        "human_feedback": "improve it",
+        "improved_output": '{"answer":"improved"}',
+    }
