@@ -173,6 +173,22 @@ RUNNING_THE_CREW: dict[RunReason, str] = {
     ),
     "run_again": "That run was not traced: running the crew again to evaluate it.",
 }
+# Said before the consent screen, at a terminal: that screen asks about a trace
+# before there is a run, so the person reads first why `crewai eval` needs one.
+BEFORE_ASKING: dict[RunReason, str] = {
+    "no_traced_run": (
+        "No traced run of this crew yet. To evaluate it, the crew runs now and its "
+        "trace goes to CrewAI AMP, which grades it."
+    ),
+    "project_changed": (
+        "The project changed since its last traced run. To evaluate what it does "
+        "now, the crew runs again and its trace goes to CrewAI AMP, which grades it."
+    ),
+    "run_again": (
+        "That run was not traced. To evaluate it, the crew runs again and its trace "
+        "goes to CrewAI AMP, which grades it."
+    ),
+}
 TRACING_NOW_ON = (
     "Tracing is now on for this project: its runs' traces are sent to CrewAI AMP, "
     "which grades them."
@@ -886,12 +902,13 @@ def _at_a_terminal() -> bool:
     return not is_dmn_mode_enabled() and sys.stdin.isatty()
 
 
-def _ask_before_the_first_enable() -> None:
-    """Nobody turned tracing on yet, and a person is here: ask on crewAI's
-    trace consent screen before turning it on. A no, or no answer before it
-    times out, runs nothing."""
+def _ask_before_the_first_enable(why: RunReason) -> None:
+    """Nobody turned tracing on yet, and a person is here: say why the crew
+    runs, then ask on crewAI's trace consent screen before turning tracing on.
+    A no, or no answer before it times out, runs nothing."""
     from crewai.events.listeners.tracing.utils import prompt_user_for_trace_viewing
 
+    console.print(Text(BEFORE_ASKING[why]), style="bold")
     if not prompt_user_for_trace_viewing(sharing=True):
         record_stop("declined")
         console.print(NOT_SHARED, style="yellow")
@@ -958,20 +975,22 @@ def _run_the_crew_to_evaluate(
     # script) the yes is inferred from this command and tracing is turned on
     # for the project — said once, plainly, here and in the run app. From
     # then on the project traces, and nothing more is asked or said.
-    turned_on_now = False
+    turned_on_now = asked = False
     if not tracing_already_on():
         if _at_a_terminal():
-            _ask_before_the_first_enable()
+            _ask_before_the_first_enable(why)
+            asked = True
         else:
             turn_tracing_on()
             turned_on_now = True
     _count_usage(f"cli_usage:eval_ran_crew:{why}")
-    said = (
-        f"{RUNNING_THE_CREW[why]} {TRACING_NOW_ON}"
-        if turned_on_now
-        else RUNNING_THE_CREW[why]
-    )
-    console.print(Text(said), style="bold")
+    if not asked:  # the line before the consent screen already said why
+        said = (
+            f"{RUNNING_THE_CREW[why]} {TRACING_NOW_ON}"
+            if turned_on_now
+            else RUNNING_THE_CREW[why]
+        )
+        console.print(Text(said), style="bold")
 
     from crewai_cli.crew_run_tui import evaluating_after_run
     from crewai_cli.run_crew import run_crew

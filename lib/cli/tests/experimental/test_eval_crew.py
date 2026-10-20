@@ -46,6 +46,7 @@ def consent_screen(monkeypatch):
 
     def prompt(timeout_seconds=20, **kwargs):
         asked.append(kwargs)
+        print("[the consent screen]")  # where it showed, in the captured output
         return answer["yes"]
 
     monkeypatch.setattr(
@@ -3127,6 +3128,14 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
 
     assert consent_screen.asked == ([] if answer == "already on" else [{"sharing": True}])
     assert "Tracing is now on" not in out  # nothing inferred: they were asked, or had said
+    why = "No traced run of this crew yet. To evaluate it, the crew runs now and its trace goes to CrewAI AMP, which grades it."
+    if answer == "already on":
+        assert why not in out
+        assert "No traced run of this crew yet: running it now to evaluate it." in out
+    else:
+        # Why the crew runs is said before the screen asks, and not again after.
+        assert out.index(why) < out.index("[the consent screen]")
+        assert "running it now to evaluate it" not in out
     if answer == "no":
         assert ran == [] and amp.calls == []
         assert not (directory / ".env").exists()
