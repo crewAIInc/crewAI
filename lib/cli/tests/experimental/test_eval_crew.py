@@ -2389,8 +2389,9 @@ class FakeExportAMP(FakeAMP):
         super().__init__()
         self.answer = answer if answer is not None else exported()
 
-    def export_evaluation(self, evaluation_id):
+    def export_evaluation(self, evaluation_id, **kwargs):
         self.calls.append(("export", evaluation_id))
+        self.export_kwargs = kwargs
         if isinstance(self.answer, Exception):
             raise self.answer
         return self.answer
@@ -3488,8 +3489,14 @@ def test_the_verdict_leaves_the_evaluations_full_data_in_the_project(project, mo
     eval_module.eval_crew(run_id="named-run")
 
     saved = directory / SAVED / EVALUATION_ID
-    assert files_in(saved) == {".gitignore": "*\n", **EXPORT_FILES}
+    assert files_in(saved) == {
+        ".gitignore": "*\n",
+        **EXPORT_FILES,
+        eval_module.SAVED_MARKER: "Saved whole by `crewai eval`.\n",
+    }
     assert ("export", EVALUATION_ID) in amp.calls
+    # its own short wait: the verdict is already out, and CI waits on the command
+    assert amp.export_kwargs == {"timeout": eval_module.SAVE_TIMEOUT}
     said = " ".join(capsys.readouterr().out.split())
     assert f"Its full data is saved in {SAVED / EVALUATION_ID}/ — start with report.md." in said
 
@@ -3529,15 +3536,20 @@ def test_only_the_newest_saved_evaluations_are_kept(project, monkeypatch):
         folder = directory / SAVED / name
         folder.mkdir(parents=True)
         (folder / "report.md").write_text("old")
+        (folder / eval_module.SAVED_MARKER).write_text("saved\n")
         os.utime(folder, (1_000_000 + n, 1_000_000 + n))
     (directory / SAVED / "notes").mkdir()  # not an evaluation: never removed
+    # named like an evaluation, but not saved by this command: never removed
+    unmarked = str(uuid.UUID(int=99))
+    (directory / SAVED / unmarked).mkdir()
+    os.utime(directory / SAVED / unmarked, (1, 1))
     _graded(monkeypatch, directory)
 
     eval_module.eval_crew(run_id="named-run")
 
     kept = sorted(p.name for p in (directory / SAVED).iterdir())
-    assert EVALUATION_ID in kept and "notes" in kept
-    assert len([name for name in kept if name != "notes"]) == eval_module.SAVED_EVALUATIONS_KEPT
+    assert EVALUATION_ID in kept and "notes" in kept and unmarked in kept
+    assert len([name for name in kept if name not in ("notes", unmarked)]) == eval_module.SAVED_EVALUATIONS_KEPT
     assert older[0] not in kept and older[-1] in kept  # the oldest went first
 
 
@@ -3559,6 +3571,7 @@ def test_graded_again_unchanged_it_points_at_what_it_saved_and_asks_nothing(proj
     saved = directory / SAVED / EVALUATION_ID
     saved.mkdir(parents=True)
     (saved / "report.md").write_text("# Report\n")
+    (saved / eval_module.SAVED_MARKER).write_text("saved\n")
     amp = _graded(monkeypatch, directory, answer=httpx.Response(410, json={"error": "report_closed", "message": "read already"}))
 
     eval_module.eval_crew(run_id="named-run")
@@ -3575,3 +3588,77 @@ def test_a_refused_save_says_amps_own_words(project, monkeypatch, capsys):
     eval_module.eval_crew(run_id="named-run")
 
     assert f"Its full data was not saved: {message}" in " ".join(capsys.readouterr().out.split())
+
+
+def test_a_save_that_skipped_a_file_says_so_and_is_tried_again(project, monkeypatch, capsys):
+    """Missing checks or a missing trace must not read as the full data."""
+    directory, _ = project
+    files = {**EXPORT_FILES, "../outside.md": "no"}
+    amp = _graded(monkeypatch, directory, answer=exported(files=files, kind="trace"))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    said = " ".join(capsys.readouterr().out.split())
+    assert f"Part of its data was saved in {SAVED / EVALUATION_ID}/: 1 file skipped" in said
+    assert "Its full data is saved" not in said
+    assert not (directory / SAVED / EVALUATION_ID / eval_module.SAVED_MARKER).exists()
+
+    amp.statuses = [_verdict_of(EVALUATION_ID)]
+    eval_module.eval_crew(run_id="named-run")
+    assert amp.calls.count(("export", EVALUATION_ID)) == 2  # not taken as saved
+
+
+def test_a_save_cut_short_after_the_report_is_tried_again(project, monkeypatch, capsys):
+    """report.md alone is not the evaluation saved: no marker, so the next
+    read saves it again instead of pointing at half of it."""
+    directory, _ = project
+    amp = _graded(monkeypatch, directory)
+    real = {name: getattr(eval_module, name) for name in ("_put_through_handles", "_put_by_path")}
+
+    def failing(name):
+        def put(root, segments, data):
+            if segments == ["run", "trace.json"]:
+                raise OSError("disk full")
+            return real[name](root, segments, data)
+        return put
+
+    with monkeypatch.context() as patched:
+        for name in real:
+            patched.setattr(eval_module, name, failing(name))
+        eval_module.eval_crew(run_id="named-run")
+
+    said = " ".join(capsys.readouterr().out.split())
+    assert "Its full data was not saved: Could not write" in said and "disk full" in said
+    saved = directory / SAVED / EVALUATION_ID
+    assert (saved / "report.md").is_file() and not (saved / eval_module.SAVED_MARKER).exists()
+
+    amp.statuses = [_verdict_of(EVALUATION_ID)]
+    eval_module.eval_crew(run_id="named-run")
+    assert amp.calls.count(("export", EVALUATION_ID)) == 2
+    assert (saved / eval_module.SAVED_MARKER).is_file()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symbolic links need privileges on Windows")
+@pytest.mark.parametrize("linked", [".crewai", ".crewai/evaluations"])
+@pytest.mark.parametrize("through_handles", [True, False])
+def test_a_link_on_the_way_keeps_the_data_out_of_wherever_it_leads(
+    project, monkeypatch, capsys, tmp_path_factory, linked, through_handles
+):
+    """Whoever made `.crewai` or `.crewai/evaluations` a link chose where it
+    leads: nothing is written there, by either way of writing an export."""
+    if through_handles and not eval_module._WRITES_THROUGH_HANDLES:
+        pytest.skip("this platform writes by path")
+    monkeypatch.setattr(eval_module, "_WRITES_THROUGH_HANDLES", through_handles)
+    directory, _ = project
+    elsewhere = tmp_path_factory.mktemp("elsewhere")
+    if linked == ".crewai/evaluations":
+        (directory / ".crewai").mkdir(exist_ok=True)
+    (directory / linked).symlink_to(elsewhere, target_is_directory=True)
+    _graded(monkeypatch, directory)
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert [p for p in elsewhere.rglob("*") if p.is_file()] == []
+    said = " ".join(capsys.readouterr().out.split())
+    assert "Its full data was not saved:" in said and "is a link" in said
+    assert "Goal gate: PASSED" in said
