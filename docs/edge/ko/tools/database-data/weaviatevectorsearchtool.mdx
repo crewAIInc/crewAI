@@ -24,9 +24,9 @@ uv add weaviate-client
 `WeaviateVectorSearchTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
 
 1. **패키지 설치**: Python 환경에 `crewai[tools]` 및 `weaviate-client` 패키지가 설치되어 있는지 확인하세요.
-2. **Weaviate 설정**: Weaviate 클러스터를 설정하세요. 안내는 [Weaviate 공식 문서](https://weaviate.io/developers/wcs/manage-clusters/connect)를 참고하세요.
-3. **API 키**: Weaviate 클러스터 URL과 API 키를 확보하세요.
-4. **OpenAI API 키**: 환경 변수에 `OPENAI_API_KEY`로 OpenAI API 키가 설정되어 있는지 확인하세요.
+2. **Weaviate 설정**: [Weaviate 공식 문서](https://weaviate.io/developers/wcs/manage-clusters/connect)를 참고하여 Weaviate Cloud 클러스터를 설정하거나, Weaviate를 직접 실행하세요(예: Docker 사용).
+3. **API 키**: Weaviate Cloud의 경우 클러스터 URL과 API 키를 확보하세요.
+4. **OpenAI API 키(선택 사항)**: 컬렉션이 OpenAI로 벡터화하는 경우 환경 변수에 `OPENAI_API_KEY`를 설정하세요. 도구가 이 키를 Weaviate로 전달합니다. 다른 벡터라이저를 사용하는 컬렉션에는 필요하지 않습니다.
 
 ## 예시
 
@@ -60,30 +60,100 @@ def search_agent(self) -> Agent:
 `WeaviateVectorSearchTool`은 다음과 같은 매개변수를 허용합니다:
 
 - **collection_name**: 필수. 검색할 컬렉션의 이름입니다.
-- **weaviate_cluster_url**: 필수. Weaviate 클러스터의 URL입니다.
-- **weaviate_api_key**: 필수. Weaviate 클러스터의 API 키입니다.
+- **weaviate_cluster_url**: 선택 사항. Weaviate Cloud 클러스터의 URL입니다. 설정하지 않으면 도구는 `weaviate_host`의 자체 호스팅 Weaviate에 연결합니다.
+- **weaviate_api_key**: 선택 사항. Weaviate 클러스터의 API 키입니다. `weaviate_cluster_url`과 함께 사용할 때는 필수입니다.
+- **weaviate_host**: 선택 사항. 자체 호스팅 Weaviate의 호스트입니다. 기본값은 `localhost`입니다.
+- **weaviate_http_port** / **weaviate_grpc_port**: 선택 사항. 자체 호스팅 Weaviate의 포트입니다. 기본값은 `8080`과 `50051`입니다.
+- **weaviate_secure**: 선택 사항. 자체 호스팅 Weaviate에 HTTPS와 TLS gRPC를 사용합니다. 기본값은 `False`입니다.
+- **headers**: 선택 사항. 모델 제공자의 API 키 등 Weaviate로 전송할 추가 헤더입니다.
+- **search_type**: 선택 사항. `hybrid`(벡터 및 키워드), `near_text`(벡터만) 또는 `bm25`(키워드만)입니다. 기본값은 `hybrid`입니다.
 - **limit**: 선택 사항. 반환할 결과 수입니다. 기본값은 `3`입니다.
-- **vectorizer**: 선택 사항. 사용할 벡터라이저입니다. 제공되지 않으면 `nomic-embed-text` 모델의 `text2vec_openai`를 사용합니다.
-- **generative_model**: 선택 사항. 사용할 생성 모델입니다. 제공되지 않으면 OpenAI의 `gpt-4o`를 사용합니다.
+- **alpha**: 선택 사항. `hybrid` 검색에서 벡터 검색과 키워드(BM25) 검색 간의 가중치를 조절합니다. alpha = 0 -> BM25만, alpha = 1 -> 벡터 검색만 사용합니다. 기본값은 `0.75`입니다.
+- **target_vector**: 선택 사항. 벡터가 둘 이상인 컬렉션에서 검색할 named vector 또는 named vector 목록입니다.
+- **return_properties**: 선택 사항. 각 결과에 대해 반환할 속성입니다. 기본적으로 모든 속성을 반환합니다.
+- **filters**: 선택 사항. 모든 검색에 적용되는 `weaviate.classes.query.Filter`입니다.
+- **tenant**: 선택 사항. 멀티 테넌트 컬렉션에서 검색할 테넌트입니다.
+- **create_collection_if_missing**: 선택 사항. 컬렉션이 존재하지 않으면 `vectorizer`와 `generative_model`로 컬렉션을 생성합니다. 기본값은 `False`입니다.
+- **vectorizer**: 선택 사항. 도구가 컬렉션을 생성할 때 사용하는 벡터 구성입니다. 기본값은 `Configure.Vectors.text2vec_openai(model="text-embedding-3-small")`입니다.
+- **generative_model**: 선택 사항. 도구가 컬렉션을 생성할 때 사용하는 생성 모델입니다. 기본값은 OpenAI의 `gpt-4o`입니다.
 
-## 고급 구성
+## 자체 호스팅 Weaviate
 
-도구에서 사용하는 벡터라이저와 생성 모델을 사용자 지정할 수 있습니다:
+직접 실행하는 Weaviate에 연결하려면 `weaviate_cluster_url`을 생략하세요:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    weaviate_host="localhost",
+    weaviate_http_port=8080,
+    weaviate_grpc_port=50051,
+)
+```
+
+Weaviate가 HTTPS로 제공되는 경우 `weaviate_secure=True`로 설정하세요. 인증이 필요한 경우 `weaviate_api_key`를 전달하세요.
+
+## 검색 옵션
+
+검색 유형, 검색할 named vector, 반환할 속성을 선택하고 결과를 필터링할 수 있습니다:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+from weaviate.classes.query import Filter
+
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    search_type="near_text",
+    target_vector="body_vector",
+    return_properties=["title", "body"],
+    filters=Filter.by_property("year").greater_than(2020),
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## 멀티 테넌시
+
+[멀티 테넌트 컬렉션](https://docs.weaviate.io/weaviate/manage-collections/multi-tenancy)의 경우, 해당 테넌트의 데이터만 검색하도록 `tenant`를 설정하세요:
+
+```python Code
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    tenant="customer_a",
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+테넌트는 에이전트가 아니라 도구를 생성할 때 설정되므로, 에이전트는 다른 테넌트의 데이터를 읽을 수 없습니다.
+
+## 컬렉션 생성 및 양자화
+
+기본적으로 도구는 기존 컬렉션만 검색합니다. `create_collection_if_missing=True`로 설정하면 처음 사용할 때 컬렉션을 생성합니다. 도구는 새 컬렉션에 `vectorizer`와 `generative_model`을 사용하며, `tenant`가 설정된 경우 컬렉션을 멀티 테넌트로 만들고 해당 테넌트를 생성합니다.
+
+`vectorizer`는 모든 `Configure.Vectors` 구성을 허용하므로, 여기에서 [벡터 양자화](https://docs.weaviate.io/weaviate/configuration/compression)도 선택할 수 있습니다. 이 예시는 Ollama로 제공되는 로컬 모델과 스칼라 양자화를 사용합니다:
 
 ```python Code
 from crewai_tools import WeaviateVectorSearchTool
 from weaviate.classes.config import Configure
 
-# Setup custom model for vectorizer and generative model
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
-    limit=3,
-    vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
-    generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
-    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
-    weaviate_api_key="your-weaviate-api-key",
+    create_collection_if_missing=True,
+    vectorizer=Configure.Vectors.text2vec_ollama(
+        api_endpoint="http://host.docker.internal:11434",
+        model="nomic-embed-text",
+        quantizer=Configure.VectorIndex.Quantizer.sq(),
+    ),
+    generative_model=Configure.Generative.ollama(
+        api_endpoint="http://host.docker.internal:11434",
+        model="llama3.2",
+    ),
 )
 ```
+
+다른 양자화 방식으로는 `Configure.VectorIndex.Quantizer.rq()`, `.bq()`, `.pq()`가 있습니다.
 
 ## 문서 미리 로드하기
 
@@ -93,6 +163,7 @@ tool = WeaviateVectorSearchTool(
 import os
 from crewai_tools import WeaviateVectorSearchTool
 import weaviate
+from weaviate.classes.config import Configure
 from weaviate.classes.init import Auth
 
 # Connect to Weaviate
@@ -103,11 +174,12 @@ client = weaviate.connect_to_weaviate_cloud(
 )
 
 # Get or create collection
-test_docs = client.collections.get("example_collections")
-if not test_docs:
+if client.collections.exists("example_collections"):
+    test_docs = client.collections.get("example_collections")
+else:
     test_docs = client.collections.create(
         name="example_collections",
-        vectorizer_config=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+        vector_config=Configure.Vectors.text2vec_openai(model="text-embedding-3-small"),
         generative_config=Configure.Generative.openai(model="gpt-4o"),
     )
 

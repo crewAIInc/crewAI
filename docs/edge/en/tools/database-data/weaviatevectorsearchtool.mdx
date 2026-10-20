@@ -25,9 +25,9 @@ uv add weaviate-client
 To effectively use the `WeaviateVectorSearchTool`, follow these steps:
 
 1. **Package Installation**: Confirm that the `crewai[tools]` and `weaviate-client` packages are installed in your Python environment.
-2. **Weaviate Setup**: Set up a Weaviate cluster. You can follow the [Weaviate documentation](https://weaviate.io/developers/wcs/manage-clusters/connect) for instructions.
-3. **API Keys**: Obtain your Weaviate cluster URL and API key.
-4. **OpenAI API Key**: Ensure you have an OpenAI API key set in your environment variables as `OPENAI_API_KEY`.
+2. **Weaviate Setup**: Set up a Weaviate Cloud cluster by following the [Weaviate documentation](https://weaviate.io/developers/wcs/manage-clusters/connect), or run Weaviate yourself (for example with Docker).
+3. **API Keys**: For Weaviate Cloud, obtain your cluster URL and API key.
+4. **OpenAI API Key (optional)**: If your collection vectorizes with OpenAI, set `OPENAI_API_KEY` in your environment. The tool forwards it to Weaviate. Collections that use another vectorizer don't need it.
 
 ## Example
 
@@ -62,32 +62,100 @@ def search_agent(self) -> Agent:
 The `WeaviateVectorSearchTool` accepts the following parameters:
 
 - **collection_name**: Required. The name of the collection to search within.
-- **weaviate_cluster_url**: Required. The URL of the Weaviate cluster.
-- **weaviate_api_key**: Required. The API key for the Weaviate cluster.
+- **weaviate_cluster_url**: Optional. The URL of a Weaviate Cloud cluster. When it is not set, the tool connects to a self-hosted Weaviate at `weaviate_host`.
+- **weaviate_api_key**: Optional. The API key for the Weaviate cluster. Required with `weaviate_cluster_url`.
+- **weaviate_host**: Optional. Host of a self-hosted Weaviate. Default is `localhost`.
+- **weaviate_http_port** / **weaviate_grpc_port**: Optional. Ports of a self-hosted Weaviate. Defaults are `8080` and `50051`.
+- **weaviate_secure**: Optional. Use HTTPS and TLS gRPC for a self-hosted Weaviate. Default is `False`.
+- **headers**: Optional. Extra headers sent to Weaviate, such as API keys for model providers.
+- **search_type**: Optional. `hybrid` (vector and keyword), `near_text` (vector only) or `bm25` (keyword only). Default is `hybrid`.
 - **limit**: Optional. The number of results to return. Default is `3`.
-- **alpha**: Optional. Controls the weighting between vector and keyword (BM25) search. alpha = 0 -> BM25 only, alpha = 1 -> vector search only. Default is `0.75`.
-- **vectorizer**: Optional. The vectorizer to use. If not provided, it will use `text2vec_openai` with the `nomic-embed-text` model.
-- **generative_model**: Optional. The generative model to use. If not provided, it will use OpenAI's `gpt-4o`.
+- **alpha**: Optional. For `hybrid` search, controls the weighting between vector and keyword (BM25) search. alpha = 0 -> BM25 only, alpha = 1 -> vector search only. Default is `0.75`.
+- **target_vector**: Optional. The named vector, or list of named vectors, to search in collections with more than one vector.
+- **return_properties**: Optional. The properties to return for each result. Returns all properties by default.
+- **filters**: Optional. A `weaviate.classes.query.Filter` applied to every search.
+- **tenant**: Optional. The tenant to search in a multi-tenant collection.
+- **create_collection_if_missing**: Optional. Create the collection with `vectorizer` and `generative_model` if it does not exist. Default is `False`.
+- **vectorizer**: Optional. The vector configuration used when the tool creates the collection. Default is `Configure.Vectors.text2vec_openai(model="text-embedding-3-small")`.
+- **generative_model**: Optional. The generative model used when the tool creates the collection. Default is OpenAI's `gpt-4o`.
 
-## Advanced Configuration
+## Self-hosted Weaviate
 
-You can customize the vectorizer and generative model used by the tool:
+Leave out `weaviate_cluster_url` to connect to a Weaviate you run yourself:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    weaviate_host="localhost",
+    weaviate_http_port=8080,
+    weaviate_grpc_port=50051,
+)
+```
+
+Set `weaviate_secure=True` when your Weaviate is served over HTTPS. Pass `weaviate_api_key` if it requires authentication.
+
+## Search Options
+
+Choose the type of search, the named vector to search and the properties to return, and filter the results:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+from weaviate.classes.query import Filter
+
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    search_type="near_text",
+    target_vector="body_vector",
+    return_properties=["title", "body"],
+    filters=Filter.by_property("year").greater_than(2020),
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## Multi-tenancy
+
+For a [multi-tenant collection](https://docs.weaviate.io/weaviate/manage-collections/multi-tenancy), set `tenant` to search only that tenant's data:
+
+```python Code
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    tenant="customer_a",
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+The tenant is set when you create the tool, not by the agent, so an agent cannot read another tenant's data.
+
+## Creating the Collection and Quantization
+
+By default, the tool only searches existing collections. Set `create_collection_if_missing=True` to have it create the collection on first use. The tool uses `vectorizer` and `generative_model` for the new collection, makes it multi-tenant when `tenant` is set, and creates that tenant.
+
+`vectorizer` accepts any `Configure.Vectors` configuration, so you can also choose the [vector quantization](https://docs.weaviate.io/weaviate/configuration/compression) here. This example uses local models served by Ollama and scalar quantization:
 
 ```python Code
 from crewai_tools import WeaviateVectorSearchTool
 from weaviate.classes.config import Configure
 
-# Setup custom model for vectorizer and generative model
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
-    limit=3,
-    alpha=0.75,
-    vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
-    generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
-    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
-    weaviate_api_key="your-weaviate-api-key",
+    create_collection_if_missing=True,
+    vectorizer=Configure.Vectors.text2vec_ollama(
+        api_endpoint="http://host.docker.internal:11434",
+        model="nomic-embed-text",
+        quantizer=Configure.VectorIndex.Quantizer.sq(),
+    ),
+    generative_model=Configure.Generative.ollama(
+        api_endpoint="http://host.docker.internal:11434",
+        model="llama3.2",
+    ),
 )
 ```
+
+The other quantizers are `Configure.VectorIndex.Quantizer.rq()`, `.bq()` and `.pq()`.
 
 ## Preloading Documents
 
@@ -97,6 +165,7 @@ You can preload your Weaviate database with documents before using the tool:
 import os
 from crewai_tools import WeaviateVectorSearchTool
 import weaviate
+from weaviate.classes.config import Configure
 from weaviate.classes.init import Auth
 
 # Connect to Weaviate
@@ -107,11 +176,12 @@ client = weaviate.connect_to_weaviate_cloud(
 )
 
 # Get or create collection
-test_docs = client.collections.get("example_collections")
-if not test_docs:
+if client.collections.exists("example_collections"):
+    test_docs = client.collections.get("example_collections")
+else:
     test_docs = client.collections.create(
         name="example_collections",
-        vectorizer_config=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+        vector_config=Configure.Vectors.text2vec_openai(model="text-embedding-3-small"),
         generative_config=Configure.Generative.openai(model="gpt-4o"),
     )
 

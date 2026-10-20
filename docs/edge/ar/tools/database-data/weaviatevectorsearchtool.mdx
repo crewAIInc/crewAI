@@ -24,9 +24,9 @@ uv add weaviate-client
 لاستخدام `WeaviateVectorSearchTool` بفعالية، اتبع هذه الخطوات:
 
 1. **تثبيت الحزمة**: تأكد من تثبيت حزمتي `crewai[tools]` و `weaviate-client` في بيئة Python الخاصة بك.
-2. **إعداد Weaviate**: قم بإعداد مجموعة Weaviate. يمكنك اتباع [وثائق Weaviate](https://weaviate.io/developers/wcs/manage-clusters/connect) للتعليمات.
-3. **مفاتيح API**: احصل على عنوان URL لمجموعة Weaviate ومفتاح API.
-4. **مفتاح OpenAI API**: تأكد من تعيين مفتاح OpenAI API في متغيرات البيئة كـ `OPENAI_API_KEY`.
+2. **إعداد Weaviate**: قم بإعداد مجموعة Weaviate Cloud باتباع [وثائق Weaviate](https://weaviate.io/developers/wcs/manage-clusters/connect)، أو شغّل Weaviate بنفسك (على سبيل المثال باستخدام Docker).
+3. **مفاتيح API**: بالنسبة لـ Weaviate Cloud، احصل على عنوان URL للمجموعة ومفتاح API.
+4. **مفتاح OpenAI API (اختياري)**: إذا كانت مجموعتك تستخدم OpenAI للتحويل المتجهي، فعيّن `OPENAI_API_KEY` في بيئتك. تمرّر الأداة هذا المفتاح إلى Weaviate. المجموعات التي تستخدم محوّلاً متجهياً آخر لا تحتاج إليه.
 
 ## مثال
 
@@ -61,32 +61,100 @@ def search_agent(self) -> Agent:
 تقبل `WeaviateVectorSearchTool` المعاملات التالية:
 
 - **collection_name**: مطلوب. اسم المجموعة المراد البحث فيها.
-- **weaviate_cluster_url**: مطلوب. عنوان URL لمجموعة Weaviate.
-- **weaviate_api_key**: مطلوب. مفتاح API لمجموعة Weaviate.
+- **weaviate_cluster_url**: اختياري. عنوان URL لمجموعة Weaviate Cloud. عندما لا يُحدد، تتصل الأداة بـ Weaviate مستضاف ذاتياً على `weaviate_host`.
+- **weaviate_api_key**: اختياري. مفتاح API لمجموعة Weaviate. مطلوب مع `weaviate_cluster_url`.
+- **weaviate_host**: اختياري. مضيف Weaviate المستضاف ذاتياً. الافتراضي هو `localhost`.
+- **weaviate_http_port** / **weaviate_grpc_port**: اختياري. منافذ Weaviate المستضاف ذاتياً. القيم الافتراضية هي `8080` و `50051`.
+- **weaviate_secure**: اختياري. استخدام HTTPS و gRPC عبر TLS لـ Weaviate المستضاف ذاتياً. الافتراضي هو `False`.
+- **headers**: اختياري. ترويسات إضافية تُرسل إلى Weaviate، مثل مفاتيح API لمزوّدي النماذج.
+- **search_type**: اختياري. `hybrid` (متجهي وبالكلمات المفتاحية)، أو `near_text` (متجهي فقط)، أو `bm25` (بالكلمات المفتاحية فقط). الافتراضي هو `hybrid`.
 - **limit**: اختياري. عدد النتائج المُرجعة. الافتراضي هو `3`.
-- **alpha**: اختياري. يتحكم في الترجيح بين البحث المتجهي والبحث بالكلمات المفتاحية (BM25). alpha = 0 -> BM25 فقط، alpha = 1 -> بحث متجهي فقط. الافتراضي هو `0.75`.
-- **vectorizer**: اختياري. المحوّل المتجهي المستخدم. إذا لم يُحدد، سيستخدم `text2vec_openai` مع نموذج `nomic-embed-text`.
-- **generative_model**: اختياري. النموذج التوليدي المستخدم. إذا لم يُحدد، سيستخدم `gpt-4o` من OpenAI.
+- **alpha**: اختياري. في البحث `hybrid`، يتحكم في الترجيح بين البحث المتجهي والبحث بالكلمات المفتاحية (BM25). alpha = 0 -> BM25 فقط، alpha = 1 -> بحث متجهي فقط. الافتراضي هو `0.75`.
+- **target_vector**: اختياري. المتجه المسمّى، أو قائمة المتجهات المسمّاة، المراد البحث فيها في المجموعات التي تحتوي على أكثر من متجه.
+- **return_properties**: اختياري. الخصائص المُرجعة لكل نتيجة. تُرجع جميع الخصائص افتراضياً.
+- **filters**: اختياري. مرشّح `weaviate.classes.query.Filter` يُطبّق على كل عملية بحث.
+- **tenant**: اختياري. المستأجر المراد البحث فيه في مجموعة متعددة المستأجرين.
+- **create_collection_if_missing**: اختياري. إنشاء المجموعة باستخدام `vectorizer` و `generative_model` إذا لم تكن موجودة. الافتراضي هو `False`.
+- **vectorizer**: اختياري. تكوين المتجهات المستخدم عندما تنشئ الأداة المجموعة. الافتراضي هو `Configure.Vectors.text2vec_openai(model="text-embedding-3-small")`.
+- **generative_model**: اختياري. النموذج التوليدي المستخدم عندما تنشئ الأداة المجموعة. الافتراضي هو `gpt-4o` من OpenAI.
 
-## التكوين المتقدم
+## Weaviate المستضاف ذاتياً
 
-يمكنك تخصيص المحوّل المتجهي والنموذج التوليدي المستخدمين في الأداة:
+احذف `weaviate_cluster_url` للاتصال بـ Weaviate تشغّله بنفسك:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    weaviate_host="localhost",
+    weaviate_http_port=8080,
+    weaviate_grpc_port=50051,
+)
+```
+
+عيّن `weaviate_secure=True` عندما يُقدَّم Weaviate الخاص بك عبر HTTPS. مرّر `weaviate_api_key` إذا كان يتطلب المصادقة.
+
+## خيارات البحث
+
+اختر نوع البحث، والمتجه المسمّى المراد البحث فيه، والخصائص المُرجعة، وقم بترشيح النتائج:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+from weaviate.classes.query import Filter
+
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    search_type="near_text",
+    target_vector="body_vector",
+    return_properties=["title", "body"],
+    filters=Filter.by_property("year").greater_than(2020),
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## تعدد المستأجرين
+
+بالنسبة لـ [مجموعة متعددة المستأجرين](https://docs.weaviate.io/weaviate/manage-collections/multi-tenancy)، عيّن `tenant` للبحث في بيانات ذلك المستأجر فقط:
+
+```python Code
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    tenant="customer_a",
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+يُحدَّد المستأجر عند إنشاء الأداة، وليس بواسطة الوكيل، لذلك لا يمكن للوكيل قراءة بيانات مستأجر آخر.
+
+## إنشاء المجموعة والتكميم
+
+افتراضياً، تبحث الأداة في المجموعات الموجودة فقط. عيّن `create_collection_if_missing=True` لجعلها تنشئ المجموعة عند أول استخدام. تستخدم الأداة `vectorizer` و `generative_model` للمجموعة الجديدة، وتجعلها متعددة المستأجرين عند تعيين `tenant`، وتنشئ ذلك المستأجر.
+
+يقبل `vectorizer` أي تكوين `Configure.Vectors`، لذا يمكنك أيضاً اختيار [تكميم المتجهات](https://docs.weaviate.io/weaviate/configuration/compression) هنا. يستخدم هذا المثال نماذج محلية يقدّمها Ollama والتكميم القياسي (scalar quantization):
 
 ```python Code
 from crewai_tools import WeaviateVectorSearchTool
 from weaviate.classes.config import Configure
 
-# Setup custom model for vectorizer and generative model
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
-    limit=3,
-    alpha=0.75,
-    vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
-    generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
-    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
-    weaviate_api_key="your-weaviate-api-key",
+    create_collection_if_missing=True,
+    vectorizer=Configure.Vectors.text2vec_ollama(
+        api_endpoint="http://host.docker.internal:11434",
+        model="nomic-embed-text",
+        quantizer=Configure.VectorIndex.Quantizer.sq(),
+    ),
+    generative_model=Configure.Generative.ollama(
+        api_endpoint="http://host.docker.internal:11434",
+        model="llama3.2",
+    ),
 )
 ```
+
+أدوات التكميم الأخرى هي `Configure.VectorIndex.Quantizer.rq()` و `.bq()` و `.pq()`.
 
 ## تحميل المستندات مسبقاً
 
@@ -96,6 +164,7 @@ tool = WeaviateVectorSearchTool(
 import os
 from crewai_tools import WeaviateVectorSearchTool
 import weaviate
+from weaviate.classes.config import Configure
 from weaviate.classes.init import Auth
 
 # Connect to Weaviate
@@ -106,11 +175,12 @@ client = weaviate.connect_to_weaviate_cloud(
 )
 
 # Get or create collection
-test_docs = client.collections.get("example_collections")
-if not test_docs:
+if client.collections.exists("example_collections"):
+    test_docs = client.collections.get("example_collections")
+else:
     test_docs = client.collections.create(
         name="example_collections",
-        vectorizer_config=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+        vector_config=Configure.Vectors.text2vec_openai(model="text-embedding-3-small"),
         generative_config=Configure.Generative.openai(model="gpt-4o"),
     )
 
