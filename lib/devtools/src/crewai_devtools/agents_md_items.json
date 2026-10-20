@@ -1147,7 +1147,7 @@
  },
  {
   "id": "B-054",
-  "item": "Source: with a git origin AMP builds from GitHub (HTTPS URL, GitHub integration access); with no origin, deploy create uploads a ZIP and deploy push re-uploads it.",
+  "item": "Source: with a git origin AMP builds from that remote, GitHub or another host (HTTPS URL; GitHub needs the GitHub integration's access); with no origin, deploy create uploads a ZIP and deploy push re-uploads it.",
   "q": "My repo has no remote. Can I still deploy, and how do updates work?",
   "key": [
    "zip",
