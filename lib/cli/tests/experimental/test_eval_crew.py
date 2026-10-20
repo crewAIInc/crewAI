@@ -3458,3 +3458,92 @@ def test_a_project_that_turned_tracing_off_is_not_asked_to_trace_toward_an_untru
     assert exited.value.code == 1
     assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
     assert "CREWAI_TRACING_ENABLED=false" in (directory / ".env").read_text()
+
+
+# ── with no terminal, the run's own output goes to a log, not the agent ────
+
+
+def _a_tracing_project(directory: Path) -> None:
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+
+
+def test_with_no_terminal_the_runs_own_output_goes_to_a_log_not_the_agent(
+    project, monkeypatch, capfd
+):
+    """A coding agent reads every line `crewai eval` prints, and pays for it:
+    the crew's panels, its final answer and its tool calls go to
+    `.crewai/last_run.log`, and the agent gets one line saying so, then the
+    verdict."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+
+    def fake_run_crew() -> None:
+        # what the run's child processes print: straight to the descriptors
+        os.write(1, b"Crew Execution Started panel\n")
+        os.write(2, b"a warning on stderr\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out, err = capfd.readouterr()
+    log = (directory / ".crewai" / "last_run.log").read_text()
+    assert "Crew Execution Started panel" in log and "a warning on stderr" in log
+    assert "Crew Execution Started panel" not in out + err
+    assert "a warning on stderr" not in out + err
+    said = " ".join(out.split())
+    assert "The crew's output goes to .crewai/last_run.log while it runs." in said
+    assert "its output is in .crewai/last_run.log." in said
+    assert "Goal gate: PASSED" in said
+
+
+def test_with_no_terminal_a_run_that_left_no_trace_shows_its_last_lines(
+    project, monkeypatch, capfd, usage
+):
+    """The error a failed run printed is what the agent needs to fix it: its
+    last lines are shown, and the sentence says where the rest is."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+
+    def fake_run_crew() -> None:
+        os.write(1, b"".join(f"line {n}\n".encode() for n in range(100)))
+        os.write(2, b"KeyError: 'topic'\n")  # and no trace recorded
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    said = " ".join(capfd.readouterr().out.split())
+    assert "its last 40 lines:" in said
+    assert "KeyError: 'topic'" in said and "line 99" in said
+    assert "line 50 " not in said  # only the tail
+    assert "(its last lines are above)" in said
+    assert amp.calls == [] and usage[-1] == "cli_usage:eval_stopped:untraced_after_run"
+
+
+def test_at_a_terminal_the_run_prints_where_it_always_did(project, monkeypatch, capfd):
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+
+    def fake_run_crew() -> None:
+        os.write(1, b"Crew Execution Started panel\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out, _ = capfd.readouterr()
+    assert "Crew Execution Started panel" in out
+    assert "last_run.log" not in out
+    assert not (directory / ".crewai" / "last_run.log").exists()

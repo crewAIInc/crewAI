@@ -161,6 +161,13 @@ NOT_TRACED = (
     f"({LAST_RUN_FILE})."
 )
 
+# With no terminal, what the crew prints while it runs (its panels, the final
+# answer, every tool call) goes to this file in the project's `.crewai/`, not to
+# the coding agent's screen: in one measured run it was 341 of 378 lines, all
+# before the verdict, and an agent pays for every line or has the end cut off.
+RUN_LOG_FILE = "last_run.log"
+RUN_LOG_TAIL_LINES = 40
+
 # Why `crewai eval` ran the crew before evaluating, a word from a closed list:
 # nothing traced yet, the project changed since its last traced run, or the run
 # app's Evaluate pressed on a run that was not traced.
@@ -1002,11 +1009,22 @@ def _run_the_crew_to_evaluate(
     # The handshake (`crewai_core.eval_handshake`) carries what this command
     # decided before the project's `.env` was loaded: the AMP origins its saved
     # login may go to, and whether it just turned tracing on.
+    run_log = None if _at_a_terminal() else _run_log_path()
+    if run_log is not None:
+        console.print(
+            f"The crew's output goes to {_shown_path(run_log)} while it runs.",
+            style="dim",
+        )
     began = datetime.now(timezone.utc)
-    with evaluating_after_run(
-        trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
-    ) as watched:
+    started = time.monotonic()
+    with (
+        evaluating_after_run(
+            trusted_amp_origins=trusted or (), tracing_turned_on=turned_on_now
+        ) as watched,
+        _run_output_to(run_log) as run_log,
+    ):
         run_crew(**run_args)
+    seconds = time.monotonic() - started
 
     # The app says what it did with the run it watched, and its word settles
     # this: it evaluated it (nothing left to do), or it had nothing to evaluate
@@ -1018,7 +1036,8 @@ def _run_the_crew_to_evaluate(
             remember_project_state(str(marker["execution_id"]))
             return None
         record_stop("untraced_after_run")
-        console.print(NOT_TRACED, style="bold red")
+        _say_what_the_run_left(run_log, seconds, traced=False)
+        console.print(_not_traced(run_log), style="bold red")
         raise SystemExit(1)
 
     # The project's record, only when it was written after this run began: a
@@ -1029,11 +1048,125 @@ def _run_the_crew_to_evaluate(
         record.get("execution_id") if _recorded_since(record, began) else None
     )
     if traced:
+        _say_what_the_run_left(run_log, seconds, traced=True)
         return str(traced)
 
     record_stop("untraced_after_run")
-    console.print(NOT_TRACED, style="bold red")
+    _say_what_the_run_left(run_log, seconds, traced=False)
+    console.print(_not_traced(run_log), style="bold red")
     raise SystemExit(1)
+
+
+def _not_traced(run_log: Path | None) -> str:
+    """NOT_TRACED, pointing at where the run's output went."""
+    if run_log is None:
+        return NOT_TRACED
+    return NOT_TRACED.replace("(its output is above)", "(its last lines are above)")
+
+
+def _run_log_path() -> Path | None:
+    """Where a run with no terminal sends its output, or None when the
+    project's `.crewai/` cannot be written (the output then stays on screen)."""
+    from crewai.telemetry.tracing.last_run import LAST_RUN_DIR, project_dir
+
+    try:
+        path = project_dir() / LAST_RUN_DIR / RUN_LOG_FILE
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    return path
+
+
+@contextlib.contextmanager
+def _run_output_to(path: Path | None) -> Iterator[Path | None]:
+    """Send everything printed inside the block to PATH, and yield it; with no
+    PATH, yield None and change nothing.
+
+    It moves this process's own stdout and stderr (file descriptors 1 and 2),
+    which every child the run starts inherits, so each way a project runs —
+    `uv run`, the JSON crew runner, a declarative flow — is covered without
+    touching any of them. Anything that keeps them from moving leaves the
+    output where it was: a quiet log is a nicety, never a failed run."""
+    if path is None:
+        yield None
+        return
+    saved: list[int] = []
+    try:
+        log = path.open("wb")
+    except OSError:
+        yield None
+        return
+    try:
+        for stream in (sys.stdout, sys.stderr):
+            with contextlib.suppress(Exception):
+                stream.flush()
+        try:
+            saved = [os.dup(1), os.dup(2)]
+            os.dup2(log.fileno(), 1)
+            os.dup2(log.fileno(), 2)
+            _point_windows_std_handles_at(1, 2)
+        except OSError:
+            for fd in saved:
+                os.close(fd)
+            saved = []
+            yield None
+            return
+        yield path
+    finally:
+        if saved:
+            for stream in (sys.stdout, sys.stderr):
+                with contextlib.suppress(Exception):
+                    stream.flush()
+            os.dup2(saved[0], 1)
+            os.dup2(saved[1], 2)
+            _point_windows_std_handles_at(1, 2)
+            for fd in saved:
+                os.close(fd)
+        log.close()
+
+
+def _point_windows_std_handles_at(out_fd: int, err_fd: int) -> None:
+    """On Windows a child takes the process's standard handles, not its file
+    descriptors: point them where descriptors 1 and 2 now go."""
+    if os.name != "nt":
+        return
+    with contextlib.suppress(Exception):
+        import ctypes
+        import msvcrt
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle_of = msvcrt.get_osfhandle  # type: ignore[attr-defined]
+        kernel32.SetStdHandle(-11, handle_of(out_fd))  # STD_OUTPUT_HANDLE
+        kernel32.SetStdHandle(-12, handle_of(err_fd))  # STD_ERROR_HANDLE
+
+
+def _say_what_the_run_left(log: Path | None, seconds: float, traced: bool) -> None:
+    """After a quiet run: where its output is, and — when it left nothing to
+    evaluate — its last lines, which usually hold the error."""
+    if log is None:
+        return
+    where = _shown_path(log)
+    if traced:
+        console.print(
+            f"The crew ran in {seconds:.0f}s; its output is in {where}.", style="dim"
+        )
+        return
+    with contextlib.suppress(OSError):
+        lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        tail = lines[-RUN_LOG_TAIL_LINES:]
+        if tail:
+            console.print(
+                f"The crew's output is in {where}; its last {len(tail)} lines:",
+                style="bold",
+            )
+            console.print(Text("\n".join(tail)))
+
+
+def _shown_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError:
+        return str(path)
 
 
 def _recorded_since(record: dict[str, Any], began: datetime) -> bool:
