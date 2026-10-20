@@ -397,9 +397,8 @@ class ToolUsage:
                     )
                     self.last_raw_result = result
                     self.last_failure = detect_tool_failure(result)
-                    result = self._format_result(
-                        result=tool.format_output_for_agent(result)
-                    )
+                    formatted_result = tool.format_output_for_agent(result)
+                    result = self._format_result(result=formatted_result)
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -415,6 +414,10 @@ class ToolUsage:
                     ):
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
+                        # _remember_format() appends a prompt for the model's
+                        # next turn, but this result is the answer itself.
+                        result = str(formatted_result)
+                        data["result"] = result
 
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
@@ -654,9 +657,8 @@ class ToolUsage:
                     )
                     self.last_raw_result = result
                     self.last_failure = detect_tool_failure(result)
-                    result = self._format_result(
-                        result=tool.format_output_for_agent(result)
-                    )
+                    formatted_result = tool.format_output_for_agent(result)
+                    result = self._format_result(result=formatted_result)
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -672,6 +674,10 @@ class ToolUsage:
                     ):
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
+                        # _remember_format() appends a prompt for the model's
+                        # next turn, but this result is the answer itself.
+                        result = str(formatted_result)
+                        data["result"] = result
 
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
