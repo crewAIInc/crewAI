@@ -1784,7 +1784,7 @@
   "q": "This project produced a reusable brand-voice skill. What should you do about it?",
   "key": [
    "skill publish",
-   "(ask|approv|confirm|permission)"
+   "(ask|approv|confirm|permission|go.?ahead)"
   ]
  },
  {
