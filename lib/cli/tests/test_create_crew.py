@@ -1337,7 +1337,7 @@ def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
     project_root = tmp_path / "json_crew"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     assert "## Working in this project" in agents_md
-    assert "### Check every change: run, trace, evaluate" in agents_md
+    assert "### Check every change: evaluate" in agents_md
     assert "crewai-eval:" not in agents_md
     assert "crew.jsonc" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
@@ -1372,12 +1372,24 @@ def _parse_cli_args(args: list[str]) -> None:
     """Parse ARGS against the real CLI without running the command."""
     command: click.Command = crewai
     name = "crewai"
-    while isinstance(command, click.Group):
+    # A group can run without a subcommand, options and all (`crewai eval --models …`,
+    # beside `crewai eval export ID`).
+    while isinstance(command, click.Group) and args and not args[0].startswith("-"):
         name, *args = args
         subcommand = command.get_command(click.Context(command), name)
         assert subcommand is not None, f"unknown command {name!r}"
         command = subcommand
     command.make_context(name, args)
+
+
+def test_agents_md_command_parser_accepts_a_group_run_without_a_subcommand():
+    _parse_cli_args(_cli_args("crewai eval"))
+    _parse_cli_args(_cli_args('crewai eval --models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"'))
+
+
+def test_agents_md_command_parser_rejects_a_group_that_needs_a_subcommand():
+    with pytest.raises(click.UsageError):
+        _parse_cli_args(_cli_args("crewai deploy"))
 
 
 def test_parse_cli_args_rejects_a_positional_deployment_id():
