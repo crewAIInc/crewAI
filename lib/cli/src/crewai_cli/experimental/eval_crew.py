@@ -1009,7 +1009,8 @@ def _run_the_crew_to_evaluate(
     # The handshake (`crewai_core.eval_handshake`) carries what this command
     # decided before the project's `.env` was loaded: the AMP origins its saved
     # login may go to, and whether it just turned tracing on.
-    run_log = None if _at_a_terminal() else _run_log_path()
+    # Whoever reads the output decides, as for the brief: stdout, not stdin.
+    run_log = _run_log_path() if nobody_watching() else None
     if run_log is not None:
         console.print(
             f"The crew's output goes to {_shown_path(run_log)} while it runs.",
@@ -1086,43 +1087,74 @@ def _run_output_to(path: Path | None) -> Iterator[Path | None]:
     which every child the run starts inherits, so each way a project runs —
     `uv run`, the JSON crew runner, a declarative flow — is covered without
     touching any of them. Anything that keeps them from moving leaves the
-    output where it was: a quiet log is a nicety, never a failed run."""
-    if path is None:
+    output where it was: a quiet log is a nicety, never a failed run. Both are
+    always put back after, one by one, whatever failed: a stream left on the
+    log would swallow the verdict, and the run's own error is never hidden by
+    a failure to put them back."""
+    log = _open_run_log(path) if path is not None else None
+    if log is None:
         yield None
         return
-    saved: list[int] = []
+    _flush_std_streams()
+    saved: dict[int, int] = {}
+    moved: list[int] = []
     try:
-        log = path.open("wb")
+        for fd in (1, 2):
+            saved[fd] = os.dup(fd)
+        for fd in (1, 2):
+            os.dup2(log, fd)
+            moved.append(fd)
     except OSError:
+        _put_back(saved, moved)
+        _close_quietly(log)
         yield None
         return
+    _point_windows_std_handles_at(1, 2)
     try:
-        for stream in (sys.stdout, sys.stderr):
-            with contextlib.suppress(Exception):
-                stream.flush()
-        try:
-            saved = [os.dup(1), os.dup(2)]
-            os.dup2(log.fileno(), 1)
-            os.dup2(log.fileno(), 2)
-            _point_windows_std_handles_at(1, 2)
-        except OSError:
-            for fd in saved:
-                os.close(fd)
-            saved = []
-            yield None
-            return
         yield path
     finally:
-        if saved:
-            for stream in (sys.stdout, sys.stderr):
-                with contextlib.suppress(Exception):
-                    stream.flush()
-            os.dup2(saved[0], 1)
-            os.dup2(saved[1], 2)
-            _point_windows_std_handles_at(1, 2)
-            for fd in saved:
-                os.close(fd)
-        log.close()
+        _flush_std_streams()
+        _put_back(saved, moved)
+        _point_windows_std_handles_at(1, 2)
+        _close_quietly(log)
+
+
+def _open_run_log(path: Path) -> int | None:
+    """The run log, opened for writing owner-only and never through a link:
+    it holds final answers, tool output and tracebacks that can carry a
+    credential. A log an earlier run left is emptied and its mode tightened.
+    None when it cannot be opened that way."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        if path.is_symlink():
+            return None  # a link someone planted does not choose where it goes
+        fd = os.open(path, flags, 0o600)
+    except OSError:
+        return None
+    with contextlib.suppress(OSError, AttributeError):
+        os.fchmod(fd, 0o600)
+    return fd
+
+
+def _flush_std_streams() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        with contextlib.suppress(Exception):
+            stream.flush()
+
+
+def _put_back(saved: dict[int, int], moved: list[int]) -> None:
+    """Point every MOVED descriptor at its SAVED original again, and close
+    every saved copy: each on its own, so one failure stops none of the rest."""
+    for fd in moved:
+        with contextlib.suppress(OSError):
+            os.dup2(saved[fd], fd)
+    for copy in saved.values():
+        _close_quietly(copy)
+
+
+def _close_quietly(fd: int) -> None:
+    with contextlib.suppress(OSError):
+        os.close(fd)
 
 
 def _point_windows_std_handles_at(out_fd: int, err_fd: int) -> None:
