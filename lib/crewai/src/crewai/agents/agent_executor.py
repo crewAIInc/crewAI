@@ -2844,8 +2844,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if self.task:
                 original_description = self.task.description
                 self.task.description = enhanced_description
-                output = planning_handler.handle_agent_reasoning()
-                self.task.description = original_description
+                try:
+                    output = planning_handler.handle_agent_reasoning()
+                finally:
+                    self.task.description = original_description
             else:
                 # description is a read-only property — recreate with enhanced text
                 input_text = getattr(self, "_kickoff_input", "")
