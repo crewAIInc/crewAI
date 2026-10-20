@@ -39,6 +39,7 @@ from crewai_tools import WeaviateVectorSearchTool
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
     limit=3,
+    alpha=0.75,
     weaviate_cluster_url="https://your-weaviate-cluster-url.com",
     weaviate_api_key="your-weaviate-api-key",
 )
@@ -200,6 +201,7 @@ with test_docs.batch.dynamic() as batch:
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
     limit=3,
+    alpha=0.75,
     weaviate_cluster_url="https://your-weaviate-cluster-url.com",
     weaviate_api_key="your-weaviate-api-key",
 )
@@ -217,6 +219,7 @@ from crewai_tools import WeaviateVectorSearchTool
 weaviate_tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
     limit=3,
+    alpha=0.75,
     weaviate_cluster_url="https://your-weaviate-cluster-url.com",
     weaviate_api_key="your-weaviate-api-key",
 )
