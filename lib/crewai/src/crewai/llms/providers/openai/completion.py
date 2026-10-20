@@ -2279,11 +2279,9 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            raw_response = (
-                self._get_sync_client().chat.completions.with_raw_response.create(
-                    **params
-                )
-            )
+            raw_response = self._client_for_attempt(
+                self._get_sync_client()
+            ).chat.completions.with_raw_response.create(**params)
             _raise_for_upstream_error(
                 raw_response.text,
                 model=self.model,
@@ -2721,9 +2719,9 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            raw_response = await self._get_async_client().chat.completions.with_raw_response.create(
-                **params
-            )
+            raw_response = await self._client_for_attempt(
+                self._get_async_client()
+            ).chat.completions.with_raw_response.create(**params)
             _raise_for_upstream_error(
                 raw_response.text,
                 model=self.model,

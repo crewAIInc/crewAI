@@ -229,3 +229,94 @@ def test_openai_provider_turns_sdk_retries_off_on_replay() -> None:
         _llm_retry_replay.reset(token)
 
     assert client.calls == [{"max_retries": 0}]
+
+class _Stopped(Exception):
+    """Raised by the fake client once the provider has issued its request."""
+
+
+class _RecordingClient:
+    """Stands in for the OpenAI client and records the retry budget in force."""
+
+    def __init__(self, budgets: list[object], chain: tuple[object, ...] = ()) -> None:
+        self.budgets = budgets
+        self.chain = chain
+
+    def with_options(self, **kwargs: object) -> "_RecordingClient":
+        return type(self)(self.budgets, (*self.chain, kwargs.get("max_retries")))
+
+    @property
+    def chat(self) -> "_RecordingClient":
+        return self
+
+    @property
+    def completions(self) -> "_RecordingClient":
+        return self
+
+    @property
+    def with_raw_response(self) -> "_RecordingClient":
+        return self
+
+    def _record(self) -> None:
+        self.budgets.append(self.chain[-1] if self.chain else None)
+        raise _Stopped
+
+
+class _SyncRecordingClient(_RecordingClient):
+    def create(self, **kwargs: object) -> Any:
+        self._record()
+
+
+class _AsyncRecordingClient(_RecordingClient):
+    async def create(self, **kwargs: object) -> Any:
+        self._record()
+
+
+@pytest.mark.parametrize("replay", [False, True])
+def test_non_streaming_chat_keeps_sdk_retries_for_the_first_attempt_only(
+    replay: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    budgets: list[object] = []
+    monkeypatch.setattr(
+        OpenAICompletion,
+        "_get_sync_client",
+        lambda self: _SyncRecordingClient(budgets),
+    )
+    completion = OpenAICompletion.__new__(OpenAICompletion)
+
+    token = _llm_retry_replay.set(replay)
+    try:
+        with pytest.raises(Exception):  # noqa: B017, PT011 - the fake stops the call
+            completion._handle_completion({"messages": [{"role": "user", "content": "hi"}]})
+    finally:
+        _llm_retry_replay.reset(token)
+
+    assert budgets == [0 if replay else None]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("replay", [False, True])
+async def test_async_non_streaming_chat_keeps_sdk_retries_for_the_first_attempt_only(
+    replay: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    budgets: list[object] = []
+    monkeypatch.setattr(
+        OpenAICompletion,
+        "_get_async_client",
+        lambda self: _AsyncRecordingClient(budgets),
+    )
+    completion = OpenAICompletion.__new__(OpenAICompletion)
+
+    token = _llm_retry_replay.set(replay)
+    try:
+        with pytest.raises(Exception):  # noqa: B017, PT011 - the fake stops the call
+            await completion._ahandle_completion(
+                {"messages": [{"role": "user", "content": "hi"}]}
+            )
+    finally:
+        _llm_retry_replay.reset(token)
+
+    assert budgets == [0 if replay else None]
