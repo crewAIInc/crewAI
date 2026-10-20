@@ -1209,8 +1209,9 @@ class AnthropicCompletion(BaseLLM):
                 if thinking_block:
                     thinking_blocks.append(cast(ThinkingBlock, thinking_block))
 
-        if thinking_blocks:
-            self._previous_thinking_blocks = thinking_blocks
+        # Assign unconditionally: a response without thinking must drop the
+        # cached blocks, or they would be replayed on a later assistant turn.
+        self._previous_thinking_blocks = thinking_blocks
 
         # Check if Claude wants to use tools
         if response.content:
@@ -1392,8 +1393,8 @@ class AnthropicCompletion(BaseLLM):
                 if thinking_block:
                     thinking_blocks.append(cast(ThinkingBlock, thinking_block))
 
-        if thinking_blocks:
-            self._previous_thinking_blocks = thinking_blocks
+        # Assign unconditionally so a no-thinking response drops stale blocks.
+        self._previous_thinking_blocks = thinking_blocks
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
@@ -1625,8 +1626,8 @@ class AnthropicCompletion(BaseLLM):
                         if thinking_block:
                             thinking_blocks.append(cast(ThinkingBlock, thinking_block))
 
-            if thinking_blocks:
-                self._previous_thinking_blocks = thinking_blocks
+            # Assign unconditionally so a no-thinking response drops stale blocks.
+            self._previous_thinking_blocks = thinking_blocks
 
             final_content = self._apply_stop_words(final_content)
 
