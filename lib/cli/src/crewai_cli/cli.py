@@ -6,6 +6,10 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 import click
+
+# Imported first so AMP requests pin the machine's proxy and CA settings before
+# any command loads a project's .env (see crewai_core.plus_api).
+import crewai_core.plus_api  # noqa: F401
 from crewai_core.token_manager import TokenManager
 
 from crewai_cli.config import Settings
@@ -58,6 +62,12 @@ def eval_models(*args: Any, **kwargs: Any) -> Any:
     from crewai_cli.experimental.eval_crew import eval_models as _eval_models
 
     return _eval_models(*args, **kwargs)
+
+
+def eval_export(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.experimental.eval_crew import export_evaluation as _export
+
+    return _export(*args, **kwargs)
 
 
 if TYPE_CHECKING:
@@ -690,7 +700,7 @@ def run(
     )
 
 
-@crewai.command(name="eval")
+@crewai.group(name="eval", invoke_without_command=True)
 @click.option(
     "--run",
     "run_id",
@@ -728,23 +738,47 @@ def run(
         "project id."
     ),
 )
+@click.pass_context
 def eval_command(
-    run_id: str | None, models: str | None, deployment_id: str | None
+    ctx: click.Context,
+    run_id: str | None,
+    models: str | None,
+    deployment_id: str | None,
 ) -> None:
-    """Evaluate the last traced run through CrewAI AMP, or compare models on the
-    project's deployment (--models).
+    """Evaluate this crew through CrewAI AMP, or compare models on the project's
+    deployment (--models).
+
+    It grades the project's last traced run. When there is none, or the project
+    changed since it, it runs the crew first and grades that run: the run is
+    traced and its trace sent to CrewAI AMP, which grades it. The first time
+    tracing is turned on for the project, a person at a terminal is asked
+    first; with no terminal (a coding agent, a script) nothing is asked and the
+    command says it turned tracing on, so `crewai eval` alone takes an agent
+    from a change to its verdict. A project that turned tracing off is asked
+    at a terminal, and told how to turn it on without one.
 
     Run by a script or coding agent (no terminal), it prints a markdown brief
     after the verdict — what failed and the change to make — so an agent can act
     on it directly. That is when AMP provides the brief: otherwise its link, when
-    AMP sends only that, else nothing more. It grades a run that already
-    happened: after a change, `crewai run` again, then `crewai eval`.
+    AMP sends only that, else nothing more.
 
     A run's evaluation exits 0 only when the goal gate PASSED, and 1 otherwise — a
     failed gate, no verdict, or an evaluation that could not run — so a CI job can
     gate on it. A comparison exits 0 when it finished, 1 when it failed or could
     not start.
+
+    `crewai eval export ID` downloads an evaluation's full data as files, for a
+    coding agent to dig into.
     """
+    if ctx.invoked_subcommand is not None:
+        # The subcommand does the work; an option meant for this body would
+        # otherwise be dropped without a word.
+        if run_id is not None or models is not None or deployment_id is not None:
+            raise click.UsageError(
+                f"`crewai eval {ctx.invoked_subcommand}` takes no --run, --models "
+                "or --deployment; give those to `crewai eval` alone."
+            )
+        return
     if models is not None:
         if run_id is not None:
             raise click.UsageError(
@@ -758,6 +792,23 @@ def eval_command(
             "--deployment names the deployment --models runs; add --models LIST."
         )
     eval_crew(run_id=run_id)
+
+
+@eval_command.command(name="export")
+@click.argument("evaluation_id", metavar="ID")
+def eval_export_command(evaluation_id: str) -> None:
+    """Download evaluation ID's full data into ./crewai-eval-ID/.
+
+    The report, every setup's outputs, every check with the judge's words, and
+    the traces, as files for a coding agent to dig into: start with report.md.
+    The folder gets a .gitignore of `*`, so the data is never committed by
+    accident; exporting again overwrites the files.
+
+    ID is the evaluation's UUID. It is read with your `crewai login` when there
+    is one; a run's evaluation can be exported without one. Exits 0 when the
+    files were written, 1 otherwise.
+    """
+    eval_export(evaluation_id)
 
 
 @crewai.command()
@@ -833,7 +884,16 @@ def deploy_list() -> None:
     is_flag=True,
     help="Skip the pre-deploy validation checks.",
 )
-def deploy_push(uuid: str | None, skip_validate: bool) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    help=(
+        "Redeploy even while a models comparison is running on the deployment. "
+        "It stops the comparison and its runs under way are lost; without it, "
+        "AMP holds the push back."
+    ),
+)
+def deploy_push(uuid: str | None, skip_validate: bool, force: bool) -> None:
     """Deploy the Crew."""
     # Backfills a project_id for projects that have [tool.crewai] but no id yet.
     # Safe in every command the user explicitly invoked: get_or_create_project_id
@@ -841,7 +901,7 @@ def deploy_push(uuid: str | None, skip_validate: bool) -> None:
     # never rewrites an unrelated directory. Never called from the SDK during kickoff.
     get_or_create_project_id()
     deploy_cmd = DeployCommand()
-    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate)
+    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate, force=force)
 
 
 @deploy.command(name="validate")

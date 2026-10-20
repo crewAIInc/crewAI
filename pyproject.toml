@@ -225,7 +225,9 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # pip 26.1.1 has PYSEC-2026-196; force 26.1.2+.
 # aiohttp <=3.13.x has GHSA-jg22-mg44-37j8, GHSA-hg6j-4rv6-33pg; fixed in 3.14.0; force 3.14.0+.
 # aiohttp <=3.14.1 has GHSA-mq44-7p77-q5h7, GHSA-mfx4-hv73-q22v; fixed in 3.14.2.
-# aiohttp <=3.14.2 has GHSA-cq5v-8q36-5273 (C parser OOB read); force 3.14.3+.
+# aiohttp <=3.14.2 has GHSA-cq5v-8q36-5273 (C parser OOB read); fixed in 3.14.3.
+# aiohttp <=3.14.3 has GHSA-5wr8-gcqf-gqf3, GHSA-2g87-pp6c-29x5, and
+# GHSA-494j-54xm-rwp3; force 3.14.4+.
 # docling-core 2.74.0 has GHSA-j5xp-7m2f-49jv, GHSA-jmmv-h3mp-59v8; force 2.74.1+.
 # docling-slim 2.132 (GHSA-q43m-vhcp-mhvm) requires docling-core>=2.98,<3. The
 # override replaces that requirement, so the floor is 2.98.0.
@@ -311,7 +313,7 @@ override-dependencies = [
     "langsmith>=0.8.18,<1",
     "authlib>=1.6.12",
     "pip>=26.2", # PYSEC-2026-3721 / CVE-2026-13346 — fixed in 26.2
-    "aiohttp>=3.14.3",
+    "aiohttp>=3.14.4",
     # [chunking] carried here because override-dependencies replace the whole
     # requirement; without it the docling extra's chunking deps get stripped.
     "docling-core[chunking]>=2.98.0,<3",
