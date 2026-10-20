@@ -61,7 +61,8 @@ class StringWebAccessScrapeToolSchema(BaseModel):
     )
     country_code: str | None = Field(
         default=None,
-        description="ISO 3166-1 alpha-2 country code to route the request through, e.g. 'US'",
+        description="ISO 3166-1 alpha-2 country code, e.g. 'US'. The page comes back as it is "
+        "served in that country",
     )
 
 
@@ -69,12 +70,7 @@ class StringWebAccessScrapeTool(BaseTool):
     """Fetch any URL through String Web Access and return it as clean, LLM-ready Markdown."""
 
     name: str = "String Web Access scrape tool"
-    description: str = (
-        "Fetch any URL and get clean, LLM-ready Markdown back. Proxy rotation, anti-bot handling, "
-        "CAPTCHA solving and JavaScript rendering happen server-side, so use this for pages that "
-        "rate-limit, geo-gate or block automated traffic and return a block screen to an ordinary "
-        "HTTP request."
-    )
+    description: str = "Fetch any URL and get clean, LLM-ready Markdown back."
     args_schema: type[BaseModel] = StringWebAccessScrapeToolSchema
     api_key: str | None = None
     timeout: int = _DEFAULT_TIMEOUT

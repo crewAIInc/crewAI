@@ -25946,7 +25946,7 @@
       }
     },
     {
-      "description": "Fetch any URL and get clean, LLM-ready Markdown back. Proxy rotation, anti-bot handling, CAPTCHA solving and JavaScript rendering happen server-side, so use this for pages that rate-limit, geo-gate or block automated traffic and return a block screen to an ordinary HTTP request.",
+      "description": "Fetch any URL and get clean, LLM-ready Markdown back.",
       "env_vars": [
         {
           "default": null,
@@ -26047,7 +26047,7 @@
               }
             ],
             "default": null,
-            "description": "ISO 3166-1 alpha-2 country code to route the request through, e.g. 'US'",
+            "description": "ISO 3166-1 alpha-2 country code, e.g. 'US'. The page comes back as it is served in that country",
             "title": "Country Code"
           },
           "execute_js": {

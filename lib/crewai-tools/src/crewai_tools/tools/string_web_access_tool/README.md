@@ -3,9 +3,7 @@
 ## Description
 
 [String Web Access](https://usestring.ai) gives an agent the live web. Search the web and fetch any
-URL, all returned as clean, LLM-ready Markdown. Proxy rotation, anti-bot handling, CAPTCHA solving
-and JavaScript rendering happen server-side, so the agent gets the page instead of a block screen.
-Best for sites that rate-limit, geo-gate or block automated traffic.
+URL, all returned as clean, LLM-ready Markdown.
 
 Two tools:
 
@@ -64,7 +62,7 @@ Crew(agents=[researcher], tasks=[task]).kickoff(
 | `format` | `markdown` | `markdown`, `raw` for the verbatim body, or `json` for a `{statusCode, headers, data}` envelope. |
 | `main_content_only` | `None` | Strip navigation, footers and other page chrome from the Markdown. |
 | `execute_js` | `None` | Render the page in a browser first. Use when a fetch of a JavaScript-rendered site comes back empty. |
-| `country_code` | `None` | ISO 3166-1 alpha-2 country to route the request through, e.g. `"GB"`. |
+| `country_code` | `None` | ISO 3166-1 alpha-2 country code, e.g. `"GB"`. The page comes back as it is served in that country. |
 
 ### `StringWebAccessSearchTool`
 
