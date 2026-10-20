@@ -742,6 +742,77 @@ class TestNativeProviderAfterHooksAsync:
         assert llm.call(messages) == "the [REDACTED] is 42"
         assert await llm.acall(messages) == "the [REDACTED] is 42"
 
+    @staticmethod
+    def _openai_chunk(content: str | None, finish_reason: str | None = None):
+        from openai.types.chat import ChatCompletionChunk
+
+        return ChatCompletionChunk.model_validate(
+            {
+                "id": "chatcmpl-1",
+                "object": "chat.completion.chunk",
+                "created": 0,
+                "model": "gpt-4o-mini",
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": finish_reason,
+                        "delta": {"content": content},
+                    }
+                ],
+            }
+        )
+
+    def test_global_after_hook_runs_once_on_openai_sync_streaming(self):
+        from unittest.mock import MagicMock
+
+        from crewai.hooks import register_after_llm_call_hook
+        from crewai.llm import LLM
+
+        calls: list[str] = []
+
+        def redact(context: LLMCallHookContext) -> str | None:
+            calls.append(context.response)
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        register_after_llm_call_hook(redact)
+        llm = LLM(model="gpt-4o-mini", api_key="sk-test", stream=True)
+        sync_client = MagicMock()
+        sync_client.chat.completions.create.return_value = iter(
+            [self._openai_chunk("the SECRET "), self._openai_chunk("is 42", "stop")]
+        )
+        llm._get_sync_client = lambda: sync_client  # type: ignore[method-assign]
+
+        assert llm.call([{"role": "user", "content": "hi"}]) == "the [REDACTED] is 42"
+        assert calls == ["the SECRET is 42"]
+
+    @pytest.mark.asyncio
+    async def test_global_after_hook_runs_once_on_openai_async_streaming(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from crewai.hooks import register_after_llm_call_hook
+        from crewai.llm import LLM
+
+        calls: list[str] = []
+
+        def redact(context: LLMCallHookContext) -> str | None:
+            calls.append(context.response)
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        async def stream():
+            yield self._openai_chunk("the SECRET ")
+            yield self._openai_chunk("is 42", "stop")
+
+        register_after_llm_call_hook(redact)
+        llm = LLM(model="gpt-4o-mini", api_key="sk-test", stream=True)
+        async_client = MagicMock()
+        async_client.chat.completions.create = AsyncMock(return_value=stream())
+        llm._get_async_client = lambda: async_client  # type: ignore[method-assign]
+
+        result = await llm.acall([{"role": "user", "content": "hi"}])
+
+        assert result == "the [REDACTED] is 42"
+        assert calls == ["the SECRET is 42"]
+
     @pytest.mark.asyncio
     async def test_global_after_hook_runs_when_async_stream_structured_output_fails_to_parse(self):
         from unittest.mock import AsyncMock, MagicMock
@@ -903,3 +974,61 @@ class TestNativeProviderAfterHooksAsync:
         llm.stream = True
 
         assert llm.call([{"role": "user", "content": "hi"}]) == "the [REDACTED] is 42"
+
+
+class TestLiteLLMAfterHooksAsync:
+    """The generic LiteLLM route runs after_llm_call hooks on acall() as it does on call()."""
+
+    @staticmethod
+    def _redact_and_count(calls: list[str]):
+        def redact(context: LLMCallHookContext) -> str | None:
+            calls.append(context.response)
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        return redact
+
+    @pytest.mark.asyncio
+    async def test_global_after_hook_runs_on_acall_without_streaming(self):
+        from unittest.mock import MagicMock, patch
+
+        from crewai.hooks import register_after_llm_call_hook
+        from crewai.llm import LLM
+
+        calls: list[str] = []
+        register_after_llm_call_hook(self._redact_and_count(calls))
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+        message = MagicMock(content="the SECRET is 42", tool_calls=None)
+        response = MagicMock(choices=[MagicMock(message=message)], model_extra=None)
+
+        async def acompletion(*_args, **_kwargs):
+            return response
+
+        with patch("crewai.llm.litellm.acompletion", side_effect=acompletion):
+            result = await llm.acall("hi")
+
+        assert result == "the [REDACTED] is 42"
+        assert calls == ["the SECRET is 42"]
+
+    @pytest.mark.asyncio
+    async def test_global_after_hook_runs_on_acall_with_streaming(self):
+        from unittest.mock import patch
+
+        from crewai.hooks import register_after_llm_call_hook
+        from crewai.llm import LLM
+
+        calls: list[str] = []
+        register_after_llm_call_hook(self._redact_and_count(calls))
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+        async def chunks():
+            yield {"id": "c1", "choices": [{"delta": {"content": "the SECRET "}, "finish_reason": None}]}
+            yield {"id": "c1", "choices": [{"delta": {"content": "is 42"}, "finish_reason": "stop"}]}
+
+        async def acompletion(*_args, **_kwargs):
+            return chunks()
+
+        with patch("crewai.llm.litellm.acompletion", side_effect=acompletion):
+            result = await llm.acall("hi")
+
+        assert result == "the [REDACTED] is 42"
+        assert calls == ["the SECRET is 42"]
