@@ -213,12 +213,18 @@ paths:
       description: |
         **📋 Reference Example Only** - *This shows the request format. To test with your actual crew, copy the cURL example and replace the URL + token with your real values.*
 
-        Retrieves the current status and results of a crew execution using its kickoff ID.
+        Gets the status and the results of an execution. Use the kickoff ID from
+        the /kickoff endpoint.
 
-        The response structure varies depending on the execution state:
-        - **running**: Execution in progress with current task info
-        - **completed**: Execution finished with full results
-        - **error**: Execution failed with error details
+        The response always has the same shape. The `state` field gives the state
+        of the execution. A field that does not apply is `null`.
+
+        While the execution runs, `progress` and the event fields show what the
+        execution does now. Send the request again to get a new response.
+
+        A deployment that runs crewAI 1.15.21 or before gives `null` for
+        `progress` and for the event fields. Upgrade the crewAI version in the
+        project, then deploy the crew again.
       operationId: getExecutionStatus
       parameters:
         - name: kickoff_id
@@ -235,41 +241,100 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: "#/components/schemas/ExecutionRunning"
-                  - $ref: "#/components/schemas/ExecutionCompleted"
-                  - $ref: "#/components/schemas/ExecutionError"
+                $ref: "#/components/schemas/ExecutionStatus"
               examples:
                 running:
-                  summary: Execution in progress
+                  summary: Crew execution in progress
                   value:
-                    status: "running"
-                    current_task: "research_task"
+                    state: "RUNNING"
+                    status: "Task is Running"
                     progress:
-                      completed_tasks: 1
-                      total_tasks: 3
+                      unit: "task"
+                      completed: 1
+                      total: 3
+                      remaining: 2
+                      current: "write_report"
+                      current_agent: "Researcher"
+                      started_at: "2025-09-10T18:00:00+00:00"
+                      updated_at: "2025-09-10T18:02:14+00:00"
+                      duration_seconds: 134.0
+                    last_event:
+                      type: "tool_usage_started"
+                      timestamp: "2025-09-10T18:02:14+00:00"
+                      tool_name: "SerperDevTool"
+                      agent_role: "Researcher"
+                    events_count: 24
+                    events_by_type:
+                      crew_kickoff_started: 1
+                      task_started: 2
+                      agent_execution_started: 2
+                      tool_usage_started: 3
+                    triggered_by:
+                      type: "user"
+                      id: "4711"
+                    execution_origin: "api"
+                    source: "memory"
+                flow_running:
+                  summary: Flow execution in progress
+                  value:
+                    state: "RUNNING"
+                    status: "Task is Running"
+                    progress:
+                      unit: "step"
+                      completed: 4
+                      total: null
+                      remaining: null
+                      current: "summarize"
+                      current_agent: null
+                      started_at: "2025-09-10T18:00:00+00:00"
+                      updated_at: "2025-09-10T18:00:41+00:00"
+                      duration_seconds: 41.2
+                    last_event:
+                      type: "method_execution_started"
+                      timestamp: "2025-09-10T18:00:41+00:00"
+                      flow_name: "PoemFlow"
+                      method_name: "summarize"
+                    events_count: 13
+                    execution_origin: "api"
+                    source: "memory"
                 completed:
                   summary: Execution completed successfully
                   value:
-                    status: "completed"
-                    result:
-                      output: "Comprehensive travel itinerary for 7 days in Japan focusing on tech culture..."
-                      tasks:
-                        - task_id: "research_task"
-                          output: "Research findings on tech destinations in Japan..."
-                          agent: "Travel Researcher"
-                          execution_time: 45.2
-                        - task_id: "planning_task"
-                          output: "7-day detailed itinerary with activities and recommendations..."
-                          agent: "Trip Planner"
-                          execution_time: 62.8
-                    execution_time: 108.5
+                    state: "SUCCESS"
+                    result: "Comprehensive travel itinerary for 7 days in Japan..."
+                    usage_metrics:
+                      total_tokens: 18324
+                      prompt_tokens: 15980
+                      completion_tokens: 2344
+                    progress:
+                      unit: "task"
+                      completed: 3
+                      total: 3
+                      remaining: 0
+                      current: null
+                      current_agent: null
+                      started_at: "2025-09-10T18:00:00+00:00"
+                      updated_at: "2025-09-10T18:04:22+00:00"
+                      duration_seconds: 262.0
+                    events_count: 31
+                    triggered_by:
+                      type: "user"
+                      id: "4711"
+                    execution_origin: "ui"
+                    source: "memory"
                 error:
                   summary: Execution failed
                   value:
-                    status: "error"
-                    error: "Task execution failed: Invalid API key for external service"
-                    execution_time: 23.1
+                    state: "FAILED"
+                    status: "Task execution failed: Invalid API key for external service"
+                    last_event:
+                      type: "task_failed"
+                      timestamp: "2025-09-10T18:00:23+00:00"
+                      task_name: "research_task"
+                      error: "Invalid API key for external service"
+                    events_count: 9
+                    execution_origin: "api"
+                    source: "memory"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -426,87 +491,228 @@ components:
         **User Bearer Token**: User-scoped access with limited permissions
 
   schemas:
-    ExecutionRunning:
+    ExecutionStatus:
       type: object
-      properties:
-        status:
-          type: string
-          enum: ["running"]
-          example: "running"
-        current_task:
-          type: string
-          description: Name of the currently executing task
-          example: "research_task"
-        progress:
-          type: object
-          properties:
-            completed_tasks:
-              type: integer
-              description: Number of completed tasks
-              example: 1
-            total_tasks:
-              type: integer
-              description: Total number of tasks in the crew
-              example: 3
+      description: |
+        The status of one execution.
 
-    ExecutionCompleted:
-      type: object
+        The response always has the same shape. The `state` field gives the
+        state of the execution. A field that does not apply is `null`.
       properties:
+        state:
+          type: string
+          enum:
+            ["PENDING", "STARTED", "RUNNING", "SUCCESS", "FAILED", "PAUSED", "REVOKED"]
+          description: The state of the execution
+          example: "RUNNING"
         status:
           type: string
-          enum: ["completed"]
-          example: "completed"
+          nullable: true
+          description: A short message about the state
+          example: "Task is Running"
         result:
-          type: object
-          properties:
-            output:
-              type: string
-              description: Final output from the crew execution
-              example: "Comprehensive travel itinerary..."
-            tasks:
-              type: array
-              items:
-                $ref: "#/components/schemas/TaskResult"
-        execution_time:
-          type: number
-          description: Total execution time in seconds
-          example: 108.5
-
-    ExecutionError:
-      type: object
-      properties:
-        status:
           type: string
-          enum: ["error"]
-          example: "error"
+          nullable: true
+          description: The final output. The field is null until the execution stops.
+          example: "Comprehensive travel itinerary for 7 days in Japan..."
+        result_json:
+          type: object
+          nullable: true
+          description: The final output as JSON, if the output is a JSON object
+        usage_metrics:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+          description: The token counts for the execution
+          example: { total_tokens: 18324, prompt_tokens: 15980, completion_tokens: 2344 }
+        progress:
+          nullable: true
+          description: How much of the work is complete
+          allOf:
+            - $ref: "#/components/schemas/ExecutionProgress"
+        last_event:
+          nullable: true
+          description: The most recent event
+          allOf:
+            - $ref: "#/components/schemas/ExecutionEvent"
+        events:
+          type: array
+          nullable: true
+          description: |
+            The 100 most recent events. The oldest event is first. Set
+            `CREWAI_STATUS_MAX_EVENTS` on the deployment to change the number.
+          items:
+            $ref: "#/components/schemas/ExecutionEvent"
+        events_count:
+          type: integer
+          nullable: true
+          description: |
+            The number of events that the execution sent. The number can be more
+            than the length of `events`.
+          example: 24
+        events_by_type:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+          description: The number of events of each type
+          example: { crew_kickoff_started: 1, task_started: 2, tool_usage_started: 3 }
+        triggered_by:
+          nullable: true
+          description: The identity that started the execution
+          allOf:
+            - $ref: "#/components/schemas/ExecutionPrincipal"
+        execution_origin:
+          type: string
+          nullable: true
+          enum: ["ui", "schedule", "trigger", "chat", "hitl-resume", "replay", "api"]
+          description: |
+            How the execution started. A request to the API of the deployment
+            gives `api`.
+          example: "api"
+        last_step:
+          type: object
+          nullable: true
+          description: The most recent agent step. Crews only.
+        last_executed_task:
+          type: object
+          nullable: true
+          description: The most recent task that the crew completed. Crews only.
+        flow_id:
+          type: string
+          nullable: true
+          description: The identifier of a flow that waits for human feedback
+        source:
+          type: string
+          enum: ["memory", "application"]
+          description: |
+            The source of the data. A response that has `application` comes from
+            the platform and gives no progress data and no event data.
+          example: "memory"
+
+    ExecutionProgress:
+      type: object
+      description: |
+        How much of the work is complete.
+
+        A crew counts tasks. A flow counts steps. A flow selects the next step
+        while it runs. The number of steps is not known before the flow stops.
+        Thus `total` and `remaining` are always null for a flow.
+      properties:
+        unit:
+          type: string
+          enum: ["task", "step"]
+          description: The unit of work
+          example: "task"
+        completed:
+          type: integer
+          description: The number of units that are complete
+          example: 1
+        total:
+          type: integer
+          nullable: true
+          description: The number of units in the execution
+          example: 3
+        remaining:
+          type: integer
+          nullable: true
+          description: The number of units that are not complete
+          example: 2
+        current:
+          type: string
+          nullable: true
+          description: The name of the task or the method that runs now
+          example: "write_report"
+        current_agent:
+          type: string
+          nullable: true
+          description: The role of the agent that works now
+          example: "Researcher"
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: The time when the worker started the execution
+          example: "2025-09-10T18:00:00+00:00"
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: The time of the most recent change
+          example: "2025-09-10T18:02:14+00:00"
+        duration_seconds:
+          type: number
+          nullable: true
+          description: The number of seconds from the start to `updated_at`
+          example: 134.0
+
+    ExecutionEvent:
+      type: object
+      description: |
+        A summary of one event.
+
+        An event does not contain the prompts, the outputs or the state of the
+        flow. A field is present only when the event has a value for it.
+      properties:
+        type:
+          type: string
+          description: The type of the event
+          example: "tool_usage_started"
+        timestamp:
+          type: string
+          format: date-time
+          nullable: true
+          description: The time of the event
+          example: "2025-09-10T18:02:14+00:00"
+        crew_name:
+          type: string
+          description: The name of the crew
+        flow_name:
+          type: string
+          description: The name of the flow
+        method_name:
+          type: string
+          description: The name of the flow method
+        task_name:
+          type: string
+          description: The name of the task
+        agent_role:
+          type: string
+          description: The role of the agent
+          example: "Researcher"
+        tool_name:
+          type: string
+          description: The name of the tool
+          example: "SerperDevTool"
+        model:
+          type: string
+          description: The name of the model
         error:
           type: string
-          description: Error message describing what went wrong
-          example: "Task execution failed: Invalid API key"
-        execution_time:
-          type: number
-          description: Time until error occurred in seconds
-          example: 23.1
+          description: The error message
 
-    TaskResult:
+    ExecutionPrincipal:
       type: object
+      description: |
+        The identity that started the execution.
+
+        The response gives the type and the identifier only. It does not give
+        the name, the email address or the organization. Each token for a
+        deployment can read the status of each execution of that deployment.
       properties:
-        task_id:
+        type:
           type: string
-          description: Unique identifier for the task
-          example: "research_task"
-        output:
+          enum: ["user", "service_account", "unknown"]
+          description: |
+            The type of the identity. A request that uses the static
+            `AUTH_TOKEN` of the deployment gives `unknown`.
+          example: "user"
+        id:
           type: string
-          description: Output generated by this task
-          example: "Research findings..."
-        agent:
-          type: string
-          description: Name of the agent that executed this task
-          example: "Travel Researcher"
-        execution_time:
-          type: number
-          description: Time taken to execute this task in seconds
-          example: 45.2
+          nullable: true
+          description: The identifier of the identity in CrewAI AMP
+          example: "4711"
 
     Error:
       type: object
