@@ -2032,6 +2032,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     original_tool
                     and hasattr(original_tool, "result_as_answer")
                     and original_tool.result_as_answer
+                    and not execution_result.get("hook_blocked")
                     # A failed tool must not become the final answer.
                     and execution_result.get("tool_failure") is None
                 ):
@@ -2063,6 +2064,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 original_tool
                 and hasattr(original_tool, "result_as_answer")
                 and original_tool.result_as_answer
+                and not execution_result.get("hook_blocked")
                 # A failed tool must not become the final answer.
                 and execution_result.get("tool_failure") is None
             ):
@@ -2356,6 +2358,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "from_cache": from_cache,
             "original_tool": original_tool,
             "tool_failure": tool_failure,
+            "hook_blocked": hook_blocked,
         }
 
     @staticmethod
