@@ -140,7 +140,7 @@ def _is_pydantic_model_class(obj: Any) -> TypeGuard[type[BaseModel]]:
     return isinstance(obj, type) and issubclass(obj, BaseModel)
 
 
-def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
+def _contains_file_id_reference(messages: list[LLMMessage]) -> bool:
     """Check if any message content contains a file_id reference.
 
     Anthropic's Files API is in beta and requires a special header when
@@ -333,6 +333,89 @@ class AnthropicCompletion(BaseLLM):
         if self._async_client is None:
             self._async_client = self._build_async_client()
         return self._async_client
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Get request input tokens with Anthropic's Messages API.
+
+        The token-count request uses the same message and tool formatting as a
+        completion, while excluding generation-only parameters such as output
+        limits and sampling settings.
+        """
+        try:
+            formatted_messages, system_message = self._format_messages_for_anthropic(
+                messages
+            )
+            completion_params = self._prepare_completion_params(
+                formatted_messages, system_message, tools
+            )
+            count_params = {
+                key: completion_params[key]
+                for key in (
+                    "model",
+                    "messages",
+                    "system",
+                    "thinking",
+                    "tool_choice",
+                    "tools",
+                )
+                if key in completion_params
+            }
+            effective_response_model = response_model or self.response_format
+            uses_file_api = _contains_file_id_reference(formatted_messages)
+
+            def count_tokens(
+                *,
+                betas: list[str] | None = None,
+                output_format: dict[str, Any] | None = None,
+            ) -> Any:
+                if betas:
+                    return self._get_sync_client().beta.messages.count_tokens(
+                        **count_params,
+                        betas=betas,
+                        **({"output_format": output_format} if output_format else {}),
+                    )
+                return self._get_sync_client().messages.count_tokens(**count_params)
+
+            if _is_pydantic_model_class(effective_response_model):
+                schema = transform_schema(effective_response_model.model_json_schema())
+                if _supports_native_structured_outputs(self.model):
+                    betas = [ANTHROPIC_STRUCTURED_OUTPUTS_BETA]
+                    if uses_file_api:
+                        betas.append(ANTHROPIC_FILES_API_BETA)
+                    response = count_tokens(
+                        betas=betas,
+                        output_format={"type": "json_schema", "schema": schema},
+                    )
+                else:
+                    count_params["tools"] = [
+                        {
+                            "name": "structured_output",
+                            "description": "Output the structured response",
+                            "input_schema": schema,
+                        }
+                    ]
+                    count_params["tool_choice"] = {
+                        "type": "tool",
+                        "name": "structured_output",
+                    }
+                    if uses_file_api:
+                        response = count_tokens(betas=[ANTHROPIC_FILES_API_BETA])
+                    else:
+                        response = count_tokens()
+            elif uses_file_api:
+                response = count_tokens(betas=[ANTHROPIC_FILES_API_BETA])
+            else:
+                response = count_tokens()
+            if response is None:
+                return super().get_input_tokens_count(messages, tools, response_model)
+            return int(response.input_tokens)
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""

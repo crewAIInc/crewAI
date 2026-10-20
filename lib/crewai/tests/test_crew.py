@@ -4200,7 +4200,7 @@ def test_multimodal_flag_adds_multimodal_tools():
 @pytest.mark.vcr()
 def test_multimodal_agent_image_tool_handling():
     """
-    Test that multimodal agents properly handle image tools in the CrewAgentExecutor
+    Test that multimodal agents properly handle image tools in the AgentExecutor
     """
     multimodal_agent = Agent(
         role="Image Analyst",
@@ -5098,7 +5098,7 @@ def test_prepare_kickoff_binds_task_only_agent_to_crew():
     Regression for crewAIInc/crewAI#5534: when Crew is built without
     agents=[...], multimodal input_files were silently dropped because the
     agent's .crew attribute was never assigned, gating file lookup off in
-    Task and CrewAgentExecutor.
+    Task and AgentExecutor.
     """
     from crewai.crews.utils import prepare_kickoff
 
