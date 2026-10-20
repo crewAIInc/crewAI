@@ -2919,7 +2919,9 @@ class OpenAICompletion(BaseLLM):
                     finish_reason=parsed_stream_finish_reason,
                     response_id=parsed_stream_response_id,
                 )
-                return accumulated_content
+                return self._invoke_after_llm_call_hooks(
+                    params["messages"], accumulated_content, from_agent
+                )
 
         stream: AsyncIterator[
             ChatCompletionChunk

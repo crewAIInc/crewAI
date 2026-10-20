@@ -742,6 +742,55 @@ class TestNativeProviderAfterHooksAsync:
         assert llm.call(messages) == "the [REDACTED] is 42"
         assert await llm.acall(messages) == "the [REDACTED] is 42"
 
+    @pytest.mark.asyncio
+    async def test_global_after_hook_runs_when_async_stream_structured_output_fails_to_parse(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from openai.types.chat import ChatCompletionChunk
+        from pydantic import BaseModel
+
+        from crewai.hooks import register_after_llm_call_hook
+        from crewai.llm import LLM
+
+        class Answer(BaseModel):
+            value: int
+
+        def chunk(content: str | None, finish_reason: str | None = None):
+            return ChatCompletionChunk.model_validate(
+                {
+                    "id": "chatcmpl-1",
+                    "object": "chat.completion.chunk",
+                    "created": 0,
+                    "model": "gpt-4o-mini",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "finish_reason": finish_reason,
+                            "delta": {"content": content},
+                        }
+                    ],
+                }
+            )
+
+        async def stream():
+            yield chunk("the SECRET ")
+            yield chunk("is 42", "stop")
+
+        def redact(context: LLMCallHookContext) -> str | None:
+            return context.response.replace("SECRET", "[REDACTED]") if context.response else None
+
+        register_after_llm_call_hook(redact)
+        llm = LLM(model="gpt-4o-mini", api_key="sk-test", stream=True)
+        async_client = MagicMock()
+        async_client.chat.completions.create = AsyncMock(return_value=stream())
+        llm._get_async_client = lambda: async_client  # type: ignore[method-assign]
+
+        result = await llm.acall(
+            [{"role": "user", "content": "hi"}], response_model=Answer
+        )
+
+        assert result == "the [REDACTED] is 42"
+
     @staticmethod
     def _bedrock_llm(monkeypatch):
         from unittest.mock import AsyncMock, MagicMock, patch
