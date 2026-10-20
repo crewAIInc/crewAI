@@ -8,7 +8,6 @@ from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 import requests
 
-from crewai_tools.security.safe_path import format_error_for_display
 from crewai_tools.security.safe_requests import safe_get
 
 
@@ -268,14 +267,17 @@ class FXMacroDataTool(BaseTool):
         # origin, so a redirect cannot carry the key to a third party.
         try:
             response = safe_get(url, headers=headers, timeout=self.REQUEST_TIMEOUT)
-        except ValueError as exc:
-            logger.error("FXMacroData request to %s was refused: %s", endpoint, exc)
-            return f"FXMacroData request to {endpoint} was refused: {exc}"
+        except ValueError:
+            logger.error("FXMacroData request to %s was refused by URL safety checks", endpoint)
+            return (
+                f"FXMacroData request to {endpoint} was refused by URL safety checks. "
+                "Requests to private/reserved IPs and unsafe URLs are blocked."
+            )
         except requests.RequestException as exc:
-            logger.error("FXMacroData request to %s failed: %s", endpoint, exc)
+            logger.error("FXMacroData request to %s failed: %s", endpoint, type(exc).__name__)
             return (
                 f"FXMacroData request to {endpoint} failed: "
-                f"{format_error_for_display(exc)}"
+                f"{type(exc).__name__}"
             )
 
         with response:

@@ -10,6 +10,14 @@ PAYLOAD = json.dumps({"currency": "USD", "data": []})
 SAFE_GET = "crewai_tools.tools.fxmacrodata_tool.fxmacrodata_tool.safe_get"
 
 
+@pytest.mark.parametrize('failure', [ValueError('sensitive upstream text'), requests.ConnectionError('sensitive upstream text'), requests.exceptions.InvalidHeader('sensitive upstream text')])
+def test_private_failure_details_are_not_logged_or_returned(tool, caplog, failure):
+    with patch(SAFE_GET, side_effect=failure):
+        result = tool.run(dataset='market_sessions')
+    assert 'sensitive upstream text' not in result
+    assert 'sensitive upstream text' not in caplog.text
+
+
 @pytest.fixture
 def tool():
     return FXMacroDataTool(api_key="test_key")
