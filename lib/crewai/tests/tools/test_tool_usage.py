@@ -28,7 +28,7 @@ from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 import pytest
 
 
@@ -280,6 +280,16 @@ class FinalAnswerTool(BaseTool):
         return f"REPORT::{text}"
 
 
+class CountingFinalAnswerTool(FinalAnswerTool):
+    """Records executions so a test can prove a call was served from cache."""
+
+    _executions: list[str] = PrivateAttr(default_factory=list)
+
+    def _run(self, text: str) -> str:
+        self._executions.append(text)
+        return super()._run(text)
+
+
 def _tool_usage_after_two_plain_uses() -> tuple[Agent, Task, ToolUsage]:
     """A ToolUsage whose next call is the third use of its task."""
     agent = Agent(role="Writer", goal="write", backstory="b")
@@ -364,6 +374,78 @@ def test_result_as_answer_tool_result_excludes_the_remember_format_prompt():
     assert task.used_tools == 3
     assert tool_result.result_as_answer is True
     assert tool_result.result == "REPORT::all good"
+
+
+def _cached_tool_usage_after_two_plain_uses() -> (
+    tuple[Agent, Task, ToolUsage, CountingFinalAnswerTool]
+):
+    """A ToolUsage whose next call is a cached result_as_answer use.
+
+    The answer tool's result is seeded into the agent's cache, so the third
+    use of the task — the one where _format_result appends the tools slice —
+    is served from cache instead of executing the tool.
+    """
+    agent = Agent(role="Writer", goal="write", backstory="b", cache=True)
+    task = Task(description="write", expected_output="c", agent=agent)
+    answer_tool = CountingFinalAnswerTool()
+    agent.cache_handler.add(
+        tool="answer",
+        input=json.dumps({"text": "all good"}),
+        output="REPORT::all good",
+    )
+    tool_usage = ToolUsage(
+        tools_handler=agent.tools_handler,
+        tools=[tool.to_structured_tool() for tool in (EchoTool(), answer_tool)],
+        task=task,
+        function_calling_llm=None,  # type: ignore[arg-type]
+        agent=agent,
+        action=AgentAction(thought="", tool="echo", tool_input="{}", text=""),
+    )
+    for text in ("a", "b"):
+        tool_usage.use(
+            calling=ToolCalling(tool_name="echo", arguments={"text": text}),
+            tool_string="",
+        )
+    return agent, task, tool_usage, answer_tool
+
+
+def test_cached_result_as_answer_payload_excludes_the_remember_format_prompt():
+    """A cache-served result_as_answer payload is the user's answer too.
+
+    When the third tool use of a task — the one where _format_result appends
+    the tools slice — is a result_as_answer call served from cache, the
+    cached output must reach the executor and the tools_results payload
+    verbatim, without the reminder riding along with it.
+    """
+    agent, task, tool_usage, answer_tool = _cached_tool_usage_after_two_plain_uses()
+
+    result = tool_usage.use(
+        calling=ToolCalling(tool_name="answer", arguments={"text": "all good"}),
+        tool_string="",
+    )
+
+    assert answer_tool._executions == []
+    assert task.used_tools == 3
+    assert result == "REPORT::all good"
+    assert agent.tools_results[-1]["result_as_answer"] is True
+    assert process_tool_results(agent, "llm answer") == "REPORT::all good"
+
+
+@pytest.mark.asyncio
+async def test_async_cached_result_as_answer_payload_excludes_the_remember_format_prompt():
+    """The async cache-hit path must strip the reminder from the payload too."""
+    agent, task, tool_usage, answer_tool = _cached_tool_usage_after_two_plain_uses()
+
+    result = await tool_usage.ause(
+        calling=ToolCalling(tool_name="answer", arguments={"text": "all good"}),
+        tool_string="",
+    )
+
+    assert answer_tool._executions == []
+    assert task.used_tools == 3
+    assert result == "REPORT::all good"
+    assert agent.tools_results[-1]["result_as_answer"] is True
+    assert process_tool_results(agent, "llm answer") == "REPORT::all good"
 
 
 def test_validate_tool_input_booleans_and_none():
