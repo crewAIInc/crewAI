@@ -1118,7 +1118,7 @@
   "q": "My coding agent runs crewai run without a terminal and I'm not logged in. Will the run be traced?",
   "key": [
    "no|not traced|won'?t",
-   "log ?in|logged in"
+   "log ?in|logged in|crewai eval"
   ],
   "partial": [
    "ephemeral|24"
@@ -1320,10 +1320,9 @@
  },
  {
   "id": "C-004",
-  "item": "After an update, run the project and crewai eval before other changes; commit the lock on its own.",
+  "item": "After an update, `crewai eval` (it runs the project) before other changes; commit the lock on its own.",
   "q": "You just upgraded crewai in this project. What do you do before starting the feature work?",
   "key": [
-   "(crewai run|run the (project|flow|crew))",
    "crewai eval"
   ],
   "partial": [
@@ -1599,7 +1598,7 @@
   "item": "Agents decide, code writes: decided writes and file writes happen in flow methods (not a task's output_file); a one-agent, one-prompt step uses Agent(...).kickoff(...).",
   "q": "The flow already knows exactly what note to post and to which record. Should a crew post it?",
   "key": [
-   "(flow method|from (the )?code|in (the )?code|in python|directly)"
+   "(flow method|flow code|deterministic (flow )?code|from (the )?code|in (the )?code|in python|directly)"
   ],
   "partial": [
    "Agent\\(.*\\)\\.kickoff|\\.kickoff\\("
@@ -2229,6 +2228,29 @@
   ],
   "trap": [
    "reasoning\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "E-001",
+  "item": "Logged out and without a terminal, `crewai eval` still gives a verdict: it runs the crew traced when the project changed, then AMP grades it; no account needed.",
+  "q": "I'm not logged in to CrewAI and my coding agent has no terminal. Can it still get a `crewai eval` verdict on a change it made?",
+  "key": [
+   "\\byes\\b|\\bit can\\b|\\bcan still\\b|works|no (account|login) (is )?(needed|required)|without (an account|logging in|a login)"
+  ],
+  "trap": [
+   "(needs?|requires?|must)( you)?( to)? (be )?(log(ged)? ?in|an account|crewai login)",
+   "accept the trace prompt"
+  ]
+ },
+ {
+  "id": "E-002",
+  "item": "After a change, `crewai eval` alone reruns the crew (traced) and grades it; no `crewai run` first.",
+  "q": "I changed a task's prompt. Do I have to `crewai run` the crew before `crewai eval` can grade the new version?",
+  "key": [
+   "\\bno\\b|not needed|don'?t (need|have)|(runs|reruns) (the crew|it)|on its own|by itself"
+  ],
+  "trap": [
+   "\\byes\\b,? (you|first)"
   ]
  }
 ]

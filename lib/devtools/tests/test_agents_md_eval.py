@@ -3,9 +3,8 @@ import re
 import subprocess
 
 from click.testing import CliRunner
-import pytest
-
 from crewai_devtools import agents_md_eval as ev
+import pytest
 
 
 ITEM: ev.Item = {
@@ -57,6 +56,18 @@ def test_bank_items_are_well_formed():
             "`uv tool install crewai --upgrade` replaces `crewai update` for this.",
             "right",
         ),
+        (
+            "It doesn't need `crewai update`: run `uv tool install crewai --upgrade`.",
+            "right",
+        ),
+        (
+            "It doesn\u2019t need `crewai update`: run `uv tool install crewai --upgrade`.",
+            "right",
+        ),
+        (
+            "You can't use `crewai update`; run `uv tool install crewai --upgrade`.",
+            "right",
+        ),
     ],
 )
 def test_grade(answer, expected):
@@ -100,7 +111,7 @@ def test_codex_answer_keeps_only_agent_messages():
 
 
 def _git(repo: Path, *args: str) -> None:
-    subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)  # noqa: S603, S607 - fixed git command in a temp repo
 
 
 @pytest.fixture

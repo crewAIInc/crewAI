@@ -74,7 +74,8 @@ EVALUATION_END: Final = "<!-- crewai-eval:end -->"
 # before ("don't run `crewai update`") or after ("`crewai update` won't do this").
 # Answers use straight or typographic (U+2019) apostrophes.
 NEGATION: Final = re.compile(
-    r"\b(don['\u2019]?t|do not|never|not|won['\u2019]?t|isn['\u2019]?t|avoid|instead of|rather than|no need to"
+    r"\b(don['\u2019]?t|doesn['\u2019]?t|didn['\u2019]?t|aren['\u2019]?t|can['\u2019]?t|do not|never|not"
+    r"|won['\u2019]?t|isn['\u2019]?t|avoid|instead of|rather than|no need to"
     r"|replac(es|ed|ing)|deprecated|legacy)\b",
     re.I,
 )
