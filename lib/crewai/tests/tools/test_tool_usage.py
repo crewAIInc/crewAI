@@ -1,5 +1,5 @@
-import datetime
 from collections.abc import Callable
+import datetime
 import json
 import random
 import threading
@@ -27,7 +27,10 @@ from crewai.hooks.tool_hooks import (
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.utilities.tool_utils import execute_tool_and_check_finality
+from crewai.utilities.tool_utils import (
+    aexecute_tool_and_check_finality,
+    execute_tool_and_check_finality,
+)
 from pydantic import BaseModel, Field, PrivateAttr
 import pytest
 
@@ -296,10 +299,7 @@ def _tool_usage_after_two_plain_uses() -> tuple[Agent, Task, ToolUsage]:
     task = Task(description="write", expected_output="c", agent=agent)
     tool_usage = ToolUsage(
         tools_handler=agent.tools_handler,
-        tools=[
-            tool.to_structured_tool()
-            for tool in (EchoTool(), FinalAnswerTool())
-        ],
+        tools=[tool.to_structured_tool() for tool in (EchoTool(), FinalAnswerTool())],
         task=task,
         function_calling_llm=None,  # type: ignore[arg-type]
         agent=agent,
@@ -363,10 +363,7 @@ def test_result_as_answer_tool_result_excludes_the_remember_format_prompt():
             tool_input='{"text": "all good"}',
             text='Action: answer\nAction Input: {"text": "all good"}',
         ),
-        tools=[
-            tool.to_structured_tool()
-            for tool in (EchoTool(), FinalAnswerTool())
-        ],
+        tools=[tool.to_structured_tool() for tool in (EchoTool(), FinalAnswerTool())],
         task=task,
         agent=agent,
     )
@@ -376,9 +373,36 @@ def test_result_as_answer_tool_result_excludes_the_remember_format_prompt():
     assert tool_result.result == "REPORT::all good"
 
 
-def _cached_tool_usage_after_two_plain_uses() -> (
-    tuple[Agent, Task, ToolUsage, CountingFinalAnswerTool]
-):
+@pytest.mark.asyncio
+async def test_async_result_as_answer_tool_result_excludes_the_remember_format_prompt():
+    """The async executor boundary returns the answer without the reminder.
+
+    ``ause()``-level tests do not see the ``ToolResult`` that
+    ``aexecute_tool_and_check_finality`` hands to native tool-call paths, so
+    assert it directly, mirroring the sync test above.
+    """
+    agent, task, _ = _tool_usage_after_two_plain_uses()
+
+    tool_result = await aexecute_tool_and_check_finality(
+        agent_action=AgentAction(
+            thought="",
+            tool="answer",
+            tool_input='{"text": "all good"}',
+            text='Action: answer\nAction Input: {"text": "all good"}',
+        ),
+        tools=[tool.to_structured_tool() for tool in (EchoTool(), FinalAnswerTool())],
+        task=task,
+        agent=agent,
+    )
+
+    assert task.used_tools == 3
+    assert tool_result.result_as_answer is True
+    assert tool_result.result == "REPORT::all good"
+
+
+def _cached_tool_usage_after_two_plain_uses() -> tuple[
+    Agent, Task, ToolUsage, CountingFinalAnswerTool
+]:
     """A ToolUsage whose next call is a cached result_as_answer use.
 
     The answer tool's result is seeded into the agent's cache, so the third
