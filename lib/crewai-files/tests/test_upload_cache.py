@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from crewai_files import FileBytes, ImageFile
 from crewai_files.cache.upload_cache import CachedUpload, UploadCache
+import pytest
 
 
 # Minimal valid PNG
@@ -207,3 +208,71 @@ class TestUploadCache:
 
         assert len(gemini_uploads) == 2
         assert len(anthropic_uploads) == 1
+
+class TestUploadCacheCapacity:
+    @pytest.mark.parametrize("updated_hash", ["a", "b"])
+    def test_replacement_preserves_other_entries(self, updated_hash: str) -> None:
+        cache = UploadCache(max_entries=2)
+        for file_hash in ("a", "b"):
+            cache.set_by_hash(
+                file_hash=file_hash,
+                content_type="text/plain",
+                provider="openai",
+                file_id=f"file-{file_hash}",
+            )
+
+        cache.set_by_hash(
+            file_hash=updated_hash,
+            content_type="application/pdf",
+            provider="openai",
+            file_id="replacement",
+            file_uri="files/replacement",
+        )
+
+        assert len(cache) == 2
+        for file_hash in ("a", "b"):
+            cached = cache.get_by_hash(file_hash, "openai")
+            assert cached is not None
+            if file_hash == updated_hash:
+                assert cached.file_id == "replacement"
+                assert cached.file_uri == "files/replacement"
+                assert cached.content_type == "application/pdf"
+            else:
+                assert cached.file_id == f"file-{file_hash}"
+
+    def test_new_provider_counts_as_new_entry(self) -> None:
+        cache = UploadCache(max_entries=2)
+        for provider in ("openai", "gemini"):
+            cache.set_by_hash(
+                file_hash="shared-hash",
+                content_type="text/plain",
+                provider=provider,
+                file_id=f"file-{provider}",
+            )
+
+        cache.set_by_hash(
+            file_hash="shared-hash",
+            content_type="text/plain",
+            provider="anthropic",
+            file_id="file-anthropic",
+        )
+
+        assert len(cache) == 2
+        assert cache.get_by_hash("shared-hash", "openai") is None
+        assert cache.get_by_hash("shared-hash", "gemini") is not None
+        assert cache.get_by_hash("shared-hash", "anthropic") is not None
+
+    def test_replacement_refreshes_eviction_order(self) -> None:
+        cache = UploadCache(max_entries=2)
+        for file_hash in ("a", "b", "a", "c"):
+            cache.set_by_hash(
+                file_hash=file_hash,
+                content_type="text/plain",
+                provider="openai",
+                file_id=f"file-{file_hash}",
+            )
+
+        assert len(cache) == 2
+        assert cache.get_by_hash("a", "openai") is not None
+        assert cache.get_by_hash("b", "openai") is None
+        assert cache.get_by_hash("c", "openai") is not None
