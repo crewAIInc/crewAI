@@ -2988,6 +2988,22 @@ class TestPlanGenerationIsolation:
             "generate_plan should store plan in state, not task.description"
         )
 
+    def test_failed_replan_restores_task_description(self):
+        task = SimpleNamespace(description="What is the capital of France?")
+        executor = _build_executor(
+            agent=SimpleNamespace(verbose=False),
+            task=task,
+        )
+
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            reasoning.return_value.handle_agent_reasoning.side_effect = ValueError(
+                "planner failed"
+            )
+            executor._trigger_replan("step 1 is blocked")
+
+        assert task.description == "What is the capital of France?"
+        assert executor.state.last_replan_reason == "Replan failed: planner failed"
+
 
 # Todo Status Tracking
 
