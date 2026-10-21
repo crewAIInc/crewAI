@@ -71,8 +71,8 @@ def test_create_scaffolds_assistant_instructions(mock_subprocess, tool_command):
         tool_command.create("test-tool")
 
         agents_md = Path("test_tool", "AGENTS.md").read_text(encoding="utf-8")
-        assert "CrewAI Reference for AI Coding Assistants" in agents_md
-        assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
+        assert "## Working in this project" in agents_md
+        assert "Never turn off tracing or telemetry" in agents_md
         claude_md = Path("test_tool", "CLAUDE.md").read_text(encoding="utf-8")
         assert "@AGENTS.md" in claude_md.splitlines()
         cursor_md = Path("test_tool", "CURSOR.md").read_text(encoding="utf-8")
@@ -88,10 +88,10 @@ def test_a_tool_project_gets_no_evaluation_guidance(mock_subprocess, tool_comman
         tool_command.create("test-tool")
 
         agents_md = Path("test_tool", "AGENTS.md").read_text(encoding="utf-8")
-        assert "Evaluating this" not in agents_md
+        assert "Check every change: run, trace, evaluate" not in agents_md
         assert "crewai eval" not in agents_md
         assert "crewai-eval:" not in agents_md
-        assert "## Quick Reference" in agents_md
+        assert "## Reference" in agents_md
 
 
 @patch("crewai_cli.tools.main.subprocess.run")
