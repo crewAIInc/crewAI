@@ -105,12 +105,32 @@ def test_searchable_draw_shows_the_query_and_an_empty_match(monkeypatch) -> None
     )
 
     rendered = output.getvalue()
-    assert "Search:" in rendered
+    assert "SEARCH ACTIONS" in rendered
     assert "missing" in rendered
     assert "type to filter" in rendered
-    assert "No matching actions" in rendered
+    assert "Esc to clear" in rendered
+    assert "No matching actions. Press Esc to clear." in rendered
     assert "0 matches" in rendered
     assert "Send an email" not in rendered
+
+
+def test_searchable_draw_shows_a_prominent_empty_search_prompt(monkeypatch) -> None:
+    output = StringIO()
+    monkeypatch.setattr(tui_picker.sys, "stdout", output)
+
+    tui_picker._draw_multi(
+        ["Send an email (send-email)"],
+        cursor=0,
+        selected=set(),
+        searchable=True,
+    )
+
+    rendered = output.getvalue()
+    assert "SEARCH ACTIONS" in rendered
+    assert "type to filter" in rendered
+    assert "Esc to clear" not in rendered
+    assert "╭─" in rendered
+    assert "╰" in rendered
 
 
 def test_numbered_search_keeps_original_indexes(monkeypatch) -> None:

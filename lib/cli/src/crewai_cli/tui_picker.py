@@ -126,15 +126,33 @@ def _draw_multi(
     extra_lines = 0
     sys.stdout.write(f"\033[2K{hint}\n")
     if searchable:
-        match_count = ""
+        search_title = "SEARCH ACTIONS"
+        search_width = min(
+            52,
+            max(len(search_title) + 1, shutil.get_terminal_size().columns - 6),
+        )
         if query:
             count = len(rows)
             noun = "match" if count == 1 else "matches"
-            match_count = f"  ·  {count} {noun}"
-        sys.stdout.write(f"\033[2K  {_GREEN}Search: {query}{match_count}{_RESET}\n")
-        extra_lines += 1
+            search_prompt = f"{query}█  ·  {count} {noun}  ·  Esc to clear"
+        else:
+            search_prompt = "type to filter"
+        search_prompt = search_prompt[:search_width]
+        title_fill = "─" * (search_width - len(search_title) - 1)
+        sys.stdout.write("\033[2K\n")
+        sys.stdout.write(
+            f"\033[2K  {_GREEN}╭─ {_BOLD}{search_title}{_GREEN} {title_fill}╮{_RESET}\n"
+        )
+        sys.stdout.write(
+            f"\033[2K  {_GREEN}│ {_BOLD}{search_prompt:<{search_width}s}{_GREEN} │{_RESET}\n"
+        )
+        sys.stdout.write(f"\033[2K  {_GREEN}╰{'─' * (search_width + 2)}╯{_RESET}\n")
+        sys.stdout.write("\033[2K\n")
+        extra_lines += 5
     if searchable and query and not rows:
-        sys.stdout.write(f"\033[2K    {_DIM}No matching actions{_RESET}\n")
+        sys.stdout.write(
+            f"\033[2K    {_DIM}No matching actions. Press Esc to clear.{_RESET}\n"
+        )
         extra_lines += 1
     for pos in range(start, end):
         i = rows[pos]
