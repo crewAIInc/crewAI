@@ -22,6 +22,7 @@ from crewai_core.platform_apps import (
 )
 from crewai_core.settings import Settings
 from crewai_core.telemetry import Telemetry
+import httpx
 from rich.console import Console
 from rich.text import Text
 
@@ -1062,6 +1063,15 @@ def _get_platform_token_from_login() -> str:
     except AuthError:
         click.secho(
             "  Sign in to CrewAI Platform to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand().login()
+    except httpx.HTTPStatusError as error:
+        status_code = getattr(error.response, "status_code", None)
+        if status_code not in {401, 403}:
+            raise
+        click.secho(
+            "  Your CrewAI login has expired; sign in again to configure integrations.",
+            fg="cyan",
         )
         AuthenticationCommand().login()
     except _NoOrganizationSelectedError:

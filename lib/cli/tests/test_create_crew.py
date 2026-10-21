@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest import mock
 
 import click
+import httpx
 import pytest
 import tomli
 from click.testing import CliRunner
@@ -849,6 +850,36 @@ def test_get_platform_token_from_login_signs_in_then_retries(monkeypatch) -> Non
         get_token,
     )
 
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    assert json_crew._get_platform_token_from_login() == "integration-token"
+
+    authentication_command.login.assert_called_once_with()
+
+
+def test_get_platform_token_from_login_reauthenticates_an_expired_login(
+    monkeypatch,
+) -> None:
+    response = mock.Mock(status_code=401)
+    tokens = iter(
+        [
+            httpx.HTTPStatusError(
+                "Unauthorized", request=mock.Mock(), response=response
+            ),
+            "integration-token",
+        ]
+    )
+
+    def get_token() -> str:
+        token = next(tokens)
+        if isinstance(token, Exception):
+            raise token
+        return token
+
+    monkeypatch.setattr(json_crew, "_get_logged_in_platform_token", get_token)
     authentication_command = mock.Mock()
     monkeypatch.setattr(
         json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
