@@ -216,7 +216,7 @@ The names in `crew.jsonc` must match the files and task references you use:
 
 ## Deploying
 
-Push your Flow to **[CrewAI AMP](https://app.crewai.com)** once it runs locally and your project is in a **GitHub** repository. From the project root:
+Push your Flow to **[CrewAI AMP](https://app.crewai.com)** once it runs locally. If the project has a git `origin`, AMP deploys from that repository (on **GitHub**, AMP's GitHub integration must be able to access it); with no `origin`, `crewai deploy create` uploads the project as a ZIP. From the project root:
 
 <CodeGroup>
 ```bash Authenticate
@@ -238,7 +238,7 @@ crewai deploy push
 
 ```bash List or remove deployments
 crewai deploy list
-crewai deploy remove <deployment_id>
+crewai deploy remove -u <deployment_uuid>
 ```
 </CodeGroup>
 
