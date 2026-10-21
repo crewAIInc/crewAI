@@ -6,6 +6,7 @@ import contextlib
 from datetime import datetime, timedelta, timezone
 import json
 import os
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -46,6 +47,7 @@ def consent_screen(monkeypatch):
 
     def prompt(timeout_seconds=20, **kwargs):
         asked.append(kwargs)
+        print("[the consent screen]")  # where it showed, in the captured output
         return answer["yes"]
 
     monkeypatch.setattr(
@@ -2387,8 +2389,9 @@ class FakeExportAMP(FakeAMP):
         super().__init__()
         self.answer = answer if answer is not None else exported()
 
-    def export_evaluation(self, evaluation_id):
+    def export_evaluation(self, evaluation_id, **kwargs):
         self.calls.append(("export", evaluation_id))
+        self.export_kwargs = kwargs
         if isinstance(self.answer, Exception):
             raise self.answer
         return self.answer
@@ -2545,6 +2548,8 @@ def test_exporting_again_overwrites_the_files(project, monkeypatch, capsys):
         ".Git./config",
         ".gitignore",  # the folder's own
         ".GITIGNORE",
+        ".crewai-eval-saved",  # the saved evaluation's marker, never AMP's to send
+        ".CREWAI-EVAL-SAVED.",
         # names Windows keeps for its devices, with any extension
         "NUL.md",
         "nul",
@@ -3127,6 +3132,14 @@ def test_at_a_terminal_tracing_is_turned_on_only_after_the_consent_screen(
 
     assert consent_screen.asked == ([] if answer == "already on" else [{"sharing": True}])
     assert "Tracing is now on" not in out  # nothing inferred: they were asked, or had said
+    why = "No traced run of this crew yet. To evaluate it, the crew runs now and its trace goes to CrewAI AMP, which grades it."
+    if answer == "already on":
+        assert why not in out
+        assert "No traced run of this crew yet: running it now to evaluate it." in out
+    else:
+        # Why the crew runs is said before the screen asks, and not again after.
+        assert out.index(why) < out.index("[the consent screen]")
+        assert "running it now to evaluate it" not in out
     if answer == "no":
         assert ran == [] and amp.calls == []
         assert not (directory / ".env").exists()
@@ -3449,3 +3462,419 @@ def test_a_project_that_turned_tracing_off_is_not_asked_to_trace_toward_an_untru
     assert exited.value.code == 1
     assert usage == ["cli_usage:eval_stopped:untrusted_amp"]
     assert "CREWAI_TRACING_ENABLED=false" in (directory / ".env").read_text()
+
+
+# ── every evaluation keeps its full data in the project ─────────────────────
+
+SAVED = Path(".crewai") / "evaluations"
+
+
+def _verdict_of(evaluation_id: str, gate: str = "passed") -> httpx.Response:
+    payload = done(gate=gate).json()
+    return httpx.Response(200, json={**payload, "id": evaluation_id})
+
+
+def _graded(monkeypatch, directory: Path, answer=None, evaluation_id: str = EVALUATION_ID, gate: str = "passed"):
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    amp = FakeExportAMP(answer=answer if answer is not None else exported(kind="trace"))
+    amp.statuses = [_verdict_of(evaluation_id, gate)]
+    return install(monkeypatch, amp)
+
+
+def test_the_verdict_leaves_the_evaluations_full_data_in_the_project(project, monkeypatch, capsys):
+    """The report opens for one five-minute sitting, and waiting for the verdict
+    is that read: an agent that wants a check's quotes or the trace after its
+    edits finds them here instead."""
+    directory, _ = project
+    amp = _graded(monkeypatch, directory)
+
+    eval_module.eval_crew(run_id="named-run")
+
+    saved = directory / SAVED / EVALUATION_ID
+    assert files_in(saved) == {
+        ".gitignore": "*\n",
+        **EXPORT_FILES,
+        eval_module.SAVED_MARKER: "Saved whole by `crewai eval`.\n",
+    }
+    assert ("export", EVALUATION_ID) in amp.calls
+    # its own short wait: the verdict is already out, and CI waits on the command
+    assert amp.export_kwargs == {"timeout": eval_module.SAVE_TIMEOUT}
+    said = " ".join(capsys.readouterr().out.split())
+    assert f"Its full data is saved in {SAVED / EVALUATION_ID}/ — start with report.md." in said
+
+
+def test_a_service_that_does_not_export_yet_costs_nothing_and_says_nothing(project, monkeypatch, capsys):
+    directory, _ = project
+    _graded(monkeypatch, directory, answer=httpx.Response(404, json={"error": "not_found"}))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert not (directory / SAVED).exists()
+    assert "full data" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [httpx.ConnectError("no route"), httpx.Response(500, json={"error": "boom"})],
+)
+def test_a_save_that_fails_is_one_line_and_never_the_verdicts(project, monkeypatch, capsys, answer):
+    """The exit code stays the gate's: a failed gate is still 1, a passed one 0."""
+    directory, _ = project
+    _graded(monkeypatch, directory, answer=answer, gate="failed")
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew(run_id="named-run")
+
+    assert exited.value.code == 1  # the failed gate, not the save
+    said = " ".join(capsys.readouterr().out.split())
+    assert said.count("Its full data was not saved:") == 1
+    assert "Goal gate: FAILED" in said
+
+
+def test_only_the_newest_saved_evaluations_are_kept(project, monkeypatch):
+    directory, _ = project
+    older = [str(uuid.UUID(int=n)) for n in range(1, 13)]
+    for n, name in enumerate(older):
+        folder = directory / SAVED / name
+        folder.mkdir(parents=True)
+        (folder / "report.md").write_text("old")
+        (folder / eval_module.SAVED_MARKER).write_text("saved\n")
+        os.utime(folder, (1_000_000 + n, 1_000_000 + n))
+    (directory / SAVED / "notes").mkdir()  # not an evaluation: never removed
+    # named like an evaluation, but not saved by this command: never removed
+    unmarked = str(uuid.UUID(int=99))
+    (directory / SAVED / unmarked).mkdir()
+    os.utime(directory / SAVED / unmarked, (1, 1))
+    _graded(monkeypatch, directory)
+
+    eval_module.eval_crew(run_id="named-run")
+
+    kept = sorted(p.name for p in (directory / SAVED).iterdir())
+    assert EVALUATION_ID in kept and "notes" in kept and unmarked in kept
+    assert len([name for name in kept if name not in ("notes", unmarked)]) == eval_module.SAVED_EVALUATIONS_KEPT
+    assert older[0] not in kept and older[-1] in kept  # the oldest went first
+
+
+def test_outside_a_project_nothing_is_saved(project, monkeypatch):
+    directory, _ = project
+    amp = _graded(monkeypatch, directory)
+    (directory / "pyproject.toml").unlink()
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert not (directory / ".crewai" / "evaluations").exists()
+    assert ("export", EVALUATION_ID) not in amp.calls
+
+
+def test_graded_again_unchanged_it_points_at_what_it_saved_and_asks_nothing(project, monkeypatch, capsys):
+    """The same evaluation, read again after its sitting closed: what was saved
+    the first time is where the data is, and AMP is not asked a second time."""
+    directory, _ = project
+    saved = directory / SAVED / EVALUATION_ID
+    saved.mkdir(parents=True)
+    (saved / "report.md").write_text("# Report\n")
+    (saved / eval_module.SAVED_MARKER).write_text("saved\n")
+    amp = _graded(monkeypatch, directory, answer=httpx.Response(410, json={"error": "report_closed", "message": "read already"}))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert ("export", EVALUATION_ID) not in amp.calls
+    assert "Its full data is saved in" in " ".join(capsys.readouterr().out.split())
+
+
+def test_a_refused_save_says_amps_own_words(project, monkeypatch, capsys):
+    directory, _ = project
+    message = f"Evaluation {EVALUATION_ID} has been read already. Evaluate the run again for a fresh report."
+    _graded(monkeypatch, directory, answer=httpx.Response(410, json={"error": "report_closed", "message": message}))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert f"Its full data was not saved: {message}" in " ".join(capsys.readouterr().out.split())
+
+
+def test_a_save_that_skipped_a_file_says_so_and_is_tried_again(project, monkeypatch, capsys):
+    """Missing checks or a missing trace must not read as the full data."""
+    directory, _ = project
+    files = {**EXPORT_FILES, "../outside.md": "no"}
+    amp = _graded(monkeypatch, directory, answer=exported(files=files, kind="trace"))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    said = " ".join(capsys.readouterr().out.split())
+    assert f"Part of its data was saved in {SAVED / EVALUATION_ID}/: 1 file skipped" in said
+    assert "Its full data is saved" not in said
+    assert not (directory / SAVED / EVALUATION_ID / eval_module.SAVED_MARKER).exists()
+
+    amp.statuses = [_verdict_of(EVALUATION_ID)]
+    eval_module.eval_crew(run_id="named-run")
+    assert amp.calls.count(("export", EVALUATION_ID)) == 2  # not taken as saved
+
+
+def test_a_save_cut_short_after_the_report_is_tried_again(project, monkeypatch, capsys):
+    """report.md alone is not the evaluation saved: no marker, so the next
+    read saves it again instead of pointing at half of it."""
+    directory, _ = project
+    amp = _graded(monkeypatch, directory)
+    real = {name: getattr(eval_module, name) for name in ("_put_through_handles", "_put_by_path")}
+
+    def failing(name):
+        def put(root, segments, data):
+            if segments == ["run", "trace.json"]:
+                raise OSError("disk full")
+            return real[name](root, segments, data)
+        return put
+
+    with monkeypatch.context() as patched:
+        for name in real:
+            patched.setattr(eval_module, name, failing(name))
+        eval_module.eval_crew(run_id="named-run")
+
+    said = " ".join(capsys.readouterr().out.split())
+    assert "Its full data was not saved: Could not write" in said and "disk full" in said
+    saved = directory / SAVED / EVALUATION_ID
+    assert (saved / "report.md").is_file() and not (saved / eval_module.SAVED_MARKER).exists()
+
+    amp.statuses = [_verdict_of(EVALUATION_ID)]
+    eval_module.eval_crew(run_id="named-run")
+    assert amp.calls.count(("export", EVALUATION_ID)) == 2
+    assert (saved / eval_module.SAVED_MARKER).is_file()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symbolic links need privileges on Windows")
+@pytest.mark.parametrize("linked", [".crewai", ".crewai/evaluations"])
+@pytest.mark.parametrize("through_handles", [True, False])
+def test_a_link_on_the_way_keeps_the_data_out_of_wherever_it_leads(
+    project, monkeypatch, capsys, tmp_path_factory, linked, through_handles
+):
+    """Whoever made `.crewai` or `.crewai/evaluations` a link chose where it
+    leads: nothing is written there, by either way of writing an export."""
+    if through_handles and not eval_module._WRITES_THROUGH_HANDLES:
+        pytest.skip("this platform writes by path")
+    monkeypatch.setattr(eval_module, "_WRITES_THROUGH_HANDLES", through_handles)
+    directory, _ = project
+    elsewhere = tmp_path_factory.mktemp("elsewhere")
+    if linked == ".crewai/evaluations":
+        (directory / ".crewai").mkdir(exist_ok=True)
+    (directory / linked).symlink_to(elsewhere, target_is_directory=True)
+    _graded(monkeypatch, directory)
+
+    eval_module.eval_crew(run_id="named-run")
+
+    assert [p for p in elsewhere.rglob("*") if p.is_file()] == []
+    said = " ".join(capsys.readouterr().out.split())
+    assert "Its full data was not saved:" in said and "is a link" in said
+    assert "Goal gate: PASSED" in said
+
+
+# ── with no terminal, the run's own output goes to a log, not the agent ────
+
+
+def _a_tracing_project(directory: Path) -> None:
+    (directory / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (directory / ".env").write_text("CREWAI_TRACING_ENABLED=true\n")
+
+
+def test_with_no_terminal_the_runs_own_output_goes_to_a_log_not_the_agent(
+    project, monkeypatch, capfd
+):
+    """A coding agent reads every line `crewai eval` prints, and pays for it:
+    the crew's panels, its final answer and its tool calls go to
+    `.crewai/last_run.log`, and the agent gets one line saying so, then the
+    verdict."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+
+    def fake_run_crew() -> None:
+        # what the run's child processes print: straight to the descriptors
+        os.write(1, b"Crew Execution Started panel\n")
+        os.write(2, b"a warning on stderr\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out, err = capfd.readouterr()
+    log = (directory / ".crewai" / "last_run.log").read_text()
+    assert "Crew Execution Started panel" in log and "a warning on stderr" in log
+    assert "Crew Execution Started panel" not in out + err
+    assert "a warning on stderr" not in out + err
+    said = " ".join(out.split())
+    assert "The crew's output goes to .crewai/last_run.log while it runs." in said
+    assert "its output is in .crewai/last_run.log." in said
+    assert "Goal gate: PASSED" in said
+
+
+def test_with_no_terminal_a_run_that_left_no_trace_shows_its_last_lines(
+    project, monkeypatch, capfd, usage
+):
+    """The error a failed run printed is what the agent needs to fix it: its
+    last lines are shown, and the sentence says where the rest is."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+
+    def fake_run_crew() -> None:
+        os.write(1, b"".join(f"line {n}\n".encode() for n in range(100)))
+        os.write(2, b"KeyError: 'topic'\n")  # and no trace recorded
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    amp = install(monkeypatch, FakeAMP())
+
+    with pytest.raises(SystemExit) as exited:
+        eval_module.eval_crew()
+
+    assert exited.value.code == 1
+    said = " ".join(capfd.readouterr().out.split())
+    assert "its last 40 lines:" in said
+    assert "KeyError: 'topic'" in said and "line 99" in said
+    assert "line 50 " not in said  # only the tail
+    assert "(its last lines are above)" in said
+    assert amp.calls == [] and usage[-1] == "cli_usage:eval_stopped:untraced_after_run"
+
+
+def test_at_a_terminal_the_run_prints_where_it_always_did(project, monkeypatch, capfd):
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: False)  # a person reads stdout
+
+    def fake_run_crew() -> None:
+        os.write(1, b"Crew Execution Started panel\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    out, _ = capfd.readouterr()
+    assert "Crew Execution Started panel" in out
+    assert "last_run.log" not in out
+    assert not (directory / ".crewai" / "last_run.log").exists()
+
+
+def test_what_decides_is_whether_anyone_reads_stdout_not_stdin(project, monkeypatch, capfd):
+    """A coding agent can hand the command a terminal for stdin and still read
+    a captured stdout: the transcript stays out of what it reads."""
+    directory, _ = project
+    _a_tracing_project(directory)
+    monkeypatch.setattr(eval_module.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_module, "nobody_watching", lambda: True)
+
+    def fake_run_crew() -> None:
+        os.write(1, b"Crew Execution Started panel\n")
+        record_last_run(directory, "the-new-run", recorded_at=_now())
+
+    monkeypatch.setattr(run_crew_module, "run_crew", fake_run_crew)
+    install(monkeypatch, FakeAMP(statuses=[done()]))
+
+    eval_module.eval_crew()
+
+    assert "Crew Execution Started panel" not in capfd.readouterr().out
+    assert "Crew Execution Started panel" in (directory / ".crewai" / "last_run.log").read_text()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_the_run_log_is_the_owners_alone_even_one_left_by_an_earlier_run(tmp_path):
+    log = tmp_path / "last_run.log"
+    log.write_text("an earlier run\n")
+    log.chmod(0o644)
+
+    with eval_module._run_output_to(log) as where:
+        assert where == log
+        os.write(1, b"this run\n")
+
+    assert log.read_text() == "this run\n"  # emptied, then written
+    assert log.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symbolic links need privileges on Windows")
+def test_a_link_at_the_logs_place_leaves_the_output_on_screen(tmp_path, capfd):
+    elsewhere = tmp_path / "elsewhere.txt"
+    elsewhere.write_text("")
+    log = tmp_path / "last_run.log"
+    log.symlink_to(elsewhere)
+
+    with eval_module._run_output_to(log) as where:
+        assert where is None
+        os.write(1, b"on screen\n")
+
+    assert "on screen" in capfd.readouterr().out
+    assert elsewhere.read_text() == ""
+
+
+def test_a_move_that_fails_halfway_puts_back_what_it_moved(tmp_path, monkeypatch, capfd):
+    """Descriptor 1 moved, 2 refused: 1 comes back before the block runs, so
+    the verdict printed after it still reaches the screen."""
+    real_dup2 = os.dup2
+    targets: list[int] = []
+
+    def dup2(src: int, dst: int, inheritable: bool = True) -> int:
+        targets.append(dst)
+        if dst == 2 and len(targets) == 2:
+            raise OSError("no room for stderr")
+        return real_dup2(src, dst, inheritable)
+
+    with monkeypatch.context() as patched:
+        patched.setattr(eval_module.os, "dup2", dup2)
+        with eval_module._run_output_to(tmp_path / "last_run.log") as where:
+            assert where is None
+    os.write(1, b"the verdict\n")
+
+    assert "the verdict" in capfd.readouterr().out
+    assert (tmp_path / "last_run.log").read_text() == ""
+
+
+def test_putting_back_goes_on_past_a_failure_and_keeps_the_runs_own_error(tmp_path, monkeypatch, capfd):
+    """Putting stdout back fails; stderr is put back anyway, every saved copy
+    is closed, and the error the run raised is the one that surfaces."""
+    real_dup2 = os.dup2
+    stdout_copy = os.dup(1)
+    calls: list[int] = []
+
+    def dup2(src: int, dst: int, inheritable: bool = True) -> int:
+        calls.append(dst)
+        if len(calls) == 3:  # the first put-back: stdout
+            raise OSError("cannot put stdout back")
+        return real_dup2(src, dst, inheritable)
+
+    def the_run() -> None:
+        raise ValueError("the run's own error")
+
+    try:
+        with monkeypatch.context() as patched:
+            patched.setattr(eval_module.os, "dup2", dup2)
+            with pytest.raises(ValueError, match="the run's own error"):
+                with eval_module._run_output_to(tmp_path / "last_run.log"):
+                    the_run()
+        assert calls == [1, 2, 1, 2]  # stderr was put back after stdout failed
+        os.write(2, b"stderr is back\n")
+        assert "stderr is back" in capfd.readouterr().err
+    finally:
+        real_dup2(stdout_copy, 1)  # the test puts stdout back itself
+        os.close(stdout_copy)
+
+
+def test_a_marker_in_the_payload_never_marks_a_save_that_was_not_whole(project, monkeypatch, capsys):
+    """AMP cannot send the marker: with one file skipped, a forged marker would
+    have made a partial save read as whole, never tried again and kept over a
+    complete one."""
+    directory, _ = project
+    files = {**EXPORT_FILES, eval_module.SAVED_MARKER: "forged\n", "../outside.md": "no"}
+    amp = _graded(monkeypatch, directory, answer=exported(files=files, kind="trace"))
+
+    eval_module.eval_crew(run_id="named-run")
+
+    saved = directory / SAVED / EVALUATION_ID
+    assert not (saved / eval_module.SAVED_MARKER).exists()
+    said = " ".join(capsys.readouterr().out.split())
+    assert "Part of its data was saved" in said and "2 files skipped" in said
+
+    amp.statuses = [_verdict_of(EVALUATION_ID)]
+    eval_module.eval_crew(run_id="named-run")
+    assert amp.calls.count(("export", EVALUATION_ID)) == 2  # tried again
