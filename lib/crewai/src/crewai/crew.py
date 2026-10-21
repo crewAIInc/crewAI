@@ -126,6 +126,7 @@ from crewai.tools.tool_failure import ToolFailurePolicy
 from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
+from crewai.utilities.agent_utils import _reset_caller_loop, _set_caller_loop
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.env import get_env_context
@@ -1186,7 +1187,15 @@ class Crew(FlowTrackable, BaseModel):
 
             return streaming_output
 
-        return await asyncio.to_thread(self.kickoff, inputs, input_files)
+        # The whole crew runs in a worker thread, but its async native tools must
+        # still bridge back onto THIS loop (issue #7630 family): anything bound to
+        # the caller's loop (e.g. an httpx.AsyncClient created before kickoff) works
+        # instead of failing with "attached to a different loop".
+        caller_loop_token = _set_caller_loop(asyncio.get_running_loop())
+        try:
+            return await asyncio.to_thread(self.kickoff, inputs, input_files)
+        finally:
+            _reset_caller_loop(caller_loop_token)
 
     async def kickoff_for_each_async(
         self,
