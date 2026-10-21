@@ -1460,13 +1460,32 @@ def run_native_tool_result(
     working async implementation, bridge ``tool.arun`` onto the caller's loop and block
     the worker thread until it finishes. Sync tools and sync callers keep the exact
     historical behavior.
+
+    Async implementations are expected not to block: bridged coroutines run on the
+    application's loop, so a tool that blocks inside its coroutine stalls every other
+    task on that loop for the duration. Offload blocking client calls to a worker
+    thread inside the tool instead.
     """
     loop = caller_loop if caller_loop is not None else _caller_loop_context.get()
     if loop is not None and tool is not None and _has_async_implementation(tool):
         try:
-            return asyncio.run_coroutine_threadsafe(tool.arun(**args_dict), loop).result()
+            running_loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
         except RuntimeError:
-            pass  # caller loop is already closed — run() fresh-loop is the fallback
+            running_loop = None
+        # Scheduling onto the loop that is already executing this call would deadlock
+        # it inside future.result(); a closed loop cannot service the submission. In
+        # both cases the bridge is impossible, so use the historical sync path.
+        if running_loop is not loop and not loop.is_closed():
+            coro = tool.arun(**args_dict)
+            try:
+                future = asyncio.run_coroutine_threadsafe(coro, loop)
+            except RuntimeError:
+                coro.close()  # loop shut down between the check and scheduling
+            else:
+                # Only scheduling failures fall back. Exceptions raised by the
+                # coroutine (RuntimeError included) propagate unchanged: re-running
+                # the tool here would repeat its side effects and mask the failure.
+                return future.result()
     return tool_func(**args_dict)
 
 
