@@ -592,6 +592,39 @@ class TestSqliteProviderFork:
         return RuntimeState(root=[crew])
 
 
+class TestSqliteRestoreWithHashInPath:
+    def test_from_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            loc, written_id = self._checkpoint_under_hash_dir(d)
+
+            restored = RuntimeState.from_checkpoint(
+                CheckpointConfig(restore_from=loc), context={"from_checkpoint": True}
+            )
+
+            assert isinstance(restored._provider, SqliteProvider)
+            assert restored._checkpoint_id == written_id
+
+    @pytest.mark.asyncio
+    async def test_afrom_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            loc, written_id = self._checkpoint_under_hash_dir(d)
+
+            restored = await RuntimeState.afrom_checkpoint(
+                CheckpointConfig(restore_from=loc), context={"from_checkpoint": True}
+            )
+
+            assert isinstance(restored._provider, SqliteProvider)
+            assert restored._checkpoint_id == written_id
+
+    @staticmethod
+    def _checkpoint_under_hash_dir(d: str) -> tuple[str, str]:
+        db = os.path.join(d, "run#1", "cp.db")
+        os.makedirs(os.path.dirname(db))
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        state = RuntimeState(root=[Crew(agents=[agent], tasks=[], verbose=False)])
+        state._provider = SqliteProvider()
+        loc = state.checkpoint(db)
+        return loc, state._checkpoint_id
 
 
 class TestKickoffFromCheckpoint:
