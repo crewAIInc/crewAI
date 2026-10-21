@@ -25,7 +25,8 @@ from crewai_core.telemetry import Telemetry
 from rich.console import Console
 from rich.text import Text
 
-from crewai_cli.authentication.token import get_auth_token
+from crewai_cli.authentication.main import AuthenticationCommand
+from crewai_cli.authentication.token import AuthError, get_auth_token
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
@@ -1048,6 +1049,18 @@ def _get_logged_in_platform_token() -> str:
     return PlusAPI(
         api_key=login_token, organization_id=organization_id
     ).get_integration_token()
+
+
+def _get_platform_token_from_login() -> str:
+    """Fetch an integration token, asking the user to log in when necessary."""
+    try:
+        return _get_logged_in_platform_token()
+    except AuthError:
+        click.secho(
+            "  Sign in to CrewAI Platform to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand().login()
+        return _get_logged_in_platform_token()
 
 
 def _prompt_platform_token() -> str:
