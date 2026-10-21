@@ -773,6 +773,45 @@ class LLM(BaseLLM):
 
         return {k: v for k, v in params.items() if v is not None}
 
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate request input tokens with LiteLLM's local tokenizer.
+
+        LiteLLM does not make a provider request for this calculation. Its
+        tokenizer uses the same formatted messages and tools as a completion.
+        """
+        if not _ensure_litellm() or litellm is None:
+            raise ImportError(
+                'LiteLLM is required for token estimation; install it with `uv add "crewai[litellm]"`.'
+            )
+
+        params = self._prepare_completion_params(messages, tools)
+        if response_model is not None:
+            from instructor import Mode, handle_response_model
+
+            _, structured_output_params = handle_response_model(
+                response_model,
+                mode=Mode.TOOLS,
+                tools=params.get("tools"),
+            )
+            params["tools"] = structured_output_params["tools"]
+            params["tool_choice"] = structured_output_params["tool_choice"]
+        try:
+            return int(
+                litellm.token_counter(
+                    model=params["model"],
+                    messages=params["messages"],
+                    tools=params.get("tools"),
+                    tool_choice=params.get("tool_choice"),
+                )
+            )
+        except Exception:
+            return super().get_input_tokens_count(messages, tools, response_model)
+
     def _handle_streaming_response(
         self,
         params: dict[str, Any],
@@ -1253,7 +1292,7 @@ class LLM(BaseLLM):
         try:
             # Attempt to make the completion call, but catch context window errors
             # and convert them to our own exception type for consistent handling
-            # across the codebase. This allows CrewAgentExecutor to handle context
+            # across the codebase. This allows AgentExecutor to handle context
             # length issues appropriately.
             if response_model:
                 params["response_model"] = response_model
@@ -1898,7 +1937,7 @@ class LLM(BaseLLM):
                     return result
                 except LLMContextLengthExceededError:
                     # Re-raise LLMContextLengthExceededError as it should be handled
-                    # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                    # by AgentExecutor, which can then decide
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:
@@ -2197,7 +2236,9 @@ class LLM(BaseLLM):
         """
         return extract_choices_finish_reason_and_id(response_or_chunk)
 
-    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.
 
         For each message with a `files` field, formats the files into
@@ -2480,13 +2521,7 @@ class LLM(BaseLLM):
         return LLM_CONTEXT_WINDOW_SIZES
 
     def get_context_window_size(self) -> int:
-        """
-        Returns the context window size, using 75% of the maximum to avoid
-        cutting off messages mid-thread.
-
-        Raises:
-            ValueError: If a model's context window size is outside valid bounds (1024-2097152)
-        """
+        """Return the context window size, using 85% of the catalog limit."""
         if self.context_window_size != 0:
             return self.context_window_size
 
