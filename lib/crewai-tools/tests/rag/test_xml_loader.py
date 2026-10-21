@@ -20,6 +20,7 @@ class TestWebPageLoader:
         soup.get_text.return_value = text
         soup.title = Mock(string=title) if title is not None else None
         soup.return_value = script_style_elements or []
+        soup.find_all.return_value = []
         return soup
 
     @patch("crewai_tools.security.safe_requests._raw_get")

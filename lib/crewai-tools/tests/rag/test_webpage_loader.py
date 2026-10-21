@@ -20,6 +20,7 @@ class TestWebPageLoader:
         soup.get_text.return_value = text
         soup.title = Mock(string=title) if title is not None else None
         soup.return_value = script_style_elements or []
+        soup.find_all.return_value = []
         return soup
 
     @patch("crewai_tools.security.safe_requests._raw_get")
@@ -36,6 +37,24 @@ class TestWebPageLoader:
         assert isinstance(result, LoaderResult)
         assert result.content == "Test content"
         assert result.metadata["title"] == "Test Page"
+
+    @patch("crewai_tools.security.safe_requests._raw_get")
+    def test_load_webpage_keeps_words_whole_across_inline_elements(self, mock_get):
+        mock_get.return_value = self.setup_mock_response(
+            '<html><head><title>Guide</title></head><body><h1>Setup</h1><p>That is un<b>believ</b>able, see <a href="/docs">the docs</a>.</p><ul><li>one</li><li>two</li></ul><p>line<br>break</p></body></html>'
+        )
+
+        result = WebPageLoader().load(SourceContent("https://example.com/guide"))
+
+        assert [line for line in result.content.splitlines() if line] == [
+            "Guide",
+            "Setup",
+            "That is unbelievable, see the docs.",
+            "one",
+            "two",
+            "line",
+            "break",
+        ]
 
     @patch("crewai_tools.security.safe_requests._raw_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
