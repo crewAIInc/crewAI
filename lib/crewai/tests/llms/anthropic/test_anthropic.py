@@ -2228,3 +2228,45 @@ def test_max_iterations_request_ends_on_a_user_turn(history_tail):
     sent = mock_client.messages.create.call_args.kwargs["messages"]
     assert sent[-1] == {"role": "user", "content": I18N_DEFAULT.errors("force_final_answer")}
     assert result.output == "42"
+
+
+@pytest.mark.parametrize(
+    ("arguments", "expected"),
+    [
+        ('{"city": "Paris"}', {"city": "Paris"}),
+        ({"city": "Paris"}, {"city": "Paris"}),
+        ("", {}),
+        ("   ", {}),
+        ('{"city": "Par', {}),
+        ("[1, 2]", {}),
+        ("null", {}),
+    ],
+    ids=["json", "dict", "empty", "blank", "truncated", "list", "null"],
+)
+def test_format_messages_tolerates_bad_tool_call_arguments(arguments, expected):
+    """A bad arguments string in history must not crash message formatting."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+    messages = [
+        {"role": "user", "content": "Weather?"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {"name": "get_weather", "arguments": arguments},
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "toolu_1", "name": "get_weather", "content": "Sunny"},
+    ]
+
+    formatted, _ = llm._format_messages_for_anthropic(messages)
+
+    tool_use = formatted[1]["content"][0]
+    assert tool_use["type"] == "tool_use"
+    assert tool_use["id"] == "toolu_1"
+    assert tool_use["input"] == expected
