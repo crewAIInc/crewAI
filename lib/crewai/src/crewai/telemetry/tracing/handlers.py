@@ -95,6 +95,8 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionStartedEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
     FlowPausedEvent,
     MethodExecutionPausedEvent,
 )
@@ -232,6 +234,18 @@ def register_handlers(
         (
             SkillLoadFailedEvent,
             lambda source, event: handle_skill_load_failed(
+                providers, ctx, source, event
+            ),
+        ),
+        (
+            ConversationMessageAddedEvent,
+            lambda source, event: handle_conversation_message_added(
+                providers, ctx, source, event
+            ),
+        ),
+        (
+            ConversationRouteSelectedEvent,
+            lambda source, event: handle_conversation_route_selected(
                 providers, ctx, source, event
             ),
         ),
@@ -1570,21 +1584,53 @@ def _reparent_suppressed_flow_children(
     ready.set()
 
 
+def _is_conversational_flow(source: Any) -> bool:
+    conversational = getattr(source, "_is_conversational_enabled", None)
+    return callable(conversational) and conversational() is True
+
+
+def handle_conversation_message_added(
+    providers: TelemetryProviders,
+    ctx: TelemetryExecutionContext,
+    source: Any,
+    event: ConversationMessageAddedEvent,
+) -> None:
+    attrs = {
+        **semantic_conventions.crewai_span(event_name=event.type, subject=event.role),
+        "gen_ai.conversation.id": event.session_id,
+        "crewai.conversation.role": event.role,
+        "crewai.conversation.content": _serialize(event.content),
+        "crewai.conversation.message_index": event.message_index,
+    }
+    _instant_span(providers, ctx, "conversation message", event, attrs)
+
+
+def handle_conversation_route_selected(
+    providers: TelemetryProviders,
+    ctx: TelemetryExecutionContext,
+    source: Any,
+    event: ConversationRouteSelectedEvent,
+) -> None:
+    attrs = {
+        **semantic_conventions.crewai_span(event_name=event.type, subject=event.route),
+        "gen_ai.conversation.id": event.session_id,
+        "crewai.conversation.route": event.route,
+        "crewai.conversation.user_message": event.user_message,
+        "crewai.conversation.message_index": event.message_index,
+        "crewai.conversation.previous_intent": event.previous_intent,
+    }
+    _instant_span(providers, ctx, "select conversation route", event, attrs)
+
+
 def handle_flow_started(
     providers: TelemetryProviders,
     ctx: TelemetryExecutionContext,
     source: Flow[Any],
     event: FlowStartedEvent,
 ) -> None:
-    conversational = getattr(source, "_is_conversational_enabled", None)
-    if (
-        ctx.conversation_id is None
-        and callable(conversational)
-        and conversational() is True
-        and getattr(source._conversation_config, "trace_scope", None) is not None
-    ):
+    if ctx.conversation_id is None and _is_conversational_flow(source):
         ctx.conversation_id = str(source.flow_id)
-    if source.suppress_flow_events:
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         _reparent_suppressed_flow_children(ctx, event)
         return
 
@@ -1651,7 +1697,7 @@ def handle_flow_finished(
     source: Flow[Any],
     event: FlowFinishedEvent,
 ) -> None:
-    if source.suppress_flow_events:
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         return
 
     flow_name = source.name or event.flow_name
@@ -1702,7 +1748,7 @@ def handle_flow_failed(
     source: Flow[Any],
     event: FlowFailedEvent,
 ) -> None:
-    if source.suppress_flow_events:
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         return
 
     flow_name = source.name or event.flow_name

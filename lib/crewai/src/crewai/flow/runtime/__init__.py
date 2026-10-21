@@ -490,6 +490,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         return model_class
 
+    def _record_kickoff_output(self, output: Any) -> None:
+        """Allow an extension to record output before execution tracing closes."""
+
     def _should_apply_pending_kickoff_context(self) -> bool:
         """Whether an optional runtime extension has pending kickoff context."""
         return False
@@ -2514,6 +2517,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
+            self._record_kickoff_output(final_output)
 
             if self._event_futures:
                 await asyncio.gather(
