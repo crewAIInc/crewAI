@@ -119,6 +119,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_failure import ToolFailurePolicy
@@ -1533,7 +1534,11 @@ class Crew(FlowTrackable, BaseModel):
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
-            if manager.tools is not None and len(manager.tools) > 0:
+            # Delegation tools are the crew's own: a manager built from
+            # manager_llm keeps them on the next kickoff, copy() or train().
+            if manager.tools is not None and any(
+                not isinstance(tool, BaseAgentTool) for tool in manager.tools
+            ):
                 self._logger.log(
                     "warning",
                     "Manager agent should not have tools",
@@ -1868,7 +1873,9 @@ class Crew(FlowTrackable, BaseModel):
         self, task: Task, tools: list[BaseTool]
     ) -> list[BaseTool]:
         if self.manager_agent:
-            if task.agent:
+            # A previous run leaves the manager assigned to the task; that is
+            # not a worker to delegate to.
+            if task.agent and task.agent is not self.manager_agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
                 tools = self._inject_delegation_tools(
