@@ -12,6 +12,7 @@ from typing import Any
 import warnings
 
 import click
+from crewai_core.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_core.platform_app_defaults import PLATFORM_APP_DEFAULT_TOOLS
 from crewai_core.platform_apps import (
     PLATFORM_APPLICATION_CATALOG,
@@ -1048,12 +1049,16 @@ def _platform_app_name(app: str) -> str:
 def _get_logged_in_platform_token() -> str:
     """Fetch the selected organization's integration token from the saved login."""
     login_token = get_auth_token()
-    organization_id = Settings().org_uuid
+    settings = Settings()
+    organization_id = settings.org_uuid
     if not organization_id:
         raise _NoOrganizationSelectedError("No CrewAI organization is selected")
-    return PlusAPI(
-        api_key=login_token, organization_id=organization_id
-    ).get_integration_token()
+    api = PlusAPI(
+        api_key=login_token,
+        organization_id=organization_id,
+        base_url=settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL,
+    )
+    return api.get_integration_token()
 
 
 def _get_platform_token_from_login() -> str:
@@ -1089,24 +1094,35 @@ def _get_platform_token_from_login() -> str:
 
 
 def _check_platform_app(
-    app: str, application_selector: Any, client_for_selector: Any
+    app: str,
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
 ) -> tuple[Any | None, Exception | None]:
     """Check one AMP application with the synchronous platform client."""
     try:
         selector = application_selector.from_string(app)
-        return client_for_selector(selector).get_actions([selector]), None
+        client = client_for_selector(selector, base_url=base_url)
+        return client.get_actions([selector]), None
     except Exception as error:
         return None, error
 
 
 async def _check_platform_apps_concurrently(
-    apps: list[str], application_selector: Any, client_for_selector: Any
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
 ) -> list[tuple[Any | None, Exception | None]]:
     """Run independent AMP application checks concurrently."""
     return await asyncio.gather(
         *(
             asyncio.to_thread(
-                _check_platform_app, app, application_selector, client_for_selector
+                _check_platform_app,
+                app,
+                application_selector,
+                client_for_selector,
+                base_url,
             )
             for app in apps
         )
@@ -1151,7 +1167,10 @@ def _report_platform_app_validation(
 
 
 def _validate_platform_apps(
-    apps: list[str], application_selector: Any, client_for_selector: Any
+    apps: list[str],
+    application_selector: Any,
+    client_for_selector: Any,
+    base_url: str | None = None,
 ) -> tuple[list[str], bool]:
     """Check selected AMP applications concurrently when no event loop is running."""
     failed: list[str] = []
@@ -1168,7 +1187,7 @@ def _validate_platform_apps(
         )
         results = asyncio.run(
             _check_platform_apps_concurrently(
-                apps, application_selector, client_for_selector
+                apps, application_selector, client_for_selector, base_url
             )
         )
         for app, (actions, error) in zip(apps, results, strict=True):
@@ -1184,7 +1203,7 @@ def _validate_platform_apps(
                 fg="cyan",
             )
             actions, error = _check_platform_app(
-                app, application_selector, client_for_selector
+                app, application_selector, client_for_selector, base_url
             )
             if _report_platform_app_validation(app, actions, error, failed):
                 return failed, True
@@ -1192,42 +1211,33 @@ def _validate_platform_apps(
 
 
 def _show_platform_validation_guidance(
-    failed_apps: list[str], token_invalid: bool
+    failed_apps: list[str], token_invalid: bool, base_url: str
 ) -> None:
     """Tell the user what to fix before revalidating AMP integrations."""
     click.echo()
     if token_invalid:
         click.secho(
-            "  Check your Enterprise Action Auth Token in AMP.",
+            "  Your CrewAI login could not validate the Enterprise Action Auth Token.",
             fg="yellow",
         )
         return
 
     failed_app_names = [_platform_app_name(app) for app in failed_apps]
     click.secho(
-        "  Check the "
+        "  Connect the "
         f"{', '.join(failed_app_names)} integration"
-        f"{'s' if len(failed_app_names) != 1 else ''} and your CrewAI "
-        "Enterprise Action Auth Token in AMP.",
+        f"{'s' if len(failed_app_names) != 1 else ''} in CrewAI AMP:",
         fg="yellow",
     )
+    click.secho(f"  {base_url.rstrip('/')}", fg="cyan")
 
 
-def _prompt_platform_revalidation_token() -> str:
-    """Prompt for an optional replacement token before the next validation pass."""
+def _confirm_platform_revalidation() -> bool:
+    """Ask whether to retry integration validation after AMP is updated."""
     click.echo()
-    return str(
-        click.prompt(
-            click.style(
-                "  Press Enter to revalidate, or enter a replacement token",
-                fg="cyan",
-            ),
-            default="",
-            show_default=False,
-            hide_input=False,
-            prompt_suffix=click.style(" > ", fg="bright_white"),
-        )
-    ).strip()
+    return click.confirm(
+        click.style("  Revalidate integrations?", fg="cyan"), default=True
+    )
 
 
 def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
@@ -1270,8 +1280,13 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             f"Enterprise Action Auth Token found via {credential_location}", dim=True
         )
         os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+        settings = Settings()
+        base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
         failed_apps, token_invalid = _validate_platform_apps(
-            apps, ApplicationSelector, client_for_selector
+            apps,
+            ApplicationSelector,
+            client_for_selector,
+            base_url,
         )
         if not failed_apps and not token_invalid:
             _success("Enterprise Action Auth Token set", bold=True)
@@ -1281,12 +1296,9 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
             )
             return token
 
-        _show_platform_validation_guidance(failed_apps, token_invalid)
-        replacement_token = _prompt_platform_revalidation_token()
-        if replacement_token:
-            token = replacement_token
-            credential_location = "interactive replacement prompt"
-            os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] = token
+        _show_platform_validation_guidance(failed_apps, token_invalid, base_url)
+        if not _confirm_platform_revalidation():
+            raise click.Abort()
 
 
 # ── Main ────────────────────────────────────────────────────────

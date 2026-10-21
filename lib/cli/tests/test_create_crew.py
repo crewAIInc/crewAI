@@ -792,17 +792,27 @@ def test_platform_validation_deduplicates_actions_by_application() -> None:
     assert apps == ["github", "gmail"]
 
 
-def test_platform_revalidation_prompt_shows_entered_value(monkeypatch) -> None:
-    prompt_options: list[dict[str, object]] = []
+def test_platform_revalidation_requires_confirmation(monkeypatch) -> None:
+    confirm_options: list[dict[str, object]] = []
 
-    def prompt(_label: str, **kwargs: object) -> str:
-        prompt_options.append(kwargs)
-        return "token"
+    def confirm(_label: str, **kwargs: object) -> bool:
+        confirm_options.append(kwargs)
+        return True
 
-    monkeypatch.setattr(json_crew.click, "prompt", prompt)
+    monkeypatch.setattr(json_crew.click, "confirm", confirm)
 
-    assert json_crew._prompt_platform_revalidation_token() == "token"
-    assert [options["hide_input"] for options in prompt_options] == [False]
+    assert json_crew._confirm_platform_revalidation()
+    assert confirm_options == [{"default": True}]
+
+
+def test_platform_validation_guidance_links_to_amp(capsys) -> None:
+    json_crew._show_platform_validation_guidance(
+        ["whatsapp"], False, "https://app.crewai.com/"
+    )
+
+    output = capsys.readouterr().out
+    assert "Connect the WhatsApp integration in CrewAI AMP" in output
+    assert "https://app.crewai.com" in output
 
 
 def test_get_logged_in_platform_token_uses_saved_login_and_organization(
@@ -811,8 +821,14 @@ def test_get_logged_in_platform_token_uses_saved_login_and_organization(
     client = mock.Mock()
     client.get_integration_token.return_value = "integration-token"
     monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setenv("CREWAI_PLUS_URL", "https://fake.crewai.com")
     monkeypatch.setattr(
-        json_crew, "Settings", lambda: mock.Mock(org_uuid="organization-id")
+        json_crew,
+        "Settings",
+        lambda: mock.Mock(
+            org_uuid="organization-id",
+            enterprise_base_url="https://app.crewai.com",
+        ),
     )
     plus_api = mock.Mock(return_value=client)
     monkeypatch.setattr(json_crew, "PlusAPI", plus_api)
@@ -820,7 +836,9 @@ def test_get_logged_in_platform_token_uses_saved_login_and_organization(
     assert json_crew._get_logged_in_platform_token() == "integration-token"
 
     plus_api.assert_called_once_with(
-        api_key="login-token", organization_id="organization-id"
+        api_key="login-token",
+        organization_id="organization-id",
+        base_url="https://app.crewai.com",
     )
     client.get_integration_token.assert_called_once_with()
 
@@ -941,7 +959,7 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     fake_client.get_actions.return_value = [object()]
     fake_integrations_client = mock.Mock(
         ApplicationSelector=FakeApplicationSelector,
-        client_for_selector=lambda _selector: fake_client,
+        client_for_selector=lambda _selector, **_kwargs: fake_client,
     )
     original_import = builtins.__import__
 
@@ -983,7 +1001,7 @@ def test_platform_auth_fetches_token_from_login_when_env_is_missing(monkeypatch)
     fake_client.get_actions.return_value = [object()]
     fake_integrations_client = mock.Mock(
         ApplicationSelector=FakeApplicationSelector,
-        client_for_selector=lambda _selector: fake_client,
+        client_for_selector=lambda _selector, **_kwargs: fake_client,
     )
     original_import = builtins.__import__
 
@@ -1020,7 +1038,7 @@ def test_platform_validation_checks_apps_concurrently():
         json_crew._check_platform_apps_concurrently(
             ["github", "gmail"],
             FakeApplicationSelector,
-            lambda _selector: FakeClient(),
+            lambda _selector, **_kwargs: FakeClient(),
         )
     )
 
@@ -1040,13 +1058,38 @@ def test_platform_validation_announces_concurrent_apps_together(capsys):
     failed_apps, token_invalid = json_crew._validate_platform_apps(
         ["github", "gmail", "google_calendar"],
         FakeApplicationSelector,
-        lambda _selector: FakeClient(),
+        lambda _selector, **_kwargs: FakeClient(),
     )
 
     output = capsys.readouterr().out
     assert (failed_apps, token_invalid) == ([], False)
     assert "Checking GitHub, Gmail, Google Calendar integrations together on AMP" in output
     assert "Checking Enterprise Action Auth Token and GitHub" not in output
+
+
+def test_platform_validation_passes_configured_amp_url_to_client_factory() -> None:
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    received_base_urls: list[str | None] = []
+
+    class FakeClient:
+        def get_actions(self, _selectors):
+            return [object()]
+
+    def client_factory(_selector, *, base_url=None):
+        received_base_urls.append(base_url)
+        return FakeClient()
+
+    assert json_crew._validate_platform_apps(
+        ["github"],
+        FakeApplicationSelector,
+        client_factory,
+        "https://app.crewai.com",
+    ) == ([], False)
+    assert received_base_urls == ["https://app.crewai.com"]
 
 
 def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys):
@@ -1070,7 +1113,7 @@ def test_platform_validation_falls_back_to_sequential_checks(monkeypatch, capsys
     failed_apps, token_invalid = json_crew._validate_platform_apps(
         ["github", "gmail"],
         FakeApplicationSelector,
-        lambda app: FakeClient(app),
+        lambda app, **_kwargs: FakeClient(app),
     )
 
     assert (failed_apps, token_invalid) == ([], False)
