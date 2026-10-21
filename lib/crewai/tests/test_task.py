@@ -904,6 +904,22 @@ def test_conditional_task_copy_preserves_type():
     assert isinstance(copied_conditional_task, ConditionalTask)
 
 
+def test_task_copy_can_be_interpolated_with_other_inputs():
+    task = Task(
+        description="Write about {topic}",
+        expected_output="A report on {topic}",
+        output_file="reports/{topic}.md",
+    )
+    task.interpolate_inputs_and_add_conversation_history({"topic": "AI"})
+
+    copied_task = task.copy(agents=[], task_mapping={})
+    copied_task.interpolate_inputs_and_add_conversation_history({"topic": "ML"})
+
+    assert copied_task.description == "Write about ML"
+    assert copied_task.expected_output == "A report on ML"
+    assert copied_task.output_file == "reports/ML.md"
+
+
 def test_interpolate_inputs(tmp_path):
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
