@@ -749,9 +749,8 @@ class TestRaisePolicySurvivesEveryWrapper:
 
         from crewai.agent.core import Agent as AgentCls
         from crewai.agents.step_executor import StepExecutor
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
-        # CrewAgentExecutor is deprecated and deliberately excluded.
         sites = [
             (AgentCls._execute_with_timeout, "_passthrough_exceptions"),
             (StepExecutor.execute, "ToolExecutionFailedError"),
@@ -1294,23 +1293,6 @@ class TestMalformedArgumentsAreReported:
         assert "INVALID_INPUT" in inspect.getsource(agent_utils.parse_tool_call_args)
 
 
-class TestDeprecatedExecutorIsNotIntegrated:
-    """CrewAgentExecutor is deprecated; the feature must not extend into it."""
-
-    def test_no_tool_failure_integration(self) -> None:
-        from importlib import import_module
-        from pathlib import Path
-
-        # Read the file directly: importing this module by name resolves to a
-        # different one in this package, so inspect would read the wrong source.
-        package = import_module(Agent.__module__.split(".")[0])
-        source = (
-            Path(package.__file__).parent / "agents" / "crew_agent_executor.py"
-        ).read_text()
-        assert "tool_failure" not in source
-        assert "ToolExecutionFailedError" not in source
-
-
 class TestConcurrentExecutionsAreIsolated:
     """A shared agent must not leak failures between concurrent executions.
 
@@ -1632,7 +1614,7 @@ class TestParallelAbortCancelsPendingSiblings:
         """
         import inspect
 
-        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.agents.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.execute_native_tool)
         assert "cancel_futures=True" in source
@@ -1722,7 +1704,7 @@ class TestPlatformActionTool:
             "error": "Failed to execute action: Slack API error: channel_not_found"
         }
         monkeypatch.setattr(client_mod.requests, "post", Mock(return_value=response))
-        monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
+        monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "t")
 
         result = self._tool()._run(channel="#joao-message")
 
@@ -1739,7 +1721,7 @@ class TestPlatformActionTool:
         response.ok = True
         response.json.return_value = {"ts": "1234.5678"}
         monkeypatch.setattr(client_mod.requests, "post", Mock(return_value=response))
-        monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
+        monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "t")
 
         result = self._tool()._run(channel="#general")
 
@@ -1775,3 +1757,198 @@ class TestSuccessfulToolsUnaffected:
         agent.llm = ScriptedLLM(_slack_steps())
         crew.kickoff()
         assert len(agent.last_tool_failures) == 1, "records must not accumulate"
+
+
+from crewai.utilities.agent_utils import MAX_REPEATED_TOOL_CALLS  # noqa: E402
+
+
+class LoopingNativeLLM(LLM):
+    """Asks for the same native tool call forever, like a stuck agent."""
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "LoopingNativeLLM":
+        return object.__new__(cls)
+
+    def __init__(self) -> None:
+        super().__init__(model="gpt-4o")
+        self.calls = 0
+
+    def call(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+        self.calls += 1
+        return [
+            {
+                "id": f"call_{self.calls}",
+                "type": "function",
+                "function": {"name": "echo", "arguments": '{"text": "hi"}'},
+            }
+        ]
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+
+class TestRepeatedToolCallStopsTheRun:
+    """Same call + same result means no progress: stop before the context fills."""
+
+    def test_helper_raises_on_the_last_identical_call(self) -> None:
+        from crewai.utilities.agent_utils import check_repeated_tool_call
+
+        agent = Agent(role="Looper", goal="g", backstory="b")
+        counts: dict[int, int] = {}
+        for _ in range(MAX_REPEATED_TOOL_CALLS - 1):
+            check_repeated_tool_call(
+                counts, tool_name="echo", tool_args={"text": "hi"}, result="x", agent=agent
+            )
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            check_repeated_tool_call(
+                counts, tool_name="echo", tool_args={"text": "hi"}, result="x", agent=agent
+            )
+
+        record = exc_info.value.record
+        assert record.failure.reason is ToolFailureReason.REPEATED_CALL
+        assert record.tool_name == "echo"
+        assert "Looper" in str(exc_info.value)
+
+    def test_helper_allows_repeats_whose_result_changes(self) -> None:
+        from crewai.utilities.agent_utils import check_repeated_tool_call
+
+        counts: dict[int, int] = {}
+        for status in ["queued", "running", "running-2", "running-3", "done", "done-2"]:
+            check_repeated_tool_call(
+                counts, tool_name="poll", tool_args={"id": 1}, result=status
+            )
+
+    def test_native_loop_stops_the_crew_early(self) -> None:
+        llm = LoopingNativeLLM()
+        agent = Agent(
+            role="Looper", goal="g", backstory="b", llm=llm, tools=[WorkingTool()]
+        )
+        task = Task(description="echo", expected_output="x", agent=agent)
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
+        assert "Looper" in str(exc_info.value)
+        # Stopped on the last allowed call, not after max_iter, and not retried.
+        assert llm.calls == MAX_REPEATED_TOOL_CALLS
+
+    def test_text_loop_stops_the_crew_early(self) -> None:
+        step = 'Thought: again\nAction: echo\nAction Input: {"text": "hi"}'
+        llm = ScriptedLLM([step])
+        agent = Agent(
+            role="Looper", goal="g", backstory="b", llm=llm, tools=[WorkingTool()]
+        )
+        task = Task(description="echo", expected_output="x", agent=agent)
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
+        # ToolUsage nudges every other identical call, so the count is not exact.
+        assert llm._index < agent.max_iter
+
+    def test_planning_step_loop_raises_instead_of_failing_the_step(self) -> None:
+        from crewai.agents.step_executor import StepExecutor
+        from crewai.utilities.planning_types import TodoItem
+        from crewai.utilities.step_execution_context import StepExecutionContext
+
+        executor = StepExecutor(
+            llm=LoopingNativeLLM(),
+            tools=[],
+            agent=Agent(role="Looper", goal="g", backstory="b"),
+            original_tools=[WorkingTool()],
+        )
+
+        with pytest.raises(ToolExecutionFailedError) as exc_info:
+            executor.execute(
+                TodoItem(step_number=1, description="echo"),
+                StepExecutionContext(task_description="t", task_goal="g"),
+            )
+
+        assert exc_info.value.record.failure.reason is ToolFailureReason.REPEATED_CALL
+
+    def test_helper_raises_on_an_alternating_loop(self) -> None:
+        """A, B, A, B... is still a loop; counting only consecutive repeats misses it."""
+        from crewai.utilities.agent_utils import check_repeated_tool_call
+
+        counts: dict[int, int] = {}
+        with pytest.raises(ToolExecutionFailedError):
+            for _ in range(MAX_REPEATED_TOOL_CALLS):
+                for text in ("a", "b"):
+                    check_repeated_tool_call(
+                        counts, tool_name="echo", tool_args={"text": text}, result=text
+                    )
+
+    @pytest.mark.asyncio
+    async def test_parallel_step_loop_stops_the_agent(self) -> None:
+        from crewai.agents.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import TodoItem
+
+        record = ToolFailureRecord(
+            tool_name="echo",
+            failure=ToolFailure(message="loop", reason=ToolFailureReason.REPEATED_CALL),
+        )
+
+        class LoopingStepExecutor:
+            def execute(self, *args: Any, **kwargs: Any) -> Any:
+                raise ToolExecutionFailedError(record)
+
+        agent = Agent(role="Looper", goal="g", backstory="b", llm=LoopingNativeLLM())
+        executor = AgentExecutor(agent=agent, llm=agent.llm, task=None)
+        executor.state.todos.items = [
+            TodoItem(step_number=1, description="first"),
+            TodoItem(step_number=2, description="second"),
+        ]
+        step_executor = LoopingStepExecutor()
+        object.__setattr__(executor, "_ensure_step_executor", lambda: step_executor)
+
+        with pytest.raises(ToolExecutionFailedError):
+            await executor.execute_todos_parallel()
+
+    def test_parallel_steps_keep_separate_tallies(self) -> None:
+        """Two steps sharing one StepExecutor must not add up each other's calls."""
+        import threading
+
+        from crewai.agents.step_executor import StepExecutor
+        from crewai.utilities.planning_types import TodoItem
+        from crewai.utilities.step_execution_context import StepExecutionContext
+
+        calls_per_step = MAX_REPEATED_TOOL_CALLS - 1
+        # Both steps call the tool in lockstep, so their calls interleave.
+        barrier = threading.Barrier(2, timeout=10)
+
+        class LockstepTool(WorkingTool):
+            def _run(self, text: str) -> Any:
+                barrier.wait()
+                return f"echoed: {text}"
+
+        class FewCallsLLM(LoopingNativeLLM):
+            def call(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+                if sum(m.get("role") == "tool" for m in messages) >= calls_per_step:
+                    return "done"
+                return super().call(messages, tools, callbacks, available_functions, **kw)
+
+        executor = StepExecutor(
+            llm=FewCallsLLM(),
+            tools=[],
+            agent=Agent(role="Looper", goal="g", backstory="b"),
+            original_tools=[LockstepTool()],
+        )
+        context = StepExecutionContext(task_description="t", task_goal="g")
+        errors: list[BaseException] = []
+
+        def run(step: int) -> None:
+            try:
+                executor.execute(TodoItem(step_number=step, description="echo"), context)
+            except BaseException as e:  # noqa: BLE001
+                errors.append(e)
+                barrier.abort()
+
+        threads = [threading.Thread(target=run, args=(n,)) for n in (1, 2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+
+        assert errors == []
