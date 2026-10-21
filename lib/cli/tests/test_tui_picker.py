@@ -61,8 +61,8 @@ def test_draw_multi_renders_only_the_visible_window(monkeypatch) -> None:
     )
 
     rendered = output.getvalue()
-    assert line_count == 8
-    assert "showing 60-66 of 125" in rendered
+    assert line_count == 7
+    assert "showing" not in rendered
     assert "Tool 59" in rendered
     assert "Tool 65" in rendered
     assert "Tool 0" not in rendered
@@ -107,7 +107,6 @@ def test_searchable_draw_shows_the_query_and_an_empty_match(monkeypatch) -> None
     rendered = output.getvalue()
     assert "SEARCH ACTIONS" in rendered
     assert "missing" in rendered
-    assert "type to filter" in rendered
     assert "Esc to clear" in rendered
     assert "No matching actions. Press Esc to clear." in rendered
     assert "0 matches" in rendered
@@ -131,6 +130,23 @@ def test_searchable_draw_shows_a_prominent_empty_search_prompt(monkeypatch) -> N
     assert "Esc to clear" not in rendered
     assert "╭─" in rendered
     assert "╰" in rendered
+
+
+def test_searchable_draw_accepts_a_contextual_search_title(monkeypatch) -> None:
+    output = StringIO()
+    monkeypatch.setattr(tui_picker.sys, "stdout", output)
+
+    tui_picker._draw_multi(
+        ["Gmail Integration"],
+        cursor=0,
+        selected=set(),
+        searchable=True,
+        search_title="SEARCH APPLICATIONS",
+    )
+
+    rendered = output.getvalue()
+    assert "SEARCH APPLICATIONS" in rendered
+    assert "SEARCH ACTIONS" not in rendered
 
 
 def test_numbered_search_keeps_original_indexes(monkeypatch) -> None:
@@ -191,3 +207,26 @@ def test_matching_label_indices_keeps_original_positions() -> None:
     assert tui_picker.matching_label_indices(labels, "draft") == [1]
     assert tui_picker.matching_label_indices(labels, "search-emails") == [2]
     assert tui_picker.matching_label_indices(labels, "missing") == []
+
+
+def test_search_reveals_collapsed_labels() -> None:
+    labels = ["Google Workspace", "Gmail Integration", "GitHub Integration"]
+
+    assert tui_picker._visible_label_indices(
+        labels, "", set(), searchable=True, collapsed_indices={1, 2}
+    ) == [0]
+    assert tui_picker._visible_label_indices(
+        labels, "github", set(), searchable=True, collapsed_indices={1, 2}
+    ) == [2]
+
+
+def test_searchable_picker_selects_a_collapsed_match(monkeypatch) -> None:
+    keys = iter(["g", "i", "t", "h", "u", "b", "space", "enter"])
+    monkeypatch.setattr(tui_picker, "_read_key", lambda: next(keys))
+    monkeypatch.setattr(tui_picker, "_clear_lines", lambda *_args, **_kwargs: None)
+
+    assert tui_picker._arrow_select_multi(
+        ["Google Workspace", "Gmail Integration", "GitHub Integration"],
+        searchable=True,
+        collapsed_indices={1, 2},
+    ) == ([2], None)
