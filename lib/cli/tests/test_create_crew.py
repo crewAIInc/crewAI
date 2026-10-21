@@ -3,6 +3,7 @@ import asyncio
 import builtins
 import keyword
 import itertools
+import os
 import re
 import shlex
 import shutil
@@ -790,7 +791,7 @@ def test_platform_validation_deduplicates_actions_by_application() -> None:
     assert apps == ["github", "gmail"]
 
 
-def test_platform_token_prompts_show_entered_values(monkeypatch) -> None:
+def test_platform_revalidation_prompt_shows_entered_value(monkeypatch) -> None:
     prompt_options: list[dict[str, object]] = []
 
     def prompt(_label: str, **kwargs: object) -> str:
@@ -799,9 +800,8 @@ def test_platform_token_prompts_show_entered_values(monkeypatch) -> None:
 
     monkeypatch.setattr(json_crew.click, "prompt", prompt)
 
-    assert json_crew._prompt_platform_token() == "token"
     assert json_crew._prompt_platform_revalidation_token() == "token"
-    assert [options["hide_input"] for options in prompt_options] == [False, False]
+    assert [options["hide_input"] for options in prompt_options] == [False]
 
 
 def test_get_logged_in_platform_token_uses_saved_login_and_organization(
@@ -922,6 +922,8 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
 
     monkeypatch.setattr(builtins, "__import__", import_with_warning)
     monkeypatch.setenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", "test-token")
+    get_token = mock.Mock()
+    monkeypatch.setattr(json_crew, "_get_platform_token_from_login", get_token)
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
@@ -937,6 +939,37 @@ def test_platform_auth_suppresses_warnings_only_while_importing_tools(
         "Enterprise Action Auth Token found via "
         "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable" in output
     )
+    get_token.assert_not_called()
+
+
+def test_platform_auth_fetches_token_from_login_when_env_is_missing(monkeypatch) -> None:
+    class FakeApplicationSelector:
+        @classmethod
+        def from_string(cls, value: str) -> str:
+            return value
+
+    fake_client = mock.Mock()
+    fake_client.get_actions.return_value = [object()]
+    fake_integrations_client = mock.Mock(
+        ApplicationSelector=FakeApplicationSelector,
+        client_for_selector=lambda _selector: fake_client,
+    )
+    original_import = builtins.__import__
+
+    def import_integrations(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "crewai_tools.tools.crewai_platform_tools.integrations_client":
+            return fake_integrations_client
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", import_integrations)
+    monkeypatch.delenv("CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", raising=False)
+    get_token = mock.Mock(return_value="login-token")
+    monkeypatch.setattr(json_crew, "_get_platform_token_from_login", get_token)
+
+    assert json_crew._setup_platform_auth([{"tools": ["platform:github"]}]) == "login-token"
+
+    get_token.assert_called_once_with()
+    assert os.environ["CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"] == "login-token"
 
 
 def test_platform_validation_checks_apps_concurrently():

@@ -1078,26 +1078,6 @@ def _get_platform_token_from_login() -> str:
         ) from error
 
 
-def _prompt_platform_token() -> str:
-    """Explain how to prompt for an AMP Enterprise Action Auth Token."""
-    click.secho(
-        "  To use CrewAI Platform tools, you need an Enterprise Action Auth Token.",
-        fg="yellow",
-    )
-    click.secho(
-        "  Get your token from CrewAI AMP: https://app.crewai.com "
-        "→ Settings → Account → Enterprise Action Auth Token.",
-        fg="cyan",
-    )
-    return str(
-        click.prompt(
-            click.style("  CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN", fg="cyan"),
-            hide_input=False,
-            prompt_suffix=click.style(" > ", fg="bright_white"),
-        )
-    ).strip()
-
-
 def _check_platform_app(
     app: str, application_selector: Any, client_for_selector: Any
 ) -> tuple[Any | None, Exception | None]:
@@ -1271,24 +1251,11 @@ def _setup_platform_auth(agents: list[dict[str, Any]]) -> str | None:
     credential_location: str | None = None
     if token:
         credential_location = "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN environment variable"
+    else:
+        token = _get_platform_token_from_login()
+        credential_location = "crewai login"
 
     while True:
-        if not token:
-            click.secho(
-                "  No CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN found; prompting for one.",
-                fg="yellow",
-            )
-            token = _prompt_platform_token()
-            if token:
-                credential_location = "interactive prompt"
-        if not token:
-            click.secho(
-                "  An Enterprise Action Auth Token is required to validate "
-                "the selected integrations.",
-                fg="yellow",
-            )
-            continue
-
         _success(
             f"Enterprise Action Auth Token found via {credential_location}", dim=True
         )
