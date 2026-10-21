@@ -804,6 +804,36 @@ def test_platform_token_prompts_show_entered_values(monkeypatch) -> None:
     assert [options["hide_input"] for options in prompt_options] == [False, False]
 
 
+def test_get_logged_in_platform_token_uses_saved_login_and_organization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = mock.Mock()
+    client.get_integration_token.return_value = "integration-token"
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setattr(
+        json_crew, "Settings", lambda: mock.Mock(org_uuid="organization-id")
+    )
+    plus_api = mock.Mock(return_value=client)
+    monkeypatch.setattr(json_crew, "PlusAPI", plus_api)
+
+    assert json_crew._get_logged_in_platform_token() == "integration-token"
+
+    plus_api.assert_called_once_with(
+        api_key="login-token", organization_id="organization-id"
+    )
+    client.get_integration_token.assert_called_once_with()
+
+
+def test_get_logged_in_platform_token_requires_selected_organization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(json_crew, "get_auth_token", lambda: "login-token")
+    monkeypatch.setattr(json_crew, "Settings", lambda: mock.Mock(org_uuid=None))
+
+    with pytest.raises(RuntimeError, match="No CrewAI organization is selected"):
+        json_crew._get_logged_in_platform_token()
+
+
 def test_platform_auth_suppresses_warnings_only_while_importing_tools(
     monkeypatch, capsys
 ):

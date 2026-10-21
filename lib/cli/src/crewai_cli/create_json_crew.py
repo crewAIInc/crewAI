@@ -20,13 +20,16 @@ from crewai_core.platform_apps import (
     PLATFORM_APP_TOOLS,
     PLATFORM_APP_TOOL_COUNTS,
 )
+from crewai_core.settings import Settings
 from crewai_core.telemetry import Telemetry
 from rich.console import Console
 from rich.text import Text
 
+from crewai_cli.authentication.token import get_auth_token
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
 from crewai_cli.model_catalog import get_provider_models
+from crewai_cli.plus_api import PlusAPI
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     copy_assistant_instructions,
@@ -1034,6 +1037,17 @@ def _platform_apps_from_agents(agents: list[dict[str, Any]]) -> list[str]:
 def _platform_app_name(app: str) -> str:
     """Return the display name for a platform application slug."""
     return PLATFORM_APP_DISPLAY_NAMES.get(app, app.replace("_", " ").title())
+
+
+def _get_logged_in_platform_token() -> str:
+    """Fetch the selected organization's integration token from the saved login."""
+    login_token = get_auth_token()
+    organization_id = Settings().org_uuid
+    if not organization_id:
+        raise RuntimeError("No CrewAI organization is selected")
+    return PlusAPI(
+        api_key=login_token, organization_id=organization_id
+    ).get_integration_token()
 
 
 def _prompt_platform_token() -> str:
