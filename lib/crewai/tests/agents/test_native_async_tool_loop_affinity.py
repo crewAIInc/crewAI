@@ -96,6 +96,79 @@ def test_async_tool_bridges_to_the_caller_loop() -> None:
         caller_loop.close()
 
 
+def test_tool_runtime_error_propagates_and_runs_exactly_once() -> None:
+    """A RuntimeError raised by the tool's coroutine must propagate unchanged and the
+    tool must execute exactly once (it must not be re-run through the sync path)."""
+    executions: list[str] = []
+
+    @tool("boom_once")
+    async def boom_once(query: str) -> str:
+        """Raise RuntimeError after recording a side effect."""
+        executions.append(query)
+        raise RuntimeError("tool exploded")
+
+    caller_loop = asyncio.new_event_loop()
+    try:
+
+        async def scenario() -> Exception | None:
+            async def run_in_worker() -> Exception | None:
+                try:
+                    await asyncio.to_thread(
+                        run_native_tool_result,
+                        boom_once.run,
+                        {"query": "q"},
+                        boom_once,
+                        caller_loop=caller_loop,
+                    )
+                except Exception as exc:  # noqa: BLE001 - the exception is the assertion
+                    return exc
+                return None
+
+            return await run_in_worker()
+
+        exc = caller_loop.run_until_complete(scenario())
+        assert isinstance(exc, RuntimeError) and "tool exploded" in str(exc)
+        assert executions == ["q"], f"tool ran {len(executions)} times: {executions}"
+        assert boom_once.current_usage_count == 1
+    finally:
+        caller_loop.close()
+
+
+def test_bridge_is_skipped_when_already_on_the_target_loop() -> None:
+    """Calling the helper on the target loop's own thread must not deadlock: it must
+    use the provided sync callable instead of scheduling a coroutine it cannot await."""
+    arun_calls: list[str] = []
+
+    class _AsyncTool:
+        func = None  # class-based tool: detection consults the _arun override
+
+        @staticmethod
+        async def _arun(**kwargs: Any) -> str:
+            arun_calls.append("arun")
+            return "from-arun"
+
+        def arun(self, **kwargs: Any) -> Any:
+            return type(self)._arun(**kwargs)
+
+    fake_tool = _AsyncTool()
+    caller_loop = asyncio.new_event_loop()
+    try:
+
+        async def scenario() -> str:
+            # The helper runs ON the very loop it would bridge onto.
+            return run_native_tool_result(
+                lambda **kwargs: "from-fallback",
+                {"x": 1},
+                fake_tool,
+                caller_loop=asyncio.get_running_loop(),
+            )
+
+        assert caller_loop.run_until_complete(scenario()) == "from-fallback"
+        assert arun_calls == [], "bridge must not schedule onto the running loop"
+    finally:
+        caller_loop.close()
+
+
 class ScriptedLLM(BaseLLM):
     """Stub LLM emitting one native tool call, then a final answer."""
 
