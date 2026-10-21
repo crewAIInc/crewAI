@@ -117,6 +117,10 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 
 
+class _NoOrganizationSelectedError(RuntimeError):
+    """Raised when the saved CLI login has no active organization."""
+
+
 # ── Common tools for picker ────────────────────────────────────
 
 _TOOL_CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
@@ -1045,7 +1049,7 @@ def _get_logged_in_platform_token() -> str:
     login_token = get_auth_token()
     organization_id = Settings().org_uuid
     if not organization_id:
-        raise RuntimeError("No CrewAI organization is selected")
+        raise _NoOrganizationSelectedError("No CrewAI organization is selected")
     return PlusAPI(
         api_key=login_token, organization_id=organization_id
     ).get_integration_token()
@@ -1060,7 +1064,18 @@ def _get_platform_token_from_login() -> str:
             "  Sign in to CrewAI Platform to configure integrations.", fg="cyan"
         )
         AuthenticationCommand().login()
+    except _NoOrganizationSelectedError:
+        click.secho(
+            "  Select a CrewAI organization to configure integrations.", fg="cyan"
+        )
+        AuthenticationCommand()._select_organization()
+
+    try:
         return _get_logged_in_platform_token()
+    except _NoOrganizationSelectedError as error:
+        raise click.ClickException(
+            "A CrewAI organization must be selected to configure integrations."
+        ) from error
 
 
 def _prompt_platform_token() -> str:
