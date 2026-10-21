@@ -47,6 +47,26 @@ def _ensure_dir_mode(directory: Path) -> None:
         )
 
 
+def _read_settings_json(path: Path) -> dict[str, Any] | None:
+    """Read settings from ``path``.
+
+    Returns ``{}`` if the file does not exist, and ``None`` (after logging a
+    warning) if it exists but is unreadable or not a JSON object.
+    """
+    try:
+        if not path.is_file():
+            return {}
+        with path.open("r") as f:
+            data = json.load(f)
+    except (OSError, ValueError) as e:
+        logger.warning("Ignoring unreadable settings file %s: %s", path, e)
+        return None
+    if not isinstance(data, dict):
+        logger.warning("Ignoring settings file %s: expected a JSON object", path)
+        return None
+    return data
+
+
 def _write_secure_json(path: Path, data: dict[str, Any]) -> None:
     """Atomically write ``data`` as JSON to ``path`` with owner-only (0o600) mode."""
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
@@ -220,15 +240,7 @@ class Settings(BaseModel):
             super().__init__(config_path=Path("/dev/null"), **merged_data)
             return
 
-        file_data = {}
-        if config_path.is_file():
-            try:
-                with config_path.open("r") as f:
-                    file_data = json.load(f)
-            except Exception:
-                file_data = {}
-
-        merged_data = {**file_data, **data}
+        merged_data = {**(_read_settings_json(config_path) or {}), **data}
         super().__init__(config_path=config_path, **merged_data)
 
     def clear_user_settings(self) -> None:
@@ -248,18 +260,19 @@ class Settings(BaseModel):
         if str(self.config_path) == "/dev/null":
             return
 
+        existing_data = _read_settings_json(self.config_path)
         try:
-            if self.config_path.is_file():
-                with self.config_path.open("r") as f:
-                    existing_data = json.load(f)
-            else:
-                existing_data = {}
-
-            updated_data = {**existing_data, **self.model_dump(exclude_unset=True)}
-            _write_secure_json(self.config_path, updated_data)
-
-        except Exception:  # noqa: S110
-            pass
+            if existing_data is None:
+                # Keep the unreadable file so the user can recover its values.
+                backup_path = self.config_path.with_name(f"{self.config_path.name}.bak")
+                os.replace(self.config_path, backup_path)
+                logger.warning("Moved unreadable settings file to %s", backup_path)
+            _write_secure_json(
+                self.config_path,
+                {**(existing_data or {}), **self.model_dump(exclude_unset=True)},
+            )
+        except OSError as e:
+            logger.warning("Could not save settings to %s: %s", self.config_path, e)
 
     def _reset_user_settings(self) -> None:
         """Reset all user settings to default values."""
