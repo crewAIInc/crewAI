@@ -117,9 +117,14 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         for file_path in self.safe_file_paths:
             file_path = self.convert_to_path(file_path)
             with pd.ExcelFile(file_path) as xl:
+                # Read every cell as the text it holds: inferred dtypes turn 12 into
+                # "12.0" in a column with a blank and "01234" into "1234.0", and the
+                # default NA values blank out cells that say "N/A" or "NULL"
                 sheet_dict = {
                     str(sheet_name): str(
-                        pd.read_excel(xl, sheet_name).to_csv(index=False)
+                        pd.read_excel(
+                            xl, sheet_name, dtype=str, keep_default_na=False
+                        ).to_csv(index=False)
                     )
                     for sheet_name in xl.sheet_names
                 }

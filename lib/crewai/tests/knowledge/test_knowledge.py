@@ -479,6 +479,27 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
+def test_excel_knowledge_source_keeps_cells_as_written(tmpdir):
+    """Numbers, text that looks numeric, and N/A-like text keep the value in the sheet."""
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["SKU", "Qty", "Zip", "Status"])
+    sheet.append(["A1", 12, "01234", "N/A"])
+    sheet.append(["A2", None, "02134", "NULL"])
+    excel_path = Path(tmpdir.join("stock.xlsx"))
+    workbook.save(excel_path)
+
+    excel_source = ExcelKnowledgeSource(file_paths=[excel_path])
+
+    assert excel_source.content[excel_path]["Sheet"].splitlines() == [
+        "SKU,Qty,Zip,Status",
+        "A1,12,01234,N/A",
+        "A2,,02134,NULL",
+    ]
+
+
 def test_excel_knowledge_source(mock_vector_db, tmpdir):
     """Test ExcelKnowledgeSource with a simple Excel file."""
 
