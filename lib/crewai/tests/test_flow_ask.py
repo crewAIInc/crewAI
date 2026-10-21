@@ -1194,3 +1194,103 @@ class TestAskMetadata:
         assert bob_entry is not None
         assert bob_entry["response"] == "answer from bob"
         assert bob_entry["response_metadata"] == {"responded_by": "bob"}
+
+
+class TestScriptedInputProviderDocExample:
+    """Smoke check for the documented scripted InputProvider example."""
+
+    def test_scripted_input_provider_example(self) -> None:
+        """Verify the complete scripted input provider example from the documentation."""
+
+        class ScriptedInputProvider:
+            def __init__(self, responses: dict[str, InputResponse | str | None]) -> None:
+                self.responses = responses
+                self.received_requests: list[dict[str, Any]] = []
+
+            def request_input(
+                self,
+                message: str,
+                flow: Flow[Any],
+                metadata: dict[str, Any] | None = None,
+            ) -> InputResponse | str | None:
+                prompt_key = metadata.get("prompt_id") if metadata else message
+                self.received_requests.append({"message": message, "metadata": metadata})
+                return self.responses.get(prompt_key)
+
+        provider = ScriptedInputProvider(
+            responses={
+                "select_shipping": InputResponse(
+                    text="express",
+                    metadata={"selected_by": "user_42", "channel": "web_modal"},
+                ),
+                "confirm_order": None,
+            }
+        )
+
+        assert isinstance(provider, InputProvider)
+
+        class OrderFulfillmentFlow(Flow):
+            input_provider = provider
+
+            @start()
+            def select_shipping(self) -> str:
+                shipping = self.ask(
+                    "Select shipping method (standard/express):",
+                    metadata={"prompt_id": "select_shipping", "required": True},
+                )
+                if shipping is None:
+                    return "Order aborted: shipping method not provided."
+                return f"Shipping: {shipping}"
+
+            @listen(select_shipping)
+            def confirm_order(self, shipping_status: str) -> str:
+                confirmation = self.ask(
+                    "Confirm order placement (yes/no):",
+                    metadata={"prompt_id": "confirm_order", "timeout": 30},
+                )
+                if confirmation is None:
+                    return f"{shipping_status} | Order cancelled: confirmation unavailable."
+                return f"{shipping_status} | Order confirmed: {confirmation}"
+
+        flow = OrderFulfillmentFlow()
+        result = flow.kickoff()
+
+        # Check result
+        assert result == "Shipping: express | Order cancelled: confirmation unavailable."
+
+        # Check provider received request metadata
+        assert len(provider.received_requests) == 2
+        assert provider.received_requests[0]["metadata"] == {
+            "prompt_id": "select_shipping",
+            "required": True,
+        }
+        assert provider.received_requests[1]["metadata"] == {
+            "prompt_id": "confirm_order",
+            "timeout": 30,
+        }
+
+        # Check flow.input_history public property
+        assert len(flow.input_history) == 2
+
+        # First prompt: successful InputResponse with metadata
+        first_entry = flow.input_history[0]
+        assert first_entry["message"] == "Select shipping method (standard/express):"
+        assert first_entry["response"] == "express"
+        assert first_entry["metadata"] == {
+            "prompt_id": "select_shipping",
+            "required": True,
+        }
+        assert first_entry["response_metadata"] == {
+            "selected_by": "user_42",
+            "channel": "web_modal",
+        }
+
+        # Second prompt: unavailable input returning None
+        second_entry = flow.input_history[1]
+        assert second_entry["message"] == "Confirm order placement (yes/no):"
+        assert second_entry["response"] is None
+        assert second_entry["metadata"] == {
+            "prompt_id": "confirm_order",
+            "timeout": 30,
+        }
+        assert second_entry["response_metadata"] is None

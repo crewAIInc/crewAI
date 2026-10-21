@@ -719,6 +719,143 @@ def next_step(self, result: HumanFeedbackResult):
 
 플로우에서의 인간 피드백에 대한 완전한 가이드는 비동기/논블로킹 피드백과 커스텀 프로바이더(Slack, 웹훅 등)를 포함하여 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows)을 참조하세요.
 
+### ask()를 사용한 스텝 내 사용자 입력
+
+플로우 내부의 스텝에서 옵션 선택, 작업 확인, 스텝 중간 확인 질문 등 직접적인 사용자 입력이 필요한 경우 `self.ask()`를 사용하세요.
+
+기본적으로 `ask()`는 표준 콘솔 입력을 통해 터미널 사용자에게 입력을 요청합니다. 하지만 Flow에 커스텀 `InputProvider`를 구성하면 `stdin`을 블로킹하지 않고 자동화된 테스트, 웹훅, 메시지 큐, 또는 커스텀 웹/채팅 인터페이스와 통합할 수 있습니다.
+
+#### 커스텀 InputProvider 및 메타데이터
+
+입력 프로바이더는 단일 메서드를 갖는 `InputProvider` 프로토콜을 구현합니다:
+
+```python
+def request_input(
+    self,
+    message: str,
+    flow: Flow,
+    metadata: dict[str, Any] | None = None,
+) -> InputResponse | str | None:
+    ...
+```
+
+- **요청 메타데이터 (Request metadata)**: `self.ask(message, metadata={...})`를 통해 임의의 키-값 컨텍스트(프롬프트 ID, 필드 필수 여부, 타임아웃 등)를 전달할 수 있습니다.
+- **응답 메타데이터 (Response metadata)**: 프로바이더는 일반 `str`, 전송 또는 호출자 메타데이터(타임스탬프, 사용자 ID, 신뢰도 점수 등)가 포함된 `InputResponse(text="...", metadata={...})`, 또는 입력을 사용할 수 없거나 취소된 경우 `None`을 반환할 수 있습니다.
+- **반환값**: `self.ask()`는 `InputResponse`를 언래핑하여 응답 문자열을 직접 반환합니다(또는 `None`).
+- **응답 메타데이터 검사**: 요청 메타데이터와 응답 메타데이터를 포함한 전체 기록은 `flow.input_history`에 기록됩니다.
+
+#### 스크립트 기반 InputProvider 예시
+
+아래는 결정론적인 스크립트 프로바이더를 사용하는 완전히 실행 가능한 예시입니다. 요청 메타데이터 전달, 응답 메타데이터가 포함된 `InputResponse` 수신, 터미널 입력을 차단하거나 외부 API를 호출하지 않고 사용 불가능한 입력을 처리하는 방법을 보여줍니다.
+
+```python Code
+from typing import Any, Mapping
+from crewai.flow.flow import Flow, start
+from crewai.flow.flow_events import InputResponse
+
+
+class ScriptedInputProvider:
+    """Deterministic input provider for automated testing and headless environments."""
+
+    def __init__(self, responses: Mapping[str, InputResponse | str | None]):
+        self.responses = responses
+        self.received_requests: list[dict[str, Any]] = []
+
+    def request_input(
+        self,
+        message: str,
+        flow: Flow,
+        metadata: dict[str, Any] | None = None,
+    ) -> InputResponse | str | None:
+        # Request metadata from self.ask() is delivered here
+        self.received_requests.append(
+            {"message": message, "metadata": metadata or {}}
+        )
+        return self.responses.get(message)
+
+
+class OrderFulfillmentFlow(Flow):
+    # Configure custom input provider at the flow level
+    input_provider = ScriptedInputProvider(
+        responses={
+            "Select shipping method (standard/express):": InputResponse(
+                text="express",
+                metadata={"source": "customer_portal", "confidence": 0.98},
+            ),
+            "Provide gift wrap message (optional):": None,  # Simulated unavailable or skipped input
+        }
+    )
+
+    @start()
+    def process_order(self):
+        # 1. Required prompt with request metadata
+        shipping = self.ask(
+            "Select shipping method (standard/express):",
+            metadata={"step": "shipping_selection", "required": True},
+        )
+        print(f"Selected shipping: {shipping}")
+
+        # 2. Optional prompt where input is unavailable (returns None)
+        gift_message = self.ask(
+            "Provide gift wrap message (optional):",
+            metadata={"step": "gift_wrap", "required": False},
+        )
+        if gift_message is None:
+            # Handle unavailable or skipped input explicitly
+            print("Gift wrap skipped or input unavailable.")
+        else:
+            print(f"Gift wrap message: {gift_message}")
+
+        return "order_processed"
+
+
+if __name__ == "__main__":
+    flow = OrderFulfillmentFlow()
+    result = flow.kickoff()
+    print(f"Flow result: {result}")
+
+    # Inspect input history and response metadata
+    print("\nInput History:")
+    for entry in flow.input_history:
+        print(f"- Prompt: {entry.message}")
+        print(f"  Response text: {entry.response}")
+        print(f"  Request metadata: {entry.metadata}")
+        print(f"  Response metadata: {entry.response_metadata}")
+```
+
+스크립트 실행:
+
+```bash Command
+python order_flow.py
+```
+
+```text Output
+Selected shipping: express
+Gift wrap skipped or input unavailable.
+Flow result: order_processed
+
+Input History:
+- Prompt: Select shipping method (standard/express):
+  Response text: express
+  Request metadata: {'step': 'shipping_selection', 'required': True}
+  Response metadata: {'source': 'customer_portal', 'confidence': 0.98}
+- Prompt: Provide gift wrap message (optional):
+  Response text: None
+  Request metadata: {'step': 'gift_wrap', 'required': False}
+  Response metadata: None
+```
+
+#### ask() vs handle_turn()
+
+`self.ask()`와 대화형 턴을 구분하는 것이 중요합니다:
+
+| 기능 | `self.ask()` | `flow.handle_turn()` |
+| :--- | :--- | :--- |
+| **실행 컨텍스트** | 활발히 실행 중인 스텝 메서드 **내부**에서 호출 | 전체 flow 턴을 시작하거나 진행하는 진입점 |
+| **목적** | 스텝 중간 확인, 마법사 질문 또는 확인 프롬프트 | 각 메시지가 그래프 실행을 트리거하는 멀티턴 대화 주도 |
+| **제어 흐름** | 답변될 때까지 현재 스텝을 일시 중지하는 동기 인라인 호출 | 해당 턴에 대해 flow 그래프의 새 실행을 시작 |
+| **가이드** | 커스텀 `InputProvider` 사용법은 위 내용 참조 | [대화형 Flows](/ko/guides/flows/conversational-flows) 참조 |
+
 ## 플로우에 에이전트 추가하기
 
 에이전트는 플로우에 원활하게 통합할 수 있으며, 단순하고 집중된 작업 실행이 필요할 때 전체 Crew의 경량 대안으로 활용됩니다. 아래는 에이전트를 플로우 내에서 사용하여 시장 조사를 수행하는 예시입니다:
