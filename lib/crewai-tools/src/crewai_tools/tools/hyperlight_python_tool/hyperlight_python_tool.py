@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from builtins import type as type_
+import contextlib
 import os
 import re
 import shutil
+import signal
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -410,6 +413,8 @@ class HyperlightPythonTool(BaseTool):
     def _execute(
         self, command: list[str], timeout: float, limit: int | None = None
     ) -> dict[str, Any]:
+        # In the caller's process group, so that a signal to the group (a
+        # terminal's Ctrl-C or hangup, `timeout`) stops it too
         process = subprocess.Popen(  # noqa: S603
             command,
             stdin=subprocess.DEVNULL,
@@ -435,8 +440,7 @@ class HyperlightPythonTool(BaseTool):
         finally:
             # Also on an interrupt: the micro-VM must not outlive the call
             if process.poll() is None:
-                process.kill()
-                process.wait()
+                self._kill_tree(process)
             deadline = time.monotonic() + _DRAIN_GRACE_SECONDS
             for reader in readers:
                 if reader.is_alive():
@@ -453,6 +457,174 @@ class HyperlightPythonTool(BaseTool):
             "stderr": stderr,
             "timed_out": timed_out,
         }
+
+    @staticmethod
+    def _kill_tree(process: subprocess.Popen[bytes]) -> None:
+        """Stop `process` and what it started, then reap it.
+
+        hluk is one process, but under a wrapper or shim that does not exec
+        it, the micro-VM is a child of the process we started: on POSIX the
+        whole tree goes.
+        """
+        interrupted = False
+        # Filled as they are stopped, so that what was frozen is killed
+        stopped: list[int] = []
+        killed: list[int] = []
+        # No Ctrl-C while the tree is stopped and killed: cut short, it would
+        # leave part of the tree stopped, or running, for good.  One that
+        # comes, to whichever thread, is raised once the kills are sent.
+        held: list[int] = []
+        previous: Any = None
+        # Not over a handler installed outside Python, which could not be
+        # put back
+        hold = threading.current_thread() is threading.main_thread() and (
+            signal.getsignal(signal.SIGINT) is not None
+        )
+        if hold:
+            try:
+                previous = signal.signal(
+                    signal.SIGINT, lambda signum, _frame: held.append(signum)
+                )
+            except (ValueError, OSError):
+                # A subinterpreter's main thread, say: no holding
+                hold = False
+        try:
+            try:
+                # Windows has no safe tree to walk: a child keeps a dead
+                # parent's id, which hluk may have been given since, so a tree
+                # kill could take an unrelated program.  There, hluk alone.
+                if os.name != "nt":
+                    _stop_tree(process.pid, stopped)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            except KeyboardInterrupt:
+                # One no handler could hold (another thread's interrupt_main)
+                interrupted = True
+            finally:
+                while stopped:
+                    pid = stopped.pop()
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except OSError:
+                        # Not ours to kill, so not ours to wait for either
+                        continue
+                    killed.append(pid)
+                if process.poll() is None:
+                    with contextlib.suppress(OSError):
+                        process.kill()
+        finally:
+            if hold:
+                signal.signal(signal.SIGINT, previous)
+        # Interruptible: everything has been killed
+        process.wait()
+        # Ours to reap when this process is a container's init or a
+        # subreaper, which the wrapper's orphans are handed to: parents
+        # first, as one's exit hands its children over
+        for pid in reversed(killed):
+            with contextlib.suppress(ChildProcessError):
+                os.waitpid(pid, 0)
+        if interrupted:
+            raise KeyboardInterrupt
+        if held:
+            # Now to the handler it was meant for: ignored, the caller's own,
+            # or the default's
+            if callable(previous):
+                previous(signal.SIGINT, None)
+            elif previous == signal.SIG_DFL:
+                os.kill(os.getpid(), signal.SIGINT)
+
+
+def _stop_tree(root: int, stopped: list[int]) -> None:
+    """SIGSTOP `root` and everything under it, a level at a time, adding
+    each process stopped under it to `stopped`.
+
+    A stopped process can neither start another one nor reap a child that
+    exits, so each level found under a stopped one is still its own when
+    it is stopped and, later, killed.
+    """
+    os.kill(root, signal.SIGSTOP)
+    seen = {root}
+    unstoppable: set[int] = set()
+    level = [root]
+    while level:
+        # A process stopped in the middle of a fork finishes it first: its
+        # child is in the next scan once the process is seen stopped
+        for pid in level:
+            if pid not in unstoppable:
+                _wait_stopped(pid)
+        children = _children()
+        level = [c for p in level for c in children.get(p, []) if c not in seen]
+        for pid in level:
+            seen.add(pid)
+            # Recorded first, so that it is killed even if stopping it is
+            # the last thing that happens
+            stopped.append(pid)
+            try:
+                os.kill(pid, signal.SIGSTOP)
+            except OSError:
+                unstoppable.add(pid)
+
+
+def _stat_fields(pid: int) -> list[bytes] | None:
+    """The fields of /proc/<pid>/stat after the command (state, parent, ...),
+    or None if it is gone."""
+    try:
+        with open(f"/proc/{pid}/stat", "rb") as f:
+            stat = f.read()
+    except OSError:
+        return None
+    # The command is in parentheses and may hold spaces and parentheses
+    return stat[stat.rfind(b")") + 2 :].split()
+
+
+def _wait_stopped(pid: int) -> None:
+    """Wait, briefly, until `pid` reports itself stopped (or gone)."""
+    linux = sys.platform.startswith("linux")
+    deadline = time.monotonic() + 1.0
+    while time.monotonic() < deadline:
+        if linux:
+            fields = _stat_fields(pid)
+            state = fields[0][:1] if fields else b""
+        else:
+            state = subprocess.run(  # noqa: S603
+                ["/bin/ps", "-o", "stat=", "-p", str(pid)],
+                capture_output=True,
+                timeout=10,
+                check=False,
+            ).stdout.strip()[:1]
+        if state in (b"", b"T", b"t", b"Z", b"X"):
+            return
+        time.sleep(0.001)
+
+
+def _children() -> dict[int, list[int]]:
+    """Every process's children, by parent id."""
+    children: dict[int, list[int]] = {}
+    if sys.platform.startswith("linux"):
+        # ps reads /proc too, so without it there is nothing to find
+        try:
+            entries = os.listdir("/proc")
+        except OSError:
+            return children
+        for entry in entries:
+            if not entry.isdigit():
+                continue
+            fields = _stat_fields(int(entry))
+            if fields is not None and len(fields) > 1:
+                children.setdefault(int(fields[1]), []).append(int(entry))
+        return children
+    listing = subprocess.run(
+        ["/bin/ps", "-A", "-o", "pid=,ppid="],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    ).stdout
+    for line in listing.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            children.setdefault(int(parts[1]), []).append(int(parts[0]))
+    return children
 
 
 class _Capture:

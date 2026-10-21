@@ -1,7 +1,9 @@
 import json
 import os
 import shutil
+import signal
 import stat
+import subprocess
 import sys
 import textwrap
 import time
@@ -165,6 +167,174 @@ def test_removes_the_script_after_each_call(fake_hluk, hluk_log):
     tool.run(code="print(1)")
 
     assert not os.path.exists(hluk_calls(hluk_log)[-1][-1])
+
+
+def test_stops_hluk_under_a_wrapper_on_a_timeout(tmp_path, fake_hluk):
+    # A wrapper that runs hluk as its child and waits, rather than exec it
+    wrapper = tmp_path / "hluk-wrapper"
+    wrapper.write_text(f'#!/bin/sh\n{fake_hluk} "$@"\n')
+    wrapper.chmod(wrapper.stat().st_mode | stat.S_IEXEC)
+    pid_file = tmp_path / "guest.pid"
+    # Room for the wrapper and two interpreters to start on a loaded runner
+    tool = HyperlightPythonTool(hluk_path=str(wrapper), timeout=5)
+
+    result = tool.run(
+        code=f"import os\nopen({str(pid_file)!r}, 'w').write(str(os.getpid()))\n"
+        "while True: pass"
+    )
+
+    assert result["timed_out"] is True
+    assert pid_file.exists(), "the guest did not start within the timeout"
+    guest = int(pid_file.read_text())
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and _is_running(guest):
+        time.sleep(0.1)
+    if _is_running(guest):
+        os.kill(guest, 9)
+        pytest.fail("the code hluk ran under the wrapper outlived the timeout")
+
+
+def _is_running(pid):
+    # Gone, or a zombie its new parent has yet to reap
+    if os.path.isdir("/proc"):
+        try:
+            with open(f"/proc/{pid}/stat") as f:
+                return f.read().rsplit(")", 1)[1].split()[0] != "Z"
+        except FileNotFoundError:
+            return False
+    state = subprocess.run(
+        ["/bin/ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True
+    ).stdout.strip()
+    return bool(state) and not state.startswith("Z")
+
+
+def test_stops_what_nested_wrappers_keep_starting(tmp_path, fake_hluk):
+    # A copy of sleep by a name of its own, so that only the test's are found
+    sleeper = tmp_path / "hl-test-sleeper"
+    shutil.copy(shutil.which("sleep"), sleeper)
+    # The outer wrapper runs an inner one that keeps starting processes,
+    # a bounded number, one every 50 ms
+    inner = tmp_path / "inner"
+    # Only for a script: --version and the warm-up return at once
+    inner.write_text(
+        "#!/bin/sh\n"
+        'case "$*" in *--version*|*"--exec pass"*) ;; *)\n'
+        f"i=0; while [ $i -lt 200 ]; do {sleeper} 300 & i=$((i+1)); sleep 0.05; done &\n"
+        ";; esac\n"
+        f'{fake_hluk} "$@"\n'
+    )
+    outer = tmp_path / "hluk-wrapper"
+    outer.write_text(f'#!/bin/sh\n{inner} "$@"\n')
+    for script in (inner, outer):
+        script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    tool = HyperlightPythonTool(hluk_path=str(outer), timeout=3)
+    try:
+        result = tool.run(code="while True: pass")
+
+        assert result["timed_out"] is True
+        time.sleep(0.5)
+        left = subprocess.run(
+            ["pgrep", "-f", str(tmp_path)], capture_output=True, text=True
+        ).stdout.split()
+        survivors = [pid for pid in left if _is_running(int(pid))]
+        assert not survivors, f"{len(survivors)} processes outlived the timeout"
+    finally:
+        subprocess.run(["pkill", "-9", "-f", str(tmp_path)], check=False)
+
+
+def test_kills_what_it_froze_when_the_walk_is_cut_short(tmp_path, monkeypatch):
+    from crewai_tools.tools.hyperlight_python_tool import hyperlight_python_tool
+
+    sleeper = tmp_path / "hl-test-sleeper"
+    shutil.copy(shutil.which("sleep"), sleeper)
+    process = subprocess.Popen(["/bin/sh", "-c", f"{sleeper} 300 & wait"])
+    try:
+        time.sleep(0.5)
+        children = hyperlight_python_tool._children
+        calls = []
+
+        def interrupted_on_the_second_scan():
+            calls.append(1)
+            if len(calls) == 2:
+                raise KeyboardInterrupt
+            return children()
+
+        monkeypatch.setattr(
+            hyperlight_python_tool, "_children", interrupted_on_the_second_scan
+        )
+        with pytest.raises(KeyboardInterrupt):
+            HyperlightPythonTool._kill_tree(process)
+        time.sleep(0.5)
+        left = subprocess.run(
+            ["pgrep", "-f", str(sleeper)], capture_output=True, text=True
+        ).stdout.split()
+        assert not [pid for pid in left if _is_running(int(pid))]
+    finally:
+        subprocess.run(["pkill", "-9", "-f", str(sleeper)], check=False)
+
+
+def test_holds_a_ctrl_c_until_the_tree_is_killed(tmp_path, monkeypatch):
+    from crewai_tools.tools.hyperlight_python_tool import hyperlight_python_tool
+
+    sleeper = tmp_path / "hl-test-sleeper"
+    shutil.copy(shutil.which("sleep"), sleeper)
+    # Three levels: sh, the sh under it, and the sleeper
+    process = subprocess.Popen(
+        ["/bin/sh", "-c", f"/bin/sh -c '{sleeper} 300; true'; true"]
+    )
+    try:
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline and not subprocess.run(
+            ["pgrep", "-f", str(sleeper)], capture_output=True
+        ).stdout:
+            time.sleep(0.05)
+        children = hyperlight_python_tool._children
+        calls = []
+
+        def ctrl_c_on_the_first_scan():
+            calls.append(1)
+            if len(calls) == 1:
+                os.kill(os.getpid(), signal.SIGINT)
+            return children()
+
+        monkeypatch.setattr(
+            hyperlight_python_tool, "_children", ctrl_c_on_the_first_scan
+        )
+        with pytest.raises(KeyboardInterrupt):
+            HyperlightPythonTool._kill_tree(process)
+        # The walk went on to the bottom: nothing is left
+        assert len(calls) >= 3
+        time.sleep(0.5)
+        left = subprocess.run(
+            ["pgrep", "-f", str(sleeper)], capture_output=True, text=True
+        ).stdout.split()
+        assert not [pid for pid in left if _is_running(int(pid))]
+    finally:
+        subprocess.run(["pkill", "-9", "-f", str(sleeper)], check=False)
+
+
+def test_passes_a_held_ctrl_c_to_the_handler_in_place(monkeypatch):
+    from crewai_tools.tools.hyperlight_python_tool import hyperlight_python_tool
+
+    process = subprocess.Popen(["/bin/sh", "-c", "exec sleep 300"])
+    seen = []
+    previous = signal.signal(signal.SIGINT, lambda signum, _frame: seen.append(signum))
+    try:
+        children = hyperlight_python_tool._children
+
+        def ctrl_c():
+            os.kill(os.getpid(), signal.SIGINT)
+            return children()
+
+        monkeypatch.setattr(hyperlight_python_tool, "_children", ctrl_c)
+        HyperlightPythonTool._kill_tree(process)
+        assert seen == [signal.SIGINT]
+        assert process.returncode is not None
+    finally:
+        signal.signal(signal.SIGINT, previous)
+        if process.poll() is None:
+            process.kill()
+            process.wait()
 
 
 def test_returns_when_something_hluk_left_holds_its_output(tmp_path, fake_hluk):
