@@ -34,3 +34,11 @@ def test_br_inside_cell_still_breaks_line():
     assert _text("<table><tr><td>a<br>b</td><td>c</td></tr></table>").strip() == (
         "a\nb c"
     )
+
+def test_trailing_br_in_cell_does_not_split_row():
+    assert _text("<table><tr><td>a<br></td><td>b</td></tr></table>").strip() == "a b"
+
+
+def test_trailing_br_in_last_cell_keeps_row_break():
+    html = "<table><tr><td>a<br></td></tr><tr><td>b</td></tr></table>"
+    assert _text(html).strip() == "a\nb"

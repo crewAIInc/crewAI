@@ -65,6 +65,7 @@ _BREAK: Final = object()
 _SOFT_BREAK: Final = object()
 _CELL_START: Final = object()
 _CELL_END: Final = object()
+_CELL_BR: Final = object()
 
 
 def visible_text(soup: BeautifulSoup) -> str:
@@ -89,6 +90,7 @@ def visible_text(soup: BeautifulSoup) -> str:
     line_break = False
     cell_gap = False
     cell_depth = 0
+    cell_br = False
 
     # Explicit stack instead of recursion, so deeply nested markup cannot
     # exhaust the interpreter stack.
@@ -99,10 +101,15 @@ def visible_text(soup: BeautifulSoup) -> str:
             line_break = True
         elif node is _SOFT_BREAK:
             cell_gap = True
+        elif node is _CELL_BR:
+            if not line_break:
+                line_break = cell_br = True
         elif node is _CELL_START:
             cell_depth += 1
         elif node is _CELL_END:
             cell_depth -= 1
+            if cell_br:
+                line_break = cell_br = False
             cell_gap = True
         elif type(node) in text_types:
             text = str(node)
@@ -116,7 +123,7 @@ def visible_text(soup: BeautifulSoup) -> str:
                 if parts:
                     parts[-1] = parts[-1].rstrip()
                     parts.append("\n" if line_break else " ")
-                line_break = cell_gap = False
+                line_break = cell_gap = cell_br = False
             parts.append(text)
         else:
             children = getattr(node, "contents", None)
@@ -124,7 +131,10 @@ def visible_text(soup: BeautifulSoup) -> str:
                 continue
             name = getattr(node, "name", None)
             if name in _BLOCK_TAGS:
-                marker = _BREAK if name == "br" or cell_depth == 0 else _SOFT_BREAK
+                if name == "br":
+                    marker = _CELL_BR if cell_depth else _BREAK
+                else:
+                    marker = _BREAK if cell_depth == 0 else _SOFT_BREAK
                 stack.append(marker)
                 stack.extend(reversed(children))
                 stack.append(marker)
