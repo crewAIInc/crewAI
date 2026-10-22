@@ -98,6 +98,16 @@ class ToolAction:
         self.definition = definition
         self.tool = self._build_tool()
         self.kwargs = definition.with_ or {}
+        # Tool instances are built once per flow object and reused across
+        # kickoffs; register the tool so each kickoff can reset its usage
+        # budget (Flow._reset_tool_action_usage_budgets). Without the reset,
+        # current_usage_count survives runs and a budget exhausted in an
+        # earlier kickoff makes every later kickoff fail.
+        tools = getattr(flow, "_tool_action_tools", None)
+        if tools is None:
+            tools = []
+            object.__setattr__(flow, "_tool_action_tools", tools)
+        tools.append(self.tool)
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
         from crewai.tools.tool_failure import (
