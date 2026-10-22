@@ -1,5 +1,7 @@
 import json
 import os
+import socket
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from crewai_tools import (
@@ -10,6 +12,25 @@ from crewai_tools import (
     GeekflareWebsiteDiagnosticsTool,
 )
 import pytest
+
+
+_FAKE_DNS = {
+    "example.com": "93.184.216.34",
+    "stripe.com": "93.184.216.35",
+    "internal.example.test": "10.0.0.5",
+}
+
+
+@pytest.fixture(autouse=True)
+def fake_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Resolve test hosts offline so the SSRF guard runs deterministically."""
+
+    def fake_getaddrinfo(host: str, port: int, *args: Any, **kwargs: Any) -> list:
+        if host not in _FAKE_DNS:
+            raise socket.gaierror(f"unknown host {host}")
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (_FAKE_DNS[host], port))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
 
 
 @pytest.fixture(autouse=True)
@@ -135,3 +156,37 @@ async def test_async_run(mock_post):
 
 def test_env_vars_declared():
     assert [v.name for v in GeekflareSearchTool().env_vars] == ["GEEKFLARE_API_KEY"]
+
+
+@patch("requests.post")
+def test_bare_domain_is_normalized(mock_post):
+    mock_post.return_value = _response()
+    GeekflareWebsiteDiagnosticsTool().run(url="example.com", check="dns_records")
+
+    _, kwargs = mock_post.call_args
+    assert kwargs["json"]["url"] == "https://example.com"
+
+
+@pytest.mark.parametrize(
+    "tool",
+    [
+        GeekflareScrapeWebsiteTool,
+        GeekflareScreenshotTool,
+        GeekflareBrandTool,
+    ],
+)
+@patch("requests.post")
+def test_private_address_is_rejected(mock_post, tool):
+    with pytest.raises(ValueError, match="private/reserved"):
+        tool()._run(url="http://internal.example.test/admin")
+    mock_post.assert_not_called()
+
+
+@patch("requests.post")
+def test_diagnostics_rejects_private_and_file_urls(mock_post):
+    tool = GeekflareWebsiteDiagnosticsTool()
+    with pytest.raises(ValueError, match="private/reserved"):
+        tool._run(url="internal.example.test", check="site_status")
+    with pytest.raises(ValueError, match="file://"):
+        tool._run(url="file:///etc/passwd", check="site_status")
+    mock_post.assert_not_called()

@@ -30,4 +30,5 @@ class GeekflareBrandTool(GeekflareBaseTool):
     )
 
     def _run(self, url: str) -> str:
+        url = self._validate_url(url)
         return self._post_json("brand", {"url": url, "mode": self.mode})

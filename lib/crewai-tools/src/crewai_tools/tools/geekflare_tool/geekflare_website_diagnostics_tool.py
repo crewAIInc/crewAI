@@ -74,6 +74,7 @@ class GeekflareWebsiteDiagnosticsTool(GeekflareBaseTool):
     )
 
     def _run(self, url: str, check: DiagnosticCheck) -> str:
+        url = self._validate_url(url)
         path, supports_redirect = _CHECKS[check]
         payload: dict[str, object] = {"url": url}
         if supports_redirect:

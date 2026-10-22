@@ -7,6 +7,8 @@ from crewai.tools import BaseTool, EnvVar
 from pydantic import Field
 import requests
 
+from crewai_tools.security.safe_path import validate_url
+
 
 GEEKFLARE_API_URL = "https://api.geekflare.com"
 
@@ -31,6 +33,13 @@ class GeekflareBaseTool(BaseTool):
             ),
         ]
     )
+
+    @staticmethod
+    def _validate_url(url: str) -> str:
+        """Validate an agent-supplied URL or bare domain with the shared SSRF guard."""
+        if "://" not in url:
+            url = f"https://{url}"
+        return validate_url(url)
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         """POST a JSON payload to a Geekflare endpoint and return the parsed response."""
