@@ -9,7 +9,7 @@ _ACTIONS = ("read", "cite", "connect", "transact", "administer")
 _FACT_FIELDS = ("phone", "address", "hours", "service_area")
 
 
-def _client(api_key: str | None) -> Any:
+def _sdk() -> Any:
     try:
         import crawlcheck
     except ImportError as exc:
@@ -19,7 +19,12 @@ def _client(api_key: str | None) -> Any:
             "or\n"
             "  pip install crawlcheck\n"
         ) from exc
-    return crawlcheck.CrawlCheck(key=api_key)
+    return crawlcheck
+
+
+def _refuse(why: str) -> str:
+    """Fail closed: an input the tool cannot check never reads as permission."""
+    return json.dumps({"ok": False, "proceed": False, "why": [why]})
 
 
 class CrawlCheckSiteCheckToolSchema(BaseModel):
@@ -75,16 +80,14 @@ class CrawlCheckSiteCheckTool(BaseTool):
 
         self.api_key = api_key or os.environ.get("CRAWLCHECK_API_KEY")
         self.allow_warn = allow_warn
-        import crawlcheck
-
-        cc = _client(self.api_key)
-        self._tools = {
-            t["name"]: t for t in crawlcheck.agent_tools(cc, allow_warn=allow_warn)
-        }
+        sdk = _sdk()
+        cc = sdk.CrawlCheck(key=self.api_key)
+        self._tools = {t["name"]: t for t in sdk.agent_tools(cc, allow_warn=allow_warn)}
 
     def _run(self, site: str, action: str = "read", **_: Any) -> str:
+        action = (action or "read").strip().lower()
         if action not in _ACTIONS:
-            action = "read"
+            return _refuse("action must be one of: " + ", ".join(_ACTIONS))
         result = self._tools["crawlcheck_check_site"]["execute"](
             {"site": site, "action": action}
         )
@@ -134,19 +137,14 @@ class CrawlCheckVerifyFactTool(BaseTool):
         import os
 
         self.api_key = api_key or os.environ.get("CRAWLCHECK_API_KEY")
-        import crawlcheck
-
-        cc = _client(self.api_key)
-        self._tools = {t["name"]: t for t in crawlcheck.agent_tools(cc)}
+        sdk = _sdk()
+        cc = sdk.CrawlCheck(key=self.api_key)
+        self._tools = {t["name"]: t for t in sdk.agent_tools(cc)}
 
     def _run(self, site: str, field: str, value: str, **_: Any) -> str:
+        field = (field or "").strip().lower()
         if field not in _FACT_FIELDS:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "why": ["field must be one of: " + ", ".join(_FACT_FIELDS)],
-                }
-            )
+            return _refuse("field must be one of: " + ", ".join(_FACT_FIELDS))
         result = self._tools["crawlcheck_verify_fact"]["execute"](
             {"site": site, "field": field, "value": value}
         )

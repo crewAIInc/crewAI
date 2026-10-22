@@ -43,10 +43,19 @@ def test_site_check_proceeds(fake_sdk):
     assert out["proceed"] is True and out["action"] == "cite"
 
 
-def test_site_check_blocked_and_unknown_action(fake_sdk):
+def test_site_check_blocked(fake_sdk):
     tool = CrawlCheckSiteCheckTool()
-    out = json.loads(tool._run(site="blocked.example", action="dance"))
-    assert out["proceed"] is False and out["action"] == "read"
+    out = json.loads(tool._run(site="blocked.example", action="read"))
+    assert out["proceed"] is False
+
+
+def test_unknown_action_fails_closed(fake_sdk):
+    tool = CrawlCheckSiteCheckTool()
+    out = json.loads(tool._run(site="example.com", action="pay"))
+    assert out["proceed"] is False and out["ok"] is False
+    # case and whitespace are normalised, not downgraded to "read"
+    out = json.loads(tool._run(site="example.com", action=" Transact "))
+    assert out["action"] == "transact"
 
 
 def test_verify_fact(fake_sdk):
