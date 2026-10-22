@@ -19,7 +19,7 @@ Native CrewAI tools for the [Mekong x402 fleet](https://api.mekongtradeintel.com
 
 ```python
 from crewai import Agent
-from crewai_tools.tools.mekong_x402_tool import MekongTaskRouterTool, MekongWebSearchTool
+from crewai_tools import MekongTaskRouterTool, MekongWebSearchTool
 
 agent = Agent(
     role="Research Analyst",
