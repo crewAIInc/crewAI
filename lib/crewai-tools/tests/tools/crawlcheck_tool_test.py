@@ -77,3 +77,10 @@ def test_schema_fields(fake_sdk):
         "field",
         "value",
     }
+
+
+def test_schema_rejects_unknown_action_and_field(fake_sdk):
+    with pytest.raises(ValueError, match="arguments validation failed"):
+        CrawlCheckSiteCheckTool().run(site="example.com", action="pay")
+    with pytest.raises(ValueError, match="arguments validation failed"):
+        CrawlCheckVerifyFactTool().run(site="example.com", field="colour", value="blue")

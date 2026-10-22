@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -34,7 +34,7 @@ class CrawlCheckSiteCheckToolSchema(BaseModel):
         ...,
         description="The website's domain or any URL on it, e.g. example.com or https://example.com/page",
     )
-    action: str = Field(
+    action: Literal["read", "cite", "connect", "transact", "administer"] = Field(
         "read",
         description="What the crew is about to do with the site: read, cite, connect (an API or MCP server), "
         "transact (pay, book, submit personal data) or administer",
@@ -98,7 +98,7 @@ class CrawlCheckVerifyFactToolSchema(BaseModel):
     """Input for CrawlCheckVerifyFactTool."""
 
     site: str = Field(..., description="The business's website domain or any URL on it")
-    field: str = Field(
+    field: Literal["phone", "address", "hours", "service_area"] = Field(
         ..., description="Which fact: phone, address, hours or service_area"
     )
     value: str = Field(
