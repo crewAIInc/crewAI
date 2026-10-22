@@ -40,6 +40,13 @@ _T = TypeVar("_T")
 _active_llm_rate_limit_retry: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "_active_llm_rate_limit_retry", default=False
 )
+_stream_chunk_emitted: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "_stream_chunk_emitted", default=False
+)
+
+
+def mark_stream_chunk_emitted() -> None:
+    _stream_chunk_emitted.set(True)
 
 
 class _ThrottlingErrorClassifier:
@@ -141,22 +148,27 @@ def run_with_rate_limit_retry(
     token = _active_llm_rate_limit_retry.set(True)
     try:
         for attempt_number in range(1, _LLM_RATE_LIMIT_MAX_ATTEMPTS + 1):
-            succeeded, result, error = attempt()
-            if succeeded:
-                return cast(_T, result)
-            if error is None:
-                raise RuntimeError("failed retry attempt did not provide an error")
-            if (
-                attempt_number == _LLM_RATE_LIMIT_MAX_ATTEMPTS
-                or not _ThrottlingErrorClassifier.is_throttling_error(error)
-            ):
-                raise error
-            sleep(
-                get_retry_delay_seconds(
-                    retry_number=attempt_number,
-                    retry_after_seconds=_retry_after_seconds(error),
+            stream_token = _stream_chunk_emitted.set(False)
+            try:
+                succeeded, result, error = attempt()
+                if succeeded:
+                    return cast(_T, result)
+                if error is None:
+                    raise RuntimeError("failed retry attempt did not provide an error")
+                if (
+                    attempt_number == _LLM_RATE_LIMIT_MAX_ATTEMPTS
+                    or _stream_chunk_emitted.get()
+                    or not _ThrottlingErrorClassifier.is_throttling_error(error)
+                ):
+                    raise error
+                sleep(
+                    get_retry_delay_seconds(
+                        retry_number=attempt_number,
+                        retry_after_seconds=_retry_after_seconds(error),
+                    )
                 )
-            )
+            finally:
+                _stream_chunk_emitted.reset(stream_token)
     finally:
         _active_llm_rate_limit_retry.reset(token)
 
@@ -183,22 +195,27 @@ async def arun_with_rate_limit_retry(
     token = _active_llm_rate_limit_retry.set(True)
     try:
         for attempt_number in range(1, _LLM_RATE_LIMIT_MAX_ATTEMPTS + 1):
-            succeeded, result, error = await attempt()
-            if succeeded:
-                return cast(_T, result)
-            if error is None:
-                raise RuntimeError("failed retry attempt did not provide an error")
-            if (
-                attempt_number == _LLM_RATE_LIMIT_MAX_ATTEMPTS
-                or not _ThrottlingErrorClassifier.is_throttling_error(error)
-            ):
-                raise error
-            await sleep(
-                get_retry_delay_seconds(
-                    retry_number=attempt_number,
-                    retry_after_seconds=_retry_after_seconds(error),
+            stream_token = _stream_chunk_emitted.set(False)
+            try:
+                succeeded, result, error = await attempt()
+                if succeeded:
+                    return cast(_T, result)
+                if error is None:
+                    raise RuntimeError("failed retry attempt did not provide an error")
+                if (
+                    attempt_number == _LLM_RATE_LIMIT_MAX_ATTEMPTS
+                    or _stream_chunk_emitted.get()
+                    or not _ThrottlingErrorClassifier.is_throttling_error(error)
+                ):
+                    raise error
+                await sleep(
+                    get_retry_delay_seconds(
+                        retry_number=attempt_number,
+                        retry_after_seconds=_retry_after_seconds(error),
+                    )
                 )
-            )
+            finally:
+                _stream_chunk_emitted.reset(stream_token)
     finally:
         _active_llm_rate_limit_retry.reset(token)
 
