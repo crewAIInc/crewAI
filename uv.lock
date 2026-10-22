@@ -1733,7 +1733,7 @@ requires-dist = [
     { name = "av", specifier = "~=13.0.0" },
     { name = "pillow", marker = "python_full_version < '3.11'", specifier = ">=12.3.0,<13" },
     { name = "pillow", marker = "python_full_version >= '3.11'", specifier = ">=13.0.0" },
-    { name = "pypdf", specifier = "~=6.19.0" },
+    { name = "pypdf", specifier = ">=6.21.1,<7" },
     { name = "python-magic", specifier = ">=0.4.27" },
     { name = "tinytag", specifier = ">=2.3.0,<3" },
 ]
