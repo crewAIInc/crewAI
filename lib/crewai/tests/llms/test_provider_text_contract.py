@@ -4,7 +4,7 @@ Issue #8006 asks for a small set of shared tests that say what every native
 provider must do identically, so provider drift shows up as a failing
 assertion instead of as a surprise in production. This module covers the first
 slice only: a plain-text request, the text that comes back, and sync/async
-parity -- for OpenAI and Anthropic, driven by fake SDK responses so the tests
+parity -- for OpenAI, Anthropic and Gemini, driven by fake SDK responses so the tests
 need no API key and make no paid call. Multimodal content, tool calls,
 streaming, token usage and further providers are separate follow-ups.
 
@@ -54,13 +54,26 @@ try:
 except ImportError:
     HAS_ANTHROPIC = False
 
+try:
+    from crewai.llms.providers.gemini.completion import (  # noqa: F401
+        GeminiCompletion,
+    )
+
+    HAS_GEMINI = True
+except ImportError:
+    HAS_GEMINI = False
+
 
 @pytest.fixture(autouse=True)
 def fake_api_keys():
     """Give every provider a syntactically valid key so no real one is needed."""
     with patch.dict(
         os.environ,
-        {"OPENAI_API_KEY": "test-key", "ANTHROPIC_API_KEY": "test-key"},
+        {
+            "OPENAI_API_KEY": "test-key",
+            "ANTHROPIC_API_KEY": "test-key",
+            "GOOGLE_API_KEY": "test-key",
+        },
     ):
         yield
 
@@ -127,6 +140,11 @@ class _ProviderContract:
             for msg in request["messages"]
             if msg.get("role") == "user"
         ]
+
+    @staticmethod
+    def turn_roles(request: dict[str, Any]) -> list[str]:
+        """Role of every conversation turn in a recorded request."""
+        return [msg.get("role", "") for msg in request["messages"]]
 
     @staticmethod
     def system_text(request: dict[str, Any]) -> str:
@@ -248,6 +266,67 @@ class _AnthropicContract(_ProviderContract):
         return system or ""
 
 
+class _GeminiContract(_ProviderContract):
+    id = "gemini"
+    model = "gemini/gemini-2.0-flash-001"
+
+    def response(self, text: str | None) -> Any:
+        from google.genai import types
+
+        return types.GenerateContentResponse(
+            candidates=[
+                types.Candidate(
+                    # Gemini reports "no assistant text" as a candidate with
+                    # no parts, rather than a null or an empty block list.
+                    content=types.Content(
+                        role="model",
+                        parts=[] if text is None else [types.Part(text=text)],
+                    ),
+                    finish_reason=types.FinishReason.STOP,
+                )
+            ],
+            usage_metadata=types.GenerateContentResponseUsageMetadata(
+                prompt_token_count=11, candidates_token_count=5, total_token_count=16
+            ),
+            response_id="resp_contract",
+        )
+
+    def stub_sync(
+        self, llm: BaseLLM, monkeypatch: pytest.MonkeyPatch, text: str | None
+    ) -> _Recorder:
+        recorder = _Recorder(self.response(text))
+        monkeypatch.setattr(llm._client.models, "generate_content", recorder)
+        return recorder
+
+    def stub_async(
+        self, llm: BaseLLM, monkeypatch: pytest.MonkeyPatch, text: str | None
+    ) -> _AsyncRecorder:
+        recorder = _AsyncRecorder(self.response(text))
+        monkeypatch.setattr(llm._client.aio.models, "generate_content", recorder)
+        return recorder
+
+    @staticmethod
+    def _text(content: Any) -> str:
+        return "".join(part.text or "" for part in content.parts or [])
+
+    @staticmethod
+    def user_texts(request: dict[str, Any]) -> list[str]:
+        return [
+            _GeminiContract._text(content)
+            for content in request["contents"]
+            if content.role == "user"
+        ]
+
+    @staticmethod
+    def turn_roles(request: dict[str, Any]) -> list[str]:
+        return [content.role or "" for content in request["contents"]]
+
+    @staticmethod
+    def system_text(request: dict[str, Any]) -> str:
+        system = request["config"].system_instruction
+        return _GeminiContract._text(system) if system is not None else ""
+
+
 # Anthropic's native provider is an optional extra; skip rather than fail the
 # whole module when it is not installed, as tests/llms/test_multimodal.py does.
 PROVIDERS = [
@@ -259,12 +338,17 @@ PROVIDERS = [
             not HAS_ANTHROPIC, reason="Anthropic SDK not installed"
         ),
     ),
+    pytest.param(
+        _GeminiContract(),
+        id="gemini",
+        marks=pytest.mark.skipif(not HAS_GEMINI, reason="google-genai not installed"),
+    ),
 ]
 
 # Recorded difference: OpenAI leaves the system prompt in the message list;
-# Anthropic hoists it into a top-level `system` parameter, so its message list
-# carries only the conversation turns.
-_SYSTEM_IN_MESSAGES = {"openai": True, "anthropic": False}
+# Anthropic hoists it into a top-level `system` parameter and Gemini into
+# `config.system_instruction`, so their turns carry only the conversation.
+_SYSTEM_IN_MESSAGES = {"openai": True, "anthropic": False, "gemini": False}
 
 PROMPT = "Name the capital of Italy."
 ANSWER = "Rome."
@@ -331,10 +415,9 @@ def test_system_prompt_is_delivered_where_the_provider_expects_it(
     request = recorder.request
     assert provider.system_text(request) == "You are terse."
     assert provider.user_texts(request) == [PROMPT]
-    assert (
-        any(msg.get("role") == "system" for msg in request["messages"])
-        is _SYSTEM_IN_MESSAGES[provider.id]
-    )
+    assert ("system" in provider.turn_roles(request)) is _SYSTEM_IN_MESSAGES[
+        provider.id
+    ]
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
