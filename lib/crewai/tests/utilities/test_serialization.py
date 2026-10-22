@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+from enum import Enum, IntEnum
 from typing import Any, List
 
 import pytest
@@ -209,3 +210,46 @@ def test_exclude_keys():
         "birthday": "1994-01-01",
         "skills": ["Python", "Testing"],
     }
+
+
+class Status(Enum):
+    OK = "ok"
+
+
+class Count(IntEnum):
+    ONE = 1
+
+
+class Day(Enum):
+    NEW_YEAR = date(2024, 1, 1)
+
+
+class Pair(Enum):
+    VAL = (1, 2)
+
+
+def test_enum_serializes_to_declared_value():
+    assert to_serializable({"status": Status.OK}) == {"status": "ok"}
+    assert to_serializable({"n": Count.ONE}) == {"n": 1}
+    assert to_serializable({"d": Day.NEW_YEAR}) == {"d": "2024-01-01"}
+    assert to_serializable({"t": Pair.VAL}) == {"t": [1, 2]}
+    assert to_serializable({"list": [Status.OK, Count.ONE]}) == {"list": ["ok", 1]}
+
+
+def test_enum_keys_are_deterministic():
+    assert to_serializable({Status.OK: 1}) == {"ok": 1}
+    assert to_serializable({Day.NEW_YEAR: 1}) == {"2024-01-01": 1}
+    assert to_serializable({Pair.VAL: 1}) == {"[1, 2]": 1}
+    first = list(to_serializable({Status.OK: 1}).keys())[0]
+    assert first == "ok"
+
+
+def test_enum_unwrap_keeps_depth_budget():
+    assert to_serializable(Status.OK, max_depth=1) == "ok"
+
+
+def test_enum_result_is_json_compatible():
+    import json
+
+    value = to_serializable({"a": Status.OK, "n": Count.ONE, Status.OK: 1})
+    assert json.loads(json.dumps(value)) == {"a": "ok", "n": 1, "ok": 1}
