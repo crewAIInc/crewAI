@@ -6,6 +6,7 @@ import pytest
 
 from crewai.llms.context_window import (
     ANTHROPIC_CONTEXT_WINDOWS,
+    AZURE_CONTEXT_WINDOWS,
     BEDROCK_CONTEXT_WINDOWS,
     CONTEXT_WINDOW_USAGE_RATIO,
     DEFAULT_CONTEXT_WINDOW_SIZE,
@@ -79,6 +80,14 @@ class TestParity:
             "gpt-5", LLM_CONTEXT_WINDOW_SIZES, default=DEFAULT_CONTEXT_WINDOW_SIZE
         )
         assert result == int(1_047_576 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def test_azure_gpt_35_turbo_context_window(self) -> None:
+        result = resolve_context_window_size(
+            "gpt-3.5-turbo",
+            AZURE_CONTEXT_WINDOWS,
+            default=DEFAULT_CONTEXT_WINDOW_SIZE,
+        )
+        assert result == int(16_385 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 class TestBedrockExpansion:

@@ -43,6 +43,7 @@ OPENAI_CONTEXT_WINDOWS: Final[dict[str, int]] = {
 
 AZURE_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "gpt-35-turbo": 16_384,
+    "gpt-3.5-turbo": 16_385,
     "text-embedding-3-small": 8_191,
     "text-embedding-3-large": 8_191,
     "text-embedding-ada-002": 8_191,
