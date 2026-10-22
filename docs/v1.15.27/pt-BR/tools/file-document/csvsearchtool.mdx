@@ -1,0 +1,94 @@
+---
+title: Busca RAG em CSV
+description: O `CSVSearchTool` é uma poderosa ferramenta RAG (Geração com Recuperação Aprimorada) projetada para buscas semânticas no conteúdo de arquivos CSV.
+icon: file-csv
+mode: "wide"
+---
+
+# `CSVSearchTool`
+
+<Note>
+    **Experimental**: Ainda estamos trabalhando na melhoria das ferramentas, portanto podem ocorrer comportamentos inesperados ou mudanças futuras.
+</Note>
+
+## Descrição
+
+Esta ferramenta é utilizada para realizar buscas RAG (Geração com Recuperação Aprimorada) no conteúdo de um arquivo CSV. Ela permite que usuários façam buscas semânticas por consultas no conteúdo de um arquivo CSV especificado. 
+Este recurso é particularmente útil para extrair informações de grandes datasets CSV, em que métodos de busca tradicionais poderiam ser ineficientes. Todas as ferramentas com "Search" no nome, incluindo o CSVSearchTool, 
+são ferramentas RAG projetadas para busca em diferentes fontes de dados.
+
+## Instalação
+
+Instale o pacote crewai_tools
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+```python Code
+from crewai_tools import CSVSearchTool
+
+# Inicialize a ferramenta com um arquivo CSV específico.
+# Esta configuração permite que o agente busque somente no arquivo CSV fornecido.
+tool = CSVSearchTool(csv='path/to/your/csvfile.csv')
+
+# OU
+
+# Inicialize a ferramenta sem um arquivo CSV específico.
+# O agente precisará informar o caminho do CSV em tempo de execução.
+tool = CSVSearchTool()
+```
+
+## Argumentos
+
+Os seguintes parâmetros podem ser utilizados para personalizar o comportamento do `CSVSearchTool`:
+
+| Argumento      | Tipo      | Descrição                                                                                                                         |
+|:---------------|:----------|:----------------------------------------------------------------------------------------------------------------------------------|
+| **csv**        | `string`  | _Opcional_. O caminho para o arquivo CSV que você deseja buscar. Este é um argumento obrigatório se a ferramenta for inicializada sem um arquivo CSV específico; caso contrário, é opcional.                                                              |
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, você pode usar um dicionário de configuração como segue:
+
+```python Code
+tool = CSVSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+
+## Segurança
+
+### Validação de Caminhos
+
+Os caminhos de arquivo fornecidos a esta ferramenta são validados em relação ao diretório de trabalho atual. Caminhos que resolvem fora do diretório de trabalho são rejeitados com um `ValueError`.
+
+Para permitir caminhos fora do diretório de trabalho (por exemplo, em testes ou pipelines confiáveis), defina a variável de ambiente:
+
+```shell
+CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true
+```
+
+### Validação de URLs
+
+Entradas de URL também são validadas: URIs `file://` e requisições direcionadas a faixas de IP privadas ou reservadas são bloqueadas para prevenir ataques de falsificação de requisições do lado do servidor (SSRF).
+```

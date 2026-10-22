@@ -64,7 +64,7 @@ from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Secret, SecretBytes, SecretStr
 
 
 if TYPE_CHECKING:
@@ -76,6 +76,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
+_StructuredT = TypeVar("_StructuredT", bound=BaseModel)
 
 __all__ = ["HumanFeedbackCollapseError", "HumanFeedbackResult", "human_feedback"]
 
@@ -154,8 +155,12 @@ class HumanFeedbackResult:
     collapsed outcome for routing purposes.
 
     Attributes:
-        output: The original return value from the decorated method that was
-            shown to the human for review.
+        output: The output shown to the human for review: the decorated
+            method's return value or, with ``learn=True``, that value after
+            past lessons were applied (same type). Downstream steps should read
+            the approved output from here, not from state the method set. After
+            a flow pauses for async feedback and resumes, the pending review is
+            restored from JSON, so a Pydantic output arrives as a ``dict``.
         feedback: The raw text feedback provided by the human. Empty string
             if no feedback was provided.
         outcome: The collapsed outcome string when emit is specified.
@@ -276,6 +281,39 @@ def _resolve_llm_instance(llm: Any) -> Any:
     return llm
 
 
+def _as_structured(response: Any, model_type: type[_StructuredT]) -> _StructuredT:
+    if isinstance(response, model_type):
+        return response
+    if isinstance(response, str):
+        # LiteLLM-routed models return structured output as a JSON string.
+        return model_type.model_validate_json(response)
+    return model_type.model_validate(response)
+
+
+def _has_hidden_values(value: Any) -> bool:
+    if isinstance(value, (Secret, SecretStr, SecretBytes)):
+        return True
+    if isinstance(value, BaseModel):
+        private = value.__pydantic_private__ or {}
+        # A rebuilt model starts private attributes from their defaults, so any
+        # private value that differs from its default would be lost.
+        if any(
+            private[name] != attr.get_default()
+            for name, attr in type(value).__private_attributes__.items()
+            if name in private
+        ):
+            return True
+        return any(
+            info.exclude or _has_hidden_values(getattr(value, name))
+            for name, info in type(value).model_fields.items()
+        )
+    if isinstance(value, dict):
+        return any(_has_hidden_values(item) for item in value.values())
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return any(_has_hidden_values(item) for item in value)
+    return False
+
+
 def _pre_review_with_lessons(
     flow_instance: Flow[Any],
     method_name: str,
@@ -288,10 +326,23 @@ def _pre_review_with_lessons(
     from crewai.hooks.dispatch import HookAborted
 
     try:
+        # Only text and Pydantic outputs can be rewritten without changing their
+        # type, and a model only when the LLM sees all of it: secrets are masked,
+        # excluded fields and private attributes dropped, so rebuilding from the
+        # review would lose them. Anything else reaches the reviewer unchanged.
+        if isinstance(method_output, BaseModel):
+            if _has_hidden_values(method_output):
+                return method_output
+            rendered = method_output.model_dump_json()
+        elif isinstance(method_output, str):
+            rendered = method_output
+        else:
+            return method_output
+
         mem = flow_instance.memory
         if mem is None:
             return method_output
-        query = f"human feedback lessons for {method_name}: {method_output!s}"
+        query = f"human feedback lessons for {method_name}: {rendered}"
         matches = mem.recall(query, source=learn_source)
         if not matches:
             return method_output
@@ -299,7 +350,7 @@ def _pre_review_with_lessons(
         lessons = "\n".join(f"- {m.record.content}" for m in matches)
         llm_inst = _resolve_llm_instance(llm)
         prompt = _get_hitl_prompt("hitl_pre_review_user").format(
-            output=str(method_output),
+            output=rendered,
             lessons=lessons,
         )
         messages = [
@@ -309,11 +360,14 @@ def _pre_review_with_lessons(
             },
             {"role": "user", "content": prompt},
         ]
+        if isinstance(method_output, BaseModel):
+            output_type = type(method_output)
+            return _as_structured(
+                llm_inst.call(messages, response_model=output_type), output_type
+            )
         if getattr(llm_inst, "supports_function_calling", lambda: False)():
             response = llm_inst.call(messages, response_model=PreReviewResult)
-            if isinstance(response, PreReviewResult):
-                return response.improved_output
-            return PreReviewResult.model_validate(response).improved_output
+            return _as_structured(response, PreReviewResult).improved_output
         reviewed = llm_inst.call(messages)
         return reviewed if isinstance(reviewed, str) else str(reviewed)
     except HookAborted:
@@ -367,10 +421,7 @@ def _distill_and_store_lessons(
         lessons: list[str] = []
         if getattr(llm_inst, "supports_function_calling", lambda: False)():
             response = llm_inst.call(messages, response_model=DistilledLessons)
-            if isinstance(response, DistilledLessons):
-                lessons = response.lessons
-            else:
-                lessons = DistilledLessons.model_validate(response).lessons
+            lessons = _as_structured(response, DistilledLessons).lessons
         else:
             response = llm_inst.call(messages)
             if isinstance(response, str):

@@ -112,7 +112,7 @@ from crewai.events.types.skill_events import (
     SkillUsedEvent,
 )
 from crewai.tasks.output_format import OutputFormat
-from crewai.telemetry.tracing import semantic_conventions
+from crewai.telemetry.tracing import gen_ai_shapes, semantic_conventions
 from crewai.telemetry.tracing.context import (
     PendingSpanEnd,
     TelemetryExecutionContext,
@@ -589,9 +589,25 @@ def _task_output_format(task: Any, output: Any = None) -> str:
 
 
 def _set_span_attributes(span: Span, attributes: dict[str, Any]) -> None:
+    """Set ``attributes`` on ``span``, no string value over the export bound.
+
+    The ``gen_ai.*`` content attributes arrive already bounded (and marked),
+    message-aware, by ``semantic_conventions``; this catches every other
+    string — a task's ``crewai.task.output``, an MCP tool's ``crewai.mcp.tool_result``, a flow's
+    serialized state — with a plain cut (the head, up to the bound) so one
+    oversized value marks itself instead of making the whole span too large
+    for Wharf to accept, and is never reshaped as if it were a conversation.
+    """
     for key, value in attributes.items():
-        if value is not None:
-            span.set_attribute(key, value)
+        if value is None:
+            continue
+        if isinstance(value, str) and f"{key}.truncated" not in attributes:
+            value, markers = gen_ai_shapes.truncate_plain(value, attr=key)
+            for marker, marker_value in markers.items():
+                span.set_attribute(marker, marker_value)
+            if value is None:
+                continue
+        span.set_attribute(key, value)
 
 
 def _get_parent_context(
@@ -679,6 +695,8 @@ def _start_span(
         if links:
             start_kwargs["links"] = links
         span = tracer.start_span(name, **start_kwargs)
+        if ctx.conversation_id is not None:
+            attributes["gen_ai.conversation.id"] = ctx.conversation_id
         _set_span_attributes(span, attributes)
         span.set_attribute("event_id", event.event_id)
         if event.parent_event_id:
@@ -845,13 +863,15 @@ def _record_agent_llm_call(
 def _conversation_id(event: Any, ctx: TelemetryExecutionContext) -> str:
     """Resolve gen_ai.conversation.id with a strict fallback chain.
 
-    task_id (most specific) -> agent_id (lite-agent) -> kickoff_id (session-wide).
+    Conversation session id -> task_id -> agent_id -> kickoff_id.
     The required session context always provides the final fallback.
 
     `agent_info["id"]` on the OSS side is a UUID object (LiteAgent.id is UUID4),
     and OTel attribute values must be primitive types — coerce to str at the
     boundary so the attribute isn't silently dropped by the SDK.
     """
+    if ctx.conversation_id is not None:
+        return ctx.conversation_id
     task_id = getattr(event, "task_id", None)
     agent_id = getattr(event, "agent_id", None)
     if not agent_id:
@@ -1556,6 +1576,14 @@ def handle_flow_started(
     source: Flow[Any],
     event: FlowStartedEvent,
 ) -> None:
+    conversational = getattr(source, "_is_conversational_enabled", None)
+    if (
+        ctx.conversation_id is None
+        and callable(conversational)
+        and conversational() is True
+        and getattr(source._conversation_config, "trace_scope", None) is not None
+    ):
+        ctx.conversation_id = str(source.flow_id)
     if source.suppress_flow_events:
         _reparent_suppressed_flow_children(ctx, event)
         return

@@ -9,6 +9,7 @@ import pytest
 from crewai_tools.security.safe_path import (
     format_path_for_display,
     format_sandbox_error,
+    is_blocked_ip,
     validate_directory_path,
     validate_file_path,
     validate_url,
@@ -199,6 +200,66 @@ class TestValidateUrl:
         monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
         with pytest.raises(ValueError, match="private/reserved IP"):
             validate_url("http://127.0.0.1/admin")
+
+
+class TestIsBlockedIp:
+    """Tests for is_blocked_ip."""
+
+    @pytest.mark.parametrize(
+        "ip",
+        [
+            "127.0.0.1",
+            "10.0.0.1",
+            "172.16.0.1",
+            "192.168.1.1",
+            "0.0.0.0",
+            "::1",
+            "::",
+            "fc00::1",
+            "fe80::1",
+            "169.254.169.254",  # AWS/GCP/Azure metadata
+            "168.63.129.16",  # Azure WireServer
+            "fd00:ec2::254",  # AWS IMDS over IPv6
+            "100.64.0.1",  # CGNAT start
+            "100.100.100.200",  # Alibaba metadata
+            "100.127.255.255",  # CGNAT end
+            "198.18.0.1",  # benchmarking start
+            "198.19.255.255",  # benchmarking end
+            "64:ff9b::a00:1",  # NAT64 of 10.0.0.1
+            "64:ff9b:1::a00:1",  # local-use NAT64
+            "2002:c0a8:0101::1",  # 6to4 of 192.168.1.1
+            "::ffff:100.100.100.200",  # IPv4-mapped
+            "::ffff:127.0.0.1",
+            "::127.0.0.1",  # IPv4-compatible
+            "::10.0.0.1",
+            "::ffff:0:127.0.0.1",  # IPv4-translated (RFC 2765)
+            "fec0::1",  # deprecated site-local
+            "2001:0:4136:e378:8000:63bf:3fff:fdd2",  # Teredo
+        ],
+    )
+    def test_blocks_non_public_addresses(self, ip):
+        assert is_blocked_ip(ip) is True
+
+    @pytest.mark.parametrize(
+        "ip",
+        [
+            "8.8.8.8",
+            "1.1.1.1",
+            "2606:4700:4700::1111",
+            "100.63.255.255",  # just below CGNAT
+            "100.128.0.0",  # just above CGNAT
+            "198.17.255.255",
+            "198.20.0.0",
+            "64:ff9b::808:808",  # NAT64 of public 8.8.8.8
+            "::ffff:8.8.8.8",
+        ],
+    )
+    def test_allows_public_addresses(self, ip):
+        assert is_blocked_ip(ip) is False
+
+    @pytest.mark.parametrize("ip", ["", "not-an-ip", "999.1.1.1", "1.2.3"])
+    def test_blocks_unparseable_input(self, ip):
+        assert is_blocked_ip(ip) is True
 
 
 class TestFormatSandboxError:
