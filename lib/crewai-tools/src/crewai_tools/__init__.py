@@ -243,6 +243,7 @@ from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool impo
 )
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
 
+
 __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
@@ -288,7 +289,6 @@ __all__ = [
     "E2BPythonTool",
     "EXASearchTool",
     "EnterpriseActionTool",
-    "ExaSearchTool",
     "FileCompressorTool",
     "FileReadTool",
     "FileWriterTool",
