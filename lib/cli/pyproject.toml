@@ -21,9 +21,9 @@ dependencies = [
     "tomli-w~=1.1.0",
     "packaging>=23.0",
     "python-dotenv>=1.2.2,<2",
-    "uv~=0.11.6",
+    "uv>=0.13.4,<1",
     "textual>=7.5.0",
-    "certifi",
+    "certifi>=2026.10.18",
 ]
 
 [project.urls]

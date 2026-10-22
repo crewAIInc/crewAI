@@ -625,7 +625,8 @@ class AnthropicCompletion(BaseLLM):
             system_message: Extracted system message
             tools: Tool definitions
             available_functions: Available functions for tool calling. When provided
-                with a single tool, tool_choice is automatically set to force tool use.
+                with a single tool, tool_choice is "auto" so the model may call
+                that tool or answer in text.
 
         Returns:
             Parameters dictionary for Anthropic API
@@ -652,8 +653,7 @@ class AnthropicCompletion(BaseLLM):
 
             # When tool_search is enabled and there are 2+ regular tools,
             # inject the search tool and mark regular tools with defer_loading.
-            # With only 1 tool there's nothing to search — skip tool search
-            # entirely so the normal forced tool_choice optimisation still works.
+            # With only 1 tool there's nothing to search, so skip tool search.
             regular_tools = [
                 t
                 for t in converted_tools
@@ -664,10 +664,11 @@ class AnthropicCompletion(BaseLLM):
 
             params["tools"] = converted_tools
 
+            # available_functions means the tool can be executed, not that the
+            # model must call it. Named tool_choice is also rejected by newer
+            # Claude models (Sonnet 5.5, Opus 5.5, Fable 5.1, Mythos 5.1).
             if available_functions and len(regular_tools) == 1:
-                tool_name = regular_tools[0].get("name")
-                if tool_name and tool_name in available_functions:
-                    params["tool_choice"] = {"type": "tool", "name": tool_name}
+                params["tool_choice"] = {"type": "auto"}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
