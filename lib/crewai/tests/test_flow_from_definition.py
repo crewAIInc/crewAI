@@ -30,7 +30,8 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError
 from crewai.project.crew_definition import AgentDefinition
 from crewai.state.checkpoint_config import CheckpointConfig
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, ToolFailure
+from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.types.streaming import StreamSession
 
 
@@ -3228,6 +3229,85 @@ def test_tool_action_requires_module_qualname_ref():
         Flow.from_declaration(contents=definition)
 
 
+class FailingTool(BaseTool):
+    name: str = "FailingTool"
+    description: str = "Always reports failure."
+
+    def _run(self, to: str) -> ToolFailure:
+        return ToolFailure(message=f"cannot send to {to}", code="bad_recipient")
+
+
+def _tool_flow_definition(ref: str, with_: dict[str, Any]) -> FlowDefinition:
+    return FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "send": {
+                    "start": True,
+                    "do": {"call": "tool", "ref": ref, "with": with_},
+                }
+            },
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        "google_gmail/send_email",
+        "google_gmail/send_email@0b3c9f8e-1d2a-4c5b-9e6f-7a8b9c0d1e2f",
+    ],
+)
+def test_tool_action_runs_platform_action(selector: str):
+    definition = _tool_flow_definition(
+        selector,
+        {"search_query": "${state.topic}", "prefix": "mail"},
+    )
+
+    with patch(
+        "crewai.project.json_loader._resolve_platform_tools",
+        return_value=[StaticSearchTool()],
+    ) as resolve:
+        flow = Flow.from_declaration(contents=definition)
+
+    resolve.assert_called_once_with(selector)
+    assert flow.kickoff(inputs={"topic": "digest"}) == "mail:digest"
+
+
+def test_tool_action_platform_ref_requires_action():
+    definition = _tool_flow_definition("google_gmail", {})
+
+    with patch("crewai.project.json_loader._resolve_platform_tools") as resolve:
+        with pytest.raises(ValueError, match="<app>/<action>"):
+            Flow.from_declaration(contents=definition)
+
+    resolve.assert_not_called()
+
+
+def test_tool_action_platform_ref_with_no_tools_names_ref():
+    definition = _tool_flow_definition("google_gmail/send_email", {})
+
+    with patch(
+        "crewai.project.json_loader._resolve_platform_tools", return_value=[]
+    ):
+        with pytest.raises(ValueError, match="'google_gmail/send_email'"):
+            Flow.from_declaration(contents=definition)
+
+
+def test_tool_action_raises_when_tool_reports_failure():
+    definition = _tool_flow_definition(
+        f"{__name__}:FailingTool", {"to": "${state.email}"}
+    )
+    flow = Flow.from_declaration(contents=definition)
+
+    with pytest.raises(ToolExecutionFailedError, match="cannot send to a@b.c") as exc:
+        flow.kickoff(inputs={"email": "a@b.c"})
+
+    assert exc.value.record.tool_name == "FailingTool"
+    assert exc.value.record.tool_args == {"to": "a@b.c"}
+
+
 def test_pydantic_state_from_ref_parity():
     flow, result = assert_parity(PydanticStateFlow, PYDANTIC_STATE_YAML)
     assert result == "count=1"
@@ -4117,6 +4197,87 @@ def test_human_feedback_emit_exposes_feedback_in_outputs_after_resume():
 
     assert result == "make it shorter|draft-content"
     assert resumed.method_outputs[0] == "draft-content"
+
+
+PENDING_REVISE_LOOP_YAML = f"""
+schema: crewai.flow/v1
+name: PendingReviseLoopFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: hitl-revise-loop
+methods:
+  draft:
+    do:
+      call: expression
+      expr: "'draft-content'"
+    start: true
+    listen: request_changes
+    human_feedback:
+      message: "Review:"
+      emit: [approved, request_changes]
+      llm: gpt-4o-mini
+      provider: {__name__}:PausingProvider
+  publish:
+    do:
+      call: expression
+      expr: "'published:' + outputs.draft.feedback"
+    listen: approved
+"""
+
+
+def test_start_step_listening_to_its_own_outcome_reruns_after_resume():
+    definition = FlowDefinition.from_declaration(contents=PENDING_REVISE_LOOP_YAML)
+    backend = DefinitionStoreBackend(store="hitl-revise-loop")
+    pending = Flow.from_declaration(contents=definition).kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+
+    revising = Flow.from_pending(pending.context.flow_id, backend, definition=definition)
+    with patch.object(revising, "_collapse_to_outcome", return_value="request_changes"):
+        repaused = revising.resume("make it shorter")
+
+    assert isinstance(repaused, HumanFeedbackPending)
+    assert repaused.context.method_name == "draft"
+
+    approving = Flow.from_pending(repaused.context.flow_id, backend, definition=definition)
+    with patch.object(approving, "_collapse_to_outcome", return_value="approved"):
+        result = approving.resume("ship it")
+
+    assert result == "published:ship it"
+
+
+@pytest.mark.parametrize("router", [False, True])
+def test_conditional_start_that_also_listens_runs_once_per_event(router):
+    handler_routing = "router: true\n    emit: [done]" if router else ""
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ConditionalStartListenFlow
+methods:
+  seed:
+    do:
+      call: expression
+      expr: "'x'"
+    start: true
+  route:
+    do:
+      call: expression
+      expr: "'go'"
+    listen: seed
+    router: true
+    emit: [go]
+  handler:
+    do:
+      call: expression
+      expr: "'done'"
+    start: go
+    listen: go
+    {handler_routing}
+"""
+    flow = Flow.from_declaration(contents=yaml_str)
+    flow.kickoff()
+
+    assert flow._method_execution_counts["handler"] == 1
 
 
 def test_flow_config_provider_fallback_from_declaration():

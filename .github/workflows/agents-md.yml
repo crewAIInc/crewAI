@@ -1,0 +1,62 @@
+name: AGENTS.md
+
+# The AGENTS.md that `crewai create` ships is tested in lib/cli/tests, which the main
+# test workflow doesn't run. The guards run whenever the file, its tests, the eval, or the
+# docs pages it links change. The eval itself is agents-md-eval.yml.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/cli/src/crewai_cli/templates/**"
+      - "lib/cli/src/crewai_cli/utils.py"
+      - "lib/cli/tests/test_create_crew.py"
+      - "lib/devtools/src/crewai_devtools/agents_md_eval.py"
+      - "lib/devtools/src/crewai_devtools/agents_md_items.json"
+      - "lib/devtools/tests/test_agents_md_eval.py"
+      - "docs/docs.json"
+      - "docs/edge/en/**"
+      - ".github/workflows/agents-md.yml"
+      - ".github/workflows/agents-md-eval.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agents-md-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  guards:
+    name: AGENTS.md guards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Restore global uv cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py3.12-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-main-py3.12-
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.13.4"
+          python-version: "3.12"
+          enable-cache: false
+
+      - name: Install the project
+        run: uv sync --all-groups --all-extras
+
+      - name: Run the AGENTS.md guards and the eval's own tests
+        run: |
+          uv run pytest lib/cli/tests/test_create_crew.py -k agents_md -p no:randomly -n 0
+          uv run pytest lib/devtools/tests/test_agents_md_eval.py -n 0

@@ -3084,6 +3084,72 @@ def test_replay_feature(researcher, writer):
         assert mock_execute_task.call_count == 3
 
 
+def test_replay_emits_paired_kickoff_events(researcher, writer):
+    """replay() must emit its own CrewKickoffStartedEvent before completing.
+
+    The execution tail of replay() emits CrewKickoffCompletedEvent(started_event_id
+    = self._kickoff_event_id). Without a start event scoping the replay, the bus
+    warns about an unpaired ending event and the completion points at the
+    original kickoff's start id, corrupting event pairing for listeners.
+    """
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    started_events: list[CrewKickoffStartedEvent] = []
+
+    def on_started(source, event: CrewKickoffStartedEvent):
+        started_events.append(event)
+
+    crewai_event_bus.register_handler(CrewKickoffStartedEvent, on_started)
+    try:
+        with patch.object(Task, "execute_sync") as mock_execute_task:
+            mock_execute_task.side_effect = [
+                TaskOutput(
+                    description=task.description,
+                    raw="Mocked output",
+                    agent="Researcher",
+                    json_dict=None,
+                    output_format=OutputFormat.RAW,
+                    pydantic=None,
+                    summary="Mocked output",
+                    messages=[],
+                )
+                for task in [list_ideas, write, write]
+            ]
+
+            crew.kickoff()
+            kickoff_start_ids = {event.event_id for event in started_events}
+            assert kickoff_start_ids, "kickoff() must emit CrewKickoffStartedEvent"
+
+            crew.replay(str(write.id))
+    finally:
+        crewai_event_bus.off(CrewKickoffStartedEvent, on_started)
+
+    replay_starts = [
+        event for event in started_events if event.event_id not in kickoff_start_ids
+    ]
+    assert replay_starts, "replay() must emit its own CrewKickoffStartedEvent"
+    # The completion event is constructed with started_event_id=self._kickoff_event_id
+    # (see _create_crew_output), so the pairing is correct exactly when the id
+    # left behind points at the replay's own start event.
+    assert crew._kickoff_event_id == replay_starts[-1].event_id
+
+
 def test_replay_rejects_changed_task_order(researcher):
     """Replay must not restore a saved output onto a different current task."""
     research = Task(
@@ -4200,7 +4266,7 @@ def test_multimodal_flag_adds_multimodal_tools():
 @pytest.mark.vcr()
 def test_multimodal_agent_image_tool_handling():
     """
-    Test that multimodal agents properly handle image tools in the CrewAgentExecutor
+    Test that multimodal agents properly handle image tools in the AgentExecutor
     """
     multimodal_agent = Agent(
         role="Image Analyst",
@@ -5098,7 +5164,7 @@ def test_prepare_kickoff_binds_task_only_agent_to_crew():
     Regression for crewAIInc/crewAI#5534: when Crew is built without
     agents=[...], multimodal input_files were silently dropped because the
     agent's .crew attribute was never assigned, gating file lookup off in
-    Task and CrewAgentExecutor.
+    Task and AgentExecutor.
     """
     from crewai.crews.utils import prepare_kickoff
 
