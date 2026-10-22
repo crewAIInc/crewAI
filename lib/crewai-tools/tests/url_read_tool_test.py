@@ -254,6 +254,21 @@ def test_html_is_stripped_to_visible_text():
     assert "color:red" not in result
 
 
+def test_html_keeps_words_whole_across_inline_elements():
+    """Inline markup must not split words, and blocks must start new lines."""
+    tool = URLReadTool()
+    body = (
+        b"<html><body><h1>Setup</h1><p>That is un<b>believ</b>able, "
+        b'see <a href="/docs">the docs</a>.</p><ul><li>one</li><li>two</li></ul>'
+        b"</body></html>"
+    )
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "text/html; charset=utf-8")
+        result = tool.run(url="https://example.com/page")
+
+    assert result == "Setup\nThat is unbelievable, see the docs.\none\ntwo"
+
+
 def test_binary_content_type_is_rejected():
     """An unsupported type is refused rather than returned as base64."""
     tool = URLReadTool()
