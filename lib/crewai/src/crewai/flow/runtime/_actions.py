@@ -114,6 +114,7 @@ class ToolAction:
             ToolExecutionFailedError,
             ToolFailureRecord,
             detect_tool_failure,
+            handle_tool_failure,
         )
 
         local_context = _pop_local_context(kwargs)
@@ -122,11 +123,26 @@ class ToolAction:
         ).render_template()
         result = self.tool.run(**rendered)
         if failure := detect_tool_failure(result):
-            raise ToolExecutionFailedError(
-                ToolFailureRecord(
-                    tool_name=self.tool.name, failure=failure, tool_args=rendered
+            if getattr(self.tool, "tool_failure_policy", None) is not None:
+                # The tool declares an explicit policy, which per BaseTool's
+                # contract overrides everything for this tool: WARN records
+                # the failure, emits ToolFailureDetectedEvent and the flow
+                # continues; IGNORE stays silent; RAISE aborts. Only a tool
+                # that sets no policy keeps flow actions' fail-hard default.
+                handle_tool_failure(
+                    failure,
+                    tool_name=self.tool.name,
+                    tool_args=rendered,
+                    tool=self.tool,
                 )
-            )
+            else:
+                raise ToolExecutionFailedError(
+                    ToolFailureRecord(
+                        tool_name=self.tool.name,
+                        failure=failure,
+                        tool_args=rendered,
+                    )
+                )
         return result
 
     def _build_tool(self) -> Any:
