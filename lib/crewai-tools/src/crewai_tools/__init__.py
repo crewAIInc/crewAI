@@ -289,6 +289,7 @@ __all__ = [
     "E2BPythonTool",
     "EXASearchTool",
     "EnterpriseActionTool",
+    "ExaSearchTool",
     "FileCompressorTool",
     "FileReadTool",
     "FileWriterTool",
