@@ -103,13 +103,16 @@ class PlusAPI(_CorePlusAPI):
             timeout=self.EVALUATION_POLL_TIMEOUT,
         )
 
-    def export_evaluation(self, evaluation_id: str) -> httpx.Response:
+    def export_evaluation(
+        self, evaluation_id: str, *, timeout: httpx.Timeout | None = None
+    ) -> httpx.Response:
         """The evaluation's full data as files (crewai eval export):
-        `{"id", "kind", "files": {relative path: text}}`."""
+        `{"id", "kind", "files": {relative path: text}}`. TIMEOUT replaces the
+        default, which allows the two minutes a large comparison may take."""
         return self._make_request(
             "GET",
             f"{self.EVALUATIONS_RESOURCE}/{evaluation_id}/export",
-            timeout=self.EVALUATION_EXPORT_TIMEOUT,
+            timeout=timeout or self.EVALUATION_EXPORT_TIMEOUT,
         )
 
     def _make_multipart_request(

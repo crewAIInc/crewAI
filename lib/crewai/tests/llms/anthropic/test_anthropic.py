@@ -1470,9 +1470,9 @@ def test_tool_search_passthrough_preserves_tool_search_type():
     assert "input_schema" in converted[1]
 
 
-def test_tool_search_single_tool_skips_search_and_forces_choice():
-    """With only 1 tool, tool_search is skipped (nothing to search) and the
-    normal forced tool_choice optimisation still applies."""
+def test_tool_search_single_tool_skips_search_and_uses_auto_choice():
+    """With only 1 tool, tool_search is skipped (nothing to search) and
+    tool_choice stays auto."""
     llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
 
     crewai_tools = [
@@ -1500,9 +1500,8 @@ def test_tool_search_single_tool_skips_search_and_forces_choice():
         available_functions={"test_tool": lambda q: "result"},
     )
 
-    # Single tool — tool_search skipped, tool_choice forced as normal
-    assert "tool_choice" in params
-    assert params["tool_choice"]["name"] == "test_tool"
+    # Single tool — tool_search skipped, model chooses whether to call it
+    assert params["tool_choice"] == {"type": "auto"}
 
     # No tool search tool should be injected
     tool_types = [t.get("type", "") for t in params["tools"]]
@@ -1511,6 +1510,39 @@ def test_tool_search_single_tool_skips_search_and_forces_choice():
 
     # No defer_loading on the single tool
     assert "defer_loading" not in params["tools"][0]
+
+
+def test_single_tool_with_available_functions_uses_auto_choice():
+    """One executable tool is offered, not forced.
+
+    Newer Claude models reject tool_choice {"type": "tool"}. Auto lets the
+    model call the tool or answer in text.
+    """
+    llm = LLM(model="anthropic/claude-sonnet-5-5")
+    tool = {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the weather for a city.",
+            "parameters": {
+                "type": "object",
+                "properties": {"city": {"type": "string"}},
+                "required": ["city"],
+            },
+        },
+    }
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "What's the weather in Paris?"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages,
+        system_message,
+        [tool],
+        available_functions={"get_weather": lambda city: "sunny"},
+    )
+
+    assert params["tool_choice"] == {"type": "auto"}
+    assert [t["name"] for t in params["tools"]] == ["get_weather"]
 
 
 def test_tool_search_via_llm_class():

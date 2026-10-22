@@ -85,6 +85,7 @@ from crewai.events.listeners.tracing.utils import (
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
     CrewTestStartedEvent,
@@ -2118,6 +2119,22 @@ class Crew(FlowTrackable, BaseModel):
 
         if replay_inputs:
             self._interpolate_inputs(replay_inputs)
+
+        # Mirror prepare_kickoff: replay's execution tail emits
+        # CrewKickoffCompletedEvent(started_event_id=self._kickoff_event_id),
+        # so a start event must scope it — otherwise the bus warns about an
+        # unpaired ending event and the completion points at the original
+        # kickoff's start id.
+        started_event = CrewKickoffStartedEvent(
+            crew_name=self.name, inputs=replay_inputs
+        )
+        self._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(self, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: BLE001,S110
+                pass
 
         if self.process == Process.hierarchical:
             self._create_manager_agent()
