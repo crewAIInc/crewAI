@@ -39,7 +39,7 @@ export YOUTUBE_API_KEY="your-api-key-here"
 ### Basic Usage
 
 ```python
-from crewai_tools.tools.youtube_search_tool.youtube_search_tool import YouTubeSearchTool
+from crewai_tools import YouTubeSearchTool
 
 # Initialize the tool
 tool = YouTubeSearchTool()
