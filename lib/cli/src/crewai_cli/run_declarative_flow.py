@@ -67,18 +67,20 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     # Load the project's .env before kickoff, mirroring the JSON-crew path
     # (run_crew._run_json_crew) so flow projects pick up API keys/config the
     # same way regardless of where crewai is installed.
-    from dotenv import load_dotenv
+    from crewai_cli.run_crew import load_project_env
 
     env_file = Path.cwd() / ".env"
     if env_file.exists():
-        load_dotenv(env_file, override=True)
+        load_project_env(env_file)
 
     provided = parse_inputs_json(inputs) or {}
 
     flow = load_declarative_flow(definition)
 
     if _flow_is_conversational(flow):
-        _run_conversational_declarative_flow(flow, inputs is not None)
+        _run_conversational_declarative_flow(
+            flow, inputs is not None, definition=definition
+        )
         return
 
     resolved_inputs = _resolve_flow_inputs(flow, provided)
@@ -91,7 +93,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     # returns a pending marker rather than completing), neither of which the
     # Textual TUI can handle correctly.
     if is_interactive() and not _flow_uses_human_feedback(flow):
-        _run_declarative_flow_tui(flow, resolved_inputs or None)
+        _run_declarative_flow_tui(flow, resolved_inputs or None, definition=definition)
         return
 
     try:
@@ -106,7 +108,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
 
 
 def _run_conversational_declarative_flow(
-    flow: Flow[Any], inputs_supplied: bool
+    flow: Flow[Any], inputs_supplied: bool, *, definition: str | Path | None = None
 ) -> None:
     """Run a declarative chat flow on the conversational TUI.
 
@@ -158,11 +160,14 @@ def _run_conversational_declarative_flow(
 
     from crewai_cli.kickoff_flow import _run_conversational_flow_tui
 
-    _run_conversational_flow_tui(flow)
+    _run_conversational_flow_tui(flow, definition=definition)
 
 
 def _run_declarative_flow_tui(
-    flow: Flow[Any], resolved_inputs: dict[str, Any] | None
+    flow: Flow[Any],
+    resolved_inputs: dict[str, Any] | None,
+    *,
+    definition: str | Path | None = None,
 ) -> Any:
     """Run a declarative flow on the CrewAI TUI (the interactive default).
 
@@ -217,6 +222,18 @@ def _run_declarative_flow_tui(
         from crewai_cli.run_crew import _chain_deploy
 
         _chain_deploy()
+    if getattr(app, "_want_traced_rerun", False):
+        from crewai_cli.run_crew import _chain_traced_rerun
+
+        # This flow, by its definition, with the inputs this run used.
+        _chain_traced_rerun(
+            {
+                "definition": str(definition) if definition else None,
+                "inputs": json.dumps(resolved_inputs, default=str)
+                if resolved_inputs
+                else None,
+            }
+        )
 
     return app._crew_result
 
