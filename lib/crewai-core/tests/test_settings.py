@@ -36,3 +36,38 @@ def test_concurrent_settings_instances_keep_configured_enterprise_url(
 
     assert [item.enterprise_base_url for item in settings] == [enterprise_url] * 2
     assert not list(config_path.parent.glob(".crewai_write_test.*"))
+
+
+def test_corrupt_settings_file_recovers_on_dump(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A corrupt settings.json is logged and overwritten on dump rather than silently failing."""
+    config_path = tmp_path / "settings.json"
+    config_path.write_text('{"org_name": "acme", "org_uuid": "123",}')
+
+    settings = settings_module.Settings(config_path=config_path)
+    assert settings.org_name is None
+    assert "Could not load settings from" in caplog.text
+
+    settings.org_name = "recovered-org"
+    settings.dump()
+
+    data = json.loads(config_path.read_text())
+    assert data["org_name"] == "recovered-org"
+
+    # Verify reloading gets the recovered settings
+    reloaded = settings_module.Settings(config_path=config_path)
+    assert reloaded.org_name == "recovered-org"
+
+
+def test_corrupt_settings_file_recovers_on_reset(tmp_path: Path) -> None:
+    """A corrupt settings.json is safely reset to defaults rather than left corrupted."""
+    config_path = tmp_path / "settings.json"
+    config_path.write_text("invalid json content {{{")
+
+    settings = settings_module.Settings(config_path=config_path)
+    settings.reset()
+
+    data = json.loads(config_path.read_text())
+    assert data["org_name"] is None
+    assert data["enterprise_base_url"] == settings_module.DEFAULT_CREWAI_ENTERPRISE_URL
