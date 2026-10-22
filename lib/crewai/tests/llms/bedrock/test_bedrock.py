@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.context_window import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -543,13 +544,21 @@ def test_bedrock_context_window_size():
     """
     Test that Bedrock models return correct context window sizes
     """
-    llm_claude = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
-    context_size_claude = llm_claude.get_context_window_size()
-    assert context_size_claude > 150000  # Should be substantial (200K tokens with ratio)
+    llm_nova = LLM(model="bedrock/amazon.nova-2-lite-v1:0")
+    context_size_nova = llm_nova.get_context_window_size()
+    assert context_size_nova == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
     llm_titan = LLM(model="bedrock/amazon.titan-text-express-v1")
     context_size_titan = llm_titan.get_context_window_size()
     assert context_size_titan > 5000
+
+
+def test_bedrock_claude_sonnet_46_uses_its_specific_context_window():
+    llm = LLM(model="bedrock/anthropic.claude-sonnet-4-6")
+
+    assert llm.get_context_window_size() == int(
+        1_000_000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 def test_bedrock_message_formatting():
@@ -683,6 +692,88 @@ def test_bedrock_token_usage_tracking():
         assert llm._token_usage['prompt_tokens'] == 50
         assert llm._token_usage['completion_tokens'] == 25
         assert llm._token_usage['total_tokens'] == 75
+
+
+def test_bedrock_input_token_count_forwards_converse_payload(bedrock_mocks):
+    """Counting preserves the Converse system, message, and tool payload."""
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    client.count_tokens.return_value = {"inputTokens": 42}
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is the weather?"},
+    ]
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location.",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+    assert llm.get_input_tokens_count(messages, tools=tools) == 42
+
+    client.count_tokens.assert_called_once_with(
+        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        input={
+            "converse": {
+                "system": [{"text": "Be concise."}],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{"text": "What is the weather?"}],
+                    }
+                ],
+                "toolConfig": {
+                    "tools": [
+                        {
+                            "toolSpec": {
+                                "name": "get_weather",
+                                "description": "Get weather for a location.",
+                                "inputSchema": {
+                                    "json": {"type": "object", "properties": {}}
+                                },
+                            }
+                        }
+                    ]
+                },
+            }
+        },
+    )
+
+
+def test_bedrock_input_token_count_uses_character_fallback_for_unsupported_models(
+    bedrock_mocks,
+):
+    """Runtime models without CountTokens report the Mantle requirement."""
+    from botocore.exceptions import ClientError
+
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/us.anthropic.claude-opus-4-7-v1:0")
+    client.count_tokens.side_effect = ClientError(
+        {
+            "Error": {
+                "Code": "ValidationException",
+                "Message": "This model does not support CountTokens.",
+            }
+        },
+        "CountTokens",
+    )
+
+    assert llm.get_input_tokens_count("12345") == 2
+
+
+def test_bedrock_input_token_count_uses_character_fallback_for_transport_errors(
+    bedrock_mocks,
+):
+    """VCR transport failures do not prevent proactive context preflight."""
+    from botocore.exceptions import HTTPClientError
+
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
+    client.count_tokens.side_effect = HTTPClientError(error=RuntimeError("VCR miss"))
+
+    assert llm.get_input_tokens_count("12345") == 2
 
 
 def test_bedrock_tool_use_conversation_flow():
@@ -909,7 +1000,7 @@ def test_bedrock_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Bedrock API."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    # Set stop sequences via the stop attribute (simulating an executor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
     with patch.object(llm._client, 'converse') as mock_converse:
@@ -934,6 +1025,43 @@ def test_bedrock_stop_sequences_sent_to_api():
         assert "inferenceConfig" in call_kwargs
         assert "stopSequences" in call_kwargs["inferenceConfig"]
         assert call_kwargs["inferenceConfig"]["stopSequences"] == ["\nObservation:", "\nThought:"]
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "bedrock/us.openai.gpt-6-sol",
+        "bedrock/global.openai.gpt-6-luna",
+        "bedrock/openai.gpt-oss-120b-1:0",
+    ],
+)
+def test_bedrock_openai_models_do_not_send_stop_sequences(model):
+    """Test that OpenAI models on Bedrock get stop words client-side, not as stopSequences."""
+    llm = LLM(model=model)
+    llm.stop = ["\nObservation:"]
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_converse.return_value = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'Thought: done\nObservation: extra'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 15
+            }
+        }
+
+        result = llm.call("Say hello in one word")
+
+        assert "stopSequences" not in mock_converse.call_args[1]["inferenceConfig"]
+        assert result == "Thought: done"
+
+    # Agent executors read this to fall back to client-side stop handling.
+    assert llm.supports_stop_words() is False
 
 
 # Agent Kickoff Structured Output Tests

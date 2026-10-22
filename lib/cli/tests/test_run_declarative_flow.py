@@ -418,7 +418,9 @@ def test_id_restore_still_drops_unknown_keys(
 # ── TUI vs terminal (headless/deploy) routing ──────────────────────
 
 
-def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False):
+def _install_fake_flow_app(
+    monkeypatch, *, status, want_deploy=False, evaluation=None, want_traced_rerun=False
+):
     """Replace CrewRunApp/EventListener/summary so _run_declarative_flow_tui is
     driven by a controllable fake app."""
 
@@ -430,6 +432,8 @@ def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False):
             self._crew_name = crew_name
             self._status = status
             self._want_deploy = want_deploy
+            self._want_traced_rerun = want_traced_rerun
+            self._evaluation = evaluation
             self._crew_result = "result"
 
         def run(self):
@@ -470,7 +474,9 @@ def test_run_declarative_flow_interactive_uses_tui(
     monkeypatch.setattr(
         run_declarative_flow_module,
         "_run_declarative_flow_tui",
-        lambda flow, resolved: captured.update(flow=flow, inputs=resolved),
+        lambda flow, resolved, definition=None: captured.update(
+            flow=flow, inputs=resolved, definition=definition
+        ),
     )
     path = _write(tmp_path, REQUIRED_FLOW_YAML)
 
@@ -480,6 +486,7 @@ def test_run_declarative_flow_interactive_uses_tui(
 
     assert captured["inputs"] == {"prospect_email": "a@b.com"}
     assert captured["flow"] is not None
+    assert captured["definition"] == str(path)  # what a traced re-run runs again
 
 
 def test_run_declarative_flow_tui_failed_exits_nonzero(
@@ -525,6 +532,27 @@ def test_run_declarative_flow_tui_chains_deploy(
     assert deploy_calls == [True]
 
 
+def test_evaluate_on_an_untraced_flow_run_runs_it_again_for_its_evaluation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The app closed because its run was not traced: what follows is
+    `crewai eval`'s own path, told to run the flow again whatever the record."""
+    _install_fake_flow_app(monkeypatch, status="completed", want_traced_rerun=True)
+    evaluated: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.eval_crew",
+        lambda **kwargs: evaluated.append(kwargs),
+    )
+
+    run_declarative_flow_module._run_declarative_flow_tui(
+        SimpleNamespace(name="Flow"), None
+    )
+
+    assert [{k: v for k, v in e.items() if k != "trusted_amp_origins"} for e in evaluated] == [
+        {"run_again": True, "run_args": {}}
+    ]
+
+
 def test_run_declarative_flow_tui_no_deploy_when_not_requested(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -539,6 +567,34 @@ def test_run_declarative_flow_tui_no_deploy_when_not_requested(
     )
 
     assert deploy_calls == []
+
+
+def test_run_declarative_flow_tui_leaves_the_report_link_behind(capsys) -> None:
+    """A declarative flow evaluates inside the app like a crew does. What the
+    terminal is for is afterwards: the link, once the screen that held it is
+    gone."""
+    app = SimpleNamespace(
+        _crew_name="Flow",
+        _status="completed",
+        _elapsed_frozen=1.0,
+        _start_time=0.0,
+        _input_tokens=0,
+        _output_tokens=0,
+        _live_out_tokens=0,
+        _final_output=None,
+        _error=None,
+        _evaluation={
+            "state": "done",
+            "url": "https://optimize.example/e/1",
+            "verdict": {"gate": "passed"},
+        },
+    )
+
+    run_declarative_flow_module._print_flow_post_tui_summary(app)
+
+    printed = capsys.readouterr().out
+    assert "goal gate PASSED" in printed
+    assert "https://optimize.example/e/1" in printed
 
 
 def test_run_declarative_flow_tui_enables_flow_events(
@@ -638,7 +694,8 @@ def test_run_declarative_flow_opens_the_conversational_tui(
     launched: list[Any] = []
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
-        "crewai_cli.kickoff_flow._run_conversational_flow_tui", launched.append
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda flow, definition=None: launched.append(flow)
     )
 
     run_declarative_flow_module.run_declarative_flow(str(definition_path))
@@ -656,7 +713,7 @@ def test_conversational_flow_does_not_take_the_steps_tui(
 
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
-        "crewai_cli.kickoff_flow._run_conversational_flow_tui", lambda flow: None
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui", lambda flow, definition=None: None
     )
     monkeypatch.setattr(
         run_declarative_flow_module,
@@ -677,7 +734,7 @@ def test_conversational_flow_rejects_inputs(
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._run_conversational_flow_tui",
-        lambda flow: pytest.fail("should have rejected --inputs before the TUI"),
+        lambda flow, definition=None: pytest.fail("should have rejected --inputs before the TUI"),
     )
 
     with pytest.raises(SystemExit) as exc_info:
@@ -701,7 +758,7 @@ def test_conversational_flow_rejects_an_empty_inputs_object(
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._run_conversational_flow_tui",
-        lambda flow: pytest.fail("an empty --inputs object still passed --inputs"),
+        lambda flow, definition=None: pytest.fail("an empty --inputs object still passed --inputs"),
     )
 
     with pytest.raises(SystemExit) as exc_info:
@@ -723,7 +780,8 @@ def test_conversational_flow_without_inputs_still_opens_the_tui(
     launched: list[Any] = []
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
-        "crewai_cli.kickoff_flow._run_conversational_flow_tui", launched.append
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda flow, definition=None: launched.append(flow)
     )
 
     run_declarative_flow_module.run_declarative_flow(str(definition_path), None)
@@ -752,7 +810,7 @@ def test_conversational_human_feedback_flow_avoids_the_tui(
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
     monkeypatch.setattr(
         "crewai_cli.kickoff_flow._run_conversational_flow_tui",
-        lambda flow: pytest.fail("human-feedback flow reached the Textual TUI"),
+        lambda flow, definition=None: pytest.fail("human-feedback flow reached the Textual TUI"),
     )
     monkeypatch.setattr(
         "crewai.flow.flow.Flow.chat", lambda self, **kw: chatted.append("repl")

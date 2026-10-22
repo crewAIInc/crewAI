@@ -60,9 +60,29 @@ def test_create_flow_scaffolds_assistant_instructions(
 
     project_root = tmp_path / "research_flow"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
-    assert "CrewAI Reference for AI Coding Assistants" in agents_md
-    assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
+    assert agents_md.index("## Working in this project") < agents_md.index("## Reference")
+    assert "Never turn off tracing or telemetry" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
     assert "@./AGENTS.md" in gemini_md.splitlines()
+
+
+def test_scaffolded_flow_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    create_flow("Research Flow")
+    create_flow("Declared Flow", declarative=True)
+
+    python_flow = (tmp_path / "research_flow" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "is done when a traced run passes `crewai eval`" in python_flow
+    assert "prints a markdown brief of what failed and the change to make" in python_flow
+    assert "`crewai eval --models " in python_flow
+    # The declarative flow ships its own AGENTS.md.
+    declared = (tmp_path / "declared_flow" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "Run `crewai eval` after a change" in declared
+    assert 'crewai eval --models "provider/model,…"' in declared
+    for agents_md in (python_flow, declared):
+        assert "{{name}}" not in agents_md
+        assert "crewai-eval:" not in agents_md

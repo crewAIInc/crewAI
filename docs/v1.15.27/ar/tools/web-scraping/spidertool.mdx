@@ -1,0 +1,93 @@
+---
+title: أداة استخراج Spider
+description: أداة `SpiderTool` مصممة لاستخراج وقراءة محتوى موقع محدد باستخدام Spider.
+icon: spider-web
+mode: "wide"
+---
+
+# `SpiderTool`
+
+## الوصف
+
+[Spider](https://spider.cloud/?ref=crewai) هي [الأسرع](https://github.com/spider-rs/spider/blob/main/benches/BENCHMARKS.md#benchmark-results)
+أداة استخراج وزحف مفتوحة المصدر تُرجع بيانات جاهزة لـ LLM.
+تحوّل أي موقع إلى HTML نقي أو markdown أو بيانات وصفية أو نص مع تمكين الزحف بإجراءات مخصصة باستخدام الذكاء الاصطناعي.
+
+## التثبيت
+
+لاستخدام `SpiderTool` تحتاج إلى تنزيل [Spider SDK](https://pypi.org/project/spider-client/)
+وحزمة `crewai[tools]` SDK أيضاً:
+
+```shell
+pip install spider-client 'crewai[tools]'
+```
+
+## مثال
+
+يوضح هذا المثال كيفية استخدام `SpiderTool` لتمكين وكيلك من استخراج المواقع وزحفها.
+البيانات المُرجعة من Spider API جاهزة بالفعل لـ LLM، لذا لا حاجة لأي تنظيف.
+
+```python Code
+from crewai_tools import SpiderTool
+
+def main():
+    spider_tool = SpiderTool()
+
+    searcher = Agent(
+        role="Web Research Expert",
+        goal="Find related information from specific URL's",
+        backstory="An expert web researcher that uses the web extremely well",
+        tools=[spider_tool],
+        verbose=True,
+    )
+
+    return_metadata = Task(
+        description="Scrape https://spider.cloud with a limit of 1 and enable metadata",
+        expected_output="Metadata and 10 word summary of spider.cloud",
+        agent=searcher
+    )
+
+    crew = Crew(
+        agents=[searcher],
+        tasks=[
+            return_metadata,
+        ],
+        verbose=2
+    )
+
+    crew.kickoff()
+
+if __name__ == "__main__":
+    main()
+```
+
+## المعاملات
+| المعامل          | النوع     | الوصف                                                                                                                                           |
+|:------------------|:---------|:-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| **api_key**         | `string`   | يحدد مفتاح Spider API. إذا لم يتم تحديده، يبحث عن `SPIDER_API_KEY` في متغيرات البيئة.                                                   |
+| **params**          | `object`   | معاملات اختيارية للطلب. الافتراضي هو `{"return_format": "markdown"}` لتحسين المحتوى لـ LLMs.                                        |
+| **request**         | `string`   | نوع الطلب المراد تنفيذه (`http`، `chrome`، `smart`). `smart` يستخدم HTTP افتراضياً، مع التبديل إلى تصيير JavaScript عند الحاجة.                        |
+| **limit**           | `int`      | الحد الأقصى لعدد الصفحات للزحف لكل موقع. عيّن إلى `0` أو اتركه للزحف غير المحدود.                                                                                     |
+| **depth**           | `int`      | الحد الأقصى لعمق الزحف. عيّن إلى `0` بدون حد.                                                                                                             |
+| **cache**           | `bool`     | يفعّل التخزين المؤقت لـ HTTP لتسريع التشغيلات المتكررة. الافتراضي هو `true`.                                                                                    |
+| **budget**          | `object`   | يعيّن حدوداً على أساس المسار للصفحات المزحوفة، مثل `{"*":1}` لصفحة الجذر فقط.                                                                          |
+| **locale**          | `string`   | اللغة المحلية للطلب، مثل `en-US`.                                                                                                                |
+| **cookies**         | `string`   | ملفات تعريف ارتباط HTTP للطلب.                                                                                                                         |
+| **stealth**         | `bool`     | يفعّل وضع التخفي لطلبات Chrome لتجنب الاكتشاف. الافتراضي هو `true`.                                                                       |
+| **headers**         | `object`   | رؤوس HTTP كخريطة من أزواج مفتاح-قيمة لجميع الطلبات.                                                                                            |
+| **metadata**        | `bool`     | يخزّن البيانات الوصفية حول الصفحات والمحتوى، مما يساعد على التوافق مع الذكاء الاصطناعي. الافتراضي هو `false`.                                                             |
+| **viewport**        | `object`   | يعيّن أبعاد نافذة العرض لـ Chrome. الافتراضي هو `800x600`.                                                                                                |
+| **encoding**        | `string`   | يحدد نوع الترميز، مثل `UTF-8`، `SHIFT_JIS`.                                                                                                  |
+| **subdomains**      | `bool`     | يتضمن النطاقات الفرعية في الزحف. الافتراضي هو `false`.                                                                                                 |
+| **user_agent**      | `string`   | وكيل مستخدم HTTP مخصص. الافتراضي هو وكيل عشوائي.                                                                                                   |
+| **store_data**      | `bool`     | يفعّل تخزين البيانات للطلب. يتجاوز `storageless` عند التعيين. الافتراضي هو `false`.                                                           |
+| **gpt_config**      | `object`   | يسمح للذكاء الاصطناعي بتوليد إجراءات الزحف، مع خطوات تسلسل اختيارية عبر مصفوفة لـ `"prompt"`.                                                        |
+| **fingerprint**     | `bool`     | يفعّل البصمة المتقدمة لـ Chrome.                                                                                                           |
+| **storageless**     | `bool`     | يمنع جميع عمليات تخزين البيانات، بما في ذلك تضمينات الذكاء الاصطناعي. الافتراضي هو `false`.                                                                               |
+| **readability**     | `bool`     | يُعالج المحتوى مسبقاً للقراءة عبر [أداة القراءة من Mozilla](https://github.com/mozilla/readability). يحسّن المحتوى لـ LLMs.                      |
+| **return_format**   | `string`   | التنسيق لإرجاع البيانات: `markdown`، `raw`، `text`، `html2text`. استخدم `raw` لتنسيق الصفحة الافتراضي.                                                     |
+| **proxy_enabled**   | `bool`     | يفعّل بروكسيات عالية الأداء لتجنب الحظر على مستوى الشبكة.                                                                                     |
+| **query_selector**  | `string`   | محدد CSS لاستخراج المحتوى من الترميز.                                                                                                |
+| **full_resources**  | `bool`     | يُنزّل جميع الموارد المرتبطة بالموقع.                                                                                                        |
+| **request_timeout** | `int`      | المهلة بالثواني للطلبات (5-60). الافتراضي هو `30`.                                                                                              |
+| **run_in_background** | `bool`   | يشغّل الطلب في الخلفية، مفيد لتخزين البيانات وتشغيل زحف لوحة التحكم. لا تأثير إذا تم تعيين `storageless`.                        |
