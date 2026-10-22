@@ -30,7 +30,8 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError
 from crewai.project.crew_definition import AgentDefinition
 from crewai.state.checkpoint_config import CheckpointConfig
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, ToolFailure
+from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.types.streaming import StreamSession
 
 
@@ -3226,6 +3227,85 @@ def test_tool_action_requires_module_qualname_ref():
 
     with pytest.raises(ValueError, match="expected 'module:qualname'"):
         Flow.from_declaration(contents=definition)
+
+
+class FailingTool(BaseTool):
+    name: str = "FailingTool"
+    description: str = "Always reports failure."
+
+    def _run(self, to: str) -> ToolFailure:
+        return ToolFailure(message=f"cannot send to {to}", code="bad_recipient")
+
+
+def _tool_flow_definition(ref: str, with_: dict[str, Any]) -> FlowDefinition:
+    return FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "send": {
+                    "start": True,
+                    "do": {"call": "tool", "ref": ref, "with": with_},
+                }
+            },
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        "google_gmail/send_email",
+        "google_gmail/send_email@0b3c9f8e-1d2a-4c5b-9e6f-7a8b9c0d1e2f",
+    ],
+)
+def test_tool_action_runs_platform_action(selector: str):
+    definition = _tool_flow_definition(
+        selector,
+        {"search_query": "${state.topic}", "prefix": "mail"},
+    )
+
+    with patch(
+        "crewai.project.json_loader._resolve_platform_tools",
+        return_value=[StaticSearchTool()],
+    ) as resolve:
+        flow = Flow.from_declaration(contents=definition)
+
+    resolve.assert_called_once_with(selector)
+    assert flow.kickoff(inputs={"topic": "digest"}) == "mail:digest"
+
+
+def test_tool_action_platform_ref_requires_action():
+    definition = _tool_flow_definition("google_gmail", {})
+
+    with patch("crewai.project.json_loader._resolve_platform_tools") as resolve:
+        with pytest.raises(ValueError, match="<app>/<action>"):
+            Flow.from_declaration(contents=definition)
+
+    resolve.assert_not_called()
+
+
+def test_tool_action_platform_ref_with_no_tools_names_ref():
+    definition = _tool_flow_definition("google_gmail/send_email", {})
+
+    with patch(
+        "crewai.project.json_loader._resolve_platform_tools", return_value=[]
+    ):
+        with pytest.raises(ValueError, match="'google_gmail/send_email'"):
+            Flow.from_declaration(contents=definition)
+
+
+def test_tool_action_raises_when_tool_reports_failure():
+    definition = _tool_flow_definition(
+        f"{__name__}:FailingTool", {"to": "${state.email}"}
+    )
+    flow = Flow.from_declaration(contents=definition)
+
+    with pytest.raises(ToolExecutionFailedError, match="cannot send to a@b.c") as exc:
+        flow.kickoff(inputs={"email": "a@b.c"})
+
+    assert exc.value.record.tool_name == "FailingTool"
+    assert exc.value.record.tool_args == {"to": "a@b.c"}
 
 
 def test_pydantic_state_from_ref_parity():
