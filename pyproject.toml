@@ -216,9 +216,8 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # gitpython <3.1.58 has GHSA-9rj7-rf2p-w77r, GHSA-4gmw-gg2m-w46p, GHSA-hh9p-6wh2-4mfc, GHSA-wvpp-8hx9-p66j and
 # GHSA-jm78-9fvv-mhgr (further unguarded git option forwarding in Repo.init, read-tree and git-config, plus
 # arbitrary file read via --pathspec-from-file); force 3.1.58+.
-# gitpython 3.1.58 has PYSEC-2026-3785, PYSEC-2026-3786, PYSEC-2026-3787 and PYSEC-2026-3788; all fixed in
-# 3.1.59, so force 3.1.59+. Its exclude-newer-package cutoff (2026-08-05) is dropped rather than bumped: the
-# global 3-day cutoff is now far later than that date, so the per-package pin only blocked the fix.
+# gitpython <=3.2.0 has GHSA-83vg-56qc-22m7 (submodule path validation after cloning can plant a Git hook);
+# force 3.2.1+.
 # pyasn1 <0.6.4 has GHSA-8ppf-4f7h-5ppj and GHSA-hm4w-wwcw-mr6r; force 0.6.4+.
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
 # urllib3 <2.8.0 has GHSA-8988-9cw3-xx77 (HTTPS proxy TLS configuration ignored), GHSA-gh4c-6fx4-qh6g (chunked
@@ -315,7 +314,10 @@ override-dependencies = [
     "uv>=0.13.4,<1",
     "certifi>=2026.10.18",
     "python-multipart>=0.0.27,<1",
-    "gitpython>=3.1.59,<4",
+    "gitpython>=3.2.1,<4",
+    "opentelemetry-api>=1.45.1,<2",
+    "opentelemetry-sdk>=1.45.1,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2",
     "pyasn1>=0.6.4",
     "langsmith>=0.8.18,<1",
     "authlib>=1.6.12",
