@@ -60,8 +60,11 @@ def test_corrupt_settings_file_recovers_on_dump(
     assert reloaded.org_name == "recovered-org"
 
 
-def test_corrupt_settings_file_recovers_on_reset(tmp_path: Path) -> None:
+def test_corrupt_settings_file_recovers_on_reset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A corrupt settings.json is safely reset to defaults rather than left corrupted."""
+    monkeypatch.setattr(settings_module.TokenManager, "clear_tokens", lambda self: None)
     config_path = tmp_path / "settings.json"
     config_path.write_text("invalid json content {{{")
 
