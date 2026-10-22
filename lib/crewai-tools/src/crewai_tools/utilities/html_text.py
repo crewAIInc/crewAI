@@ -62,6 +62,8 @@ _BLOCK_TAGS: Final[frozenset[str]] = frozenset(
 _CELL_TAGS: Final[frozenset[str]] = frozenset({"td", "th"})
 
 _BREAK: Final = object()
+_SOFT_BREAK: Final = object()
+_CELL_START: Final = object()
 _CELL_END: Final = object()
 
 
@@ -72,7 +74,8 @@ def visible_text(soup: BeautifulSoup) -> str:
     ``un<b>believ</b>able`` reads ``un believ able``, ``<a>docs</a>.`` reads
     ``docs .``, and a page with no whitespace between its blocks reads as one
     line. Here text runs join exactly as written, block elements and ``<br>``
-    start a new line, and table cells are separated by a space.
+    start a new line, and table cells are separated by a space. Blocks inside
+    a table cell do not break the row: they are separated by a space too.
 
     The tree is walked once, without being modified, so the cost is linear in
     the size of the document. Like ``get_text()``, only plain and CDATA strings
@@ -85,6 +88,7 @@ def visible_text(soup: BeautifulSoup) -> str:
     parts: list[str] = []
     line_break = False
     cell_gap = False
+    cell_depth = 0
 
     # Explicit stack instead of recursion, so deeply nested markup cannot
     # exhaust the interpreter stack.
@@ -93,7 +97,12 @@ def visible_text(soup: BeautifulSoup) -> str:
         node = stack.pop()
         if node is _BREAK:
             line_break = True
+        elif node is _SOFT_BREAK:
+            cell_gap = True
+        elif node is _CELL_START:
+            cell_depth += 1
         elif node is _CELL_END:
+            cell_depth -= 1
             cell_gap = True
         elif type(node) in text_types:
             text = str(node)
@@ -102,15 +111,11 @@ def visible_text(soup: BeautifulSoup) -> str:
                 text = text.lstrip()
                 if not text:
                     continue
+                while parts and not parts[-1].strip():
+                    parts.pop()
                 if parts:
-                    if line_break:
-                        while parts and not parts[-1].strip():
-                            parts.pop()
-                        if parts:
-                            parts[-1] = parts[-1].rstrip()
-                        parts.append("\n")
-                    else:
-                        parts.append(" ")
+                    parts[-1] = parts[-1].rstrip()
+                    parts.append("\n" if line_break else " ")
                 line_break = cell_gap = False
             parts.append(text)
         else:
@@ -119,12 +124,14 @@ def visible_text(soup: BeautifulSoup) -> str:
                 continue
             name = getattr(node, "name", None)
             if name in _BLOCK_TAGS:
-                stack.append(_BREAK)
+                marker = _BREAK if name == "br" or cell_depth == 0 else _SOFT_BREAK
+                stack.append(marker)
                 stack.extend(reversed(children))
-                stack.append(_BREAK)
+                stack.append(marker)
             elif name in _CELL_TAGS:
                 stack.append(_CELL_END)
                 stack.extend(reversed(children))
+                stack.append(_CELL_START)
             else:
                 stack.extend(reversed(children))
     return "".join(parts)
