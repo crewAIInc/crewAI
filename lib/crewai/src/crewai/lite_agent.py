@@ -78,6 +78,7 @@ from crewai.tools.tool_failure import (
     ToolFailureRecord,
     tool_failure_collector,
 )
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
@@ -307,6 +308,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _kickoff_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
+    _usage_baseline: UsageMetrics | None = PrivateAttr(default=None)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
     _before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
         PrivateAttr(default_factory=get_before_llm_call_hooks)
@@ -544,6 +546,8 @@ class LiteAgent(FlowTrackable, BaseModel):
             self._iterations = 0
             self.tools_results = []
             self._tool_failures = []
+            self._guardrail_retry_count = 0
+            self._usage_baseline = self._current_usage_summary()
 
             self._messages = self._format_messages(
                 messages, response_format=response_format, input_files=input_files
@@ -668,6 +672,25 @@ class LiteAgent(FlowTrackable, BaseModel):
                     color="yellow",
                 )
 
+    def _current_usage_summary(self) -> UsageMetrics | None:
+        """Snapshot the cumulative usage counters backing this agent's LLM.
+
+        The counters live on the LLM instance (or the agent's token process
+        for non-BaseLLM models) and grow for the object's lifetime — across
+        calls and across agents sharing the instance. Per-call usage is the
+        delta between two snapshots, mirroring ``Agent._current_usage_summary``.
+        """
+        if isinstance(self.llm, BaseLLM):
+            return self.llm.get_token_usage_summary()
+        return self._token_process.get_summary()
+
+    def _current_usage_delta(self) -> UsageMetrics | None:
+        """Usage accrued during this kickoff, relative to its baseline."""
+        summary = self._current_usage_summary()
+        if summary is not None and self._usage_baseline is not None:
+            return summary.delta_since(self._usage_baseline)
+        return summary
+
     def _execute_core(
         self, agent_info: dict[str, Any], response_format: type[BaseModel] | None = None
     ) -> LiteAgentOutput:
@@ -727,10 +750,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                             color="yellow",
                         )
 
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
+        usage_metrics = self._current_usage_delta()
 
         raw_output = (
             agent_finish.output.model_dump_json()
@@ -786,10 +806,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 elif isinstance(guardrail_result.result, BaseModel):
                     output.pydantic = guardrail_result.result
 
-            if isinstance(self.llm, BaseLLM):
-                usage_metrics = self.llm.get_token_usage_summary()
-            else:
-                usage_metrics = self._token_process.get_summary()
+            usage_metrics = self._current_usage_delta()
             output.usage_metrics = usage_metrics.model_dump() if usage_metrics else None
 
         crewai_event_bus.emit(
