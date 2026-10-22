@@ -1260,6 +1260,21 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, "🧠 Memory Retrieved", "green")
 
+    def handle_memory_retrieval_failed(
+        self,
+        error: str,
+    ) -> None:
+        """Handle memory retrieval failed event with panel display."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Memory Retrieval Failed\n", style="red bold")
+        content.append("Error: ", style="white")
+        content.append(f"{error}\n", style="red")
+
+        self.print_panel(content, "❌ Memory Retrieval Error", "red")
+
     def handle_memory_query_failed(
         self,
         error: str,
@@ -1420,7 +1435,6 @@ To enable tracing, do any one of these:
         content.append(f"{task_preview}\n", style="cyan")
 
         self.print_panel(content, "🔗 A2A Delegation", "cyan")
-        return
 
     def handle_a2a_delegation_completed(
         self,

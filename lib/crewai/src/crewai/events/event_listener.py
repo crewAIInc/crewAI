@@ -726,6 +726,10 @@ class EventListener(BaseEventListener):
         def on_knowledge_search_query_failed(
             _: Any, event: KnowledgeSearchQueryFailedEvent
         ) -> None:
+            # A failed query must release the in-progress flag too, or every
+            # later retrieval's started display is swallowed (the listener is
+            # a process-wide singleton).
+            self.knowledge_retrieval_in_progress = False
             self.formatter.handle_knowledge_search_query_failed(event.error)
 
         @crewai_event_bus.on(AgentReasoningStartedEvent)
