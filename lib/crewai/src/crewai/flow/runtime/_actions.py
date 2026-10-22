@@ -100,15 +100,31 @@ class ToolAction:
         self.kwargs = definition.with_ or {}
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
-        local_context = _pop_local_context(kwargs)
-        return self.tool.run(
-            **Expression.from_flow(
-                self.kwargs, self.flow, local_context=local_context
-            ).render_template()
+        from crewai.tools.tool_failure import (
+            ToolExecutionFailedError,
+            ToolFailureRecord,
+            detect_tool_failure,
         )
+
+        local_context = _pop_local_context(kwargs)
+        rendered = Expression.from_flow(
+            self.kwargs, self.flow, local_context=local_context
+        ).render_template()
+        result = self.tool.run(**rendered)
+        if failure := detect_tool_failure(result):
+            raise ToolExecutionFailedError(
+                ToolFailureRecord(
+                    tool_name=self.tool.name, failure=failure, tool_args=rendered
+                )
+            )
+        return result
 
     def _build_tool(self) -> Any:
         from crewai.tools import BaseTool
+
+        # A class ref always has a colon; an app selector never does.
+        if ":" not in self.definition.ref:
+            return _build_platform_tool(self.definition.ref)
 
         tool_cls = cast(
             Callable[[], BaseTool],
@@ -125,6 +141,24 @@ class ToolAction:
                 f"cannot instantiate tool ref {self.definition.ref!r} "
                 f"without arguments: {e}"
             ) from e
+
+
+def _build_platform_tool(ref: str) -> Any:
+    """Build the one integration app action named by ``<app>/<action>[@<connection>]``."""
+    from crewai.project.json_loader import _resolve_platform_tools
+
+    if "/" not in ref.partition("@")[0]:
+        raise InvalidRefError(
+            f"invalid tool ref {ref!r}; expected 'module:qualname' for a tool "
+            "class or '<app>/<action>[@<connection>]' for one integration app action"
+        )
+    tools = _resolve_platform_tools(ref)
+    if len(tools) != 1:
+        raise InvalidRefError(
+            f"tool ref {ref!r} resolved to {len(tools)} tools; the action "
+            "does not exist or the app is not connected"
+        )
+    return tools[0]
 
 
 class CrewAction:
