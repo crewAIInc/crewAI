@@ -140,6 +140,14 @@ def test_custom_llm_message_formatting():
     assert result == "Test response"
 
 
+def test_base_llm_input_token_count_estimates_text_characters(caplog):
+    """Custom providers have a conservative fallback without native support."""
+    custom_llm = CustomLLM(model="test-model")
+
+    assert custom_llm.get_input_tokens_count("12345") == 2
+    assert "assuming one token per four characters" in caplog.text
+
+
 class JWTAuthLLM(BaseLLM):
     """Custom LLM implementation with JWT authentication."""
 

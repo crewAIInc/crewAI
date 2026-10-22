@@ -34,9 +34,11 @@ from crewai.utilities.agent_utils import (
     build_text_tool_calling_fallback_message,
     build_tool_calls_assistant_message,
     check_native_tool_support,
+    check_repeated_tool_call,
     enforce_rpm_limit,
     execute_single_native_tool_call,
     extract_task_section,
+    extract_tool_call_info,
     format_message_for_llm,
     is_native_tool_calling_unsupported_error,
     is_tool_call_list,
@@ -150,6 +152,7 @@ class StepExecutor:
         """
         start_time = time.monotonic()
         tool_calls_made: list[str] = []
+        tool_call_counts: dict[int, int] = {}
 
         try:
             enforce_rpm_limit(self.request_within_rpm_limit)
@@ -160,6 +163,7 @@ class StepExecutor:
                     messages,
                     todo,
                     tool_calls_made,
+                    tool_call_counts=tool_call_counts,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
                     start_time=start_time,
@@ -169,6 +173,7 @@ class StepExecutor:
                     messages,
                     todo,
                     tool_calls_made,
+                    tool_call_counts=tool_call_counts,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
                     start_time=start_time,
@@ -213,6 +218,7 @@ class StepExecutor:
                         messages,
                         todo,
                         tool_calls_made,
+                        tool_call_counts=tool_call_counts,
                         max_step_iterations=max_step_iterations,
                         step_timeout=step_timeout,
                         start_time=start_time,
@@ -334,6 +340,7 @@ class StepExecutor:
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
         start_time: float | None = None,
+        tool_call_counts: dict[int, int] | None = None,
     ) -> str:
         """Execute step using text-parsed tool calling with a multi-turn loop.
 
@@ -344,6 +351,8 @@ class StepExecutor:
         """
         use_stop_words = self.llm.supports_stop_words() if self.llm else False
         last_tool_result = ""
+        if tool_call_counts is None:
+            tool_call_counts = {}
 
         for _ in range(max_step_iterations):
             if step_timeout and start_time:
@@ -374,6 +383,14 @@ class StepExecutor:
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
                 tool_result = self._execute_text_tool_with_events(formatted, todo)
+                check_repeated_tool_call(
+                    tool_call_counts,
+                    tool_name=formatted.tool,
+                    tool_args=formatted.tool_input,
+                    result=tool_result,
+                    agent=self.agent,
+                    task=self.task,
+                )
                 last_tool_result = tool_result
                 messages.append({"role": "assistant", "content": answer_str})
                 messages.append(self._build_observation_message(tool_result))
@@ -550,6 +567,7 @@ class StepExecutor:
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
         start_time: float | None = None,
+        tool_call_counts: dict[int, int] | None = None,
     ) -> str:
         """Execute step using native function calling with a multi-turn loop.
 
@@ -559,6 +577,8 @@ class StepExecutor:
         correct mistakes, and issue follow-up commands — all within one step.
         """
         accumulated_results: list[str] = []
+        if tool_call_counts is None:
+            tool_call_counts = {}
 
         for _ in range(max_step_iterations):
             if step_timeout and start_time:
@@ -587,7 +607,7 @@ class StepExecutor:
 
             if isinstance(answer, list) and answer and is_tool_call_list(answer):
                 result = self._execute_native_tool_calls(
-                    answer, messages, todo, tool_calls_made
+                    answer, messages, todo, tool_calls_made, tool_call_counts
                 )
                 accumulated_results.append(result)
                 continue
@@ -607,6 +627,7 @@ class StepExecutor:
         messages: list[LLMMessage],
         todo: TodoItem,
         tool_calls_made: list[str],
+        tool_call_counts: dict[int, int],
     ) -> str:
         """Execute a batch of native tool calls and return their results.
 
@@ -637,6 +658,15 @@ class StepExecutor:
 
             if call_result.func_name:
                 tool_calls_made.append(call_result.func_name)
+            info = extract_tool_call_info(tool_call)
+            check_repeated_tool_call(
+                tool_call_counts,
+                tool_name=call_result.func_name,
+                tool_args=info[2] if info else None,
+                result=call_result.result,
+                agent=self.agent,
+                task=self.task,
+            )
 
             if call_result.result_as_answer:
                 return str(call_result.result)
