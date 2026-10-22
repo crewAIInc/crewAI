@@ -7,6 +7,7 @@ from PIL import Image
 from crewai_files import FileBytes, ImageFile, PDFFile
 from crewai_files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
+    BEDROCK_CONSTRAINTS,
     ImageConstraints,
     ProviderConstraints,
 )
@@ -325,7 +326,8 @@ class TestFileProcessorBedrockLimits:
         result = FileProcessor(constraints="bedrock").process(file)
         result_size = len(result.read())
 
-        assert result_size < 3_932_160
+        assert result_size < len(data)
+        assert result_size <= BEDROCK_CONSTRAINTS.image.max_size_bytes
 
     def test_strict_mode_accepts_pdf_under_document_limit(self):
         """Test a PDF under 4.5 MB is not rejected as too large."""
