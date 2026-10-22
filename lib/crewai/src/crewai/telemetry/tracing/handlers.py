@@ -1907,7 +1907,7 @@ def handle_flow_paused(
     source: Flow[Any],
     event: FlowPausedEvent,
 ) -> None:
-    if source.suppress_flow_events:
+    if source.suppress_flow_events and not _is_conversational_flow(source):
         return
 
     flow_name = source.name or event.flow_name

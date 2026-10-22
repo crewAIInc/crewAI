@@ -2,14 +2,18 @@ from datetime import datetime, timedelta, timezone
 import json
 
 from crewai.flow import ConversationConfig, ConversationState
+from crewai.events.event_bus import crewai_event_bus
+from crewai.flow.async_feedback import HumanFeedbackPending
 from crewai.flow.flow import Flow, listen, start
+from crewai.flow.human_feedback import human_feedback
+from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from crewai.telemetry.tracing.ephemeral import trace_consent
 from crewai.telemetry.tracing.grants import (
     GrantSpanExporter,
     TraceGrant,
     TraceGrantClient,
 )
-from crewai.telemetry.tracing.session import telemetry_session
+from crewai.telemetry.tracing.session import TraceSession, telemetry_session
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 import pytest
 
@@ -178,3 +182,64 @@ def test_regular_flow_lifecycle_is_unchanged(monkeypatch, quiet, fail):
     assert all(s.name in ("execute flow", "call method") for s in spans)
     assert not any("gen_ai.conversation.id" in s.attributes for s in spans)
     assert all(s.parent is None or s.parent == root.context for s in spans)
+
+
+@pytest.mark.parametrize("quiet", [False, True])
+def test_conversation_pause_closes_root_before_resume(monkeypatch, tmp_path, quiet):
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+
+    class AsyncProvider:
+        def request_feedback(self, context, flow):
+            raise HumanFeedbackPending(context=context)
+
+    @ConversationConfig(trace_scope="turn")
+    class ReviewChat(Flow[ConversationState]):
+        def route_turn(self, context):
+            return "review"
+
+        @listen("review")
+        @human_feedback(message="Review draft:", provider=AsyncProvider())
+        def draft(self):
+            return "draft"
+
+        @listen(draft)
+        def finish(self, result):
+            return f"Approved: {result.feedback}"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "flows.db"))
+    chat = ReviewChat(
+        persistence=persistence, tracing=False, suppress_flow_events=quiet
+    )
+    exporter = InMemorySpanExporter()
+    session = TraceSession("review-execution", [exporter])
+    try:
+        with session.activate():
+            pending = chat.handle_turn("Review this draft")
+            assert isinstance(pending, HumanFeedbackPending)
+            assert crewai_event_bus.flush()
+            assert session.flush()
+            paused_roots = [
+                s for s in exporter.get_finished_spans() if s.name == "execute flow"
+            ]
+            assert len(paused_roots) == 1
+            paused_root = paused_roots[0]
+            assert paused_root.status.is_ok
+            assert not session.context.active_spans
+            assert pending.context.trace_context == (
+                paused_root.context.trace_id,
+                paused_root.context.span_id,
+            )
+
+            resumed = ReviewChat.from_pending(chat.state.id, persistence)
+            assert resumed.resume("looks good") == "Approved: looks good"
+            assert crewai_event_bus.flush()
+            assert session.flush()
+            roots = [
+                s for s in exporter.get_finished_spans() if s.name == "execute flow"
+            ]
+            assert len(roots) == 2
+            assert paused_root.end_time <= roots[1].start_time
+            assert all(s.status.is_ok for s in roots)
+            assert not session.context.active_spans
+    finally:
+        session.shutdown()
