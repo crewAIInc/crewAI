@@ -1,0 +1,110 @@
+---
+title: "YouTube Download to Cloud Storage عبر FlashData"
+description: "تتبع تسليم فيديو YouTube إلى تخزين العميل"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+## تتبع تسليم فيديو YouTube إلى تخزين العميل
+
+`FlashDataYouTubeDownloadSubmitTool, FlashDataYouTubeDownloadStatusTool, FlashDataYouTubeDownloadResultTool`
+
+دع Agent يفحص مهمة تسليم محفوظة بواسطة `job_id`. الإرسال والحالة والنتيجة أدوات منفصلة؛ الإرسال وحده ينشئ كتابة مدفوعة إلى تخزين العميل.
+
+[الإعداد وحقول الطلب والأسعار الحالية](https://flashdata.dev/docs/sources/youtube_download)
+
+## التثبيت والإعداد
+
+لم يُدرج هذا التكامل بعد في حزمة `crewai-tools` المنشورة. ثبّت مراجعة المصدر المحددة أدناه باستخدام Python 3.10–3.13. وهي تستخدم CrewAI 1.15.28.
+
+```shell
+uv add "crewai-tools @ git+https://github.com/crewAIInc/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
+```
+
+أنشئ حساب FlashData ومفتاح API عبر دليل المصدر أدناه. اضبط `FLASHDATA_API_KEY` في البيئة أو مدير الأسرار، ولا تضع القيمة في التعليمات أو الشيفرة. لا يحتاج المثال المباشر إلى نموذج.
+
+## استدعاء الأداة مباشرة
+
+اضبط `FLASHDATA_JOB_ID` على إيصال تنزيل محفوظ. لا تنشئ القراءة مهمة جديدة. تعيد الحالة حقول دورة الحياة المنقحة تحت `job`، وتضيف أداة النتيجة `output` عند الاكتمال. يقتصر رابط البيان الموقّع على أصل HTTPS الموثوق الذي تعيده API الإدارة ولا يُرسل إليه المفتاح. قد يحتوي البيان نفسه على روابط موقعة؛ شاركه مع المستلمين المقصودين فقط.
+
+```python
+import os
+from crewai_tools import FlashDataYouTubeDownloadStatusTool, FlashDataYouTubeDownloadResultTool
+
+job_id = os.environ["FLASHDATA_JOB_ID"]
+status = FlashDataYouTubeDownloadStatusTool().run(job_id=job_id)
+print(status)
+if status["job"]["status"] == "completed":
+    result = FlashDataYouTubeDownloadResultTool().run(job_id=job_id)
+    print(result["output"])
+```
+
+## المدخلات والمخرجات
+
+تتطلب القراءة `job_id`. يتطلب الإرسال `video_id`؛ يعرض المخطط حقول الصيغة والجودة والقص الاختيارية. يأتي التخزين من إعداد المشغّل.
+
+افحص أسماء المدخلات وأنواعها وحدودها وقيمها الافتراضية دون طلب API:
+
+```python
+from crewai_tools import FlashDataYouTubeDownloadSubmitTool
+
+print(FlashDataYouTubeDownloadSubmitTool().args_schema.model_json_schema())
+```
+
+مفاتيح API وبيانات التخزين واختيار المصدر ليست مدخلات Agent. فئة الأداة تثبت المصدر. يمكن تخصيص اسم متغير المفتاح بواسطة `api_key_env`.
+
+## الاستخدام في مهمة Agent
+
+اضبط `CREWAI_MODEL` على نموذج تدعمه بيئة CrewAI وأضف بيانات اعتماد مزوده. يستخدم `kickoff()` النموذج وقد يستدعي FlashData. يختار Agent متى يستخدم الأداة؛ يحد `max_usage_count=1` استخدامها في مثيل الأداة، وليس إنفاق الحساب.
+
+```python
+import os
+from crewai import Agent, Crew, Task
+from crewai_tools import FlashDataYouTubeDownloadStatusTool
+
+tool = FlashDataYouTubeDownloadStatusTool(max_usage_count=1)
+agent = Agent(
+    role='Track a YouTube delivery to customer storage',
+    goal="Prepare a concise brief grounded in returned evidence.",
+    backstory="You preserve source identifiers and state missing information clearly.",
+    llm=os.environ["CREWAI_MODEL"],
+    tools=[tool],
+    max_iter=4,
+    allow_delegation=False,
+    verbose=False,
+)
+task = Task(
+    description='Read the saved YouTube delivery job once and report its current status. Do not submit a new job. Job ID: ' + os.environ["FLASHDATA_JOB_ID"],
+    expected_output="A brief with returned facts, source identifiers and unresolved gaps.",
+    agent=agent,
+)
+result = Crew(agents=[agent], tasks=[task], verbose=False).kickoff()
+print(result)
+```
+
+## تفويض تسليم جديد
+
+الإرسال الجديد معطل افتراضيًا. اضبط `FLASHDATA_DOWNLOAD_STORAGE` ببيانات JSON الخاصة بالمزود وفق دليل المصدر، و`AUTHORIZED_YOUTUBE_VIDEO_ID` على فيديو مصرح لك بتسليمه. فعّل `allow_submit=True` فقط بعد تفويض الكتابة المدفوعة. لا تمنح Agent البحث أداة الإرسال إذا كان يحتاج فقط إلى فحص مهمة.
+
+```python
+import os
+from crewai_tools import FlashDataYouTubeDownloadSubmitTool
+
+submit = FlashDataYouTubeDownloadSubmitTool(allow_submit=True)
+receipt = submit.run(
+    video_id=os.environ["AUTHORIZED_YOUTUBE_VIDEO_ID"],
+    download_type="audio",
+    output_format="m4a",
+)
+print(receipt)  # Save receipt["id"] before any later status/result read.
+```
+
+## التكلفة والحدود
+
+التثبيت مجاني بترخيص MIT. **تستهلك طلبات FlashData API وحدات Credits مدفوعة.** تكاليف النموذج وتخزين العميل منفصلة. راجع [أسعار FlashData](https://flashdata.dev/pricing) ودليل المصدر.
+
+احفظ إيصال الإرسال وأعد استخدام المعرف. لا ترسل مجددًا للاستعلام عن الحالة. تنتهي صلاحية JSON للنتيجة بعد 24 ساعة، وتخضع الوسائط لسياسة التخزين لديك.
+
+تفشل المدخلات غير الصالحة قبل الطلب. لا توجد إعادة محاولة أو صفحات إضافية أو استعلام دوري تلقائي. مهلة الشبكة 120 ثانية، منها 15 للاتصال، وحد الرد 20 MiB. قد يترك انتهاء المهلة نتيجة فوترة غير معروفة؛ افحص Jobs في حسابك قبل إعادة الإرسال. لا تتضمن الأخطاء الردود الخام أو الأسرار، وتبقى النتائج الفارغة فارغة.
+
+[تنفيذ المصدر](https://github.com/crewAIInc/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)

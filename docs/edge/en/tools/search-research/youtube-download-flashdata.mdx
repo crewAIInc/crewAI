@@ -1,0 +1,110 @@
+---
+title: "YouTube Download to Cloud Storage with FlashData"
+description: "Track a YouTube delivery to customer storage"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+## Track a YouTube delivery to customer storage
+
+`FlashDataYouTubeDownloadSubmitTool, FlashDataYouTubeDownloadStatusTool, FlashDataYouTubeDownloadResultTool`
+
+Let an operations Agent inspect a saved delivery job by `job_id`. Submission, status and result are separate tools; only submission creates a paid customer-storage write.
+
+[Setup, request fields and current rates](https://flashdata.dev/docs/sources/youtube_download)
+
+## Install and configure
+
+This integration is not yet included in the published `crewai-tools` package. Install the reviewed source revision below with Python 3.10–3.13. It uses CrewAI 1.15.28.
+
+```shell
+uv add "crewai-tools @ git+https://github.com/crewAIInc/crewAI.git@449d1f0f70ed312fb3fc371b7df9f97386ef326f#subdirectory=lib/crewai-tools"
+```
+
+Create a FlashData account and API key using the source guide below. Set `FLASHDATA_API_KEY` in your environment or secret manager; keep the value out of prompts and source code. The direct example requires no model.
+
+## Call the tool directly
+
+Set `FLASHDATA_JOB_ID` to a saved YouTube download receipt. These reads never submit a new job. Status returns filtered lifecycle fields under `job`; the result tool additionally returns `output` once completed. The signed manifest URL is restricted to the management API’s trusted HTTPS origin and receives no API key. The manifest can itself contain signed URLs; share it only with intended recipients.
+
+```python
+import os
+from crewai_tools import FlashDataYouTubeDownloadStatusTool, FlashDataYouTubeDownloadResultTool
+
+job_id = os.environ["FLASHDATA_JOB_ID"]
+status = FlashDataYouTubeDownloadStatusTool().run(job_id=job_id)
+print(status)
+if status["job"]["status"] == "completed":
+    result = FlashDataYouTubeDownloadResultTool().run(job_id=job_id)
+    print(result["output"])
+```
+
+## Inputs and output
+
+Reads require `job_id`. Submission requires `video_id`; optional format, quality and clip fields are shown in its schema. Storage comes from operator configuration.
+
+Inspect all argument names, types, ranges and defaults without making a request:
+
+```python
+from crewai_tools import FlashDataYouTubeDownloadSubmitTool
+
+print(FlashDataYouTubeDownloadSubmitTool().args_schema.model_json_schema())
+```
+
+API keys, storage credentials and source selection are not Agent arguments. The source is fixed by the tool class. Custom API-key environment names can be configured with `api_key_env`.
+
+## Use in an Agent task
+
+Configure `CREWAI_MODEL` with a model supported by your CrewAI installation and set that provider’s credentials. Running `kickoff()` uses the model and may call FlashData. The Agent chooses whether to use the tool; `max_usage_count=1` limits its uses in this CrewAI tool instance, not your account spending.
+
+```python
+import os
+from crewai import Agent, Crew, Task
+from crewai_tools import FlashDataYouTubeDownloadStatusTool
+
+tool = FlashDataYouTubeDownloadStatusTool(max_usage_count=1)
+agent = Agent(
+    role='Track a YouTube delivery to customer storage',
+    goal="Prepare a concise brief grounded in returned evidence.",
+    backstory="You preserve source identifiers and state missing information clearly.",
+    llm=os.environ["CREWAI_MODEL"],
+    tools=[tool],
+    max_iter=4,
+    allow_delegation=False,
+    verbose=False,
+)
+task = Task(
+    description='Read the saved YouTube delivery job once and report its current status. Do not submit a new job. Job ID: ' + os.environ["FLASHDATA_JOB_ID"],
+    expected_output="A brief with returned facts, source identifiers and unresolved gaps.",
+    agent=agent,
+)
+result = Crew(agents=[agent], tasks=[task], verbose=False).kickoff()
+print(result)
+```
+
+## Authorize a new delivery
+
+New submission is disabled by default. Configure `FLASHDATA_DOWNLOAD_STORAGE` with the provider-specific JSON from the source guide, and set `AUTHORIZED_YOUTUBE_VIDEO_ID` to a video you are authorized to deliver. Enable `allow_submit=True` only after authorizing the paid write. Keep submission outside the research Agent when it only needs to inspect a job.
+
+```python
+import os
+from crewai_tools import FlashDataYouTubeDownloadSubmitTool
+
+submit = FlashDataYouTubeDownloadSubmitTool(allow_submit=True)
+receipt = submit.run(
+    video_id=os.environ["AUTHORIZED_YOUTUBE_VIDEO_ID"],
+    download_type="audio",
+    output_format="m4a",
+)
+print(receipt)  # Save receipt["id"] before any later status/result read.
+```
+
+## Cost and limits
+
+Installation is free under MIT. **FlashData API calls consume paid Credits.** Model and customer-storage charges are separate. See [FlashData pricing](https://flashdata.dev/pricing) and the source guide for current rates.
+
+Save the submission receipt and reuse its ID. Never submit again to poll. Result JSON expires after 24 hours; media retention depends on your storage policy.
+
+Invalid input fails before the API request. The client performs no automatic retries, pagination or polling. Network timeout is 120 seconds (15 seconds to connect), with a 20 MiB response limit. A timeout after submission may have an unknown billing outcome: inspect Jobs in your FlashData account before submitting again. Errors omit raw responses and credentials; empty results remain empty.
+
+[Source implementation](https://github.com/crewAIInc/crewAI/tree/449d1f0f70ed312fb3fc371b7df9f97386ef326f/lib/crewai-tools/src/crewai_tools/tools/flashdata_tool)

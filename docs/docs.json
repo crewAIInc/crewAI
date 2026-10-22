@@ -274,7 +274,22 @@
                           "edge/en/tools/search-research/serpapi-googlesearchtool",
                           "edge/en/tools/search-research/serpapi-googleshoppingtool",
                           "edge/en/tools/search-research/databricks-query-tool",
-                          "edge/en/tools/search-research/youai-search"
+                          "edge/en/tools/search-research/youai-search",
+                          "edge/en/tools/search-research/google-search-flashdata",
+                          "edge/en/tools/search-research/google-news-flashdata",
+                          "edge/en/tools/search-research/google-images-flashdata",
+                          "edge/en/tools/search-research/google-shopping-flashdata",
+                          "edge/en/tools/search-research/google-videos-flashdata",
+                          "edge/en/tools/search-research/google-places-flashdata",
+                          "edge/en/tools/search-research/youtube-search-flashdata",
+                          "edge/en/tools/search-research/youtube-search-extended-flashdata",
+                          "edge/en/tools/search-research/youtube-metadata-flashdata",
+                          "edge/en/tools/search-research/youtube-transcript-flashdata",
+                          "edge/en/tools/search-research/youtube-captions-flashdata",
+                          "edge/en/tools/search-research/youtube-trainability-flashdata",
+                          "edge/en/tools/search-research/youtube-channel-flashdata",
+                          "edge/en/tools/search-research/youtube-suggestions-flashdata",
+                          "edge/en/tools/search-research/youtube-download-flashdata"
                         ]
                       },
                       {
@@ -17989,7 +18004,22 @@
                           "edge/pt-BR/tools/search-research/websitesearchtool",
                           "edge/pt-BR/tools/search-research/codedocssearchtool",
                           "edge/pt-BR/tools/search-research/youtubechannelsearchtool",
-                          "edge/pt-BR/tools/search-research/youtubevideosearchtool"
+                          "edge/pt-BR/tools/search-research/youtubevideosearchtool",
+                          "edge/pt-BR/tools/search-research/google-search-flashdata",
+                          "edge/pt-BR/tools/search-research/google-news-flashdata",
+                          "edge/pt-BR/tools/search-research/google-images-flashdata",
+                          "edge/pt-BR/tools/search-research/google-shopping-flashdata",
+                          "edge/pt-BR/tools/search-research/google-videos-flashdata",
+                          "edge/pt-BR/tools/search-research/google-places-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-search-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-search-extended-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-metadata-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-transcript-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-captions-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-trainability-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-channel-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-suggestions-flashdata",
+                          "edge/pt-BR/tools/search-research/youtube-download-flashdata"
                         ]
                       },
                       {
@@ -34364,7 +34394,22 @@
                           "edge/ko/tools/search-research/arxivpapertool",
                           "edge/ko/tools/search-research/serpapi-googlesearchtool",
                           "edge/ko/tools/search-research/serpapi-googleshoppingtool",
-                          "edge/ko/tools/search-research/databricks-query-tool"
+                          "edge/ko/tools/search-research/databricks-query-tool",
+                          "edge/ko/tools/search-research/google-search-flashdata",
+                          "edge/ko/tools/search-research/google-news-flashdata",
+                          "edge/ko/tools/search-research/google-images-flashdata",
+                          "edge/ko/tools/search-research/google-shopping-flashdata",
+                          "edge/ko/tools/search-research/google-videos-flashdata",
+                          "edge/ko/tools/search-research/google-places-flashdata",
+                          "edge/ko/tools/search-research/youtube-search-flashdata",
+                          "edge/ko/tools/search-research/youtube-search-extended-flashdata",
+                          "edge/ko/tools/search-research/youtube-metadata-flashdata",
+                          "edge/ko/tools/search-research/youtube-transcript-flashdata",
+                          "edge/ko/tools/search-research/youtube-captions-flashdata",
+                          "edge/ko/tools/search-research/youtube-trainability-flashdata",
+                          "edge/ko/tools/search-research/youtube-channel-flashdata",
+                          "edge/ko/tools/search-research/youtube-suggestions-flashdata",
+                          "edge/ko/tools/search-research/youtube-download-flashdata"
                         ]
                       },
                       {
@@ -51281,7 +51326,22 @@
                           "edge/ar/tools/search-research/arxivpapertool",
                           "edge/ar/tools/search-research/serpapi-googlesearchtool",
                           "edge/ar/tools/search-research/serpapi-googleshoppingtool",
-                          "edge/ar/tools/search-research/databricks-query-tool"
+                          "edge/ar/tools/search-research/databricks-query-tool",
+                          "edge/ar/tools/search-research/google-search-flashdata",
+                          "edge/ar/tools/search-research/google-news-flashdata",
+                          "edge/ar/tools/search-research/google-images-flashdata",
+                          "edge/ar/tools/search-research/google-shopping-flashdata",
+                          "edge/ar/tools/search-research/google-videos-flashdata",
+                          "edge/ar/tools/search-research/google-places-flashdata",
+                          "edge/ar/tools/search-research/youtube-search-flashdata",
+                          "edge/ar/tools/search-research/youtube-search-extended-flashdata",
+                          "edge/ar/tools/search-research/youtube-metadata-flashdata",
+                          "edge/ar/tools/search-research/youtube-transcript-flashdata",
+                          "edge/ar/tools/search-research/youtube-captions-flashdata",
+                          "edge/ar/tools/search-research/youtube-trainability-flashdata",
+                          "edge/ar/tools/search-research/youtube-channel-flashdata",
+                          "edge/ar/tools/search-research/youtube-suggestions-flashdata",
+                          "edge/ar/tools/search-research/youtube-download-flashdata"
                         ]
                       },
                       {
