@@ -11,6 +11,7 @@ from tempfile import TemporaryDirectory
 TOOL_RESULT_PREVIEW_LINE_COUNT = 10
 TOOL_RESULT_PREVIEW_MAX_CHARS = 2_000
 TOOL_RESULT_READ_CONTEXT_WINDOW_RATIO = 0.05
+_TOOL_RESULT_TEMP_DIR = Path("/tmp")  # noqa: S108 - intentional POSIX temp dir
 
 
 @dataclass(frozen=True)
@@ -41,10 +42,19 @@ class ToolResultArtifactStore:
 
         Args:
             base_dir: Parent directory for the private execution directory.
-                Intended for tests; production defaults to the system temp
-                directory.
+                Intended for tests; production uses ``/tmp`` when available,
+                otherwise the platform's system temp directory.
         """
-        directory = str(base_dir) if base_dir is not None else None
+        # Keep potentially large tool output out of the project and user data
+        # directories. ``/tmp`` is the conventional ephemeral location on
+        # POSIX; retain Python's platform-specific fallback where it is absent.
+        directory = (
+            str(base_dir)
+            if base_dir is not None
+            else str(_TOOL_RESULT_TEMP_DIR)
+            if _TOOL_RESULT_TEMP_DIR.is_dir()
+            else None
+        )
         self._temporary_directory = TemporaryDirectory(
             prefix="crewai-tool-results-", dir=directory
         )

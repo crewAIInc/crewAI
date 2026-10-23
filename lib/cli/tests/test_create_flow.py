@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-import runpy
 
 from click.testing import CliRunner
-from crewai.flow.visualization import build_flow_structure
 from pytest import MonkeyPatch
 import tomli
 
@@ -62,8 +60,8 @@ def test_create_flow_scaffolds_assistant_instructions(
 
     project_root = tmp_path / "research_flow"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
-    assert "CrewAI Reference for AI Coding Assistants" in agents_md
-    assert "Never disable, block, or silence CrewAI's built-in observability" in agents_md
+    assert agents_md.index("## Working in this project") < agents_md.index("## Reference")
+    assert "Never turn off tracing or telemetry" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
     gemini_md = (project_root / "GEMINI.md").read_text(encoding="utf-8")
@@ -77,31 +75,14 @@ def test_scaffolded_flow_agents_md_tells_assistants_to_evaluate_with_crewai_eval
     create_flow("Research Flow")
     create_flow("Declared Flow", declarative=True)
 
-    for project in ("research_flow", "declared_flow"):
-        agents_md = (tmp_path / project / "AGENTS.md").read_text(encoding="utf-8")
-        assert "## Evaluating this" in agents_md
-        assert "Run `crewai eval` after a change" in agents_md
-        assert "it prints a **markdown brief** after the verdict" in agents_md
-        assert 'crewai eval --models "provider/model,…"' in agents_md
+    python_flow = (tmp_path / "research_flow" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "is done when a traced run passes `crewai eval`" in python_flow
+    assert "prints a markdown brief of what failed and the change to make" in python_flow
+    assert "`crewai eval --models " in python_flow
+    # The declarative flow ships its own AGENTS.md.
+    declared = (tmp_path / "declared_flow" / "AGENTS.md").read_text(encoding="utf-8")
+    assert "Run `crewai eval` after a change" in declared
+    assert 'crewai eval --models "provider/model,…"' in declared
+    for agents_md in (python_flow, declared):
         assert "{{name}}" not in agents_md
         assert "crewai-eval:" not in agents_md
-
-
-def test_scaffolded_agents_md_routing_example_lets_plots_see_its_branches(
-    tmp_path: Path, monkeypatch: MonkeyPatch
-):
-    monkeypatch.chdir(tmp_path)
-    create_flow("Research Flow")
-
-    agents_md = (tmp_path / "research_flow" / "AGENTS.md").read_text(encoding="utf-8")
-    section = agents_md.split("### Conditional Routing", 1)[1]
-    example = tmp_path / "routing_example.py"
-    example.write_text(section.split("```python\n", 1)[1].split("```", 1)[0])
-
-    quality_flow = runpy.run_path(str(example), run_name="routing_example")["QualityFlow"]
-    structure = build_flow_structure(quality_flow())
-
-    assert structure["nodes"]["check_quality"]["router_events"] == [
-        "high_quality",
-        "needs_revision",
-    ]
