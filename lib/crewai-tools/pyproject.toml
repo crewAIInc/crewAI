@@ -118,8 +118,9 @@ github = [
     # GHSA-9rj7-rf2p-w77r, GHSA-4gmw-gg2m-w46p, GHSA-hh9p-6wh2-4mfc,
     # GHSA-wvpp-8hx9-p66j and GHSA-jm78-9fvv-mhgr (further unguarded git
     # option forwarding / arbitrary file read); force 3.1.58+. 3.1.58 then has
-    # PYSEC-2026-3785 through -3788; force 3.1.59+.
-    "gitpython>=3.1.59,<4",
+    # PYSEC-2026-3785 through -3788, and <=3.2.0 has GHSA-83vg-56qc-22m7;
+    # force 3.2.1+.
+    "gitpython>=3.2.1,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
@@ -147,6 +148,10 @@ oxylabs = [
     # 3.x keeps the RealtimeClient surface these tools use and adds sources;
     # allow it rather than pinning consumers to a single release.
     "oxylabs>=2.0.0,<4",
+]
+azure-documentdb = [
+    "azure-identity>=1.17.0,<2",
+    "pymongo>=4.18.2",
 ]
 mongodb = [
     # <4.18.1 has GHSA-8fvv-fgr5-f8ch (GridFS delete treats a mapping id as a
