@@ -35,7 +35,7 @@ TERMS = {
         {
             "scheme": "exact",
             "network": "eip155:8453",
-            "amount": "2000",
+            "amount": "1000",
             "asset": BASE_USDC,
             "payTo": BOTSRATED_PAY_TO,
         }
@@ -100,10 +100,10 @@ def test_preflight_not_covered(get):
 def test_check_pays_and_enforces_budget(get):
     get.return_value = _quote()
     paying_get = MagicMock(return_value=_resp(200, {"host": "blockrun.ai"}))
-    tool = BotsRatedCheckTool(budget_usd="0.003", paying_get=paying_get)
-    assert json.loads(tool.run(host="blockrun.ai"))["remaining_usd"] == pytest.approx(
-        0.001
-    )
+    tool = BotsRatedCheckTool(budget_usd="0.0015", paying_get=paying_get)
+    first = json.loads(tool.run(host="blockrun.ai"))
+    assert first["remaining_usd"] == pytest.approx(0.0005)
+    assert first["charged"] is True
     assert json.loads(tool.run(host="blockrun.ai"))["error"] == "budget_exceeded"
     paying_get.assert_called_once_with(
         "https://botsrated.com/v1/check?host=blockrun.ai"
@@ -127,11 +127,37 @@ def test_check_no_payment_on_free_404_or_bad_terms(get):
 def test_check_failure_releases_budget(get):
     get.return_value = _quote()
     tool = BotsRatedCheckTool(
-        budget_usd="0.002",
+        budget_usd="0.001",
         paying_get=MagicMock(side_effect=[_resp(500, {}), _resp(200, {})]),
     )
     assert json.loads(tool.run(host="blockrun.ai"))["error"] == "paid_call_failed"
     assert json.loads(tool.run(host="blockrun.ai"))["remaining_usd"] == 0
+
+
+FREE = {
+    "host": "blockrun.ai",
+    "charged": False,
+    "free_quota": {"route": "check", "used": 1, "limit": 100, "remaining": 99},
+}
+
+
+@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
+def test_check_free_quota_answer_is_not_charged(get):
+    get.return_value = _resp(200, FREE)
+    paying_get = MagicMock()
+    tool = BotsRatedCheckTool(budget_usd="0.001", paying_get=paying_get)
+    out = json.loads(tool.run(host="blockrun.ai"))
+    assert out["charged"] is False and out["remaining_usd"] == pytest.approx(0.001)
+    paying_get.assert_not_called()
+
+
+@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
+def test_check_rejects_quote_above_price(get):
+    get.return_value = _quote({"accepts": [{**TERMS["accepts"][0], "amount": "2000"}]})
+    paying_get = MagicMock()
+    tool = BotsRatedCheckTool(budget_usd="1", paying_get=paying_get)
+    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
+    paying_get.assert_not_called()
 
 
 def test_check_requires_positive_budget():

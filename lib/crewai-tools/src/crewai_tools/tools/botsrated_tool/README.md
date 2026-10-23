@@ -11,8 +11,8 @@ These tools let an agent check a seller before it pays.
 
 - `BotsRatedPreflightTool`: free, no API key, no wallet. If you pass the `pay_to` of the 402 option the agent
   is about to pay, `pay_to_check` reports whether BotsRated has seen that payTo for the host.
-- `BotsRatedCheckTool`: $0.002 USDC on Base per call. It is opt-in and needs a budget and a GET that can pay
-  x402. It reads the quote unpaid first, accepts only exact Base USDC to BotsRated at $0.002 or less, and
+- `BotsRatedCheckTool`: $0.001 USDC on Base per call; the first 100 per day are free (`charged: false`, budget untouched). It is opt-in and needs a budget and a GET that can pay
+  x402. It reads the quote unpaid first, accepts only exact Base USDC to BotsRated at $0.001 or less, and
   stops at the budget.
 
 ## Installation

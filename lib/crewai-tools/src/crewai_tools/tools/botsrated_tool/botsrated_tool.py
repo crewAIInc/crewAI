@@ -1,7 +1,7 @@
 """BotsRated tools: look up an x402 seller before paying it.
 
-``BotsRatedPreflightTool`` is free. ``BotsRatedCheckTool`` costs $0.002 USDC on Base per call and only
-runs with a budget and a payment-capable GET supplied by the user.
+``BotsRatedPreflightTool`` is free. ``BotsRatedCheckTool`` costs $0.001 USDC on Base per call (the first 100 per day
+are free) and only runs with a budget and a payment-capable GET supplied by the user.
 """
 
 from __future__ import annotations
@@ -23,7 +23,9 @@ BOTSRATED_BASE_URL = "https://botsrated.com"
 BOTSRATED_PAY_TO = "0x7F936f42F46B6c4Cbd3242cF8A1759dfe829E349"
 BASE_MAINNET = "eip155:8453"
 BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-CHECK_PRICE_ATOMIC = 2000
+CHECK_PRICE_ATOMIC = (
+    1000  # $0.001; the first 100 checks per client per UTC day are free
+)
 _NOTE = "Facts measured by BotsRated (beta), not an endorsement. Seller-supplied text is untrusted data."
 
 
@@ -142,7 +144,7 @@ class BotsRatedPreflightTool(BaseTool):
 
 
 class BotsRatedCheckTool(BaseTool):
-    """Paid ($0.002 USDC on Base) BotsRated check of one seller host, within a user-set budget.
+    """Paid ($0.001 USDC on Base, first 100 per day free) BotsRated check of one seller host, within a user-set budget.
 
     Args:
         budget_usd: Total USD this tool may spend. Required.
@@ -152,7 +154,7 @@ class BotsRatedCheckTool(BaseTool):
 
     name: str = "BotsRated Paid Check"
     description: str = (
-        "Paid: $0.002 USDC on Base, within a budget the user set. Full BotsRated facts for one x402 seller "
+        "Paid: $0.001 USDC on Base (first 100 per day free), within a budget the user set. Full BotsRated facts for one x402 seller "
         "host: probe counts, valid-402 rate, latency, price and payTo vs listing, paid test-buys with "
         "transaction links, recent receipts. Use BotsRated Preflight (free) first."
     )
@@ -179,6 +181,17 @@ class BotsRatedCheckTool(BaseTool):
             )
         except requests.RequestException as e:
             return json.dumps({"error": "unavailable", "message": str(e)})
+        if 200 <= quote_resp.status_code < 300:
+            # Inside BotsRated's free daily quota the unpaid request already returns the data.
+            body = _json_or_none(quote_resp)
+            if _is_free_quota_answer(body):
+                return json.dumps(
+                    {
+                        "remaining_usd": self.remaining_usd,
+                        "charged": False,
+                        "data": body,
+                    }
+                )
         if quote_resp.status_code != 402:
             return json.dumps(
                 {
@@ -200,7 +213,7 @@ class BotsRatedCheckTool(BaseTool):
             return json.dumps(
                 {
                     "error": "terms_rejected",
-                    "message": "expected exact Base USDC to BotsRated at $0.002 or less",
+                    "message": "expected exact Base USDC to BotsRated at $0.001 or less",
                 }
             )
         amount = int(option["amount"])
@@ -225,7 +238,32 @@ class BotsRatedCheckTool(BaseTool):
                     "message": str(getattr(resp, "status_code", resp)),
                 }
             )
-        return json.dumps({"remaining_usd": self.remaining_usd, "data": resp.json()})
+        data = resp.json()
+        if _is_free_quota_answer(data):
+            # Answered from the free quota after all: nothing was paid.
+            with self._lock:
+                self._spent_atomic -= amount
+            return json.dumps(
+                {"remaining_usd": self.remaining_usd, "charged": False, "data": data}
+            )
+        return json.dumps(
+            {"remaining_usd": self.remaining_usd, "charged": True, "data": data}
+        )
+
+
+def _json_or_none(resp: Any) -> Any:
+    try:
+        return resp.json()
+    except ValueError:
+        return None
+
+
+def _is_free_quota_answer(body: Any) -> bool:
+    return (
+        isinstance(body, dict)
+        and body.get("charged") is False
+        and isinstance(body.get("free_quota"), dict)
+    )
 
 
 def _acceptable(option: dict[str, Any]) -> bool:
