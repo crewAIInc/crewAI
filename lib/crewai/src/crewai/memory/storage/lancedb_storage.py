@@ -14,7 +14,8 @@ import time
 from typing import Any
 
 from crewai_core.lock_store import lock as store_lock
-import lancedb  # type: ignore[import-untyped]
+import lancedb
+from lancedb.query import ColumnOrdering
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
@@ -38,6 +39,28 @@ _SCAN_ROWS_LIMIT = 50_000
 # gives enough headroom to catch up with version advancement.
 _MAX_RETRIES = 5
 _RETRY_BASE_DELAY = 0.2  # seconds; doubles on each retry
+
+
+def _sql_str(value: str) -> str:
+    """Escape a value for use inside a single-quoted SQL string literal."""
+    return value.replace("'", "''")
+
+
+def _id_in_filter(record_ids: list[str]) -> str:
+    """Build an ``id IN (...)`` predicate that matches each ID literally."""
+    ids_expr = ", ".join(f"'{_sql_str(str(rid))}'" for rid in record_ids)
+    return f"id IN ({ids_expr})"
+
+
+def _scope_prefix_filter(prefix: str) -> str:
+    r"""Build a predicate matching scopes that start with ``prefix``.
+
+    ``\``, ``%`` and ``_`` in the prefix are escaped so they match literally;
+    only the appended trailing ``%`` acts as a wildcard. Lance supports only
+    ``\`` as the ``LIKE`` escape character.
+    """
+    pattern = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"scope LIKE '{_sql_str(pattern)}%' ESCAPE '\\'"
 
 
 class LanceDBStorage:
@@ -331,11 +354,12 @@ class LanceDBStorage:
             )
         with store_lock(self._lock_name):
             self._ensure_table()
-            safe_id = str(record.id).replace("'", "''")
-            self._do_write("delete", f"id = '{safe_id}'")
+            # Reject unserializable records before deleting the stored version.
             row = self._record_to_row(record)
             if row["vector"] is None or len(row["vector"]) != self._vector_dim:
                 row["vector"] = [0.0] * self._vector_dim
+            safe_id = _sql_str(str(record.id))
+            self._do_write("delete", f"id = '{safe_id}'")
             self._do_write("add", [row])
 
     def touch_records(self, record_ids: list[str]) -> None:
@@ -352,11 +376,9 @@ class LanceDBStorage:
             return
         with store_lock(self._lock_name):
             now = datetime.utcnow().isoformat()
-            safe_ids = [str(rid).replace("'", "''") for rid in record_ids]
-            ids_expr = ", ".join(f"'{rid}'" for rid in safe_ids)
             self._do_write(
                 "update",
-                where=f"id IN ({ids_expr})",
+                where=_id_in_filter(record_ids),
                 values={"last_accessed": now},
             )
 
@@ -364,7 +386,7 @@ class LanceDBStorage:
         """Return a single record by ID, or None if not found."""
         if self._table is None:
             return None
-        safe_id = str(record_id).replace("'", "''")
+        safe_id = _sql_str(str(record_id))
         rows = self._table.search().where(f"id = '{safe_id}'").limit(1).to_list()
         if not rows:
             return None
@@ -387,9 +409,7 @@ class LanceDBStorage:
             )
         query = self._table.search(query_embedding)
         if scope_prefix is not None and scope_prefix.strip("/"):
-            prefix = scope_prefix.rstrip("/")
-            like_val = prefix + "%"
-            query = query.where(f"scope LIKE '{like_val}'")
+            query = query.where(_scope_prefix_filter(scope_prefix.rstrip("/")))
         results = query.limit(
             limit * 3 if (categories or metadata_filter) else limit
         ).to_list()
@@ -423,8 +443,7 @@ class LanceDBStorage:
         with store_lock(self._lock_name):
             if record_ids and not (categories or metadata_filter):
                 before = int(self._table.count_rows())
-                ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
-                self._do_write("delete", f"id IN ({ids_expr})")
+                self._do_write("delete", _id_in_filter(record_ids))
                 return before - int(self._table.count_rows())
             if categories or metadata_filter:
                 rows = self._scan_rows(scope_prefix)
@@ -445,15 +464,14 @@ class LanceDBStorage:
                 if not to_delete:
                     return 0
                 before = int(self._table.count_rows())
-                ids_expr = ", ".join(f"'{rid}'" for rid in to_delete)
-                self._do_write("delete", f"id IN ({ids_expr})")
+                self._do_write("delete", _id_in_filter(to_delete))
                 return before - int(self._table.count_rows())
             conditions = []
             if scope_prefix is not None and scope_prefix.strip("/"):
                 prefix = scope_prefix.rstrip("/")
                 if not prefix.startswith("/"):
                     prefix = "/" + prefix
-                conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
+                conditions.append(f"{_scope_prefix_filter(prefix)} OR scope = '/'")
             if older_than is not None:
                 conditions.append(f"created_at < '{older_than.isoformat()}'")
             if not conditions:
@@ -487,7 +505,7 @@ class LanceDBStorage:
             return []
         q = self._table.search()
         if scope_prefix is not None and scope_prefix.strip("/"):
-            q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+            q = q.where(_scope_prefix_filter(scope_prefix.rstrip("/")))
         if columns is not None:
             q = q.select(columns)
         result: list[dict[str, Any]] = q.limit(limit).to_list()
@@ -506,10 +524,23 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        rows = self._scan_rows(scope_prefix, limit=limit + offset)
-        records = [self._row_to_record(r) for r in rows]
-        records.sort(key=lambda r: r.created_at, reverse=True)
-        return records[offset : offset + limit]
+        if self._table is None or limit <= 0 or offset < 0:
+            return []
+
+        q = self._table.search()
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            if not prefix.startswith("/"):
+                prefix = "/" + prefix
+            q = q.where(_scope_prefix_filter(prefix))
+
+        q = (
+            q.order_by([ColumnOrdering(column_name="created_at", ascending=False)])
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = q.to_list()
+        return [self._row_to_record(row) for row in rows]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
@@ -613,8 +644,9 @@ class LanceDBStorage:
                 return
             prefix = scope_prefix.rstrip("/")
             if prefix:
+                literal = _sql_str(prefix)
                 self._do_write(
-                    "delete", f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'"
+                    "delete", f"scope >= '{literal}' AND scope < '{literal}/\uffff'"
                 )
 
     def optimize(self) -> None:

@@ -437,17 +437,26 @@ def matching_label_indices(labels: list[str], query: str) -> list[int]:
 # ── Public API ──────────────────────────────────────────────────
 
 
-def pick(title: str, options: list[tuple[str, str]]) -> str | None:
+def pick(
+    title: str,
+    options: list[tuple[str, str]],
+    *,
+    labels: list[str] | None = None,
+) -> str | None:
     """Arrow-key single-select picker.
 
     Args:
         title: Header text.
         options: List of ``(value, description)`` tuples.
+        labels: Optional display labels, in the same order as ``options``.
 
     Returns:
         The *value* of the selected option, or ``None`` if cancelled.
     """
-    labels = [f"{value:<12s} {desc}" for value, desc in options]
+    if labels is None:
+        labels = [f"{value:<12s} {desc}" for value, desc in options]
+    elif len(labels) != len(options):
+        raise ValueError("labels must have the same length as options")
 
     click.echo()
     click.secho(f"  {title}", fg="cyan", bold=True)
