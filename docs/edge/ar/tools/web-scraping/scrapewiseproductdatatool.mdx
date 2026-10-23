@@ -1,0 +1,115 @@
+---
+title: أداة بيانات منتجات Scrapewise
+description: أداة `ScrapewiseProductDataTool` تقرأ بيانات منتجات وأسعار المنافسين المنظمة التي جمعتها مكشطات ScrapeWise مسبقاً.
+icon: tags
+mode: "wide"
+---
+
+# `ScrapewiseProductDataTool`
+
+## الوصف
+
+أداة `ScrapewiseProductDataTool` تقرأ صفوف المنتجات والأسعار المنظمة من [ScrapeWise](https://scrapewise.ai)، وهي منصة مُدارة لاستخراج بيانات التجارة الإلكترونية. تتولى ScrapeWise تشغيل المكشطات وصيانتها، وتقرأ هذه الأداة الصفوف التي خزّنتها بالفعل — العنوان والسعر والتوفر ومعرّفات المنتج — بحيث لا يجلب الوكيل HTML ولا يحلله بنفسه مطلقاً.
+
+وهذا ما يميّزها عن أدوات الاستخراج المباشر في هذه الفئة: لا يوجد جلب للصفحة، ولا جدار صدّ للروبوتات، ولا HTML في مخرجات الأداة. والمقايضة هي أن الموقع يجب أن يكون مُهيّأً مسبقاً كمكشطة في حساب ScrapeWise الخاص بك.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت عميل ScrapeWise لـ Python:
+
+```shell
+uv add scrapewise
+```
+
+ستحتاج أيضاً إلى إعداد مفتاح ScrapeWise API كمتغير بيئة:
+
+```shell
+export SCRAPEWISE_API_KEY="your_api_key"
+```
+
+يمكنك الحصول على مفتاح API من [لوحة تحكم ScrapeWise](https://portal.scrapewise.ai).
+
+## خطوات البدء
+
+لاستخدام `ScrapewiseProductDataTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت التبعيات**: ثبّت الحزمة المطلوبة باستخدام الأمر أعلاه.
+2. **إعداد مفتاح API**: عيّن مفتاح ScrapeWise API كمتغير بيئة أو قدمه أثناء التهيئة.
+3. **العثور على معرّف المكشطة**: انسخ معرّف المكشطة التي تريد قراءة بياناتها من لوحة تحكم ScrapeWise.
+4. **تهيئة الأداة**: ثبّت الأداة على مكشطة واحدة، أو اترك `scraper_id` دون تحديد ودع الوكيل يمرره في كل استدعاء.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `ScrapewiseProductDataTool` لقراءة أسعار المنافسين:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapewiseProductDataTool
+
+# Initialize the tool, pinned to one scraper
+product_data_tool = ScrapewiseProductDataTool(scraper_id="68d4f1c9ab12cd34ef567890")
+
+# Define an agent that uses the tool
+pricing_analyst = Agent(
+    role="Pricing Analyst",
+    goal="Understand how competitor prices move across a product range",
+    backstory="An analyst who works from structured product feeds rather than raw web pages.",
+    tools=[product_data_tool],
+    verbose=True,
+)
+
+# Example task to summarise competitor pricing
+pricing_task = Task(
+    description="Read the latest competitor product rows and report the ten cheapest in-stock items.",
+    expected_output="A ranked list of ten products with price and availability.",
+    agent=pricing_analyst,
+)
+
+# Create and run the crew
+crew = Crew(agents=[pricing_analyst], tasks=[pricing_task])
+result = crew.kickoff()
+```
+
+اترك `scraper_id` دون تحديد لتدع الوكيل يختار المصدر في كل استدعاء:
+
+```python Code
+product_data_tool = ScrapewiseProductDataTool()
+```
+
+## المعاملات
+
+تقبل أداة `ScrapewiseProductDataTool` المعاملات التالية عند التهيئة:
+
+- `scraper_id`: اختياري. يثبّت الأداة على مكشطة ScrapeWise واحدة. وعند تعيينه لا يحتاج الوكيل إلى تقديمه.
+- `api_key`: اختياري. مفتاح ScrapeWise API الخاص بك. وفي حال غيابه تُستخدم قيمة متغير البيئة `SCRAPEWISE_API_KEY`.
+- `base_url`: اختياري. يتجاوز عنوان API الأساسي. مطلوب فقط لعمليات النشر غير الافتراضية.
+- `timeout`: اختياري. مهلة الطلب بالثواني.
+
+وعند الاستدعاء تقبل الأداة:
+
+- `scraper_id`: مطلوب إلا إذا كان مثبتاً عند التهيئة.
+- `max_rows`: اختياري، القيمة الافتراضية `25`. يجب أن تكون بين 1 و100.
+
+## متغيرات البيئة
+
+- `SCRAPEWISE_API_KEY`: مطلوب. مفتاح ScrapeWise API الخاص بك.
+
+## حد الصفوف
+
+تُرجع نقطة نهاية بيانات العيّنة في ScrapeWise 100 صف كحد أقصى في كل استدعاء، لذلك يتم التحقق من `max_rows` مقابل هذا الحد. وهي عيّنة من الصفوف المخزّنة وليست مجموعة البيانات الكاملة — استخدم تصديرات ScrapeWise للتحليل الكامل.
+
+## معالجة الأخطاء
+
+تُرجع الأداة الأخطاء كنص بدلاً من إطلاق استثناء، بحيث لا تؤدي القراءة الفاشلة إلى إيقاف الطاقم:
+
+- غياب حزمة `scrapewise` يُطلق `ImportError` عند التهيئة، مع أمر التثبيت.
+- غياب مفتاح API يُطلق `ValueError` عند التهيئة.
+- أي قيمة لـ `max_rows` خارج النطاق 1–100 يرفضها مخطط الإدخال.
+- تُرجع أخطاء API والنقل على شكل `Error reading ScrapeWise product data: ...`.
+- المكشطة التي لا تحتوي على صفوف مخزّنة بعد تُرجع رسالة صريحة تفيد بذلك، وليس نصاً فارغاً.
+
+## أفضل الممارسات
+
+- ثبّت `scraper_id` عندما يقرأ الطاقم موقعاً واحداً فقط — فهذا يزيل معاملاً قد يخطئ فيه النموذج.
+- أبقِ `max_rows` منخفضاً (25 أو أقل) لمهام الاستدلال؛ فتفريغ عدد كبير من الصفوف يزدحم نافذة السياق.
+- استخدم نسخة أداة واحدة لكل مكشطة عندما يقارن الوكيل موقعين، وسمِّ الوكلاء بأسماء المواقع حتى يفرّق النموذج بينها.
