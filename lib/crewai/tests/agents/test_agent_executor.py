@@ -75,6 +75,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.base_llm import BaseLLM
+from crewai.tools.base_tool import Tool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem, TodoList
@@ -766,6 +768,56 @@ class TestAgentExecutor:
         mock_run.assert_not_called()
 
 
+class NativeBatchStubLLM(BaseLLM):
+    """Native-tooling stub: one batch with two tool calls, then plain text."""
+
+    def __init__(self) -> None:
+        super().__init__(model="stub")
+        self.calls: list[list[dict[str, Any]]] = []
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def call(
+        self,
+        messages: Any,
+        tools: Any = None,
+        callbacks: Any = None,
+        available_functions: Any = None,
+        from_task: Any = None,
+        from_agent: Any = None,
+        response_model: Any = None,
+    ) -> Any:
+        self.calls.append([dict(m) for m in messages])
+        if len(self.calls) == 1:
+            return [
+                SimpleNamespace(
+                    id="call_answer",
+                    function=SimpleNamespace(name="answer_tool", arguments="{}"),
+                ),
+                SimpleNamespace(
+                    id="call_side",
+                    function=SimpleNamespace(name="side_tool", arguments="{}"),
+                ),
+            ]
+        return "done"
+
+
+def _build_native_tool(name: str, result_as_answer: bool) -> Tool:
+    def _run(**kwargs: Any) -> str:
+        return f"{name}-result"
+
+    return Tool(
+        name=name,
+        description=f"{name}: native stub tool",
+        func=_run,
+        result_as_answer=result_as_answer,
+    )
+
+
 class TestStepExecutorCriticalFixes:
     """Regression tests for critical plan-and-execute issues."""
 
@@ -937,7 +989,7 @@ class TestStepExecutorCriticalFixes:
             patch.object(
                 step_executor,
                 "_execute_native_tool_calls",
-                return_value="2 words",
+                return_value=("2 words", None),
             ),
         ):
             result = step_executor._execute_native(
@@ -948,6 +1000,86 @@ class TestStepExecutorCriticalFixes:
             )
 
         assert result == "2 words"
+
+    def _build_native_step_executor(
+        self, tools: list[Tool]
+    ) -> tuple[NativeBatchStubLLM, StepExecutor]:
+        llm = NativeBatchStubLLM()
+        agent = Mock()
+        agent.role = "Test Agent"
+        agent.goal = "Execute tasks"
+        agent.verbose = False
+        agent.key = "test-agent-key"
+        return llm, StepExecutor(
+            llm=llm,
+            tools=[],
+            agent=agent,
+            original_tools=tools,
+        )
+
+    def test_native_result_as_answer_ends_step_with_tool_result(self):
+        """A result_as_answer tool is the step's final answer.
+
+        The loop must stop there instead of calling the LLM again on a
+        history whose assistant tool_calls have no tool replies.
+        """
+        llm, step_executor = self._build_native_step_executor(
+            [
+                _build_native_tool("answer_tool", result_as_answer=True),
+                _build_native_tool("side_tool", result_as_answer=False),
+            ]
+        )
+        todo = TodoItem(step_number=1, description="Do the thing")
+        context = StepExecutionContext(task_description="task", task_goal="goal")
+
+        result = step_executor.execute(todo, context, max_step_iterations=5)
+
+        assert result.success is True
+        assert result.result == "answer_tool-result"
+        assert result.tool_calls_made == ["answer_tool", "side_tool"]
+        assert len(llm.calls) == 1
+
+    def test_native_result_as_answer_batch_answers_every_tool_call_id(self):
+        """Every tool call declared in the batch must get a tool message.
+
+        An assistant message with tool_calls must be followed by tool
+        messages responding to each tool_call_id, so the result_as_answer
+        short-circuit may not leave dangling ids behind.
+        """
+        _, step_executor = self._build_native_step_executor(
+            [
+                _build_native_tool("answer_tool", result_as_answer=True),
+                _build_native_tool("side_tool", result_as_answer=False),
+            ]
+        )
+        tool_calls = [
+            SimpleNamespace(
+                id="call_answer",
+                function=SimpleNamespace(name="answer_tool", arguments="{}"),
+            ),
+            SimpleNamespace(
+                id="call_side",
+                function=SimpleNamespace(name="side_tool", arguments="{}"),
+            ),
+        ]
+        messages: list[dict[str, Any]] = []
+        tool_calls_made: list[str] = []
+
+        step_executor._execute_native_tool_calls(
+            tool_calls,
+            messages,
+            TodoItem(step_number=1, description="Do the thing"),
+            tool_calls_made,
+            tool_call_counts={},
+        )
+
+        declared = {tc["id"] for tc in messages[0]["tool_calls"]}
+        answered = {
+            m["tool_call_id"] for m in messages if m.get("role") == "tool"
+        }
+        assert declared == {"call_answer", "call_side"}
+        assert answered == declared
+        assert tool_calls_made == ["answer_tool", "side_tool"]
 
     def test_step_executor_falls_back_when_native_tools_are_rejected(
         self, step_executor
