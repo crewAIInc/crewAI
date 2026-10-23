@@ -102,17 +102,14 @@ class TestPickleHandler(unittest.TestCase):
         loaded_data = self.handler.load()
         assert loaded_data == {}
 
-    def test_load_corrupted_file(self):
+    def test_load_corrupted_file_without_signature(self):
         with open(self.file_path, "wb") as file:
             file.write(b"corrupted data")
             file.flush()
             os.fsync(file.fileno())
 
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(ValueError, match="no signature file found"):
             self.handler.load()
-
-        assert str(exc.value) == "pickle data was truncated"
-        assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
 
     def test_load_tampered_file_raises_error(self):
         data = {"key": "value"}
@@ -142,22 +139,14 @@ class TestPickleHandler(unittest.TestCase):
         with pytest.raises(ValueError, match="signature mismatch"):
             self.handler.load()
 
-    def test_load_legacy_file_without_signature(self):
-        # Write a pickle file without a signature (simulates pre-fix files)
+    def test_load_unsigned_file_rejected(self):
         import pickle
 
         with open(self.file_path, "wb") as f:
             pickle.dump({"legacy": True}, f)
 
-        # Should load with a warning, not raise
-        import warnings
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            loaded_data = self.handler.load()
-            assert loaded_data == {"legacy": True}
-            assert len(w) == 1
-            assert "signature file" in str(w[0].message)
+        with pytest.raises(ValueError, match="no signature file found"):
+            self.handler.load()
 
     def test_overwrite_preserves_signature(self):
         data1 = {"first": True}
