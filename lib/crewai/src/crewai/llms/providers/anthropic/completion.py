@@ -1781,7 +1781,9 @@ class AnthropicCompletion(BaseLLM):
         if usage.get("total_tokens", 0) > 0:
             logging.info(f"Anthropic API usage: {usage}")
 
-        return content
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], content, from_agent
+        )
 
     async def _ahandle_streaming_completion(
         self,
@@ -1980,7 +1982,9 @@ class AnthropicCompletion(BaseLLM):
             response_id=final_response_id,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     async def _ahandle_tool_use_conversation(
         self,

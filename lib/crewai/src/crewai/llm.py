@@ -2059,7 +2059,16 @@ class LLM(BaseLLM):
                     )
 
                     if self._effective_stream():
-                        return await self._ahandle_streaming_response(
+                        result = await self._ahandle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+                    else:
+                        result = await self._ahandle_non_streaming_response(
                             params=params,
                             callbacks=callbacks,
                             available_functions=available_functions,
@@ -2068,14 +2077,12 @@ class LLM(BaseLLM):
                             response_model=response_model,
                         )
 
-                    return await self._ahandle_non_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
+                    if isinstance(result, str):
+                        result = self._invoke_after_llm_call_hooks(
+                            messages, result, from_agent
+                        )
+
+                    return result
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:
