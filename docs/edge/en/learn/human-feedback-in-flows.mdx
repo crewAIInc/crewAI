@@ -74,7 +74,8 @@ When this flow runs, it will:
 | `metadata` | `dict` | No | Additional data for enterprise integrations |
 | `provider` | `HumanFeedbackProvider` | No | Custom provider for async/non-blocking feedback. See [Async Human Feedback](#async-human-feedback-non-blocking) |
 | `learn` | `bool` | No | Enable HITL learning: distill lessons from feedback and pre-review future output. Default `False`. See [Learning from Feedback](#learning-from-feedback) |
-| `learn_limit` | `int` | No | Max past lessons to recall for pre-review. Default `5` |
+| `learn_source` | `str` | No | Memory `source` that lessons are stored under and recalled from. Default `"hitl"` |
+| `learn_strict` | `bool` | No | Raise when pre-review or lesson distillation fails, instead of falling back. Default `False` |
 
 ### Basic Usage (No Routing)
 
@@ -645,10 +646,14 @@ The `learn=True` parameter enables a feedback loop between human reviewers and t
 
 ### How It Works
 
-1. **After feedback**: The LLM extracts generalizable lessons from the output + feedback and stores them in memory with `source="hitl"`. If the feedback is just approval (e.g. "looks good"), nothing is stored.
-2. **Before next review**: Past HITL lessons are recalled from memory and applied by the LLM to improve the output before the human sees it.
+1. **After feedback**: The LLM extracts generalizable lessons from the output + feedback and stores them in memory under `learn_source` (default `"hitl"`). This happens whether the reply arrives during the run or later resumes a paused flow through an [async provider](#async-human-feedback-non-blocking). If the feedback is just approval (e.g. "looks good"), nothing is stored.
+2. **Before next review**: Past HITL lessons are recalled from memory and applied by the LLM to improve the output before the human sees it. Text output is rewritten as text, and a Pydantic model is rewritten as the same model unless it holds something the LLM can't see: a secret, an excluded field, or a private attribute changed from its default. Any other output, such as a `dict` or a `list`, is shown unchanged.
 
 Over time, the human sees progressively better pre-reviewed output because each correction informs future reviews.
+
+<Note>
+The human approves the reviewed version, which can differ from what the method returned. Downstream, read it from `self.last_human_feedback.output` (or the listener's argument). State the method set before the review still holds the original. If the flow paused for async feedback, the output is restored from JSON on resume, so a Pydantic model arrives as a `dict`.
+</Note>
 
 ### Example
 
@@ -682,14 +687,15 @@ class ArticleReviewFlow(Flow):
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `learn` | `False` | Enable HITL learning |
-| `learn_limit` | `5` | Max past lessons to recall for pre-review |
+| `learn_source` | `"hitl"` | Memory source that lessons are stored under and recalled from |
+| `learn_strict` | `False` | Raise on pre-review or distillation failures instead of falling back |
 
 ### Key Design Decisions
 
 - **Same LLM for everything**: The `llm` parameter on the decorator is shared by outcome collapsing, lesson distillation, and pre-review. No need to configure multiple models.
 - **Structured output**: Both distillation and pre-review use function calling with Pydantic models when the LLM supports it, falling back to text parsing otherwise.
 - **Non-blocking storage**: Lessons are stored via `remember_many()` which runs in a background thread -- the flow continues immediately.
-- **Graceful degradation**: If the LLM fails during distillation, nothing is stored. If it fails during pre-review, the raw output is shown. Neither failure blocks the flow.
+- **Graceful degradation**: If the LLM fails during distillation, nothing is stored. If it fails during pre-review, the raw output is shown. Neither failure blocks the flow unless `learn_strict=True`, which raises instead.
 - **No scope/categories needed**: When storing lessons, only `source` is passed. The encoding pipeline infers scope, categories, and importance automatically.
 
 <Note>

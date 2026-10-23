@@ -213,7 +213,7 @@ Os nomes em `crew.jsonc` devem coincidir com os arquivos e referências:
 
 ## Implantação
 
-Envie seu Flow para o **[CrewAI AMP](https://app.crewai.com)** quando rodar localmente e o projeto estiver em um repositório **GitHub**. Na raiz do projeto:
+Envie seu Flow para o **[CrewAI AMP](https://app.crewai.com)** quando ele rodar localmente. Se o projeto tiver um `origin` git, o AMP implanta a partir desse repositório (no **GitHub**, a integração do AMP com o GitHub precisa ter acesso a ele); sem `origin`, `crewai deploy create` envia o projeto como um ZIP. Na raiz do projeto:
 
 <CodeGroup>
 ```bash Autenticar
@@ -235,7 +235,7 @@ crewai deploy push
 
 ```bash Listar ou remover implantações
 crewai deploy list
-crewai deploy remove <deployment_id>
+crewai deploy remove -u <deployment_uuid>
 ```
 </CodeGroup>
 

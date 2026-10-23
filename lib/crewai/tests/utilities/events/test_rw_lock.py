@@ -5,6 +5,7 @@ This module tests the RWLock class for correct concurrent read and write behavio
 
 import threading
 import time
+from unittest.mock import patch
 
 from crewai.utilities.rw_lock import RWLock
 
@@ -262,3 +263,49 @@ def test_manual_acquire_release():
 
     with lock.r_locked():
         pass
+
+
+def test_interrupted_read_acquire_does_not_drop_reader_count():
+    lock = RWLock()
+    lock.w_acquire()
+    try:
+        with patch.object(lock._cond, "wait", side_effect=KeyboardInterrupt):
+            with lock.r_locked():
+                raise AssertionError("read section entered without the lock")
+    except KeyboardInterrupt:
+        pass
+
+    assert lock._writer is True
+    assert lock._readers == 0
+    lock.w_release()
+
+    lock.r_acquire()
+    try:
+        assert lock._readers == 1
+        assert lock._writer is False
+    finally:
+        lock.r_release()
+    assert lock._readers == 0
+
+
+def test_interrupted_write_acquire_does_not_clear_writer():
+    lock = RWLock()
+    lock.w_acquire()
+    try:
+        with patch.object(lock._cond, "wait", side_effect=KeyboardInterrupt):
+            with lock.w_locked():
+                raise AssertionError("write section entered without the lock")
+    except KeyboardInterrupt:
+        pass
+
+    assert lock._writer is True
+    assert lock._readers == 0
+    lock.w_release()
+
+    lock.r_acquire()
+    try:
+        assert lock._readers == 1
+        assert lock._writer is False
+    finally:
+        lock.r_release()
+    assert lock._readers == 0
