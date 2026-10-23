@@ -27,7 +27,7 @@ Get an API key at https://dash.geekflare.com (a free tier is available). API doc
 - `GeekflareScrapeWebsiteTool`: Page content as Markdown, text, HTML, or JSON, with optional `product` or `contact` templates for structured data.
 - `GeekflareScreenshotTool`: Viewport, full-page, or element screenshot, returned as a hosted image URL.
 - `GeekflareBrandTool`: Brand identity from a website: logos, colors, fonts, and social profiles.
-- `GeekflareWebsiteDiagnosticsTool`: Uptime, DNS records, DNSSEC, TLS/SSL, redirects, broken links, load time, mixed content, meta tags, and Lighthouse audits.
+- `GeekflareWebsiteDiagnosticsTool`: Uptime, DNS records, TLS/SSL, redirects, broken links, load time, meta tags, and Lighthouse audits.
 
 All tools return the API response as a JSON string.
 
@@ -117,7 +117,7 @@ researcher = Agent(
 
 ### GeekflareWebsiteDiagnosticsTool
 
-- Run argument `check`: `site_status`, `dns_records`, `dnssec`, `tls_scan`, `redirect_check`, `broken_links`, `load_time`, `mixed_content`, `meta_tags`, or `lighthouse`.
+- Run argument `check`: `site_status`, `dns_records`, `tls_scan`, `redirect_check`, `broken_links`, `load_time`, `meta_tags`, or `lighthouse`.
 - `follow_redirect`: Follow redirects before checking, where supported.
 - `lighthouse_device`: `desktop` or `mobile`.
 

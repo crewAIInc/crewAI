@@ -8,7 +8,7 @@ CrewAI tools for the [Geekflare API](https://geekflare.com):
 - **GeekflareScrapeWebsiteTool**: Page content as Markdown, text, HTML, or JSON, with optional `product` or `contact` templates.
 - **GeekflareScreenshotTool**: Viewport, full-page, or element screenshot as a hosted image URL.
 - **GeekflareBrandTool**: Logos, brand colors, fonts, and social profiles for a website.
-- **GeekflareWebsiteDiagnosticsTool**: Uptime, DNS records, DNSSEC, TLS/SSL, redirects, broken links, load time, mixed content, meta tags, and Lighthouse audits.
+- **GeekflareWebsiteDiagnosticsTool**: Uptime, DNS records, TLS/SSL, redirects, broken links, load time, meta tags, and Lighthouse audits.
 
 All tools return the API response as a JSON string.
 

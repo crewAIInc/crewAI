@@ -8,12 +8,10 @@ from crewai_tools.tools.geekflare_tool.geekflare_base import GeekflareBaseTool
 DiagnosticCheck = Literal[
     "site_status",
     "dns_records",
-    "dnssec",
     "tls_scan",
     "redirect_check",
     "broken_links",
     "load_time",
-    "mixed_content",
     "meta_tags",
     "lighthouse",
 ]
@@ -22,12 +20,10 @@ DiagnosticCheck = Literal[
 _CHECKS: dict[str, tuple[str, bool]] = {
     "site_status": ("up", True),
     "dns_records": ("dnsrecord", False),
-    "dnssec": ("dnssec", False),
     "tls_scan": ("tlsscan", False),
     "redirect_check": ("redirectcheck", False),
     "broken_links": ("brokenlink", True),
     "load_time": ("loadtime", True),
-    "mixed_content": ("mixedcontent", True),
     "meta_tags": ("metascraping", False),
     "lighthouse": ("lighthouse", True),
 }
@@ -43,9 +39,9 @@ class GeekflareWebsiteDiagnosticsToolSchema(BaseModel):
         ...,
         description=(
             "Which check to run: site_status (up/down and HTTP status), dns_records, "
-            "dnssec, tls_scan (certificate and TLS versions), redirect_check, "
-            "broken_links, load_time, mixed_content, meta_tags (title, description, "
-            "Open Graph), or lighthouse (performance/SEO/accessibility scores; slow)."
+            "tls_scan (certificate and TLS versions), redirect_check, broken_links, "
+            "load_time, meta_tags (title, description, Open Graph), or lighthouse "
+            "(performance/SEO/accessibility scores; slow)."
         ),
     )
 
@@ -61,9 +57,9 @@ class GeekflareWebsiteDiagnosticsTool(GeekflareBaseTool):
     name: str = "Geekflare Website Diagnostics"
     description: str = (
         "Run a website check with Geekflare and return the result as JSON: uptime, "
-        "DNS records, DNSSEC, TLS/SSL certificate, redirect chain, broken links, load "
-        "time, mixed content, meta tags, or a Lighthouse audit. Reports findings only; "
-        "it does not change the website."
+        "DNS records, TLS/SSL certificate, redirect chain, broken links, load time, "
+        "meta tags, or a Lighthouse audit. Reports findings only; it does not change "
+        "the website."
     )
     args_schema: type[BaseModel] = GeekflareWebsiteDiagnosticsToolSchema
     follow_redirect: bool = Field(

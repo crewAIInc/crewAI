@@ -12385,7 +12385,7 @@
       }
     },
     {
-      "description": "Run a website check with Geekflare and return the result as JSON: uptime, DNS records, DNSSEC, TLS/SSL certificate, redirect chain, broken links, load time, mixed content, meta tags, or a Lighthouse audit. Reports findings only; it does not change the website.",
+      "description": "Run a website check with Geekflare and return the result as JSON: uptime, DNS records, TLS/SSL certificate, redirect chain, broken links, load time, meta tags, or a Lighthouse audit. Reports findings only; it does not change the website.",
       "env_vars": [
         {
           "default": null,
@@ -12496,16 +12496,14 @@
         "description": "Input schema for GeekflareWebsiteDiagnosticsTool.",
         "properties": {
           "check": {
-            "description": "Which check to run: site_status (up/down and HTTP status), dns_records, dnssec, tls_scan (certificate and TLS versions), redirect_check, broken_links, load_time, mixed_content, meta_tags (title, description, Open Graph), or lighthouse (performance/SEO/accessibility scores; slow).",
+            "description": "Which check to run: site_status (up/down and HTTP status), dns_records, tls_scan (certificate and TLS versions), redirect_check, broken_links, load_time, meta_tags (title, description, Open Graph), or lighthouse (performance/SEO/accessibility scores; slow).",
             "enum": [
               "site_status",
               "dns_records",
-              "dnssec",
               "tls_scan",
               "redirect_check",
               "broken_links",
               "load_time",
-              "mixed_content",
               "meta_tags",
               "lighthouse"
             ],

@@ -110,12 +110,10 @@ def test_brand_payload(mock_post):
     [
         ("site_status", "up", True),
         ("dns_records", "dnsrecord", False),
-        ("dnssec", "dnssec", False),
         ("tls_scan", "tlsscan", False),
         ("redirect_check", "redirectcheck", False),
         ("broken_links", "brokenlink", True),
         ("load_time", "loadtime", True),
-        ("mixed_content", "mixedcontent", True),
         ("meta_tags", "metascraping", False),
         ("lighthouse", "lighthouse", True),
     ],
