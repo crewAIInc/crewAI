@@ -1854,6 +1854,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 function_calling_llm=self.function_calling_llm,
                 crew=self.crew,
             )
+        except HookAborted:
+            # A deliberate stop: the generic handler below would feed the
+            # policy abort back to the LLM as a recoverable observation.
+            raise
+
         except ToolExecutionFailedError:
             # A deliberate stop: the generic handler below would feed it back
             # to the LLM as a recoverable observation.
