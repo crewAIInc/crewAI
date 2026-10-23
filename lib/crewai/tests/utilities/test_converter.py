@@ -1,7 +1,7 @@
 from enum import Enum
 import json
 import os
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from crewai.llm import LLM
 from crewai.utilities.converter import (
@@ -1022,3 +1022,114 @@ def test_internal_instructor_does_not_double_prefix_qualified_models() -> None:
         InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
 
         mock_from_provider.assert_called_once_with("groq/llama-3.3-70b")
+
+
+def test_to_json_preserves_text_llm_json_string() -> None:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    llm.call.return_value = '{"name": "Alice", "age": 30}'
+    converter = Converter(
+        llm=llm,
+        text="Alice is 30 years old.",
+        model=SimpleModel,
+        instructions="Return JSON.",
+    )
+
+    result = json.loads(converter.to_json())
+
+    assert result == {"name": "Alice", "age": 30}
+
+
+def test_to_json_retries_after_transient_text_llm_error() -> None:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    llm.call.side_effect = [
+        RuntimeError("temporary failure"),
+        '{"name": "Alice", "age": 30}',
+    ]
+    converter = Converter(
+        llm=llm,
+        text="Alice is 30 years old.",
+        model=SimpleModel,
+        instructions="Return JSON.",
+        max_attempts=2,
+    )
+
+    result = json.loads(converter.to_json())
+
+    assert result == {"name": "Alice", "age": 30}
+    assert llm.call.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ato_json_preserves_text_llm_json_string() -> None:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(return_value='{"name": "Alice", "age": 30}')
+    converter = Converter(
+        llm=llm,
+        text="Alice is 30 years old.",
+        model=SimpleModel,
+        instructions="Return JSON.",
+    )
+
+    result = json.loads(await converter.ato_json())
+
+    assert result == {"name": "Alice", "age": 30}
+
+
+@pytest.mark.asyncio
+async def test_ato_json_retries_after_transient_text_llm_error() -> None:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(
+        side_effect=[
+            RuntimeError("temporary failure"),
+            '{"name": "Alice", "age": 30}',
+        ]
+    )
+    converter = Converter(
+        llm=llm,
+        text="Alice is 30 years old.",
+        model=SimpleModel,
+        instructions="Return JSON.",
+        max_attempts=2,
+    )
+
+    result = json.loads(await converter.ato_json())
+
+    assert result == {"name": "Alice", "age": 30}
+    assert llm.acall.call_count == 2
+
+
+def test_to_json_still_serializes_non_string_text_llm_response() -> None:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    llm.call.return_value = {"name": "Alice", "age": 30}
+    converter = Converter(
+        llm=llm,
+        text="Alice is 30 years old.",
+        model=SimpleModel,
+        instructions="Return JSON.",
+    )
+
+    result = json.loads(converter.to_json())
+
+    assert result == {"name": "Alice", "age": 30}
+
+
+@pytest.mark.asyncio
+async def test_ato_json_still_serializes_non_string_text_llm_response() -> None:
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(return_value={"name": "Alice", "age": 30})
+    converter = Converter(
+        llm=llm,
+        text="Alice is 30 years old.",
+        model=SimpleModel,
+        instructions="Return JSON.",
+    )
+
+    result = json.loads(await converter.ato_json())
+
+    assert result == {"name": "Alice", "age": 30}
