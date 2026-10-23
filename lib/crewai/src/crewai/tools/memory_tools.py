@@ -46,6 +46,12 @@ class RecallMemoryTool(BaseTool):
         if isinstance(queries, str):
             queries = [queries]
 
+        if hasattr(self.memory, "recall_many"):
+            matches = self.memory.recall_many(queries, limit=20)
+            if not matches:
+                return "No relevant memories found."
+            return "Found memories:\n" + "\n".join(m.format() for m in matches)
+
         all_lines: list[str] = []
         seen_ids: set[str] = set()
         for query in queries:
