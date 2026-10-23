@@ -1,0 +1,127 @@
+---
+title: Geekflare Tools
+description: Geekflare integrations for web search (including Google SERP), page scraping, screenshots, brand data, and website diagnostics.
+icon: globe
+mode: "wide"
+---
+
+# Geekflare Tools
+
+These tools connect CrewAI agents to the [Geekflare API](https://geekflare.com) for live web data and website checks.
+
+## Installation
+
+```shell
+uv add crewai-tools
+```
+
+## Environment Variables
+
+- `GEEKFLARE_API_KEY` (required)
+
+Get an API key at https://dash.geekflare.com (a free tier is available). API docs: https://docs.geekflare.com
+
+## Included Tools
+
+- `GeekflareSearchTool`: Web, news, or image search. Set `serp=True` for the full Google results page (organic results, AI Overview, People Also Ask) by country or city.
+- `GeekflareScrapeWebsiteTool`: Page content as Markdown, text, HTML, or JSON, with optional `product` or `contact` templates for structured data.
+- `GeekflareScreenshotTool`: Viewport, full-page, or element screenshot, returned as a hosted image URL.
+- `GeekflareBrandTool`: Brand identity from a website: logos, colors, fonts, and social profiles.
+- `GeekflareWebsiteDiagnosticsTool`: Uptime, DNS records, TLS/SSL, redirects, broken links, load time, meta tags, and Lighthouse audits.
+
+All tools return the API response as a JSON string.
+
+## Examples
+
+### Search
+
+```python Code
+from crewai_tools import GeekflareSearchTool
+
+tool = GeekflareSearchTool(limit=5)
+print(tool.run(query="latest stable python release"))
+
+# Full Google results page for a city
+serp = GeekflareSearchTool(serp=True, city="London,England,United Kingdom")
+print(serp.run(query="best project management software"))
+```
+
+### Scrape a page
+
+```python Code
+from crewai_tools import GeekflareScrapeWebsiteTool
+
+tool = GeekflareScrapeWebsiteTool(formats=["markdown"])
+print(tool.run(url="https://example.com"))
+```
+
+### Website diagnostics
+
+```python Code
+from crewai_tools import GeekflareWebsiteDiagnosticsTool
+
+tool = GeekflareWebsiteDiagnosticsTool()
+print(tool.run(url="https://example.com", check="tls_scan"))
+```
+
+### Use with an agent
+
+```python Code
+from crewai import Agent
+from crewai_tools import (
+    GeekflareScrapeWebsiteTool,
+    GeekflareSearchTool,
+    GeekflareWebsiteDiagnosticsTool,
+)
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Answer questions with current, cited information from the web",
+    backstory="An analyst who checks sources and website health.",
+    tools=[
+        GeekflareSearchTool(),
+        GeekflareScrapeWebsiteTool(),
+        GeekflareWebsiteDiagnosticsTool(),
+    ],
+)
+```
+
+## Parameters
+
+### GeekflareSearchTool
+
+- `limit`: Number of results, 1–100 (default 10).
+- `source`: `web`, `news`, or `images` (default `web`).
+- `location`: Country code (ISO alpha-2).
+- `city`: City for localized results; takes priority over `location`.
+- `time`: Recency filter: `any`, `h`, `d`, `w`, `m`, `y`, or with a count such as `d7`.
+- `include_domains` / `exclude_domains`: Domain filters.
+- `serp`: Return the full Google results page.
+- `grounded_answer`: Add an AI answer grounded in the results.
+
+### GeekflareScrapeWebsiteTool
+
+- `formats`: Up to 3 of `markdown`, `markdown-llm`, `text`, `text-llm`, `html`, `html-llm`, `json` (default `["markdown"]`).
+- `render_js`: Force JavaScript rendering on or off (default automatic).
+- `wait_time`: Seconds to wait after page load.
+- `device`: `desktop` or `mobile`.
+- `template`: `product` or `contact` for structured data.
+
+### GeekflareScreenshotTool
+
+- `full_page`, `device`, `image_type` (`png`, `jpeg`, `webp`), `selector`.
+
+### GeekflareBrandTool
+
+- `mode`: `standard` or `enriched`.
+
+### GeekflareWebsiteDiagnosticsTool
+
+- Run argument `check`: `site_status`, `dns_records`, `tls_scan`, `redirect_check`, `broken_links`, `load_time`, `meta_tags`, or `lighthouse`.
+- `follow_redirect`: Follow redirects before checking, where supported.
+- `lighthouse_device`: `desktop` or `mobile`.
+
+## Notes
+
+- Each call uses Geekflare credits; see https://geekflare.com/pricing/.
+- Use the tools for publicly accessible pages only.
