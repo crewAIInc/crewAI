@@ -1867,14 +1867,14 @@ def test_from_pending_preserves_completed_methods_on_later_checkpoint_restore(tm
     flow1 = OrderFlow(checkpoint=cp_config, persistence=persistence)
     pending = flow1.kickoff()
     assert isinstance(pending, HumanFeedbackPending)
-    assert execution_log == ["reserve_inventory"]
+    assert execution_log == ["reserve_inventory", "review_order"]
 
     # 2. Restore via from_pending and resume - review_order completes, charge_payment fails
     flow2 = OrderFlow.from_pending(pending.context.flow_id, persistence, checkpoint=cp_config)
     with pytest.raises(RuntimeError, match="payment gateway timeout"):
         flow2.resume("approved")
 
-    assert execution_log == ["reserve_inventory", "charge_payment"]
+    assert execution_log == ["reserve_inventory", "review_order", "charge_payment"]
 
     # 3. Locate the latest checkpoint written after resume
     checkpoint_files = list(Path(checkpoint_dir).glob("**/*.json"))
@@ -1891,13 +1891,15 @@ def test_from_pending_preserves_completed_methods_on_later_checkpoint_restore(tm
         )
     )
 
-    # Assert reserve_inventory did NOT run a second time
+    # Assert reserve_inventory and review_order did NOT run a second time
     assert execution_log == [
         "reserve_inventory",
+        "review_order",
         "charge_payment",
         "charge_payment",
     ]
     assert execution_log.count("reserve_inventory") == 1
+    assert execution_log.count("review_order") == 1
     assert execution_log.count("charge_payment") == 2
 
 
