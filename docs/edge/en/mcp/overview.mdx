@@ -36,6 +36,25 @@ agent = Agent(
 # MCP tools are now automatically available to your agent!
 ```
 
+### Hugging Bay model catalog
+
+To give an agent only Hugging Bay's read-only `find_runnable` tool, use CrewAI's URL tool selector:
+
+```python
+from crewai import Agent
+
+catalog_agent = Agent(
+    role="Model catalog lookup",
+    goal="Check model fit for a task and hardware budget.",
+    backstory="Use the model catalog tool and report its estimate clearly.",
+    mcps=["https://huggingbay.xyz/api/mcp#find_runnable"],
+)
+```
+
+When prompting the agent, ask it to call `find_runnable` with both `task` and `hardware`, for example `{"task":"chat","hardware":"8gb-laptop"}`. Hugging Bay public catalog reads need no account or key. Configure the LLM used by CrewAI separately. The result is a fit estimate, not a measured run.
+
+For Hugging Face downloads from repositories currently mirrored by Hugging Bay, set `HF_ENDPOINT=https://hf.huggingbay.xyz` in the client's environment. The mirror serves hosted files; it does not run inference.
+
 #### Structured Configurations (Full Control)
 
 For complete control over connection settings, tool filtering, and all transport types:
