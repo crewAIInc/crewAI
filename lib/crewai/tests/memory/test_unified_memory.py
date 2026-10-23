@@ -1315,3 +1315,93 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+def _memory_with_private_records(lancedb_path: Path):
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+    from crewai.memory.unified_memory import Memory
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=2)
+    storage.save(
+        [
+            MemoryRecord(
+                content="secret api key sk-abc123",
+                scope="/notes",
+                embedding=[1.0, 0.0],
+                private=True,
+                source=None,
+            ),
+            MemoryRecord(
+                content="team-wide note",
+                scope="/notes",
+                embedding=[1.0, 0.0],
+            ),
+        ]
+    )
+    mem = Memory(
+        llm=MagicMock(),
+        storage=storage,
+        embedder=lambda texts: [[1.0, 0.0]] * len(texts),
+    )
+    return mem
+
+
+@pytest.mark.parametrize("depth", ["shallow", "deep"])
+def test_private_record_without_source_does_not_leak(lancedb_path: Path, depth: str) -> None:
+    """A private record saved with source=None must not be visible to default
+    (source=None, include_private=False) recalls.
+
+    The filter used to be `not r.private or r.source == source`, and
+    `None == None` passed — every default caller saw the "private" record.
+    """
+    mem = _memory_with_private_records(lancedb_path)
+
+    results = mem.recall(
+        "secret api key", scope="/notes", depth=depth, include_private=False
+    )
+
+    contents = [m.record.content for m in results]
+    assert "secret api key sk-abc123" not in contents, (
+        "private source=None record leaked to an unprivileged recall "
+        f"({depth} path): {contents!r}"
+    )
+    assert "team-wide note" in contents, "public records must stay visible"
+
+
+def test_private_record_still_visible_to_its_source_and_when_included(lancedb_path: Path) -> None:
+    """The tightening must not hide private records from legitimate access."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+    from crewai.memory.types import MemoryRecord as MR
+    from crewai.memory.unified_memory import Memory
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=2)
+    storage.save(
+        [
+            MR(
+                content="private to worker-1",
+                scope="/notes",
+                embedding=[1.0, 0.0],
+                private=True,
+                source="worker-1",
+            )
+        ]
+    )
+    mem = Memory(
+        llm=MagicMock(),
+        storage=storage,
+        embedder=lambda texts: [[1.0, 0.0]] * len(texts),
+    )
+
+    as_owner = mem.recall(
+        "private to worker", scope="/notes", depth="shallow", source="worker-1"
+    )
+    assert [m.record.content for m in as_owner] == ["private to worker-1"], (
+        "the owning source must still see its private record"
+    )
+
+    with_private = mem.recall(
+        "private to worker", scope="/notes", depth="shallow", include_private=True
+    )
+    assert [m.record.content for m in with_private] == ["private to worker-1"], (
+        "include_private=True must still see everything"
+    )
