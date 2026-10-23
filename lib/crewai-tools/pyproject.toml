@@ -188,6 +188,10 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 
+extra-desktop = [
+    "extra-desktop>=0.3.2",
+]
+
 
 [tool.uv]
 exclude-newer = "3 days"
