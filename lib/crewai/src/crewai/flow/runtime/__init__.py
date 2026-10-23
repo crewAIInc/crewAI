@@ -2096,6 +2096,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         output_holder.append(stream_session)
         return stream_session
 
+    def _reset_tool_action_usage_budgets(self) -> None:
+        """Give every tool action a fresh usage budget for this run.
+
+        Tool actions build their tools once (``_flow_post_init``) and reuse
+        them across kickoffs, so ``current_usage_count`` would otherwise
+        survive runs. Agents zero the counter each time they prepare tools
+        (``parse_tools``); flows reset at the kickoff boundary instead. A
+        budget exhausted in an earlier kickoff must not fail later ones.
+        """
+        for tool in getattr(self, "_tool_action_tools", None) or ():
+            reset = getattr(tool, "reset_usage_count", None)
+            if callable(reset):
+                reset()
+
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
@@ -2208,6 +2222,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 restore_from_state_id=restore_from_state_id,
             )
 
+        self._reset_tool_action_usage_budgets()
         self._cel_now = datetime.now(timezone.utc)
 
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
