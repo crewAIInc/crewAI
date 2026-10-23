@@ -1259,8 +1259,8 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
+            from crewai.utilities.message_utils import message_content_text
 
             messages = params.get("messages", [])
             if not messages:
@@ -1292,7 +1292,7 @@ class LLM(BaseLLM):
         try:
             # Attempt to make the completion call, but catch context window errors
             # and convert them to our own exception type for consistent handling
-            # across the codebase. This allows CrewAgentExecutor to handle context
+            # across the codebase. This allows AgentExecutor to handle context
             # length issues appropriately.
             if response_model:
                 params["response_model"] = response_model
@@ -1418,8 +1418,8 @@ class LLM(BaseLLM):
         """
         if response_model and self.is_litellm:
             from crewai.hooks.llm_hooks import model_call_hooks_dispatched
-            from crewai.utilities.agent_utils import message_content_text
             from crewai.utilities.internal_instructor import InternalInstructor
+            from crewai.utilities.message_utils import message_content_text
 
             messages = params.get("messages", [])
             if not messages:
@@ -1937,7 +1937,7 @@ class LLM(BaseLLM):
                     return result
                 except LLMContextLengthExceededError:
                     # Re-raise LLMContextLengthExceededError as it should be handled
-                    # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                    # by AgentExecutor, which can then decide
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:

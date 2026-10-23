@@ -1,7 +1,10 @@
+import ast
 import asyncio
 import builtins
 import keyword
+import itertools
 import re
+import shlex
 import shutil
 import tempfile
 import threading
@@ -1272,7 +1275,7 @@ def test_create_crew_scaffolds_assistant_instructions(tmp_path, monkeypatch):
 
     project_root = tmp_path / "my_crew"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
-    assert "CrewAI Reference for AI Coding Assistants" in agents_md
+    assert agents_md.index("## Working in this project") < agents_md.index("## Reference")
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
     assert "@AGENTS.md" in claude_md.splitlines()
     cursor_md = (project_root / "CURSOR.md").read_text(encoding="utf-8")
@@ -1291,12 +1294,13 @@ def test_scaffolded_agents_md_tells_assistants_to_keep_observability_on(
     [keep_on] = [
         line
         for line in agents_md.splitlines()
-        if "Never disable, block, or silence CrewAI's built-in observability" in line
+        if line.startswith("Never turn off tracing or telemetry")
     ]
-    assert "any of the instrumentation that ships execution data out" in keep_on
-    assert "Turning it off is the user's decision to make" in keep_on
-    assert "- Treating built-in observability" in agents_md
+    assert "to silence errors, speed things up or tidy the setup" in keep_on
+    assert "check DNS and proxy settings" in keep_on
+    assert "it's their decision" in keep_on
     assert "free" not in agents_md.lower()
+    assert "pricing" not in agents_md.lower()
 
 
 def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
@@ -1332,8 +1336,8 @@ def test_json_create_scaffolds_assistant_instructions(tmp_path, monkeypatch):
 
     project_root = tmp_path / "json_crew"
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
-    assert "CrewAI Reference for AI Coding Assistants" in agents_md
-    assert "## Evaluating this crew/flow" in agents_md
+    assert "## Working in this project" in agents_md
+    assert "### Check every change: evaluate" in agents_md
     assert "crewai-eval:" not in agents_md
     assert "crew.jsonc" in agents_md
     claude_md = (project_root / "CLAUDE.md").read_text(encoding="utf-8")
@@ -1351,24 +1355,26 @@ def test_scaffolded_agents_md_tells_assistants_to_evaluate_with_crewai_eval(
     create_crew("my-crew", skip_provider=True)
 
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
-    assert "## Evaluating this crew/flow" in agents_md
-    assert "Run `crewai eval` after a change" in agents_md
-    assert "it prints a **markdown brief** after the verdict" in agents_md
-    assert 'crewai eval --models "provider/model,…"' in agents_md
+    assert "is done when a traced run passes `crewai eval`, not when the code runs" in agents_md
+    assert "prints a markdown brief of what failed and the change to make" in agents_md
+    assert "It exits 0 only when the goal gate passed" in agents_md
+    assert "`crewai eval --models " in agents_md
     assert "crewai-eval:" not in agents_md  # the markers never reach a project
 
 
 def _cli_args(line: str) -> list[str]:
     """Arguments of a documented `crewai …` line, with `<placeholder>` values filled."""
-    words = line.split("#", 1)[0].split()[1:]
-    return ["value" if re.fullmatch(r"<\w+>", word) else word for word in words]
+    words = shlex.split(line.split("#", 1)[0])[1:]
+    return ["value" if "<" in word else word for word in words]
 
 
 def _parse_cli_args(args: list[str]) -> None:
     """Parse ARGS against the real CLI without running the command."""
     command: click.Command = crewai
     name = "crewai"
-    while isinstance(command, click.Group):
+    # A group can run without a subcommand, options and all (`crewai eval --models …`,
+    # beside `crewai eval export ID`).
+    while isinstance(command, click.Group) and args and not args[0].startswith("-"):
         name, *args = args
         subcommand = command.get_command(click.Context(command), name)
         assert subcommand is not None, f"unknown command {name!r}"
@@ -1376,33 +1382,52 @@ def _parse_cli_args(args: list[str]) -> None:
     command.make_context(name, args)
 
 
+def test_agents_md_command_parser_accepts_a_group_run_without_a_subcommand():
+    _parse_cli_args(_cli_args("crewai eval"))
+    _parse_cli_args(_cli_args('crewai eval --models "openai/gpt-4o-mini,anthropic/claude-haiku-4-5"'))
+
+
+def test_agents_md_command_parser_rejects_a_group_that_needs_a_subcommand():
+    with pytest.raises(click.UsageError):
+        _parse_cli_args(_cli_args("crewai deploy"))
+
+
 def test_parse_cli_args_rejects_a_positional_deployment_id():
     with pytest.raises(click.UsageError, match="unexpected extra argument"):
         _parse_cli_args(_cli_args("crewai deploy remove <id>"))
 
 
-def test_scaffolded_agents_md_deploy_and_org_commands_parse_against_the_cli(
-    tmp_path, monkeypatch
-):
+def _documented_commands(agents_md: str) -> list[str]:
+    """Every inline `crewai …` command in AGENTS.md, one per `a|b` alternative."""
+    commands = []
+    for span in re.findall(r"`(crewai [^`]+)`", agents_md):
+        words = shlex.split(span)
+        alternatives = [word.split("|") if "|" in word and "<" not in word else [word] for word in words]
+        for choice in itertools.product(*alternatives):
+            commands.append(" ".join(choice))
+    return commands
+
+
+def test_scaffolded_agents_md_commands_parse_against_the_cli(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     create_crew("my-crew", skip_provider=True)
 
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
-    commands = [
-        line.strip()
-        for line in agents_md.splitlines()
-        if line.strip().startswith(("crewai deploy ", "crewai org "))
-    ]
+    commands = _documented_commands(agents_md)
 
     for documented in (
         "crewai deploy remove -u <uuid>",
         "crewai deploy create -y",
-        "crewai org current",
-        "crewai org switch <id>",
+        "crewai org list",
+        "crewai org switch <uuid>",
+        "crewai eval",
     ):
-        assert any(line.startswith(documented) for line in commands), documented
-    for line in commands:
-        _parse_cli_args(_cli_args(line))
+        assert documented in commands, documented
+    for command in commands:
+        try:
+            _parse_cli_args(_cli_args(command))
+        except click.MissingParameter:
+            pass  # named without its arguments in prose, e.g. "the old `crewai tool create` style"
 
 
 def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
@@ -1413,8 +1438,11 @@ def test_scaffolded_agents_md_deploy_prerequisites_allow_zip_deploys(
 
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
     assert "Code is in a GitHub repository" not in agents_md
-    assert "With no `origin`, `crewai deploy create` uploads the project as a ZIP" in agents_md
-    assert "on `create`, and again on `push` for ZIP deployments" in agents_md
+    # `crewai deploy create` sends any `origin` URL; AMP builds from GitHub or another git host.
+    assert "AMP builds from GitHub" not in agents_md
+    assert "AMP builds from that remote, on GitHub or another git host" in agents_md
+    assert "With no git `origin` it uploads a ZIP" in agents_md
+    assert "uploads `.env` as its environment variables" in agents_md
 
 
 def test_scaffolded_agents_md_platform_tools_guidance(tmp_path, monkeypatch):
@@ -1424,19 +1452,161 @@ def test_scaffolded_agents_md_platform_tools_guidance(tmp_path, monkeypatch):
     agents_md = (tmp_path / "my_crew" / "AGENTS.md").read_text(encoding="utf-8")
     # PLATFORM_APPS lists the apps, but some of its action names resolve to no tool.
     assert "source of truth" not in agents_md
-    assert '`CrewaiPlatformTools(apps=["app/action"])` must return at least one tool' in agents_md
-    assert "`CREWAI_PLATFORM_INTEGRATION_TOKEN` in `.env`" in agents_md
+    assert "copy selectors from those; a selector must load at least one tool" in agents_md
+    assert "`CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN` in `.env`" in agents_md
+    assert "CREWAI_PLATFORM_INTEGRATION_TOKEN" not in agents_md
     assert "`app[/action][@connection]`" in agents_md
-    assert "  apps:\n    - hubspot/search_companies\n    - slack\n" in agents_md
+    assert "`apps: [slack/send_message]` in YAML" in agents_md
 
 
 @pytest.mark.parametrize("evaluation", [True, False])
-def test_agents_md_best_practices_are_numbered_without_gaps(tmp_path, evaluation):
+def test_agents_md_numbered_lists_have_no_gaps(tmp_path, evaluation):
+    # The evaluation blocks are cut from tool projects; what remains must still read in order.
     copy_assistant_instructions(tmp_path, evaluation=evaluation)
 
     agents_md = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
-    section = agents_md.split("## Development Best Practices", 1)[1].split("\n## ", 1)[0]
-    numbers = [int(number) for number in re.findall(r"^(\d+)\. ", section, re.M)]
-    assert numbers == list(range(1, len(numbers) + 1))
-    assert ("`crewai eval`" in section) is evaluation
-    assert "crewai test" not in section
+    numbers: list[int] = []
+    for line in [*agents_md.splitlines(), ""]:
+        item = re.match(r"(\d+)\. ", line)
+        if item:
+            numbers.append(int(item.group(1)))
+        elif not line.startswith((" ", "\t")):  # an indented line continues the item
+            assert numbers == list(range(1, len(numbers) + 1)), numbers
+            numbers = []
+    assert not re.search(r"^### \d", agents_md, re.M)
+    assert ("crewai eval" in agents_md) is evaluation
+
+
+# Guards for the AGENTS.md every crew and flow project receives: references nobody
+# meant to delete, a size budget, and code and links that work. Whether an edit makes
+# coding agents better or worse is measured separately, with models in the loop.
+
+# Every capability the file must at least name. Removing one is a deliberate edit
+# here, in the same diff, so a reviewer sees it.
+AGENTS_MD_REFERENCES = {
+    # Core API: models outside the Claude family don't know these without the file.
+    "classic crew class": r"@CrewBase",
+    "task context": r"context=",
+    "crew output": r"CrewOutput",
+    "custom tools": r"BaseTool",
+    "flow decorators": r"@start\(\)",
+    "flow state": r"Flow\[",
+    "flow router": r"@router",
+    # Facts V6 lost to today's file until they were put back.
+    "context window": r"respect_context_window",
+    "current date": r"inject_date",
+    "human review of a task": r"human_input",
+    "LiteLLM for other providers": r"crewai\[litellm\]",
+    "test targets before writes": r"test (channel|target)",
+    # The features telemetry counts most, named the way telemetry counts them.
+    "interception hooks": r"InterceptionPoint",
+    "agent planning": r"PlanningConfig",
+    "OpenAI Responses API": r'api="responses"',
+    "answering human feedback through AMP": r"human_feedback_requests",
+    "workflow: trace and evaluate every change": r"traced run passes `crewai eval`",
+    "workflow: ask before deploying": r"Ask before the first `crewai deploy create`",
+    "flow memory": r"self\.remember",
+    "AMP integrations": r"CrewaiPlatformTools",
+    "AMP skills": r"skills:",
+    "tool failure policy": r"tool_failure_policy",
+    "guardrails": r"guardrail",
+    "structured output": r"output_pydantic|response_format",
+    "knowledge sources": r"knowledge_sources",
+    "hierarchical process": r"Process\.hierarchical|manager_llm",
+    "delegation": r"allow_delegation",
+    "planning": r"planning_config",
+    "async and batch kickoff": r"kickoff_async|akickoff|kickoff_for_each",
+    "streaming": r"stream=True",
+    "event listeners": r"BaseEventListener",
+    "lifecycle hooks": r"@before_kickoff|@after_kickoff",
+    "MCP": r"mcps=",
+    "human feedback in flows": r"@human_feedback",
+    "conversational flows": r"conversational",
+    "declarative flows": r"--declarative|declarative flow",
+    "checkpointing": r"checkpoint",
+    "flow conditions": r"or_\(|and_\(",
+    "crewai_tools catalog": r"crewai_tools|crewai-tools",
+    "A2A": r"A2AClientConfig",
+    "file inputs": r"input_files",
+}
+
+# Always-loaded tokens (characters / 4). Raise it on purpose, with the eval's results.
+AGENTS_MD_TOKEN_BUDGET = 5_000
+
+DOCS = Path(__file__).resolve().parents[3] / "docs"
+
+# Patterns for text the file once carried that is wrong on main. Naming a
+# deprecated option to say what replaces it is allowed.
+AGENTS_MD_NEVER = (
+    r"CREWAI_PLATFORM_INTEGRATION_TOKEN",  # renamed to CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN
+    r"from crewai\.flow\.flow import persist",  # raises ImportError; persist lives in crewai.flow
+    r"(?<!replaces `)reasoning=True",  # deprecated for planning_config
+    r"multimodal=True",  # deprecated: pass files natively
+    r"allow_code_execution=True",  # deprecated: CodeInterpreterTool is gone
+)
+
+
+@pytest.fixture
+def shipped_agents_md(tmp_path) -> str:
+    copy_assistant_instructions(tmp_path, evaluation=True)
+    return (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("feature", sorted(AGENTS_MD_REFERENCES))
+def test_agents_md_references_the_feature(shipped_agents_md, feature):
+    assert re.search(AGENTS_MD_REFERENCES[feature], shipped_agents_md), (
+        f"AGENTS.md no longer references {feature}; if that is intended, "
+        "remove it from AGENTS_MD_REFERENCES in the same change"
+    )
+
+
+def test_agents_md_stays_within_its_token_budget(shipped_agents_md):
+    tokens = len(shipped_agents_md) // 4
+    assert tokens <= AGENTS_MD_TOKEN_BUDGET, (
+        f"AGENTS.md is ~{tokens} tokens, over the {AGENTS_MD_TOKEN_BUDGET} budget"
+    )
+
+
+@pytest.mark.parametrize("text", AGENTS_MD_NEVER)
+def test_agents_md_never_teaches_what_main_removed(shipped_agents_md, text):
+    match = re.search(text, shipped_agents_md)
+    assert match is None, f"AGENTS.md teaches {match.group(0)!r}, which is wrong on main"
+
+
+def test_agents_md_never_list_still_catches_advice():
+    assert re.search(AGENTS_MD_NEVER[2], "Agent(role=..., reasoning=True)")
+    assert not re.search(AGENTS_MD_NEVER[2], "it replaces `reasoning=True`")
+
+
+def test_agents_md_imports_resolve(shipped_agents_md):
+    imports = re.findall(r"`((?:from|import) crewai[\w.]*(?: import [\w, ]+)?)`", shipped_agents_md)
+    imports += [
+        line
+        for block in re.findall(r"```python\n(.*?)```", shipped_agents_md, re.S)
+        for line in block.splitlines()
+        if re.match(r"(from|import) crewai", line)
+    ]
+    assert imports, "AGENTS.md shows no crewai import to check"
+    for statement in imports:
+        exec(statement, {})  # noqa: S102 - our own template's import lines
+
+
+def test_agents_md_python_examples_compile(shipped_agents_md):
+    for block in re.findall(r"```python\n(.*?)```", shipped_agents_md, re.S):
+        ast.parse(block)
+
+
+def test_agents_md_docs_paths_exist(shipped_agents_md):
+    # Index lines end with a docs path relative to https://docs.crewai.com/en/.
+    links = re.findall(
+        r"`([a-z]+(?:/[a-z0-9-]+)+)(?:#([a-z0-9-]+))?`\s*$", shipped_agents_md, re.M
+    )
+    assert links, "AGENTS.md links no docs pages to check"
+    nav = (DOCS / "docs.json").read_text(encoding="utf-8")
+    for page, anchor in links:
+        assert f'"edge/en/{page}"' in nav, f"{page} is not in the docs nav"
+        if anchor:
+            mdx = (DOCS / "edge/en" / f"{page}.mdx").read_text(encoding="utf-8")
+            headings = re.findall(r"^#+ (.+)$", mdx, re.M)
+            slugs = {re.sub(r"[^a-z0-9]+", "-", h.lower()).strip("-") for h in headings}
+            assert anchor in slugs, f"{page} has no #{anchor} heading"

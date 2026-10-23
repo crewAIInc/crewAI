@@ -763,6 +763,19 @@ def test_bedrock_input_token_count_uses_character_fallback_for_unsupported_model
     assert llm.get_input_tokens_count("12345") == 2
 
 
+def test_bedrock_input_token_count_uses_character_fallback_for_transport_errors(
+    bedrock_mocks,
+):
+    """VCR transport failures do not prevent proactive context preflight."""
+    from botocore.exceptions import HTTPClientError
+
+    _, client = bedrock_mocks
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
+    client.count_tokens.side_effect = HTTPClientError(error=RuntimeError("VCR miss"))
+
+    assert llm.get_input_tokens_count("12345") == 2
+
+
 def test_bedrock_tool_use_conversation_flow():
     """
     Test that the Bedrock completion properly handles tool use conversation flow
@@ -987,7 +1000,7 @@ def test_bedrock_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Bedrock API."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    # Set stop sequences via the stop attribute (simulating an executor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
     with patch.object(llm._client, 'converse') as mock_converse:
