@@ -338,7 +338,7 @@ class Crew(FlowTrackable, BaseModel):
     trained_agents_file: str | Path | None = Field(
         default=None,
         description=(
-            "Path to a trained-agents pickle produced by train(). "
+            "Path to trained-agents JSON data produced by train(). "
             "When set, agents load suggestions from this file during inference."
         ),
     )

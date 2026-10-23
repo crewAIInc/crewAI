@@ -91,19 +91,19 @@ crewai train [OPTIONS]
 ```
 
 - `-n, --n-iterations INTEGER`: Número de iterações para treinar o crew (padrão: 5)
-- `-f, --filename TEXT`: Caminho para um arquivo customizado para treinamento (padrão: "trained_agents_data.pkl")
+- `-f, --filename TEXT`: Caminho para um arquivo JSON customizado para treinamento (padrão: "trained_agents_data.json")
 
 Exemplo:
 
 ```shell Terminal
-crewai train -n 10 -f my_training_data.pkl
+crewai train -n 10 -f my_training_data.json
 ```
 
 ```python
 # Exemplo de uso programático do comando train
 n_iterations = 2
 inputs = {"topic": "Treinamento CrewAI"}
-filename = "seu_modelo.pkl"
+filename = "seu_modelo.json"
 
 try:
     SuaCrew().crew().train(

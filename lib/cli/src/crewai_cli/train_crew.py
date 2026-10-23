@@ -15,8 +15,8 @@ def train_crew(n_iterations: int, filename: str) -> None:
             "The number of iterations must be a positive integer."
         )
 
-    if not filename.endswith(".pkl"):
-        raise click.ClickException("The filename must end with .pkl")
+    if not filename.endswith(".json"):
+        raise click.ClickException("The filename must end with .json")
 
     command = ["uv", "run", "train", str(n_iterations), filename]
 
