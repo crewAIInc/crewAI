@@ -903,3 +903,77 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_tool_invocation_single_attempt_on_failure():
+    """Verify synchronous tool invocation runs exactly once per outer attempt on failure."""
+    invocations = []
+
+    class FailingTestToolInput(BaseModel):
+        """Input schema for failing test tool."""
+        logical_id: str = Field(..., description="ID parameter")
+
+    class FailingTestTool(BaseTool):
+        """Tool that fails upon execution."""
+        name: str = "failing_single_tool"
+        description: str = "Fails on invocation"
+        args_schema: type[BaseModel] = FailingTestToolInput
+
+        def _run(self, logical_id: str) -> str:
+            invocations.append(logical_id)
+            raise RuntimeError("Intentional tool failure")
+
+    tool = FailingTestTool()
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=MagicMock(tool="failing_single_tool", tool_input={"logical_id": "123"}),
+    )
+    tool_usage._max_parsing_attempts = 1
+
+    calling = ToolCalling(tool_name="failing_single_tool", arguments={"logical_id": "123"})
+    tool_usage.use(calling=calling, tool_string="Action: failing_single_tool(logical_id=123)")
+
+    assert len(invocations) == 1, f"Expected 1 invocation per attempt, got {len(invocations)}"
+
+
+@pytest.mark.asyncio
+async def test_tool_async_invocation_single_attempt_on_failure():
+    """Verify asynchronous tool invocation runs exactly once per outer attempt on failure."""
+    async_invocations = []
+
+    class FailingAsyncTestToolInput(BaseModel):
+        """Input schema for failing async test tool."""
+        logical_id: str = Field(..., description="ID parameter")
+
+    class FailingAsyncTestTool(BaseTool):
+        """Async tool that fails upon execution."""
+        name: str = "failing_async_single_tool"
+        description: str = "Fails on async invocation"
+        args_schema: type[BaseModel] = FailingAsyncTestToolInput
+
+        def _run(self, logical_id: str) -> str:
+            raise NotImplementedError("Sync not implemented")
+
+        async def _arun(self, logical_id: str) -> str:
+            async_invocations.append(logical_id)
+            raise RuntimeError("Intentional async tool failure")
+
+    tool = FailingAsyncTestTool()
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=MagicMock(tool="failing_async_single_tool", tool_input={"logical_id": "456"}),
+    )
+    tool_usage._max_parsing_attempts = 1
+
+    calling = ToolCalling(tool_name="failing_async_single_tool", arguments={"logical_id": "456"})
+    await tool_usage.ause(calling=calling, tool_string="Action: failing_async_single_tool(logical_id=456)")
+
+    assert len(async_invocations) == 1, f"Expected 1 async invocation per attempt, got {len(async_invocations)}"
