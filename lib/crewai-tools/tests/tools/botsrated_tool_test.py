@@ -2,13 +2,14 @@ import base64
 import json
 from unittest.mock import MagicMock, patch
 
+import requests
+
 import pytest
 from crewai_tools.tools.botsrated_tool.botsrated_tool import (
     BASE_USDC,
     BOTSRATED_PAY_TO,
     BotsRatedCheckTool,
     BotsRatedPreflightTool,
-    botsrated_payment_policy,
 )
 
 SELLER_PAY_TO = "0xe9030014F5DAe217d0A152f02A043567b16c1aBf"
@@ -112,94 +113,87 @@ def test_preflight_not_covered(get):
     assert json.loads(BotsRatedPreflightTool().run(url="x.example"))["covered"] is False
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_pays_and_enforces_budget(get):
-    get.return_value = _quote()
-    paying_get = MagicMock(return_value=_resp(200, {"host": "blockrun.ai"}))
-    tool = BotsRatedCheckTool(budget_usd="0.0015", paying_get=paying_get)
+MOD = "crewai_tools.tools.botsrated_tool.botsrated_tool"
+
+
+@patch(f"{MOD}._sign", return_value="sig")
+@patch(f"{MOD}.requests.get")
+def test_check_signs_validated_quote_and_enforces_budget(get, sign):
+    get.side_effect = [_quote(), _resp(200, {"host": "blockrun.ai"}), _quote()]
+    client = MagicMock()
+    tool = BotsRatedCheckTool(budget_usd="0.0015", x402_client=client)
     first = json.loads(tool.run(host="blockrun.ai"))
-    assert first["remaining_usd"] == pytest.approx(0.0005)
     assert first["charged"] is True
+    assert first["remaining_usd"] == pytest.approx(0.0005)
+    sign.assert_called_once_with(client, TERMS)
+    paid = get.call_args_list[1]
+    assert paid.args[0] == "https://botsrated.com/v1/check?host=blockrun.ai"
+    assert paid.kwargs["headers"]["PAYMENT-SIGNATURE"] == "sig"
+    assert paid.kwargs["allow_redirects"] is False
     assert json.loads(tool.run(host="blockrun.ai"))["error"] == "budget_exceeded"
-    paying_get.assert_called_once_with(
-        "https://botsrated.com/v1/check?host=blockrun.ai"
-    )
+    assert sign.call_count == 1
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_no_payment_on_free_404_or_bad_terms(get):
-    paying_get = MagicMock()
-    tool = BotsRatedCheckTool(budget_usd="1", paying_get=paying_get)
+@patch(f"{MOD}._sign")
+@patch(f"{MOD}.requests.get")
+def test_check_no_signature_on_404_bad_terms_or_redirect(get, sign):
+    tool = BotsRatedCheckTool(budget_usd="1", x402_client=MagicMock())
     get.return_value = _resp(404, {"error": {"code": "host_not_covered"}})
     assert json.loads(tool.run(host="x.example"))["error"] == "no_quote"
-    get.return_value = _quote(
-        {"accepts": [{**TERMS["accepts"][0], "payTo": SELLER_PAY_TO}]}
-    )
-    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
-    paying_get.assert_not_called()
+    get.return_value = _resp(302, {})
+    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "no_quote"
+    assert get.call_args.kwargs["allow_redirects"] is False
+    for accepts in (
+        [{**TERMS["accepts"][0], "payTo": SELLER_PAY_TO}],
+        [{**TERMS["accepts"][0], "amount": "2000"}],
+        [{**TERMS["accepts"][0], "amount": "500000", "payTo": SELLER_PAY_TO}, TERMS["accepts"][0]],
+        [],
+    ):
+        get.return_value = _quote({"accepts": accepts})
+        assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
+    sign.assert_not_called()
+    assert tool.remaining_usd == 1
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_failure_keeps_reservation(get):
-    # A payment may settle before the paid call fails, so the budget is not refunded.
-    get.return_value = _quote()
-    paying_get = MagicMock(side_effect=[_resp(500, {}), _resp(200, {})])
-    tool = BotsRatedCheckTool(budget_usd="0.001", paying_get=paying_get)
+@patch(f"{MOD}._sign", return_value="sig")
+@patch(f"{MOD}.requests.get")
+def test_check_failure_after_signing_keeps_reservation(get, sign):
+    get.side_effect = [_quote(), _resp(500, {}), _quote()]
+    tool = BotsRatedCheckTool(budget_usd="0.001", x402_client=MagicMock())
     first = json.loads(tool.run(host="blockrun.ai"))
     assert first["error"] == "paid_call_failed"
     assert first["may_have_been_charged"] is True
     assert tool.remaining_usd == 0
     assert json.loads(tool.run(host="blockrun.ai"))["error"] == "budget_exceeded"
-    assert paying_get.call_count == 1
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_exception_keeps_reservation(get):
-    get.return_value = _quote()
-    tool = BotsRatedCheckTool(
-        budget_usd="0.001", paying_get=MagicMock(side_effect=TimeoutError("read"))
-    )
-    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "paid_call_failed"
+@patch(f"{MOD}._sign", return_value="sig")
+@patch(f"{MOD}.requests.get")
+def test_check_transport_error_after_signing_keeps_reservation(get, sign):
+    get.side_effect = [_quote(), requests.Timeout("read")]
+    tool = BotsRatedCheckTool(budget_usd="0.001", x402_client=MagicMock())
+    out = json.loads(tool.run(host="blockrun.ai"))
+    assert out["error"] == "paid_call_failed" and out["may_have_been_charged"] is True
     assert tool.remaining_usd == 0
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_rejects_quote_with_any_foreign_option(get):
-    foreign = {**TERMS["accepts"][0], "amount": "500000", "payTo": SELLER_PAY_TO}
-    get.return_value = _quote({"accepts": [foreign, TERMS["accepts"][0]]})
-    paying_get = MagicMock()
-    tool = BotsRatedCheckTool(budget_usd="1", paying_get=paying_get)
-    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
-    get.return_value = _quote({"accepts": []})
-    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
-    paying_get.assert_not_called()
+@patch(f"{MOD}._sign", return_value="sig")
+@patch(f"{MOD}.requests.get")
+def test_check_paid_free_quota_body_does_not_refund(get, sign):
+    get.side_effect = [_quote(), _resp(200, FREE)]
+    tool = BotsRatedCheckTool(budget_usd="0.001", x402_client=MagicMock())
+    assert json.loads(tool.run(host="blockrun.ai"))["charged"] is True
+    assert tool.remaining_usd == 0
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_quote_does_not_follow_redirects(get):
-    get.return_value = _resp(302, {})
-    paying_get = MagicMock()
-    tool = BotsRatedCheckTool(budget_usd="1", paying_get=paying_get)
-    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "no_quote"
-    assert get.call_args.kwargs["allow_redirects"] is False
-    paying_get.assert_not_called()
-
-
-def test_payment_policy_keeps_only_botsrated_terms():
-    class Req:
-        def __init__(self, **kw):
-            self.__dict__.update(kw)
-
-        def get_amount(self):
-            return self.amount
-
-    ok = Req(scheme="exact", network="eip155:8453", asset=BASE_USDC,
-             pay_to=BOTSRATED_PAY_TO, amount="1000")
-    pricey = Req(**{**ok.__dict__, "amount": "500000"})
-    other_to = Req(**{**ok.__dict__, "pay_to": SELLER_PAY_TO})
-    other_net = Req(**{**ok.__dict__, "network": "eip155:1"})
-    assert botsrated_payment_policy(2, [pricey, other_to, other_net, ok]) == [ok]
-    assert botsrated_payment_policy(2, [pricey]) == []
+@patch(f"{MOD}._sign", side_effect=RuntimeError("no scheme for eip155:8453"))
+@patch(f"{MOD}.requests.get")
+def test_check_signing_failure_releases_reservation(get, sign):
+    get.return_value = _quote()
+    tool = BotsRatedCheckTool(budget_usd="0.001", x402_client=MagicMock())
+    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "payment_not_created"
+    assert tool.remaining_usd == pytest.approx(0.001)
+    assert get.call_count == 1
 
 
 FREE = {
@@ -209,25 +203,43 @@ FREE = {
 }
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_free_quota_answer_is_not_charged(get):
+@patch(f"{MOD}._sign")
+@patch(f"{MOD}.requests.get")
+def test_check_free_quota_answer_is_not_charged(get, sign):
     get.return_value = _resp(200, FREE)
-    paying_get = MagicMock()
-    tool = BotsRatedCheckTool(budget_usd="0.001", paying_get=paying_get)
+    tool = BotsRatedCheckTool(budget_usd="0.001", x402_client=MagicMock())
     out = json.loads(tool.run(host="blockrun.ai"))
     assert out["charged"] is False and out["remaining_usd"] == pytest.approx(0.001)
-    paying_get.assert_not_called()
+    sign.assert_not_called()
 
 
-@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_rejects_quote_above_price(get):
-    get.return_value = _quote({"accepts": [{**TERMS["accepts"][0], "amount": "2000"}]})
-    paying_get = MagicMock()
-    tool = BotsRatedCheckTool(budget_usd="1", paying_get=paying_get)
-    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
-    paying_get.assert_not_called()
+def test_sign_with_real_x402_client():
+    pytest.importorskip("x402.mechanisms.evm")
+    from eth_account import Account
+    from x402 import x402ClientSync
+    from x402.http.utils import decode_payment_signature_header
+    from x402.mechanisms.evm import EthAccountSigner
+    from x402.mechanisms.evm.exact import ExactEvmScheme
+
+    from crewai_tools.tools.botsrated_tool.botsrated_tool import _sign
+
+    client = x402ClientSync()
+    client.register(
+        "eip155:8453", ExactEvmScheme(signer=EthAccountSigner(Account.create()))
+    )
+    terms = {
+        **TERMS,
+        "resource": {"url": "https://botsrated.com/v1/check?host=blockrun.ai"},
+        "accepts": [
+            {**TERMS["accepts"][0], "maxTimeoutSeconds": 300,
+             "extra": {"name": "USD Coin", "version": "2"}}
+        ],
+    }
+    payload = decode_payment_signature_header(_sign(client, terms))
+    assert payload.accepted.pay_to.lower() == BOTSRATED_PAY_TO.lower()
+    assert payload.accepted.amount == "1000"
 
 
 def test_check_requires_positive_budget():
     with pytest.raises(ValueError):
-        BotsRatedCheckTool(budget_usd="0", paying_get=MagicMock())
+        BotsRatedCheckTool(budget_usd="0", x402_client=MagicMock())

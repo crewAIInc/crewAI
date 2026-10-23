@@ -12,17 +12,19 @@ These tools let an agent check a seller before it pays.
 - `BotsRatedPreflightTool`: free, no API key, no wallet. If you pass the `pay_to` of the 402 option the agent
   is about to pay, `pay_to_check` is `matches_observed` only when BotsRated's own unpaid probe saw that payTo
   on that network. `listing_only` means only the seller's directory listing has it; `not_seen` means neither.
-- `BotsRatedCheckTool`: $0.001 USDC on Base per call; the first 100 per day are free (`charged: false`, budget untouched). It is opt-in and needs a budget and a GET that can pay
-  x402. It reads the quote unpaid first (no redirects), accepts it only if **every** payment option is exact
-  Base USDC to BotsRated at $0.001 or less, and stops at the budget. A paid call that fails keeps its
-  reservation (the payment may already have settled), so the budget is a hard ceiling.
+- `BotsRatedCheckTool`: $0.001 USDC on Base per call; the first 100 per day are free (`charged: false`, budget
+  untouched). It is opt-in and needs a budget and an `x402ClientSync`. It reads the quote unpaid (no
+  redirects) and accepts it only if **every** payment option is exact Base USDC to BotsRated at $0.001 or less.
+  It then signs that validated quote with your client and sends the signature itself, so no other payment can
+  be signed. Once signed, the amount stays counted even if the call fails (it may have settled), so the budget
+  is a hard ceiling.
 
 ## Installation
 
 ```shell
 pip install 'crewai[tools]'
 # for the paid check only:
-pip install 'x402[evm,requests]'
+pip install 'x402[evm]'
 ```
 
 ## Example
@@ -43,23 +45,16 @@ Opt-in paid check:
 
 ```python
 from x402 import x402ClientSync
-from x402.http.clients import x402_requests
 from x402.mechanisms.evm import EthAccountSigner
 from x402.mechanisms.evm.exact import ExactEvmScheme
 from crewai_tools import BotsRatedCheckTool
-from crewai_tools.tools.botsrated_tool import botsrated_payment_policy
 
 client = x402ClientSync()
-# Base mainnet only, and the signer may only pick BotsRated's own check terms.
 client.register("eip155:8453", ExactEvmScheme(signer=EthAccountSigner(account)))
-client.register_policy(botsrated_payment_policy)
 check = BotsRatedCheckTool(
-    budget_usd="0.02", paying_get=x402_requests(client).get
+    budget_usd="0.02", x402_client=client
 )  # at most $0.02 in total
 ```
-
-Use a dedicated client (or wallet) for this tool: the policy rejects every payment that is not BotsRated's
-check, so it should not be shared with clients that pay other sellers.
 
 ## Notes
 

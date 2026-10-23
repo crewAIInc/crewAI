@@ -1,13 +1,12 @@
 """BotsRated tools: look up an x402 seller before paying it.
 
 ``BotsRatedPreflightTool`` is free. ``BotsRatedCheckTool`` costs $0.001 USDC on Base per call (the first 100 per day
-are free) and only runs with a budget and a payment-capable GET supplied by the user.
+are free) and only runs with a budget and an x402 client supplied by the user.
 """
 
 from __future__ import annotations
 
 import base64
-from collections.abc import Callable
 from decimal import Decimal
 import json
 import threading
@@ -143,8 +142,9 @@ class BotsRatedCheckTool(BaseTool):
 
     Args:
         budget_usd: Total USD this tool may spend. Required.
-        paying_get: A callable ``url -> response`` that pays x402 challenges, e.g. ``x402_requests(client).get``
-            from the ``x402`` package. The response needs ``status_code`` and ``json()``.
+        x402_client: An ``x402ClientSync`` from the ``x402`` package with an EVM scheme registered. The tool
+            signs only the quote it has validated and sends that signature itself, so the client never
+            fetches or picks a payment on its own.
     """
 
     name: str = "BotsRated Paid Check"
@@ -155,7 +155,7 @@ class BotsRatedCheckTool(BaseTool):
     )
     args_schema: type[BaseModel] = BotsRatedCheckSchema
     budget_usd: Decimal = Field(..., gt=0)
-    paying_get: Callable[[str], Any] = Field(..., exclude=True)
+    x402_client: Any = Field(..., exclude=True)
     base_url: str = BOTSRATED_BASE_URL
     timeout: float = 8.0
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -227,34 +227,59 @@ class BotsRatedCheckTool(BaseTool):
                 return json.dumps(
                     {"error": "budget_exceeded", "remaining_usd": self.remaining_usd}
                 )
-            self._spent_atomic += amount  # reserve before paying
+            self._spent_atomic += amount  # reserve before signing
         try:
-            resp = self.paying_get(url)
-            ok = 200 <= resp.status_code < 300
-        except Exception as e:  # noqa: BLE001 - the payment client may raise anything
-            ok, resp = False, e
-        if not ok:
-            # A signed payment may already have been sent and settled before the call failed,
-            # so the reservation stays spent: the budget is a hard ceiling.
+            signature = _sign(self.x402_client, terms)
+        except Exception as e:  # noqa: BLE001 - nothing was signed, so nothing can settle
+            with self._lock:
+                self._spent_atomic -= amount
+            return json.dumps({"error": "payment_not_created", "message": str(e)})
+        # From here a signed payment exists and may settle, so the reservation stays spent.
+        try:
+            resp = requests.get(
+                url,
+                headers={"accept": "application/json", "PAYMENT-SIGNATURE": signature},
+                timeout=self.timeout,
+                allow_redirects=False,
+            )
+        except requests.RequestException as e:
             return json.dumps(
                 {
                     "error": "paid_call_failed",
-                    "message": str(getattr(resp, "status_code", resp)),
+                    "message": str(e),
                     "may_have_been_charged": True,
                     "remaining_usd": self.remaining_usd,
                 }
             )
-        data = _json_or_none(resp)
-        if _is_free_quota_answer(data):
-            # Answered from the free quota after all: nothing was paid.
-            with self._lock:
-                self._spent_atomic -= amount
+        if not 200 <= resp.status_code < 300:
             return json.dumps(
-                {"remaining_usd": self.remaining_usd, "charged": False, "data": data}
+                {
+                    "error": "paid_call_failed",
+                    "message": str(resp.status_code),
+                    "may_have_been_charged": True,
+                    "remaining_usd": self.remaining_usd,
+                }
             )
         return json.dumps(
-            {"remaining_usd": self.remaining_usd, "charged": True, "data": data}
+            {
+                "remaining_usd": self.remaining_usd,
+                "charged": True,
+                "data": _json_or_none(resp),
+            }
         )
+
+
+def _sign(x402_client: Any, terms: dict[str, Any]) -> str:
+    """Sign the validated quote with the user's x402 client; returns the PAYMENT-SIGNATURE header."""
+    from x402.http.utils import (  # type: ignore[import-not-found,unused-ignore]
+        encode_payment_signature_header,
+    )
+    from x402.schemas.helpers import (  # type: ignore[import-not-found,unused-ignore]
+        parse_payment_required,
+    )
+
+    payload = x402_client.create_payment_payload(parse_payment_required(terms))
+    return str(encode_payment_signature_header(payload))
 
 
 def _pay_to_check(
@@ -276,27 +301,6 @@ def _pay_to_check(
         return "listing_only"
     compared = live_ok or listed_ok
     return "not_seen" if compared else "not_compared"
-
-
-def botsrated_payment_policy(version: int, requirements: list[Any]) -> list[Any]:
-    """x402 client policy that only lets the client sign BotsRated's own check terms.
-
-    Register it on the client you pass to ``BotsRatedCheckTool`` (``client.register_policy(...)``) so the
-    signer can never pick a different amount, asset, network or recipient than the tool checked.
-    """
-    return [
-        r
-        for r in requirements
-        if _acceptable(
-            {
-                "scheme": getattr(r, "scheme", None),
-                "network": getattr(r, "network", None),
-                "asset": getattr(r, "asset", None),
-                "payTo": getattr(r, "pay_to", None),
-                "amount": r.get_amount() if hasattr(r, "get_amount") else None,
-            }
-        )
-    ]
 
 
 def _json_or_none(resp: Any) -> Any:
