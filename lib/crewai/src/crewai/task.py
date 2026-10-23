@@ -689,6 +689,9 @@ class Task(BaseModel):
             )
             dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
             context = pre_step_ctx.payload
+            # Guardrail retries read prompt_context. Keep it aligned with the
+            # context the agent actually receives after PRE_STEP rewrites.
+            self.prompt_context = context
 
             with tool_failure_collector() as execution_failures:
                 result = await agent.aexecute_task(
@@ -848,6 +851,9 @@ class Task(BaseModel):
             )
             dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
             context = pre_step_ctx.payload
+            # Guardrail retries read prompt_context. Keep it aligned with the
+            # context the agent actually receives after PRE_STEP rewrites.
+            self.prompt_context = context
 
             with tool_failure_collector() as execution_failures:
                 result = agent.execute_task(
@@ -1324,6 +1330,26 @@ Follow these guidelines:
         """
         return self.security_config.fingerprint
 
+    @staticmethod
+    def _guardrail_retry_context(
+        guardrail_result_error: str | None,
+        task_output_raw: str,
+        original_context: str | None,
+    ) -> str:
+        """Build retry context without dropping declared upstream context.
+
+        Guardrail retries used to replace ``context`` with only the
+        validation-error template, which dropped outputs from tasks listed in
+        ``Task.context``.
+        """
+        validation_error = I18N_DEFAULT.errors("validation_error").format(
+            guardrail_result_error=guardrail_result_error,
+            task_output=task_output_raw,
+        )
+        if original_context:
+            return f"{original_context}\n\n{validation_error}"
+        return validation_error
+
     def _invoke_guardrail_function(
         self,
         task_output: TaskOutput,
@@ -1345,6 +1371,10 @@ Follow these guidelines:
         # Each retry resets the agent's failure list, so accumulate to keep
         # failures from blocked attempts on the final output.
         accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
+        # Freeze the context from the initial attempt. Retries must keep it
+        # (including PRE_STEP rewrites) instead of sending only the
+        # validation-error message.
+        original_context = self.prompt_context
 
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
@@ -1397,9 +1427,10 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
+            context = self._guardrail_retry_context(
                 guardrail_result_error=guardrail_result.error,
-                task_output=task_output.raw,
+                task_output_raw=task_output.raw,
+                original_context=original_context,
             )
             if agent and agent.verbose:
                 PRINTER.print(
@@ -1466,6 +1497,10 @@ Follow these guidelines:
         # Each retry resets the agent's failure list, so accumulate to keep
         # failures from blocked attempts on the final output.
         accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
+        # Freeze the context from the initial attempt. Retries must keep it
+        # (including PRE_STEP rewrites) instead of sending only the
+        # validation-error message.
+        original_context = self.prompt_context
 
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
@@ -1518,9 +1553,10 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
+            context = self._guardrail_retry_context(
                 guardrail_result_error=guardrail_result.error,
-                task_output=task_output.raw,
+                task_output_raw=task_output.raw,
+                original_context=original_context,
             )
             if agent and agent.verbose:
                 PRINTER.print(
