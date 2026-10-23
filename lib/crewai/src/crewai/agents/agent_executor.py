@@ -90,6 +90,8 @@ from crewai.tools.tool_failure import (
 )
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
+    _reset_caller_loop,
+    _set_caller_loop,
     build_text_tool_calling_fallback_message,
     check_native_tool_support,
     check_repeated_tool_call,
@@ -111,6 +113,7 @@ from crewai.utilities.agent_utils import (
     parse_tool_call_args,
     process_llm_response,
     render_text_description_and_args,
+    run_native_tool_result,
     setup_native_tools,
     track_delegation_if_needed,
 )
@@ -2240,8 +2243,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
-                    tool_func = self._available_functions[func_name]
-                    raw_result = tool_func(**args_dict)
+                    raw_result = run_native_tool_result(
+                        self._available_functions[func_name], args_dict, tool=output_tool
+                    )
                     raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)
@@ -3142,6 +3146,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self._is_executing = True
             self._has_been_invoked = True
 
+        # Sync flow methods execute in worker threads (asyncio.to_thread); native
+        # tool coroutines must bridge back onto THIS loop to honor caller-loop
+        # affinity (see agent_utils.run_native_tool_result).
+        caller_loop_token = _set_caller_loop(asyncio.get_running_loop())
+
         try:
             # Reset state for fresh execution
             self._cleanup_deferred_tool_results()
@@ -3212,6 +3221,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         finally:
             self._cleanup_deferred_tool_results()
             self._is_executing = False
+            _reset_caller_loop(caller_loop_token)
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Async version of invoke. Alias for invoke_async."""

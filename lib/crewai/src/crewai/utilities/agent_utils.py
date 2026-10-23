@@ -1421,6 +1421,90 @@ class NativeToolCallResult:
     tool_message: LLMMessage = field(default_factory=dict)  # type: ignore[assignment]
 
 
+# The event loop an async kickoff await(ed) on, captured at the async entry points
+# (Crew.kickoff_async / Crew.akickoff / AgentExecutor.invoke_async) before they
+# offload work into worker threads. ContextVars propagate through asyncio.to_thread
+# and the runtime's context-copying, so every sync lane that ends up executing a
+# native tool call can bridge async tool coroutines back onto this loop.
+_caller_loop_context: contextvars.ContextVar[asyncio.AbstractEventLoop | None] = (
+    contextvars.ContextVar("crewai_caller_loop", default=None)
+)
+
+
+def _set_caller_loop(loop: asyncio.AbstractEventLoop) -> contextvars.Token[asyncio.AbstractEventLoop | None]:
+    """Capture the loop an async kickoff awaits on for the duration of the run."""
+    return _caller_loop_context.set(loop)
+
+
+def _reset_caller_loop(token: contextvars.Token[asyncio.AbstractEventLoop | None]) -> None:
+    """Clear the captured caller loop (contextvar reset is token-scoped)."""
+    _caller_loop_context.reset(token)
+
+
+def run_native_tool_result(
+    tool_func: Callable[..., Any],
+    args_dict: dict[str, Any],
+    tool: Any | None = None,
+    caller_loop: asyncio.AbstractEventLoop | None = None,
+) -> Any:
+    """Invoke a native tool, honoring the caller's event loop for async tools.
+
+    ``tool_func`` is the invocation the available-functions map provides (the tool's
+    bound ``run`` or a test double); it is used verbatim in the sync path. Flow methods
+    execute in worker threads (``asyncio.to_thread``), so an async tool's coroutine
+    historically went through a bare ``asyncio.run`` inside ``Tool.run`` on a fresh,
+    unrelated loop — anything bound to the caller's loop (an ``httpx.AsyncClient``, a
+    caller-loop ``Future``, sockets) then fails with "attached to a different loop"
+    (the post-#8192 shape of the issue #7630 family). When the caller's loop is known
+    (see the caller-loop context captured by the async kickoffs) and ``tool`` has a
+    working async implementation, bridge ``tool.arun`` onto the caller's loop and block
+    the worker thread until it finishes. Sync tools and sync callers keep the exact
+    historical behavior.
+
+    Async implementations are expected not to block: bridged coroutines run on the
+    application's loop, so a tool that blocks inside its coroutine stalls every other
+    task on that loop for the duration. Offload blocking client calls to a worker
+    thread inside the tool instead.
+    """
+    loop = caller_loop if caller_loop is not None else _caller_loop_context.get()
+    if loop is not None and tool is not None and _has_async_implementation(tool):
+        try:
+            running_loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+        # Scheduling onto the loop that is already executing this call would deadlock
+        # it inside future.result(); a closed loop cannot service the submission. In
+        # both cases the bridge is impossible, so use the historical sync path.
+        if running_loop is not loop and not loop.is_closed():
+            coro = tool.arun(**args_dict)
+            try:
+                future = asyncio.run_coroutine_threadsafe(coro, loop)
+            except RuntimeError:
+                coro.close()  # loop shut down between the check and scheduling
+            else:
+                # Only scheduling failures fall back. Exceptions raised by the
+                # coroutine (RuntimeError included) propagate unchanged: re-running
+                # the tool here would repeat its side effects and mask the failure.
+                return future.result()
+    return tool_func(**args_dict)
+
+
+def _has_async_implementation(tool: Any) -> bool:
+    """True when the tool provides an async implementation that can actually await."""
+    wrapped = getattr(tool, "func", None)
+    if wrapped is not None:
+        # Tool wraps a user callable; it decides whether async work exists.
+        # (Tool always overrides _arun, even for sync funcs.)
+        return asyncio.iscoroutinefunction(wrapped)
+    meth = type(tool).__dict__.get("_arun")
+    if meth is None:
+        return False
+    func = getattr(meth, "__func__", meth)
+    # The BaseTool default raises NotImplementedError on await; a real override
+    # denotes class-based async support.
+    return func is not getattr(BaseTool, "_arun", None)
+
+
 def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     """Format native tool output when a tool explicitly defines a formatter."""
     if isinstance(raw_result, ToolFailure):
@@ -1588,8 +1672,9 @@ def execute_single_native_tool_call(
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
-                tool_func = available_functions[func_name]
-                raw_result = tool_func(**args_dict)
+                raw_result = run_native_tool_result(
+                    available_functions[func_name], args_dict, tool=output_tool
+                )
                 raw_tool_result = raw_result
 
                 if tools_handler and tools_handler.cache:
