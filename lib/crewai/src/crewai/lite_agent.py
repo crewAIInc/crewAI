@@ -80,7 +80,6 @@ from crewai.tools.tool_failure import (
 )
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
-    format_message_for_llm,
     get_llm_response,
     get_tool_names,
     handle_agent_action_core,
@@ -102,6 +101,7 @@ from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_fo
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm, overlay_llm_for
+from crewai.utilities.message_utils import format_message_for_llm
 from crewai.utilities.pydantic_schema_utils import (
     generate_model_description,
     serialize_model_class,
