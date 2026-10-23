@@ -327,7 +327,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                                 meta.get("version") or "-",
                                 str(skill_dir),
                             )
-                        except (json.JSONDecodeError, KeyError):
+                        except (json.JSONDecodeError, UnicodeDecodeError, KeyError):
                             console.print(
                                 f"[yellow]Warning: skipping malformed cache entry at {meta_file}[/yellow]"
                             )
