@@ -225,7 +225,12 @@ class Settings(BaseModel):
             try:
                 with config_path.open("r") as f:
                     file_data = json.load(f)
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    "Could not load settings from %s (file may be corrupted): %s",
+                    config_path,
+                    e,
+                )
                 file_data = {}
 
         merged_data = {**file_data, **data}
@@ -249,17 +254,24 @@ class Settings(BaseModel):
             return
 
         try:
+            existing_data: dict[str, Any] = {}
             if self.config_path.is_file():
-                with self.config_path.open("r") as f:
-                    existing_data = json.load(f)
-            else:
-                existing_data = {}
+                try:
+                    with self.config_path.open("r") as f:
+                        existing_data = json.load(f)
+                except Exception as e:
+                    logger.warning(
+                        "Could not parse existing settings from %s before writing; overwriting: %s",
+                        self.config_path,
+                        e,
+                    )
+                    existing_data = {}
 
             updated_data = {**existing_data, **self.model_dump(exclude_unset=True)}
             _write_secure_json(self.config_path, updated_data)
 
-        except Exception:  # noqa: S110
-            pass
+        except Exception as e:  # noqa: S110
+            logger.error("Failed to write settings to %s: %s", self.config_path, e)
 
     def _reset_user_settings(self) -> None:
         """Reset all user settings to default values."""
