@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 from contextlib import closing
 import json
 import os
@@ -21,9 +22,11 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.events.types.flow_events import MethodExecutionFinishedEvent
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
+    _on_any_event,
     _resolve,
     _SENTINEL,
 )
@@ -214,6 +217,45 @@ class TestCheckpointConfig:
             on_events=["task_completed", "crew_kickoff_completed"]
         )
         assert cfg.trigger_events == {"task_completed", "crew_kickoff_completed"}
+
+
+class TestAutomaticCheckpointFailures:
+    def test_base_exception_is_logged_without_failing_flow(self, caplog: Any) -> None:
+        """Automatic checkpoints are best-effort even for PyO3 panic failures."""
+
+        class PanicException(BaseException):
+            pass
+
+        flow = Flow(checkpoint=CheckpointConfig(on_events=["method_execution_finished"]))
+        event = MethodExecutionFinishedEvent(
+            flow_name=flow.__class__.__name__,
+            method_name="write_state",
+            state={},
+        )
+
+        with caplog.at_level(logging.WARNING), patch(
+            "crewai.state.checkpoint_listener._do_checkpoint",
+            side_effect=PanicException("dictionary changed size during iteration"),
+        ):
+            _on_any_event(flow, event, RuntimeState(root=[flow]))
+
+        assert "Auto-checkpoint failed for event method_execution_finished" in caplog.text
+
+    def test_process_control_exceptions_still_propagate(self) -> None:
+        """Auto-checkpoint failure handling must not swallow process control."""
+
+        flow = Flow(checkpoint=CheckpointConfig(on_events=["method_execution_finished"]))
+        event = MethodExecutionFinishedEvent(
+            flow_name=flow.__class__.__name__,
+            method_name="write_state",
+            state={},
+        )
+
+        with patch(
+            "crewai.state.checkpoint_listener._do_checkpoint",
+            side_effect=KeyboardInterrupt,
+        ), pytest.raises(KeyboardInterrupt):
+            _on_any_event(flow, event, RuntimeState(root=[flow]))
 
 
 
