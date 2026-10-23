@@ -97,7 +97,7 @@ from crewai.utilities.guardrail_types import (
     GuardrailType,
     GuardrailsType,
 )
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import I18N, I18N_DEFAULT, get_i18n
 from crewai.utilities.string_utils import interpolate_only
 
 
@@ -307,6 +307,7 @@ class Task(BaseModel):
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
+    _i18n: I18N = PrivateAttr(default_factory=get_i18n)
     checkpoint_original_description: str | None = Field(default=None, exclude=False)
     checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
@@ -1043,7 +1044,7 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = I18N_DEFAULT.slice("expected_output").format(
+        output = self._i18n.slice("expected_output").format(
             expected_output=self.expected_output
         )
         tasks_slices = [description, output]
@@ -1115,7 +1116,7 @@ Follow these guidelines:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
 
         if inputs.get("crew_chat_messages"):
-            conversation_instruction = I18N_DEFAULT.slice(
+            conversation_instruction = self._i18n.slice(
                 "conversation_history_instruction"
             )
 
