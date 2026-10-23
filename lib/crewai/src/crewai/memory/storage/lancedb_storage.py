@@ -353,11 +353,12 @@ class LanceDBStorage:
             )
         with store_lock(self._lock_name):
             self._ensure_table()
-            safe_id = _sql_str(str(record.id))
-            self._do_write("delete", f"id = '{safe_id}'")
+            # Reject unserializable records before deleting the stored version.
             row = self._record_to_row(record)
             if row["vector"] is None or len(row["vector"]) != self._vector_dim:
                 row["vector"] = [0.0] * self._vector_dim
+            safe_id = _sql_str(str(record.id))
+            self._do_write("delete", f"id = '{safe_id}'")
             self._do_write("add", [row])
 
     def touch_records(self, record_ids: list[str]) -> None:
