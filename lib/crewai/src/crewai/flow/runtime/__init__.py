@@ -1854,6 +1854,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return outputs
 
     @property
+    def input_history(self) -> list[InputHistoryEntry]:
+        """Audit trail of ask() prompts, responses, and metadata."""
+        return self._input_history
+
+    @property
     def flow_id(self) -> str:
         """Returns the unique identifier of this flow instance.
 
