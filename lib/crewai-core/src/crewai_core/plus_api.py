@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
+import ipaddress
 import os
 from pathlib import Path
+import ssl
 from typing import Any, Final, Literal, TypedDict, cast
 from urllib.parse import urljoin
+import urllib.request
 
 import httpx
 from typing_extensions import NotRequired
@@ -134,11 +138,118 @@ Headers = TypedDict(
 )
 
 
+# The integrations apps listing takes ~11s on a real organization. Only the read
+# waits longer, so an unreachable or saturated service still fails at httpx's 5s.
+_TRIGGER_TIMEOUT = httpx.Timeout(5.0, read=60.0)
+
+
 class RequestKwargs(TypedDict):
     headers: dict[str, str]
     json: NotRequired[Any]
     params: NotRequired[dict[str, str]]
-    timeout: NotRequired[float]
+    timeout: NotRequired[float | httpx.Timeout]
+
+
+def _sets_transport(key: str) -> bool:
+    """Whether this variable decides the proxy or CA bundle of AMP requests.
+
+    httpx reads the proxy and CA variables. REQUEST_METHOD counts: urllib drops
+    an uppercase HTTP_PROXY when it is set. So does UV_ENV_FILE, for a crewAI
+    process started with `uv run`: uv loads that file into it before Python starts.
+    """
+    return key.lower().endswith("_proxy") or key.upper() in {
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "REQUEST_METHOD",
+        "UV_ENV_FILE",
+    }
+
+
+# The proxy and CA variables as the process had them when this module was first
+# imported. AMP requests carry the saved login, so they take their proxy and CA
+# from here, never from the live environment: a project's .env, loaded later by
+# `crewai run` or by `crewai.llm` on import, must not choose where the login
+# travels or which CA vouches for AMP. The CLI imports this module at startup,
+# before any command reads a .env.
+_MACHINE_TRANSPORT_ENV: dict[str, str] = {
+    key: value for key, value in os.environ.items() if _sets_transport(key)
+}
+
+
+def restore_machine_transport(environ: MutableMapping[str, str]) -> None:
+    """Put the pinned proxy and CA variables back in ``environ``, dropping any set since.
+
+    For a process that loads a project's .env and then starts another crewAI
+    process: the child pins the variables it inherits as the machine's.
+    """
+    for key in [key for key in environ if _sets_transport(key)]:
+        del environ[key]
+    environ.update(_MACHINE_TRANSPORT_ENV)
+
+
+def _os_proxies() -> dict[str, str]:
+    """The OS proxy settings (macOS System Settings, the Windows registry)."""
+    read = getattr(urllib.request, "getproxies_macosx_sysconf", None) or getattr(
+        urllib.request, "getproxies_registry", None
+    )
+    return read() if read else {}
+
+
+def _machine_proxies() -> dict[str, str]:
+    """Proxies by scheme, read from the pinned variables as urllib's getproxies() reads them."""
+    proxies: dict[str, str] = {}
+    # Two passes, so a lowercase name wins over its uppercase twin.
+    for name, value in _MACHINE_TRANSPORT_ENV.items():
+        if value and name.lower().endswith("_proxy"):
+            proxies[name[:-6].lower()] = value
+    # As urllib does (CVE-2016-1000110, "httpoxy"): in a CGI process a client's
+    # Proxy header arrives as HTTP_PROXY, so only a lowercase http_proxy counts.
+    if "REQUEST_METHOD" in _MACHINE_TRANSPORT_ENV:
+        proxies.pop("http", None)
+    for name, value in _MACHINE_TRANSPORT_ENV.items():
+        if name.endswith("_proxy"):
+            if value:
+                proxies[name[:-6].lower()] = value
+            else:
+                proxies.pop(name[:-6].lower(), None)
+    return proxies or _os_proxies()
+
+
+def _no_proxy_pattern(host: str) -> str:
+    """The httpx mount pattern for one NO_PROXY entry, as httpx builds it."""
+    if "://" in host:
+        return host
+    try:
+        address = ipaddress.ip_address(host.split("/")[0])
+    except ValueError:
+        return f"all://{host}" if host.lower() == "localhost" else f"all://*{host}"
+    return f"all://[{host}]" if address.version == 6 else f"all://{host}"
+
+
+def _machine_transport(verify: bool) -> dict[str, Any]:
+    """httpx.Client arguments for the machine's proxy and CA, as trust_env would read them at startup."""
+    ssl_verify: ssl.SSLContext | bool = verify
+    if verify and (cafile := _MACHINE_TRANSPORT_ENV.get("SSL_CERT_FILE")):
+        ssl_verify = ssl.create_default_context(cafile=cafile)
+    elif verify and (capath := _MACHINE_TRANSPORT_ENV.get("SSL_CERT_DIR")):
+        ssl_verify = ssl.create_default_context(capath=capath)
+
+    proxies = _machine_proxies()
+    mounts: dict[str, httpx.BaseTransport | None] = {}
+    for scheme in ("http", "https", "all"):
+        if url := proxies.get(scheme):
+            mounts[f"{scheme}://"] = httpx.HTTPTransport(
+                proxy=url if "://" in url else f"http://{url}",
+                verify=ssl_verify,
+                trust_env=False,
+            )
+    for host in (entry.strip() for entry in proxies.get("no", "").split(",")):
+        if host == "*":
+            mounts = {}
+            break
+        if host:
+            mounts[_no_proxy_pattern(host)] = None
+    return {"verify": ssl_verify, "trust_env": False, "mounts": mounts}
 
 
 class PlusAPI:
@@ -181,6 +292,11 @@ class PlusAPI:
             or DEFAULT_CREWAI_ENTERPRISE_URL
         )
 
+    @staticmethod
+    def _http_client(verify: bool = True) -> httpx.Client:
+        """A client that reaches AMP through the machine's proxy and CA, not a project's .env."""
+        return httpx.Client(**_machine_transport(verify))
+
     def _make_request(
         self,
         method: HttpMethod,
@@ -188,7 +304,7 @@ class PlusAPI:
         *,
         json: Any = None,
         params: dict[str, str] | None = None,
-        timeout: float | None = None,
+        timeout: float | httpx.Timeout | None = None,
         verify: bool = True,
     ) -> httpx.Response:
         url = urljoin(self.base_url, endpoint)
@@ -199,7 +315,7 @@ class PlusAPI:
             request_kwargs["params"] = params
         if timeout is not None:
             request_kwargs["timeout"] = timeout
-        with httpx.Client(trust_env=False, verify=verify) as client:
+        with self._http_client(verify) as client:
             return client.request(method, url, **request_kwargs)
 
     def _make_multipart_request(
@@ -225,7 +341,7 @@ class PlusAPI:
 
         with (
             path.open("rb") as file_handle,
-            httpx.Client(trust_env=False, verify=verify) as client,
+            self._http_client(verify) as client,
         ):
             files = {
                 "zip_file": (path.name, file_handle, "application/zip"),
@@ -324,27 +440,37 @@ class PlusAPI:
         )
 
     def deploy_by_name(
-        self, project_name: str, *, project_id: str | None = None
+        self, project_name: str, *, project_id: str | None = None, force: bool = False
     ) -> httpx.Response:
         """Redeploy by name, with PROJECT_ID (`[tool.crewai].project_id`) when set.
 
-        The body is sent only when there is a project id. An AMP that predates
-        project ids ignores it: this route has read its body through Rails'
-        ``params.permit`` since the v1 API (2024-08), which drops a key it does
-        not name, and AMP never made unpermitted keys an error.
+        The body is sent only when there is something in it. An AMP that
+        predates project ids ignores it: this route has read its body through
+        Rails' ``params.permit`` since the v1 API (2024-08), which drops a key
+        it does not name, and AMP never made unpermitted keys an error. FORCE
+        redeploys even while a models comparison runs on the deployment (AMP
+        answers 409 ``comparison_running`` otherwise; an older AMP ignores it).
         """
         endpoint = f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
-        if project_id:
-            return self._make_request("POST", endpoint, json={"project_id": project_id})
-        return self._make_request("POST", endpoint)
+        return self._redeploy(endpoint, project_id=project_id, force=force)
 
     def deploy_by_uuid(
-        self, uuid: str, *, project_id: str | None = None
+        self, uuid: str, *, project_id: str | None = None, force: bool = False
     ) -> httpx.Response:
-        """Redeploy by uuid, with PROJECT_ID as for `deploy_by_name`."""
+        """Redeploy by uuid, with PROJECT_ID and FORCE as for `deploy_by_name`."""
         endpoint = f"{self.CREWS_RESOURCE}/{uuid}/deploy"
+        return self._redeploy(endpoint, project_id=project_id, force=force)
+
+    def _redeploy(
+        self, endpoint: str, *, project_id: str | None, force: bool
+    ) -> httpx.Response:
+        body: dict[str, Any] = {}
         if project_id:
-            return self._make_request("POST", endpoint, json={"project_id": project_id})
+            body["project_id"] = project_id
+        if force:
+            body["force"] = True
+        if body:
+            return self._make_request("POST", endpoint, json=body)
         return self._make_request("POST", endpoint)
 
     def crew_status_by_name(self, project_name: str) -> httpx.Response:
@@ -416,14 +542,17 @@ class PlusAPI:
         *,
         env: dict[str, str] | None = None,
         project_id: str | None = None,
+        force: bool = False,
     ) -> httpx.Response:
         """Update an existing crew deployment from a local project ZIP archive.
 
-        PROJECT_ID as for `create_crew_from_zip`.
+        PROJECT_ID as for `create_crew_from_zip`, FORCE as for `deploy_by_name`.
         """
         data: dict[str, str] = {}
         if project_id:
             data["project_id"] = project_id
+        if force:
+            data["force"] = "true"
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})
         return self._make_multipart_request(
@@ -533,10 +662,14 @@ class PlusAPI:
 
     def get_triggers(self) -> httpx.Response:
         """Get all available triggers from integrations."""
-        return self._make_request("GET", f"{self.INTEGRATIONS_RESOURCE}/apps")
+        return self._make_request(
+            "GET", f"{self.INTEGRATIONS_RESOURCE}/apps", timeout=_TRIGGER_TIMEOUT
+        )
 
     def get_trigger_payload(self, app_slug: str, trigger_slug: str) -> httpx.Response:
         """Get sample payload for a specific trigger."""
         return self._make_request(
-            "GET", f"{self.INTEGRATIONS_RESOURCE}/{app_slug}/{trigger_slug}/payload"
+            "GET",
+            f"{self.INTEGRATIONS_RESOURCE}/{app_slug}/{trigger_slug}/payload",
+            timeout=_TRIGGER_TIMEOUT,
         )

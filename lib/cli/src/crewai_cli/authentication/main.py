@@ -14,6 +14,10 @@ from crewai_core.auth.oauth2 import (
 )
 from crewai_core.settings import Settings
 
+from crewai_cli.authentication.token import get_auth_token
+from crewai_cli.plus_api import PlusAPI
+from crewai_cli.tui_picker import pick
+
 
 __all__ = ["AuthenticationCommand", "Oauth2Settings", "ProviderFactory"]
 
@@ -22,7 +26,53 @@ class AuthenticationCommand(_BaseAuthenticationCommand):
     """CLI-side login that also signs the user into the tool repository."""
 
     def _post_login(self) -> None:
+        self._select_organization()
         self._login_to_tool_repository()
+
+    def _select_organization(self) -> None:
+        """Let the user choose the organization for this CLI login."""
+        try:
+            response = PlusAPI(api_key=get_auth_token()).get_organizations()
+            response.raise_for_status()
+            organizations = response.json()
+        except Exception as error:
+            console.print(f"Could not retrieve organizations: {error}", style="yellow")
+            return
+
+        if not organizations:
+            console.print("You don't belong to any organizations yet.", style="yellow")
+            return
+
+        organization_names = [
+            organization["name"] or "Unnamed organization"
+            for organization in organizations
+        ]
+        name_width = max(len(name) for name in organization_names)
+        organization_id = pick(
+            "Select an organization (Name / ID):",
+            [
+                (organization["uuid"], organization["name"])
+                for organization in organizations
+            ],
+            labels=[
+                f"{name:<{name_width}}  {organization['uuid']}"
+                for name, organization in zip(
+                    organization_names, organizations, strict=True
+                )
+            ],
+        )
+        if organization_id is None:
+            return
+
+        organization = next(
+            organization
+            for organization in organizations
+            if organization["uuid"] == organization_id
+        )
+        settings = Settings()
+        settings.org_name = organization["name"]
+        settings.org_uuid = organization["uuid"]
+        settings.dump()
 
     def _login_to_tool_repository(self) -> None:
         from crewai_cli.tools.main import ToolCommand
