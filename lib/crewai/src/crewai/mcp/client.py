@@ -438,6 +438,7 @@ class MCPClient:
 
         tools: list[dict[str, Any]] = []
         cursor = None
+        seen_cursors: set[str] = set()
 
         while True:
             params = PaginatedRequestParams(cursor=cursor) if cursor else None
@@ -459,6 +460,9 @@ class MCPClient:
             cursor = getattr(tools_result, "next_cursor", None) or getattr(tools_result, "nextCursor", None)
             if not cursor:
                 break
+            if cursor in seen_cursors:
+                raise RuntimeError(f"Repeated pagination cursor in list_tools: {cursor}")
+            seen_cursors.add(cursor)
 
         return tools
 
@@ -663,6 +667,7 @@ class MCPClient:
 
         prompts: list[dict[str, Any]] = []
         cursor = None
+        seen_cursors: set[str] = set()
 
         while True:
             params = PaginatedRequestParams(cursor=cursor) if cursor else None
@@ -683,6 +688,9 @@ class MCPClient:
             cursor = getattr(prompts_result, "next_cursor", None) or getattr(prompts_result, "nextCursor", None)
             if not cursor:
                 break
+            if cursor in seen_cursors:
+                raise RuntimeError(f"Repeated pagination cursor in list_prompts: {cursor}")
+            seen_cursors.add(cursor)
 
         return prompts
 

@@ -672,6 +672,7 @@ class MCPToolResolver:
 
                 schemas: dict[str, dict[str, Any]] = {}
                 cursor = None
+                seen_cursors: set[str] = set()
 
                 while True:
                     params = PaginatedRequestParams(cursor=cursor) if cursor else None
@@ -695,6 +696,9 @@ class MCPToolResolver:
                     cursor = getattr(tools_result, "next_cursor", None) or getattr(tools_result, "nextCursor", None)
                     if not cursor:
                         break
+                    if cursor in seen_cursors:
+                        raise RuntimeError(f"Repeated pagination cursor in _discover_mcp_tools: {cursor}")
+                    seen_cursors.add(cursor)
 
                 return schemas
 
