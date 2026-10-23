@@ -2162,7 +2162,21 @@ class Crew(FlowTrackable, BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        return self._execute_tasks(self.tasks, start_index, True)
+        try:
+            return self._execute_tasks(self.tasks, start_index, True)
+        except Exception as e:
+            # Mirror kickoff()'s failure terminal: the start event above is
+            # scope-starting, so a failed replay must close its own scope or
+            # the leaked frame parents every later event in this context.
+            crewai_event_bus.emit(
+                self,
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
+            )
+            raise
 
     def query_knowledge(
         self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
