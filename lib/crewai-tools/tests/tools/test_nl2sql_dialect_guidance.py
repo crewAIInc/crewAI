@@ -7,7 +7,7 @@ import pytest
 
 pytest.importorskip("sqlalchemy")
 
-from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool  # noqa: E402
+from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool
 
 
 def _make_tool(db_uri: str, **kwargs: object) -> NL2SQLTool:
