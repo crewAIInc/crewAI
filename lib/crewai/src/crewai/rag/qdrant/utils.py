@@ -151,7 +151,7 @@ def _prepare_search_params(
     }
 
     if score_threshold is not None:
-        search_kwargs["score_threshold"] = score_threshold
+        search_kwargs["score_threshold"] = _denormalize_qdrant_score(score_threshold)
 
     if metadata_filter:
         filter_conditions: list[FilterCondition] = []
@@ -178,6 +178,22 @@ def _normalize_qdrant_score(score: float) -> float:
     """
     normalized = (score + 1.0) / 2.0
     return max(0.0, min(1.0, normalized))
+
+
+def _denormalize_qdrant_score(score: float) -> float:
+    """Convert a normalized [0, 1] score back to Qdrant's cosine similarity range.
+
+    Inverse of _normalize_qdrant_score. Qdrant compares score_threshold with the
+    raw [-1, 1] cosine similarity, so a threshold on the normalized scale has to
+    be converted before the query.
+
+    Args:
+        score: Normalized score in [0, 1] range.
+
+    Returns:
+        Cosine similarity score on Qdrant's [-1, 1] scale.
+    """
+    return score * 2.0 - 1.0
 
 
 def _process_search_results(response: QueryResponse) -> list[SearchResult]:
