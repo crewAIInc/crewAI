@@ -52,7 +52,7 @@ def _create_python_flow(
     (project_root / "src" / folder_name / "tools").mkdir(parents=True)
     (project_root / "tests").mkdir(exist_ok=True)
 
-    with open(project_root / ".env", "w") as file:
+    with open(project_root / ".env", "w", encoding="utf-8") as file:
         file.write("OPENAI_API_KEY=YOUR_API_KEY")
 
     package_dir = Path(__file__).parent
@@ -86,7 +86,7 @@ def _create_python_flow(
             "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
         )
 
-        with open(dst_file, "w") as file:
+        with open(dst_file, "w", encoding="utf-8") as file:
             file.write(content)
 
     for file_name in root_template_files:
