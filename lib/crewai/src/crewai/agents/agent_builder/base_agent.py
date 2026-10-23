@@ -756,7 +756,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             copied_data.pop("cache", None)
             if self._constructor_cache_opt_in:
                 copied_data["cache"] = True
-        return type(self)(
+        copied_agent = type(self)(
             **copied_data,
             llm=existing_llm,
             tools=self.tools,
@@ -764,6 +764,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             knowledge=copied_knowledge,
             knowledge_storage=copied_knowledge_storage,
         )
+        # The dump holds the interpolated text; keep the templates so that the
+        # copy can be interpolated with other inputs, e.g. in kickoff_for_each.
+        copied_agent._original_role = self._original_role
+        copied_agent._original_goal = self._original_goal
+        copied_agent._original_backstory = self._original_backstory
+        return copied_agent
 
     def _llm_for_copy(self) -> Any:
         """The llm a copy is built with; ``Agent`` overrides it for ``llm_overlay``."""

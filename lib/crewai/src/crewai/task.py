@@ -1187,12 +1187,18 @@ Follow these guidelines:
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = shallow_copy(self.tools) if self.tools else []
 
-        return self.__class__(
+        copied_task = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
+        # The dump holds the interpolated text; keep the templates so that the
+        # copy can be interpolated with other inputs, e.g. in kickoff_for_each.
+        copied_task._original_description = self._original_description
+        copied_task._original_expected_output = self._original_expected_output
+        copied_task._original_output_file = self._original_output_file
+        return copied_task
 
     def _export_output(
         self, result: str | BaseModel
