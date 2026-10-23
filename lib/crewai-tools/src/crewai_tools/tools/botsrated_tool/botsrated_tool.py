@@ -67,8 +67,10 @@ class BotsRatedPreflightTool(BaseTool):
         "Free. Use BEFORE paying any x402 seller. Returns BotsRated's latest unpaid probe of the seller: "
         "HTTP status, whether the 402 challenge was valid, latency, the price and payTo it observed, "
         "freshness and a receipt URL. Pass pay_to (and network) from the 402 option you plan to pay: "
-        "if pay_to_check is 'not_seen', do not pay without asking the user. covered=false means "
-        "BotsRated has no data for this host."
+        "pay_to_check is 'matches_observed' only when BotsRated's own unpaid probe saw that payTo on that "
+        "network. 'listing_only' means only the seller's directory listing has it (the seller controls that), "
+        "'not_seen' means neither does. For anything other than 'matches_observed', do not pay without "
+        "asking the user. covered=false means BotsRated has no data for this host."
     )
     args_schema: type[BaseModel] = BotsRatedPreflightSchema
     base_url: str = BOTSRATED_BASE_URL
@@ -108,14 +110,7 @@ class BotsRatedPreflightTool(BaseTool):
         probe = body.get("latest_probe") or {}
         listing = body.get("listing") or {}
         observed_network = probe.get("live_network") or listing.get("network")
-        seen = {
-            p.lower()
-            for p in (listing.get("payTo"), probe.get("live_payTo"))
-            if isinstance(p, str)
-        }
-        check = "not_compared"
-        if pay_to and seen and (not network or network == observed_network):
-            check = "matches_observed" if pay_to.lower() in seen else "not_seen"
+        check = _pay_to_check(pay_to, network, probe, listing)
         return json.dumps(
             {
                 "covered": True,
@@ -177,7 +172,10 @@ class BotsRatedCheckTool(BaseTool):
         url = self.base_url.rstrip("/") + path
         try:
             quote_resp = requests.get(
-                url, headers={"accept": "application/json"}, timeout=self.timeout
+                url,
+                headers={"accept": "application/json"},
+                timeout=self.timeout,
+                allow_redirects=False,
             )
         except requests.RequestException as e:
             return json.dumps({"error": "unavailable", "message": str(e)})
@@ -208,15 +206,21 @@ class BotsRatedCheckTool(BaseTool):
             return json.dumps(
                 {"error": "bad_402", "message": "could not parse the payment terms"}
             )
-        option = next((o for o in terms.get("accepts", []) if _acceptable(o)), None)
-        if option is None:
+        accepts = terms.get("accepts") if isinstance(terms, dict) else None
+        # The payment client re-reads the 402 and picks an option itself, so every option has to
+        # be one this tool is willing to pay, not just one of them.
+        if (
+            not isinstance(accepts, list)
+            or not accepts
+            or not all(isinstance(o, dict) and _acceptable(o) for o in accepts)
+        ):
             return json.dumps(
                 {
                     "error": "terms_rejected",
-                    "message": "expected exact Base USDC to BotsRated at $0.001 or less",
+                    "message": "every payment option must be exact Base USDC to BotsRated at $0.001 or less",
                 }
             )
-        amount = int(option["amount"])
+        amount = max(int(o["amount"]) for o in accepts)
         limit = int(self.budget_usd * 1_000_000)
         with self._lock:
             if self._spent_atomic + amount > limit:
@@ -230,15 +234,17 @@ class BotsRatedCheckTool(BaseTool):
         except Exception as e:  # noqa: BLE001 - the payment client may raise anything
             ok, resp = False, e
         if not ok:
-            with self._lock:
-                self._spent_atomic -= amount
+            # A signed payment may already have been sent and settled before the call failed,
+            # so the reservation stays spent: the budget is a hard ceiling.
             return json.dumps(
                 {
                     "error": "paid_call_failed",
                     "message": str(getattr(resp, "status_code", resp)),
+                    "may_have_been_charged": True,
+                    "remaining_usd": self.remaining_usd,
                 }
             )
-        data = resp.json()
+        data = _json_or_none(resp)
         if _is_free_quota_answer(data):
             # Answered from the free quota after all: nothing was paid.
             with self._lock:
@@ -249,6 +255,48 @@ class BotsRatedCheckTool(BaseTool):
         return json.dumps(
             {"remaining_usd": self.remaining_usd, "charged": True, "data": data}
         )
+
+
+def _pay_to_check(
+    pay_to: str | None,
+    network: str | None,
+    probe: dict[str, Any],
+    listing: dict[str, Any],
+) -> str:
+    """Compare a payTo with what BotsRated's unpaid probe saw; the listing alone never confirms it."""
+    if not pay_to:
+        return "not_compared"
+    live, live_net = probe.get("live_payTo"), probe.get("live_network")
+    listed, listed_net = listing.get("payTo"), listing.get("network")
+    live_ok = isinstance(live, str) and (not network or network == live_net)
+    listed_ok = isinstance(listed, str) and (not network or network == listed_net)
+    if live_ok and pay_to.lower() == str(live).lower():
+        return "matches_observed"
+    if listed_ok and pay_to.lower() == str(listed).lower():
+        return "listing_only"
+    compared = live_ok or listed_ok
+    return "not_seen" if compared else "not_compared"
+
+
+def botsrated_payment_policy(version: int, requirements: list[Any]) -> list[Any]:
+    """x402 client policy that only lets the client sign BotsRated's own check terms.
+
+    Register it on the client you pass to ``BotsRatedCheckTool`` (``client.register_policy(...)``) so the
+    signer can never pick a different amount, asset, network or recipient than the tool checked.
+    """
+    return [
+        r
+        for r in requirements
+        if _acceptable(
+            {
+                "scheme": getattr(r, "scheme", None),
+                "network": getattr(r, "network", None),
+                "asset": getattr(r, "asset", None),
+                "payTo": getattr(r, "pay_to", None),
+                "amount": r.get_amount() if hasattr(r, "get_amount") else None,
+            }
+        )
+    ]
 
 
 def _json_or_none(resp: Any) -> Any:

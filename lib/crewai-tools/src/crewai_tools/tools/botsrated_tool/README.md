@@ -10,10 +10,12 @@ signed receipt.
 These tools let an agent check a seller before it pays.
 
 - `BotsRatedPreflightTool`: free, no API key, no wallet. If you pass the `pay_to` of the 402 option the agent
-  is about to pay, `pay_to_check` reports whether BotsRated has seen that payTo for the host.
+  is about to pay, `pay_to_check` is `matches_observed` only when BotsRated's own unpaid probe saw that payTo
+  on that network. `listing_only` means only the seller's directory listing has it; `not_seen` means neither.
 - `BotsRatedCheckTool`: $0.001 USDC on Base per call; the first 100 per day are free (`charged: false`, budget untouched). It is opt-in and needs a budget and a GET that can pay
-  x402. It reads the quote unpaid first, accepts only exact Base USDC to BotsRated at $0.001 or less, and
-  stops at the budget.
+  x402. It reads the quote unpaid first (no redirects), accepts it only if **every** payment option is exact
+  Base USDC to BotsRated at $0.001 or less, and stops at the budget. A paid call that fails keeps its
+  reservation (the payment may already have settled), so the budget is a hard ceiling.
 
 ## Installation
 
@@ -45,13 +47,19 @@ from x402.http.clients import x402_requests
 from x402.mechanisms.evm import EthAccountSigner
 from x402.mechanisms.evm.exact import ExactEvmScheme
 from crewai_tools import BotsRatedCheckTool
+from crewai_tools.tools.botsrated_tool import botsrated_payment_policy
 
 client = x402ClientSync()
-client.register("eip155:*", ExactEvmScheme(signer=EthAccountSigner(account)))
+# Base mainnet only, and the signer may only pick BotsRated's own check terms.
+client.register("eip155:8453", ExactEvmScheme(signer=EthAccountSigner(account)))
+client.register_policy(botsrated_payment_policy)
 check = BotsRatedCheckTool(
     budget_usd="0.02", paying_get=x402_requests(client).get
 )  # at most $0.02 in total
 ```
+
+Use a dedicated client (or wallet) for this tool: the policy rejects every payment that is not BotsRated's
+check, so it should not be shared with clients that pay other sellers.
 
 ## Notes
 

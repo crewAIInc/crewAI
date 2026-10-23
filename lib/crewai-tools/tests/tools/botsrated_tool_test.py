@@ -8,6 +8,7 @@ from crewai_tools.tools.botsrated_tool.botsrated_tool import (
     BOTSRATED_PAY_TO,
     BotsRatedCheckTool,
     BotsRatedPreflightTool,
+    botsrated_payment_policy,
 )
 
 SELLER_PAY_TO = "0xe9030014F5DAe217d0A152f02A043567b16c1aBf"
@@ -91,6 +92,21 @@ def test_preflight_not_seen_and_other_network(get):
 
 
 @patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
+def test_preflight_listing_alone_does_not_confirm(get):
+    listed = "0x1111111111111111111111111111111111111111"
+    body = {**PREFLIGHT, "listing": {"payTo": listed, "network": "eip155:8453"}}
+    get.return_value = _resp(200, body)
+    out = json.loads(BotsRatedPreflightTool().run(url="blockrun.ai", pay_to=listed))
+    assert out["pay_to_check"] == "listing_only"
+    no_probe = {**PREFLIGHT, "latest_probe": None}
+    get.return_value = _resp(200, no_probe)
+    out = json.loads(
+        BotsRatedPreflightTool().run(url="blockrun.ai", pay_to=SELLER_PAY_TO)
+    )
+    assert out["pay_to_check"] == "listing_only"
+
+
+@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
 def test_preflight_not_covered(get):
     get.return_value = _resp(404, {"error": {"code": "host_not_covered"}})
     assert json.loads(BotsRatedPreflightTool().run(url="x.example"))["covered"] is False
@@ -124,14 +140,66 @@ def test_check_no_payment_on_free_404_or_bad_terms(get):
 
 
 @patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
-def test_check_failure_releases_budget(get):
+def test_check_failure_keeps_reservation(get):
+    # A payment may settle before the paid call fails, so the budget is not refunded.
+    get.return_value = _quote()
+    paying_get = MagicMock(side_effect=[_resp(500, {}), _resp(200, {})])
+    tool = BotsRatedCheckTool(budget_usd="0.001", paying_get=paying_get)
+    first = json.loads(tool.run(host="blockrun.ai"))
+    assert first["error"] == "paid_call_failed"
+    assert first["may_have_been_charged"] is True
+    assert tool.remaining_usd == 0
+    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "budget_exceeded"
+    assert paying_get.call_count == 1
+
+
+@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
+def test_check_exception_keeps_reservation(get):
     get.return_value = _quote()
     tool = BotsRatedCheckTool(
-        budget_usd="0.001",
-        paying_get=MagicMock(side_effect=[_resp(500, {}), _resp(200, {})]),
+        budget_usd="0.001", paying_get=MagicMock(side_effect=TimeoutError("read"))
     )
     assert json.loads(tool.run(host="blockrun.ai"))["error"] == "paid_call_failed"
-    assert json.loads(tool.run(host="blockrun.ai"))["remaining_usd"] == 0
+    assert tool.remaining_usd == 0
+
+
+@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
+def test_check_rejects_quote_with_any_foreign_option(get):
+    foreign = {**TERMS["accepts"][0], "amount": "500000", "payTo": SELLER_PAY_TO}
+    get.return_value = _quote({"accepts": [foreign, TERMS["accepts"][0]]})
+    paying_get = MagicMock()
+    tool = BotsRatedCheckTool(budget_usd="1", paying_get=paying_get)
+    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
+    get.return_value = _quote({"accepts": []})
+    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
+    paying_get.assert_not_called()
+
+
+@patch("crewai_tools.tools.botsrated_tool.botsrated_tool.requests.get")
+def test_check_quote_does_not_follow_redirects(get):
+    get.return_value = _resp(302, {})
+    paying_get = MagicMock()
+    tool = BotsRatedCheckTool(budget_usd="1", paying_get=paying_get)
+    assert json.loads(tool.run(host="blockrun.ai"))["error"] == "no_quote"
+    assert get.call_args.kwargs["allow_redirects"] is False
+    paying_get.assert_not_called()
+
+
+def test_payment_policy_keeps_only_botsrated_terms():
+    class Req:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+        def get_amount(self):
+            return self.amount
+
+    ok = Req(scheme="exact", network="eip155:8453", asset=BASE_USDC,
+             pay_to=BOTSRATED_PAY_TO, amount="1000")
+    pricey = Req(**{**ok.__dict__, "amount": "500000"})
+    other_to = Req(**{**ok.__dict__, "pay_to": SELLER_PAY_TO})
+    other_net = Req(**{**ok.__dict__, "network": "eip155:1"})
+    assert botsrated_payment_policy(2, [pricey, other_to, other_net, ok]) == [ok]
+    assert botsrated_payment_policy(2, [pricey]) == []
 
 
 FREE = {
