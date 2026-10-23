@@ -830,6 +830,14 @@ class Memory(BaseModel):
     ) -> int:
         """Delete memories matching criteria.
 
+        Like ``reset()``, this is a destructive operation with a write
+        barrier: pending background saves (e.g. from ``remember_many()``)
+        are drained first, and new saves cannot be submitted while the
+        delete runs. Without it, a save that was submitted before
+        ``forget()`` could land after the delete and resurrect the
+        forgotten content. Note that this call may block briefly while
+        pending saves complete.
+
         Args:
             scope: Scope to delete from. If None and root_scope is set, deletes
                 only within root_scope.
@@ -839,20 +847,31 @@ class Memory(BaseModel):
             record_ids: Specific record IDs to delete.
 
         Returns:
-            Number of records deleted.
+            Number of records deleted. Saves that were pending when
+            ``forget()`` was called are drained before matching records are
+            removed, so they count toward the deleted records; saves
+            submitted after ``forget()`` starts deleting land afterwards and
+            are kept.
         """
-        effective_scope = scope
-        if effective_scope is None and self.root_scope:
-            effective_scope = self.root_scope
-        elif effective_scope is not None and self.root_scope:
-            effective_scope = join_scope_paths(self.root_scope, effective_scope)
-        return self._storage.delete(
-            scope_prefix=effective_scope,
-            categories=categories,
-            record_ids=record_ids,
-            older_than=older_than,
-            metadata_filter=metadata_filter,
-        )
+        with self._reset_lock:
+            # Write barrier: wait for any pending background saves to finish
+            # so the delete below removes their records too. The lock must
+            # span the drain AND the delete because ``_submit_save()``
+            # registers new saves under the same lock; draining without it
+            # would let a save slip in between and land after the deletion.
+            self.drain_writes()
+            effective_scope = scope
+            if effective_scope is None and self.root_scope:
+                effective_scope = self.root_scope
+            elif effective_scope is not None and self.root_scope:
+                effective_scope = join_scope_paths(self.root_scope, effective_scope)
+            return self._storage.delete(
+                scope_prefix=effective_scope,
+                categories=categories,
+                record_ids=record_ids,
+                older_than=older_than,
+                metadata_filter=metadata_filter,
+            )
 
     def update(
         self,
