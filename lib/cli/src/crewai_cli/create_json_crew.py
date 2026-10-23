@@ -1072,7 +1072,12 @@ def _get_platform_token_from_login() -> str:
         AuthenticationCommand().login()
     except httpx.HTTPStatusError as error:
         status_code = getattr(error.response, "status_code", None)
-        if status_code not in {401, 403}:
+        if status_code == 403:
+            raise click.ClickException(
+                "Your account does not have access to the selected CrewAI organization. "
+                "Select another organization or ask an administrator for access."
+            ) from error
+        if status_code != 401:
             raise
         click.secho(
             "  Your CrewAI login has expired; sign in again to configure integrations.",

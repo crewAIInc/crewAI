@@ -908,6 +908,25 @@ def test_get_platform_token_from_login_reauthenticates_an_expired_login(
     authentication_command.login.assert_called_once_with()
 
 
+def test_get_platform_token_from_login_reports_forbidden_organization(monkeypatch) -> None:
+    response = mock.Mock(status_code=403)
+    error = httpx.HTTPStatusError("Forbidden", request=mock.Mock(), response=response)
+    monkeypatch.setattr(
+        json_crew,
+        "_get_logged_in_platform_token",
+        mock.Mock(side_effect=error),
+    )
+    authentication_command = mock.Mock()
+    monkeypatch.setattr(
+        json_crew, "AuthenticationCommand", mock.Mock(return_value=authentication_command)
+    )
+
+    with pytest.raises(click.ClickException, match="does not have access"):
+        json_crew._get_platform_token_from_login()
+
+    authentication_command.login.assert_not_called()
+
+
 def test_get_platform_token_from_login_selects_missing_organization(monkeypatch) -> None:
     tokens = iter(
         [json_crew._NoOrganizationSelectedError(), "integration-token"]
