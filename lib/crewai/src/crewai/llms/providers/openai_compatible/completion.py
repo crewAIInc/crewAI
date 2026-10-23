@@ -96,6 +96,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "hostinger_router": ProviderConfig(
+        base_url="https://router.hostinger.com/v1",
+        api_key_env="HOSTINGER_ROUTER_API_KEY",
+        base_url_env="HOSTINGER_ROUTER_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -149,6 +155,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - hostinger_router: Hostinger Router (https://router.hostinger.com)
 
     Example:
         # Using provider prefix
