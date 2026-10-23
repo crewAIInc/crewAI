@@ -85,6 +85,7 @@ class LLMCallBlockedError(ValueError):
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
+TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD: Final[float] = 0.25
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
 logger = logging.getLogger(__name__)
 
@@ -391,7 +392,7 @@ class BaseLLM(BaseModel, ABC):
             "token per four characters because a native token count is unavailable.",
             self.model,
         )
-        from crewai.utilities.agent_utils import message_content_text
+        from crewai.utilities.message_utils import message_content_text
 
         if isinstance(messages, str):
             character_count = len(messages)
@@ -400,6 +401,63 @@ class BaseLLM(BaseModel, ABC):
                 len(message_content_text(message)) for message in messages
             )
         return (character_count + 3) // 4
+
+    def is_tool_result_overflowing_threshold(
+        self, tool_result: str
+    ) -> tuple[bool, int]:
+        """Check whether a tool result exceeds the deferred-output threshold.
+
+        The threshold is 25% of the model's usable context window. The count
+        comes from one call to :meth:`get_input_tokens_count`, which uses the
+        provider's estimator or the four-characters-per-token fallback.
+
+        Args:
+            tool_result: The formatted text returned by a tool.
+
+        Returns:
+            Whether the result alone uses more than 25% of the usable context
+            window, and the input-token count from that same check.
+        """
+        tool_result_tokens = self.get_input_tokens_count(tool_result)
+        threshold = (
+            self.get_context_window_size() * TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD
+        )
+        return tool_result_tokens > threshold, tool_result_tokens
+
+    def is_context_window_overflowing_threshold(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> bool:
+        """Check whether a pending request exceeds the usable context window.
+
+        ``get_context_window_size`` already reserves 15% of the raw model
+        window, so this preflight check triggers compaction once a request
+        reaches more than 85% of the provider's advertised limit.
+
+        Args:
+            messages: The messages that will be sent to the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            Whether the pending request exceeds the usable context window.
+        """
+        input_tokens = self.get_input_tokens_count(messages, tools, response_model)
+        return input_tokens > self.get_context_window_size()
+
+    def summarize_messages(
+        self,
+        messages: list[LLMMessage],
+        callbacks: list[Any],
+        verbose: bool = True,
+    ) -> None:
+        """Compact a mutable conversation history to fit this model's context window."""
+        from crewai.llms.context_window import summarize_messages
+
+        summarize_messages(self, messages, callbacks, verbose)
 
     @abstractmethod
     def call(
@@ -943,8 +1001,8 @@ class BaseLLM(BaseModel, ABC):
             return [{"role": "user", "content": messages}]
 
         # Validate then copy each message, dropping the cache-breakpoint
-        # flag in the copy only. The caller (e.g. CrewAgentExecutor,
-        # experimental.AgentExecutor) reuses its messages buffer across
+        # flag in the copy only. The caller (AgentExecutor) reuses its
+        # messages buffer across
         # many LLM calls in the tool-use loop; mutating their dicts
         # in place would erase the markers after the first call and
         # break prompt caching for every subsequent iteration.
