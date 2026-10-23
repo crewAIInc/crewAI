@@ -1811,7 +1811,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 return "todo_satisfied"
         return default_route
 
-    @router(call_llm_and_parse)
+    @router("parsed")
     def route_by_answer_type(
         self,
     ) -> Literal["execute_tool", "agent_finished", "todo_satisfied"]:
@@ -3019,6 +3019,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             verbose=self.agent.verbose,
         )
 
+        self._last_context_error = None
         self.state.iterations += 1
 
         return "initialized"

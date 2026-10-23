@@ -1089,7 +1089,104 @@ class TestStepExecutorCriticalFixes:
 
         assert result == "initialized"
         assert executor.state.iterations == initial_iterations + 1
+        assert executor._last_context_error is None
         mock_handle_context.assert_called_once()
+
+    def test_route_by_answer_type_listens_to_parsed_not_method(
+        self, mock_dependencies
+    ):
+        """route_by_answer_type must listen to 'parsed' route label, not the method reference (#8316)."""
+        executor = _build_executor(**mock_dependencies)
+        method_def = executor._definition.methods["route_by_answer_type"]
+        assert method_def.listen == "parsed"
+
+    def test_reactive_context_overflow_recovery_resumes_task(self):
+        """#8316: Context-overflow recovery should resume task after summarization instead of prematurely finalizing."""
+        import json
+        import httpx
+        from crewai import Agent, Crew, LLM, Task
+
+        requests = []
+
+        def handler(request):
+            data = json.loads(request.content)
+            requests.append(data)
+            if request.url.path.endswith("/chat/completions") and sum(1 for r in requests if "messages" in r) == 1:
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "message": "maximum context length exceeded",
+                            "type": "invalid_request_error",
+                            "code": "context_length_exceeded",
+                        }
+                    },
+                )
+            if "structured summaries" in str(data.get("messages", [{}])[0]).lower():
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "fixture",
+                        "object": "chat.completion",
+                        "created": 1,
+                        "model": "gpt-4o",
+                        "choices": [
+                            {
+                                "index": 0,
+                                "message": {
+                                    "role": "assistant",
+                                    "content": "<summary>SUMMARY-FIXTURE-MARKER</summary>",
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5},
+                    },
+                )
+            return httpx.Response(
+                200,
+                json={
+                    "id": "fixture",
+                    "object": "chat.completion",
+                    "created": 1,
+                    "model": "gpt-4o",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": "Final Answer: TASK-FINISHED",
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5},
+                },
+            )
+
+        llm = LLM(model="gpt-4o", api_key="offline-fixture", max_retries=0)
+        llm._get_sync_client()._client._transport = httpx.MockTransport(handler)
+        llm._get_async_client()._client._transport = httpx.MockTransport(handler)
+
+        worker = Agent(
+            role="fixture-worker",
+            goal="answer fixture",
+            backstory="local fixture",
+            llm=llm,
+            max_retry_limit=0,
+            respect_context_window=True,
+            verbose=False,
+        )
+        t = Task(
+            description="Return the fixture answer",
+            expected_output="plain text",
+            agent=worker,
+        )
+        crew = Crew(agents=[worker], tasks=[t])
+        result = crew.kickoff()
+
+        assert result.raw == "TASK-FINISHED"
+        assert worker.agent_executor.state.iterations == 1
 
     def test_use_stop_words_property(self, mock_dependencies):
         """Test use_stop_words property."""
