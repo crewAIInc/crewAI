@@ -76,3 +76,14 @@ def test_store_line_count_preserves_unicode_separators(tmp_path: Path) -> None:
     assert '\u2028' in artifact.preview
 
     store.cleanup()
+
+
+def test_store_line_count_splits_carriage_return_only_lines(tmp_path: Path) -> None:
+    store = ToolResultArtifactStore(base_dir=tmp_path)
+    content = "\r".join(f"line {index}" for index in range(12))
+    artifact = store.store(content, estimated_token_count=20)
+
+    assert artifact.line_count == 12
+    assert artifact.preview_truncated is True
+
+    store.cleanup()
