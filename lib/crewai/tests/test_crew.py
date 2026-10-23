@@ -22,6 +22,7 @@ from crewai.events.types.crew_events import (
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
+    CrewTestFailedEvent,
     CrewTestStartedEvent,
     CrewTrainCompletedEvent,
     CrewTrainStartedEvent,
@@ -4274,6 +4275,50 @@ def test_crew_testing_function(researcher):
     assert len(received_events) == 2
     assert isinstance(received_events[0], CrewTestStartedEvent)
     assert isinstance(received_events[1], CrewTestCompletedEvent)
+
+
+def test_crew_test_setup_failure_pairs_events(researcher):
+    """A failure during test() setup must still pair Started with Failed.
+
+    crew_test_failed is scope-ending: the start event used to be emitted
+    only after create_llm succeeded, so a create_llm failure emitted an
+    unpaired Failed that popped the caller's enclosing event scope.
+    """
+    task = Task(
+        description="Summarize the topic.",
+        expected_output="A summary.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    started: list[CrewTestStartedEvent] = []
+    failed: list[CrewTestFailedEvent] = []
+
+    @crewai_event_bus.on(CrewTestStartedEvent)
+    def on_started(source, event: CrewTestStartedEvent):
+        started.append(event)
+
+    @crewai_event_bus.on(CrewTestFailedEvent)
+    def on_failed(source, event: CrewTestFailedEvent):
+        failed.append(event)
+
+    crewai_event_bus.register_handler(CrewTestStartedEvent, on_started)
+    crewai_event_bus.register_handler(CrewTestFailedEvent, on_failed)
+    try:
+        with patch("crewai.crew.create_llm", side_effect=RuntimeError("no key")):
+            with pytest.raises(RuntimeError, match="no key"):
+                crew.test(2, "gpt-4o-mini")
+        crewai_event_bus.flush()
+    finally:
+        crewai_event_bus.off(CrewTestStartedEvent, on_started)
+        crewai_event_bus.off(CrewTestFailedEvent, on_failed)
+
+    assert started, "test() must emit CrewTestStartedEvent before setup runs"
+    assert failed, "test() setup failure must emit CrewTestFailedEvent"
+    assert failed[-1].started_event_id == started[-1].event_id, (
+        "the Failed event must pair with the test's own start event, not pop "
+        "the caller's enclosing scope"
+    )
 
 
 def test_hierarchical_verbose_manager_agent(researcher, writer):

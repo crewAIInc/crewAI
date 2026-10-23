@@ -2344,20 +2344,23 @@ class Crew(FlowTrackable, BaseModel):
 
         Uses concurrent.futures for concurrent execution.
         """
+        # Emit the start event before setup: crew_test_failed is
+        # scope-ending, so a failure during create_llm must find its opener
+        # already on the stack instead of popping the caller's scope.
+        crewai_event_bus.emit(
+            self,
+            CrewTestStartedEvent(
+                crew_name=self.name,
+                n_iterations=n_iterations,
+                eval_llm=eval_llm,
+                inputs=inputs,
+            ),
+        )
         try:
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
 
-            crewai_event_bus.emit(
-                self,
-                CrewTestStartedEvent(
-                    crew_name=self.name,
-                    n_iterations=n_iterations,
-                    eval_llm=llm_instance,
-                    inputs=inputs,
-                ),
-            )
             test_crew = self.copy()
 
             evaluator = CrewEvaluator(test_crew, llm_instance)
