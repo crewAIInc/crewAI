@@ -198,6 +198,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
     "deepinfra",
+    "acedatacloud",
 ]
 
 
@@ -223,6 +224,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "dashscope": "dashscope",
     "snowflake": "snowflake",
     "deepinfra": "deepinfra",
+    "acedatacloud": "acedatacloud",
 }
 
 
@@ -435,7 +437,7 @@ class LLM(BaseLLM):
             # vLLM serves any model
             return True
 
-        if provider == "cerebras":
+        if provider in {"cerebras", "acedatacloud"}:
             return True
 
         if provider == "dashscope":
@@ -680,6 +682,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
             "deepinfra",
+            "acedatacloud",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

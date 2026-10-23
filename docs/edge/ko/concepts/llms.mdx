@@ -1071,3 +1071,18 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
     ```
   </Tab>
 </Tabs>
+
+
+## Ace Data Cloud
+
+`crewai create crew` 실행 시 **Ace Data Cloud**를 선택하거나 기본 제공 접두사를 직접 사용하세요. API 기본 주소는 자동으로 설정됩니다.
+
+[Ace Data Cloud Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_api_key)에서 API 소비자 Token을 발급받으세요. General application에서 필요한 API 권한이 있는 키를 복사하거나 생성합니다. 환경 변수에 `ACEDATACLOUD_API_KEY`를 설정하고 실제 키를 프롬프트나 커밋된 설정에 넣지 마세요.
+
+```python
+from crewai import LLM
+
+llm = LLM(model="acedatacloud/gpt-4.1-mini")
+```
+
+[모델 목록](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_pricing)에서 현재 공개 채팅 모델 ID를 선택하세요. 접두사는 공급자를 선택하고 나머지 모델 ID는 그대로 전달됩니다. 호출 전에 가격과 잔액을 확인하세요. `ACEDATACLOUD_BASE_URL`로 주소를 재정의할 수 있으나 일반 사용에는 필요하지 않습니다.

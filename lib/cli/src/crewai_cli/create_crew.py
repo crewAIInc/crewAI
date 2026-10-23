@@ -271,7 +271,12 @@ def create_crew(
                 elif "key_name" in details:
                     prompt = details["prompt"]
                     key_name = details["key_name"]
-                    api_key_value = click.prompt(prompt, default="", show_default=False)
+                    api_key_value = click.prompt(
+                        prompt,
+                        default="",
+                        show_default=False,
+                        hide_input=details.get("hide_input", False),
+                    )
 
                     if api_key_value.strip():
                         env_vars[key_name] = api_key_value

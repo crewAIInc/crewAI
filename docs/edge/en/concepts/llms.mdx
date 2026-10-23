@@ -1563,3 +1563,18 @@ llm = LLM(
     ```
   </Tab>
 </Tabs>
+
+
+## Ace Data Cloud
+
+Choose **Ace Data Cloud** when running `crewai create crew`, or use its native provider prefix directly. The API base URL is configured automatically.
+
+Get an API-consumer Token from [Ace Data Cloud Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_api_key). Select General application and copy or create a key with the needed API access. Set `ACEDATACLOUD_API_KEY` in your environment; never include a real key in prompts or committed configuration.
+
+```python
+from crewai import LLM
+
+llm = LLM(model="acedatacloud/gpt-4.1-mini")
+```
+
+Use a current public chat model ID from the [model catalog](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_pricing). The prefix selects the provider; the remaining model ID is sent unchanged. Check current pricing and balance before a model call. An optional `ACEDATACLOUD_BASE_URL` overrides the endpoint; it is not needed for normal use.

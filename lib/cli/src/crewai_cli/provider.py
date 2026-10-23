@@ -65,8 +65,13 @@ def select_provider(provider_models: dict[str, list[str]]) -> str | None | bool:
     predefined_providers = [p.lower() for p in PROVIDERS]
     all_providers = sorted(set(predefined_providers + list(provider_models.keys())))
 
+    provider_labels = {"acedatacloud": "Ace Data Cloud"}
     provider = select_choice(
-        "Select a provider to set up:", [*predefined_providers, "other"]
+        "Select a provider to set up:",
+        [provider_labels.get(item, item) for item in predefined_providers] + ["other"],
+    )
+    provider = next(
+        (key for key, label in provider_labels.items() if label == provider), provider
     )
     if provider is None:
         return None

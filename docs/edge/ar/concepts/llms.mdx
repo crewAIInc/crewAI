@@ -1415,3 +1415,18 @@ llm = LLM(
     ```
   </Tab>
 </Tabs>
+
+
+## Ace Data Cloud
+
+اختر **Ace Data Cloud** عند تشغيل `crewai create crew` أو استخدم بادئة المزوّد الأصلية مباشرة. يُضبط عنوان API الأساسي تلقائيًا.
+
+احصل على Token لاستهلاك API من [تطبيقات Ace Data Cloud](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_api_key). اختر General application وانسخ مفتاحًا أو أنشئه بصلاحيات API المطلوبة. اضبط `ACEDATACLOUD_API_KEY` في البيئة، ولا تضع مفتاحًا حقيقيًا في التعليمات أو الإعدادات المودعة.
+
+```python
+from crewai import LLM
+
+llm = LLM(model="acedatacloud/gpt-4.1-mini")
+```
+
+استخدم معرّف نموذج محادثة عامًا وحديثًا من [كتالوج النماذج](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_pricing). تختار البادئة المزوّد ويُرسل باقي المعرّف دون تغيير. تحقّق من الأسعار والرصيد قبل الاستدعاء. يتيح `ACEDATACLOUD_BASE_URL` تجاوز العنوان اختياريًا ولا يلزم للاستخدام العادي.

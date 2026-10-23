@@ -995,3 +995,18 @@ Saiba como obter o máximo da configuração do seu LLM:
     ```
   </Tab>
 </Tabs>
+
+
+## Ace Data Cloud
+
+Selecione **Ace Data Cloud** ao executar `crewai create crew` ou use diretamente o prefixo nativo. A URL base da API é configurada automaticamente.
+
+Obtenha um Token de consumo da API em [Ace Data Cloud Applications](https://platform.acedata.cloud/console/applications?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_api_key). Selecione General application e copie ou crie uma chave com acesso às APIs necessárias. Configure `ACEDATACLOUD_API_KEY` no ambiente; nunca inclua uma chave real em prompts ou configurações versionadas.
+
+```python
+from crewai import LLM
+
+llm = LLM(model="acedatacloud/gpt-4.1-mini")
+```
+
+Use um ID público e atual de modelo de chat do [catálogo de modelos](https://platform.acedata.cloud/models?utm_source=github&utm_medium=referral&utm_campaign=evergreen&utm_content=crewai_provider_docs_pricing). O prefixo seleciona o provedor e o restante do ID é enviado sem alterações. Confira preços e saldo antes de chamar o modelo. `ACEDATACLOUD_BASE_URL` permite substituir o endpoint, mas não é necessária no uso normal.
