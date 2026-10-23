@@ -11,8 +11,10 @@ import pytest_asyncio
 from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import Message, Task as A2ATask, TaskState, TaskStatus
+from aiocache.factory import CacheHandler
+from redis.asyncio import SSLConnection
 
-from crewai.a2a.utils.task import cancel, cancellable, execute
+from crewai.a2a.utils.task import _parse_redis_url, cancel, cancellable, execute
 
 
 @pytest.fixture
@@ -63,6 +65,41 @@ async def clear_cache(mock_context: MagicMock) -> None:
 
     cache = caches.get("default")
     await cache.delete(f"cancel:{mock_context.task_id}")
+
+
+class TestParseRedisUrl:
+    """Tests for _parse_redis_url."""
+
+    def test_username_and_tls_reach_the_redis_pool(self) -> None:
+        """A rediss:// URL with an ACL user builds a TLS pool that sends the user."""
+        handler = CacheHandler()
+        handler.set_config(
+            {"default": _parse_redis_url("rediss://agent:pw@cache.internal:6380/1")}
+        )
+
+        pool = handler.get("default").client.connection_pool
+
+        assert pool.connection_kwargs["username"] == "agent"
+        assert pool.connection_class is SSLConnection
+
+    def test_decodes_percent_encoded_username(self) -> None:
+        """Percent-encoded username characters are decoded, as redis-py from_url does."""
+        config = _parse_redis_url("redis://ag%40ent:pw@cache.internal:6379/0")
+
+        assert config["connection_pool_kwargs"] == {"username": "ag@ent"}
+        assert "ssl" not in config
+
+    def test_password_only_url_sends_no_username(self) -> None:
+        """redis://:pw@host has an empty username, which must not reach the pool."""
+        config = _parse_redis_url("redis://:pw@cache.internal:6379/0")
+
+        assert config == {
+            "cache": "aiocache.RedisCache",
+            "endpoint": "cache.internal",
+            "port": 6379,
+            "db": 0,
+            "password": "pw",
+        }
 
 
 class TestCancellableDecorator:
