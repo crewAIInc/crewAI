@@ -18,6 +18,7 @@ DataTypeStr: TypeAlias = Literal[
     "xml",
     "docx",
     "mdx",
+    "notebook",
     "mysql",
     "postgres",
     "github",
