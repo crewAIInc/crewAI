@@ -711,6 +711,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if isinstance(entity, cls):
             entity._restore_from_checkpoint()
             crewai_event_bus.set_runtime_state(state)
+            if not entity.suppress_flow_events:
+                crewai_event_bus.emit(
+                    entity,
+                    FlowCreatedEvent(
+                        type="flow_created", flow_name=entity._definition.name
+                    ),
+                )
             return entity
         # Construction emits FlowCreatedEvent. Suppress it until the instance
         # is hydrated and installed, so listeners never observe the old runtime

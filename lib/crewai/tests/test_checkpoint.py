@@ -637,6 +637,42 @@ class TestKickoffFromCheckpoint:
             crewai_event_bus.reset_runtime_state()
 
     @pytest.mark.parametrize("suppress_events", [False, True])
+    def test_in_place_restore_emits_creation_event_after_state_install(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suppress_events: bool
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import FlowCreatedEvent
+
+        original = Flow(suppress_flow_events=suppress_events)
+        original._completed_methods = {"reserve"}
+        original.state["order"] = 42
+        location = RuntimeState(root=[original]).checkpoint(str(tmp_path))
+        old_state = RuntimeState(root=[])
+        crewai_event_bus.set_runtime_state(old_state)
+        observed: list[tuple[Any, Any, Any]] = []
+        real_emit = crewai_event_bus.emit
+
+        def capture(source: Any, event: Any) -> Any:
+            if type(source) is Flow and isinstance(event, FlowCreatedEvent):
+                observed.append(
+                    (source, crewai_event_bus.runtime_state, source.state.get("order"))
+                )
+            return real_emit(source, event)
+
+        monkeypatch.setattr(crewai_event_bus, "emit", capture)
+        try:
+            restored = Flow.from_checkpoint(CheckpointConfig(restore_from=location))
+            assert restored._completed_methods == {"reserve"}
+            assert restored.state["order"] == 42
+            assert old_state.root == []
+            state = crewai_event_bus.runtime_state
+            assert state is not None and state.root == [restored]
+            assert observed == ([] if suppress_events else [(restored, state, 42)])
+        finally:
+            crewai_event_bus.flush()
+            crewai_event_bus.reset_runtime_state()
+
+    @pytest.mark.parametrize("suppress_events", [False, True])
     @pytest.mark.parametrize("use_definition", [False, True])
     def test_restored_flow_creation_event_uses_restored_runtime_state(
         self,
