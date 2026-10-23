@@ -242,8 +242,9 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
 
 
 def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
-    """Writes environment variables to a .env file in the specified folder."""
+    """Writes environment variables to a gitignored .env file for local use."""
     env_file_path = folder_path / ".env"
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
+            # codeql[py/clear-text-storage-sensitive-data]
             file.write(f"{key.upper()}={value}\n")

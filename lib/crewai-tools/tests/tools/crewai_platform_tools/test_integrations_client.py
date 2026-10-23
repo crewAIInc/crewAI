@@ -53,7 +53,7 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
     mock_get.side_effect = [index_response, show_response]
     connection_id = UUID("550e8400-e29b-41d4-a716-446655440000")
 
-    tools = ClipperClient().get_actions(
+    tools = ClipperClient(base_url="https://configured.example.test/").get_actions(
         [
             ApplicationSelector.from_string(f"github@{connection_id}"),
             ApplicationSelector.from_string("github/create_issue"),
@@ -83,14 +83,14 @@ def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
     }
     assert mock_get.call_args_list == [
         call(
-            "https://platform.example.test/clipper/v1/applications/github/tools",
+            "https://configured.example.test/clipper/v1/applications/github/tools",
             headers=headers,
             params={"connection_id": str(connection_id)},
             timeout=30,
             verify=True,
         ),
         call(
-            "https://platform.example.test/clipper/v1/applications/github/tools/create_issue",
+            "https://configured.example.test/clipper/v1/applications/github/tools/create_issue",
             headers=headers,
             params={},
             timeout=30,
