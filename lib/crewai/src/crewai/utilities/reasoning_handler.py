@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -45,6 +46,34 @@ class AgentReasoningOutput(BaseModel):
 
 PlanningPlan = ReasoningPlan
 AgentPlanningOutput = AgentReasoningOutput
+
+
+_READY_LEGACY_SENTENCE: Final[str] = "READY: I am ready to execute the task."
+
+_READY_VERDICT_LINE_RE: Final[re.Pattern[str]] = re.compile(
+    r"^[ \t>•\-*#\d.)\]]*(NOT\s+)?READY\b\s*(?::.*|[.!?])?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _detect_ready(response: str) -> bool:
+    """Detect a READY verdict, honoring the last decision in the trace.
+
+    Only verdict-position lines count (bare `READY`, bulleted/numbered or
+    markdown variants, the legacy sentence): prose merely mentioning the word
+    (e.g. "once the tools are ready") is ignored. A trailing `NOT READY`
+    (including markdown like `NOT **READY**`) wins over any earlier READY,
+    so it never false-positives as ready.
+    """
+    if not response:
+        return False
+    if _READY_LEGACY_SENTENCE in response:
+        return True
+    cleaned = response.replace("*", "")
+    matches = list(_READY_VERDICT_LINE_RE.finditer(cleaned))
+    if not matches:
+        return False
+    return matches[-1].group(1) is None
 
 
 FUNCTION_SCHEMA: Final[dict[str, Any]] = {
@@ -411,7 +440,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                _detect_ready(response_str),
             )
 
         except HookAborted:
@@ -437,7 +466,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    _detect_ready(fallback_str),
                 )
             except HookAborted:
                 raise
@@ -599,7 +628,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = "READY: I am ready to execute the task." in response
+        ready = _detect_ready(response)
 
         return plan, ready
 
