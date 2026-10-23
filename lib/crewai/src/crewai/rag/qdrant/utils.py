@@ -14,6 +14,7 @@ from qdrant_client.models import (
     MatchValue,
     PointStruct,
     QueryResponse,
+    VectorsConfig,
 )
 
 from crewai.rag.qdrant.constants import DEFAULT_VECTOR_PARAMS
@@ -86,11 +87,23 @@ def _is_async_embedding_function(
 
 def _get_collection_params(
     kwargs: QdrantCollectionCreateParams,
+    default_vectors_config: VectorsConfig | None = None,
 ) -> CreateCollectionParams:
-    """Extract collection creation parameters from kwargs."""
+    """Extract collection creation parameters from kwargs.
+
+    Args:
+        kwargs: Collection creation parameters.
+        default_vectors_config: Vector configuration used when kwargs has none.
+            Falls back to DEFAULT_VECTOR_PARAMS.
+
+    Returns:
+        Parameters for Qdrant's create_collection.
+    """
     params: CreateCollectionParams = {
         "collection_name": kwargs["collection_name"],
-        "vectors_config": kwargs.get("vectors_config", DEFAULT_VECTOR_PARAMS),
+        "vectors_config": kwargs.get(
+            "vectors_config", default_vectors_config or DEFAULT_VECTOR_PARAMS
+        ),
     }
 
     if "sparse_vectors_config" in kwargs:
