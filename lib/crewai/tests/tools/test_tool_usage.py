@@ -1,12 +1,17 @@
-import datetime
+import asyncio
 from collections.abc import Callable
+import datetime
 import json
 import random
 import threading
 import time
 from unittest.mock import MagicMock, patch
 
+from pydantic import BaseModel, Field
+import pytest
+
 from crewai import Agent, Task
+from crewai.agent.utils import process_tool_results
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
@@ -25,10 +30,12 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
+from crewai.tools.tool_results import active_tool_results, tool_results_collector
 from crewai.tools.tool_usage import ToolUsage
-from crewai.utilities.tool_utils import execute_tool_and_check_finality
-from pydantic import BaseModel, Field
-import pytest
+from crewai.utilities.tool_utils import (
+    aexecute_tool_and_check_finality,
+    execute_tool_and_check_finality,
+)
 
 
 class RandomNumberToolInput(BaseModel):
@@ -903,3 +910,651 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+class AmountTool(BaseTool):
+    name: str = "amount_tool"
+    description: str = "Reports an amount."
+    result_as_answer: bool = True
+
+    def _run(self) -> str:
+        return "amount: 100"
+
+    async def _arun(self) -> str:
+        return "amount: 100"
+
+
+class FailingAmountTool(BaseTool):
+    name: str = "amount_tool"
+    description: str = "Reports an amount but fails."
+    result_as_answer: bool = True
+
+    def _run(self) -> str:
+        raise RuntimeError("upstream timeout")
+
+    async def _arun(self) -> str:
+        raise RuntimeError("upstream timeout")
+
+
+def _amount_action() -> AgentAction:
+    return AgentAction(
+        thought="",
+        tool="amount_tool",
+        tool_input="{}",
+        text="Action: amount_tool\nAction Input: {}",
+    )
+
+
+def _amount_agent() -> Agent:
+    agent = Agent(
+        role="Teller",
+        goal="Report amounts",
+        backstory="You report amounts.",
+        tools=[AmountTool()],
+    )
+    agent.tools_results = []
+    return agent
+
+
+def test_react_result_as_answer_keeps_the_after_hook_replacement():
+    """result_as_answer must answer with the hook's value, not the raw result.
+
+    ToolUsage records the pre-hook result on the agent, and
+    process_tool_results() reads that record back to honour result_as_answer.
+    The executor's own answer already carries the replacement, so the two have
+    to agree -- otherwise the replacement is applied and then overwritten.
+    """
+    agent = _amount_agent()
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return "Amount: 100 USD"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        tool_result = execute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert tool_result.result == "Amount: 100 USD"
+    assert tool_result.result_as_answer is True
+    assert process_tool_results(agent, tool_result.result) == "Amount: 100 USD"
+
+
+@pytest.mark.asyncio
+async def test_async_react_result_as_answer_keeps_the_after_hook_replacement():
+    """The async ReAct path mirrors the sync one."""
+    agent = _amount_agent()
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return "Amount: 100 USD"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        tool_result = await aexecute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert tool_result.result == "Amount: 100 USD"
+    assert process_tool_results(agent, tool_result.result) == "Amount: 100 USD"
+
+
+def test_react_result_as_answer_unchanged_without_an_after_hook():
+    """Control: with no hook registered the raw tool result is still the answer."""
+    agent = _amount_agent()
+    clear_after_tool_call_hooks()
+    tool_result = execute_tool_and_check_finality(
+        agent_action=_amount_action(),
+        tools=[AmountTool().to_structured_tool()],
+        tools_handler=ToolsHandler(cache=CacheHandler()),
+        agent=agent,
+    )
+
+    assert tool_result.result == "amount: 100"
+    assert process_tool_results(agent, tool_result.result) == "amount: 100"
+
+
+def test_react_after_hook_that_returns_none_leaves_the_result_alone():
+    """Control: a monitoring hook that returns None must not blank the answer."""
+    agent = _amount_agent()
+    seen: list[str | None] = []
+
+    def after_hook(context: ToolCallHookContext) -> None:
+        seen.append(context.tool_result)
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        tool_result = execute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert seen == ["amount: 100"]
+    assert tool_result.result == "amount: 100"
+    assert process_tool_results(agent, tool_result.result) == "amount: 100"
+
+
+def test_react_result_as_answer_failed_call_does_not_overwrite_earlier_result():
+    """A subsequent failed call must not overwrite an earlier successful result.
+
+    When a tool call fails, ToolUsage does not append an entry to agent.tools_results.
+    The after hook still executes on the error string, but _record_after_hook_result
+    must not search backwards past the current invocation boundary (start_index)
+    to corrupt the earlier successful call with error text.
+    """
+    agent = _amount_agent()
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return f"[audited] {context.tool_result}"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        # Call 1: Success
+        res1 = execute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+        assert res1.result == "[audited] amount: 100"
+        assert len(agent.tools_results) == 1
+        assert agent.tools_results[0]["result"] == "[audited] amount: 100"
+
+        # Call 2: Failure (raises RuntimeError)
+        res2 = execute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[FailingAmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+        assert "upstream timeout" in res2.result
+        # The failed call must not append or corrupt the earlier successful entry
+        assert len(agent.tools_results) == 1
+        assert agent.tools_results[0]["result"] == "[audited] amount: 100"
+
+        # process_tool_results should still retain the successful answer, NOT the error
+        final_answer = process_tool_results(agent, "final thought")
+        assert final_answer == "[audited] amount: 100"
+        assert "upstream timeout" not in final_answer
+    finally:
+        clear_after_tool_call_hooks()
+
+
+def test_agent_tools_results_cleared_between_tasks():
+    """agent.tools_results must be cleared before preparing a new task.
+
+    Ensures that result_as_answer tools from task 1 do not leak into task 2.
+    """
+    agent = _amount_agent()
+    # Simulate task 1 having populated tools_results
+    agent.tools_results = [
+        {"tool_name": "amount_tool", "result": "Amount: 100 USD", "result_as_answer": True}
+    ]
+
+    task2 = Task(
+        description="Write a summary report",
+        expected_output="Summary report",
+        agent=agent,
+    )
+    # When preparing task 2, tools_results should be reset
+    agent._prepare_task_execution(task2, context=None)
+    assert agent.tools_results == []
+
+
+@pytest.mark.asyncio
+async def test_async_react_result_as_answer_failed_call_does_not_overwrite_earlier_result():
+    """Async twin: A subsequent failed call must not overwrite an earlier successful result."""
+    agent = _amount_agent()
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return f"[audited] {context.tool_result}"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        # Call 1: Success
+        res1 = await aexecute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+        assert res1.result == "[audited] amount: 100"
+        assert len(agent.tools_results) == 1
+        assert agent.tools_results[0]["result"] == "[audited] amount: 100"
+
+        # Call 2: Failure (raises RuntimeError)
+        res2 = await aexecute_tool_and_check_finality(
+            agent_action=_amount_action(),
+            tools=[FailingAmountTool().to_structured_tool()],
+            tools_handler=ToolsHandler(cache=CacheHandler()),
+            agent=agent,
+        )
+        assert "upstream timeout" in res2.result
+        assert len(agent.tools_results) == 1
+        assert agent.tools_results[0]["result"] == "[audited] amount: 100"
+
+        final_answer = process_tool_results(agent, "final thought")
+        assert final_answer == "[audited] amount: 100"
+        assert "upstream timeout" not in final_answer
+    finally:
+        clear_after_tool_call_hooks()
+
+
+def test_react_result_as_answer_warm_cache_hit_preserves_hook_replacement():
+    """A warm cache hit must record its result when result_as_answer=True.
+
+    If an earlier call in the same task ran fresh (e.g. Call A returning 100),
+    and a later call is served from cache (Call B returning 200), the cached call's
+    result must be recorded so process_tool_results returns Call B instead of
+    falling back to Call A.
+    """
+    agent = _amount_agent()
+    cache_handler = CacheHandler()
+    tools_handler = ToolsHandler(cache=cache_handler)
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return f"[formatted] {context.tool_result}"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        # Pre-seed cache for input {"code": "cached"}
+        cache_handler.add(
+            tool="amount_tool",
+            input='{"code": "cached"}',
+            output="amount: 200",
+        )
+
+        # Call A: fresh call with {"code": "fresh"}
+        action_a = AgentAction(
+            thought="",
+            tool="amount_tool",
+            tool_input='{"code": "fresh"}',
+            text='Action: amount_tool\nAction Input: {"code": "fresh"}',
+        )
+        res_a = execute_tool_and_check_finality(
+            agent_action=action_a,
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=tools_handler,
+            agent=agent,
+        )
+        assert res_a.result == "[formatted] amount: 100"
+        assert len(agent.tools_results) == 1
+        assert agent.tools_results[0]["result"] == "[formatted] amount: 100"
+
+        # Call B: cached call with {"code": "cached"}
+        action_b = AgentAction(
+            thought="",
+            tool="amount_tool",
+            tool_input='{"code": "cached"}',
+            text='Action: amount_tool\nAction Input: {"code": "cached"}',
+        )
+        res_b = execute_tool_and_check_finality(
+            agent_action=action_b,
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=tools_handler,
+            agent=agent,
+        )
+        assert res_b.result == "[formatted] amount: 200"
+        # Must have recorded the cached result as the latest entry
+        assert len(agent.tools_results) == 2
+        assert agent.tools_results[-1]["result"] == "[formatted] amount: 200"
+
+        # process_tool_results must honour Call B, NOT Call A
+        final_answer = process_tool_results(agent, res_b.result)
+        assert final_answer == "[formatted] amount: 200"
+    finally:
+        clear_after_tool_call_hooks()
+
+
+@pytest.mark.asyncio
+async def test_async_react_result_as_answer_warm_cache_hit_preserves_hook_replacement():
+    """Async twin: A warm cache hit must record its result when result_as_answer=True."""
+    agent = _amount_agent()
+    cache_handler = CacheHandler()
+    tools_handler = ToolsHandler(cache=cache_handler)
+
+    def after_hook(context: ToolCallHookContext) -> str:
+        return f"[formatted] {context.tool_result}"
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+    try:
+        # Pre-seed cache for input {"code": "cached"}
+        cache_handler.add(
+            tool="amount_tool",
+            input='{"code": "cached"}',
+            output="amount: 200",
+        )
+
+        # Call A: fresh call with {"code": "fresh"}
+        action_a = AgentAction(
+            thought="",
+            tool="amount_tool",
+            tool_input='{"code": "fresh"}',
+            text='Action: amount_tool\nAction Input: {"code": "fresh"}',
+        )
+        res_a = await aexecute_tool_and_check_finality(
+            agent_action=action_a,
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=tools_handler,
+            agent=agent,
+        )
+        assert res_a.result == "[formatted] amount: 100"
+        assert len(agent.tools_results) == 1
+
+        # Call B: cached call with {"code": "cached"}
+        action_b = AgentAction(
+            thought="",
+            tool="amount_tool",
+            tool_input='{"code": "cached"}',
+            text='Action: amount_tool\nAction Input: {"code": "cached"}',
+        )
+        res_b = await aexecute_tool_and_check_finality(
+            agent_action=action_b,
+            tools=[AmountTool().to_structured_tool()],
+            tools_handler=tools_handler,
+            agent=agent,
+        )
+        assert res_b.result == "[formatted] amount: 200"
+        assert len(agent.tools_results) == 2
+        assert agent.tools_results[-1]["result"] == "[formatted] amount: 200"
+
+        final_answer = process_tool_results(agent, res_b.result)
+        assert final_answer == "[formatted] amount: 200"
+    finally:
+        clear_after_tool_call_hooks()
+
+
+def test_agent_sequential_tasks_tool_results_isolation_end_to_end():
+    """Sequential tasks on one Agent do not leak result_as_answer across boundaries."""
+    agent = _amount_agent()
+
+    # Task 1 uses AmountTool (result_as_answer=True)
+    task1 = Task(
+        description="Fetch report",
+        expected_output="Amount report",
+        agent=agent,
+    )
+    agent._prepare_task_execution(task1, context=None)
+    execute_tool_and_check_finality(
+        agent_action=_amount_action(),
+        tools=[AmountTool().to_structured_tool()],
+        tools_handler=ToolsHandler(cache=CacheHandler()),
+        agent=agent,
+    )
+    task1_output = process_tool_results(agent, "agent raw answer")
+    assert task1_output == "amount: 100"
+
+    # Task 2 is a pure LLM task with no result_as_answer tools
+    task2 = Task(
+        description="Write a summary",
+        expected_output="Summary",
+        agent=agent,
+    )
+    agent._prepare_task_execution(task2, context=None)
+    assert agent.tools_results == []
+
+    # Finalizing task 2 must preserve task 2's own output, NOT task 1's tool output
+    task2_output = process_tool_results(agent, "My Task 2 Summary")
+    assert task2_output == "My Task 2 Summary"
+
+
+def test_tool_results_collector_is_execution_scoped():
+    """ContextVar collector isolates nested and concurrent execution scopes."""
+    assert active_tool_results() is None
+
+    with tool_results_collector() as outer_results:
+        assert active_tool_results() is outer_results
+        outer_results.append({"tool_name": "outer", "result": 1})
+
+        with tool_results_collector() as inner_results:
+            assert active_tool_results() is inner_results
+            assert active_tool_results() is not outer_results
+            inner_results.append({"tool_name": "inner", "result": 2})
+            assert len(active_tool_results()) == 1
+
+        assert active_tool_results() is outer_results
+        assert len(active_tool_results()) == 1
+        assert outer_results[0]["result"] == 1
+
+    assert active_tool_results() is None
+
+
+@pytest.mark.asyncio
+async def test_agent_concurrent_tasks_tool_results_isolation():
+    """Concurrent async tasks sharing an agent must have isolated tool results."""
+    async def task_worker(task_id: int):
+        with tool_results_collector() as collector:
+            for step in range(3):
+                active = active_tool_results()
+                assert active is collector
+                active.append({"task_id": task_id, "step": step})
+                await asyncio.sleep(0.01)
+            return list(active)
+
+    res1, res2 = await asyncio.gather(task_worker(1), task_worker(2))
+    assert all(r["task_id"] == 1 for r in res1)
+    assert len(res1) == 3
+    assert all(r["task_id"] == 2 for r in res2)
+    assert len(res2) == 3
+
+
+def test_agent_concurrent_threads_tool_results_isolation():
+    """Concurrent threads sharing an agent must have isolated tool results."""
+    results = {}
+
+    def thread_worker(thread_id: int):
+        with tool_results_collector() as collector:
+            for step in range(3):
+                active = active_tool_results()
+                assert active is collector
+                active.append({"thread_id": thread_id, "step": step})
+                time.sleep(0.01)
+            results[thread_id] = list(active)
+
+    t1 = threading.Thread(target=thread_worker, args=(1,))
+    t2 = threading.Thread(target=thread_worker, args=(2,))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    assert all(r["thread_id"] == 1 for r in results[1])
+    assert len(results[1]) == 3
+    assert all(r["thread_id"] == 2 for r in results[2])
+    assert len(results[2]) == 3
+
+
+@pytest.mark.asyncio
+async def test_agent_concurrent_tasks_reset_tools_results_does_not_clear_other_task():
+    """Calling reset_tools_results() during a task execution only clears that task's results."""
+    agent = _amount_agent()
+
+    async def task_worker(task_id: int, should_reset: bool):
+        with tool_results_collector() as collector:
+            collector.append({"task_id": task_id, "before": True})
+            await asyncio.sleep(0.02)
+            if should_reset:
+                agent.reset_tools_results()
+            await asyncio.sleep(0.02)
+            collector.append({"task_id": task_id, "after": True})
+            return list(collector)
+
+    res_reset, res_keep = await asyncio.gather(
+        task_worker(1, should_reset=True),
+        task_worker(2, should_reset=False),
+    )
+
+    assert len(res_reset) == 1
+    assert res_reset[0] == {"task_id": 1, "after": True}
+
+    assert len(res_keep) == 2
+    assert res_keep[0] == {"task_id": 2, "before": True}
+    assert res_keep[1] == {"task_id": 2, "after": True}
+
+
+@pytest.mark.asyncio
+async def test_concurrent_tasks_shared_agent_real_react_tool_hooks_isolation():
+    """Concurrent tasks on a shared agent exercise real ToolUsage, hooks, and finalization with forced barrier overlap."""
+    agent = _amount_agent()
+
+    clear_after_tool_call_hooks()
+
+    def deterministic_after_hook(context: ToolCallHookContext):
+        if context.tool_name == "amount_tool":
+            code = (
+                context.tool_input.get("code")
+                if isinstance(context.tool_input, dict)
+                else None
+            )
+            return f"Formatted for {code}: 999"
+        return None
+
+    register_after_tool_call_hook(deterministic_after_hook)
+
+    worker1_in_tool = asyncio.Event()
+    worker2_in_tool = asyncio.Event()
+
+    class BarrierAmountTool(BaseTool):
+        name: str = "amount_tool"
+        description: str = "Reports an amount with forced concurrency barrier."
+        result_as_answer: bool = True
+
+        def _run(self, code: str = "") -> str:
+            return f"raw: {code}"
+
+        async def _arun(self, code: str = "") -> str:
+            if code == "task_1":
+                worker1_in_tool.set()
+                await worker2_in_tool.wait()
+            elif code == "task_2":
+                worker2_in_tool.set()
+                await worker1_in_tool.wait()
+            return f"raw: {code}"
+
+    task1 = Task(description="Fetch 1", expected_output="Output 1", agent=agent)
+    task2 = Task(description="Fetch 2", expected_output="Output 2", agent=agent)
+
+    action1 = AgentAction(
+        thought="",
+        tool="amount_tool",
+        tool_input='{"code": "task_1"}',
+        text='Action: amount_tool\nAction Input: {"code": "task_1"}',
+    )
+    action2 = AgentAction(
+        thought="",
+        tool="amount_tool",
+        tool_input='{"code": "task_2"}',
+        text='Action: amount_tool\nAction Input: {"code": "task_2"}',
+    )
+
+    async def worker1():
+        with tool_results_collector():
+            res = await aexecute_tool_and_check_finality(
+                agent_action=action1,
+                tools=[BarrierAmountTool().to_structured_tool()],
+                tools_handler=ToolsHandler(cache=CacheHandler()),
+                agent=agent,
+            )
+            return agent._finalize_task_execution(task1, res.result)
+
+    async def worker2():
+        with tool_results_collector():
+            res = await aexecute_tool_and_check_finality(
+                agent_action=action2,
+                tools=[BarrierAmountTool().to_structured_tool()],
+                tools_handler=ToolsHandler(cache=CacheHandler()),
+                agent=agent,
+            )
+            return agent._finalize_task_execution(task2, res.result)
+
+    try:
+        res1, res2 = await asyncio.gather(worker1(), worker2())
+        assert res1 == "Formatted for task_1: 999"
+        assert res2 == "Formatted for task_2: 999"
+        assert len(agent.tools_results) == 1
+        assert agent.tools_results[0]["result"] in (res1, res2)
+    finally:
+        clear_after_tool_call_hooks()
+
+
+def test_prepopulated_agent_tools_results_not_corrupted_by_failed_hook_in_collector():
+    """Active collector operations do not mutate pre-populated agent.tools_results."""
+    from crewai.utilities.tool_utils import _record_after_hook_result
+
+    agent = _amount_agent()
+    original_entry = {
+        "tool_name": "amount_tool",
+        "result": "original_valid_value",
+        "result_as_answer": True,
+    }
+    agent.tools_results = [original_entry]
+
+    with tool_results_collector() as active:
+        _record_after_hook_result(
+            agent=agent,
+            tool_name="amount_tool",
+            result="failed_hook_attempt",
+            start_index=len(active),
+            result_as_answer=False,
+        )
+        assert len(active) == 0
+
+    assert len(agent.tools_results) == 1
+    assert agent.tools_results[0]["result"] == "original_valid_value"
+    assert agent.tools_results[0]["result_as_answer"] is True
+
+
+def test_nested_agent_execution_preserves_parent_tool_results():
+    """Nested execution (such as coworker delegation) isolates child and parent tool results."""
+    manager = _amount_agent()
+    coworker = _amount_agent()
+
+    # Manager starts a task and accumulates a tool result
+    task1 = Task(description="Manager Task", expected_output="Manager Output", agent=manager)
+    with tool_results_collector() as manager_results:
+        manager._prepare_task_execution(task1, context=None)
+        manager_results.append({
+            "tool_name": "amount_tool",
+            "result": "Manager Report: 100",
+            "result_as_answer": True,
+        })
+
+        # Coworker executes a delegated task within the same thread/context
+        task2 = Task(description="Delegated Task", expected_output="Coworker Output", agent=coworker)
+        with tool_results_collector() as coworker_results:
+            coworker._prepare_task_execution(task2, context=None)
+            assert coworker_results is not manager_results
+            coworker_results.append({
+                "tool_name": "amount_tool",
+                "result": "Coworker Report: 200",
+                "result_as_answer": True,
+            })
+            coworker_output = process_tool_results(coworker, "Delegated summary")
+            assert coworker_output == "Coworker Report: 200"
+
+        # Manager resumes; manager's results must be intact and unaffected by coworker
+        assert len(manager_results) == 1
+        assert manager_results[0]["result"] == "Manager Report: 100"
+        manager_output = process_tool_results(manager, "Manager final summary")
+        assert manager_output == "Manager Report: 100"
+
