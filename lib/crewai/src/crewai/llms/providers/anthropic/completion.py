@@ -865,6 +865,32 @@ class AnthropicCompletion(BaseLLM):
 
         return converted
 
+    @staticmethod
+    def _parse_tool_arguments(arguments: Any) -> dict[str, Any]:
+        """Return tool call arguments as the dict Anthropic expects for tool_use input.
+
+        Arguments stored in history can be an empty string (a tool called with no
+        arguments), truncated JSON, or valid JSON that is not an object. None of
+        these should abort formatting the whole conversation.
+        """
+        if isinstance(arguments, dict):
+            return arguments
+        if not isinstance(arguments, str) or not arguments.strip():
+            return {}
+        try:
+            parsed = json.loads(arguments)
+        except json.JSONDecodeError:
+            logging.warning(
+                "Could not parse tool call arguments as JSON, sending empty input"
+            )
+            return {}
+        if not isinstance(parsed, dict):
+            logging.warning(
+                "Tool call arguments are not a JSON object, sending empty input"
+            )
+            return {}
+        return parsed
+
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | list[dict[str, Any]] | None]:
@@ -969,9 +995,9 @@ class AnthropicCompletion(BaseLLM):
                                 "type": "tool_use",
                                 "id": tc.get("id", ""),
                                 "name": func.get("name", ""),
-                                "input": json.loads(func.get("arguments", "{}"))
-                                if isinstance(func.get("arguments"), str)
-                                else func.get("arguments", {}),
+                                "input": self._parse_tool_arguments(
+                                    func.get("arguments", "{}")
+                                ),
                             }
                             assistant_content.append(tool_use)
                     if assistant_content:
