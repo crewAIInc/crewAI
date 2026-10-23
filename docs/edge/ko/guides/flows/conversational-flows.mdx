@@ -30,7 +30,7 @@ REST, WebSocket, 테스트, 커스텀 UI에서 오는 모든 사용자 메시지
 | `stream_turn(message, session_id=...)` | 대화형 한 턴을 순서가 보장된 런타임 frame으로 스트리밍 |
 | `chat()` | 대화형 `Flow`용 로컬 터미널 REPL |
 | `kickoff(inputs={...})` | 대화형 턴 처리 없이 flow를 직접 실행하는 고급 용도 |
-| `ask()` | 한 스텝 **내부** 블로킹 프롬프트 (마법사, 확인) |
+| [`ask()`](/ko/concepts/flows#asking-the-user-for-input-with-ask) | 한 스텝 **내부** 블로킹 프롬프트 (마법사, 확인) |
 | `@human_feedback` | **스텝 출력** 승인/거부 — 다음 채팅 줄이 아님 |
 
 대화형 모드가 활성화되지 않으면 `handle_turn()`, `stream_turn()`, `chat()`은 `ValueError`를 발생시킵니다. `@ConversationConfig(...)`를 적용하면 자동으로 활성화되며, 그렇지 않으면 `conversational = True`로 설정하세요.

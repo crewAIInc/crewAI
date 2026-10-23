@@ -30,7 +30,7 @@ Use **`flow.handle_turn(message, session_id=...)`** para cada mensagem de usuár
 | `stream_turn(message, session_id=...)` | Transmite um turno conversacional como frames ordenados do runtime |
 | `chat()` | REPL local no terminal para `Flow` conversacional |
 | `kickoff(inputs={...})` | Execução avançada do flow sem tratamento de turno conversacional |
-| `ask()` | Prompt bloqueante **dentro** de um passo (wizard, esclarecimento) |
+| [`ask()`](/pt-BR/concepts/flows#asking-the-user-for-input-with-ask) | Prompt bloqueante **dentro** de um passo (wizard, esclarecimento) |
 | `@human_feedback` | Aprovar/rejeitar **saída de um passo** — não a próxima linha do chat |
 
 `handle_turn()`, `stream_turn()` e `chat()` geram `ValueError` se o modo conversacional não estiver habilitado. Aplicar `@ConversationConfig(...)` o habilita automaticamente; caso contrário, defina `conversational = True`.
