@@ -188,6 +188,24 @@ def process_guardrail(
             ),
         )
         raise
+    except Exception as e:
+        # an exception ends the validation too; without a terminal event the
+        # "evaluate guardrail" span survives until the end-of-execution sweep
+        # closes it as orphaned, and the trace loses the real error
+        crewai_event_bus.emit(
+            event_source,
+            LLMGuardrailCompletedEvent(
+                success=False,
+                result=None,
+                error=f"{type(e).__name__}: {e}",
+                retry_count=retry_count,
+                guardrail_type=started_event.guardrail_type,
+                guardrail_name=started_event.guardrail_name,
+                from_agent=from_agent,
+                from_task=from_task,
+            ),
+        )
+        raise
 
     guardrail_result = GuardrailResult.from_tuple(result)
 

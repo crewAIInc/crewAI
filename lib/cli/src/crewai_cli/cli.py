@@ -750,9 +750,12 @@ def eval_command(
 
     It grades the project's last traced run. When there is none, or the project
     changed since it, it runs the crew first and grades that run: the run is
-    traced and its trace sent to CrewAI AMP, which grades it. Nothing is asked,
-    with or without a terminal, so `crewai eval` alone takes a coding agent from
-    a change to its verdict.
+    traced and its trace sent to CrewAI AMP, which grades it. The first time
+    tracing is turned on for the project, a person at a terminal is asked
+    first; with no terminal (a coding agent, a script) nothing is asked and the
+    command says it turned tracing on, so `crewai eval` alone takes an agent
+    from a change to its verdict. A project that turned tracing off is asked
+    at a terminal, and told how to turn it on without one.
 
     Run by a script or coding agent (no terminal), it prints a markdown brief
     after the verdict — what failed and the change to make — so an agent can act

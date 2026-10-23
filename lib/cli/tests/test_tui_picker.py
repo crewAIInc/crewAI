@@ -4,6 +4,25 @@ from io import StringIO
 from crewai_cli import tui_picker
 
 
+def test_pick_uses_custom_labels(monkeypatch) -> None:
+    selected_labels: list[str] = []
+    monkeypatch.setattr(tui_picker, "_is_interactive", lambda: True)
+    monkeypatch.setattr(
+        tui_picker,
+        "_arrow_select_one",
+        lambda labels: selected_labels.extend(labels) or 1,
+    )
+
+    result = tui_picker.pick(
+        "Select an organization",
+        [("org-engineering", "Engineering"), ("org-research", "Research")],
+        labels=["Engineering  org-engineering", "Research      org-research"],
+    )
+
+    assert selected_labels == ["Engineering  org-engineering", "Research      org-research"]
+    assert result == "org-research"
+
+
 def test_visible_row_range_keeps_short_lists_fully_visible(monkeypatch) -> None:
     monkeypatch.setattr(
         tui_picker.shutil,
