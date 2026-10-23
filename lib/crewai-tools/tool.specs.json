@@ -118,6 +118,98 @@
       }
     },
     {
+      "description": "Search indexed YouTube transcript passages for one topic or phrase. Use the returned timestamps and source links when citing what was said. Report partial results and access limits. An empty result means no match in the index, not that nobody discussed the topic. Calls use Arcmira account usage.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Arcmira API key, or pass api_key when creating the tool.",
+          "name": "ARCMIRA_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Arcmira: YouTube Transcript Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search transcript passages while preserving timestamps and source links.",
+        "properties": {},
+        "required": [],
+        "title": "ArcmiraSearchTool",
+        "type": "object"
+      },
+      "name": "ArcmiraSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for a transcript passage search.",
+        "properties": {
+          "limit": {
+            "default": 5,
+            "description": "Maximum transcript passages to return. Each result uses account usage.",
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "description": "One topic or phrase to find in indexed YouTube transcripts.",
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "ArcmiraSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Fetches metadata from Arxiv based on a search query and optionally downloads PDFs.",
       "env_vars": [],
       "humanized_name": "Arxiv Paper Fetcher and Downloader",
