@@ -1320,6 +1320,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         instance._method_outputs = list(pending_context.method_outputs or [])
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
+
+        if pending_context.completed_methods:
+            instance._completed_methods = {
+                FlowMethodName(m) for m in pending_context.completed_methods
+            }
+        if pending_context.method_outputs:
+            instance._method_outputs = [
+                entry
+                if isinstance(entry, dict) and "method" in entry and "output" in entry
+                else {"method": "", "output": entry}
+                for entry in pending_context.method_outputs
+            ]
+        if pending_context.method_execution_counts:
+            instance._method_execution_counts = {
+                FlowMethodName(k): v
+                for k, v in pending_context.method_execution_counts.items()
+            }
         # Seed the match id so the resume-phase listener filters its own
         # LLM events (which run with `current_flow_id == instance.flow_id`)
         # instead of dropping or absorbing unrelated ones. Must stay
@@ -1540,7 +1557,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self.last_human_feedback = previous_feedback
                     raise
 
-            self._completed_methods.add(FlowMethodName(context.method_name))
+            method_key = FlowMethodName(context.method_name)
+            self._completed_methods.add(method_key)
+            self._method_execution_counts[method_key] = (
+                self._method_execution_counts.get(method_key, 0) + 1
+            )
 
             await asyncio.to_thread(
                 self._persist_method_completion, FlowMethodName(context.method_name)
@@ -1629,7 +1650,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
-                e.context.method_outputs = list(self._method_outputs)
+                if e.context.completed_methods is None:
+                    e.context.completed_methods = [
+                        str(m) for m in self._completed_methods
+                    ]
+                if e.context.method_outputs is None:
+                    e.context.method_outputs = list(self._method_outputs)
+                if e.context.method_execution_counts is None:
+                    e.context.method_execution_counts = {
+                        str(k): v for k, v in self._method_execution_counts.items()
+                    }
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -2494,7 +2524,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
-                    e.context.method_outputs = list(self._method_outputs)
+                    if e.context.completed_methods is None:
+                        e.context.completed_methods = [
+                            str(m) for m in self._completed_methods
+                        ]
+                    if e.context.method_outputs is None:
+                        e.context.method_outputs = list(self._method_outputs)
+                    if e.context.method_execution_counts is None:
+                        e.context.method_execution_counts = {
+                            str(k): v for k, v in self._method_execution_counts.items()
+                        }
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
@@ -3688,6 +3727,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if llm is None or isinstance(llm, (str, dict))
                 else _serialize_llm_for_context(llm),
                 execution_uuid=get_execution_uuid(),
+                completed_methods=[str(m) for m in self._completed_methods],
+                method_outputs=list(self._method_outputs),
+                method_execution_counts={
+                    str(k): v for k, v in self._method_execution_counts.items()
+                },
             )
             feedback_value = await asyncio.to_thread(
                 provider.request_feedback, context, self
