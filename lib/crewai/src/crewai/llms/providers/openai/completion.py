@@ -57,6 +57,7 @@ from crewai.llms.base_llm import (
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.llms.retry import in_rate_limit_retry_replay
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -468,6 +469,18 @@ class OpenAICompletion(BaseLLM):
         if self._client is None:
             self._client = self._build_sync_client()
         return self._client
+
+    def _client_for_attempt(self, client: Any) -> Any:
+        """Return the client to use for the current attempt.
+
+        The SDK's own retries belong to the first attempt only. When CrewAI's
+        rate-limit retry replays the call, the replay would stack its three
+        tries on top of the three already spent, so the replay runs with SDK
+        retries disabled: one request per replay instead of three.
+        """
+        if in_rate_limit_retry_replay():
+            return client.with_options(max_retries=0)
+        return client
 
     def _get_async_client(self) -> Any:
         if self._async_client is None:
@@ -1181,7 +1194,9 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle non-streaming Responses API call."""
         try:
-            response: Response = self._get_sync_client().responses.create(**params)
+            response: Response = self._client_for_attempt(
+                self._get_sync_client()
+            ).responses.create(**params)
 
             if self.auto_chain and response.id:
                 self._last_response_id = response.id
@@ -1326,9 +1341,9 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle async non-streaming Responses API call."""
         try:
-            response: Response = await self._get_async_client().responses.create(
-                **params
-            )
+            response: Response = await self._client_for_attempt(
+                self._get_async_client()
+            ).responses.create(**params)
 
             if self.auto_chain and response.id:
                 self._last_response_id = response.id
@@ -1473,7 +1488,9 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
-        stream = self._get_sync_client().responses.create(**params)
+        stream = self._client_for_attempt(self._get_sync_client()).responses.create(
+            **params
+        )
         response_id_stream = None
 
         for event in stream:
@@ -1610,7 +1627,9 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
-        stream = await self._get_async_client().responses.create(**params)
+        stream = await self._client_for_attempt(
+            self._get_async_client()
+        ).responses.create(**params)
         response_id_stream = None
 
         async for event in stream:
@@ -2257,11 +2276,9 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            raw_response = (
-                self._get_sync_client().chat.completions.with_raw_response.create(
-                    **params
-                )
-            )
+            raw_response = self._client_for_attempt(
+                self._get_sync_client()
+            ).chat.completions.with_raw_response.create(**params)
             _raise_for_upstream_error(
                 raw_response.text,
                 model=self.model,
@@ -2557,9 +2574,9 @@ class OpenAICompletion(BaseLLM):
             logging.error("Failed to get parsed result from stream")
             return ""
 
-        completion_stream: Stream[ChatCompletionChunk] = (
-            self._get_sync_client().chat.completions.create(**params)
-        )
+        completion_stream: Stream[ChatCompletionChunk] = self._client_for_attempt(
+            self._get_sync_client()
+        ).chat.completions.create(**params)
 
         usage_data: dict[str, Any] | None = None
         stream_finish_reason: str | None = None
@@ -2699,9 +2716,9 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            raw_response = await self._get_async_client().chat.completions.with_raw_response.create(
-                **params
-            )
+            raw_response = await self._client_for_attempt(
+                self._get_async_client()
+            ).chat.completions.with_raw_response.create(**params)
             _raise_for_upstream_error(
                 raw_response.text,
                 model=self.model,
@@ -2846,7 +2863,9 @@ class OpenAICompletion(BaseLLM):
         if response_model:
             completion_stream: AsyncIterator[
                 ChatCompletionChunk
-            ] = await self._get_async_client().chat.completions.create(**params)
+            ] = await self._client_for_attempt(
+                self._get_async_client()
+            ).chat.completions.create(**params)
 
             accumulated_content = ""
             usage_data: dict[str, Any] | None = None
@@ -2911,9 +2930,9 @@ class OpenAICompletion(BaseLLM):
                 )
                 return accumulated_content
 
-        stream: AsyncIterator[
-            ChatCompletionChunk
-        ] = await self._get_async_client().chat.completions.create(**params)
+        stream: AsyncIterator[ChatCompletionChunk] = await self._client_for_attempt(
+            self._get_async_client()
+        ).chat.completions.create(**params)
 
         usage_data = None
         stream_finish_reason: str | None = None
