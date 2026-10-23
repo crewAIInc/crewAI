@@ -43,7 +43,11 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms.retry import arun_with_rate_limit_retry, run_with_rate_limit_retry
+from crewai.llms.retry import (
+    arun_with_rate_limit_retry,
+    mark_stream_chunk_emitted,
+    run_with_rate_limit_retry,
+)
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
@@ -839,6 +843,7 @@ class BaseLLM(BaseModel, ABC):
         call_type: LLMCallType | None = None,
         response_id: str | None = None,
     ) -> None:
+        mark_stream_chunk_emitted()
         """Emit stream chunk event.
 
         Args:
@@ -869,6 +874,7 @@ class BaseLLM(BaseModel, ABC):
         from_agent: BaseAgent | None = None,
         response_id: str | None = None,
     ) -> None:
+        mark_stream_chunk_emitted()
         """Emit thinking/reasoning chunk event from a thinking model.
 
         Args:
