@@ -43,6 +43,25 @@ TERMS = {
         }
     ],
 }
+# What the tool hands to the signer for TERMS: only allowlisted fields, never extensions.
+SIGNED_TERMS = {
+    "x402Version": 2,
+    "accepts": [{**TERMS["accepts"][0], "maxTimeoutSeconds": 600, "extra": {}}],
+}
+EIP3009_OPTION = {
+    **TERMS["accepts"][0],
+    "maxTimeoutSeconds": 300,
+    "extra": {"name": "USD Coin", "version": "2"},
+}
+# Otherwise acceptable Base USDC terms that ask for a Permit2 flow plus an ERC-20 approval.
+PERMIT2_TERMS = {
+    "x402Version": 2,
+    "resource": {"url": "https://botsrated.com/v1/check?host=blockrun.ai"},
+    "accepts": [
+        {**EIP3009_OPTION, "extra": {**EIP3009_OPTION["extra"], "assetTransferMethod": "permit2"}}
+    ],
+    "extensions": {"erc20ApprovalGasSponsoring": {"info": {}, "schema": {}}},
+}
 
 
 def _resp(status: int, body: dict, headers: dict | None = None) -> MagicMock:
@@ -125,7 +144,7 @@ def test_check_signs_validated_quote_and_enforces_budget(get, sign):
     first = json.loads(tool.run(host="blockrun.ai"))
     assert first["charged"] is True
     assert first["remaining_usd"] == pytest.approx(0.0005)
-    sign.assert_called_once_with(client, TERMS)
+    sign.assert_called_once_with(client, SIGNED_TERMS)
     paid = get.call_args_list[1]
     assert paid.args[0] == "https://botsrated.com/v1/check?host=blockrun.ai"
     assert paid.kwargs["headers"]["PAYMENT-SIGNATURE"] == "sig"
@@ -238,6 +257,76 @@ def test_sign_with_real_x402_client():
     payload = decode_payment_signature_header(_sign(client, terms))
     assert payload.accepted.pay_to.lower() == BOTSRATED_PAY_TO.lower()
     assert payload.accepted.amount == "1000"
+
+
+@patch(f"{MOD}._sign", return_value="sig")
+@patch(f"{MOD}.requests.get")
+def test_check_rejects_permit2_extra_extensions_and_long_timeout(get, sign):
+    tool = BotsRatedCheckTool(budget_usd="1", x402_client=MagicMock())
+    ok = {"x402Version": 2, "accepts": [EIP3009_OPTION]}
+    for terms in (
+        PERMIT2_TERMS,
+        {**ok, "accepts": PERMIT2_TERMS["accepts"]},
+        {**ok, "extensions": PERMIT2_TERMS["extensions"]},
+        {**ok, "extensions": {"eip2612GasSponsoring": {}}},
+        {**ok, "extensions": {"bazaar": {}, "erc20ApprovalGasSponsoring": {}}},
+        {**ok, "accepts": [{**EIP3009_OPTION, "extra": {"paymentFlow": "x"}}]},
+        {**ok, "accepts": [EIP3009_OPTION, {**EIP3009_OPTION, "extra": {"assetTransferMethod": "eip3009"}}]},
+        {**ok, "accepts": [{**EIP3009_OPTION, "maxTimeoutSeconds": 86400}]},
+        {**ok, "accepts": [{**EIP3009_OPTION, "maxTimeoutSeconds": "300"}]},
+        {**ok, "x402Version": 1},
+    ):
+        get.return_value = _quote(terms)
+        assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
+    sign.assert_not_called()
+    assert tool.remaining_usd == 1
+
+
+@patch(f"{MOD}._sign", return_value="sig")
+@patch(f"{MOD}.requests.get")
+def test_check_strips_discovery_extension_and_unknown_fields(get, sign):
+    terms = {
+        "x402Version": 2,
+        "error": "Payment required",
+        "resource": {"url": "https://botsrated.com/v1/check?host=blockrun.ai", "tags": ["x402"]},
+        "accepts": [{**EIP3009_OPTION, "unknown": "x"}],
+        "extensions": {"bazaar": {"info": {}}},
+    }
+    get.side_effect = [_quote(terms), _resp(200, {"host": "blockrun.ai"})]
+    client = MagicMock()
+    tool = BotsRatedCheckTool(budget_usd="0.001", x402_client=client)
+    assert json.loads(tool.run(host="blockrun.ai"))["charged"] is True
+    sign.assert_called_once_with(
+        client,
+        {
+            "x402Version": 2,
+            "resource": {"url": "https://botsrated.com/v1/check?host=blockrun.ai"},
+            "accepts": [EIP3009_OPTION],
+        },
+    )
+
+
+@patch(f"{MOD}.requests.get")
+def test_permit2_quote_never_reaches_rpc_signer(get):
+    pytest.importorskip("x402.mechanisms.evm")
+    from eth_account import Account
+    from x402 import x402ClientSync
+    from x402.mechanisms.evm.exact import ExactEvmScheme
+    from x402.mechanisms.evm.signers import EthAccountSignerWithRPC
+
+    client = x402ClientSync()
+    signer = EthAccountSignerWithRPC(Account.create(), rpc_url="http://127.0.0.1:9")
+    client.register("eip155:8453", ExactEvmScheme(signer=signer))
+    tool = BotsRatedCheckTool(budget_usd="1", x402_client=client)
+    get.return_value = _quote(PERMIT2_TERMS)
+    with (
+        patch.object(client, "create_payment_payload", wraps=client.create_payment_payload) as create,
+        patch.object(signer, "sign_transaction") as sign_tx,
+    ):
+        assert json.loads(tool.run(host="blockrun.ai"))["error"] == "terms_rejected"
+    create.assert_not_called()
+    sign_tx.assert_not_called()
+    assert get.call_count == 1 and tool.remaining_usd == 1
 
 
 def test_check_requires_positive_budget():
