@@ -186,8 +186,13 @@ class MCPToolResolver:
             slug_tools, _ = cached
             if specific_tool:
                 sanitized = sanitize_tool_name(specific_tool)
+                # Tools are named f"{server_name}_{tool_name}"; match the exact
+                # tool, not a suffix — "#search" must not select
+                # "advanced_search" too.
                 all_tools.extend(
-                    t for t in slug_tools if t.name.endswith(f"_{sanitized}")
+                    t
+                    for t in slug_tools
+                    if t.name == f"{getattr(t, 'server_name', '')}_{sanitized}"
                 )
             else:
                 all_tools.extend(slug_tools)
