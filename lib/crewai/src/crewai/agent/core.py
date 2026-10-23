@@ -51,8 +51,8 @@ from crewai.agents.agent_builder.base_agent import (
     _serialize_llm_ref,
     _validate_llm_ref,
 )
+from crewai.agents.agent_executor import AgentExecutor
 from crewai.agents.cache.cache_handler import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
@@ -74,7 +74,6 @@ from crewai.events.types.memory_events import (
 )
 from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.execution import begin_execution, end_execution
-from crewai.experimental.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -148,34 +147,30 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
 )
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
-    "CrewAgentExecutor": CrewAgentExecutor,
     "AgentExecutor": AgentExecutor,
 }
 
 
 def _is_resuming_agent_executor(
-    executor: CrewAgentExecutor | AgentExecutor | None,
+    executor: AgentExecutor | None,
 ) -> TypeIs[AgentExecutor]:
     """Type guard: True when the executor is resuming from a checkpoint."""
     return isinstance(executor, AgentExecutor) and executor._resuming
 
 
 def _validate_executor_class(value: Any) -> Any:
+    if getattr(value, "__name__", None) == "CrewAgentExecutor" or (
+        isinstance(value, str) and value == "CrewAgentExecutor"
+    ):
+        raise ValueError(
+            "CrewAgentExecutor has been removed. Use "
+            "crewai.agents.agent_executor.AgentExecutor."
+        )
     if isinstance(value, str):
         cls = _EXECUTOR_CLASS_MAP.get(value)
         if cls is None:
             raise ValueError(f"Unknown executor class: {value}")
-        value = cls
-    import warnings
-
-    if value is CrewAgentExecutor:
-        warnings.warn(
-            "CrewAgentExecutor is deprecated and will be removed in a future release. "
-            "Agents inside Crews now use AgentExecutor by default. "
-            "Switch to crewai.experimental.AgentExecutor.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        return cls
     return value
 
 
@@ -222,7 +217,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor or AgentExecutor class.
+            agent_executor: The AgentExecutor running this agent.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -298,6 +293,10 @@ class Agent(BaseAgent):
     respect_context_window: bool = Field(
         default=True,
         description="Keep messages under the context window size by summarizing content.",
+    )
+    use_better_compaction: bool = Field(
+        default=True,
+        description="Defer oversized tool results to temporary artifacts for bounded reads.",
     )
     max_retry_limit: int = Field(
         default=2,
@@ -386,16 +385,17 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
+    agent_executor: AgentExecutor | None = Field(
+        default=None,
+        description="Executor running this agent.",
     )
     executor_class: Annotated[
-        type[CrewAgentExecutor] | type[AgentExecutor],
+        type[AgentExecutor],
         BeforeValidator(_validate_executor_class),
         PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
     ] = Field(
         default=AgentExecutor,
-        description="Class to use for the agent executor. Defaults to AgentExecutor, can optionally use CrewAgentExecutor.",
+        description="Class to use for the agent executor. CrewAgentExecutor has been removed.",
     )
 
     @model_validator(mode="before")
@@ -1258,11 +1258,7 @@ class Agent(BaseAgent):
     def create_agent_executor(
         self, tools: list[BaseTool] | None = None, task: Task | None = None
     ) -> None:
-        """Create an agent executor for the agent.
-
-        Returns:
-            An instance of the CrewAgentExecutor class.
-        """
+        """Create the AgentExecutor for the agent."""
         configured_tools = tools if tools is not None else self.tools or []
         raw_tools = self._add_skill_loader_tool(list(configured_tools), task=task)
         parsed_tools = parse_tools(raw_tools)
@@ -1307,6 +1303,8 @@ class Agent(BaseAgent):
                 if task
                 else None,
             )
+            if isinstance(self.agent_executor, AgentExecutor):
+                self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def _update_executor_parameters(
         self,
@@ -1340,10 +1338,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        if isinstance(self.agent_executor, AgentExecutor):
-            self.agent_executor.stop_words = stop_words
-        else:
-            self.agent_executor.stop = stop_words
+        self.agent_executor.stop_words = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -1354,21 +1349,48 @@ class Agent(BaseAgent):
 
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.use_better_compaction = self.use_better_compaction
 
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Resolve platform app selectors into tools.
+
+        Args:
+            apps: App or ``app/action`` selectors to resolve.
+
+        Returns:
+            The resolved tools, or an empty list when none resolve or resolution
+            fails. A non-empty ``apps`` that resolves to no tools emits a
+            ``UserWarning`` naming the agent and its apps.
+        """
+        platform_tools: list[BaseTool] = []
         try:
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
-            return CrewaiPlatformTools(apps=apps)
+            platform_tools = CrewaiPlatformTools(apps=apps)
         except Exception as e:
             self._logger.log("error", f"Error getting platform tools: {e!s}")
-            return []
+
+        if apps and not platform_tools:
+            # Logger.log above is verbose-gated; without a warning a bad `apps`
+            # entry only shows up later as a task the agent couldn't do.
+            app_names = ", ".join(str(app) for app in apps)
+            warnings.warn(
+                f"Agent '{self.role}' declares apps [{app_names}] but none "
+                "resolved to any tools; the agent will run without them and may "
+                "be unable to complete its goal. Check that these apps exist and "
+                "are connected, and that CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN is set.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        return platform_tools
 
     def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Convert MCP server references/configs to CrewAI tools.
@@ -1654,6 +1676,7 @@ class Agent(BaseAgent):
                 BaseLLM | None, self.function_calling_llm
             )
             executor.respect_context_window = self.respect_context_window
+            executor.use_better_compaction = self.use_better_compaction
             executor.request_within_rpm_limit = rpm_limit_fn
             executor.callbacks = [TokenCalcHandler(self._token_process)]
         else:
@@ -1671,6 +1694,7 @@ class Agent(BaseAgent):
                 step_callback=self.step_callback,
                 function_calling_llm=self.function_calling_llm,
                 respect_context_window=self.respect_context_window,
+                use_better_compaction=self.use_better_compaction,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
                 response_model=response_format,
