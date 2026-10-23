@@ -86,8 +86,14 @@ class GithubLoader(BaseLoader):
                 all_content.append("")
 
         if "issue" in content_types:
-            issues = repo.get_issues(state="open")
-            issue_list = [i for i in list(issues[:10]) if not i.pull_request][:5]
+            issue_list = []
+            # GitHub includes pull requests in its issues endpoint.
+            for issue in repo.get_issues(state="open"):
+                if issue.pull_request:
+                    continue
+                issue_list.append(issue)
+                if len(issue_list) == 5:
+                    break
             if issue_list:
                 all_content.append("Recent Issues:")
                 for issue in issue_list:
