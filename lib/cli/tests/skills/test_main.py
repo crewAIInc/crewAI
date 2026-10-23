@@ -3,17 +3,23 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import tempfile
 import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from crewai_cli.shared.token_manager import TokenManager
+
+
+if TYPE_CHECKING:
+    from crewai_cli.skills.main import SkillCommand
 
 
 @contextmanager
@@ -257,6 +263,36 @@ class TestSkillPublish:
 
 
 class TestSkillListCached:
+    @pytest.mark.parametrize("metadata", [b"\xff\xfe", b"{invalid json"])
+    def test_list_cached_skips_unreadable_metadata(
+        self,
+        skill_command: SkillCommand,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        metadata: bytes,
+    ) -> None:
+        cache_root = tmp_path / ".crewai" / "skills" / "acme"
+        broken = cache_root / "a-broken"
+        healthy = cache_root / "z-healthy"
+        broken.mkdir(parents=True)
+        healthy.mkdir()
+        (broken / ".crewai_meta.json").write_bytes(metadata)
+        (healthy / ".crewai_meta.json").write_text(
+            json.dumps({"org": "acme", "name": "z-healthy", "version": "1.0.0"}),
+            encoding="utf-8",
+        )
+
+        with (
+            in_temp_dir(),
+            patch("crewai_cli.skills.main.Path.home", return_value=tmp_path),
+        ):
+            skill_command.list_cached()
+
+        output = capsys.readouterr().out
+        assert "@acme/z-healthy" in output
+        assert "skipping malformed cache entry" in output
+        assert (broken / ".crewai_meta.json").read_bytes() == metadata
+
     def test_list_cached_empty(self, skill_command, capsys):
         with in_temp_dir():
             skill_command.list_cached()

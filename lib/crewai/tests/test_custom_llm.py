@@ -1,5 +1,6 @@
 import json
 from typing import Any, Dict, List, Optional, Union
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from crewai import Agent, Crew, Process, Task
@@ -224,6 +225,23 @@ def test_base_llm_input_token_count_tolerates_unavailable_json_schema() -> None:
 
     custom_llm = CustomLLM(model="test-model")
     assert custom_llm.get_input_tokens_count("12345", response_model=Answer) == 2
+
+
+def test_base_llm_summarize_messages_compacts_history():
+    """BaseLLM owns the context-compaction behavior."""
+    llm = CustomLLM(model="test-model")
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "Long conversation"},
+    ]
+    callbacks: list[Any] = []
+
+    with patch.object(llm, "acall", new=AsyncMock(return_value="<summary>Short</summary>")):
+        llm.summarize_messages(messages, callbacks, verbose=False)
+
+    assert messages[0] == {"role": "system", "content": "Be concise."}
+    assert messages[1]["role"] == "user"
+    assert "Short" in messages[1]["content"]
 
 
 class JWTAuthLLM(BaseLLM):
