@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import json
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 
@@ -44,8 +45,10 @@ class PendingFeedbackContext:
         trace_context: Previous trace and root span IDs, used to link the resumed
             execution segment. Absent when execution tracing was disabled.
         completed_methods: Methods completed before the pause.
-        method_outputs: Completed method outputs, in execution order. Persisted
-            outputs use the same JSON conversion as ``method_output``.
+        method_outputs: Completed method records, in execution order. Persisted
+            outputs are JSON-compatible snapshots, not restored Python types.
+            An output that cannot be serialized falls back to its string
+            representation (or a type placeholder if that also fails).
         method_execution_counts: Successful execution counts before the pause.
 
     Example:
@@ -79,7 +82,7 @@ class PendingFeedbackContext:
     method_execution_counts: dict[str, int] = field(default_factory=dict)
 
     @staticmethod
-    def _make_json_safe(value: Any) -> Any:
+    def _make_json_safe(value: Any, *, fallback_to_string: bool = False) -> Any:
         """Convert a value to a JSON-serializable form.
 
         Handles Pydantic models, dataclasses, and arbitrary objects by
@@ -88,21 +91,47 @@ class PendingFeedbackContext:
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
         if isinstance(value, (list, tuple)):
-            return [PendingFeedbackContext._make_json_safe(v) for v in value]
+            return [
+                PendingFeedbackContext._make_json_safe(
+                    v, fallback_to_string=fallback_to_string
+                )
+                for v in value
+            ]
         if isinstance(value, dict):
             return {
-                k: PendingFeedbackContext._make_json_safe(v) for k, v in value.items()
+                k: PendingFeedbackContext._make_json_safe(
+                    v, fallback_to_string=fallback_to_string
+                )
+                for k, v in value.items()
             }
 
         from pydantic import BaseModel
 
         if isinstance(value, BaseModel):
-            return value.model_dump(mode="json", fallback=str)
+            if fallback_to_string:
+                return value.model_dump(mode="json", fallback=str)
+            return value.model_dump(mode="json")
         import dataclasses
 
         if dataclasses.is_dataclass(value) and not isinstance(value, type):
-            return PendingFeedbackContext._make_json_safe(dataclasses.asdict(value))
+            return PendingFeedbackContext._make_json_safe(
+                dataclasses.asdict(value), fallback_to_string=fallback_to_string
+            )
         return str(value)
+
+    @classmethod
+    def _make_history_value_json_safe(cls, value: Any) -> Any:
+        """Keep historical output serialization from preventing a valid pause."""
+        try:
+            converted = cls._make_json_safe(value, fallback_to_string=True)
+            # Conversion alone does not validate dictionary keys, for example.
+            json.dumps(converted)
+            return converted
+        except Exception:
+            try:
+                return str(value)
+            except Exception:
+                return f"<{type(value).__name__}>"
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize context to a dictionary for persistence.
@@ -124,7 +153,15 @@ class PendingFeedbackContext:
             "execution_uuid": self.execution_uuid,
             "trace_context": list(self.trace_context) if self.trace_context else None,
             "completed_methods": self.completed_methods,
-            "method_outputs": self._make_json_safe(self.method_outputs),
+            "method_outputs": [
+                {
+                    key: self._make_history_value_json_safe(value)
+                    for key, value in entry.items()
+                }
+                if isinstance(entry, dict) and "method" in entry and "output" in entry
+                else self._make_history_value_json_safe(entry)
+                for entry in self.method_outputs
+            ],
             "method_execution_counts": self.method_execution_counts,
         }
 

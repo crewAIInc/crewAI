@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
+from datetime import date
 import json
 from pathlib import Path
 import sqlite3
@@ -15,7 +16,7 @@ from crewai.flow import Flow, human_feedback, listen, start
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.persistence import SQLiteFlowPersistence
 from crewai.flow.persistence.base import FlowPersistence
-from pydantic import BaseModel, ConfigDict, PrivateAttr
+from pydantic import BaseModel, ConfigDict, PrivateAttr, field_serializer
 import pytest
 
 
@@ -253,3 +254,96 @@ def test_legacy_pending_row_without_execution_history_still_resumes(
     result = restored.resume("approved")
     assert result.output == "draft"
     assert result.feedback == "approved"
+
+
+@pytest.mark.parametrize("use_async", [False, True])
+@pytest.mark.parametrize("custom_persistence", [False, True])
+@pytest.mark.parametrize(
+    "output_kind",
+    [
+        "date_keys",
+        "tuple_keys",
+        "mixed_keys",
+        "binary_model",
+        "cycle_list",
+        "cycle_dict",
+        "broken_str",
+        "broken_serializer",
+    ],
+)
+def test_unrepresentable_history_output_does_not_prevent_pending_resume(
+    tmp_path: Path, use_async: bool, custom_persistence: bool, output_kind: str
+) -> None:
+    class BinaryResult(BaseModel):
+        payload: bytes
+
+    class BrokenString:
+        def __str__(self) -> str:
+            raise RuntimeError("cannot render output")
+
+    class BrokenSerializer(BaseModel):
+        payload: str
+
+        @field_serializer("payload")
+        def serialize_payload(self, value: str) -> str:
+            raise ValueError("cannot serialize payload")
+
+    cycle_list: list[Any] = []
+    cycle_list.append(cycle_list)
+    cycle_dict: dict[str, Any] = {}
+    cycle_dict["self"] = cycle_dict
+    outputs: dict[str, Any] = {
+        "date_keys": {date(2026, 10, 23): {"orders": 3}},
+        "tuple_keys": {(1, 2): "pair"},
+        "mixed_keys": {"plain": 1, 2: "number", (3, 4): "tuple"},
+        "binary_model": BinaryResult(payload=b"\xff\x00"),
+        "cycle_list": cycle_list,
+        "cycle_dict": cycle_dict,
+        "broken_str": BrokenString(),
+        "broken_serializer": BrokenSerializer(payload="value"),
+    }
+    output = outputs[output_kind]
+    expected_output = "<BrokenString>" if output_kind == "broken_str" else str(output)
+    runs: list[str] = []
+
+    class ReviewFlow(Flow):
+        @start()
+        def reserve(self) -> Any:
+            runs.append("reserve")
+            return output
+
+        @listen(reserve)
+        def summarize(self) -> dict[str, int]:
+            return {"orders": 3}
+
+        @listen(summarize)
+        @human_feedback(message="Approve?", provider=PausingProvider())
+        def review(self) -> str:
+            return "safe review output"
+
+    persistence = (
+        CustomPersistence()
+        if custom_persistence
+        else SQLiteFlowPersistence(str(tmp_path / "flows.db"))
+    )
+    flow = ReviewFlow(persistence=persistence)
+    pending = asyncio.run(flow.kickoff_async()) if use_async else flow.kickoff()
+    assert isinstance(pending, HumanFeedbackPending)
+    # Persistence must not replace or modify the live business output.
+    assert flow.method_outputs[0] is output
+    crewai_event_bus.reset_runtime_state()
+    resumed = ReviewFlow.from_pending(pending.context.flow_id, persistence)
+    assert resumed._completed_methods == {"reserve", "summarize"}
+    assert resumed._method_execution_counts == {"reserve": 1, "summarize": 1}
+    assert resumed._method_outputs == [
+        {"method": "reserve", "output": expected_output},
+        {"method": "summarize", "output": {"orders": 3}},
+    ]
+    result = (
+        asyncio.run(resumed.resume_async("approved"))
+        if use_async
+        else resumed.resume("approved")
+    )
+    assert result.output == "safe review output"
+    assert runs == ["reserve"]
+    assert persistence.load_pending_feedback(pending.context.flow_id) is None
