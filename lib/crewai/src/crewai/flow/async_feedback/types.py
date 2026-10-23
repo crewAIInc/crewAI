@@ -43,6 +43,10 @@ class PendingFeedbackContext:
             new uuid. New pauses always store a value.
         trace_context: Previous trace and root span IDs, used to link the resumed
             execution segment. Absent when execution tracing was disabled.
+        completed_methods: Methods completed before the pause.
+        method_outputs: Completed method outputs, in execution order. Persisted
+            outputs use the same JSON conversion as ``method_output``.
+        method_execution_counts: Successful execution counts before the pause.
 
     Example:
         ```python
@@ -70,6 +74,9 @@ class PendingFeedbackContext:
     requested_at: datetime = field(default_factory=datetime.now)
     execution_uuid: str | None = None
     trace_context: tuple[int, int] | None = None
+    completed_methods: list[str] = field(default_factory=list)
+    method_outputs: list[Any] = field(default_factory=list)
+    method_execution_counts: dict[str, int] = field(default_factory=dict)
 
     @staticmethod
     def _make_json_safe(value: Any) -> Any:
@@ -90,7 +97,7 @@ class PendingFeedbackContext:
         from pydantic import BaseModel
 
         if isinstance(value, BaseModel):
-            return value.model_dump(mode="json")
+            return value.model_dump(mode="json", fallback=str)
         import dataclasses
 
         if dataclasses.is_dataclass(value) and not isinstance(value, type):
@@ -116,6 +123,9 @@ class PendingFeedbackContext:
             "requested_at": self.requested_at.isoformat(),
             "execution_uuid": self.execution_uuid,
             "trace_context": list(self.trace_context) if self.trace_context else None,
+            "completed_methods": self.completed_methods,
+            "method_outputs": self._make_json_safe(self.method_outputs),
+            "method_execution_counts": self.method_execution_counts,
         }
 
     @classmethod
@@ -157,6 +167,9 @@ class PendingFeedbackContext:
             trace_context=(trace_context[0], trace_context[1])
             if trace_context
             else None,
+            completed_methods=data.get("completed_methods", []),
+            method_outputs=data.get("method_outputs", []),
+            method_execution_counts=data.get("method_execution_counts", {}),
         )
 
 
