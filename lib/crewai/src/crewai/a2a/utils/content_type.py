@@ -137,19 +137,23 @@ def _find_compatible_modes(
 ) -> list[str]:
     """Find compatible MIME types between client and server.
 
-    Returns modes in client preference order.
+    Returns modes in client preference order. When a client wildcard matches a
+    concrete server mode, include subsequent matching concrete server modes.
     """
     compatible = []
     for client_mode in client_modes:
+        expanded_wildcard = False
         for server_mode in server_modes:
             if _mime_types_compatible(client_mode, server_mode):
                 if "*" in client_mode and "*" not in server_mode:
                     if server_mode not in compatible:
                         compatible.append(server_mode)
-                else:
+                    expanded_wildcard = True
+                elif not expanded_wildcard:
+                    # Later wildcard matches must not broaden a concrete expansion.
                     if client_mode not in compatible:
                         compatible.append(client_mode)
-                break
+                    break
     return compatible
 
 
