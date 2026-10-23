@@ -1,0 +1,134 @@
+---
+title: Instant Expert
+description: Permita que uma crew pague uma pessoa específica, como um executivo ou especialista, por uma chamada curta ou uma resposta por escrito
+icon: user-tie
+mode: "wide"
+---
+
+# Instant Expert
+
+O [Instant Expert](https://instant.expert) permite que um agente obtenha respostas de pessoas específicas que valem o investimento: executivos, líderes de operações e especialistas. Ele encontra pessoas que correspondem a uma descrição (ou usa as que você indicar), envia a cada uma um convite pago para uma chamada curta ou uma resposta por escrito e cobra apenas se a pessoa agendar ou responder. É um servidor MCP remoto, então a CrewAI se conecta a ele com o suporte a MCP já embutido, `MCPServerHTTP` no `mcps` de um agente, sem nenhum pacote extra para instalar.
+
+| Endpoint                          | O que alcança                                                      | Autorização                         |
+| --------------------------------- | ------------------------------------------------------------------ | ----------------------------------- |
+| `https://instant.expert/mcp/test` | Modo de teste: pessoas fictícias, nenhum e-mail enviado, cartão de teste do Stripe | Um token de sandbox gratuito, sem conta |
+| `https://instant.expert/mcp`      | Uma conta real: pessoas reais e cobranças reais                    | Um token de acesso OAuth da conta   |
+
+## Requisitos
+
+- A CrewAI, que inclui a biblioteca `mcp` usada pelo `MCPServerHTTP`
+- Uma chave de API de LLM, por exemplo `OPENAI_API_KEY`
+- Nenhuma conta do Instant Expert para o modo de teste
+
+## Obter um token do modo de teste
+
+O modo de teste usa pessoas fictícias, registra cada e-mail em vez de enviá-lo e cobra um cartão de teste do Stripe. Uma única requisição retorna um token válido por 24 horas:
+
+```bash
+curl -X POST https://instant.expert/api/sandbox
+export INSTANT_EXPERT_SANDBOX_TOKEN=ie_sandbox_...
+```
+
+Cada rede pode criar cinco tokens por hora, então reutilize um token entre execuções.
+
+## Uso
+
+Um hook `before_tool_call` pausa a crew em `send_requests`, a ferramenta que efetiva o pedido, até que uma pessoa o aprove.
+
+```python
+import os
+
+from crewai import Agent, Crew, Task
+from crewai.hooks import ToolCallHookContext, before_tool_call
+from crewai.mcp import MCPServerHTTP
+
+instant_expert = MCPServerHTTP(
+    url="https://instant.expert/mcp/test",
+    headers={"Authorization": f"Bearer {os.environ['INSTANT_EXPERT_SANDBOX_TOKEN']}"},
+)
+
+
+@before_tool_call
+def approve_paid_send(context: ToolCallHookContext) -> bool | None:
+    # CrewAI prefixes MCP tool names with the server, so match the suffix.
+    if not context.tool_name.endswith("send_requests"):
+        return None
+    answer = context.request_human_input(
+        prompt=f"Place this order? {context.tool_input}",
+        default_message="Type y to send:",
+    )
+    return None if answer.strip().lower() == "y" else False  # False blocks the call
+
+
+coordinator = Agent(
+    role="Outreach coordinator",
+    goal="Get answers from the right executives and report each person's outcome",
+    backstory="You find the right people through Instant Expert and only spend within budget.",
+    mcps=[instant_expert],
+)
+outreach = Task(
+    description=(
+        "Find 3 product leaders at SaaS companies. Offer each of them $40 for a "
+        "15-minute call about how they choose analytics tools, with a $150 total "
+        "budget. Search, wait for the job with get_job, read the people with "
+        "get_search, draft with queue_requests, then preview with "
+        "prepare_request_order. Then call send_requests right away with the "
+        "preview's details and confirmed=true. Don't ask for approval in chat: "
+        "the crew pauses at send_requests and shows the founder the order. "
+        "Finally, report who booked, replied or declined."
+    ),
+    expected_output="Who was invited, the price, and each person's status",
+    agent=coordinator,
+)
+print(Crew(agents=[coordinator], tasks=[outreach]).kickoff().raw)
+```
+
+No modo de teste, cada pessoa fictícia responde por conta própria depois da entrega: algumas agendam, algumas respondem com uma pergunta, algumas recusam e algumas nunca respondem.
+
+## Ferramentas disponíveis
+
+| Ferramenta                                          | O que faz                                                                        |
+| --------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `plan_outreach`                                     | Sugere públicos que valem a pena contatar para uma empresa ou pergunta de pesquisa |
+| `search_people`, `get_job`, `get_search`            | Encontra pessoas que correspondem a uma descrição, como tarefa em segundo plano  |
+| `import_people`                                     | Salva pessoas que você já conhece por URL do LinkedIn, e-mail ou nome e empresa  |
+| `queue_requests`, `get_request_draft`               | Cria o rascunho dos convites pagos: mensagem, valor por pessoa e orçamento total |
+| `prepare_request_order`, `send_requests`            | Mostra a prévia do pedido e depois o efetiva                                     |
+| `get_request_order`, `list_requests`, `get_request` | Acompanha a entrega e a resposta de cada pessoa                                  |
+| `simulate_response`                                 | Somente no modo de teste: força o resultado de uma pessoa fictícia               |
+
+## Usar uma conta real
+
+Uma conta real usa `https://instant.expert/mcp` e um token de acesso OAuth no lugar do token de sandbox. Não há chaves de API: o servidor autentica clientes com OAuth 2.1 (PKCE e registro dinâmico de clientes). O `MCPServerHTTP` só envia os cabeçalhos que você passa, então obtenha o token com um cliente MCP que faça o login, como o FastMCP. Instale-o no mesmo comando que a CrewAI, `pip install crewai fastmcp`, para que o pip escolha uma versão do FastMCP compatível com a versão da biblioteca `mcp` usada pela CrewAI.
+
+```python
+import asyncio
+
+from crewai.mcp import MCPServerHTTP
+from fastmcp import Client
+from fastmcp.client.auth import OAuth
+
+LIVE_URL = "https://instant.expert/mcp"
+
+
+async def sign_in() -> str:
+    """Sign in to Instant Expert in the browser and return an access token."""
+    oauth = OAuth(mcp_url=LIVE_URL)
+    async with Client(LIVE_URL, auth=oauth):
+        tokens = await oauth.token_storage_adapter.get_tokens()
+    return tokens.access_token
+
+
+instant_expert = MCPServerHTTP(
+    url=LIVE_URL,
+    headers={"Authorization": f"Bearer {asyncio.run(sign_in())}"},
+)
+```
+
+`sign_in()` abre o navegador uma vez por execução para você entrar e aprovar a conexão. A CrewAI envia esse cabeçalho sem mudanças durante toda a execução, e os tokens de acesso expiram depois de pouco tempo, então deixe a execução terminar, aprovação incluída, antes que o token expire. Se as chamadas de ferramenta começarem a falhar com HTTP 401, entre de novo e comece uma nova execução. Os pedidos feitos antes disso continuam valendo, então confira `list_requests` antes de enviar de novo. Para que um agente efetive pedidos, a conexão também precisa ter o envio pago ativado e um cartão salvo. Veja a [documentação MCP do Instant Expert](https://instant.expert/docs/mcp).
+
+## Observações
+
+- A CrewAI adiciona o nome do servidor como prefixo aos nomes das ferramentas MCP: `instant_expert_mcp_test_send_requests` no modo de teste e `instant_expert_mcp_send_requests` em uma conta real. O hook compara o fim do nome, então funciona nos dois casos.
+- A CrewAI não repassa as instruções do próprio servidor ao modelo, por isso a tarefa acima descreve os passos que elas indicam: buscar, esperar a tarefa, ler as pessoas, criar o rascunho, ver a prévia e enviar.
+- A CrewAI tenta novamente uma chamada de ferramenta que leva mais de 30 segundos. Isso é seguro aqui: as ferramentas que iniciam uma tarefa ou efetivam um pedido recebem uma chave de idempotência, e uma nova tentativa com os mesmos argumentos retorna a tarefa ou o pedido original.
