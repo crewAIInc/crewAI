@@ -74,7 +74,10 @@ FUNCTION_SCHEMA: Final[dict[str, Any]] = {
                                 "description": "What to do in this step",
                             },
                             "tool_to_use": {
-                                "type": ["string", "null"],
+                                "anyOf": [
+                                    {"type": "string"},
+                                    {"type": "null"},
+                                ],
                                 "description": "Tool to use for this step, or null if no tool needed",
                             },
                             "depends_on": {
