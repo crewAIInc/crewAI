@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 import logging
 import os
 import re
 from typing import Any, Literal, cast
+from urllib.parse import unquote_to_bytes
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
@@ -612,6 +614,58 @@ class GeminiCompletion(BaseLLM):
 
         return gemini_tools
 
+    @staticmethod
+    def _convert_image_url(image_url: Any) -> types.Part:
+        """Convert a base64 image data URI without fetching external resources.
+
+        Invalid images raise ValueError rather than producing a text-only
+        request. Error messages deliberately omit the URL and image payload.
+        """
+        url = image_url.get("url") if isinstance(image_url, dict) else None
+        if not isinstance(url, str):
+            raise ValueError("Gemini image_url requires a string image_url.url")
+
+        header, separator, encoded = url.partition(",")
+        metadata = header[5:].split(";")
+        if (
+            header[:5].lower() != "data:"
+            or not separator
+            or len(metadata) < 2
+            or metadata[-1].lower() != "base64"
+            or any(
+                not key or not sep or not value
+                for key, sep, value in (
+                    parameter.partition("=") for parameter in metadata[1:-1]
+                )
+            )
+        ):
+            raise ValueError(
+                "Gemini image_url requires a base64 data URI: "
+                "data:<image MIME type>;base64,<data>. External URLs are not fetched."
+            )
+
+        mime_type = metadata[0].lower()
+        if mime_type not in (
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/heic",
+            "image/heif",
+        ):
+            raise ValueError(
+                "Gemini image_url requires a supported image MIME type: "
+                "image/png, image/jpeg, image/webp, image/heic or image/heif"
+            )
+        try:
+            # Data URLs may percent-escape base64 characters such as +, / and =.
+            # Decode once, preserving literal + (unlike form URL decoding).
+            data = base64.b64decode(unquote_to_bytes(encoded), validate=True)
+        except (binascii.Error, ValueError):
+            raise ValueError("Gemini image_url contains invalid base64 data") from None
+        if not data:
+            raise ValueError("Gemini image_url contains empty image data")
+        return types.Part.from_bytes(data=data, mime_type=mime_type)
+
     def _format_messages_for_gemini(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[types.Content], str | None]:
@@ -631,6 +685,9 @@ class GeminiCompletion(BaseLLM):
             Tuple of (formatted_contents, system_instruction)
 
         Raises:
+            ValueError: If an image_url part cannot be converted without losing
+                image content. Only base64 image data URIs in user and ordinary
+                assistant turns are supported.
             ValueError: If the history ends on a model turn with an unresolved
                 function call, which requires a function response rather than a
                 continuation prompt.
@@ -648,7 +705,16 @@ class GeminiCompletion(BaseLLM):
             if isinstance(content, list):
                 for item in content:
                     if isinstance(item, dict):
-                        if "text" in item:
+                        if item.get("type") == "image_url":
+                            if role not in ("user", "assistant") or (
+                                role == "assistant" and message.get("tool_calls")
+                            ):
+                                raise ValueError(
+                                    "Gemini image_url parts require a user or assistant "
+                                    "message without tool calls"
+                                )
+                            parts.append(self._convert_image_url(item.get("image_url")))
+                        elif "text" in item:
                             parts.append(types.Part.from_text(text=str(item["text"])))
                         elif "inlineData" in item:
                             inline = item["inlineData"]
