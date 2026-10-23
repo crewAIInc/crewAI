@@ -9,7 +9,7 @@ Structure (see ``flow_definition``) and executed here.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
@@ -1317,6 +1317,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else cls(persistence=persistence, **kwargs)
         )
         instance._initialize_state(state_data)
+        instance._pending_events = {
+            PendingListenerKey(key): set(events)
+            for key, events in pending_context.pending_events.items()
+        }
+        instance._fired_or_listeners = {
+            FlowMethodName(name) for name in pending_context.fired_or_listeners
+        }
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
@@ -1628,6 +1635,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 if session := get_trace_session():
                     e.context.trace_context = session.context.otel_resume_context
+                self._capture_pending_listener_state(e.context)
                 self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
@@ -2446,7 +2454,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         self._execute_start_method(start_method)
                         for start_method in starts_to_execute
                     ]
-                    await asyncio.gather(*tasks)
+                    await self._execute_parallel(tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
                 if isinstance(e, HumanFeedbackPending):
@@ -2492,6 +2500,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     if session := get_trace_session():
                         e.context.trace_context = session.context.otel_resume_context
+                    self._capture_pending_listener_state(e.context)
                     self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
@@ -3165,6 +3174,28 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         else:
             return state_copy
 
+    def _capture_pending_listener_state(self, context: PendingFeedbackContext) -> None:
+        context.pending_events = {
+            str(key): sorted(events) for key, events in self._pending_events.items()
+        }
+        context.fired_or_listeners = sorted(self._fired_or_listeners)
+
+    async def _execute_parallel(
+        self, coroutines: Sequence[Coroutine[Any, Any, Any]]
+    ) -> None:
+        tasks = [asyncio.create_task(coroutine) for coroutine in coroutines]
+        try:
+            await asyncio.gather(*tasks)
+        except HumanFeedbackPending:
+            # HumanFeedbackPending 暂停前需要等待其他已启动分支结束
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, BaseException) and not isinstance(
+                    result, HumanFeedbackPending
+                ):
+                    raise result from None
+            raise
+
     async def _execute_listeners(
         self,
         trigger_method: FlowMethodName,
@@ -3291,7 +3322,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             )
                             for listener_name in listeners_triggered
                         ]
-                        await asyncio.gather(*tasks)
+                        await self._execute_parallel(tasks)
 
                 if current_trigger in router_results:
                     for method_name in self._start_method_names():

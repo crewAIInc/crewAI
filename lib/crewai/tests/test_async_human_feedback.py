@@ -11,8 +11,10 @@ This module tests the async/non-blocking human feedback flow, including:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+from pathlib import Path
 import tempfile
 from datetime import datetime
 from typing import Any
@@ -21,7 +23,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
+from crewai.flow import (
+    Flow,
+    HumanFeedbackResult,
+    and_,
+    human_feedback,
+    listen,
+    or_,
+    start,
+)
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -32,6 +42,104 @@ from crewai.flow.persistence import SQLiteFlowPersistence
 
 
 # PendingFeedbackContext Tests
+
+
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.parametrize("parallel_starts", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_parallel_feedback_preserves_sibling_and_join(
+    tmp_path: Path, async_mode: bool, parallel_starts: bool
+) -> None:
+    class PendingReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @(start() if parallel_starts else listen(begin))
+        @human_feedback(message="Approve?", provider=PendingReview())
+        def review(self) -> str:
+            return "draft"
+
+        @listen(review)
+        def record_review(self, result: HumanFeedbackResult) -> None:
+            self.state["review"] = result.feedback
+
+        @(start() if parallel_starts else listen(begin))
+        async def enrich(self) -> None:
+            await asyncio.to_thread((tmp_path / "enriched.txt").write_text, "done")
+            self.state["enriched"] = True
+
+        @listen(and_(record_review, enrich))
+        def publish(self) -> None:
+            self.state["published"] = self.state.get("published", 0) + 1
+
+        @listen(or_(record_review, enrich))
+        def audit(self) -> None:
+            self.state["audits"] = self.state.get("audits", 0) + 1
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+
+    async def run_async() -> ReviewFlow:
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        pending = await flow.kickoff_async()
+        assert isinstance(pending, HumanFeedbackPending)
+        resumed = ReviewFlow.from_pending(
+            pending.context.flow_id, persistence, suppress_flow_events=True
+        )
+        await resumed.resume_async("approved")
+        return resumed
+
+    if async_mode:
+        resumed = asyncio.run(run_async())
+    else:
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        pending = flow.kickoff()
+        assert isinstance(pending, HumanFeedbackPending)
+        resumed = ReviewFlow.from_pending(
+            pending.context.flow_id, persistence, suppress_flow_events=True
+        )
+        resumed.resume("approved")
+
+    assert {key: value for key, value in resumed.state.items() if key != "id"} == {
+        "review": "approved",
+        "enriched": True,
+        "published": 1,
+        "audits": 1,
+    }
+    assert persistence.load_pending_feedback(resumed.state["id"]) is None
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_parallel_feedback_propagates_sibling_failure(tmp_path: Path) -> None:
+    class PendingReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class FailedEnrichment(Flow):
+        @start()
+        @human_feedback(message="Approve?", provider=PendingReview())
+        def review(self) -> str:
+            return "draft"
+
+        @start()
+        async def enrich(self) -> None:
+            await asyncio.to_thread((tmp_path / "enriched.txt").write_text, "done")
+            raise ValueError("enrichment failed")
+
+    flow = FailedEnrichment(
+        persistence=SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite")),
+        suppress_flow_events=True,
+    )
+    with pytest.raises(ValueError, match="enrichment failed"):
+        flow.kickoff()
 
 
 class TestPendingFeedbackContext:
