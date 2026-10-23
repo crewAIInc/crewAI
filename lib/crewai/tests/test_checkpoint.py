@@ -592,9 +592,66 @@ class TestSqliteProviderFork:
         return RuntimeState(root=[crew])
 
 
-
-
 class TestKickoffFromCheckpoint:
+    @pytest.mark.parametrize("suppress_events", [False, True])
+    @pytest.mark.parametrize("use_definition", [False, True])
+    def test_restored_flow_creation_event_uses_restored_runtime_state(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        suppress_events: bool,
+        use_definition: bool,
+    ) -> None:
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import FlowCreatedEvent
+
+        class OrderFlow(Flow):
+            suppress_flow_events: bool = suppress_events
+
+        entity = Flow(suppress_flow_events=True)
+        entity.checkpoint_completed_methods = {"reserve"}
+        entity.checkpoint_state = {"id": "restored", "order": 42}
+        restored_state = RuntimeState(root=[entity])
+        old_state = RuntimeState(root=[])
+        crewai_event_bus.set_runtime_state(old_state)
+        observed: list[tuple[Any, Any, set[str]]] = []
+        real_emit = crewai_event_bus.emit
+
+        def capture(source: Any, event: Any) -> Any:
+            if isinstance(source, OrderFlow) and isinstance(event, FlowCreatedEvent):
+                observed.append(
+                    (
+                        source,
+                        crewai_event_bus.runtime_state,
+                        set(source._completed_methods),
+                    )
+                )
+            return real_emit(source, event)
+
+        monkeypatch.setattr(crewai_event_bus, "emit", capture)
+        with patch.object(RuntimeState, "from_checkpoint", return_value=restored_state):
+            try:
+                definition = OrderFlow.flow_definition() if use_definition else None
+                if definition is not None:
+                    definition = definition.model_copy(
+                        update={
+                            "config": definition.config.model_copy(
+                                update={"suppress_flow_events": suppress_events}
+                            )
+                        }
+                    )
+                restored = OrderFlow.from_checkpoint(
+                    CheckpointConfig(restore_from="unused.json"), definition=definition
+                )
+                assert old_state.root == []
+                assert restored_state.root == [restored]
+                assert restored.suppress_flow_events is suppress_events
+                assert observed == (
+                    [] if suppress_events else [(restored, restored_state, {"reserve"})]
+                )
+            finally:
+                crewai_event_bus.flush()
+                crewai_event_bus.reset_runtime_state()
+
     def test_crew_kickoff_delegates_to_from_checkpoint(self) -> None:
         mock_restored = MagicMock(spec=Crew)
         mock_restored.kickoff.return_value = "result"

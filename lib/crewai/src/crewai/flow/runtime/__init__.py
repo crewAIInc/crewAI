@@ -705,10 +705,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             entity._restore_from_checkpoint()
             crewai_event_bus.set_runtime_state(state)
             return entity
-        instance = (
-            cls.from_declaration(contents=definition)
+        # Construction emits FlowCreatedEvent. Defer it until the instance is
+        # hydrated and installed, so listeners never observe the old runtime
+        # state or a newly-created, empty flow during restore.
+        suppress_events = (
+            definition.config.suppress_flow_events
             if definition is not None
-            else cls()
+            else cls.model_fields["suppress_flow_events"].get_default(
+                call_default_factory=True
+            )
+        )
+        instance = (
+            cls.from_declaration(contents=definition, suppress_flow_events=True)
+            if definition is not None
+            else cls(suppress_flow_events=True)
         )
         instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
         instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
@@ -717,6 +727,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         instance._restore_from_checkpoint()
         state.root[index] = cast(Any, instance)
         crewai_event_bus.set_runtime_state(state)
+        instance.suppress_flow_events = suppress_events
+        if not instance.suppress_flow_events:
+            crewai_event_bus.emit(
+                instance,
+                FlowCreatedEvent(
+                    type="flow_created", flow_name=instance._definition.name
+                ),
+            )
         return instance
 
     @classmethod
