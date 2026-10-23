@@ -1471,6 +1471,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
+        completed_response_seen = False
         usage: dict[str, Any] | None = None
 
         stream = self._get_sync_client().responses.create(**params)
@@ -1504,14 +1505,20 @@ class OpenAICompletion(BaseLLM):
                         }
                     )
 
-            elif event.type == "response.completed":
+            elif event.type in {
+                "response.completed",
+                "response.failed",
+                "response.incomplete",
+            }:
                 final_response = event.response
-                if self.auto_chain and event.response and event.response.id:
-                    self._last_response_id = event.response.id
-                if self.auto_chain_reasoning and event.response:
-                    reasoning_items = self._extract_reasoning_items(event.response)
-                    if reasoning_items:
-                        self._last_reasoning_items = reasoning_items
+                if event.type == "response.completed":
+                    completed_response_seen = True
+                    if self.auto_chain and event.response and event.response.id:
+                        self._last_response_id = event.response.id
+                    if self.auto_chain_reasoning and event.response:
+                        reasoning_items = self._extract_reasoning_items(event.response)
+                        if reasoning_items:
+                            self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
@@ -1521,6 +1528,8 @@ class OpenAICompletion(BaseLLM):
             if final_response is not None
             else (None, response_id_stream)
         )
+
+        self._raise_for_unsuccessful_streaming_response(final_response)
 
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
@@ -1538,6 +1547,24 @@ class OpenAICompletion(BaseLLM):
             )
 
             return parsed_result
+
+        if function_calls and not completed_response_seen:
+            raise RuntimeError(
+                "OpenAI Responses API stream ended before response.completed"
+            )
+
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+                usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
+            return function_calls
 
         if function_calls and available_functions:
             for call in function_calls:
@@ -1608,6 +1635,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
+        completed_response_seen = False
         usage: dict[str, Any] | None = None
 
         stream = await self._get_async_client().responses.create(**params)
@@ -1641,14 +1669,20 @@ class OpenAICompletion(BaseLLM):
                         }
                     )
 
-            elif event.type == "response.completed":
+            elif event.type in {
+                "response.completed",
+                "response.failed",
+                "response.incomplete",
+            }:
                 final_response = event.response
-                if self.auto_chain and event.response and event.response.id:
-                    self._last_response_id = event.response.id
-                if self.auto_chain_reasoning and event.response:
-                    reasoning_items = self._extract_reasoning_items(event.response)
-                    if reasoning_items:
-                        self._last_reasoning_items = reasoning_items
+                if event.type == "response.completed":
+                    completed_response_seen = True
+                    if self.auto_chain and event.response and event.response.id:
+                        self._last_response_id = event.response.id
+                    if self.auto_chain_reasoning and event.response:
+                        reasoning_items = self._extract_reasoning_items(event.response)
+                        if reasoning_items:
+                            self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
@@ -1658,6 +1692,8 @@ class OpenAICompletion(BaseLLM):
             if final_response is not None
             else (None, response_id_stream)
         )
+
+        self._raise_for_unsuccessful_streaming_response(final_response)
 
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
@@ -1675,6 +1711,24 @@ class OpenAICompletion(BaseLLM):
             )
 
             return parsed_result
+
+        if function_calls and not completed_response_seen:
+            raise RuntimeError(
+                "OpenAI Responses API stream ended before response.completed"
+            )
+
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+                usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
+            )
+            return function_calls
 
         if function_calls and available_functions:
             for call in function_calls:
@@ -1730,6 +1784,18 @@ class OpenAICompletion(BaseLLM):
         )
 
         return full_response
+
+    @staticmethod
+    def _raise_for_unsuccessful_streaming_response(response: Response | None) -> None:
+        """Raise when a streamed Responses API response ended unsuccessfully."""
+        status = getattr(response, "status", None)
+        if status != "failed":
+            return
+        details = getattr(response, "error", None)
+        message = getattr(details, "message", None) or str(details or status)
+        raise RuntimeError(
+            f"OpenAI Responses API stream ended with {status}: {message}"
+        )
 
     def _extract_function_calls_from_response(
         self, response: Response
