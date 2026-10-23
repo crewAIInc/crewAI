@@ -2162,7 +2162,21 @@ class Crew(FlowTrackable, BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        return self._execute_tasks(self.tasks, start_index, True)
+        try:
+            return self._execute_tasks(self.tasks, start_index, True)
+        except Exception as e:
+            # Mirror kickoff()'s failure terminal: the start event above is
+            # scope-starting, so a failed replay must close its own scope or
+            # the leaked frame parents every later event in this context.
+            crewai_event_bus.emit(
+                self,
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
+            )
+            raise
 
     def query_knowledge(
         self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
@@ -2330,20 +2344,23 @@ class Crew(FlowTrackable, BaseModel):
 
         Uses concurrent.futures for concurrent execution.
         """
+        # Emit the start event before setup: crew_test_failed is
+        # scope-ending, so a failure during create_llm must find its opener
+        # already on the stack instead of popping the caller's scope.
+        crewai_event_bus.emit(
+            self,
+            CrewTestStartedEvent(
+                crew_name=self.name,
+                n_iterations=n_iterations,
+                eval_llm=eval_llm,
+                inputs=inputs,
+            ),
+        )
         try:
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
 
-            crewai_event_bus.emit(
-                self,
-                CrewTestStartedEvent(
-                    crew_name=self.name,
-                    n_iterations=n_iterations,
-                    eval_llm=llm_instance,
-                    inputs=inputs,
-                ),
-            )
             test_crew = self.copy()
 
             evaluator = CrewEvaluator(test_crew, llm_instance)
