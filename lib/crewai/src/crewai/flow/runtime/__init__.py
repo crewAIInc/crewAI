@@ -677,27 +677,47 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if definition is not None:
             context["flow_definition"] = definition
         state = RuntimeState.from_checkpoint(config, context=context)
+        flow_slots: list[tuple[int, Flow[Any]]] = []
+        for i, candidate in enumerate(state.root):
+            if isinstance(candidate, Flow):
+                flow_slots.append((i, candidate))
+        if not flow_slots:
+            crewai_event_bus.set_runtime_state(state)
+            raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
+        # Entities deserialize as plain ``Flow`` objects, so the class alone
+        # cannot identify the target when several flows are stored. Blank
+        # duplicates carry no restore data, so prefer the entity that does.
+        index, entity = next(
+            (
+                slot
+                for slot in flow_slots
+                if (
+                    slot[1].checkpoint_completed_methods
+                    or slot[1].checkpoint_method_outputs
+                    or slot[1].checkpoint_method_counts
+                )
+            ),
+            flow_slots[0],
+        )
+        if entity.execution_context is not None:
+            apply_execution_context(entity.execution_context)
+        if isinstance(entity, cls):
+            entity._restore_from_checkpoint()
+            crewai_event_bus.set_runtime_state(state)
+            return entity
+        instance = (
+            cls.from_declaration(contents=definition)
+            if definition is not None
+            else cls()
+        )
+        instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
+        instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
+        instance.checkpoint_method_counts = entity.checkpoint_method_counts
+        instance.checkpoint_state = entity.checkpoint_state
+        instance._restore_from_checkpoint()
+        state.root[index] = cast(Any, instance)
         crewai_event_bus.set_runtime_state(state)
-        for entity in state.root:
-            if not isinstance(entity, Flow):
-                continue
-            if entity.execution_context is not None:
-                apply_execution_context(entity.execution_context)
-            if isinstance(entity, cls):
-                entity._restore_from_checkpoint()
-                return entity
-            instance = (
-                cls.from_declaration(contents=definition)
-                if definition is not None
-                else cls()
-            )
-            instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
-            instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
-            instance.checkpoint_method_counts = entity.checkpoint_method_counts
-            instance.checkpoint_state = entity.checkpoint_state
-            instance._restore_from_checkpoint()
-            return instance
-        raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
+        return instance
 
     @classmethod
     def fork(
