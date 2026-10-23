@@ -36,3 +36,27 @@ def test_concurrent_settings_instances_keep_configured_enterprise_url(
 
     assert [item.enterprise_base_url for item in settings] == [enterprise_url] * 2
     assert not list(config_path.parent.glob(".crewai_write_test.*"))
+
+
+@pytest.mark.parametrize(
+    "contents",
+    ['{"org_name": "acme",}', "not json", "[]"],
+    ids=["trailing-comma", "garbage", "non-object"],
+)
+def test_corrupt_settings_file_is_reported_and_replaced_on_save(
+    tmp_path: Path, contents: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A corrupt settings file is logged on load and backed up by the next save."""
+    config_path = tmp_path / "settings.json"
+    config_path.write_text(contents)
+
+    with caplog.at_level("WARNING", logger=settings_module.__name__):
+        settings = settings_module.Settings(config_path=config_path)
+    assert settings.org_name is None
+    assert str(config_path) in caplog.text
+
+    settings.org_name = "new-org"
+    settings.dump()
+
+    assert json.loads(config_path.read_text())["org_name"] == "new-org"
+    assert (tmp_path / "settings.json.bak").read_text() == contents
