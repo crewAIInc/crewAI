@@ -1,0 +1,105 @@
+---
+title: Anakin 도구
+description: Anakin으로 웹을 스크래핑, 검색, 크롤링하고 리서치하며, 사전 구축된 사이트 액션, 페이지 모니터, AI 클라우드 브라우저를 사용합니다.
+icon: globe
+mode: "wide"
+---
+
+# Anakin 도구
+
+[Anakin](https://anakin.io)은 웹사이트를 깔끔한 마크다운이나 구조화된 JSON으로 변환합니다.
+`crewai-anakin` 패키지는 CrewAI 에이전트에 22개의 Anakin 도구를 제공합니다. 페이지 스크래핑,
+웹 검색, 사이트 맵핑 및 크롤링, 여러 소스에 걸친 리서치, 수백 개 사이트에서 사전 구축된 Wire
+액션 사용, 페이지 변경 모니터링, AI 답변 엔진 비교, 클라우드 브라우저 제어를 할 수 있습니다.
+
+이 패키지는 Anakin이 관리하며 PyPI에 게시되어 있습니다
+([소스](https://github.com/Anakin-Inc/crewai-anakin)).
+
+## 설치
+
+```shell
+uv add crewai-anakin
+```
+
+## 환경 변수
+
+- `ANAKIN_API_KEY` (필수)
+
+[Anakin 대시보드](https://anakin.io/dashboard)에서 무료 API 키를 발급받으세요.
+
+## 포함된 도구
+
+웹 데이터:
+
+- `AnakinScrapeTool`: 페이지 하나를 깔끔한 마크다운으로 가져오며, 선택적으로 AI가 추출한 JSON도 제공합니다.
+- `AnakinSearchTool`: URL, 제목, 스니펫을 즉시 반환하는 웹 검색입니다.
+- `AnakinMapTool`: 사이트의 모든 URL을 나열하여 크롤링할 대상을 정할 수 있습니다.
+- `AnakinCrawlTool`: 한 사이트의 여러 페이지를 마크다운으로 가져오며, 포함 및 제외 패턴으로 범위를 지정합니다.
+- `AnakinAgenticSearchTool`: 여러 소스에 걸쳐 리서치하고 요약과 구조화된 데이터를 반환합니다.
+
+사전 구축된 사이트 액션(Wire), 모니터, AI 가시성, 브라우저 자동화:
+
+- `AnakinWireDiscoverTool`, `AnakinWireCatalogTool`, `AnakinWireReadActionTool`, `AnakinWireWriteActionTool` 등: Amazon, LinkedIn, Zillow 같은 사이트에서 검증된 액션을 찾아 실행합니다.
+- `AnakinMonitorCreateTool` 및 기타 모니터 도구: 페이지, 사이트 또는 Wire 액션을 일정에 따라 감시합니다.
+- `AnakinAiVisibilitySearchTool`: ChatGPT, Gemini, Google AI Overview에 같은 질문을 하고 답변을 비교합니다.
+- `AnakinBrowserTaskTool`: AI 에이전트가 실제 브라우저를 조작해 여러 단계의 작업을 수행합니다.
+
+`get_anakin_tools()`는 하나의 공유 클라이언트로 22개 도구를 모두 반환합니다. 웹사이트나 Anakin
+계정에서 무언가를 변경하거나 오래 걸리는 유료 작업을 시작하는 7개 도구(예: `AnakinBrowserTaskTool`)를
+제외하려면 `read_only=True`를 전달하세요.
+
+## 예시
+
+### 페이지 스크래핑
+
+```python Code
+from crewai_anakin import AnakinScrapeTool
+
+tool = AnakinScrapeTool()
+print(tool.run(url="https://example.com"))
+```
+
+### 사이트 일부 크롤링
+
+```python Code
+from crewai_anakin import AnakinCrawlTool
+
+tool = AnakinCrawlTool()
+print(tool.run(url="https://docs.example.com", max_pages=20, include_patterns=["/guides/*"]))
+```
+
+## 예제
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_anakin import AnakinScrapeTool, AnakinSearchTool
+
+agent = Agent(
+    role="Market Researcher",
+    goal="Answer questions with facts from the web",
+    backstory="An analyst who cites the pages used",
+    tools=[AnakinSearchTool(), AnakinScrapeTool()],
+    verbose=True,
+)
+
+task = Task(
+    description="What do the top three CRM vendors charge per seat?",
+    expected_output="A table of vendor, plan and price per seat, with source URLs",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+## 문제 해결
+
+- 401: `ANAKIN_API_KEY`를 확인하세요.
+- 402: 계정의 크레딧이 소진되었습니다.
+- JavaScript가 많은 페이지에서 내용이 비어 있는 경우: `AnakinScrapeTool` 또는 `AnakinCrawlTool`에 `use_browser=True`를 전달하세요.
+- 결제가 거부되는 경우: `AnakinWireWriteActionTool`, `AnakinWireBuildTool`, `AnakinBrowserTaskTool`은 결제나 송금처럼 보이는 요청을 거부합니다. 도구를 `allow_financial_actions=True`로 생성하면 허용됩니다.

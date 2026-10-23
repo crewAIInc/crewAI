@@ -1,0 +1,106 @@
+---
+title: Ferramentas Anakin
+description: Faça scraping, buscas, crawling e pesquisas na web com o Anakin, além de ações prontas em sites, monitores de páginas e um navegador em nuvem com IA.
+icon: globe
+mode: "wide"
+---
+
+# Ferramentas Anakin
+
+O [Anakin](https://anakin.io) transforma sites em markdown limpo ou JSON estruturado. O pacote
+`crewai-anakin` oferece 22 ferramentas do Anakin para agentes CrewAI: fazer scraping de uma
+página, buscar na web, mapear e rastrear um site, pesquisar em várias fontes, usar ações Wire
+prontas em centenas de sites, monitorar mudanças em páginas, comparar mecanismos de resposta com
+IA e controlar um navegador em nuvem.
+
+O pacote é mantido pelo Anakin e publicado no PyPI
+([código-fonte](https://github.com/Anakin-Inc/crewai-anakin)).
+
+## Instalação
+
+```shell
+uv add crewai-anakin
+```
+
+## Variáveis de Ambiente
+
+- `ANAKIN_API_KEY` (obrigatória)
+
+Obtenha uma chave de API gratuita no [painel do Anakin](https://anakin.io/dashboard).
+
+## Ferramentas Incluídas
+
+Dados da web:
+
+- `AnakinScrapeTool`: uma página em markdown limpo, opcionalmente com JSON extraído por IA.
+- `AnakinSearchTool`: busca na web com URLs, títulos e trechos, retornados imediatamente.
+- `AnakinMapTool`: todas as URLs de um site, para decidir o que rastrear.
+- `AnakinCrawlTool`: várias páginas de um site em markdown, delimitadas por padrões de inclusão e exclusão.
+- `AnakinAgenticSearchTool`: pesquisa em várias fontes, retornando um resumo e dados estruturados.
+
+Ações prontas em sites (Wire), monitores, visibilidade em IA e automação de navegador:
+
+- `AnakinWireDiscoverTool`, `AnakinWireCatalogTool`, `AnakinWireReadActionTool`, `AnakinWireWriteActionTool` e outras: encontre e execute ações testadas em sites como Amazon, LinkedIn e Zillow.
+- `AnakinMonitorCreateTool` e as demais ferramentas de monitor: acompanhe uma página, um site ou uma ação Wire em uma programação.
+- `AnakinAiVisibilitySearchTool`: faça a mesma pergunta ao ChatGPT, Gemini e Google AI Overview e compare as respostas.
+- `AnakinBrowserTaskTool`: um agente de IA que controla um navegador real em uma tarefa de várias etapas.
+
+`get_anakin_tools()` retorna as 22 ferramentas com um único cliente compartilhado. Passe
+`read_only=True` para deixar de fora as 7 ferramentas que alteram algo em um site ou na sua
+conta Anakin, ou que iniciam um trabalho longo e pago (como a `AnakinBrowserTaskTool`).
+
+## Exemplos
+
+### Fazer scraping de uma página
+
+```python Code
+from crewai_anakin import AnakinScrapeTool
+
+tool = AnakinScrapeTool()
+print(tool.run(url="https://example.com"))
+```
+
+### Rastrear parte de um site
+
+```python Code
+from crewai_anakin import AnakinCrawlTool
+
+tool = AnakinCrawlTool()
+print(tool.run(url="https://docs.example.com", max_pages=20, include_patterns=["/guides/*"]))
+```
+
+## Exemplo
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_anakin import AnakinScrapeTool, AnakinSearchTool
+
+agent = Agent(
+    role="Market Researcher",
+    goal="Answer questions with facts from the web",
+    backstory="An analyst who cites the pages used",
+    tools=[AnakinSearchTool(), AnakinScrapeTool()],
+    verbose=True,
+)
+
+task = Task(
+    description="What do the top three CRM vendors charge per seat?",
+    expected_output="A table of vendor, plan and price per seat, with source URLs",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+## Solução de Problemas
+
+- 401: verifique a `ANAKIN_API_KEY`.
+- 402: a conta está sem créditos.
+- Conteúdo vazio em páginas com muito JavaScript: passe `use_browser=True` para `AnakinScrapeTool` ou `AnakinCrawlTool`.
+- Pagamentos recusados: `AnakinWireWriteActionTool`, `AnakinWireBuildTool` e `AnakinBrowserTaskTool` recusam pedidos que pareçam um checkout ou uma transferência de dinheiro, a menos que a ferramenta seja criada com `allow_financial_actions=True`.
