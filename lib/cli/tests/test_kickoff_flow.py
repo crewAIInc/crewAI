@@ -98,3 +98,38 @@ def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> 
 
     assert result == "done"
     assert calls == ["listener", "app", "run"]
+
+
+
+def test_evaluate_on_an_untraced_conversation_runs_it_again_for_its_evaluation(
+    monkeypatch,
+) -> None:
+    """The app closed because the session was not traced: the conversational
+    flow runs again through `crewai eval`'s own path rather than the request
+    being lost."""
+    from types import SimpleNamespace
+
+    from crewai_cli import kickoff_flow
+
+    class FakeApp:
+        def __init__(self, **kwargs):
+            self._status = "completed"
+            self._crew_result = "result"
+            self._want_traced_rerun = True
+
+        def run(self):
+            pass
+
+    monkeypatch.setattr("crewai_cli.crew_run_tui.CrewRunApp", FakeApp)
+    monkeypatch.setattr("crewai.events.event_listener.EventListener", lambda: None)
+    evaluated: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "crewai_cli.experimental.eval_crew.eval_crew",
+        lambda **kwargs: evaluated.append(kwargs),
+    )
+
+    chat = SimpleNamespace(name="Chat")
+    assert kickoff_flow._run_conversational_flow_tui(chat) == "result"
+    # named by its definition (`crewai run --definition chat.yaml`): that flow again
+    assert kickoff_flow._run_conversational_flow_tui(chat, definition="chat.yaml") == "result"
+    assert [e["run_args"] for e in evaluated] == [{}, {"definition": "chat.yaml"}]

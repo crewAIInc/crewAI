@@ -9,6 +9,7 @@ from ipaddress import ip_address
 import logging
 import os
 from threading import Lock
+from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -28,13 +29,82 @@ from crewai.events.listeners.tracing.utils import (
     should_suppress_tracing_messages,
 )
 from crewai.telemetry.telemetry import Telemetry
-from crewai.telemetry.tracing import last_run
+from crewai.telemetry.tracing import gen_ai_shapes, last_run
 from crewai.telemetry.tracing.session import MAX_EXPORT_BATCH_SIZE, otlp_exporter
 
 
 logger = logging.getLogger(__name__)
 # Wharf's default encoded OTLP request limit for both OSS grant tiers.
 MAX_EXPORT_BODY_BYTES = 3_072_000
+
+
+_FIT_ATTEMPTS = 16
+
+
+def _fit_span(span: ReadableSpan, size: int) -> ReadableSpan | None:
+    """``span`` with its largest string attributes cut until it fits a request.
+
+    Each attribute is bounded on its own, so only a span carrying many large
+    ones gets here. Cutting the largest by the overshoot, with the usual
+    ``<attr>.truncated`` / ``<attr>.original_size_bytes`` markers, keeps the
+    span (its place in the tree, its timing, its status) where dropping it
+    would lose all of it. ``None`` when its strings cannot make it fit — the
+    excess is in the resource, the scope or the events.
+    """
+    attributes = dict(span.attributes or {})
+    for _ in range(_FIT_ATTEMPTS):
+        overshoot = size - MAX_EXPORT_BODY_BYTES
+        if overshoot <= 0:
+            return _with_attributes(span, attributes)
+        key, value = max(
+            (
+                (k, v)
+                for k, v in attributes.items()
+                if isinstance(v, str) and not k.endswith(".truncated")
+            ),
+            key=lambda item: len(item[1].encode("utf-8")),
+            default=(None, None),
+        )
+        if key is None or value is None:
+            return None
+        length = len(value.encode("utf-8"))
+        target = max(0, length - overshoot - 1024)
+        if key.startswith("gen_ai."):
+            cut, markers = gen_ai_shapes.truncate_attr(
+                value, attr=key, max_bytes=target
+            )
+        else:
+            cut, markers = gen_ai_shapes.truncate_plain(
+                value, attr=key, max_bytes=target
+            )
+        if cut is None:
+            cut = ""
+        if cut == value:
+            return None
+        attributes[key] = cut
+        # A value already cut keeps the size it had before the first cut.
+        markers.pop(f"{key}.original_size_bytes", None)
+        attributes.setdefault(f"{key}.original_size_bytes", length)
+        attributes.update(markers)
+        size = encode_spans([_with_attributes(span, attributes)]).ByteSize()
+    return None
+
+
+def _with_attributes(span: ReadableSpan, attributes: dict[str, Any]) -> ReadableSpan:
+    return ReadableSpan(
+        name=span.name,
+        context=span.get_span_context(),
+        parent=span.parent,
+        resource=span.resource,
+        attributes=attributes,
+        events=span.events,
+        links=span.links,
+        kind=span.kind,
+        status=span.status,
+        start_time=span.start_time,
+        end_time=span.end_time,
+        instrumentation_scope=span.instrumentation_scope,
+    )
 
 
 class TraceGrantError(Exception):
@@ -47,14 +117,36 @@ class TraceGrantError(Exception):
 
 def tracing_credential() -> str | None:
     """Resolve an explicit PAT, integration credential, or saved CLI login."""
+    resolved = resolve_tracing_credential()
+    return resolved[1] if resolved else None
+
+
+def tracing_credential_source() -> str | None:
+    """Which credential ``tracing_credential`` sends: ``"pat"``
+    (``CREWAI_USER_PAT``), ``"integration"`` (the platform integration token)
+    or ``"login"`` (the saved ``crewai login``) — so a refusal can name the one
+    that failed instead of sending somebody to refresh another."""
+    resolved = resolve_tracing_credential()
+    return resolved[0] if resolved else None
+
+
+def resolve_tracing_credential() -> tuple[str, str] | None:
+    """The credential tracing sends and where it came from, as ``(source,
+    token)`` — read once, in the one order both functions above follow.
+
+    A caller that sends the token and may later explain a refusal keeps this
+    pair: resolving the source again after the request can name a credential
+    AMP never saw (the environment or the context may have changed meanwhile).
+    """
     if token := os.getenv("CREWAI_USER_PAT"):
-        return token
+        return "pat", token
     if token := get_platform_integration_token():
-        return token
+        return "integration", token
     try:
-        return get_auth_token()
+        token = get_auth_token()
     except AuthError:
         return None
+    return ("login", token) if token else None
 
 
 @dataclass(frozen=True)
@@ -243,6 +335,18 @@ class GrantSpanExporter(SpanExporter):
             size = encode_spans(batch).ByteSize()
             if size > MAX_EXPORT_BODY_BYTES:
                 if len(batch) == 1:
+                    fitted = _fit_span(batch[0], size)
+                    if fitted is not None:
+                        logger.warning(
+                            "Execution trace span %r encoded to %d bytes, over "
+                            "Wharf's %d-byte request limit; its largest "
+                            "attributes were cut, each marked <attr>.truncated",
+                            batch[0].name,
+                            size,
+                            MAX_EXPORT_BODY_BYTES,
+                        )
+                        pending.append([fitted])
+                        continue
                     logger.warning(
                         "Skipping execution trace span: encoded size %d exceeds "
                         "Wharf's %d-byte request limit",

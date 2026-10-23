@@ -87,7 +87,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             project_root, "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
         )
 
-        copy_assistant_instructions(project_root)
+        copy_assistant_instructions(project_root, evaluation=False)
 
         old_directory = os.getcwd()
         os.chdir(project_root)

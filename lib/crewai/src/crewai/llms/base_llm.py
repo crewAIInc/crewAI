@@ -85,7 +85,9 @@ class LLMCallBlockedError(ValueError):
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
+TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD: Final[float] = 0.25
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+logger = logging.getLogger(__name__)
 
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
@@ -362,6 +364,89 @@ class BaseLLM(BaseModel, ABC):
             config["stop"] = self.stop
 
         return config
+
+    def get_input_tokens_count(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> int:
+        """Estimate the input-token count a request will consume.
+
+        Providers with native token-estimation support should override this
+        method. This fallback estimates one token per four text characters,
+        rounded up, so callers can safely preflight requests when a native
+        count endpoint is unavailable.
+
+        Args:
+            messages: Input messages for the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            A conservative estimate of the provider's input-token count.
+        """
+        logger.warning(
+            "Using an approximate input token count for model %r: assuming one "
+            "token per four characters because a native token count is unavailable.",
+            self.model,
+        )
+        from crewai.utilities.agent_utils import message_content_text
+
+        if isinstance(messages, str):
+            character_count = len(messages)
+        else:
+            character_count = sum(
+                len(message_content_text(message)) for message in messages
+            )
+        return (character_count + 3) // 4
+
+    def is_tool_result_overflowing_threshold(
+        self, tool_result: str
+    ) -> tuple[bool, int]:
+        """Check whether a tool result exceeds the deferred-output threshold.
+
+        The threshold is 25% of the model's usable context window. The count
+        comes from one call to :meth:`get_input_tokens_count`, which uses the
+        provider's estimator or the four-characters-per-token fallback.
+
+        Args:
+            tool_result: The formatted text returned by a tool.
+
+        Returns:
+            Whether the result alone uses more than 25% of the usable context
+            window, and the input-token count from that same check.
+        """
+        tool_result_tokens = self.get_input_tokens_count(tool_result)
+        threshold = (
+            self.get_context_window_size() * TOOL_RESULT_CONTEXT_WINDOW_THRESHOLD
+        )
+        return tool_result_tokens > threshold, tool_result_tokens
+
+    def is_context_window_overflowing_threshold(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> bool:
+        """Check whether a pending request exceeds the usable context window.
+
+        ``get_context_window_size`` already reserves 15% of the raw model
+        window, so this preflight check triggers compaction once a request
+        reaches more than 85% of the provider's advertised limit.
+
+        Args:
+            messages: The messages that will be sent to the LLM.
+            tools: Optional tool schemas included in the request.
+            response_model: Optional structured-output model included in the
+                request.
+
+        Returns:
+            Whether the pending request exceeds the usable context window.
+        """
+        input_tokens = self.get_input_tokens_count(messages, tools, response_model)
+        return input_tokens > self.get_context_window_size()
 
     @abstractmethod
     def call(
@@ -884,7 +969,9 @@ class BaseLLM(BaseModel, ABC):
 
             return None
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+    def _format_messages(
+        self, messages: str | list[LLMMessage], *, file_api: str | None = None
+    ) -> list[LLMMessage]:
         """Convert messages to standard format.
 
         Args:
@@ -903,8 +990,8 @@ class BaseLLM(BaseModel, ABC):
             return [{"role": "user", "content": messages}]
 
         # Validate then copy each message, dropping the cache-breakpoint
-        # flag in the copy only. The caller (e.g. CrewAgentExecutor,
-        # experimental.AgentExecutor) reuses its messages buffer across
+        # flag in the copy only. The caller (AgentExecutor) reuses its
+        # messages buffer across
         # many LLM calls in the tool-use loop; mutating their dicts
         # in place would erase the markers after the first call and
         # break prompt caching for every subsequent iteration.
@@ -921,9 +1008,11 @@ class BaseLLM(BaseModel, ABC):
             }
             cleaned.append(cast(_LLMMessage, copy))
 
-        return self._process_message_files(cleaned)
+        return self._process_message_files(cleaned, api=file_api)
 
-    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+    def _process_message_files(
+        self, messages: list[LLMMessage], *, api: str | None = None
+    ) -> list[LLMMessage]:
         """Process files attached to messages and format for the provider.
 
         For each message with a `files` field, formats the files into
@@ -948,7 +1037,7 @@ class BaseLLM(BaseModel, ABC):
             return messages
 
         formatter = self._multimodal_formatter_name()
-        api = getattr(self, "api", None)
+        api = api if api is not None else getattr(self, "api", None)
 
         for msg in messages:
             files = msg.get("files")
