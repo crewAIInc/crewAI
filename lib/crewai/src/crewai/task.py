@@ -738,6 +738,7 @@ class Task(BaseModel):
                         tools=tools,
                         guardrail=guardrail,
                         guardrail_index=idx,
+                        context=context,
                     )
 
             if self._guardrail:
@@ -746,6 +747,7 @@ class Task(BaseModel):
                     agent=agent,
                     tools=tools,
                     guardrail=self._guardrail,
+                    context=context,
                 )
 
             post_step_ctx = StepContext(
@@ -897,6 +899,7 @@ class Task(BaseModel):
                         tools=tools,
                         guardrail=guardrail,
                         guardrail_index=idx,
+                        context=context,
                     )
 
             if self._guardrail:
@@ -905,6 +908,7 @@ class Task(BaseModel):
                     agent=agent,
                     tools=tools,
                     guardrail=self._guardrail,
+                    context=context,
                 )
 
             post_step_ctx = StepContext(
@@ -1331,6 +1335,7 @@ Follow these guidelines:
         tools: list[BaseTool],
         guardrail: GuardrailCallable | None,
         guardrail_index: int | None = None,
+        context: str | None = None,
     ) -> TaskOutput:
         if not guardrail:
             return task_output
@@ -1397,9 +1402,14 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
+            validation_error = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
+            )
+            retry_context = (
+                f"{context}\n\n{validation_error}"
+                if context
+                else validation_error
             )
             if agent and agent.verbose:
                 PRINTER.print(
@@ -1409,7 +1419,7 @@ Follow these guidelines:
             with tool_failure_collector() as retry_failures:
                 result = agent.execute_task(
                     task=self,
-                    context=context,
+                    context=retry_context,
                     tools=tools,
                 )
 
@@ -1451,6 +1461,7 @@ Follow these guidelines:
         tools: list[BaseTool],
         guardrail: GuardrailCallable | None,
         guardrail_index: int | None = None,
+        context: str | None = None,
     ) -> TaskOutput:
         """Invoke the guardrail function asynchronously."""
         if not guardrail:
@@ -1518,9 +1529,14 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
+            validation_error = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
+            )
+            retry_context = (
+                f"{context}\n\n{validation_error}"
+                if context
+                else validation_error
             )
             if agent and agent.verbose:
                 PRINTER.print(
@@ -1530,7 +1546,7 @@ Follow these guidelines:
             with tool_failure_collector() as retry_failures:
                 result = await agent.aexecute_task(
                     task=self,
-                    context=context,
+                    context=retry_context,
                     tools=tools,
                 )
 
