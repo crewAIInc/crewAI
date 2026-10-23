@@ -283,7 +283,10 @@ class BaseTool(BaseModel, ABC):
             kwargs: The keyword arguments to validate.
 
         Returns:
-            Validated (and possibly coerced) keyword arguments.
+            Validated (and possibly coerced) keyword arguments. Fields the
+            caller did not provide are omitted rather than serialized as
+            null, except fields with a non-None schema default, which are
+            passed through for implementations that require them.
 
         Raises:
             ValueError: If validation against args_schema fails.
@@ -291,7 +294,18 @@ class BaseTool(BaseModel, ABC):
         if self.args_schema is not None and self.args_schema.model_fields:
             try:
                 validated = self.args_schema.model_validate(kwargs)
-                return validated.model_dump()
+                # Drop fields the caller never provided so unset optionals are
+                # omitted (not sent as null). Explicitly passed values survive.
+                dumped = validated.model_dump(exclude_unset=True)
+                # ... except fields carrying a real (non-None) default, which
+                # implementations may require positionally (e.g. an explicit
+                # schema declaring `count: int = 1` with `_run(self, count)`).
+                for name, field in self.args_schema.model_fields.items():
+                    if name not in dumped:
+                        default = field.get_default(call_default_factory=True)
+                        if default is not None:
+                            dumped[name] = default
+                return dumped
             except Exception as e:
                 hint = build_schema_hint(self.args_schema)
                 raise ValueError(
