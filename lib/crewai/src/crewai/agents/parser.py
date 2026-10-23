@@ -20,6 +20,7 @@ from crewai.agents.constants import (
     UNABLE_TO_REPAIR_JSON_RESULTS,
 )
 from crewai.utilities.i18n import I18N_DEFAULT as _I18N
+from crewai.utilities.string_utils import _has_unterminated_string
 
 
 @dataclass
@@ -106,7 +107,9 @@ def parse(text: str) -> AgentAction | AgentFinish:
 
         action_input = action_match.group(2).strip()
 
-        tool_input = action_input.strip(" ").strip('"')
+        tool_input = action_input
+        if not tool_input.startswith(("{", "[")):
+            tool_input = tool_input.strip('"')
         safe_tool_input = _safe_repair_json(tool_input)
 
         return AgentAction(
@@ -171,6 +174,12 @@ def _safe_repair_json(tool_input: str) -> str:
         return tool_input
 
     tool_input = tool_input.replace('"""', '"')
+
+    # Keep truncated strings intact so ToolUsage can reject the original
+    # malformed input. Repairing here would hide the truncation from its
+    # validation and could silently change the value passed to a tool.
+    if _has_unterminated_string(tool_input):
+        return tool_input
 
     result = repair_json(tool_input)
     if not result or result in UNABLE_TO_REPAIR_JSON_RESULTS:
