@@ -164,6 +164,7 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     - `previous_response_id`: ID da resposta anterior para multi-turno
     - `include`: Dados adicionais para incluir na resposta (ex: `["reasoning.encrypted_content"]`)
     - `builtin_tools`: Lista de ferramentas integradas da OpenAI: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `tool_search`: Defina como `True` para adiar o carregamento das ferramentas de função e deixar o modelo carregá-las sob demanda pela busca de ferramentas hospedada da OpenAI (desativado por padrão)
     - `parse_tool_outputs`: Retornar `ResponsesAPIResult` estruturado com saídas de ferramentas integradas parseadas
     - `auto_chain`: Rastrear e usar automaticamente IDs de resposta para conversas multi-turno
     - `auto_chain_reasoning`: Rastrear itens de raciocínio criptografados para conformidade ZDR (Zero Data Retention)
