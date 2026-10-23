@@ -102,6 +102,7 @@ def _draw_multi(
     row_indices: list[int] | None = None,
     query: str = "",
     searchable: bool = False,
+    search_title: str = "SEARCH ACTIONS",
 ) -> int:
     action_indices = action_indices or set()
     separator_indices = separator_indices or set()
@@ -111,22 +112,12 @@ def _draw_multi(
     except ValueError:
         cursor_pos = 0
     start, end = _visible_row_range(len(rows), cursor_pos)
-    hint_text = "↑↓ navigate, space toggle, enter confirm"
-    if action_indices:
-        hint_text = "↑↓ navigate, space toggle, enter confirm, ▸ rows expand/collapse"
-    if searchable:
-        hint_text += " · type to filter"
-    if end - start < len(rows):
-        hint_text += f" · showing {start + 1}-{end} of {len(rows)}"
-    hint = f"  {_DIM}{hint_text}{_RESET}"
     if clear:
         # Erase the previous block first. A shorter search result would
         # otherwise leave the old rows visible underneath the matches.
         _clear_lines(previous_line_count or 1)
     extra_lines = 0
-    sys.stdout.write(f"\033[2K{hint}\n")
     if searchable:
-        search_title = "SEARCH ACTIONS"
         search_width = min(
             52,
             max(len(search_title) + 1, shutil.get_terminal_size().columns - 6),
@@ -170,7 +161,7 @@ def _draw_multi(
         bold = f"{_BOLD}{label}{_RESET}" if i == cursor else label
         sys.stdout.write(f"\033[2K    {arrow}{check} {bold}\n")
     sys.stdout.flush()
-    return end - start + 1 + extra_lines
+    return end - start + extra_lines
 
 
 def _visible_row_range(total: int, cursor: int) -> tuple[int, int]:
@@ -219,9 +210,11 @@ def _visible_label_indices(
     separator_indices: set[int],
     *,
     searchable: bool,
+    collapsed_indices: set[int] | None = None,
 ) -> list[int]:
+    collapsed_indices = collapsed_indices or set()
     if not searchable or not query:
-        return list(range(len(labels)))
+        return [index for index in range(len(labels)) if index not in collapsed_indices]
     return [
         index
         for index in matching_label_indices(labels, query)
@@ -235,9 +228,14 @@ def _cursor_on_visible(
     query: str,
     separator_indices: set[int],
     searchable: bool,
+    collapsed_indices: set[int],
 ) -> int:
     visible = _visible_label_indices(
-        labels, query, separator_indices, searchable=searchable
+        labels,
+        query,
+        separator_indices,
+        searchable=searchable,
+        collapsed_indices=collapsed_indices,
     )
     if cursor in visible or not visible:
         return cursor
@@ -251,11 +249,16 @@ def _move_visible_cursor(
     query: str,
     separator_indices: set[int],
     searchable: bool,
+    collapsed_indices: set[int],
 ) -> int:
     visible = [
         index
         for index in _visible_label_indices(
-            labels, query, separator_indices, searchable=searchable
+            labels,
+            query,
+            separator_indices,
+            searchable=searchable,
+            collapsed_indices=collapsed_indices,
         )
         if index not in separator_indices
     ]
@@ -275,11 +278,14 @@ def _arrow_select_multi(
     preselected: set[int] | None = None,
     initial_cursor: int | None = None,
     searchable: bool = False,
+    collapsed_indices: set[int] | None = None,
+    search_title: str = "SEARCH ACTIONS",
 ) -> tuple[list[int], int | None]:
     total = len(labels)
     selected: set[int] = set(preselected or ())
     action_indices = action_indices or set()
     separator_indices = separator_indices or set()
+    collapsed_indices = collapsed_indices or set()
     query = ""
     if initial_cursor is not None and 0 <= initial_cursor < total:
         cursor = initial_cursor
@@ -298,10 +304,15 @@ def _arrow_select_multi(
             clear=clear,
             previous_line_count=rendered_lines if clear else None,
             row_indices=_visible_label_indices(
-                labels, query, separator_indices, searchable=searchable
+                labels,
+                query,
+                separator_indices,
+                searchable=searchable,
+                collapsed_indices=collapsed_indices,
             ),
             query=query,
             searchable=searchable,
+            search_title=search_title,
         )
 
     try:
@@ -310,18 +321,34 @@ def _arrow_select_multi(
             key = _read_key()
             if key == "up":
                 cursor = _move_visible_cursor(
-                    cursor, -1, labels, query, separator_indices, searchable
+                    cursor,
+                    -1,
+                    labels,
+                    query,
+                    separator_indices,
+                    searchable,
+                    collapsed_indices,
                 )
             elif key == "down":
                 cursor = _move_visible_cursor(
-                    cursor, 1, labels, query, separator_indices, searchable
+                    cursor,
+                    1,
+                    labels,
+                    query,
+                    separator_indices,
+                    searchable,
+                    collapsed_indices,
                 )
             elif key == "space":
                 if cursor in action_indices:
                     _clear_lines(rendered_lines)
                     return sorted(selected), cursor
                 if cursor in _visible_label_indices(
-                    labels, query, separator_indices, searchable=searchable
+                    labels,
+                    query,
+                    separator_indices,
+                    searchable=searchable,
+                    collapsed_indices=collapsed_indices,
                 ):
                     selected ^= {cursor}
             elif key == "enter":
@@ -332,17 +359,32 @@ def _arrow_select_multi(
             elif searchable and key in ("\x7f", "\b") and query:
                 query = query[:-1]
                 cursor = _cursor_on_visible(
-                    cursor, labels, query, separator_indices, searchable
+                    cursor,
+                    labels,
+                    query,
+                    separator_indices,
+                    searchable,
+                    collapsed_indices,
                 )
             elif searchable and key == "esc" and query:
                 query = ""
                 cursor = _cursor_on_visible(
-                    cursor, labels, query, separator_indices, searchable
+                    cursor,
+                    labels,
+                    query,
+                    separator_indices,
+                    searchable,
+                    collapsed_indices,
                 )
             elif searchable and _is_search_character(key):
                 query += key
                 cursor = _cursor_on_visible(
-                    cursor, labels, query, separator_indices, searchable
+                    cursor,
+                    labels,
+                    query,
+                    separator_indices,
+                    searchable,
+                    collapsed_indices,
                 )
             elif key in ("esc", "q"):
                 _clear_lines(rendered_lines)
@@ -380,14 +422,20 @@ def _numbered_select_multi(
     separator_indices: set[int] | None = None,
     preselected: set[int] | None = None,
     searchable: bool = False,
+    collapsed_indices: set[int] | None = None,
 ) -> tuple[list[int], int | None]:
     action_indices = action_indices or set()
     separator_indices = separator_indices or set()
+    collapsed_indices = collapsed_indices or set()
     query = ""
     if searchable:
         query = str(click.prompt("  Filter", default="", show_default=False)).strip()
     visible = _visible_label_indices(
-        labels, query, separator_indices, searchable=searchable
+        labels,
+        query,
+        separator_indices,
+        searchable=searchable,
+        collapsed_indices=collapsed_indices,
     )
     numbered_indices: list[int] = []
     if searchable and query and not visible:
@@ -522,6 +570,8 @@ def pick_many(
     preselected: set[int] | None = None,
     initial_cursor: int | None = None,
     searchable: bool = False,
+    collapsed_indices: set[int] | None = None,
+    search_title: str = "SEARCH ACTIONS",
 ) -> list[int]: ...
 
 
@@ -535,6 +585,8 @@ def pick_many(
     preselected: set[int] | None = None,
     initial_cursor: int | None = None,
     searchable: bool = False,
+    collapsed_indices: set[int] | None = None,
+    search_title: str = "SEARCH ACTIONS",
 ) -> tuple[list[int], int | None]: ...
 
 
@@ -547,11 +599,14 @@ def pick_many(
     preselected: set[int] | None = None,
     initial_cursor: int | None = None,
     searchable: bool = False,
+    collapsed_indices: set[int] | None = None,
+    search_title: str = "SEARCH ACTIONS",
 ) -> list[int] | tuple[list[int], int | None]:
     """Arrow-key multi-select with checkboxes.
 
     ``searchable`` lets the user type a query. Matching rows stay tied to
     their original indexes, and checked rows stay checked when filtered out.
+    ``collapsed_indices`` stay hidden until they match a query.
 
     Returns:
         Sorted list of selected indices, or ``(indices, action_index)`` when
@@ -570,6 +625,8 @@ def pick_many(
                 preselected=preselected,
                 initial_cursor=initial_cursor,
                 searchable=searchable,
+                collapsed_indices=collapsed_indices,
+                search_title=search_title,
             )
         except Exception:
             selected, action = _numbered_select_multi(
@@ -578,6 +635,7 @@ def pick_many(
                 separator_indices=separator_indices,
                 preselected=preselected,
                 searchable=searchable,
+                collapsed_indices=collapsed_indices,
             )
     else:
         selected, action = _numbered_select_multi(
@@ -586,6 +644,7 @@ def pick_many(
             separator_indices=separator_indices,
             preselected=preselected,
             searchable=searchable,
+            collapsed_indices=collapsed_indices,
         )
     if action_indices is None:
         return selected

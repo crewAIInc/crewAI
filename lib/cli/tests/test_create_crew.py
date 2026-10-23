@@ -751,6 +751,13 @@ def test_platform_applications_expand_in_the_main_tool_picker(monkeypatch):
     assert picker_calls[1][2]["initial_cursor"] == next(
         index for index, label in enumerate(labels) if "CrewAI Platform" in label
     )
+    assert picker_calls[1][2]["searchable"] is True
+    github_index = next(
+        index
+        for index, label in enumerate(labels)
+        if label.strip().startswith("GitHub Integration")
+    )
+    assert github_index in picker_calls[1][2]["collapsed_indices"]
     assert all(title != "Platform applications (space to toggle, enter to return):" for title, *_ in picker_calls)
 
 

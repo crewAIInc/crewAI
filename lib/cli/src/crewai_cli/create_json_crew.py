@@ -416,6 +416,7 @@ def _select_tools() -> list[str]:
         separator_indices: set[int] = set()
         action_indices: set[int] = set()
         action_by_index: dict[int, tuple[str, str]] = {}
+        collapsed_indices: set[int] = set()
         preselected: set[int] = set()
         initial_cursor: int | None = None
 
@@ -458,12 +459,13 @@ def _select_tools() -> list[str]:
                         item_label="applications",
                     )
                 )
-                if is_expanded:
-                    for name, description in apps:
-                        if name in selected:
-                            preselected.add(len(labels))
-                        tool_by_index[len(labels)] = name
-                        labels.append("    " + _tool_label(name, description))
+                for name, description in apps:
+                    if name in selected:
+                        preselected.add(len(labels))
+                    tool_by_index[len(labels)] = name
+                    labels.append("    " + _tool_label(name, description))
+                    if not is_expanded:
+                        collapsed_indices.add(len(labels) - 1)
 
         for category, category_tools in categories:
             row = len(labels)
@@ -489,6 +491,9 @@ def _select_tools() -> list[str]:
             separator_indices=separator_indices,
             preselected=preselected,
             initial_cursor=initial_cursor,
+            searchable=expanded == "CrewAI Platform",
+            collapsed_indices=collapsed_indices,
+            search_title="SEARCH APPLICATIONS",
         )
         first_render = False
 
