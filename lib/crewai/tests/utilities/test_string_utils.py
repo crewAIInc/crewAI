@@ -1,7 +1,50 @@
+import hashlib
 from typing import Any, Dict, List, Union
 
 import pytest
-from crewai.utilities.string_utils import interpolate_only
+from crewai.utilities.string_utils import interpolate_only, sanitize_tool_name
+
+
+class TestSanitizeToolName:
+    """Tests for the sanitize_tool_name function in string_utils.py."""
+
+    def test_default_max_length_unchanged(self):
+        """Names under the default 64-char limit pass through untouched (aside from normalization)."""
+        assert sanitize_tool_name("search_the_web") == "search_the_web"
+
+    def test_camel_case_split_and_lowercase(self):
+        """CamelCase names are split on word boundaries and lowercased."""
+        assert sanitize_tool_name("SearchTheWeb") == "search_the_web"
+
+    def test_truncation_with_default_limit_fits_and_has_hash_suffix(self):
+        """Names over max_length are truncated to exactly max_length with a hash suffix."""
+        long_name = "fetch_customer_accounts_" * 5
+        result = sanitize_tool_name(long_name, max_length=64)
+        assert len(result) == 64
+        assert "_" in result
+
+    @pytest.mark.parametrize("limit", [1, 4, 8, 9, 10])
+    def test_truncation_never_exceeds_small_max_length(self, limit):
+        """Regression for #8111: short max_length values must still be honored exactly."""
+        result = sanitize_tool_name("fetch_customer_accounts", max_length=limit)
+        assert len(result) == limit
+        if limit < 9:
+            digest = hashlib.sha256(b"fetch_customer_accounts").hexdigest()
+            assert result == digest[:limit]
+
+    def test_truncation_still_respects_larger_max_length(self):
+        """Larger limits keep the original readable-prefix + hash-suffix behavior."""
+        result = sanitize_tool_name("fetch_customer_accounts", max_length=20)
+        assert len(result) <= 20
+        assert result.endswith(
+            "_" + hashlib.sha256(b"fetch_customer_accounts").hexdigest()[:8]
+        )
+
+    @pytest.mark.parametrize("limit", [0, -1, -64])
+    def test_non_positive_max_length_raises(self, limit):
+        """max_length must be a positive integer."""
+        with pytest.raises(ValueError, match="max_length must be a positive integer"):
+            sanitize_tool_name("fetch_customer_accounts", max_length=limit)
 
 
 class TestInterpolateOnly:
