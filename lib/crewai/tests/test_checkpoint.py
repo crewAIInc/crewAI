@@ -14,15 +14,19 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.checkpoint_events import CheckpointFailedEvent
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
+from crewai.state import checkpoint_listener
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
+    _do_checkpoint,
     _find_checkpoint,
     _resolve,
     _SENTINEL,
@@ -31,6 +35,7 @@ from crewai.state.provider.json_provider import JsonProvider
 from crewai.state.provider.sqlite_provider import SqliteProvider
 from crewai.state.runtime import RuntimeState
 from crewai.task import Task
+from crewai.tools import tool
 
 
 
@@ -850,3 +855,121 @@ class TestCustomLLMCheckpointRestore:
         assert isinstance(llm, BaseLLM)
         assert not inspect.isabstract(type(llm))
         assert llm.model == "stub"
+
+
+@tool("checkpoint_echo")
+def checkpoint_echo(text: str) -> str:
+    """Echo the text back."""
+    return text
+
+
+def _passing_guardrail(output):
+    return True, output
+
+
+class TestCheckpointFunctionTools:
+    """A crew using ``@tool`` function tools can be checkpointed and restored.
+
+    ``Tool.func`` holds a plain function, so ``model_dump(mode="json")`` raised
+    ``PydanticSerializationError`` and no auto-checkpoint was written (#7398).
+    """
+
+    def _make_crew(self) -> Crew:
+        agent = Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            llm=_FinalAnswerLLM(),
+            tools=[checkpoint_echo],
+        )
+        task = Task(
+            description="d",
+            expected_output="e",
+            agent=agent,
+            tools=[checkpoint_echo],
+            guardrail=_passing_guardrail,
+        )
+        return Crew(agents=[agent], tasks=[task], verbose=False)
+
+    def _write_checkpoint(self) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            with pytest.warns(UserWarning, match="Callable 'guardrail'"):
+                _do_checkpoint(
+                    RuntimeState(root=[self._make_crew()]),
+                    CheckpointConfig(location=d),
+                )
+            [path] = Path(d).rglob("*.json")
+            return path.read_text(encoding="utf-8")
+
+    def test_checkpoint_stores_tool_func_as_dotted_path(self) -> None:
+        crew_data = json.loads(self._write_checkpoint())["entities"][0]
+
+        expected = f"{__name__}.checkpoint_echo"
+        assert crew_data["agents"][0]["tools"][0]["func"] == expected
+        assert crew_data["tasks"][0]["tools"][0]["func"] == expected
+        assert crew_data["tasks"][0]["guardrail"] is None
+
+    def test_restore_resolves_tool_func(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("CREWAI_DESERIALIZE_CALLBACKS", "1")
+
+        restored = RuntimeState.model_validate_json(
+            self._write_checkpoint(), context={"from_checkpoint": True}
+        )
+
+        crew = restored.root[0]
+        for restored_tool in (crew.agents[0].tools[0], crew.tasks[0].tools[0]):
+            assert restored_tool.func is checkpoint_echo.func
+            assert restored_tool.run(text="hi") == "hi"
+
+    def test_restore_refuses_tool_func_without_opt_in(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("CREWAI_DESERIALIZE_CALLBACKS", raising=False)
+
+        with pytest.raises(ValidationError, match="Refusing to resolve"):
+            RuntimeState.model_validate_json(
+                self._write_checkpoint(), context={"from_checkpoint": True}
+            )
+
+    @pytest.mark.filterwarnings("ignore:Callable 'guardrail':UserWarning")
+    def test_kickoff_auto_checkpoints_guardrail_task_then_tool_task(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The #7398 layout: a guardrail task, then a task whose agent has a tool."""
+        # conftest clears bus handlers after each test; let this crew re-register.
+        monkeypatch.setattr(checkpoint_listener, "_handlers_registered", False)
+        writer = Agent(role="writer", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        researcher = Agent(
+            role="researcher",
+            goal="g",
+            backstory="b",
+            llm=_FinalAnswerLLM(),
+            tools=[checkpoint_echo],
+        )
+        draft = Task(
+            description="draft",
+            expected_output="e",
+            agent=writer,
+            guardrail=_passing_guardrail,
+        )
+        research = Task(description="research", expected_output="e", agent=researcher)
+        failures: list[CheckpointFailedEvent] = []
+
+        @crewai_event_bus.on(CheckpointFailedEvent)
+        def _record_failure(_source: Any, event: CheckpointFailedEvent) -> None:
+            failures.append(event)
+
+        with tempfile.TemporaryDirectory() as d, caplog.at_level("WARNING"):
+            crew = Crew(
+                agents=[writer, researcher],
+                tasks=[draft, research],
+                verbose=False,
+                checkpoint=CheckpointConfig(location=d, on_events=["task_completed"]),
+            )
+            crew.kickoff()
+            crewai_event_bus.flush()
+            written = list(Path(d).rglob("*.json"))
+
+        assert [f.error for f in failures] == []
+        assert "Auto-checkpoint failed" not in caplog.text
+        assert len(written) == 2
