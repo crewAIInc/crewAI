@@ -2153,10 +2153,17 @@ class Agent(BaseAgent):
                     f"Last error: {guardrail_result.error}"
                 )
 
-            executor._append_message_to_state(
-                guardrail_result.error or "Guardrail validation failed",
-                role="user",
+            # ``executor.invoke`` resets the conversation and rebuilds it from
+            # ``inputs``, so state-level feedback would be discarded before the
+            # retry starts. Put it in the request the retry is rebuilt from, so
+            # the model sees what failed and the attached files stay on the
+            # original turn.
+            feedback = I18N_DEFAULT.errors("validation_error").format(
+                guardrail_result_error=guardrail_result.error
+                or "Guardrail validation failed",
+                task_output=output.raw,
             )
+            inputs["input"] = f"{inputs['input']}\n\n{feedback}"
 
             retried = self._execute_and_build_output(
                 executor, inputs, response_format, usage_baseline
