@@ -397,9 +397,8 @@ class ToolUsage:
                     )
                     self.last_raw_result = result
                     self.last_failure = detect_tool_failure(result)
-                    result = self._format_result(
-                        result=tool.format_output_for_agent(result)
-                    )
+                    formatted_result = tool.format_output_for_agent(result)
+                    result = self._format_result(result=formatted_result)
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -415,6 +414,10 @@ class ToolUsage:
                     ):
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
+                        # _remember_format() appends a prompt for the model's
+                        # next turn, but this result is the answer itself.
+                        result = str(formatted_result)
+                        data["result"] = result
 
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
@@ -480,9 +483,30 @@ class ToolUsage:
             else:
                 self.last_raw_result = result
                 self.last_failure = detect_tool_failure(result)
-                result = self._format_result(
-                    result=tool.format_output_for_agent(result)
-                )
+                formatted_result = tool.format_output_for_agent(result)
+                result = self._format_result(result=formatted_result)
+
+                if (
+                    available_tool is not None
+                    and hasattr(available_tool, "result_as_answer")
+                    and available_tool.result_as_answer
+                    # A failed tool must not become the final answer;
+                    # process_tool_results() reads this back independently.
+                    and self.last_failure is None
+                ):
+                    # A cached result can be the final answer too: record it
+                    # for process_tool_results() and drop the reminder
+                    # _remember_format() appends for the model's next turn.
+                    if self.agent and hasattr(self.agent, "tools_results"):
+                        self.agent.tools_results.append(
+                            {
+                                "result": str(formatted_result),
+                                "tool_name": sanitize_tool_name(tool.name),
+                                "tool_args": calling.arguments,
+                                "result_as_answer": available_tool.result_as_answer,
+                            }
+                        )
+                    result = str(formatted_result)
 
         finally:
             if started_event_emitted and not error_event_emitted:
@@ -654,9 +678,8 @@ class ToolUsage:
                     )
                     self.last_raw_result = result
                     self.last_failure = detect_tool_failure(result)
-                    result = self._format_result(
-                        result=tool.format_output_for_agent(result)
-                    )
+                    formatted_result = tool.format_output_for_agent(result)
+                    result = self._format_result(result=formatted_result)
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -672,6 +695,10 @@ class ToolUsage:
                     ):
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
+                        # _remember_format() appends a prompt for the model's
+                        # next turn, but this result is the answer itself.
+                        result = str(formatted_result)
+                        data["result"] = result
 
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
@@ -737,9 +764,30 @@ class ToolUsage:
             else:
                 self.last_raw_result = result
                 self.last_failure = detect_tool_failure(result)
-                result = self._format_result(
-                    result=tool.format_output_for_agent(result)
-                )
+                formatted_result = tool.format_output_for_agent(result)
+                result = self._format_result(result=formatted_result)
+
+                if (
+                    available_tool is not None
+                    and hasattr(available_tool, "result_as_answer")
+                    and available_tool.result_as_answer
+                    # A failed tool must not become the final answer;
+                    # process_tool_results() reads this back independently.
+                    and self.last_failure is None
+                ):
+                    # A cached result can be the final answer too: record it
+                    # for process_tool_results() and drop the reminder
+                    # _remember_format() appends for the model's next turn.
+                    if self.agent and hasattr(self.agent, "tools_results"):
+                        self.agent.tools_results.append(
+                            {
+                                "result": str(formatted_result),
+                                "tool_name": sanitize_tool_name(tool.name),
+                                "tool_args": calling.arguments,
+                                "result_as_answer": available_tool.result_as_answer,
+                            }
+                        )
+                    result = str(formatted_result)
 
         finally:
             if started_event_emitted and not error_event_emitted:
