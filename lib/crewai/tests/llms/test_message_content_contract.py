@@ -265,8 +265,9 @@ def test_gemini_inline_data_part_keeps_its_bytes() -> None:
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "Known defect: _format_messages_for_gemini silently drops OpenAI-style "
-        "image_url parts, which step_executor emits for vision observations"
+        "Known defect (#8434): _format_messages_for_gemini silently drops "
+        "OpenAI-style image_url parts, which step_executor emits for vision "
+        "observations"
     ),
 )
 def test_gemini_image_url_part_keeps_its_bytes() -> None:
