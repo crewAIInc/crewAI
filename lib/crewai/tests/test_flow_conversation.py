@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from types import MappingProxyType
 from typing import Any, ClassVar, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
@@ -46,11 +47,13 @@ from crewai.flow.flow_context import (
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.conversation import (
+    _coerce_user_message_text,
     append_message,
     get_conversation_messages,
     normalize_kickoff_inputs,
     prepare_conversational_turn,
 )
+from crewai.flow.conversational_mixin import _ConversationalMixin
 
 class ConversationalFlow(Flow[ConversationState]):
     """Test base: a ``Flow[ConversationState]`` with conversational mode enabled.
@@ -107,6 +110,156 @@ class TestMessageHelpers:
         assert flow._conversation_messages == [
             {"role": "assistant", "content": "reply"}
         ]
+
+
+class TestCoerceAndFormatMultimodalMessages:
+    """Multimodal user messages must collapse to text without leaking Python reprs."""
+
+    def test_coerce_user_message_text_with_multimodal_dict(self) -> None:
+        """Coerce multimodal dictionary message to text."""
+        msg = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Can I cancel my subscription?"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/receipt.png"},
+                },
+            ],
+        }
+        text = _coerce_user_message_text(msg)
+        assert text == "Can I cancel my subscription?"
+
+    def test_coerce_user_message_text_with_conversation_message(self) -> None:
+        """Coerce ConversationMessage model to text."""
+        msg = ConversationMessage(
+            role="user",
+            content=[
+                {"type": "text", "text": "What is in this chart?"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/chart.png"},
+                },
+            ],
+        )
+        text = _coerce_user_message_text(msg)
+        assert text == "What is in this chart?"
+
+    def test_coerce_user_message_text_multimodal_image_only(self) -> None:
+        """Coerce image-only multimodal message to fallback description."""
+        msg = {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/image.png"},
+                }
+            ],
+        }
+        text = _coerce_user_message_text(msg)
+        assert text == "[multimodal content]"
+
+    def test_coerce_user_message_text_plain_string(self) -> None:
+        """Coerce plain string message without modification."""
+        assert _coerce_user_message_text("hello world") == "hello world"
+
+    def test_coerce_user_message_text_with_non_dict_mapping(self) -> None:
+        """Coerce non-dict Mapping message without losing content."""
+        msg = MappingProxyType(
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "MappingProxy test"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "https://example.com/img.png"},
+                    },
+                ],
+            }
+        )
+        assert _coerce_user_message_text(msg) == "MappingProxy test"
+        assert (
+            _ConversationalMixin._coerce_user_message_text(msg)
+            == "MappingProxy test"
+        )
+
+    def test_format_messages_collapses_multimodal_history(self) -> None:
+        """Format history collapsing multimodal content parts to text."""
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Analyze this chart"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "https://example.com/chart.png"},
+                    },
+                ],
+            },
+            {"role": "assistant", "content": "Chart shows 25% growth."},
+        ]
+        formatted = _ConversationalMixin._format_messages(messages)
+        assert (
+            formatted
+            == "user: Analyze this chart\nassistant: Chart shows 25% growth."
+        )
+        assert "[{'type':" not in formatted
+
+    def test_format_messages_preserves_non_dict_mapping(self) -> None:
+        """Format messages preserving content from non-dict Mapping objects."""
+        messages = [
+            MappingProxyType(
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Analyze mapping"},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": "https://example.com/map.png"},
+                        },
+                    ],
+                }
+            ),
+            MappingProxyType(
+                {"role": "assistant", "content": "Analysis complete"}
+            ),
+        ]
+        formatted = _ConversationalMixin._format_messages(messages)
+        assert (
+            formatted
+            == "user: Analyze mapping\nassistant: Analysis complete"
+        )
+        assert "[{'type':" not in formatted
+
+    def test_prepare_conversational_turn_collapses_multimodal_message(self) -> None:
+        """Prepare conversational turn collapsing multimodal user input."""
+        flow = SimpleChatFlow()
+        flow._state = ChatState(messages=[])
+        multimodal_msg = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Help with my order"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/order.png"},
+                },
+            ],
+        }
+        prepare_conversational_turn(flow, user_message=multimodal_msg)
+        assert flow.state.last_user_message == "Help with my order"
+        assert get_conversation_messages(flow)[0]["content"] == "Help with my order"
+        assert "[{'type':" not in str(flow.state.last_user_message)
+
+    def test_mixin_coerce_user_message_text_matches(self) -> None:
+        """Mixin _coerce_user_message_text matches helper behavior."""
+        msg = {
+            "role": "user",
+            "content": [{"type": "text", "text": "Refund inquiry"}],
+        }
+        assert (
+            _ConversationalMixin._coerce_user_message_text(msg)
+            == "Refund inquiry"
+        )
 
 
 class TestIntentPerTurn:
