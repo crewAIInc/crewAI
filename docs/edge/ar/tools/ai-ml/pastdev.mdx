@@ -1,0 +1,114 @@
+---
+title: past dev
+description: احفظ ذاكرة CrewAI في past dev، وهي واجهة برمجة ذاكرة لوكلاء الذكاء الاصطناعي، وامنح الوكلاء أداتَي Recall وIngest.
+icon: clock-rotate-left
+mode: "wide"
+---
+
+# past dev
+
+## الوصف
+
+[past dev](https://past.dev) هي واجهة برمجة ذاكرة لوكلاء الذكاء الاصطناعي. تحفظ ما
+تتعلّمه طواقمك (crews) وتعيده في التشغيلات اللاحقة، مع تاريخ كل ذاكرة ومصدرها. وعندما
+تحلّ عبارة أحدث محلّ عبارة سابقة، تضع past dev على العبارة السابقة علامة أنها استُبدلت.
+
+تربط حزمة `crewai-pastdotdev` بين past dev وCrewAI بطريقتين:
+
+- **`PastDevMemory`**: كائن `Memory` تمرّره بوصفه `memory=` إلى `Crew` أو `Agent`.
+  الحفظ هو عملية Ingest في past dev، والبحث هو عملية Recall في past dev.
+- **`PastDevRecallTool`** و**`PastDevIngestTool`**: أداتان يستدعيهما الوكيل عندما
+  يقرّر ذلك. لا يقدّم النموذج إلا الاستعلام أو المحتوى.
+
+## التثبيت
+
+```shell
+uv add crewai-pastdotdev
+# or
+pip install crewai-pastdotdev
+```
+
+أنشئ مفتاح API للمشروع في وحدة تحكم past dev ثم اضبطه:
+
+```shell
+export PAST_API_KEY="past_sk_..."
+```
+
+إذا كنت تشغّل past dev في سحابتك الخاصة، فاضبط أيضًا `PAST_API_HOST`. القيمة
+الافتراضية هي `https://api.past.dev`.
+
+## الهوية
+
+تنتمي كل ذاكرة في past dev إلى هوية: معرّف الشخص أو الحساب الذي تخصّه الذاكرة، مثل
+معرّف المستخدم في تطبيقك. شيفرتك هي التي تحدّد الهوية، وليس النموذج أبدًا. لا تملك
+الأدوات أي وسيط للهوية، لذلك لا يستطيع الوكيل قراءة ذاكرة شخص آخر أو الكتابة فيها.
+أنشئ ذاكرة واحدة أو أداة واحدة لكل مستخدم.
+
+## ذاكرة الطاقم
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_pastdotdev import PastDevMemory
+
+memory = PastDevMemory(identity="user-42")
+
+writer = Agent(
+    role="Account manager",
+    goal="Write the weekly report the way the customer wants it",
+    backstory="You know the customer well.",
+)
+report = Task(
+    description="Write this week's report for the customer.",
+    expected_output="A report in the format the customer prefers.",
+    agent=writer,
+)
+
+crew = Crew(agents=[writer], tasks=[report], memory=memory)
+crew.kickoff()
+```
+
+قبل كل مهمة، ينفّذ CrewAI عملية recall باستخدام وصف المهمة ويضيف الذكريات إلى موجّه
+الوكيل. وبعد كل مهمة، يحفظ المهمة ونتيجتها. تستخرج past dev الذكريات من جهتها، لذلك
+لا يجري `PastDevMemory` أي استدعاء إضافي لنموذج لغوي عند الحفظ. كما تمرّ أداتا
+"Search memory" و"Save to memory" اللتان يمنحهما CrewAI للوكلاء عبر past dev.
+
+| المعامل | القيمة الافتراضية | الوصف |
+| :- | :- | :- |
+| `identity` | إلزامي | الهوية المستخدمة في كل حفظ وrecall. |
+| `api_key` | `PAST_API_KEY` | مفتاح API للمشروع. |
+| `api_host` | `PAST_API_HOST` أو `https://api.past.dev` | مضيف الواجهة البرمجية. |
+| `audience` | لا شيء | معرّف (slug) جمهور للذكريات المحفوظة. من دونه تكون الذاكرة مرئية للمشروع كله. |
+| `recall_level` | `low` | ميزانية الأدلة في عملية recall: `low` أو `medium` أو `high` أو `extra-high`. |
+| `read_only` | `False` | recall فقط. |
+
+تحفظ past dev الذاكرة على خوادمها، لذلك لا تتوفر عمليات المخزن المحلي (`tree()`
+و`info()` و`list_records()` و`update()` و`reset()`). ويحذف
+`forget(record_ids=[...])` نقاط البيانات حسب معرّف مصدرها.
+
+## أدوات الوكيل
+
+```python Code
+from crewai import Agent
+from crewai_pastdotdev import PastDevIngestTool, PastDevRecallTool
+
+agent = Agent(
+    role="Support agent",
+    goal="Help the customer with what you know about them",
+    backstory="You remember every earlier conversation.",
+    tools=[
+        PastDevRecallTool(identity="user-42"),
+        PastDevIngestTool(identity="user-42"),
+    ],
+)
+```
+
+| الأداة | الوسيط الذي يقدّمه النموذج | معاملات المُنشئ |
+| :- | :- | :- |
+| `PastDevRecallTool` | `query` | `identity`, `limit`, `level`, `api_key`, `api_host` |
+| `PastDevIngestTool` | `content` | `identity`, `audience`, `label`, `metadata`, `api_key`, `api_host` |
+
+## مزيد من المعلومات
+
+- [البدء السريع في past dev](https://past.dev/docs/memory-api/quickstart)
+- [مرجع واجهة past dev البرمجية](https://past.dev/docs/memory-api/api-reference)
+- [crewai-pastdotdev على PyPI](https://pypi.org/project/crewai-pastdotdev/)

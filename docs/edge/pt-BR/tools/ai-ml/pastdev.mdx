@@ -1,0 +1,118 @@
+---
+title: past dev
+description: Mantenha a memória do CrewAI no past dev, uma API de memória para agentes de IA, e dê aos agentes as ferramentas Recall e Ingest.
+icon: clock-rotate-left
+mode: "wide"
+---
+
+# past dev
+
+## Descrição
+
+[past dev](https://past.dev) é uma API de memória para agentes de IA. Ele guarda
+o que suas crews aprendem e devolve isso em execuções posteriores, com a data e a
+fonte de cada memória. Quando uma afirmação mais recente substitui uma anterior,
+o past dev marca a anterior como substituída.
+
+O pacote `crewai-pastdotdev` conecta o past dev ao CrewAI de duas formas:
+
+- **`PastDevMemory`**: um `Memory` que você passa como `memory=` para um `Crew` ou
+  um `Agent`. Salvar é um Ingest do past dev e buscar é um Recall do past dev.
+- **`PastDevRecallTool`** e **`PastDevIngestTool`**: ferramentas que um agente
+  chama quando decide. O modelo fornece apenas a consulta ou o conteúdo.
+
+## Instalação
+
+```shell
+uv add crewai-pastdotdev
+# or
+pip install crewai-pastdotdev
+```
+
+Crie uma chave de API de projeto no console do past dev e defina-a:
+
+```shell
+export PAST_API_KEY="past_sk_..."
+```
+
+Se você executa o past dev na sua própria nuvem, defina também `PAST_API_HOST`. O
+padrão é `https://api.past.dev`.
+
+## A identidade
+
+Cada memória no past dev pertence a uma identidade: o id da pessoa ou da conta a
+que a memória se refere, por exemplo o id do usuário na sua aplicação. Seu código
+define a identidade, nunca o modelo. As ferramentas não têm argumento de
+identidade, então um agente não pode ler nem escrever a memória de outra pessoa.
+Crie uma memória ou uma ferramenta para cada usuário.
+
+## Memória da crew
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_pastdotdev import PastDevMemory
+
+memory = PastDevMemory(identity="user-42")
+
+writer = Agent(
+    role="Account manager",
+    goal="Write the weekly report the way the customer wants it",
+    backstory="You know the customer well.",
+)
+report = Task(
+    description="Write this week's report for the customer.",
+    expected_output="A report in the format the customer prefers.",
+    agent=writer,
+)
+
+crew = Crew(agents=[writer], tasks=[report], memory=memory)
+crew.kickoff()
+```
+
+Antes de cada tarefa, o CrewAI faz um recall com a descrição da tarefa e adiciona
+as memórias ao prompt do agente. Depois de cada tarefa, ele salva a tarefa e seu
+resultado. O past dev extrai as memórias do lado dele, então o `PastDevMemory` não
+faz nenhuma chamada extra a um LLM ao salvar. As ferramentas "Search memory" e
+"Save to memory" que o CrewAI dá aos agentes também passam pelo past dev.
+
+| Parâmetro | Padrão | Descrição |
+| :- | :- | :- |
+| `identity` | obrigatório | A identidade de cada save e recall. |
+| `api_key` | `PAST_API_KEY` | A chave de API do projeto. |
+| `api_host` | `PAST_API_HOST` ou `https://api.past.dev` | O host da API. |
+| `audience` | nenhum | O slug de uma audiência para as memórias salvas. Sem ele, uma memória é visível para todo o projeto. |
+| `recall_level` | `low` | O orçamento de evidências de um recall: `low`, `medium`, `high` ou `extra-high`. |
+| `read_only` | `False` | Apenas recall. |
+
+O past dev guarda a memória nos servidores dele, então as operações do
+armazenamento local (`tree()`, `info()`, `list_records()`, `update()`, `reset()`)
+não estão disponíveis. `forget(record_ids=[...])` exclui data points pelo id da
+fonte.
+
+## Ferramentas do agente
+
+```python Code
+from crewai import Agent
+from crewai_pastdotdev import PastDevIngestTool, PastDevRecallTool
+
+agent = Agent(
+    role="Support agent",
+    goal="Help the customer with what you know about them",
+    backstory="You remember every earlier conversation.",
+    tools=[
+        PastDevRecallTool(identity="user-42"),
+        PastDevIngestTool(identity="user-42"),
+    ],
+)
+```
+
+| Ferramenta | Argumento do modelo | Parâmetros do construtor |
+| :- | :- | :- |
+| `PastDevRecallTool` | `query` | `identity`, `limit`, `level`, `api_key`, `api_host` |
+| `PastDevIngestTool` | `content` | `identity`, `audience`, `label`, `metadata`, `api_key`, `api_host` |
+
+## Mais informações
+
+- [Quickstart do past dev](https://past.dev/docs/memory-api/quickstart)
+- [Referência da API do past dev](https://past.dev/docs/memory-api/api-reference)
+- [crewai-pastdotdev no PyPI](https://pypi.org/project/crewai-pastdotdev/)
