@@ -14,12 +14,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
 from datetime import datetime
 import logging
-from typing import Any, ClassVar
+from typing import Annotated, Any, ClassVar
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PlainSerializer
 
 from crewai.flow.flow import Flow, listen, router, start
+from crewai.flow.runtime import _serialize_initial_state
 from crewai.memory.analyze import QueryAnalysis, analyze_query
 from crewai.memory.types import (
     _RECALL_OVERSAMPLE_FACTOR,
@@ -67,7 +68,11 @@ class RecallFlow(Flow[RecallState]):
 
     _skip_auto_memory: bool = True
 
-    initial_state: type[RecallState] = RecallState
+    # Keep the base Flow JSON serializer: a bare class ref breaks checkpoints.
+    initial_state: Annotated[
+        type[RecallState],
+        PlainSerializer(_serialize_initial_state, return_type=Any, when_used="json"),
+    ] = RecallState
 
     def __init__(
         self,
