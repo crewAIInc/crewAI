@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import asyncio
 from io import StringIO
 import json
 import threading
@@ -38,6 +39,7 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
@@ -2909,6 +2911,61 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
 
     with pytest.raises(Exception, match="Manager agent should not have tools"):
         crew.kickoff()
+
+
+class _ScriptedReActLLM(BaseLLM):
+    def __init__(self, *replies: str) -> None:
+        super().__init__(model="offline")
+        self.replies = replies
+        self.calls = 0
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def call(self, messages: Any, **kwargs: Any) -> str:
+        reply = self.replies[self.calls % len(self.replies)]
+        self.calls += 1
+        return reply
+
+    async def acall(self, messages: Any, **kwargs: Any) -> str:
+        return self.call(messages, **kwargs)
+
+
+@pytest.mark.parametrize("async_entry", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize("manager", ["manager_llm", "manager_agent"])
+def test_hierarchical_crew_delegates_to_workers_on_every_kickoff(
+    manager, async_entry
+):
+    delegate = json.dumps(
+        {"task": "Write a word", "context": "None", "coworker": "Writer"}
+    )
+    manager_llm = _ScriptedReActLLM(
+        f"Thought: Delegate\nAction: Delegate work to coworker\nAction Input: {delegate}",
+        "Thought: Done\nFinal Answer: hello",
+    )
+    worker_llm = _ScriptedReActLLM("Thought: Done\nFinal Answer: hello")
+    writer = Agent(role="Writer", goal="Write", backstory="Writes", llm=worker_llm)
+    task = Task(description="Get a word", expected_output="A word")
+    if manager == "manager_llm":
+        crew = Crew(
+            agents=[writer],
+            tasks=[task],
+            process=Process.hierarchical,
+            manager_llm=manager_llm,
+        )
+    else:
+        boss = Agent(role="Boss", goal="Manage", backstory="Manages", llm=manager_llm)
+        crew = Crew(
+            agents=[writer],
+            tasks=[task],
+            process=Process.hierarchical,
+            manager_agent=boss,
+        )
+
+    for run in (1, 2):
+        result = asyncio.run(crew.akickoff()) if async_entry else crew.kickoff()
+        assert result.raw == "hello"
+        assert worker_llm.calls == run
 
 
 @pytest.mark.vcr()
