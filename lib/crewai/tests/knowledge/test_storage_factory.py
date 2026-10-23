@@ -128,3 +128,72 @@ def test_falsy_explicit_storage_is_honored():
     # reset must call the backend, not raise "Storage is not initialized."
     knowledge.reset()
     assert reset_calls == [True]
+
+
+# A checkpoint stores knowledge storage as a plain dict; the fields are typed to
+# the abstract base, so restoring needs a concrete class (#8319).
+
+
+def test_checkpointed_source_storage_round_trips():
+    from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+    from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
+    source = StringKnowledgeSource(
+        content="fixture", storage=KnowledgeStorage(collection_name="crew")
+    )
+
+    restored = StringKnowledgeSource.model_validate_json(source.model_dump_json())
+
+    assert isinstance(restored.storage, KnowledgeStorage)
+    assert restored.storage.collection_name == "crew"
+
+
+def test_checkpointed_knowledge_storage_round_trips():
+    from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
+    knowledge = Knowledge(collection_name="crew", sources=[])
+
+    restored = Knowledge.model_validate_json(knowledge.model_dump_json())
+
+    assert isinstance(restored.storage, KnowledgeStorage)
+    assert restored.storage.collection_name == "crew"
+
+
+def test_agent_knowledge_storage_dumps_and_restores_its_fields():
+    from crewai import Agent
+    from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
+    agent = Agent(
+        role="r",
+        goal="g",
+        backstory="b",
+        knowledge_storage=KnowledgeStorage(collection_name="crew"),
+    )
+    dumped = agent.model_dump(mode="json")["knowledge_storage"]
+
+    restored = Agent(role="r", goal="g", backstory="b", knowledge_storage=dumped)
+
+    assert dumped == {"collection_name": "crew"}
+    assert isinstance(restored.knowledge_storage, KnowledgeStorage)
+    assert restored.knowledge_storage.collection_name == "crew"
+
+
+def test_checkpointed_storage_restores_through_registered_factory():
+    from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+    from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
+    source = StringKnowledgeSource(
+        content="fixture", storage=KnowledgeStorage(collection_name="crew")
+    )
+    dumped = source.model_dump_json()
+    seen: list[tuple[object, object]] = []
+
+    def make(embedder, collection_name):
+        seen.append((embedder, collection_name))
+        return _FakeKnowledgeStorage()
+
+    factory.set_knowledge_storage_factory(make)
+    restored = StringKnowledgeSource.model_validate_json(dumped)
+
+    assert isinstance(restored.storage, _FakeKnowledgeStorage)
+    assert seen == [(None, "crew")]

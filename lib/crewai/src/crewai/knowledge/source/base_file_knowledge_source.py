@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import Field, field_validator
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorageField
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 
@@ -22,7 +22,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         default_factory=list, description="The path to the file"
     )
     content: dict[Path, str] = Field(init=False, default_factory=dict)
-    storage: BaseKnowledgeStorage | None = Field(default=None)
+    storage: KnowledgeStorageField = Field(default=None)
     safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
