@@ -142,7 +142,7 @@ class SkillCacheManager:
                         results.append(
                             json.loads(meta_file.read_text(encoding="utf-8"))
                         )
-                    except (json.JSONDecodeError, KeyError):
+                    except (json.JSONDecodeError, UnicodeDecodeError, KeyError):
                         _logger.debug(
                             "Skipping malformed cache entry: %s",
                             meta_file,

@@ -1,0 +1,107 @@
+---
+title: Generative UI
+description: Render your CrewAI agent's work as live React components, across the full spectrum from author-controlled to agent-invented UI.
+icon: wand-magic-sparkles
+mode: "wide"
+---
+
+## Beyond the chat bubble
+
+Generative UI means the agent's work shows up as real interface, not just text. When your Crew or Flow calls a tool, updates its state, or reasons about a problem, you decide what the user sees: a progress checklist, a recipe card, a chart, a whole assembled panel.
+
+CopilotKit renders generative UI along a **spectrum**, from fully author-controlled (you decide every pixel) to agent-invented (the agent assembles the surface):
+
+| Tier | Who decides the UI | CrewAI mechanism |
+| --- | --- | --- |
+| **[Controlled](#controlled)** | You — a fixed set of components the agent picks from | `useRenderTool`, `useAgent`, reasoning |
+| **[Declarative](#declarative)** | The agent — assembles a surface from *your* component catalog | [A2UI](/edge/en/guides/frontend/a2ui) |
+| **[Open-ended](#open-ended)** | An external tool/server invents the surface | MCP tools |
+
+The tiers compose freely; a single app usually mixes them.
+
+## Controlled
+
+You own the components. The agent chooses which to show and with what data. This is the most predictable tier and where most apps start.
+
+### Tool rendering
+
+The agent calls a tool on the backend. You register a matching component on the frontend with `useRenderTool`, and CopilotKit renders it, streaming the arguments in as they arrive.
+
+```tsx
+"use client";
+import { useRenderTool } from "@copilotkit/react-core/v2";
+import { z } from "zod";
+
+useRenderTool({
+  name: "generate_recipe",
+  parameters: z.object({
+    title: z.string(),
+    ingredients: z.array(z.string()),
+  }),
+  render: ({ args }) => <RecipeCard title={args.title} ingredients={args.ingredients} />,
+});
+```
+
+<Note>
+`useRenderTool` renders a tool call. When a tool also needs to *run* code in the browser, use [`useFrontendTool`](/edge/en/guides/frontend/frontend-actions) (a `handler`, with optional `render`).
+</Note>
+
+See [Tool-Based Generative UI](/edge/en/guides/frontend/tool-based-generative-ui) for the full walkthrough, including progressive rendering as arguments stream, and [Backend Tool Rendering](/edge/en/guides/frontend/tool-based-generative-ui#backend-tools) for tools your Crew or Flow executes server-side.
+
+### State rendering
+
+Instead of reacting to a single tool call, render the agent's **state** as it changes. This is the right pattern for multi-step work: read the agent's working state with `useAgent` and paint it however you like.
+
+```tsx
+"use client";
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function TaskProgress() {
+  const { agent } = useAgent({ agentId: "task_runner" });
+  const steps = agent?.state?.steps ?? [];
+  return <StepList steps={steps} />;
+}
+```
+
+See [Agentic Generative UI](/edge/en/guides/frontend/agentic-generative-ui) for streaming state from a Flow, and [Shared State](/edge/en/guides/frontend/shared-state) for editing that state from the UI.
+
+### Reasoning
+
+When the model reasons before answering, that thinking renders in the chat automatically. No component to write. See [Reasoning](/edge/en/guides/frontend/reasoning).
+
+## Declarative
+
+The agent goes beyond picking a component: it **assembles a surface** by combining building blocks from a catalog *you* define. You still own the components (the agent can only use what is in your catalog), but the layout is the agent's.
+
+This is [A2UI](/edge/en/guides/frontend/a2ui). You register a catalog on the provider:
+
+```tsx
+<CopilotKit runtimeUrl="/api/copilotkit" agent="assistant" a2ui={{ catalog }}>
+  {/* ... */}
+</CopilotKit>
+```
+
+The agent then builds surfaces from that catalog — either dynamically (it designs the layout from the conversation) or from a fixed schema your backend fills with data. See [A2UI](/edge/en/guides/frontend/a2ui) for both modes and error recovery.
+
+## Open-ended
+
+At the far end, the surface is invented outside your app entirely. For CrewAI this comes through **MCP**: tools served by an MCP server the agent connects to render as tool calls in the chat, the same way backend tools do. This is the least constrained and the least predictable tier.
+
+MCP tool calls surface as standard tool-call UI — render them with `useRenderTool` like any other tool. Full agent-invented "MCP App" surfaces are an emerging capability; see the [CopilotKit docs](https://docs.copilotkit.ai) for the current state.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
+    Map agent tool calls to components (controlled).
+  </Card>
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
+    Render live agent state (controlled).
+  </Card>
+  <Card title="A2UI" icon="table-cells" href="/edge/en/guides/frontend/a2ui">
+    Let the agent assemble surfaces from your catalog (declarative).
+  </Card>
+  <Card title="Reasoning" icon="brain" href="/edge/en/guides/frontend/reasoning">
+    Render the agent's thinking.
+  </Card>
+</CardGroup>
