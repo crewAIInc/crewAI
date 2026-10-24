@@ -10,6 +10,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+import threading
 import time
 from typing import (
     TYPE_CHECKING,
@@ -145,6 +146,131 @@ _passthrough_exceptions: tuple[type[Exception], ...] = (
     ToolExecutionFailedError,
     HookAborted,
 )
+
+# Dedicated worker pool for the sync-in-loop fallback in
+# Agent._execute_without_timeout. When the sync AgentExecutor.invoke() API is
+# called from inside a running event loop, invoke() returns a coroutine
+# (magic auto-async for Flows) instead of a result; the coroutine is driven
+# to completion on one of these threads, each of which owns a fresh event
+# loop, so the caller's loop stays free and the pre-1.14.5 sync contract
+# (e.g. crew.kickoff() inside a Jupyter cell) keeps working. The pool is
+# bounded to limit thread creation. Calls that originate on a pool worker
+# itself (a re-entrant sync kickoff, e.g. from an executor step callback that
+# calls crew.kickoff()) run on a dedicated thread instead: submitting back
+# into the bounded pool and blocking could deadlock once every worker is
+# waiting on a queued job.
+_SYNC_INVOKE_THREAD_PREFIX = "crewai-sync-invoke"
+_sync_invoke_pool = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4,
+    thread_name_prefix=_SYNC_INVOKE_THREAD_PREFIX,
+)
+
+# Bound on how long a worker loop waits for fire-and-forget tasks (e.g. async
+# step_callback tasks scheduled with asyncio.create_task during the run) after
+# the main coroutine finishes. Without the drain, asyncio.run() cancels those
+# tasks during loop teardown and the final callbacks are silently dropped.
+# The same bound applies independently to the post-cancel wait below, so a
+# callback that swallows CancelledError cannot hang the sync call.
+_CALLBACK_DRAIN_TIMEOUT_S = 30.0
+
+
+async def _await_and_drain_callbacks(
+    coro: Coroutine[Any, Any, dict[str, Any]],
+) -> dict[str, Any]:
+    """Await the main coroutine, then let fire-and-forget tasks finish.
+
+    Tasks still pending on the worker loop when the coroutine completes would
+    otherwise be cancelled by asyncio.run() during loop shutdown. They get a
+    bounded chance to complete first; anything still running afterwards is
+    cancelled so a misbehaving callback cannot hang the sync call.
+
+    The drain runs whether the coroutine succeeds or raises: an executor
+    failure must not silently drop in-flight callbacks either. The
+    coroutine's own result or exception is always preserved — drained task
+    exceptions are only retrieved (to avoid "never retrieved" warnings),
+    never raised.
+    """
+    try:
+        return await coro
+    finally:
+        await _drain_worker_loop_tasks()
+
+
+async def _drain_worker_loop_tasks() -> None:
+    """Give fire-and-forget tasks on the worker loop a bounded drain.
+
+    Pending tasks get ``_CALLBACK_DRAIN_TIMEOUT_S`` to finish, then are
+    cancelled. The post-cancel wait is bounded independently by the same
+    timeout instead of an unbounded gather: a task that swallows
+    ``CancelledError`` must not hang the sync call. Anything still alive
+    afterwards is left for the worker loop's own teardown (asyncio.run()
+    re-cancels and collects it, as with any task on a closing loop).
+    """
+    pending = [
+        task for task in asyncio.all_tasks() if task is not asyncio.current_task()
+    ]
+    if not pending:
+        return
+    done, still_pending = await asyncio.wait(pending, timeout=_CALLBACK_DRAIN_TIMEOUT_S)
+    for task in done:
+        if not task.cancelled():
+            task.exception()  # retrieve to avoid "never retrieved" warnings
+    for task in still_pending:
+        task.cancel()
+    if still_pending:
+        done_after_cancel, _ = await asyncio.wait(
+            still_pending, timeout=_CALLBACK_DRAIN_TIMEOUT_S
+        )
+        for task in done_after_cancel:
+            if not task.cancelled():
+                task.exception()
+
+
+def _run_awaitable_on_worker_thread(
+    coro: Coroutine[Any, Any, dict[str, Any]],
+) -> dict[str, Any]:
+    """Drive a coroutine to completion on a worker thread with a fresh loop.
+
+    Propagates the caller's contextvars to the worker thread. Exceptions
+    raised by the coroutine are re-raised on the caller via future.result().
+    """
+    ctx = contextvars.copy_context()
+    if threading.current_thread().name.startswith(_SYNC_INVOKE_THREAD_PREFIX):
+        return _run_awaitable_on_dedicated_thread(ctx, coro)
+    future = _sync_invoke_pool.submit(
+        ctx.run, asyncio.run, _await_and_drain_callbacks(coro)
+    )
+    return future.result()
+
+
+def _run_awaitable_on_dedicated_thread(
+    ctx: contextvars.Context, coro: Coroutine[Any, Any, dict[str, Any]]
+) -> dict[str, Any]:
+    """Drive a coroutine to completion on a fresh thread with its own loop.
+
+    Used for re-entrant sync-in-loop invocations (see above): a new thread
+    per call keeps the bounded pool deadlock-free, and the depth of such
+    nesting is bounded by user code.
+    """
+    outcome: dict[str, Any] = {}
+
+    def _target() -> None:
+        try:
+            outcome["result"] = ctx.run(asyncio.run, _await_and_drain_callbacks(coro))
+        except BaseException as exc:  # re-raised on the caller below
+            outcome["error"] = exc
+
+    thread = threading.Thread(
+        target=_target,
+        name=f"{_SYNC_INVOKE_THREAD_PREFIX}-reentrant",
+        daemon=True,
+    )
+    thread.start()
+    thread.join()
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome["result"]
+
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "AgentExecutor": AgentExecutor,
@@ -400,7 +526,7 @@ class Agent(BaseAgent):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
+    def validate_from_repository(cls, v: Any) -> dict[str, Any] | Any | None:
         """Merge repository agent config with provided values before validation."""
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
@@ -1088,11 +1214,15 @@ class Agent(BaseAgent):
             }
         )
         if inspect.isawaitable(invoke_result):
-            invoke_result.close()
-            raise RuntimeError(
-                "Agent execution was invoked synchronously from within a running "
-                "event loop. Use `agent.kickoff_async()` / `crew.kickoff_async()` "
-                "(or `await agent.aexecute_task(...)`) when calling from async code."
+            # invoke() returned a coroutine because we are inside a running
+            # event loop (magic auto-async). Run it to completion on a worker
+            # thread with a fresh event loop instead of raising, preserving
+            # the sync contract crew.kickoff() has always had (e.g. from a
+            # Jupyter/Colab cell). If the executor is already running its
+            # async path, invoke_async's own concurrency guard raises from
+            # within the coroutine, so that protection is not lost.
+            invoke_result = _run_awaitable_on_worker_thread(
+                cast("Coroutine[Any, Any, dict[str, Any]]", invoke_result)
             )
         return invoke_result["output"]
 
@@ -1496,7 +1626,6 @@ class Agent(BaseAgent):
             DeprecationWarning,
             stacklevel=2,
         )
-        return
 
     def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
