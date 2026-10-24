@@ -54,6 +54,8 @@ _REGION_PREFIXES: Final[tuple[str, ...]] = (
     "eu.",
     "au.",
     "jp.",
+    "in.",
+    "ca.",
 )
 _VENDOR_PREFIXES: Final[tuple[str, ...]] = (
     "anthropic.",

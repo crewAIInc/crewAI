@@ -223,6 +223,8 @@ def test_contested_provider_aliases_are_left_to_the_bare_index() -> None:
     [
         ("us.anthropic.claude-sonnet-4-5-v1:0", 200_000),
         ("eu.anthropic.claude-sonnet-4-5-v1:0", 200_000),
+        ("in.anthropic.claude-sonnet-5", 1_000_000),
+        ("ca.amazon.nova-lite-v1:0", 300_000),
         ("us.anthropic.claude-opus-4-6-v1:0", 1_000_000),
         ("us.anthropic.claude-opus-4-5-v1:0", 200_000),
         ("us.anthropic.claude-haiku-4-5-v1:0", 200_000),
