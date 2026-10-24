@@ -217,6 +217,8 @@ def overlay_model_for_model(
 
 def _model_forms(model: str, provider: str | None) -> list[str]:
     """``model`` in the forms a key may name it by, the one as written first."""
+    from crewai.llm import route_keeps_prefix
+
     if provider and not model.startswith(f"{provider}/"):
         routed = f"{provider}/{model}"
         # A bare name is the native one with its prefix stripped; a name that
@@ -226,7 +228,13 @@ def _model_forms(model: str, provider: str | None) -> list[str]:
     else:
         forms = [model]
     prefix, separator, rest = forms[-1].partition("/")
-    if separator and "/" not in rest and prefix.lower() in _aliases():
+    provider_named = _aliases().get(prefix.lower()) if separator else None
+    # A route that keeps its prefix (``trustedrouter/auto``) has no bare form.
+    if (
+        provider_named
+        and "/" not in rest
+        and not route_keeps_prefix(provider_named, rest)
+    ):
         if rest not in forms:
             forms.append(rest)
     return forms
