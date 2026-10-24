@@ -26627,6 +26627,770 @@
       }
     },
     {
+      "description": "Get the confirmed balance and the pending (unconfirmed) change of a Bitcoin, Litecoin, Dogecoin or Zcash address. Amounts are decimal strings in coin units.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional SoChain API key for higher limits (https://sochain.com/dashboard)",
+          "name": "SOCHAIN_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "SoChain Address Balance",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Confirmed and unconfirmed balance of an address.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional SoChain API key, sent as the API-KEY header. Get one at https://sochain.com/dashboard.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://sochain.com/api/v3",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SoChainAddressBalanceTool",
+        "type": "object"
+      },
+      "name": "SoChainAddressBalanceTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "address": {
+            "description": "The address to look up.",
+            "pattern": "^[A-Za-z0-9]{1,1000}$",
+            "title": "Address",
+            "type": "string"
+          },
+          "network": {
+            "description": "Network code: BTC, LTC, DOGE or ZEC, or a testnet: BTCTEST (Bitcoin testnet4), LTCTEST, DOGETEST or ZECTEST.",
+            "enum": [
+              "BTC",
+              "LTC",
+              "DOGE",
+              "ZEC",
+              "BTCTEST",
+              "LTCTEST",
+              "DOGETEST",
+              "ZECTEST"
+            ],
+            "title": "Network",
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "address"
+        ],
+        "title": "SoChainAddressSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Summarize a Bitcoin, Litecoin, Dogecoin or Zcash address: confirmed and unconfirmed balance, total received, transactions sent and received, and when it was first and last active.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional SoChain API key for higher limits (https://sochain.com/dashboard)",
+          "name": "SOCHAIN_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "SoChain Address Summary",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Balances, total received and transaction counts of an address.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional SoChain API key, sent as the API-KEY header. Get one at https://sochain.com/dashboard.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://sochain.com/api/v3",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SoChainAddressSummaryTool",
+        "type": "object"
+      },
+      "name": "SoChainAddressSummaryTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "address": {
+            "description": "The address to look up.",
+            "pattern": "^[A-Za-z0-9]{1,1000}$",
+            "title": "Address",
+            "type": "string"
+          },
+          "network": {
+            "description": "Network code: BTC, LTC, DOGE or ZEC, or a testnet: BTCTEST (Bitcoin testnet4), LTCTEST, DOGETEST or ZECTEST.",
+            "enum": [
+              "BTC",
+              "LTC",
+              "DOGE",
+              "ZEC",
+              "BTCTEST",
+              "LTCTEST",
+              "DOGETEST",
+              "ZECTEST"
+            ],
+            "title": "Network",
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "address"
+        ],
+        "title": "SoChainAddressSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List the transactions of a Bitcoin, Litecoin, Dogecoin or Zcash address, ten per page, unconfirmed first and then newest first, with the amount sent, received and the balance change of each.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional SoChain API key for higher limits (https://sochain.com/dashboard)",
+          "name": "SOCHAIN_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "SoChain Address Transactions",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "An address's transactions, ten per page.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional SoChain API key, sent as the API-KEY header. Get one at https://sochain.com/dashboard.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://sochain.com/api/v3",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SoChainAddressTransactionsTool",
+        "type": "object"
+      },
+      "name": "SoChainAddressTransactionsTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "address": {
+            "description": "The address to look up.",
+            "pattern": "^[A-Za-z0-9]{1,1000}$",
+            "title": "Address",
+            "type": "string"
+          },
+          "network": {
+            "description": "Network code: BTC, LTC, DOGE or ZEC, or a testnet: BTCTEST (Bitcoin testnet4), LTCTEST, DOGETEST or ZECTEST.",
+            "enum": [
+              "BTC",
+              "LTC",
+              "DOGE",
+              "ZEC",
+              "BTCTEST",
+              "LTCTEST",
+              "DOGETEST",
+              "ZECTEST"
+            ],
+            "title": "Network",
+            "type": "string"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "maximum": 999999,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 1,
+            "description": "Page number from 1; ten transactions per page, newest first.",
+            "title": "Page"
+          }
+        },
+        "required": [
+          "network",
+          "address"
+        ],
+        "title": "SoChainAddressTransactionsSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get a Bitcoin, Litecoin, Dogecoin or Zcash block by height or hash: time, confirmations, transaction count, reward, fees, fee rates and value out.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional SoChain API key for higher limits (https://sochain.com/dashboard)",
+          "name": "SOCHAIN_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "SoChain Block",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "One block by height or hash.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional SoChain API key, sent as the API-KEY header. Get one at https://sochain.com/dashboard.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://sochain.com/api/v3",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SoChainBlockTool",
+        "type": "object"
+      },
+      "name": "SoChainBlockTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "block": {
+            "description": "Block height or block hash (64 hex characters).",
+            "pattern": "^([0-9]{1,8}|[0-9a-fA-F]{64})$",
+            "title": "Block",
+            "type": "string"
+          },
+          "include_transactions": {
+            "default": false,
+            "description": "Also return every transaction ID in the block (can be long).",
+            "title": "Include Transactions",
+            "type": "boolean"
+          },
+          "network": {
+            "description": "Network code: BTC, LTC, DOGE or ZEC, or a testnet: BTCTEST (Bitcoin testnet4), LTCTEST, DOGETEST or ZECTEST.",
+            "enum": [
+              "BTC",
+              "LTC",
+              "DOGE",
+              "ZEC",
+              "BTCTEST",
+              "LTCTEST",
+              "DOGETEST",
+              "ZECTEST"
+            ],
+            "title": "Network",
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "block"
+        ],
+        "title": "SoChainBlockSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get the state of the Bitcoin, Litecoin, Dogecoin or Zcash network: newest block, hashrate, mempool size and the next projected blocks with their fee rates, to estimate the fee a transaction needs.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional SoChain API key for higher limits (https://sochain.com/dashboard)",
+          "name": "SOCHAIN_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "SoChain Network Info",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Network state, mempool and fee rates.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional SoChain API key, sent as the API-KEY header. Get one at https://sochain.com/dashboard.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://sochain.com/api/v3",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SoChainNetworkInfoTool",
+        "type": "object"
+      },
+      "name": "SoChainNetworkInfoTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "network": {
+            "description": "Network code: BTC, LTC, DOGE or ZEC, or a testnet: BTCTEST (Bitcoin testnet4), LTCTEST, DOGETEST or ZECTEST.",
+            "enum": [
+              "BTC",
+              "LTC",
+              "DOGE",
+              "ZEC",
+              "BTCTEST",
+              "LTCTEST",
+              "DOGETEST",
+              "ZECTEST"
+            ],
+            "title": "Network",
+            "type": "string"
+          }
+        },
+        "required": [
+          "network"
+        ],
+        "title": "SoChainNetworkSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get a Bitcoin, Litecoin, Dogecoin or Zcash transaction by its ID: confirmations, block, fee, size, and every input and output.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional SoChain API key for higher limits (https://sochain.com/dashboard)",
+          "name": "SOCHAIN_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "SoChain Transaction",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "One transaction with its inputs and outputs.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional SoChain API key, sent as the API-KEY header. Get one at https://sochain.com/dashboard.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://sochain.com/api/v3",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SoChainTransactionTool",
+        "type": "object"
+      },
+      "name": "SoChainTransactionTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "network": {
+            "description": "Network code: BTC, LTC, DOGE or ZEC, or a testnet: BTCTEST (Bitcoin testnet4), LTCTEST, DOGETEST or ZECTEST.",
+            "enum": [
+              "BTC",
+              "LTC",
+              "DOGE",
+              "ZEC",
+              "BTCTEST",
+              "LTCTEST",
+              "DOGETEST",
+              "ZECTEST"
+            ],
+            "title": "Network",
+            "type": "string"
+          },
+          "tx_hash": {
+            "description": "Transaction ID (64 hex characters).",
+            "pattern": "^[0-9a-fA-F]{64}$",
+            "title": "Tx Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "tx_hash"
+        ],
+        "title": "SoChainTransactionSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool to scrape or crawl a website and return LLM-ready content.",
       "env_vars": [
         {
