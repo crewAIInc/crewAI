@@ -96,6 +96,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DEEPINFRA_BASE_URL",
         api_key_required=True,
     ),
+    "aistupidlevel": ProviderConfig(
+        base_url="https://aistupidlevel.info/v1",
+        api_key_env="AISTUPIDLEVEL_API_KEY",
+        base_url_env="AISTUPIDLEVEL_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -149,6 +155,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
         - deepinfra: DeepInfra (https://deepinfra.com)
+        - aistupidlevel: AI Stupid Level Smart Router (https://aistupidlevel.info)
 
     Example:
         # Using provider prefix
