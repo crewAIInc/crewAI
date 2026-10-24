@@ -305,7 +305,10 @@ def run_crew_tool(crew: Crew, messages: list[LLMMessage], **kwargs: Any) -> str:
     except Exception as e:
         click.secho("An error occurred while running the crew:", fg="red")
         click.secho(str(e), fg="red")
-        sys.exit(1)
+        # Return the error to the conversation instead of exiting: this runs
+        # as an LLM-callable tool inside the chat loop, so the model can tell
+        # the user what failed and the session survives a failed run.
+        return f"Error running the crew: {e}"
 
 
 def load_crew_and_name() -> tuple[Crew, str]:
