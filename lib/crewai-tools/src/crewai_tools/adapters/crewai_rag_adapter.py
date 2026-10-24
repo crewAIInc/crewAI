@@ -197,7 +197,8 @@ class CrewAIRagAdapter(Adapter):
             else:
                 source_ref = str(arg)
 
-            if not data_type:
+            item_data_type = data_type
+            if not item_data_type:
                 ext = os.path.splitext(source_ref)[1].lower()
                 is_url = source_ref.startswith(("http://", "https://", "file://"))
                 if (
@@ -206,9 +207,9 @@ class CrewAIRagAdapter(Adapter):
                     and not os.path.isfile(source_ref)
                 ):
                     raise FileNotFoundError(f"File does not exist: {source_ref}")
-                data_type = DataTypes.from_content(source_ref)
+                item_data_type = DataTypes.from_content(source_ref)
 
-            if data_type == DataType.DIRECTORY:
+            if item_data_type == DataType.DIRECTORY:
                 if not os.path.isdir(source_ref):
                     raise ValueError(f"Directory does not exist: {source_ref}")
 
@@ -304,7 +305,7 @@ class CrewAIRagAdapter(Adapter):
                 metadata: dict[str, Any] = base_metadata.copy()
                 source_content = SourceContent(source_ref)
 
-                if data_type in [
+                if item_data_type in [
                     DataType.PDF_FILE,
                     DataType.TEXT_FILE,
                     DataType.DOCX,
@@ -316,8 +317,8 @@ class CrewAIRagAdapter(Adapter):
                     if not source_content.is_url() and not source_content.path_exists():
                         raise FileNotFoundError(f"File does not exist: {source_ref}")
 
-                loader = data_type.get_loader()
-                chunker = data_type.get_chunker()
+                loader = item_data_type.get_loader()
+                chunker = item_data_type.get_chunker()
 
                 loader_result: LoaderResult = loader.load(source_content, **kwargs)
 
@@ -326,7 +327,7 @@ class CrewAIRagAdapter(Adapter):
                 for i, chunk in enumerate(chunks):
                     chunk_metadata: dict[str, Any] = metadata.copy()
                     chunk_metadata.update(loader_result.metadata)
-                    chunk_metadata["data_type"] = str(data_type)
+                    chunk_metadata["data_type"] = str(item_data_type)
                     chunk_metadata["chunk_index"] = i
                     chunk_metadata["total_chunks"] = len(chunks)
                     chunk_metadata["source"] = source_ref
