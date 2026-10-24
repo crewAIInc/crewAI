@@ -7,11 +7,13 @@ import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
+import importlib.util
 import inspect
 import json
 import logging
+import os
 import re
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, get_args
 
 from crewai_core.printer import ColoredText, Printer
 from crewai_core.settings import Settings
@@ -61,6 +63,258 @@ from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
+
+
+try:
+    from pydantic import ImportString as _ImportString
+except ImportError:  # pragma: no cover - crewai requires pydantic v2
+    _ImportString = None  # type: ignore[assignment]
+
+try:
+    from pydantic import BeforeValidator as _BeforeValidator
+except ImportError:  # pragma: no cover - crewai requires pydantic v2
+    _BeforeValidator = None  # type: ignore[assignment]
+
+try:
+    from crewai.types.callback import string_to_callable as _string_to_callable
+except ImportError:  # pragma: no cover - defensive; base_tool imports it too
+    _string_to_callable = None  # type: ignore[assignment]
+
+
+_ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
+    {
+        "crewai.tools",
+        "crewai_tools",
+        "crewai.tools.base_tool",
+        "crewai.tools.structured_tool",
+        "crewai.tools.tool_usage",
+    }
+)
+
+
+def _is_allowlisted_tool_module(module_name: str) -> bool:
+    """Check whether a repository tool record's module may be imported.
+
+    Repository records store the tool class's defining module as produced by
+    ``extract_tools_metadata``. For crewai-tools that is the tool's own
+    submodule (e.g. ``"crewai_tools.tools.csv_search_tool.csv_search_tool"``),
+    never the bare ``"crewai_tools"`` package. Accept only submodules that
+    resolve inside the installed ``crewai_tools`` package directory, so the
+    check remains a pinned-package membership test rather than a loose prefix
+    match that would bless any dotted name starting with the package name.
+    """
+    if module_name in _ALLOWED_TOOL_MODULES:
+        return True
+    if module_name != "crewai_tools" and not module_name.startswith("crewai_tools."):
+        return False
+    try:
+        spec = importlib.util.find_spec(module_name)
+        package_spec = importlib.util.find_spec("crewai_tools")
+    except Exception:
+        # Fail closed: any resolution failure means "not allowlisted".
+        # find_spec imports the parent package, which can raise beyond
+        # ImportError on a broken install; the allowlist must return False
+        # rather than crash the agent load.
+        return False
+    if spec is None or package_spec is None or not spec.origin:
+        return False
+    search_locations = package_spec.submodule_search_locations
+    if not search_locations:
+        return False
+    real_origin = os.path.realpath(spec.origin)
+    return any(
+        real_origin.startswith(os.path.realpath(location) + os.sep)
+        for location in search_locations
+    )
+
+
+def _is_import_string(tp: Any) -> bool:
+    """Match pydantic's ImportString as a class, an instance, or by name.
+
+    ``ImportString[Callable]`` is ``Annotated[Callable, ImportString()]``: an
+    *instance* in Annotated metadata, which ``field.annotation`` may carry
+    directly or pydantic may strip into ``field.metadata``, depending on the
+    version. The bare class and the "ImportString" forward-reference string
+    are matched too; anything unrecognized fails closed by name.
+    """
+    if _ImportString is not None and (
+        tp is _ImportString or isinstance(tp, _ImportString)
+    ):
+        return True
+    return (
+        getattr(tp, "__name__", "") == "ImportString"
+        or type(tp).__name__ == "ImportString"
+    )
+
+
+def _is_string_to_callable_validator(tp: Any) -> bool:
+    """Match a validator that resolves dotted-path strings into callables.
+
+    ``SerializableCallable`` is
+    ``Annotated[Callable, BeforeValidator(string_to_callable), ...]``: its
+    validator imports a string like ``"os.system"`` into a live callable at
+    validation time, and ``BaseTool`` pre-resolves ``cache_function`` strings
+    through the same importer before validation. A field carrying this
+    validator is import-resolving, exactly like ``ImportString``.
+    """
+    return (
+        _BeforeValidator is not None
+        and _string_to_callable is not None
+        and isinstance(tp, _BeforeValidator)
+        and tp.func is _string_to_callable
+    )
+
+
+def _annotation_resolves_import(
+    annotation: Any, metadata: Sequence[Any] | None = None
+) -> bool:
+    """Detect annotations that turn a string into an imported Python object.
+
+    ``pydantic.ImportString`` (including inside ``Optional``/``Union`` or
+    containers such as ``list[ImportString]``, and in its parameterized
+    ``ImportString[Callable]`` form) and ``SerializableCallable`` (via its
+    ``string_to_callable`` validator) resolve a dotted-path string to the
+    referenced object at validation time. Depending on the pydantic version,
+    ``Annotated`` metadata may live inside ``field.annotation`` or be
+    stripped into ``field.metadata`` — both are scanned. A repository record
+    is remote JSON, so a string init_param for such a field becomes an
+    arbitrary callable (e.g. ``"os.system"``) on the loader's host.
+    """
+    seen: set[int] = set()
+
+    def _walk(tp: Any) -> bool:
+        if tp is None or id(tp) in seen:
+            return False
+        seen.add(id(tp))
+        if _is_import_string(tp) or _is_string_to_callable_validator(tp):
+            return True
+        if tp == "ImportString":  # unresolved forward reference, fail closed
+            return True
+        # Unwrap Annotated / Optional / Union / generic containers.
+        return any(_walk(arg) for arg in get_args(tp))
+
+    if _walk(annotation):
+        return True
+    return any(_walk(item) for item in (metadata or []))
+
+
+def _contains_non_local_ref(value: Any) -> bool:
+    """True if a JSON value has a ``$ref`` that is not a pure local fragment.
+
+    ``create_model_from_schema`` resolves ``$ref`` with jsonref's default
+    loader, which follows any non-fragment URI at model-build time. Checking
+    for ``://`` is not enough: jsonref also resolves no-authority forms such
+    as ``file:/etc/hostname`` or ``http:/host/x`` (still URIs — a missing
+    authority does not make them fragments), and relative refs such as
+    ``other.json#/x`` resolve against the process working directory, which is
+    a local-file-read primitive. The only refs that can never touch the
+    network or the filesystem are pure fragments (``#/...``), which resolve
+    inside the schema document itself.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "$ref" and isinstance(item, str):
+                if not item.strip().startswith("#"):
+                    return True
+            elif _contains_non_local_ref(item):
+                return True
+    elif isinstance(value, (list, tuple)):
+        return any(_contains_non_local_ref(item) for item in value)
+    return False
+
+
+# Tool fields whose dict values are passed through create_model_from_schema
+# (which resolves $ref via jsonref). Only these fields can turn a schema
+# dict into a network fetch at construction time.
+_SCHEMA_FIELDS_WITH_REF_RESOLUTION = frozenset({"args_schema", "result_schema"})
+
+
+def _is_json_value(value: Any) -> bool:
+    """True for values that can round-trip through JSON (defense in depth).
+
+    Repository records arrive as JSON, so legitimate init_params are
+    JSON-typed by construction; rejecting anything else keeps callables and
+    other non-serializable objects out of the tool constructor even if a
+    record ever reaches this path from a non-JSON source.
+    """
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return True
+    if isinstance(value, (list, tuple)):
+        return all(_is_json_value(item) for item in value)
+    if isinstance(value, dict):
+        return all(
+            isinstance(key, str) and _is_json_value(item) for key, item in value.items()
+        )
+    return False
+
+
+def _validate_repository_tool_params(
+    tool_class: type[BaseTool], init_params: Any
+) -> None:
+    """Fail closed on repository tool init_params that could become code.
+
+    The module allowlist gates *which* tool classes may load; this gates *what*
+    a remote record may pass to their constructors:
+
+    - ``init_params`` must be a JSON object;
+    - every key must be a declared pydantic field of the tool class, so a
+      record cannot smuggle unexpected keyword arguments into ``__init__``;
+    - no field may use an import-resolving annotation (``ImportString`` in
+      any form, or ``SerializableCallable``): such a field turns a remote
+      string like ``"os.system"`` into a live callable, which the tool may
+      then invoke — arbitrary code execution on the loader's host;
+    - every value must be JSON-typed.
+
+    Raises:
+        AgentRepositoryError: If any parameter fails validation.
+    """
+    tool_name = getattr(tool_class, "__name__", repr(tool_class))
+    if not isinstance(init_params, dict):
+        raise AgentRepositoryError(
+            f"Tool {tool_name!r} has invalid init_params: expected a JSON "
+            f"object, got {type(init_params).__name__}."
+        )
+    fields = getattr(tool_class, "model_fields", None) or {}
+    for key, value in init_params.items():
+        field = fields.get(key)
+        if field is None:
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} does not declare init parameter {key!r}; "
+                "repository records may only set declared tool fields."
+            )
+        if _annotation_resolves_import(
+            field.annotation, getattr(field, "metadata", None)
+        ):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} uses an "
+                "import-resolving annotation: a repository string value would "
+                "be imported as a Python object on this host. Refusing to "
+                "instantiate."
+            )
+        if not _is_json_value(value):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} must be JSON-typed "
+                f"(got {type(value).__name__}); refusing to instantiate."
+            )
+        # args_schema/result_schema dicts are passed through
+        # create_model_from_schema, which resolves $ref with jsonref's
+        # default loader. Any non-fragment $ref resolves outside the schema
+        # document: absolute URIs (https://..., file://...), no-authority
+        # URI forms (file:/path, http:/host/x), and relative refs
+        # (other.json#/x) which resolve against the process working
+        # directory — a local-file-read or SSRF primitive at construction
+        # time. Reject them; only pure #-fragment refs stay allowed.
+        if (
+            key in _SCHEMA_FIELDS_WITH_REF_RESOLUTION
+            and isinstance(value, dict)
+            and _contains_non_local_ref(value)
+        ):
+            raise AgentRepositoryError(
+                f"Tool {tool_name!r} init parameter {key!r} contains a "
+                "non-local $ref: schema dicts in repository records may "
+                "only use #-fragment $refs that resolve inside the schema "
+                "document itself."
+            )
 
 
 if TYPE_CHECKING:
@@ -1120,8 +1374,27 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
+                        if not _is_allowlisted_tool_module(tool["module"]):
+                            raise AgentRepositoryError(
+                                f"Tool module {tool['module']!r} is not in the allowlist. "
+                                f"Allowed modules: {', '.join(sorted(_ALLOWED_TOOL_MODULES))}"
+                            )
                         module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
+                        if not (
+                            inspect.isclass(tool_class)
+                            and issubclass(tool_class, BaseTool)
+                        ):
+                            raise AgentRepositoryError(
+                                f"Tool {tool['name']!r} resolved from module {tool['module']!r} "
+                                f"is not a BaseTool subclass."
+                            )
+
+                        # The record is remote JSON: validate what it may pass
+                        # to the constructor before splatting it in.
+                        _validate_repository_tool_params(
+                            tool_class, tool["init_params"]
+                        )
 
                         tool_value = tool_class(**tool["init_params"])
 
