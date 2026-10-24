@@ -1402,7 +1402,7 @@
   "q": "You've changed the flow and re-evaluated three times, and the grades aren't moving. What now?",
   "key": [
    "(stop|report)",
-   "brief"
+   "brief|grades|report links?"
   ],
   "partial": [
    "structur"
