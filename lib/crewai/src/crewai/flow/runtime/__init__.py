@@ -1224,6 +1224,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             result: The result from the triggering method.
             triggering_event_id: The event_id of the event that triggered these listeners.
         """
+        self._validate_parallel_feedback([*racing_listeners, *other_listeners])
         racing_tasks = [
             asyncio.create_task(
                 self._execute_single_listener(name, result, triggering_event_id),
@@ -2450,6 +2451,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     for start_method in starts_to_execute:
                         await self._execute_start_method(start_method)
                 else:
+                    self._validate_parallel_feedback(starts_to_execute)
                     tasks = [
                         self._execute_start_method(start_method)
                         for start_method in starts_to_execute
@@ -3180,6 +3182,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         }
         context.fired_or_listeners = sorted(self._fired_or_listeners)
 
+    def _validate_parallel_feedback(
+        self, method_names: Sequence[FlowMethodName]
+    ) -> None:
+        feedback_methods = [
+            name
+            for name in method_names
+            if self._definition.methods[str(name)].human_feedback is not None
+        ]
+        if len(feedback_methods) > 1:
+            raise ValueError(
+                "Parallel human feedback methods are not supported. "
+                "Chain feedback methods sequentially so each reply has one recipient."
+            )
+
     async def _execute_parallel(
         self, coroutines: Sequence[Coroutine[Any, Any, Any]]
     ) -> None:
@@ -3194,6 +3210,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     result, HumanFeedbackPending
                 ):
                     raise result from None
+            if sum(isinstance(result, HumanFeedbackPending) for result in results) > 1:
+                raise ValueError(
+                    "Multiple parallel human feedback requests cannot be resumed. "
+                    "Chain feedback methods sequentially."
+                ) from None
             raise
 
     async def _execute_listeners(
@@ -3314,6 +3335,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             current_triggering_event_id,
                         )
                     else:
+                        self._validate_parallel_feedback(listeners_triggered)
                         tasks = [
                             self._execute_single_listener(
                                 listener_name,
