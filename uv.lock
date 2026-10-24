@@ -21,12 +21,13 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
+certifi = "2026-10-21T00:00:00Z"
 langsmith = "2026-06-20T00:00:00Z"
 msgpack = "2026-06-20T00:00:00Z"
 oauthlib = "2026-09-29T00:00:00Z"
-certifi = "2026-10-21T00:00:00Z"
-uv = "2026-10-21T00:00:00Z"
 pydantic-settings = "2026-06-20T00:00:00Z"
+pypdf = "2026-10-22T00:00:00Z"
+uv = "2026-10-21T00:00:00Z"
 
 [manifest]
 members = [
@@ -44,6 +45,8 @@ overrides = [
     { name = "certifi", specifier = ">=2026.10.18" },
     { name = "cryptography", specifier = ">=50.0.0" },
     { name = "docling-core", extras = ["chunking"], specifier = ">=2.98.0,<3" },
+    { name = "filelock", marker = "python_full_version < '3.11'", specifier = ">=3.24.2,<4" },
+    { name = "filelock", marker = "python_full_version >= '3.11'", specifier = ">=4.2.1" },
     { name = "fsspec", specifier = ">=2026.6.0" },
     { name = "gitpython", specifier = ">=3.2.1,<4" },
     { name = "h2", specifier = ">=4.4.1" },
@@ -65,10 +68,10 @@ overrides = [
     { name = "pyasn1", specifier = ">=0.6.4" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },
     { name = "pymongo", specifier = ">=4.18.2" },
-    { name = "pypdf", specifier = ">=6.21.1,<7" },
+    { name = "pypdf", specifier = ">=6.21.2,<7" },
     { name = "python-multipart", specifier = ">=0.0.27,<1" },
     { name = "rich", specifier = ">=13.7.1" },
-    { name = "setuptools", specifier = ">=83.0.0" },
+    { name = "setuptools", specifier = ">=84.1.0" },
     { name = "snowflake-connector-python", specifier = ">=4.7.3,<5" },
     { name = "snowflake-sqlalchemy", specifier = ">=1.11.0" },
     { name = "soupsieve", specifier = ">=2.9.2" },
@@ -907,7 +910,8 @@ wheels = [
 
 [package.optional-dependencies]
 filecache = [
-    { name = "filelock" },
+    { name = "filelock", version = "3.29.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
 [[package]]
@@ -1585,7 +1589,7 @@ requires-dist = [
     { name = "json-repair", specifier = "~=0.60.1" },
     { name = "json5", specifier = "~=0.10.0" },
     { name = "jsonref", specifier = "~=1.1.0" },
-    { name = "lancedb", specifier = ">=0.29.2,<0.30.1" },
+    { name = "lancedb", specifier = ">=0.33.0,<1.0.0" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.88.6,<2" },
     { name = "mcp", specifier = ">=1.30.0,<2" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.0,<3" },
@@ -1736,7 +1740,7 @@ requires-dist = [
     { name = "av", specifier = "~=13.0.0" },
     { name = "pillow", marker = "python_full_version < '3.11'", specifier = ">=12.3.0,<13" },
     { name = "pillow", marker = "python_full_version >= '3.11'", specifier = ">=13.0.0" },
-    { name = "pypdf", specifier = ">=6.21.1,<7" },
+    { name = "pypdf", specifier = ">=6.21.2,<7" },
     { name = "python-magic", specifier = ">=0.4.27" },
     { name = "tinytag", specifier = ">=2.3.0,<3" },
 ]
@@ -1885,7 +1889,7 @@ typesafe-sdk = [
 ]
 weaviate-client = [
     { name = "weaviate-client", version = "4.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (python_full_version >= '3.13' and platform_machine != 's390x')" },
-    { name = "weaviate-client", version = "4.21.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.13') or (python_full_version >= '3.11' and platform_machine == 's390x')" },
+    { name = "weaviate-client", version = "4.21.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.13') or (python_full_version >= '3.13' and platform_machine == 's390x')" },
 ]
 xml = [
     { name = "nltk" },
@@ -2810,9 +2814,34 @@ wheels = [
 name = "filelock"
 version = "3.29.1"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.11' and platform_machine != 's390x'",
+    "python_full_version < '3.11' and platform_machine == 's390x'",
+]
 sdist = { url = "https://files.pythonhosted.org/packages/1f/f9/f38573ed5844586db374d085911740a501ccfa373b455fc9413f09f85237/filelock-3.29.1.tar.gz", hash = "sha256:d97e6b1b9757569626c58caa07dc4beb1613f4a2938b1e8cc81afca398906c9e", size = 59335, upload-time = "2026-06-03T15:19:04.053Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4c/a0/614c5fe402fd88951df45f4dda2fa3b4e17a99ecd92340771929169b3b95/filelock-3.29.1-py3-none-any.whl", hash = "sha256:85199dfd706869641b72b2e8955d5416a4b2b7dc4b0e8e6d97b4cc1299a6983b", size = 40750, upload-time = "2026-06-03T15:19:02.959Z" },
+]
+
+[[package]]
+name = "filelock"
+version = "4.2.4"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13' and platform_machine != 's390x'",
+    "python_full_version >= '3.13' and platform_machine == 's390x'",
+    "python_full_version == '3.12.*' and platform_machine != 's390x' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and platform_machine != 's390x' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and platform_machine == 's390x' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and platform_machine == 's390x' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_machine != 's390x' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_machine != 's390x' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_machine == 's390x' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_machine == 's390x' and sys_platform == 'win32'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d8/28/3893324bcadf8f89b1616637468d766af3f625008c0735bf704fdfa86617/filelock-4.2.4.tar.gz", hash = "sha256:c6d8663535e1650ee430507b4ffbac7b464dd64b7647ea0112a9f406499d163d", size = 652444, upload-time = "2026-10-19T01:57:51.001Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/1b/5e74289a1878e666bb4b65fe5805a04cafcac2aa5f519ef1ead67ef91c56/filelock-4.2.4-py3-none-any.whl", hash = "sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e", size = 162475, upload-time = "2026-10-19T01:57:49.419Z" },
 ]
 
 [[package]]
@@ -3492,7 +3521,8 @@ name = "huggingface-hub"
 version = "1.16.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
+    { name = "filelock", version = "3.29.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "fsspec" },
     { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'" },
     { name = "httpx" },
@@ -4149,7 +4179,7 @@ wheels = [
 
 [[package]]
 name = "lancedb"
-version = "0.30.0"
+version = "0.40.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
@@ -4163,12 +4193,10 @@ dependencies = [
     { name = "tqdm" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/2f/1577778ad57dba0c55dc13d87230583e14541c82562483ecf8bb2f8e8a00/lancedb-0.30.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:be2a9a43a65c330ccfd08115afb26106cd8d16788522fe7693d3a1f4e01ad321", size = 41959907, upload-time = "2026-03-16T23:03:04.551Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/ca/8c2a04ce499a2a97d1a0de2b7e84fa8166f988a9a495e1ada860110489c2/lancedb-0.30.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:be6a4ba2a1799a426cbf2ba5ea2559a7389a569e9a31f2409d531ceb59d42f35", size = 43873070, upload-time = "2026-03-16T23:11:01.352Z" },
-    { url = "https://files.pythonhosted.org/packages/16/68/e01bf7837454a5ce9e2f6773905e07b09a949bc88136c0773c8166ed7729/lancedb-0.30.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0a967ec05f9930770aeb077bc5579769b1bedf559fcd03a592d9644084625918", size = 46891197, upload-time = "2026-03-16T23:14:39.18Z" },
-    { url = "https://files.pythonhosted.org/packages/43/d1/9085ad17abd98f3a180d7860df3190b2d76f99f533c76d7c7494cec4139d/lancedb-0.30.0-cp39-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:05c66f40f7d4f6f24208e786c40f84b87b1b8e55505305849dd3fed3b78431a3", size = 43877660, upload-time = "2026-03-16T23:11:00.837Z" },
-    { url = "https://files.pythonhosted.org/packages/ea/69/504ee25c57c3f23c80276b5b7b5e4c0f98a5197a7e9e51d3c50500d2b53a/lancedb-0.30.0-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:bdcd27d98554ed11b6f345b14d1307b0e2332d5654767e9ee2e23d9b2d6513d1", size = 46932144, upload-time = "2026-03-16T23:15:00.474Z" },
-    { url = "https://files.pythonhosted.org/packages/2c/85/d5550f22023e672af1945394f7a06a578fcab2980ecc6666acef3428a771/lancedb-0.30.0-cp39-abi3-win_amd64.whl", hash = "sha256:4751ff0446b90be4d4dccfe05f6c105f403a05f3b8531ab99eedc1c656aca950", size = 51121310, upload-time = "2026-03-16T23:43:23.89Z" },
+    { url = "https://files.pythonhosted.org/packages/27/2b/855ab90aea9cfd311842be596ca12dcc366df7b2e8209003f95cc8079f6d/lancedb-0.40.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:10e6fbacc9a9be5698c8e635f150ef4346e428db71d15b31bc1b79aec2a382ff", size = 67454352, upload-time = "2026-10-07T10:35:02.537Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/07/bcdd8f581db0719a5e99be5abdf2a569c840f9b3b90069eff1181141b291/lancedb-0.40.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:e967577fe42980217e43f9b6ecbe042c5ae314370a34b88f1c54e825f96b26f0", size = 71651477, upload-time = "2026-10-07T10:35:06.644Z" },
+    { url = "https://files.pythonhosted.org/packages/82/f7/4a5b7bff8abf486d4dc43fc1cb06c5c08472a1aee760eb5d9d10bd7c770e/lancedb-0.40.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:aac9e08a710ba2071a8aefc4b4ef7d8534f5f7e4e4ce1761f11469d97c36f1e2", size = 75231099, upload-time = "2026-10-07T10:35:10.459Z" },
+    { url = "https://files.pythonhosted.org/packages/88/38/00ed271fd7fc51761b7d449856913a64951041881e68972602643eae7349/lancedb-0.40.0-cp310-abi3-win_amd64.whl", hash = "sha256:aaea68920b88e3d0b84a9ec84bc1585ad04239b9ca1bfcd1e491c2c12bffddc2", size = 83389723, upload-time = "2026-10-07T10:35:14.427Z" },
 ]
 
 [[package]]
@@ -4663,15 +4691,15 @@ version = "3.10.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "cycler" },
     { name = "fonttools" },
     { name = "kiwisolver" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "packaging" },
     { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pillow", version = "13.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "pillow", version = "13.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "pyparsing" },
     { name = "python-dateutil" },
 ]
@@ -4841,7 +4869,7 @@ version = "0.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0e/4a/c27b42ed9b1c7d13d9ba8b6905dece787d6259152f2309338aed29b2447b/ml_dtypes-0.5.4.tar.gz", hash = "sha256:8ab06a50fb9bf9666dd0fe5dfb4676fa2b0ac0f31ecff72a6c3af8e22c063453", size = 692314, upload-time = "2025-11-17T22:32:31.031Z" }
 wheels = [
@@ -5851,9 +5879,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ml-dtypes" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "protobuf" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'win32') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
+    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*' or (python_full_version == '3.11.*' and sys_platform != 'win32') or (python_full_version >= '3.13' and sys_platform != 'win32')" },
     { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/04/19/8ea73a64b368b75fe339771a20a02bc61ea1f551484c9e3d9d0bfbd0450f/onnx-1.22.0.tar.gz", hash = "sha256:ef40c0aaf0b643857ea9306fc7eddce17eaf9fb0407e4801f1fc5758443a38e0", size = 12024721, upload-time = "2026-06-15T12:50:05.354Z" }
@@ -7792,14 +7820,14 @@ wheels = [
 
 [[package]]
 name = "pypdf"
-version = "6.21.1"
+version = "6.21.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/e1/32a9c4dbd94618145f8bab5c623bdb0a528f23fc8719afd77ba0278fd377/pypdf-6.21.1.tar.gz", hash = "sha256:2d62c383acd6e0dff0a96322ba8b1135229343b084d73c6f6cfd947fd291afcb", size = 7088597, upload-time = "2026-10-17T10:29:52.801Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/06/28/081f1cbcca7042441dafc8de00f48ba60853f89e5bff92c5f26477346d81/pypdf-6.21.2.tar.gz", hash = "sha256:0a3e1c5c886a1be03646c16a04827cc166c2a0575c971b26a4bf89686551c2d4", size = 7144571, upload-time = "2026-10-21T16:44:55.272Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl", hash = "sha256:553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b", size = 405134, upload-time = "2026-10-17T10:29:50.687Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/4d/c9d2d67f204eff463237a1a8f5e25a6923b7b1043982b91fcaf104c8ef60/pypdf-6.21.2-py3-none-any.whl", hash = "sha256:1d44d1a3a200f25062adff0085b02040e4646431ac2ccac22e42679e91466084", size = 407766, upload-time = "2026-10-21T16:44:53.626Z" },
 ]
 
 [[package]]
@@ -8004,7 +8032,8 @@ name = "python-discovery"
 version = "1.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
+    { name = "filelock", version = "3.29.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0c/57/250bd238b966cece44328235eb85290045d059265fdaf7527a3a958123db/python_discovery-1.6.1.tar.gz", hash = "sha256:cf87d3627dfb4412437fdd5b13eae402607722998d21567993aedbc59b23c15e", size = 84338, upload-time = "2026-09-18T01:31:53.971Z" }
 wheels = [
@@ -8991,11 +9020,11 @@ wheels = [
 
 [[package]]
 name = "setuptools"
-version = "83.0.0"
+version = "84.2.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/34/26/f5d29e25ffdb535afef2d35cdb55b325298f96debd670da4c325e08d70f4/setuptools-83.0.0.tar.gz", hash = "sha256:025bccbbf0fa05b6192bc64ae1e7b16e001fd6d6d4d5de03c97b1c1ade523bef", size = 1154254, upload-time = "2026-07-04T15:31:22.699Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/b3/c19426f783614d625699a4b247faf628ea9ab1db228674491767b417f9e1/setuptools-84.2.1.tar.gz", hash = "sha256:3ff8b3b5492a0aa66960f4419365a86b84e013070d4313e4d4a6894f5d64d6bc", size = 1230289, upload-time = "2026-10-20T19:01:37.742Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/40/e1e72872c6354b306daef1703549e8e83b4d43cfea356311bf722a043752/setuptools-83.0.0-py3-none-any.whl", hash = "sha256:29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3", size = 1008090, upload-time = "2026-07-04T15:31:20.885Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl", hash = "sha256:ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2", size = 876263, upload-time = "2026-10-20T19:01:35.678Z" },
 ]
 
 [[package]]
@@ -9131,7 +9160,8 @@ dependencies = [
     { name = "certifi" },
     { name = "charset-normalizer" },
     { name = "cryptography" },
-    { name = "filelock" },
+    { name = "filelock", version = "3.29.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "idna" },
     { name = "packaging" },
     { name = "platformdirs" },
@@ -9725,7 +9755,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cuda-bindings", marker = "sys_platform == 'linux'" },
     { name = "cuda-toolkit", extra = ["cublas", "cudart", "cufft", "cufile", "cupti", "curand", "cusolver", "cusparse", "nvjitlink", "nvrtc", "nvtx"], marker = "sys_platform == 'linux'" },
-    { name = "filelock" },
+    { name = "filelock", version = "3.29.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "fsspec" },
     { name = "jinja2" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -10322,7 +10353,7 @@ dependencies = [
     { name = "beautifulsoup4", version = "4.15.0", source = { registry = "https://pypi.org/simple" } },
     { name = "charset-normalizer" },
     { name = "emoji" },
-    { name = "filelock" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" } },
     { name = "filetype" },
     { name = "html5lib" },
     { name = "installer" },
@@ -10695,7 +10726,8 @@ version = "21.14.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distlib" },
-    { name = "filelock" },
+    { name = "filelock", version = "3.29.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "platformdirs" },
     { name = "python-discovery" },
