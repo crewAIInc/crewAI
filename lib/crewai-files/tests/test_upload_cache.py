@@ -209,6 +209,7 @@ class TestUploadCache:
         assert len(gemini_uploads) == 2
         assert len(anthropic_uploads) == 1
 
+
 class TestUploadCacheCapacity:
     @pytest.mark.parametrize("updated_hash", ["a", "b"])
     def test_replacement_preserves_other_entries(self, updated_hash: str) -> None:
