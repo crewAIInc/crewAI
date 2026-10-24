@@ -392,7 +392,7 @@ class BaseLLM(BaseModel, ABC):
             "token per four characters because a native token count is unavailable.",
             self.model,
         )
-        from crewai.utilities.agent_utils import message_content_text
+        from crewai.utilities.message_utils import message_content_text
 
         if isinstance(messages, str):
             character_count = len(messages)
@@ -447,6 +447,17 @@ class BaseLLM(BaseModel, ABC):
         """
         input_tokens = self.get_input_tokens_count(messages, tools, response_model)
         return input_tokens > self.get_context_window_size()
+
+    def summarize_messages(
+        self,
+        messages: list[LLMMessage],
+        callbacks: list[Any],
+        verbose: bool = True,
+    ) -> None:
+        """Compact a mutable conversation history to fit this model's context window."""
+        from crewai.llms.context_window import summarize_messages
+
+        summarize_messages(self, messages, callbacks, verbose)
 
     @abstractmethod
     def call(
