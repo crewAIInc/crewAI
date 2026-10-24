@@ -1225,37 +1225,50 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             triggering_event_id: The event_id of the event that triggered these listeners.
         """
         self._validate_parallel_feedback([*racing_listeners, *other_listeners])
-        racing_tasks = [
-            asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
-                name=str(name),
-            )
-            for name in racing_listeners
-        ]
 
-        other_tasks = [
-            asyncio.create_task(
-                self._execute_single_listener(name, result, triggering_event_id),
-                name=str(name),
-            )
-            for name in other_listeners
-        ]
+        async def run_race() -> None:
+            tasks = [
+                asyncio.create_task(
+                    self._execute_single_listener(name, result, triggering_event_id),
+                    name=str(name),
+                )
+                for name in racing_listeners
+            ]
+            try:
+                for coro in asyncio.as_completed(tasks):
+                    try:
+                        await coro
+                    except HumanFeedbackPending:
+                        break
+                    except Exception as e:
+                        logger.debug(f"Racing listener failed: {e}")
+                        continue
+                    break
+            finally:
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+            pending = [
+                item for item in results if isinstance(item, HumanFeedbackPending)
+            ]
+            if len(pending) > 1:
+                raise ValueError(
+                    "Multiple parallel human feedback requests cannot be resumed. "
+                    "Chain feedback methods sequentially."
+                )
+            if pending:
+                raise pending[0]
 
-        if racing_tasks:
-            for coro in asyncio.as_completed(racing_tasks):
-                try:
-                    await coro
-                except Exception as e:
-                    logger.debug(f"Racing listener failed: {e}")
-                    continue
-                break
-
-            for task in racing_tasks:
-                if not task.done():
-                    task.cancel()
-
-        if other_tasks:
-            await asyncio.gather(*other_tasks, return_exceptions=True)
+        await self._execute_parallel(
+            [
+                run_race(),
+                *(
+                    self._execute_single_listener(name, result, triggering_event_id)
+                    for name in other_listeners
+                ),
+            ]
+        )
 
     @classmethod
     def from_pending(
@@ -3217,6 +3230,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 ) from None
             raise
 
+        except BaseException:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
+
     async def _execute_listeners(
         self,
         trigger_method: FlowMethodName,
@@ -3739,11 +3759,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 else _serialize_llm_for_context(llm),
                 execution_uuid=get_execution_uuid(),
             )
-            feedback_value = await asyncio.to_thread(
-                provider.request_feedback, context, self
-            )
-            if asyncio.iscoroutine(feedback_value):
-                feedback_value = await feedback_value
+
+            async def request_feedback() -> Any:
+                value = await asyncio.to_thread(
+                    provider.request_feedback, context, self
+                )
+                if asyncio.iscoroutine(value):
+                    return await value
+                return value
+
+            request = asyncio.create_task(request_feedback())
+            try:
+                feedback_value = await asyncio.shield(request)
+            except asyncio.CancelledError:
+                results = await asyncio.gather(request, return_exceptions=True)
+                if isinstance(results[0], HumanFeedbackPending):
+                    raise results[0] from None
+                raise
             raw_feedback = str(feedback_value)
         else:
             raw_feedback = await asyncio.to_thread(

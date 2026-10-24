@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import threading
 from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -284,6 +285,140 @@ def test_sequential_reviews_keep_each_reply_with_its_method(
     assert resumed.state["first_reply"] == "first approved"
     assert resumed.state["second_reply"] == "second rejected"
     assert persistence.load_pending_feedback(flow.state["id"]) is None
+
+
+@pytest.mark.parametrize("feedback_racer", [False, True])
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_racing_batch_preserves_feedback_pause(
+    tmp_path: Path, feedback_racer: bool
+) -> None:
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @listen(begin)
+        @human_feedback(message="Approve?", provider=FileReview())
+        def review(self) -> str:
+            return "document"
+
+        @listen(begin)
+        async def left(self) -> str:
+            if feedback_racer:
+                await asyncio.Event().wait()
+            return "left"
+
+        @listen(begin)
+        def right(self) -> str:
+            self.state["right"] = True
+            return "right"
+
+        @listen(or_(review, left) if feedback_racer else or_(left, right))
+        def choose(self) -> None:
+            self.state["chosen"] = self.state.get("chosen", 0) + 1
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+
+    async def run() -> ReviewFlow:
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        pending = await asyncio.wait_for(flow.kickoff_async(), timeout=5)
+        assert isinstance(pending, HumanFeedbackPending)
+        assert (tmp_path / "review.request").is_file()
+        assert flow.state["right"] is True
+        resumed = ReviewFlow.from_pending(
+            flow.state["id"], persistence, suppress_flow_events=True
+        )
+        await resumed.resume_async("approved")
+        return resumed
+
+    resumed = asyncio.run(run())
+    assert resumed.last_human_feedback is not None
+    assert resumed.last_human_feedback.feedback == "approved"
+    assert resumed.state["chosen"] == 1
+    assert persistence.load_pending_feedback(resumed.state["id"]) is None
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_sibling_failure_cancels_feedback_before_provider_request(tmp_path: Path) -> None:
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    async def run() -> None:
+        entered = asyncio.Event()
+        release = asyncio.Event()
+
+        class ReviewFlow(Flow):
+            @start()
+            @human_feedback(message="Approve?", provider=FileReview())
+            async def review(self) -> str:
+                entered.set()
+                await release.wait()
+                return "document"
+
+            @start()
+            async def fail(self) -> None:
+                await entered.wait()
+                raise ValueError("sibling failed")
+
+        persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        with pytest.raises(ValueError, match="sibling failed"):
+            await flow.kickoff_async()
+        release.set()
+        await asyncio.sleep(0.05)
+        assert not (tmp_path / "review.request").exists()
+        assert persistence.load_pending_feedback(flow.state["id"]) is None
+
+    asyncio.run(run())
+
+
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_sibling_failure_drains_inflight_provider_before_returning(tmp_path: Path) -> None:
+    entered = threading.Event()
+    release = threading.Event()
+
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            entered.set()
+            if not release.wait(timeout=5):
+                raise TimeoutError("provider was not released")
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        @human_feedback(message="Approve?", provider=FileReview())
+        def review(self) -> str:
+            return "document"
+
+        @start()
+        async def fail(self) -> None:
+            assert await asyncio.to_thread(entered.wait, 5)
+            asyncio.get_running_loop().call_later(0.05, release.set)
+            raise ValueError("sibling failed")
+
+    async def run() -> None:
+        persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        with pytest.raises(ValueError, match="sibling failed"):
+            await flow.kickoff_async()
+        assert (tmp_path / "review.request").is_file()
+        assert persistence.load_pending_feedback(flow.state["id"]) is None
+
+    asyncio.run(run())
 
 
 class TestPendingFeedbackContext:
