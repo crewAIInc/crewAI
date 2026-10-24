@@ -37,6 +37,7 @@ def test_retrieve_not_found():
 
 
 def test_prompt_file():
+    """Load prompt values from a custom JSON file."""
     import os
 
     path = os.path.join(os.path.dirname(__file__), "prompts.json")
@@ -48,6 +49,7 @@ def test_prompt_file():
 
 @pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
 def test_custom_prompt_file_utf8(encoding: str, tmp_path: Path) -> None:
+    """Accept an optional UTF-8 BOM while preserving prompt content."""
     prompt = "你是一位研究助手。\ufeff Preserve this content character."
     path = tmp_path / "prompts.json"
     path.write_text(
@@ -62,6 +64,7 @@ def test_custom_prompt_file_utf8(encoding: str, tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
 def test_invalid_custom_prompt_json(encoding: str, tmp_path: Path) -> None:
+    """Reject malformed custom JSON with or without a UTF-8 BOM."""
     path = tmp_path / "prompts.json"
     path.write_text('{"slices":', encoding=encoding)
 
