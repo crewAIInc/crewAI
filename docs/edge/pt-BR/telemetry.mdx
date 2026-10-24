@@ -24,14 +24,14 @@ Quando o recurso `share_crew` está ativado, dados detalhados, incluindo descri�
 para fornecer insights mais detalhados. Essa coleta expandida pode incluir informações pessoais caso o usuário as tenha inserido em seus crews ou tarefas.
 Usuários devem considerar cuidadosamente o conteúdo de seus crews e tarefas antes de habilitar o `share_crew`.
 A telemetria do CrewAI pode ser desabilitada ao definir `CREWAI_DISABLE_TELEMETRY` como `true`, `1`, `yes` ou `on` (qualquer capitalização). `OTEL_SDK_DISABLED` com os mesmos valores também desabilita o exportador do CrewAI. O SDK do OpenTelemetry em si ainda só reconhece `true` para desabilitar as demais instrumentações do processo.
-O rastreamento AMP é tratado em [Tracing](/pt-BR/observability/tracing).
+O rastreamento AMP é tratado em [Tracing](/pt-BR/observability/tracing). `OTEL_SDK_DISABLED` não desliga o rastreamento AMP: defina `CREWAI_TRACING_ENABLED=false` ou `tracing=False` no Crew ou Flow.
 
 ### Exemplos:
 ```python
 # Desabilitar apenas a telemetria do CrewAI
 os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 
-# Desabilitar todo o OpenTelemetry (incluindo CrewAI)
+# Desabilitar toda a instrumentação OpenTelemetry, incluindo a telemetria do CrewAI (não o rastreamento AMP)
 os.environ['OTEL_SDK_DISABLED'] = 'true'
 ```
 

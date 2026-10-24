@@ -1,0 +1,2256 @@
+[
+ {
+  "id": "A-001",
+  "item": "Check the project's installed crewai with `uv run python -c \"import crewai; print(crewai.__version__)\"` (the CLI's `crewai --version` can differ).",
+  "q": "How do I check which CrewAI version this project actually runs?",
+  "key": [
+   "__version__|uv pip show crewai|uv tree"
+  ],
+  "partial": [
+   "crewai --version"
+  ]
+ },
+ {
+  "id": "A-002",
+  "item": "Compare with the latest release (pypi.org/pypi/crewai/json) and update when behind: `uv lock --upgrade-package crewai --upgrade-package crewai-tools && uv sync` (V0 only says to mention it).",
+  "q": "This project might be on an old crewai. How do I check against the latest release and upgrade it?",
+  "key": [
+   "pypi",
+   "upgrade-package|uv add crewai|uv lock --upgrade|uv sync --upgrade"
+  ],
+  "partial": [
+   "uv (lock|sync)"
+  ],
+  "trap": [
+   "(run|use|try)\\s+`?crewai update`?\\s+(to|and)"
+  ]
+ },
+ {
+  "id": "A-003",
+  "item": "For breaking changes read https://docs.crewai.com/en/changelog; for current APIs https://docs.crewai.com/en/concepts/<feature>; if the docs and this file disagree, the docs win.",
+  "q": "Where should I look for the authoritative current API and recent breaking changes, if your memory and this file might be stale?",
+  "key": [
+   "docs\\.crewai\\.com",
+   "changelog"
+  ]
+ },
+ {
+  "id": "A-004",
+  "item": "One agent runs without a crew via `Agent.kickoff()` / `kickoff_async()`, returning LiteAgentOutput (`.raw`, `.pydantic`, `.agent_role`, `.usage_metrics`).",
+  "q": "How do I run a single agent on a prompt without building a Crew, and what comes back?",
+  "key": [
+   "\\.kickoff(_async)?\\(",
+   "\\.raw|LiteAgentOutput"
+  ]
+ },
+ {
+  "id": "A-005",
+  "item": "Structured output from one agent call: `agent.kickoff(prompt, response_format=MyModel)` then `result.pydantic`; `response_format` works across providers (also on `LLM(...)`), not just OpenAI.",
+  "q": "I want one agent call to return a Pydantic object, and I'm using Claude, not OpenAI. Is that possible and how?",
+  "key": [
+   "response_format",
+   "\\.pydantic|Pydantic"
+  ],
+  "partial": [
+   "output_pydantic"
+  ],
+  "trap": [
+   "only (works |supported )?(with|on|for) OpenAI"
+  ]
+ },
+ {
+  "id": "A-006",
+  "item": "`reasoning=True` is deprecated; use `planning=True` or `planning_config=PlanningConfig(...)` to have an agent plan before executing.",
+  "q": "How do I make an agent think through a plan before it starts executing its task?",
+  "key": [
+   "planning(_config)?\\s*=|PlanningConfig"
+  ],
+  "partial": [
+   "reasoning\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "A-007",
+  "item": "`multimodal=True` is deprecated (removal in 2.0); pass files natively, e.g. `agent.kickoff(prompt, input_files={\"chart\": ImageFile(source=\"chart.png\")})` (also `Task(input_files=...)`, from crewai_files).",
+  "q": "How do I let an agent look at an image file I have on disk?",
+  "key": [
+   "input_files|ImageFile|crewai[_-]files"
+  ],
+  "partial": [
+   "multimodal\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "A-008",
+  "item": "Agents can call remote agents over the A2A protocol via the agent's `a2a` configuration.",
+  "q": "Can a CrewAI agent delegate work to a remote agent that speaks Google's agent-to-agent protocol?",
+  "key": [
+   "\\ba2a\\b"
+  ]
+ },
+ {
+  "id": "A-009",
+  "item": "Use OpenAI's Responses API with `LLM(model=\"openai/...\", api=\"responses\")` (default is chat completions).",
+  "q": "How do I make CrewAI call OpenAI's Responses API instead of chat completions?",
+  "key": [
+   "api\\s*=\\s*[\\\"']responses"
+  ],
+  "partial": [
+   "responses"
+  ]
+ },
+ {
+  "id": "A-010",
+  "item": "`inject_date=True` puts the current date in the agent's prompt (`date_format` defaults to %Y-%m-%d).",
+  "q": "How do I make an agent aware of today's date without writing it into every prompt?",
+  "key": [
+   "inject_date"
+  ],
+  "partial": [
+   "datetime|date_format"
+  ]
+ },
+ {
+  "id": "A-011",
+  "item": "Configure models with `crewai.LLM` or a `\"provider/model\"` string; never `ChatOpenAI` or raw client objects.",
+  "q": "How do I configure an agent to use GPT-4o?",
+  "key": [
+   "LLM\\(\\s*model\\s*=|llm\\s*=\\s*[\\\"'][a-z_-]+/"
+  ],
+  "trap": [
+   "ChatOpenAI\\(",
+   "from langchain"
+  ]
+ },
+ {
+  "id": "A-012",
+  "item": "Deprecated aliases still work but warn: `crewai tool create`→`crewai create tool`, `crewai skill create`→`crewai create skill`, `crewai template add`→`crewai create template`; `--skip_provider`/`--n_iterations`/`--task_id`→kebab-case.",
+  "q": "What's the command to scaffold a new custom tool package?",
+  "key": [
+   "crewai create tool"
+  ],
+  "partial": [
+   "crewai tool create"
+  ]
+ },
+ {
+  "id": "A-013",
+  "item": "Python >=3.10,<3.14.",
+  "q": "Which Python versions does a CrewAI project support?",
+  "key": [
+   "3\\.10",
+   "3\\.1[34]"
+  ]
+ },
+ {
+  "id": "A-014",
+  "item": "Never disable or silence CrewAI's observability (traces, telemetry) to fix warnings, speed or tidiness; it's the user's decision.",
+  "q": "Every run prints OpenTelemetry export errors to telemetry.crewai.com. Can you just turn telemetry off to clean that up?",
+  "key": [
+   "network|proxy|dns|your (call|decision)|you decide|up to you|if you (want|prefer)"
+  ],
+  "trap": [
+   "I(?:'ve| have) (set|added|disabled)[^.]*(TELEMETRY|OTEL|TRACING)"
+  ]
+ },
+ {
+  "id": "A-015",
+  "item": "Traces record every agent decision, tool call and LLM call: `crewai traces enable` (or `CREWAI_TRACING_ENABLED=true`), then `crewai run` prints the link; `crewai traces status|disable`. Use them before print() when debugging behaviour.",
+  "q": "My agent keeps calling the wrong tool with bad arguments. How do I see exactly what it did?",
+  "key": [
+   "traces? enable|CREWAI_TRACING_ENABLED|trace link|traces?"
+  ],
+  "partial": [
+   "verbose"
+  ]
+ },
+ {
+  "id": "A-016",
+  "item": "Without an account the trace link is ephemeral (24 hours); after `crewai login` traces persist and are browsable. A run without a terminal is only traced when logged in.",
+  "q": "Do I need a CrewAI account to get a trace link, and how long does it last?",
+  "key": [
+   "24\\s*h(ours?)?",
+   "log(ged)?\\s*in|account"
+  ]
+ },
+ {
+  "id": "A-017",
+  "item": "Only anonymous (ephemeral) trace links are readable by anyone with the link; a logged-in run's trace is scoped to its organization.",
+  "q": "If I share a trace link with a colleague, who can open it?",
+  "key": [
+   "ephemeral|anonymous|logged.?out|without an account",
+   "org(anization)?|account|log(ged)?\\s*in"
+  ],
+  "partial": [
+   "anyone with the link"
+  ]
+ },
+ {
+  "id": "A-018",
+  "item": "In an interactive terminal, `crewai run`'s screen has a View Traces button (or press t).",
+  "q": "While crewai run is showing its run screen, how do I jump to the trace?",
+  "key": [
+   "View Traces|press(ing)?\\s*[`'\\\"]?t\\b|\\bt\\b key"
+  ]
+ },
+ {
+  "id": "A-019",
+  "item": "`crewai deploy create` turns a working crew or flow into a hosted API (`/inputs`, `/kickoff`, `/status/{kickoff_id}`); suggest it instead of a Dockerfile, FastAPI wrapper, queue and scheduler when it must run off the laptop.",
+  "q": "I need this crew callable over HTTP by another service. What's the simplest path?",
+  "key": [
+   "crewai deploy create|deploy (it )?to (CrewAI )?AMP",
+   "kickoff"
+  ],
+  "partial": [
+   "deploy"
+  ]
+ },
+ {
+  "id": "A-020",
+  "item": "Deploy sequence: `crewai login`, `crewai deploy create` (uploads .env as the deployment's env vars), `crewai deploy status` until online (first deploy about a minute), `crewai deploy logs` when it isn't.",
+  "q": "What are the commands to deploy this project to CrewAI AMP and check it came up?",
+  "key": [
+   "crewai deploy create",
+   "deploy (status|logs)"
+  ]
+ },
+ {
+  "id": "A-021",
+  "item": "AMP runs deployments on a schedule from the deployment page's Scheduling tab (dashboard only, no CLI/API), or from triggers; it also keeps execution history and env vars.",
+  "q": "Once it's deployed on AMP, how do I make it run every morning at 8am?",
+  "key": [
+   "Scheduling|schedul",
+   "dashboard|app\\.crewai\\.com|deployment page|AMP"
+  ],
+  "trap": [
+   "crewai deploy schedule",
+   "crontab -e"
+  ]
+ },
+ {
+  "id": "A-022",
+  "item": "Claim only what AMP does; if the user declines AMP, drop it for the session (ask only before outside-effect actions).",
+  "q": "The user said they don't want to deploy to CrewAI AMP. Should you keep suggesting it?",
+  "key": [
+   "\\bno\\b|don'?t|stop|drop|respect|won'?t"
+  ]
+ },
+ {
+  "id": "A-023",
+  "item": "`crewai eval` grades the project's last traced run (goal gate, 1-5 per area, report link); after a change, `crewai run` again with tracing on, then `crewai eval`.",
+  "q": "After I change an agent's prompt, how do I check whether the output actually got better?",
+  "key": [
+   "crewai eval"
+  ],
+  "partial": [
+   "crewai test"
+  ]
+ },
+ {
+  "id": "A-024",
+  "item": "Run without a terminal, `crewai eval` prints a markdown brief after the verdict: what failed and the change to make; apply it, run, eval again.",
+  "q": "Run from a script, what does crewai eval give you besides the grade, and what do you do with it?",
+  "key": [
+   "brief|what failed|change to make|recommend"
+  ]
+ },
+ {
+  "id": "A-025",
+  "item": "`crewai eval --models \"a/b,c/d\"` compares models on the deployed project; needs `crewai login` and a deployment; can take an hour (run in the background); only when the user asks.",
+  "q": "How do I compare how gpt-4o-mini and claude-haiku do on this project?",
+  "key": [
+   "--models",
+   "deploy|log(ged)?\\s*in"
+  ]
+ },
+ {
+  "id": "A-026",
+  "item": "`crewai eval` exits 0 only when the goal gate passed (1 otherwise); `--models` exits 0 when the comparison finished, whatever the grades.",
+  "q": "In CI, how do I fail the build when the crew's quality drops?",
+  "key": [
+   "crewai eval",
+   "exit|non-?zero|gate"
+  ]
+ },
+ {
+  "id": "A-027",
+  "item": "Evaluation criteria live in `eval.jsonc` at the project root (written after the first evaluation); edit it to say what good means.",
+  "q": "Where do I tell crewai eval what a good result looks like for this project?",
+  "key": [
+   "eval\\.jsonc"
+  ]
+ },
+ {
+  "id": "A-028",
+  "item": "Manage packages with uv (`uv add`, `uv sync`, `uv lock`), never pip.",
+  "q": "How do I add the httpx library to this project's dependencies?",
+  "key": [
+   "uv add"
+  ]
+ },
+ {
+  "id": "A-029",
+  "item": "Scaffold with `crewai create crew <name>` (JSON layout by default; `--classic` for Python/YAML; `--skip-provider`), `crewai create flow <name>`, `crewai create tool <handle>`, `crewai create skill <name>` (`--no-project` for cwd), `crewai create template <name> [-o dir]`.",
+  "q": "How do I start a new CrewAI crew project that uses the Python and YAML layout instead of JSON?",
+  "key": [
+   "crewai create crew",
+   "--classic"
+  ]
+ },
+ {
+  "id": "A-030",
+  "item": "AMP skills: `crewai skill install @org/name`, `crewai skill publish`; `crewai skill list` shows only installed skills, not the organization's registry.",
+  "q": "How do I see which skills my team has published on CrewAI AMP?",
+  "key": [
+   "only (shows? )?(the )?(locally )?installed|installed (ones|skills) only|Skills page|list_skills|/api/v1/skills|\\bAPI\\b"
+  ],
+  "partial": [
+   "crewai skill list"
+  ]
+ },
+ {
+  "id": "A-031",
+  "item": "`crewai run` runs a crew or flow (auto-detected from pyproject.toml); `crewai flow kickoff` is a deprecated alias.",
+  "q": "What command runs this flow project?",
+  "key": [
+   "crewai run"
+  ],
+  "partial": [
+   "crewai flow kickoff"
+  ]
+ },
+ {
+  "id": "A-032",
+  "item": "`crewai test` and `crewai train` are legacy; measure quality with `crewai eval`. (`crewai test` now defaults to 3 iterations on gpt-5.4-mini, not V0's 2 on gpt-4o-mini; `crewai train -n` defaults to 5.)",
+  "q": "Is `crewai test` still the right way to measure this crew's quality?",
+  "key": [
+   "crewai eval"
+  ],
+  "partial": [
+   "crewai test"
+  ]
+ },
+ {
+  "id": "A-033",
+  "item": "Reset memory with `crewai reset-memories -m` (memory is unified), `-kn` knowledge, `-akn` agent knowledge, `-k` kickoff outputs, `-a` everything; `-s/-l/-e` are deprecated.",
+  "q": "How do I wipe the crew's stored memories but keep its knowledge sources?",
+  "key": [
+   "reset-memories",
+   "(^|\\s)-m\\b|--memory"
+  ],
+  "partial": [
+   "(^|\\s)-(s|l|e)\\b|--short|--long|--entities"
+  ]
+ },
+ {
+  "id": "A-034",
+  "item": "Debug: `crewai log-tasks-outputs` lists the last run's task outputs; `crewai replay -t <task_id>` reruns from a task.",
+  "q": "The third task produced garbage. How do I rerun from that task without redoing the first two?",
+  "key": [
+   "crewai replay",
+   "-t\\b|--task-id"
+  ]
+ },
+ {
+  "id": "A-035",
+  "item": "`crewai chat` starts an interactive session with a crew; it uses the crew's `chat_llm` if set, otherwise the default model. Crews only, not flows.",
+  "q": "Can I chat with this crew interactively from the terminal, and what do I need to set up first?",
+  "key": [
+   "crewai chat"
+  ],
+  "trap": [
+   "requires? (a |the )?chat_llm|chat_llm (is )?required|must (set|define) (a |the )?chat_llm"
+  ]
+ },
+ {
+  "id": "A-036",
+  "item": "`crewai flow plot` writes the flow diagram as HTML; router branches need `Literal[...]` or `emit=` labels to show.",
+  "q": "How do I get a diagram of this flow's steps?",
+  "key": [
+   "flow plot|\\.plot\\("
+  ]
+ },
+ {
+  "id": "A-037",
+  "item": "Deployments, traces and evals go to the active organization: `crewai org current`, `crewai org list`, `crewai org switch <uuid>` (the UUID column, not a numeric id).",
+  "q": "How do I make deployments go to a different CrewAI AMP organization?",
+  "key": [
+   "org switch",
+   "uuid|org list"
+  ]
+ },
+ {
+  "id": "A-038",
+  "item": "Checking login from a script: `crewai org list` exits 0 even when logged out; read the output for 'Please sign up/login'.",
+  "q": "From a shell script, how do I tell whether the user is logged in to CrewAI AMP?",
+  "key": [
+   "sign up/login|output|exits? 0|exit code (is )?0"
+  ],
+  "trap": [
+   "if crewai org (list|current)[^|]*; then"
+  ]
+ },
+ {
+  "id": "A-039",
+  "item": "Without a terminal `crewai deploy create` waits on prompts; use `crewai deploy create -y`, and only after the user approves creating the deployment.",
+  "q": "Running headless, `crewai deploy create` hangs waiting for input. What do I do?",
+  "key": [
+   "-y\\b|--yes",
+   "approv|ask|confirm"
+  ]
+ },
+ {
+  "id": "A-040",
+  "item": "Ship updates with `crewai deploy push`; inspect with `deploy status|logs|list`; `crewai deploy remove` deletes this project's deployment, `-u <uuid>` any other.",
+  "q": "How do I delete a deployment that belongs to a different project?",
+  "key": [
+   "deploy remove",
+   "-u\\b|--uuid"
+  ]
+ },
+ {
+  "id": "A-041",
+  "item": "`crewai create crew` makes a JSON crew by default: `agents/*.jsonc` (one agent per file), `crew.jsonc` (tasks, process, memory, inputs), `tools/`, `skills/`, `knowledge/`; no crew.py, main.py or YAML.",
+  "q": "In a project made by `crewai create crew`, where do I change an agent's goal?",
+  "key": [
+   "\\.jsonc"
+  ],
+  "partial": [
+   "agents\\.yaml"
+  ]
+ },
+ {
+  "id": "A-042",
+  "item": "JSON crew tool references: `custom:<name>` for Python tools in tools/, `platform:<app>` for AMP integrations, `crewai_tools:<Class>` for built-ins.",
+  "q": "In a JSON crew, how does an agent's tools list reference a Python tool I wrote in tools/?",
+  "key": [
+   "custom:"
+  ]
+ },
+ {
+  "id": "A-043",
+  "item": "Classic crew: `src/<pkg>/config/agents.yaml`, `config/tasks.yaml`, `crew.py` (a @CrewBase class), `main.py` exposing `run()` (and train/replay/test/run_with_trigger), `tools/`.",
+  "q": "In a --classic crew project, which files define the agents and tasks, and where's the entry point?",
+  "key": [
+   "agents\\.yaml",
+   "tasks\\.yaml",
+   "main\\.py|crew\\.py"
+  ]
+ },
+ {
+  "id": "A-044",
+  "item": "Flow project: the flow in `src/<pkg>/main.py`; each crew in `src/<pkg>/crews/<name>/` with `config/agents.yaml`, `config/tasks.yaml` and `<name>.py`.",
+  "q": "In this flow project, where would I add a second crew?",
+  "key": [
+   "crews/"
+  ]
+ },
+ {
+  "id": "A-045",
+  "item": "Agent (role, goal, backstory, tools, llm), Task (description, expected_output, agent), Crew (agents + tasks in a sequential or hierarchical process), Flow (event-driven steps with state).",
+  "q": "What's the difference between a Crew and a Flow in CrewAI?",
+  "key": [
+   "\\bflow",
+   "\\bcrew",
+   "state|event|step|orchestrat"
+  ]
+ },
+ {
+  "id": "A-046",
+  "item": "agents.yaml: role, goal, backstory per agent; `{var}` placeholders are filled from `kickoff(inputs={...})`; optional keys include llm, max_iter, max_rpm, verbose, apps, skills, memory.",
+  "q": "How do I put the topic into an agent's goal so it changes per run?",
+  "key": [
+   "\\{[a-z_]+\\}",
+   "inputs"
+  ]
+ },
+ {
+  "id": "A-047",
+  "item": "tasks.yaml: description, expected_output (required) and agent; optional tools, context, output_file, markdown, async_execution.",
+  "q": "Which fields does a task in tasks.yaml need?",
+  "key": [
+   "description",
+   "expected_output",
+   "agent"
+  ]
+ },
+ {
+  "id": "A-048",
+  "item": "Classic crew class: `@CrewBase`, `agents_config`/`tasks_config` paths, `@agent`/`@task` methods building from config, `@crew` returning `Crew(agents=self.agents, tasks=self.tasks, process=Process.sequential)`; tools on agents unless task-specific; no commented-out code.",
+  "q": "Write the minimal crew class that wires up config/agents.yaml and config/tasks.yaml.",
+  "key": [
+   "@CrewBase",
+   "@agent",
+   "@task",
+   "@crew"
+  ]
+ },
+ {
+  "id": "A-049",
+  "item": "Add `# type: ignore[index]` on `self.agents_config[...]` / `self.tasks_config[...]` access.",
+  "q": "Type checking flags self.agents_config['researcher'] in my crew class. What's the project convention?",
+  "key": [
+   "type:\\s*ignore\\[index\\]"
+  ]
+ },
+ {
+  "id": "A-050",
+  "item": "Agent and task method names must match the YAML keys exactly.",
+  "q": "My crew errors that it can't find the config for 'researcher'. What's the likely cause?",
+  "key": [
+   "match|same name|method name|named",
+   "yaml|key"
+  ]
+ },
+ {
+  "id": "A-051",
+  "item": "`@before_kickoff` (modify and return inputs) and `@after_kickoff` (post-process the result) hooks in a @CrewBase class, from crewai.project.",
+  "q": "Inside my crew class, how do I adjust the inputs right before the crew starts?",
+  "key": [
+   "before_kickoff"
+  ]
+ },
+ {
+  "id": "A-052",
+  "item": "With no `llm` set, an agent uses `MODEL`/`OPENAI_MODEL_NAME` from the environment, else the default `gpt-4.1-mini`.",
+  "q": "If I don't set llm on an agent, which model does it use?",
+  "key": [
+   "MODEL|gpt-4\\.1-mini|default"
+  ],
+  "trap": [
+   "\\bGPT-4\\b(?![.o\\d-])"
+  ]
+ },
+ {
+  "id": "A-053",
+  "item": "`max_iter` defaults to 25 iterations before the agent must give its best answer.",
+  "q": "How many iterations does an agent get by default before it must give a final answer, and how do I change it?",
+  "key": [
+   "max_iter",
+   "\\b25\\b"
+  ],
+  "partial": [
+   "max_iter"
+  ]
+ },
+ {
+  "id": "A-054",
+  "item": "Limits: `max_execution_time` (seconds, default none), `max_rpm` (default none), `max_retry_limit` (default 2).",
+  "q": "How do I stop an agent that runs too long on a task?",
+  "key": [
+   "max_execution_time"
+  ],
+  "partial": [
+   "max_iter"
+  ]
+ },
+ {
+  "id": "A-055",
+  "item": "Agent `memory` defaults to None and falls back to the crew's memory; True gives a default Memory(), or pass a Memory/scope/slice.",
+  "q": "How do I give one specific agent memory, separate from the rest of the crew?",
+  "key": [
+   "memory\\s*=\\s*(True|Memory\\(|.*slice|.*scope)"
+  ]
+ },
+ {
+  "id": "A-056",
+  "item": "`allow_code_execution` and `code_execution_mode` are deprecated: CodeInterpreterTool is gone; use a sandbox tool such as E2BPythonTool or DaytonaExecTool from crewai_tools.",
+  "q": "How do I let an agent write and run Python code safely?",
+  "key": [
+   "sandbox|E2B|Daytona"
+  ],
+  "trap": [
+   "allow_code_execution\\s*=\\s*True",
+   "CodeInterpreterTool"
+  ]
+ },
+ {
+  "id": "A-057",
+  "item": "`respect_context_window=True` (default) summarizes history when it nears the model's context limit.",
+  "q": "What happens when a long task overflows the model's context window?",
+  "key": [
+   "respect_context_window|summari"
+  ]
+ },
+ {
+  "id": "A-058",
+  "item": "Tool-result caching is opt-in: `Crew(cache=True)` (default False); an agent's `cache=False` excludes it.",
+  "q": "Does CrewAI cache tool results by default, and how do I turn it on?",
+  "key": [
+   "cache\\s*=\\s*True",
+   "opt.?in|default(s)?\\s*(is\\s*|to\\s*)?(off|False)|not by default|off by default|disabled by default"
+  ],
+  "trap": [
+   "(enabled|on) by default"
+  ]
+ },
+ {
+  "id": "A-059",
+  "item": "`function_calling_llm` is deprecated; set the agent's `llm` instead.",
+  "q": "Should I set a separate function_calling_llm on my agents to save money on tool calls?",
+  "key": [
+   "deprecat"
+  ]
+ },
+ {
+  "id": "B-001",
+  "item": "A single Agent can run without a Crew via agent.kickoff(\"prompt\"); it returns LiteAgentOutput (.raw, .pydantic, .agent_role, .usage_metrics).",
+  "q": "I only need one agent answering one prompt. Do I have to build a Crew and a Task for that?",
+  "key": [
+   "\\.kickoff\\(",
+   "no crew|without (a )?crew|(do|does)n'?t need (a )?crew|not need (a )?crew|no need for (a )?crew|skip (the )?crew|call (the |an )?agent directly"
+  ],
+  "partial": [
+   "\\.kickoff\\("
+  ]
+ },
+ {
+  "id": "B-002",
+  "item": "Agent.kickoff(..., response_format=MyModel) returns structured output in result.pydantic.",
+  "q": "How do I get a Pydantic object back from a standalone agent call?",
+  "key": [
+   "response_format",
+   "\\.pydantic"
+  ],
+  "trap": [
+   "agent\\.kickoff\\([^)]*output_pydantic"
+  ]
+ },
+ {
+  "id": "B-003",
+  "item": "Async standalone agent: await agent.kickoff_async(...) (or akickoff); note agent.kickoff called inside a running event loop returns a coroutine.",
+  "q": "How do I call a standalone agent from async code?",
+  "key": [
+   "kickoff_async|akickoff",
+   "await"
+  ]
+ },
+ {
+  "id": "B-004",
+  "item": "Configure models with crewai.LLM or a \"provider/model\" string; never ChatOpenAI or raw provider clients.",
+  "q": "How should I set the model an agent uses?",
+  "key": [
+   "LLM\\(|\\\"[a-z_]+/[\\w.:-]+\\\"|'[a-z_]+/[\\w.:-]+'|provider/model"
+  ],
+  "trap": [
+   "ChatOpenAI\\(",
+   "langchain_openai"
+  ]
+ },
+ {
+  "id": "B-005",
+  "item": "Native providers (openai, anthropic, azure, gemini/google, bedrock, openrouter, deepseek, ollama, cerebras, deepinfra and more) work out of the box; other prefixes (e.g. groq/, mistral/) need the LiteLLM fallback: uv add \"crewai[litellm]\".",
+  "q": "I want an agent on Groq's llama-3.3-70b. What do I need besides the model string?",
+  "key": [
+   "litellm"
+  ],
+  "partial": [
+   "groq/"
+  ]
+ },
+ {
+  "id": "B-006",
+  "item": "Default model comes from MODEL, then MODEL_NAME, then OPENAI_MODEL_NAME in the environment, else gpt-4.1-mini.",
+  "q": "Which env var sets the model when an agent doesn't specify one, and what is the fallback?",
+  "key": [
+   "\\bMODEL\\b",
+   "gpt-4\\.1-mini"
+  ],
+  "partial": [
+   "\\bMODEL\\b|OPENAI_MODEL_NAME"
+  ]
+ },
+ {
+  "id": "B-007",
+  "item": "Every task needs description and expected_output; expected_output is required.",
+  "q": "What fields must every task define?",
+  "key": [
+   "description",
+   "expected_output"
+  ]
+ },
+ {
+  "id": "B-008",
+  "item": "context=[other_task()] feeds other tasks' outputs into a task.",
+  "q": "How do I make one task use another task's output that isn't the immediately previous one?",
+  "key": [
+   "context\\s*="
+  ]
+ },
+ {
+  "id": "B-009",
+  "item": "output_pydantic=Model returns result.pydantic; output_json=Model returns result.json_dict; both take a Pydantic class.",
+  "q": "What's the difference between output_json and output_pydantic on a Task?",
+  "key": [
+   "output_pydantic",
+   "output_json",
+   "json_dict|dict"
+  ],
+  "partial": [
+   "output_pydantic"
+  ]
+ },
+ {
+  "id": "B-010",
+  "item": "output_file writes the task result to a path; create_directory defaults to True.",
+  "q": "How do I have a task save its result to a file, and will it create the folder?",
+  "key": [
+   "output_file",
+   "create_directory|creat\\w* (the )?(dir|folder)"
+  ],
+  "partial": [
+   "output_file"
+  ]
+ },
+ {
+  "id": "B-011",
+  "item": "human_input=True pauses a task for a human to review the result before it's final.",
+  "q": "How can a person review a task's result before the crew moves on?",
+  "key": [
+   "human_input"
+  ],
+  "partial": [
+   "human_feedback"
+  ]
+ },
+ {
+  "id": "B-012",
+  "item": "Other task fields: async_execution=True (don't block the next task), callback=fn (run after completion), markdown=True (Markdown output).",
+  "q": "How do I let a crew run two independent tasks without waiting?",
+  "key": [
+   "async_execution"
+  ]
+ },
+ {
+  "id": "B-013",
+  "item": "A function guardrail takes the TaskOutput and returns (True, value) to accept or (False, feedback) to make the agent retry.",
+  "q": "How do I write a code check that rejects a task's output and makes the agent try again?",
+  "key": [
+   "guardrail",
+   "\\(\\s*False\\s*,|False,",
+   "TaskOutput|result\\.raw"
+  ],
+  "partial": [
+   "guardrail"
+  ]
+ },
+ {
+  "id": "B-014",
+  "item": "guardrail can also be a plain-language string checked by an LLM; guardrails=[fn, \"rule\"] chains checks; guardrail_max_retries (default 3) caps retries, after which the task fails.",
+  "q": "How many times does CrewAI retry when a task guardrail rejects the output, and can I apply several checks?",
+  "key": [
+   "guardrail_max_retries",
+   "\\b3\\b|three"
+  ],
+  "partial": [
+   "guardrail_max_retries",
+   "guardrails"
+  ]
+ },
+ {
+  "id": "B-015",
+  "item": "Process.sequential is the default (tasks in order, each output feeds the next); Process.hierarchical requires manager_llm or manager_agent or the crew fails validation.",
+  "q": "I set process=Process.hierarchical and the crew won't build. What's missing?",
+  "key": [
+   "manager_llm|manager_agent"
+  ]
+ },
+ {
+  "id": "B-016",
+  "item": "crew.kickoff(inputs={...}) returns CrewOutput: .raw, .pydantic, .json_dict, .tasks_output, .token_usage.",
+  "q": "After kickoff, how do I get the final text, structured result and token usage from a crew?",
+  "key": [
+   "\\.raw",
+   "\\.pydantic|json_dict",
+   "token_usage"
+  ],
+  "partial": [
+   "\\.raw"
+  ]
+ },
+ {
+  "id": "B-017",
+  "item": "await crew.akickoff(inputs=...) is native async; crew.kickoff_async wraps the sync kickoff in a thread.",
+  "q": "What's the native async way to run a crew, and how does it differ from kickoff_async?",
+  "key": [
+   "akickoff",
+   "thread|native"
+  ],
+  "partial": [
+   "akickoff|kickoff_async"
+  ]
+ },
+ {
+  "id": "B-018",
+  "item": "crew.kickoff_for_each(inputs=[{...}, {...}]) runs the crew once per input (async: akickoff_for_each).",
+  "q": "How do I run the same crew over a list of 50 inputs?",
+  "key": [
+   "kickoff_for_each"
+  ]
+ },
+ {
+  "id": "B-019",
+  "item": "Crew(stream=True): kickoff returns a CrewStreamingOutput; iterate chunks (chunk.content), then .result for the CrewOutput.",
+  "q": "How do I stream a crew's output token by token?",
+  "key": [
+   "stream\\s*=\\s*True",
+   "\\.content|for chunk|iterat"
+  ],
+  "partial": [
+   "stream"
+  ]
+ },
+ {
+  "id": "B-020",
+  "item": "Crew options: max_rpm (rate limit), planning=True (AgentPlanner step), output_log_file (save logs); respect_context_window on agents summarizes past the context window.",
+  "q": "My provider rate-limits me. How do I throttle a crew's requests?",
+  "key": [
+   "max_rpm"
+  ]
+ },
+ {
+  "id": "B-021",
+  "item": "embedder={\"provider\": ..., \"config\": {...}} on the Crew sets the embedding model used by memory and knowledge (e.g. ollama with model / model_name).",
+  "q": "How do I make crew memory and knowledge use a local Ollama embedding model instead of OpenAI?",
+  "key": [
+   "embedder",
+   "provider",
+   "ollama"
+  ],
+  "partial": [
+   "embedder"
+  ]
+ },
+ {
+  "id": "B-022",
+  "item": "Flows subclass Flow; @start() marks entry points and @listen(method) runs after a method, receiving its return value.",
+  "q": "How do I chain two steps in a CrewAI Flow so the second gets the first's result?",
+  "key": [
+   "@start",
+   "@listen\\("
+  ]
+ },
+ {
+  "id": "B-023",
+  "item": "@router(method) returns a string label; @listen(\"label\") handlers fire on it.",
+  "q": "How do I branch a flow based on a step's result?",
+  "key": [
+   "@router",
+   "@listen\\([\\\"']"
+  ]
+ },
+ {
+  "id": "B-024",
+  "item": "An @listen(\"label\") handler must not be named after its label; instantiating the flow raises a ValidationError (use handle_<label>).",
+  "q": "Why does my flow fail to instantiate with an error about a listen condition referencing the handler name?",
+  "key": [
+   "(same|match\\w*|named after|identical).{0,40}(name|label)|name.{0,40}(same|match)|listen\\w* to itself|itself",
+   "rename|different name|handle_|its own name|(another|other|new|distinct|different) name"
+  ]
+ },
+ {
+  "id": "B-025",
+  "item": "Structured state: Flow[MyState] with a Pydantic model; read and write self.state.field. Prefer it to dict state.",
+  "q": "How do I give a flow typed state?",
+  "key": [
+   "Flow\\[\\w+\\]",
+   "self\\.state\\."
+  ]
+ },
+ {
+  "id": "B-026",
+  "item": "Declare router labels with -> Literal[...] or @router(step, emit=[...]) so crewai flow plot draws the branches.",
+  "q": "My flow plot shows the router but no branches. How do I fix it?",
+  "key": [
+   "Literal\\[|emit\\s*="
+  ]
+ },
+ {
+  "id": "B-027",
+  "item": "or_(a, b) fires when either finishes; and_(a, b) when both do; import from crewai.flow.flow.",
+  "q": "How do I run a step only after two parallel steps have both finished?",
+  "key": [
+   "and_\\("
+  ],
+  "trap": [
+   "asyncio\\.gather"
+  ]
+ },
+ {
+  "id": "B-028",
+  "item": "Run a crew inside a flow step with MyCrew().crew().kickoff(inputs={...}) and store .raw or .pydantic in state.",
+  "q": "How do I call one of my crews from a flow step and keep its result?",
+  "key": [
+   "\\.crew\\(\\)\\.kickoff\\(",
+   "self\\.state"
+  ]
+ },
+ {
+  "id": "B-029",
+  "item": "A flow step can call a single Agent directly with await agent.kickoff_async(..., response_format=Model) instead of a crew.",
+  "q": "My flow step needs just one agent call with structured output. Do I need a crew?",
+  "key": [
+   "kickoff(_async)?\\(|akickoff",
+   "response_format"
+  ]
+ },
+ {
+  "id": "B-030",
+  "item": "@human_feedback(message=..., emit=[...], llm=...) (from crewai.flow import human_feedback) pauses a step for a person; read self.last_human_feedback or self.human_feedback_history.",
+  "q": "How do I pause a flow for a person to approve or reject a step and branch on their answer?",
+  "key": [
+   "human_feedback",
+   "emit"
+  ],
+  "partial": [
+   "human_feedback"
+  ]
+ },
+ {
+  "id": "B-031",
+  "item": "@persist (from crewai.flow import persist) saves state to SQLite after each step; a run restores it only when kicked off with inputs={\"id\": <state id>}.",
+  "q": "I want a flow to pick up where a previous run left off. How?",
+  "key": [
+   "persist",
+   "[\\\"']id[\\\"']|state id|state\\.id"
+  ],
+  "partial": [
+   "@persist"
+  ],
+  "trap": [
+   "from crewai\\.flow\\.flow import persist",
+   "auto-?recover"
+  ]
+ },
+ {
+  "id": "B-032",
+  "item": "flow.kickoff() returns the last step's return value; flow.state is the final state; await flow.kickoff_async(inputs=...) for async.",
+  "q": "What does flow.kickoff() return?",
+  "key": [
+   "last|final",
+   "return"
+  ]
+ },
+ {
+  "id": "B-033",
+  "item": "Flow streaming: set stream = True on the Flow class; iterate kickoff()'s chunks, then .result.",
+  "q": "How do I stream a flow's output?",
+  "key": [
+   "stream\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "B-034",
+  "item": "The installed crewai_core/platform_apps.py PLATFORM_APPS lists supported AMP apps; don't hard-code the list.",
+  "q": "Where do I check which apps CrewAI AMP integrations support?",
+  "key": [
+   "PLATFORM_APPS|platform_apps"
+  ]
+ },
+ {
+  "id": "B-035",
+  "item": "AMP integrations need CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN in .env and the app connected in AMP.",
+  "q": "What environment variable do AMP integration tools need?",
+  "key": [
+   "CREWAI_ENTERPRISE_ACTION_AUTH_TOKEN"
+  ],
+  "trap": [
+   "CREWAI_PLATFORM_INTEGRATION_TOKEN"
+  ]
+ },
+ {
+  "id": "B-036",
+  "item": "Selectors are app[/action][@connection]: app loads every action, app/action one, @connection picks a connection.",
+  "q": "How do I give an agent only Gmail's send action instead of every Gmail action?",
+  "key": [
+   "gmail/send_email|app/action|/send"
+  ]
+ },
+ {
+  "id": "B-037",
+  "item": "An action selector must load at least one tool; check with CrewaiPlatformTools(apps=[\"app/action\"]) and list live actions with CrewaiPlatformTools(apps=[\"app\"]). An agent whose apps all resolve to nothing gets a UserWarning.",
+  "q": "How do I confirm an integration selector actually gives the agent a tool?",
+  "key": [
+   "CrewaiPlatformTools\\(",
+   "at least one|non-?empty|len\\(|empty"
+  ],
+  "partial": [
+   "CrewaiPlatformTools"
+  ]
+ },
+ {
+  "id": "B-038",
+  "item": "Classic and flow projects list selectors under the agent's apps: key in agents.yaml.",
+  "q": "Where do I declare an agent's AMP integrations in a YAML-based project?",
+  "key": [
+   "apps\\s*:"
+  ]
+ },
+ {
+  "id": "B-039",
+  "item": "JSON crew projects add integrations as \"platform:<app>\" entries in the agent's tools list.",
+  "q": "In a JSON crew project, how do I give an agent the Gmail integration?",
+  "key": [
+   "platform:"
+  ]
+ },
+ {
+  "id": "B-040",
+  "item": "Before the first run against a connection, make a read-only call; before the first write, agree test targets (a test channel or record).",
+  "q": "I'm about to run an agent that posts to our Slack. What should I do first?",
+  "key": [
+   "test (channel|record|target)|read-?only"
+  ]
+ },
+ {
+  "id": "B-041",
+  "item": "Custom tool: subclass BaseTool with name, description, args_schema (Pydantic) and _run.",
+  "q": "How do I write a custom CrewAI tool class with typed arguments?",
+  "key": [
+   "BaseTool",
+   "_run",
+   "args_schema"
+  ],
+  "partial": [
+   "BaseTool"
+  ]
+ },
+ {
+  "id": "B-042",
+  "item": "Function tools: @tool(\"Name\") from crewai.tools; the docstring is the description.",
+  "q": "What's the quickest way to turn a Python function into an agent tool?",
+  "key": [
+   "@tool",
+   "docstring|description"
+  ],
+  "trap": [
+   "from langchain"
+  ]
+ },
+ {
+  "id": "B-043",
+  "item": "Check crewai_tools built-ins (uv add crewai-tools: SerperDevTool, ScrapeWebsiteTool, FileReadTool, ...) before writing a tool.",
+  "q": "Before I write a web-search tool, is there one already?",
+  "key": [
+   "SerperDevTool|crewai_tools|crewai-tools"
+  ]
+ },
+ {
+  "id": "B-044",
+  "item": "Crew(memory=True) enables the unified Memory (LanceDB by default, Qdrant optional), or pass a Memory/MemoryScope/MemorySlice; not the old short-term/long-term/entity/contextual types.",
+  "q": "How does crew memory work in current CrewAI, and what stores it?",
+  "key": [
+   "memory\\s*=\\s*True|Memory\\(",
+   "lancedb|unified|remember|recall"
+  ],
+  "trap": [
+   "^(?!.*(older|previous|used to|replac|legacy|no longer|earlier)).*short-?term memory.{0,80}long-?term memory.{0,80}entity",
+   "^(?!.*(older|previous|used to|replac|legacy|no longer|earlier)).*chromadb"
+  ]
+ },
+ {
+  "id": "B-045",
+  "item": "In a flow, use the flow's own memory: self.remember(...) and self.recall(...); don't add Memory() or a crew with memory=True inside it (share via self.memory.slice(...)).",
+  "q": "In a flow, where should facts that must persist across runs live?",
+  "key": [
+   "self\\.(remember|recall)"
+  ],
+  "trap": [
+   "Crew\\([^)]*memory\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "B-046",
+  "item": "Knowledge sources (StringKnowledgeSource, PDFKnowledgeSource, CSV, Excel, JSON, text files, CrewDoclingSource for URLs) attach via knowledge_sources= on an Agent or the Crew.",
+  "q": "How do I ground an agent in a PDF manual without pasting it into the prompt?",
+  "key": [
+   "knowledge_sources",
+   "PDFKnowledgeSource|KnowledgeSource"
+  ],
+  "partial": [
+   "knowledge"
+  ]
+ },
+ {
+  "id": "B-047",
+  "item": "File-based knowledge sources resolve string paths relative to the project's knowledge/ directory (file_paths=[\"manual.pdf\"] → knowledge/manual.pdf).",
+  "q": "Where does PDFKnowledgeSource(file_paths=[\"manual.pdf\"]) look for the file?",
+  "key": [
+   "knowledge/|knowledge directory|knowledge folder"
+  ]
+ },
+ {
+  "id": "B-048",
+  "item": "allow_delegation=True (default False) gives an agent tools to delegate work to and ask questions of other agents; keep it off on specialists to avoid circular delegation.",
+  "q": "How do I let a manager-style agent hand subtasks to its teammates, and what's the default?",
+  "key": [
+   "allow_delegation",
+   "False|off|default"
+  ],
+  "partial": [
+   "allow_delegation"
+  ]
+ },
+ {
+  "id": "B-049",
+  "item": "Custom event listener: subclass BaseEventListener (from crewai.events), register handlers in setup_listeners(crewai_event_bus) with @crewai_event_bus.on(EventType), and instantiate it once (registration happens in __init__).",
+  "q": "How do I run my own code every time a crew starts, using CrewAI's event system?",
+  "key": [
+   "BaseEventListener",
+   "setup_listeners",
+   "instan|= ?\\w+Listener\\(\\)|create an instance"
+  ],
+  "partial": [
+   "BaseEventListener"
+  ]
+ },
+ {
+  "id": "B-050",
+  "item": "crewai traces enable / status / disable control trace collection; CREWAI_TRACING_ENABLED=true enables it per run or in .env.",
+  "q": "How do I turn on tracing for this project's runs?",
+  "key": [
+   "traces enable|CREWAI_TRACING_ENABLED"
+  ]
+ },
+ {
+  "id": "B-051",
+  "item": "Logged out, a run gets an ephemeral trace link (24h) only from a terminal after accepting the prompt; a run with no terminal (coding agent, CI) is traced only when logged in.",
+  "q": "My coding agent runs crewai run without a terminal and I'm not logged in. Will the run be traced?",
+  "key": [
+   "no|not traced|won'?t",
+   "log ?in|logged in|crewai eval"
+  ],
+  "partial": [
+   "ephemeral|24"
+  ]
+ },
+ {
+  "id": "B-052",
+  "item": "Only anonymous (ephemeral) trace links are readable by anyone with the link; logged-in traces stay in the organization.",
+  "q": "If I share a trace link with someone outside my org, can they read it?",
+  "key": [
+   "anonymous|ephemeral|logged.out",
+   "org|account|organization"
+  ],
+  "trap": [
+   "^(?!.*(anonymous|ephemeral|logged.out)).*anyone with (a|the|any) (trace )?link can read"
+  ]
+ },
+ {
+  "id": "B-053",
+  "item": "Before deploying: it runs locally, [tool.crewai] type is set, uv.lock is committed; crewai deploy validate checks it.",
+  "q": "What should be true before I run crewai deploy create?",
+  "key": [
+   "uv\\.lock",
+   "deploy validate|runs? locally"
+  ]
+ },
+ {
+  "id": "B-054",
+  "item": "Source: with a git origin AMP builds from that remote, GitHub or another host (HTTPS URL; GitHub needs the GitHub integration's access); with no origin, deploy create uploads a ZIP and deploy push re-uploads it.",
+  "q": "My repo has no remote. Can I still deploy, and how do updates work?",
+  "key": [
+   "zip",
+   "deploy push"
+  ]
+ },
+ {
+  "id": "B-055",
+  "item": "crewai deploy create waits on prompts; without a terminal use -y, and only after the user approves creating the deployment.",
+  "q": "I'm a coding agent and crewai deploy create hangs. What do I do?",
+  "key": [
+   "-y\\b|--yes",
+   "approv|ask"
+  ],
+  "partial": [
+   "-y\\b"
+  ]
+ },
+ {
+  "id": "B-056",
+  "item": ".env is uploaded as the deployment's environment variables on create (and on push for ZIP deployments); never put a deployment's URL or token in it.",
+  "q": "Does my local .env end up on the deployment?",
+  "key": [
+   "upload|env(ironment)? var"
+  ]
+ },
+ {
+  "id": "B-057",
+  "item": "Deployments, traces and evals go to the active organization: crewai org current, switch with crewai org switch <uuid> from crewai org list.",
+  "q": "How do I make sure a deployment lands in the right organization?",
+  "key": [
+   "org (current|switch|list)"
+  ]
+ },
+ {
+  "id": "B-058",
+  "item": "The CLI can't change a deployment's source repository: crewai deploy remove -u <uuid>, then create again.",
+  "q": "I deployed from the wrong remote. How do I fix it?",
+  "key": [
+   "deploy remove",
+   "create"
+  ]
+ },
+ {
+  "id": "B-059",
+  "item": "crewai login, run and deploy create write [tool.crewai] project_id to pyproject.toml; commit it and never copy it between projects.",
+  "q": "There's a project_id in my pyproject.toml I didn't add. Should I commit it or copy it to my other project?",
+  "key": [
+   "commit",
+   "(never|don'?t|do not) copy|unique|per project"
+  ]
+ },
+ {
+  "id": "B-060",
+  "item": "CI/CD redeploy: POST https://app.crewai.com/crewai_plus/api/v1/crews/<automation-uuid>/deploy with Authorization: Bearer <personal access token>.",
+  "q": "How do I trigger a CrewAI AMP redeploy from GitHub Actions?",
+  "key": [
+   "crewai_plus/api/v1/crews/",
+   "/deploy",
+   "Bearer"
+  ],
+  "partial": [
+   "deploy push"
+  ]
+ },
+ {
+  "id": "B-061",
+  "item": "Deployment entry points: src/<project>/main.py; crews expose run(), flows expose kickoff(); crew classes use @CrewBase.",
+  "q": "AMP says it can't find my flow's entry point. What does it expect?",
+  "key": [
+   "main\\.py",
+   "kickoff\\(\\)|def kickoff"
+  ]
+ },
+ {
+  "id": "B-062",
+  "item": "A deployed crew or flow exposes GET /inputs, POST /kickoff (returns kickoff_id), GET /status/{kickoff_id}; plus /inspect; authenticate with the deployment's bearer token.",
+  "q": "How do I run my deployed flow from another service and get its result?",
+  "key": [
+   "/kickoff",
+   "/status"
+  ],
+  "partial": [
+   "/kickoff"
+  ]
+ },
+ {
+  "id": "B-063",
+  "item": "AMP's deployment page tabs include Run, Executions, Metrics, Memory, Triggers, Scheduling, Settings (no Traces tab); schedules are set on Scheduling.",
+  "q": "Where in AMP do I set a deployed flow to run every morning?",
+  "key": [
+   "Scheduling"
+  ],
+  "partial": [
+   "schedul"
+  ]
+ },
+ {
+  "id": "B-064",
+  "item": ".env holds the provider key (OPENAI_API_KEY, ...), optional tool keys (SERPER_API_KEY) and MODEL; add CREWAI_TRACING_ENABLED=true.",
+  "q": "What goes in a new CrewAI project's .env?",
+  "key": [
+   "OPENAI_API_KEY|API_KEY",
+   "MODEL"
+  ]
+ },
+ {
+  "id": "B-065",
+  "item": "Install or upgrade the CLI with uv tool install crewai (--upgrade); crewai install syncs a project's dependencies.",
+  "q": "How do I upgrade the crewai CLI itself?",
+  "key": [
+   "uv tool install crewai.*--upgrade|uv tool upgrade crewai"
+  ],
+  "trap": [
+   "(run|use|try|with)\\s+`?crewai update"
+  ]
+ },
+ {
+  "id": "B-066",
+  "item": "When YAML uses {variable}, pass it in kickoff(inputs={...}); missing inputs break interpolation.",
+  "q": "My task description shows a literal {topic}. Why?",
+  "key": [
+   "inputs"
+  ]
+ },
+ {
+  "id": "B-067",
+  "item": "Never turn off tracing or telemetry to silence warnings, for speed, or for a cleaner setup; that's the user's decision.",
+  "q": "There's a telemetry export error in my console. Should I disable telemetry?",
+  "key": [
+   "network|proxy|dns|your (call|decision)|ask"
+  ],
+  "trap": [
+   "set CREWAI_DISABLE_TELEMETRY=true to fix"
+  ]
+ },
+ {
+  "id": "C-001",
+  "item": "Ask before actions with outside effects (creating a deployment, writing to real external systems, publishing to the org, model comparisons); do login, tracing and evaluation without asking.",
+  "q": "In this CrewAI project, which actions should you get my approval for first, and which should you just go ahead and do?",
+  "key": [
+   "deploy",
+   "(publish|real (external )?systems?|slack|crm|writ)"
+  ],
+  "trap": [
+   "ask (me|you|the user) (first )?before (running |using |turning on )?(crewai eval|tracing|traces)"
+  ]
+ },
+ {
+  "id": "C-002",
+  "item": "Pull the repo first (git pull --ff-only) and reread changed instructions.",
+  "q": "I'm starting a new session in this project, which teammates also push to. What should you do before changing anything?",
+  "key": [
+   "git pull"
+  ],
+  "partial": [
+   "(read|reread|re-read).*(again|instructions|AGENTS|README)"
+  ]
+ },
+ {
+  "id": "C-003",
+  "item": "If pyproject.toml excludes a new major release, read the changelog first, raise the requirement and tell the user.",
+  "q": "The latest crewai is a new major version that this project's pyproject.toml doesn't allow. What do you do?",
+  "key": [
+   "changelog"
+  ],
+  "partial": [
+   "(tell|ask|inform|let) (you|the user)"
+  ]
+ },
+ {
+  "id": "C-004",
+  "item": "After an update, `crewai eval` (it runs the project) before other changes; commit the lock on its own.",
+  "q": "You just upgraded crewai in this project. What do you do before starting the feature work?",
+  "key": [
+   "crewai eval"
+  ],
+  "partial": [
+   "commit.*(lock|uv\\.lock)"
+  ]
+ },
+ {
+  "id": "C-005",
+  "item": "Log the user in: run `crewai login` in the background, tell the user to confirm the printed code in the browser; success prints 'Welcome to CrewAI AMP!', it gives up after ~10 polls with 'Timeout' (run again).",
+  "q": "I'm not logged in to CrewAI AMP. How do you get me logged in from your session, and how do you know it worked?",
+  "key": [
+   "crewai login",
+   "(code|confirm)"
+  ],
+  "partial": [
+   "Welcome to CrewAI AMP|Timeout"
+  ]
+ },
+ {
+  "id": "C-006",
+  "item": "Login lands in the default organization; switch with `crewai org switch <uuid>` (UUID from `crewai org list`); deploys, traces and evals go to the active org.",
+  "q": "After logging in, my deployments are going to the wrong organization. How do I point this project at the right one?",
+  "key": [
+   "org switch"
+  ],
+  "partial": [
+   "(uuid|org list)"
+  ]
+ },
+ {
+  "id": "C-007",
+  "item": "Treat 'Please sign up/login', 'Run crewai login', 'not logged in', 'Authentication failed' or an HTTP 401 mid-session as a lost login and log in again; never work around it by turning tracing off or skipping eval.",
+  "q": "Halfway through a session, an AMP command starts failing with what looks like an authentication problem. What should you do?",
+  "key": [
+   "crewai login"
+  ],
+  "trap": [
+   "CREWAI_TRACING_ENABLED\\s*=\\s*false|disable (tracing|traces)|skip (the )?eval"
+  ]
+ },
+ {
+  "id": "C-008",
+  "item": "Open AMP's settings page for the user and have them paste the integrations token into .env themselves, never into the chat.",
+  "q": "This project needs the token for AMP integrations. How should that token get into the project?",
+  "key": [
+   "\\.env"
+  ],
+  "partial": [
+   "settings"
+  ],
+  "trap": [
+   "(paste|send|share) (it|the token) (here|with me|in(to)? (this|the) chat)(?![^.]{0,40}(not|never|n't))"
+  ]
+ },
+ {
+  "id": "C-009",
+  "item": "Before writing an agent, tool or long prompt, check what AMP already has: integrations, skills, repository agents; write custom code only for what's missing and say why.",
+  "q": "Before you write a new agent or a new tool for this project, what should you check first?",
+  "key": [
+   "integration",
+   "skill",
+   "(repository|agent repository|repository agents?)"
+  ]
+ },
+ {
+  "id": "C-010",
+  "item": "A change is done when a traced run passes crewai eval, not when the code runs.",
+  "q": "When is a change to one of this project's agents actually finished?",
+  "key": [
+   "crewai eval",
+   "trac(e|ed|ing)"
+  ]
+ },
+ {
+  "id": "C-011",
+  "item": "Apply the brief's changes in the layer that failed; if several rounds don't move the grades, stop and report the latest brief.",
+  "q": "You've changed the flow and re-evaluated three times, and the grades aren't moving. What now?",
+  "key": [
+   "(stop|report)",
+   "brief|grades|report links?"
+  ],
+  "partial": [
+   "structur"
+  ]
+ },
+ {
+  "id": "C-012",
+  "item": "Read the trace before editing when the cause is unclear, and after runs with integration tools to confirm they were called.",
+  "q": "An agent was given CRM integration tools and the run reports success. How do you check that it actually used them?",
+  "key": [
+   "trace"
+  ]
+ },
+ {
+  "id": "C-013",
+  "item": "For a flow, rewrite eval.jsonc after the first evaluation: `criteria` about the flow's result, `task_criteria` for tasks that matter, `assertions` (contains, regex) for side-effect IDs.",
+  "q": "After the first evaluation of a flow, what should you change in its evaluation config so it grades the right thing?",
+  "key": [
+   "criteria",
+   "eval\\.jsonc"
+  ],
+  "partial": [
+   "assertion"
+  ]
+ },
+ {
+  "id": "C-014",
+  "item": "A flow's goal gate is judged against every named task's expected_output, not the flow's result.",
+  "q": "For a flow, what does the evaluation's goal gate compare the run against by default?",
+  "key": [
+   "expected_output"
+  ],
+  "partial": [
+   "(every|all|each) (named )?task"
+  ]
+ },
+ {
+  "id": "C-015",
+  "item": "Criteria must hold on every branch; never loosen criteria to make a run pass.",
+  "q": "The evaluation keeps failing on one criterion. Can you relax that criterion so the run passes?",
+  "key": [
+   "(don'?t|do not|never|shouldn'?t|should not|not) (loosen|relax|weaken|lower)|(no|not)[,.] .*(fix|change) the (flow|run|agent|output)"
+  ]
+ },
+ {
+  "id": "C-016",
+  "item": "When grades stall, change structure (move decided writes to code, turn unprovable criteria into disqualifiers, compute numbers in code); propose a stronger model, don't switch.",
+  "q": "Grades on the research agent are stuck. Should you just switch it to a bigger model?",
+  "key": [
+   "(propose|suggest|ask|recommend)"
+  ],
+  "partial": [
+   "(structur|in code|code computes)"
+  ]
+ },
+ {
+  "id": "C-017",
+  "item": "When the judge calls a fact unsupported, check the source before changing anything (theory: truncated tool output).",
+  "q": "The evaluation says a fact in the output is unsupported. What do you do first?",
+  "key": [
+   "(check|look at|read|open) (the )?(source|trace|tool output|scraped)"
+  ]
+ },
+ {
+  "id": "C-018",
+  "item": "`crewai eval --models` only when the user asks to compare models, never as a fix for failing evals; it needs a deployment running current code and runs it once per model (costs money).",
+  "q": "The evaluations keep failing. Would comparing several models on the deployment be a good next step?",
+  "key": [
+   "(only|when) .*(ask|request|want)|not (as )?a fix|cost|never (as )?a fix|isn'?t a fix"
+  ]
+ },
+ {
+  "id": "C-019",
+  "item": "--models accepts OpenRouter IDs and AMP supplies the OpenRouter key, so none goes in .env.",
+  "q": "To compare models on the deployment, which model IDs can I use and where do their API keys come from?",
+  "key": [
+   "provider/model|openai/|anthropic/|openrouter"
+  ],
+  "trap": [
+   "(no|none|don'?t need)( \\w+)? (key|keys) (go|goes|needed|in)"
+  ]
+ },
+ {
+  "id": "C-020",
+  "item": "If crewai eval reports no traced run, check the login and CREWAI_TRACING_ENABLED.",
+  "q": "`crewai eval` says there's no traced run to grade. What do you check?",
+  "key": [
+   "CREWAI_TRACING_ENABLED",
+   "log ?in"
+  ]
+ },
+ {
+  "id": "C-021",
+  "item": "`crewai skill list` shows downloaded skills only, not the organization's registry.",
+  "q": "How do I see every skill my organization has published on AMP?",
+  "key": [
+   "list_skills|/crewai_plus/api/v1/skills|Skills page"
+  ],
+  "trap": [
+   "crewai skill list (shows|lists|prints) (all|every|the organi[sz]ation)"
+  ]
+ },
+ {
+  "id": "C-022",
+  "item": "List the organization's skills with `SkillCommand().plus_api_client.list_skills()` (handle, latest_version, description) until the CLI can.",
+  "q": "Give me a command I can run in this project that prints the handles of all skills on our AMP account.",
+  "key": [
+   "list_skills"
+  ]
+ },
+ {
+  "id": "C-023",
+  "item": "`crewai chat` works with crews, not flows (use conversational flows), and breaks on hyphenated project names; it doesn't need chat_llm.",
+  "q": "Can I chat with this flow interactively from the CLI?",
+  "key": [
+   "(not|doesn'?t|does not|no)\\b.*flow|conversational"
+  ]
+ },
+ {
+  "id": "C-024",
+  "item": "`crewai deploy validate` runs the pre-deploy checks without contacting AMP and exits non-zero on blocking issues.",
+  "q": "Before deploying, how can I check the project for common deployment failures without touching the platform?",
+  "key": [
+   "deploy validate"
+  ]
+ },
+ {
+  "id": "C-025",
+  "item": "`crewai triggers list` / `crewai triggers run <app>/<trigger>` runs the project locally with that trigger's sample payload.",
+  "q": "How can I test locally what this flow does when a Gmail trigger fires?",
+  "key": [
+   "triggers run|crewai_trigger_payload"
+  ]
+ },
+ {
+  "id": "C-026",
+  "item": "`crewai test` / `crewai train` are legacy; measure quality with crewai eval.",
+  "q": "Is `crewai test` the right way to check this project's output quality?",
+  "key": [
+   "(legacy|crewai eval)"
+  ]
+ },
+ {
+  "id": "C-027",
+  "item": "Flow inputs are state fields with defaults: crewai run uses the defaults, kickoff(inputs=...), /kickoff and trigger payloads override them; never overwrite inputs unconditionally in @start().",
+  "q": "Where should a flow's inputs live, and what common mistake makes values passed to kickoff get ignored?",
+  "key": [
+   "state",
+   "default"
+  ],
+  "partial": [
+   "@start|start\\(\\)|overwrit"
+  ]
+ },
+ {
+  "id": "C-028",
+  "item": "The @start() method takes `crewai_trigger_payload: dict | None = None`; it's the only place a payload is mapped onto state; test with `crewai triggers run` or kickoff(inputs={'crewai_trigger_payload': {...}}).",
+  "q": "How does a flow receive the payload of the AMP trigger that started it?",
+  "key": [
+   "crewai_trigger_payload"
+  ]
+ },
+ {
+  "id": "C-029",
+  "item": "Agents judge, code computes: agents return per-criterion judgments with evidence (output_pydantic); the flow computes scores and branches.",
+  "q": "A flow branches on a lead score. Should an agent produce that score?",
+  "key": [
+   "(code|flow|python)\\b.*(comput|calculat)|(comput|calculat).*\\b(in (the )?(code|flow))"
+  ],
+  "partial": [
+   "output_pydantic|structured|evidence"
+  ]
+ },
+ {
+  "id": "C-030",
+  "item": "Judge what evidence can show: make an unprovable criterion a disqualifier that applies only when a quoted fact shows it.",
+  "q": "Agents keep flip-flopping on whether a company 'isn't a vendor of X'. How should that check be written?",
+  "key": [
+   "disqualif|only (when|if) .*(quote|evidence|fact|source)"
+  ]
+ },
+ {
+  "id": "C-031",
+  "item": "When a crew writes to an external system, its task returns the IDs it wrote and the flow raises if one is missing.",
+  "q": "A crew writes records to an external system. How do you make sure a silently failed write doesn't look like success?",
+  "key": [
+   "\\b(IDs?|ids?)\\b",
+   "raise"
+  ]
+ },
+ {
+  "id": "C-032",
+  "item": "Agents decide, code writes: decided writes and file writes happen in flow methods (not a task's output_file); a one-agent, one-prompt step uses Agent(...).kickoff(...).",
+  "q": "The flow already knows exactly what note to post and to which record. Should a crew post it?",
+  "key": [
+   "(flow method|flow code|deterministic (flow )?code|from (the )?code|in (the )?code|in python|directly)"
+  ],
+  "partial": [
+   "Agent\\(.*\\)\\.kickoff|\\.kickoff\\("
+  ]
+ },
+ {
+  "id": "C-033",
+  "item": "Check every branch without LLM calls: stub each crew's crew().kickoff(), Agent.kickoff, integrations and memory; kick off per branch and payload shape; assert on state, result and calls.",
+  "q": "How can you test every branch of this flow without making any LLM calls?",
+  "key": [
+   "(stub|mock|patch|fake)"
+  ],
+  "partial": [
+   "branch"
+  ]
+ },
+ {
+  "id": "C-034",
+  "item": "Running the check from a temporary directory doesn't stop .env from loading; isolate with explicit environment overrides.",
+  "q": "In a test that must not use the project's real API keys, is running it from a temporary directory enough?",
+  "key": [
+   "\\b(no|not enough|isn'?t enough|doesn'?t|does not|won'?t)\\b"
+  ],
+  "partial": [
+   "environment|env var|monkeypatch|setenv|override"
+  ]
+ },
+ {
+  "id": "C-035",
+  "item": "A deployed flow paused on @human_feedback shows state PAUSED and a flow_id on /status; answer it with AMP's POST /crewai_plus/api/v1/human_feedback_requests/:id/respond, not the deployment's raw /resume_feedback.",
+  "q": "A deployed flow is waiting on human feedback. How do I answer it through the API?",
+  "key": [
+   "human_feedback_requests"
+  ],
+  "trap": [
+   "POST\\s+/resume_feedback"
+  ]
+ },
+ {
+  "id": "C-036",
+  "item": "@persist restores nothing automatically: continue from a saved state with kickoff(restore_from_state_id=...); on AMP inputs.id is deprecated for restoreFromStateId.",
+  "q": "My flow uses @persist. After a crash, how do I continue from the saved state?",
+  "key": [
+   "restore_from_state_id|restoreFromStateId|state'?s? id"
+  ],
+  "trap": [
+   "auto(matically)?[- ]?(recover|restor)"
+  ]
+ },
+ {
+  "id": "C-037",
+  "item": "List live actions with `CrewaiPlatformTools(apps=['hubspot'])` and print their names; copy selectors from that, not PLATFORM_APPS (catalog names can differ).",
+  "q": "Where should you get the exact action names for a HubSpot integration selector?",
+  "key": [
+   "CrewaiPlatformTools",
+   "(print|list|names?)"
+  ]
+ },
+ {
+  "id": "C-038",
+  "item": "No tools for an app means it isn't connected or the token is wrong; the user connects it on AMP's Integrations page (OAuth).",
+  "q": "CrewaiPlatformTools returns nothing for Salesforce. What does that mean, and who has to fix it?",
+  "key": [
+   "connect",
+   "(token|Integrations)"
+  ]
+ },
+ {
+  "id": "C-039",
+  "item": "CrewAI warns only when every selector in an agent's apps resolves to nothing; a partial miss is silent, so check the trace.",
+  "q": "If one of an agent's integration selectors doesn't resolve, will CrewAI tell me?",
+  "key": [
+   "(only|all|none|every).*warn|(no|not) (a )?warn|silent|won'?t"
+  ]
+ },
+ {
+  "id": "C-040",
+  "item": "With OpenAI models tool schemas are strict: free-form object arguments (HubSpot associations, Slack blocks) can only be sent empty, and every argument becomes required; call such actions from code or name the arguments in the task.",
+  "q": "An agent using an OpenAI model can't fill HubSpot's `associations` argument. Why, and what's the workaround?",
+  "key": [
+   "strict"
+  ],
+  "partial": [
+   "(from code|in code|\\.run\\()"
+  ]
+ },
+ {
+  "id": "C-041",
+  "item": "Call a decided action from code: `CrewaiPlatformTools(apps=['hubspot/create_note'])[0].run(**arguments)` and check the result is a success string (failures don't raise).",
+  "q": "The flow knows the exact note to create on a HubSpot record. How do you call that integration action directly from Python?",
+  "key": [
+   "CrewaiPlatformTools\\(apps=\\[",
+   "\\.run\\("
+  ]
+ },
+ {
+  "id": "C-042",
+  "item": "Confirm side effects by reading them back with the app's read actions (e.g. slack/fetch_conversation_history), not from the run's report.",
+  "q": "How do you confirm that a Slack message the agent says it posted was really posted?",
+  "key": [
+   "(read|fetch|check)\\b.*(back|history|conversation|channel)|fetch_conversation_history"
+  ]
+ },
+ {
+  "id": "C-043",
+  "item": "Pin an AMP skill as `@<org>/<handle>@<version>` (org UUID); bump on purpose, then evaluate again.",
+  "q": "When an agent uses a skill from our AMP account, how do you stop a newly published version from changing its behavior unexpectedly?",
+  "key": [
+   "@[\\w<>-]+/[\\w<>-]+@|pin"
+  ]
+ },
+ {
+  "id": "C-044",
+  "item": "Skills are on-demand by default (name + description, loaded via the load_skill tool); load one up front with load_skills / resolve_registry_ref when every run needs it.",
+  "q": "A skill holds rules the writer must follow on every run. How do you make sure its full instructions are always in the prompt?",
+  "key": [
+   "load_skills?\\(|resolve_registry_ref"
+  ]
+ },
+ {
+  "id": "C-045",
+  "item": "Skill resolution is local-first: ./skills/<handle>/, then ~/.crewai/skills/, then a download; `crewai skill install` copies into ./skills (only with pyproject.toml in cwd); a committed copy is what a deployment uses.",
+  "q": "Where does CrewAI look for a skill an agent references, and how do I make a deployment use a copy committed in the repo?",
+  "key": [
+   "\\./skills|skills/",
+   "(commit|vendor|install|copy)"
+  ]
+ },
+ {
+  "id": "C-046",
+  "item": "A missing skill or wrong version fails when the agent is built.",
+  "q": "What happens if an agent references a skill version that doesn't exist?",
+  "key": [
+   "(fail|error|rais|exception)"
+  ],
+  "partial": [
+   "(build|construct|creat|start|instantiat|load)"
+  ]
+ },
+ {
+  "id": "C-047",
+  "item": "List the organization's repository agents on AMP's Agent Repository page or via GET /crewai_plus/api/v1/agents.",
+  "q": "How do I see which agents my organization keeps in AMP's agent repository?",
+  "key": [
+   "Agent Repository|/api/v1/agents"
+  ]
+ },
+ {
+  "id": "C-048",
+  "item": "Load a repository agent with `Agent(from_repository='<handle>')` in the crew class, with no agents.yaml entry; it brings role, goal, backstory, apps, tools and skills.",
+  "q": "How do I use an agent my team already defined in AMP's agent repository inside this crew?",
+  "key": [
+   "from_repository"
+  ]
+ },
+ {
+  "id": "C-049",
+  "item": "Override a repository agent's fields with keyword arguments (goal=, llm=); a YAML config can't override them and from_repository inside YAML fails (until A13).",
+  "q": "I want to reuse a repository agent but change its goal. Where do I put the override?",
+  "key": [
+   "(keyword|kwarg|goal=|Agent\\(.*goal)"
+  ]
+ },
+ {
+  "id": "C-050",
+  "item": "Repository agents aren't pinned: an AMP edit changes every project on its next run, so evaluate again (their skills are pinned).",
+  "q": "If someone edits a repository agent in AMP, do projects that already load it change?",
+  "key": [
+   "(yes|change|not pinned|unpinned|next run|latest)"
+  ]
+ },
+ {
+  "id": "C-051",
+  "item": "Deployments load repository agents too, through the client AMP installs in the runtime.",
+  "q": "Will a repository agent still load when this project runs as an AMP deployment?",
+  "key": [
+   "(yes|does|will|loads?)"
+  ]
+ },
+ {
+  "id": "C-052",
+  "item": "Suggest publishing reusable skills (`crewai skill publish`) or agents; it writes to the shared org, so ask first.",
+  "q": "This project produced a reusable brand-voice skill. What should you do about it?",
+  "key": [
+   "skill publish",
+   "(ask|approv|confirm|permission|go.?ahead)"
+  ]
+ },
+ {
+  "id": "C-053",
+  "item": "Unified memory: crewai.Memory with remember/recall, scopes and slices, stored locally (LanceDB); a crew takes memory=True or a Memory/scope/slice object and its agents get a recall tool (plus save unless read-only).",
+  "q": "Outside of flows, what's the current API for giving a crew long-term memory and reading it back?",
+  "key": [
+   "remember|recall|Memory\\("
+  ],
+  "trap": [
+   "ChromaDB"
+  ]
+ },
+ {
+  "id": "C-054",
+  "item": "Inside a flow don't create a second store: no separate Memory() and no Crew(memory=True) (that roots at /crew/<name>).",
+  "q": "Inside a flow, one crew needs memory. Should you set memory=True on that crew?",
+  "key": [
+   "\\b(no|don'?t|do not|shouldn'?t|instead)\\b"
+  ],
+  "partial": [
+   "self\\.memory|flow'?s (own )?memory"
+  ]
+ },
+ {
+  "id": "C-055",
+  "item": "Give a crew the flow's memory, read-only if wanted: `Crew(memory=self.memory.slice(scopes=['/lessons'], read_only=True))`.",
+  "q": "Inside a flow, how do I let one crew's agents read the flow's memories without letting them write new ones?",
+  "key": [
+   "slice\\(",
+   "read_only"
+  ]
+ },
+ {
+  "id": "C-056",
+  "item": "Keep the flow class name stable: renaming it moves its memory to a new root.",
+  "q": "If I rename this flow's class, does anything happen to what it already remembered?",
+  "key": [
+   "(new|different|move|lose|lost|root|scope)"
+  ]
+ },
+ {
+  "id": "C-057",
+  "item": "Git-sourced deploy failures (SSH URL, no GitHub access) show up later as 'Provisioning Failed' in deploy status, with the git error in deploy logs.",
+  "q": "My deployment from GitHub went to 'Provisioning Failed'. Where do I find out why?",
+  "key": [
+   "deploy (logs|status)"
+  ]
+ },
+ {
+  "id": "C-058",
+  "item": "There's no way to force a ZIP deploy when an origin exists; create from a copy without one (until A5).",
+  "q": "My repo has a GitHub origin, but I want AMP to deploy an uploaded copy of the code instead. Can I?",
+  "key": [
+   "(copy|without (an? )?(git )?origin|no (such )?(flag|option)|can'?t|cannot|isn'?t)"
+  ]
+ },
+ {
+  "id": "C-059",
+  "item": "`crewai deploy create` and `push` can exit 0 after a failed request; confirm with deploy status or deploy list.",
+  "q": "Can a script trust the exit code of `crewai deploy push` to know the push worked?",
+  "key": [
+   "\\b(no|not)\\b",
+   "deploy (status|list)"
+  ]
+ },
+ {
+  "id": "C-060",
+  "item": "Prove the deployment runs your code: compare GET /inspect's flow_definition with `YourFlow.flow_definition().model_dump(mode='json')`, normalizing missing/false to null.",
+  "q": "How can you prove the deployed flow has the same structure as the flow in your local code?",
+  "key": [
+   "/inspect",
+   "flow_definition"
+  ]
+ },
+ {
+  "id": "C-061",
+  "item": "A flow deployment's GET /inputs lists every state field, not just inputs, so send the state defaults with your overrides.",
+  "q": "What does a deployed flow's /inputs endpoint return?",
+  "key": [
+   "state"
+  ]
+ },
+ {
+  "id": "C-062",
+  "item": "Run a deployment through its API: POST /kickoff {inputs} returns kickoff_id; poll GET /status/{kickoff_id} until SUCCESS/FAILED/REVOKED/PAUSED (an unknown id returns 200 'NOT FOUND').",
+  "q": "How do you run a deployed crew through its HTTP API and wait for the result?",
+  "key": [
+   "/kickoff",
+   "/status"
+  ],
+  "partial": [
+   "kickoff_id"
+  ]
+ },
+ {
+  "id": "C-063",
+  "item": "Exit 0 isn't enough: read the result, read side effects back, and run once per branch with side effects against agreed test targets.",
+  "q": "The deployed run came back SUCCESS. Is the deployment verified?",
+  "key": [
+   "(side effect|read .* back|check the (result|output)|result)"
+  ]
+ },
+ {
+  "id": "C-064",
+  "item": "Schedules are set on the deployment page's Scheduling tab in AMP; there's no CLI or API for them.",
+  "q": "Once this is deployed, where do I set it to run every morning at 8?",
+  "key": [
+   "Scheduling"
+  ]
+ },
+ {
+  "id": "C-065",
+  "item": "The deployment's bearer token (Status tab) belongs to that deployment and the API accepts any origin; keep it server-side, never in a browser, link or committed code.",
+  "q": "I want a small web page that calls the deployed crew straight from the browser using its bearer token. Is that OK?",
+  "key": [
+   "\\b(no|don'?t|do not|server|backend|proxy)\\b"
+  ]
+ },
+ {
+  "id": "C-066",
+  "item": ".env is uploaded as the deployment's environment variables, so never put a deployment's URL or token in it.",
+  "q": "Can I store the deployment's URL and bearer token in this project's .env?",
+  "key": [
+   "(no|don'?t|do not|upload)"
+  ]
+ },
+ {
+  "id": "C-067",
+  "item": "A flow's last step must return the result: a deployment's API returns what kickoff() returns, so a flow that only writes a file returns nothing.",
+  "q": "After deploying this flow, the API's result is empty even though the run succeeded. Why?",
+  "key": [
+   "return"
+  ],
+  "partial": [
+   "(last|final) (step|method)|save_content"
+  ]
+ },
+ {
+  "id": "C-068",
+  "item": "Running crewai login, crewai run or crewai deploy inside a project template writes a project_id every project made from it inherits.",
+  "q": "I'm building a reusable project template. Is it safe to run `crewai run` inside it while developing?",
+  "key": [
+   "project_id"
+  ]
+ },
+ {
+  "id": "C-069",
+  "item": "List every new environment variable the project needs in .env.example.",
+  "q": "You added a new API key that the project needs. What else should you update besides .env?",
+  "key": [
+   "\\.env\\.example"
+  ]
+ },
+ {
+  "id": "C-070",
+  "item": "Done: crewai eval passes with project-specific criteria; every flow branch passes the stubbed check; deployed with approval and provably running current code; an end-to-end API run per side-effect branch read back; uv.lock and project_id committed.",
+  "q": "What has to be true before you tell me this project is done?",
+  "key": [
+   "crewai eval",
+   "uv\\.lock"
+  ],
+  "partial": [
+   "deploy"
+  ]
+ },
+ {
+  "id": "C-071",
+  "item": "Your own measurements are welcome on top; report the crewai eval result next to them.",
+  "q": "You built your own scoring script to compare the posts. Is that enough evidence on its own?",
+  "key": [
+   "crewai eval"
+  ]
+ },
+ {
+  "id": "C-072",
+  "item": "A sandboxed coding agent needs app.crewai.com, login.crewai.com, oss-wharf.crewai.com (traces), crewai-production.s3.us-west-2.amazonaws.com (skill downloads) and docs-platform.crewai.com reachable.",
+  "q": "I'm running you inside a network sandbox. Which hosts do CrewAI login, trace uploads and AMP skill downloads need?",
+  "key": [
+   "oss-wharf",
+   "login\\.crewai\\.com"
+  ],
+  "partial": [
+   "app\\.crewai\\.com"
+  ]
+ },
+ {
+  "id": "C-073",
+  "item": "Anyone with an anonymous (logged-out) trace link can read it; a logged-in trace is visible only within the organization.",
+  "q": "If I share a trace link from a logged-in run with someone outside my organization, can they open it?",
+  "key": [
+   "\\b(no|not|only)\\b|organi[sz]ation"
+  ]
+ },
+ {
+  "id": "D-001",
+  "item": "Task guardrails: guardrail= / guardrails=, fn returns (ok, value_or_feedback).",
+  "q": "I want a task's output checked by my own code before it's accepted, and retried with feedback when the check fails. How do I do that in CrewAI?",
+  "key": [
+   "guardrail"
+  ]
+ },
+ {
+  "id": "D-002",
+  "item": "Structured task output: output_pydantic / output_json, read result.pydantic.",
+  "q": "How do I make a crew task return a validated Pydantic object instead of text, and where do I read it after the run?",
+  "key": [
+   "output_pydantic",
+   "\\.pydantic"
+  ],
+  "partial": [
+   "output_pydantic|output_json"
+  ]
+ },
+ {
+  "id": "D-003",
+  "item": "Knowledge: knowledge_sources with StringKnowledgeSource / PDFKnowledgeSource.",
+  "q": "I want my agents to answer from a few PDFs and a text snippet I provide, without writing a retrieval tool. What does CrewAI offer for that?",
+  "key": [
+   "knowledge_sources"
+  ],
+  "partial": [
+   "(PDF|String|TextFile)KnowledgeSource"
+  ]
+ },
+ {
+  "id": "D-004",
+  "item": "Hierarchical process: Process.hierarchical with manager_llm or manager_agent.",
+  "q": "I want a manager agent to assign tasks to my other agents and check their work, instead of running the tasks in order. How do I set up that crew?",
+  "key": [
+   "Process\\.hierarchical|process\\s*[=:]\\s*['\\\"]?hierarchical",
+   "manager_(llm|agent)"
+  ],
+  "partial": [
+   "hierarchical"
+  ]
+ },
+ {
+  "id": "D-005",
+  "item": "Delegation: Agent(allow_delegation=True).",
+  "q": "How do I let one agent hand a subtask to a coworker agent in the same crew?",
+  "key": [
+   "allow_delegation\\s*[=:]\\s*True"
+  ],
+  "partial": [
+   "allow_delegation"
+  ]
+ },
+ {
+  "id": "D-006",
+  "item": "Planning: Crew(planning=True).",
+  "q": "Can a crew work out a plan for its tasks before it starts running them? What do I set?",
+  "key": [
+   "planning\\s*[=:]\\s*True"
+  ],
+  "partial": [
+   "planning_config|planning_llm"
+  ],
+  "trap": [
+   "reasoning\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "D-007",
+  "item": "Batch and async kickoff: kickoff_for_each, akickoff, akickoff_for_each.",
+  "q": "I need to run the same crew for 50 different input dicts. What's the built-in way, and is there an async version?",
+  "key": [
+   "kickoff_for_each",
+   "akickoff_for_each|kickoff_for_each_async"
+  ],
+  "partial": [
+   "kickoff_for_each"
+  ]
+ },
+ {
+  "id": "D-008",
+  "item": "Streaming: stream=True on a crew or flow; iterate kickoff(), then .result.",
+  "q": "I want to show the crew's output in my UI as it's produced, chunk by chunk. How do I turn that on and get the final result at the end?",
+  "key": [
+   "stream\\s*[=:]\\s*True",
+   "\\.result"
+  ],
+  "partial": [
+   "stream\\s*[=:]\\s*True"
+  ]
+ },
+ {
+  "id": "D-009",
+  "item": "Events: BaseEventListener + crewai_event_bus.on in setup_listeners.",
+  "q": "I want to send every task completion from my crew to our own monitoring system, without changing the agents or tasks. What's the CrewAI mechanism?",
+  "key": [
+   "BaseEventListener"
+  ],
+  "partial": [
+   "crewai_event_bus|event_bus\\.on"
+  ]
+ },
+ {
+  "id": "D-010",
+  "item": "Kickoff hooks: @before_kickoff / @after_kickoff in @CrewBase.",
+  "q": "In a classic @CrewBase crew, how do I run code that cleans up the inputs right before the crew starts, and post-processes the result after it finishes?",
+  "key": [
+   "before_kickoff",
+   "after_kickoff"
+  ],
+  "partial": [
+   "before_kickoff|after_kickoff"
+  ]
+ },
+ {
+  "id": "D-011",
+  "item": "MCP: Agent(mcps=[url, slug, MCPServerStdio(...)]).",
+  "q": "My agent needs the tools from an MCP server I start locally with `npx my-mcp-server`. How do I give those tools to the agent?",
+  "key": [
+   "mcps\\s*[=:]",
+   "MCPServerStdio"
+  ],
+  "partial": [
+   "mcps\\s*[=:]|MCPServer(Stdio|HTTP|SSE)|MCPServerAdapter"
+  ]
+ },
+ {
+  "id": "D-012",
+  "item": "A2A: Agent(a2a=A2AClientConfig(endpoint=...)); A2AServerConfig exposes one.",
+  "q": "I want my CrewAI agent to delegate work to a remote agent that speaks the A2A protocol. What do I configure on the agent?",
+  "key": [
+   "A2AClientConfig|a2a\\s*=\\s*A2A"
+  ],
+  "partial": [
+   "A2AConfig|crewai\\.a2a"
+  ]
+ },
+ {
+  "id": "D-013",
+  "item": "Human feedback in flows: @human_feedback(message, emit=[...], llm=...).",
+  "q": "In my flow, a person should approve or reject a draft, and the flow should branch on their answer. What's the CrewAI way to do that?",
+  "key": [
+   "human_feedback"
+  ]
+ },
+ {
+  "id": "D-014",
+  "item": "Conversational flows: conversational = True; test with handle_turn / stream_turn (crewai run needs a terminal).",
+  "q": "I'm building a chat assistant as a CrewAI flow that carries a conversation across turns. What does CrewAI give me for that, and how would you send it test messages from a script?",
+  "key": [
+   "conversational",
+   "handle_turn|stream_turn"
+  ],
+  "partial": [
+   "conversational\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "D-015",
+  "item": "Declarative flows: crewai create flow <name> --declarative, flow.yaml.",
+  "q": "Can I define a CrewAI flow in YAML instead of Python? How do I start a project like that?",
+  "key": [
+   "--declarative"
+  ],
+  "partial": [
+   "flow\\.ya?ml"
+  ]
+ },
+ {
+  "id": "D-016",
+  "item": "Checkpoints: Crew(checkpoint=True); kickoff(from_checkpoint=CheckpointConfig(restore_from=...)).",
+  "q": "A long crew run died halfway through. How can I make runs resumable, so the next attempt continues from where it stopped?",
+  "key": [
+   "checkpoint",
+   "from_checkpoint|restore_from"
+  ],
+  "partial": [
+   "checkpoint"
+  ]
+ },
+ {
+  "id": "D-017",
+  "item": "Flow conditions: or_ / and_ in @listen.",
+  "q": "In a flow, how do I make one step run when either of two earlier steps finishes, and another step run only once both have finished?",
+  "key": [
+   "or_\\(",
+   "and_\\("
+  ],
+  "partial": [
+   "or_|and_"
+  ]
+ },
+ {
+  "id": "D-018",
+  "item": "crewai_tools catalog: 100+ tools (SerperDevTool, ScrapeWebsiteTool); check before writing one.",
+  "q": "My agent needs to search the web and scrape pages. Should I write those tools myself?",
+  "key": [
+   "SerperDevTool|ScrapeWebsiteTool|WebsiteSearchTool|FirecrawlScrapeWebsiteTool|EXASearchTool|BraveSearchTool|TavilySearchTool"
+  ],
+  "partial": [
+   "crewai_tools|crewai-tools"
+  ]
+ },
+ {
+  "id": "D-019",
+  "item": "Files: kickoff(input_files={...: ImageFile(source=...)}) from crewai_files.",
+  "q": "I want to pass an image file to my crew so the agent can look at it. How do I hand it the file at kickoff?",
+  "key": [
+   "input_files"
+  ],
+  "partial": [
+   "ImageFile"
+  ],
+  "trap": [
+   "multimodal\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "D-020",
+  "item": "Tool-call hooks: @on(InterceptionPoint.PRE_TOOL_CALL) from crewai.hooks runs before every tool call; raise HookAborted to block it.",
+  "q": "I want to block any tool call whose input contains a password, for every agent, without editing each tool. What does CrewAI give me for that?",
+  "key": [
+   "PRE_TOOL_CALL|before_tool_call"
+  ],
+  "partial": [
+   "crewai\\.hooks|HookAborted|InterceptionPoint"
+  ]
+ },
+ {
+  "id": "D-021",
+  "item": "LLM-call hooks: PRE_MODEL_CALL / POST_MODEL_CALL (or before_llm_call / after_llm_call) run on every LLM call.",
+  "q": "How can I log every LLM call my agents make, with the agent and how many messages it sent, without changing the agents or tasks?",
+  "key": [
+   "PRE_MODEL_CALL|POST_MODEL_CALL|before_llm_call|after_llm_call"
+  ],
+  "partial": [
+   "BaseEventListener|LLMCall\\w*Event|crewai\\.hooks"
+  ]
+ },
+ {
+  "id": "D-022",
+  "item": "Agent planning: Agent(planning_config=PlanningConfig(...)) makes the agent plan before acting; it replaces reasoning=True.",
+  "q": "How do I make one agent plan its steps before it starts working on a task?",
+  "key": [
+   "planning_config|PlanningConfig"
+  ],
+  "trap": [
+   "reasoning\\s*=\\s*True"
+  ]
+ },
+ {
+  "id": "E-001",
+  "item": "Logged out and without a terminal, `crewai eval` still gives a verdict: it runs the crew traced when the project changed, then AMP grades it; no account needed.",
+  "q": "I'm not logged in to CrewAI and my coding agent has no terminal. Can it still get a `crewai eval` verdict on a change it made?",
+  "key": [
+   "\\byes\\b|\\bit can\\b|\\bcan still\\b|works|no (account|login) (is )?(needed|required)|without (an account|logging in|a login)"
+  ],
+  "trap": [
+   "(needs?|requires?|must)( you)?( to)? (be )?(log(ged)? ?in|an account|crewai login)",
+   "accept the trace prompt"
+  ]
+ },
+ {
+  "id": "E-002",
+  "item": "After a change, `crewai eval` alone reruns the crew (traced) and grades it; no `crewai run` first.",
+  "q": "I changed a task's prompt. Do I have to `crewai run` the crew before `crewai eval` can grade the new version?",
+  "key": [
+   "\\bno\\b|not needed|don'?t (need|have)|(runs|reruns) (the crew|it)|on its own|by itself"
+  ],
+  "trap": [
+   "\\byes\\b,? (you|first)"
+  ]
+ }
+]

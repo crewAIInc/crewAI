@@ -3,6 +3,11 @@ import sys
 from typing import TYPE_CHECKING, Annotated, Any
 import warnings
 
+# Pin the machine's proxy and CA for AMP requests first: importing crewai.llm and
+# crewai.project loads the project's .env, which must not choose where the saved
+# login travels. A crew run in its own process (`uv run run_crew`) never imports
+# the CLI, so this import is the pin there.
+import crewai_core.plus_api  # noqa: F401
 from pydantic import Field, PydanticUserError
 
 from crewai.agent.core import Agent
@@ -48,7 +53,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.28"
+__version__ = "1.15.30"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
