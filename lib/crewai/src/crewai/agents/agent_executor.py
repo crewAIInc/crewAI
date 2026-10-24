@@ -117,7 +117,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.message_utils import format_message_for_llm
+from crewai.utilities.message_utils import format_message_for_llm, message_content_text
 from crewai.utilities.planning_types import (
     PlanStep,
     StepObservation,
@@ -2476,14 +2476,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     last_msg.get("role") == "tool"
                     or last_msg.get("role") == "assistant"
                 ):
-                    result = str(last_msg.get("content", ""))
+                    result = message_content_text(last_msg)
         elif not self.state.current_answer and self.state.messages:
             # For native tools, results are in the message history as 'tool' roles
             # We take the content of the most recent tool results
             tool_results: list[str] = []
             for msg in reversed(self.state.messages):
                 if msg.get("role") == "tool":
-                    tool_results.insert(0, str(msg.get("content", "")))
+                    tool_results.insert(0, message_content_text(msg))
                 elif msg.get("role") == "assistant" and msg.get("tool_calls"):
                     # Once we hit the assistant message that triggered the tools, we stop
                     break
@@ -2791,7 +2791,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # Check if agent's last message indicates need for replanning
         if self.state.messages:
             last_msg = self.state.messages[-1]
-            content = str(last_msg.get("content", "")).lower()
+            content = message_content_text(last_msg).lower()
             replan_indicators = [
                 "need to reconsider",
                 "approach isn't working",
