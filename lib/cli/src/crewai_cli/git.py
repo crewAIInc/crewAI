@@ -163,7 +163,11 @@ class Repository:
         """Add local-only ignore patterns before auto-staging an initial commit."""
         exclude_file = Path(self.path) / ".git" / "info" / "exclude"
         exclude_file.parent.mkdir(parents=True, exist_ok=True)
-        existing = exclude_file.read_text() if exclude_file.exists() else ""
+        if exclude_file.exists():
+            with exclude_file.open("r", encoding="utf-8", newline="") as fh:
+                existing = fh.read()
+        else:
+            existing = ""
         existing_lines = set(existing.splitlines())
         missing_patterns = [
             pattern
@@ -173,11 +177,16 @@ class Repository:
         if not missing_patterns:
             return
 
-        prefix = "" if existing.endswith("\n") or not existing else "\n"
-        patterns = "\n".join(missing_patterns)
-        exclude_file.write_text(
-            f"{existing}{prefix}# CrewAI deploy auto-commit excludes\n{patterns}\n"
-        )
+        # Keep the file's own line endings: append with CRLF only if it already
+        # uses CRLF, and write with newline="" so nothing is translated.
+        newline = "\r\n" if "\r\n" in existing else "\n"
+        prefix = "" if existing.endswith("\n") or not existing else newline
+        patterns = newline.join(missing_patterns)
+        with exclude_file.open("w", encoding="utf-8", newline="") as fh:
+            fh.write(
+                f"{existing}{prefix}# CrewAI deploy auto-commit excludes{newline}"
+                f"{patterns}{newline}"
+            )
 
     def deployable_files(self) -> list[str]:
         """Return files tracked by Git or untracked and not ignored."""
