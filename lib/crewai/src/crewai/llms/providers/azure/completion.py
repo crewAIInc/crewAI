@@ -464,6 +464,10 @@ class AzureCompletion(BaseLLM):
     ) -> None:
         """Handle completion-specific errors including context length checks.
 
+        The failure event itself is left to call()/acall(), which emit exactly
+        one for the started event they opened; raising here without emitting
+        keeps the scope pairing intact.
+
         Args:
             error: The exception that occurred
             from_task: Task that initiated the call
@@ -478,9 +482,6 @@ class AzureCompletion(BaseLLM):
 
         error_msg = f"Azure API call failed: {error!s}"
         logging.error(error_msg)
-        self._emit_call_failed_event(
-            error=error_msg, from_task=from_task, from_agent=from_agent
-        )
         raise error
 
     def call(

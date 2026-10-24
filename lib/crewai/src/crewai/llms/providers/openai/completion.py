@@ -682,6 +682,9 @@ class OpenAICompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
+                # The only failed event for this call: the completion handlers
+                # raise without emitting, so retries and API fallbacks stay
+                # paired with the started event above.
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
                 self._emit_call_failed_event(
@@ -827,6 +830,9 @@ class OpenAICompletion(BaseLLM):
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except Exception as e:
+                # The only failed event for this call: the completion handlers
+                # raise without emitting, so retries and API fallbacks stay
+                # paired with the started event above.
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
                 self._emit_call_failed_event(
@@ -1291,16 +1297,10 @@ class OpenAICompletion(BaseLLM):
         except NotFoundError as e:
             error_msg = f"Model {self.model} not found: {e}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ValueError(error_msg) from e
         except APIConnectionError as e:
             error_msg = f"Failed to connect to OpenAI API: {e}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ConnectionError(error_msg) from e
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -1309,9 +1309,6 @@ class OpenAICompletion(BaseLLM):
 
             error_msg = f"OpenAI Responses API call failed: {e!s}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise
 
         return content
@@ -1434,16 +1431,10 @@ class OpenAICompletion(BaseLLM):
         except NotFoundError as e:
             error_msg = f"Model {self.model} not found: {e}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ValueError(error_msg) from e
         except APIConnectionError as e:
             error_msg = f"Failed to connect to OpenAI API: {e}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ConnectionError(error_msg) from e
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -1452,9 +1443,6 @@ class OpenAICompletion(BaseLLM):
 
             error_msg = f"OpenAI Responses API call failed: {e!s}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise
 
         return content
@@ -2359,16 +2347,10 @@ class OpenAICompletion(BaseLLM):
         except NotFoundError as e:
             error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ValueError(error_msg) from e
         except APIConnectionError as e:
             error_msg = f"Failed to connect to OpenAI API: {e}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ConnectionError(error_msg) from e
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -2384,9 +2366,6 @@ class OpenAICompletion(BaseLLM):
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise e from e
 
         return content
@@ -2799,23 +2778,17 @@ class OpenAICompletion(BaseLLM):
         except NotFoundError as e:
             error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ValueError(error_msg) from e
         except APIConnectionError as e:
             error_msg = f"Failed to connect to OpenAI API: {e}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise ConnectionError(error_msg) from e
         except Exception as e:
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
 
-            # `_call_completions` retries these, so reporting a failed call
+            # `_acall_completions` retries these, so reporting a failed call
             # here would surface an error the caller never experiences.
             if self._rejects_reasoning_effort_with_tools(
                 e
@@ -2824,9 +2797,6 @@ class OpenAICompletion(BaseLLM):
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
             raise e from e
 
         return content
