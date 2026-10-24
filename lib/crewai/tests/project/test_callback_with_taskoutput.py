@@ -1,5 +1,8 @@
 """Test callback decorator with TaskOutput arguments."""
 
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from crewai import Agent, Crew, Task
@@ -92,3 +95,133 @@ def test_callback_decorator_with_taskoutput_integration() -> None:
         assert test_crew.callback_called
         assert test_crew.received_output is not None
         assert test_crew.received_output.raw == "test result"
+
+
+def _sample_output() -> TaskOutput:
+    return TaskOutput(
+        description="d",
+        agent="Writer",
+        raw="done",
+        output_format=OutputFormat.RAW,
+    )
+
+
+def _crew_from_task_yaml(
+    tmp_path: Path, task_fields: str, *, factory: bool
+) -> Any:
+    """Build a crew whose task callback comes from tasks.yaml."""
+    agents = tmp_path / "agents.yaml"
+    tasks = tmp_path / "tasks.yaml"
+    agents.write_text(
+        "writer:\n  role: Writer\n  goal: Write\n  backstory: Writes\n",
+        encoding="utf-8",
+    )
+    tasks.write_text(
+        f"write:\n  description: d\n  expected_output: e\n{task_fields}",
+        encoding="utf-8",
+    )
+
+    if factory:
+
+        @CrewBase
+        class FactoryCrew:
+            """Crew whose callback method returns the task callable."""
+
+            agents_config = str(agents)
+            tasks_config = str(tasks)
+
+            def __init__(self) -> None:
+                self.seen: list[TaskOutput] = []
+
+            @callback
+            def on_done(self) -> Callable[[TaskOutput], None]:
+                def inner(output: TaskOutput) -> None:
+                    self.seen.append(output)
+
+                return inner
+
+            @task
+            def write(self) -> Task:
+                return Task(config=self.tasks_config["write"])
+
+        return FactoryCrew
+
+    @CrewBase
+    class DirectCrew:
+        """Crew whose callback method accepts the task output."""
+
+        agents_config = str(agents)
+        tasks_config = str(tasks)
+
+        def __init__(self) -> None:
+            self.seen: list[TaskOutput] = []
+
+        @callback
+        def on_done(self, output: TaskOutput) -> None:
+            self.seen.append(output)
+
+        @callback
+        def on_also(self, output: TaskOutput) -> None:
+            self.seen.append(output)
+
+        @task
+        def write(self) -> Task:
+            return Task(config=self.tasks_config["write"])
+
+    return DirectCrew
+
+
+def test_yaml_callback_receives_task_output(tmp_path: Path) -> None:
+    """tasks.yaml callback: name becomes Task.callback and receives output."""
+    crew = _crew_from_task_yaml(tmp_path, "  callback: on_done\n", factory=False)()
+    task = crew.write()
+    output = _sample_output()
+
+    assert crew.seen == []
+    assert task.callback is not None
+    task.callback(output)
+    assert crew.seen == [output]
+
+
+def test_yaml_callbacks_list_is_not_invoked_during_build(tmp_path: Path) -> None:
+    """tasks.yaml callbacks are attached, not called while the crew is built."""
+    crew = _crew_from_task_yaml(
+        tmp_path, "  callbacks:\n    - on_done\n", factory=False
+    )()
+    task = crew.write()
+    output = _sample_output()
+
+    assert crew.seen == []
+    assert task.callback is not None
+    task.callback(output)
+    assert crew.seen == [output]
+
+
+def test_yaml_callback_factory_is_stored_on_task(tmp_path: Path) -> None:
+    """A callback factory's returned callable is Task.callback."""
+    crew = _crew_from_task_yaml(
+        tmp_path, "  callbacks:\n    - on_done\n", factory=True
+    )()
+    task = crew.write()
+    output = _sample_output()
+
+    assert crew.seen == []
+    assert task.callback is not None
+    task.callback(output)
+    assert crew.seen == [output]
+
+
+def test_yaml_callbacks_list_runs_every_named_callback(tmp_path: Path) -> None:
+    """Every name in callbacks runs with the task output."""
+    crew = _crew_from_task_yaml(
+        tmp_path,
+        "  callbacks:\n    - on_done\n    - on_also\n",
+        factory=False,
+    )()
+    task = crew.write()
+    output = _sample_output()
+
+    assert crew.seen == []
+    assert task.callback is not None
+    task.callback(output)
+    assert crew.seen == [output, output]
