@@ -136,7 +136,6 @@ class JevDecisionTool(BaseTool):
                 response = client.system_one(
                     state=validated.state,
                     questions={"decision": choice_question},
-                    model=self.model,
                 )
             finally:
                 if created_client and hasattr(client, "close"):

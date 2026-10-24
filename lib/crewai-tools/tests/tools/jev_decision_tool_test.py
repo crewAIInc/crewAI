@@ -79,6 +79,7 @@ def test_run_returns_choice_probabilities_and_confidence(
     }
     client.system_one.assert_called_once()
     assert client.system_one.call_args.kwargs["state"] == "I was charged twice."
+    assert "model" not in client.system_one.call_args.kwargs
     question = client.system_one.call_args.kwargs["questions"]["decision"]
     assert isinstance(question, FakeChoice)
     assert question.instructions == "Which team should handle this?"
