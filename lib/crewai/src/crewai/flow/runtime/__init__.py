@@ -3228,20 +3228,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         requests: list[PendingFeedbackContext] = []
         token = self._parallel_feedback_requests.set(requests)
         try:
-            try:
-                await self._gather_parallel(coroutines)
-            except HumanFeedbackPending:
-                if len(requests) > 1:
-                    raise ValueError(
-                        "Multiple parallel human feedback requests cannot be resumed. "
-                        "Chain feedback methods sequentially."
-                    ) from None
-                raise
+            await self._gather_parallel(coroutines)
+        except HumanFeedbackPending:
             if len(requests) > 1:
                 raise ValueError(
                     "Multiple parallel human feedback requests cannot be resumed. "
                     "Chain feedback methods sequentially."
-                )
+                ) from None
+            raise
         finally:
             self._parallel_feedback_requests.reset(token)
 
