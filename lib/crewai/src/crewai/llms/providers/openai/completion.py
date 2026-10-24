@@ -102,6 +102,38 @@ _UPSTREAM_STATUS_ERRORS: Final[dict[int, type[APIStatusError]]] = {
 }
 
 
+def _tool_call_index(
+    index: int | None,
+    call_id: str | None,
+    name: str | None,
+    tool_calls: dict[int, dict[str, Any]],
+) -> int:
+    """Resolve a streamed tool-call slot, including providers that omit index."""
+    if index is not None:
+        return index
+
+    if call_id:
+        for existing_index, existing in tool_calls.items():
+            if existing["id"] == call_id:
+                return existing_index
+        # An ID identifies a new call even when its name arrives in a later chunk.
+        return max(tool_calls, default=-1) + 1
+
+    if name:
+        # Some providers stream a call ID first and its function name next.
+        # Without an index or ID on the name chunk, continue the latest unnamed call.
+        for existing_index in reversed(tool_calls):
+            if tool_calls[existing_index].get("id") and not tool_calls[
+                existing_index
+            ].get("name"):
+                return existing_index
+        return max(tool_calls, default=-1) + 1
+
+    # Argument-only deltas continue the most recently observed call.
+    return max(tool_calls, default=0)
+
+
+
 def _upstream_status_code(error: Mapping[str, Any]) -> int | None:
     """Read an HTTP-like status code out of a gateway error object.
 
@@ -2596,7 +2628,12 @@ class OpenAICompletion(BaseLLM):
 
             if chunk_delta.tool_calls:
                 for tool_call in chunk_delta.tool_calls:
-                    tool_index = tool_call.index if tool_call.index is not None else 0
+                    tool_index = _tool_call_index(
+                        tool_call.index,
+                        tool_call.id,
+                        tool_call.function.name if tool_call.function else None,
+                        tool_calls,
+                    )
                     if tool_index not in tool_calls:
                         tool_calls[tool_index] = {
                             "id": tool_call.id,
@@ -2948,7 +2985,12 @@ class OpenAICompletion(BaseLLM):
 
             if chunk_delta.tool_calls:
                 for tool_call in chunk_delta.tool_calls:
-                    tool_index = tool_call.index if tool_call.index is not None else 0
+                    tool_index = _tool_call_index(
+                        tool_call.index,
+                        tool_call.id,
+                        tool_call.function.name if tool_call.function else None,
+                        tool_calls,
+                    )
                     if tool_index not in tool_calls:
                         tool_calls[tool_index] = {
                             "id": tool_call.id,
