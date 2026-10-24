@@ -421,6 +421,56 @@ def test_sibling_failure_drains_inflight_provider_before_returning(tmp_path: Pat
     asyncio.run(run())
 
 
+@pytest.mark.block_network(allowed_hosts=[r"^127\.0\.0\.1$", r"^::1$"])
+def test_completed_race_winner_does_not_resume_losing_feedback(tmp_path: Path) -> None:
+    entered = threading.Event()
+    release = threading.Event()
+
+    class FileReview:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow[Any]
+        ) -> str:
+            entered.set()
+            if not release.wait(timeout=5):
+                raise TimeoutError("provider was not released")
+            (tmp_path / "review.request").write_text(context.message)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        def begin(self) -> None:
+            pass
+
+        @listen(begin)
+        @human_feedback(message="Approve?", provider=FileReview())
+        def review(self) -> str:
+            return "document"
+
+        @listen(begin)
+        async def faster(self) -> str:
+            assert await asyncio.to_thread(entered.wait, 5)
+            return "automatic result"
+
+        @listen(or_(review, faster))
+        async def choose(self, result: HumanFeedbackResult | str) -> None:
+            self.state["chosen"] = result
+            asyncio.get_running_loop().call_later(0.05, release.set)
+
+    async def run() -> None:
+        persistence = SQLiteFlowPersistence(str(tmp_path / "feedback.sqlite"))
+        flow = ReviewFlow(persistence=persistence, suppress_flow_events=True)
+        result = await asyncio.wait_for(flow.kickoff_async(), timeout=5)
+        assert not isinstance(result, HumanFeedbackPending)
+        assert flow.state["chosen"] == "automatic result"
+        assert (tmp_path / "review.request").is_file()
+        assert flow.human_feedback_history == []
+        assert persistence.load_pending_feedback(flow.state["id"]) is None
+        with pytest.raises(ValueError, match="No pending feedback"):
+            await flow.resume_async("approve losing review")
+
+    asyncio.run(run())
+
+
 class TestPendingFeedbackContext:
     """Tests for PendingFeedbackContext dataclass."""
 

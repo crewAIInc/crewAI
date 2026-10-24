@@ -1249,6 +1249,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     if not task.done():
                         task.cancel()
                 results = await asyncio.gather(*tasks, return_exceptions=True)
+            if any(not isinstance(item, BaseException) for item in results):
+                return
             pending = [
                 item for item in results if isinstance(item, HumanFeedbackPending)
             ]
@@ -3772,9 +3774,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             try:
                 feedback_value = await asyncio.shield(request)
             except asyncio.CancelledError:
-                results = await asyncio.gather(request, return_exceptions=True)
-                if isinstance(results[0], HumanFeedbackPending):
-                    raise results[0] from None
+                await asyncio.gather(request, return_exceptions=True)
                 raise
             raw_feedback = str(feedback_value)
         else:
